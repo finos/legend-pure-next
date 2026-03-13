@@ -1,0 +1,89 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::string::tests::plus::model::*;
+
+native function
+    <<PCT.function>>
+    {
+        doc.doc='Concatenate two strings',
+        PCT.grammarDoc='\'str\'+\'other\'',
+        PCT.grammarCharacters='+'
+    }
+    meta::pure::functions::string::plus(left:String[1], right:String[1]):String[1];
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testPlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('ap', $f->eval(|'a' + 'p'));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testMultiPlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|'the quick brown fox' + ' jumps over ' + 'the lazy dog'));
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|('the quick brown fox' + ' jumps over ') + 'the lazy dog'));
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|'the quick brown fox' + ' ' + 'jumps' + ' ' + 'over' + ' ' + 'the lazy dog'));
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|'the quick brown fox' + (' ' + 'jumps' + ' ' + 'over' + ' ' + 'the lazy dog')));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testMultiPlusWithFunctionExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('1 2 3', $f->eval(|toString(1) + ' ' + toString(1 + 1) + ' ' + toString(2 + 1)));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testMultiPlusWithPropertyExpressions<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let hoboken = ^P_Location(place='Hoboken, NJ', type=P_GeographicEntityType.CITY);
+    let jc = ^P_Location(place='Jersey City, NJ', type=P_GeographicEntityType.CITY);
+    assertEquals('Hoboken, NJ; Jersey City, NJ', $f->eval(|$hoboken.place + '; ' + $jc.place));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testPlusInCollect<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let people = [^P_Person(firstName='Pierre', lastName='Doe'), ^P_Person(firstName='Kevin', lastName='RoeDoe')];
+    assertEquals(['Doe, Pierre', 'RoeDoe, Kevin'], $f->eval(|$people->map(p | $p.lastName->at(0) + ', ' + $p.firstName->at(0))));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::plus::testPlusInIterate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let people = [^P_Person(firstName='Pierre', lastName='Doe'), ^P_Person(firstName='Kevin', lastName='RoeDoe'), ^P_Person(firstName='Andrew', lastName='Some_LName')];
+    assertEquals('names; Doe, Pierre; RoeDoe, Kevin; Some_LName, Andrew', $f->eval(|$people->fold({p, s | $s + '; ' + $p.lastName->at(0) + ', ' + $p.firstName->at(0)}, 'names')));
+
+    let person = $people->fold({p1, p2 | ^$p2(lastName = ($p2.lastName->at(0) + ' ' + $p1.lastName->at(0)))}, ^P_Person(firstName='', lastName='init:'));
+    assertEquals('init: Doe RoeDoe Some_LName', $f->eval(|$person.lastName));
+}
+
+Class meta::pure::functions::string::tests::plus::model::P_GeographicEntity
+{
+    type : P_GeographicEntityType[1];
+}
+
+Class meta::pure::functions::string::tests::plus::model::P_Location extends P_GeographicEntity
+{
+    place : String[1];
+    censusdate: Date[0..1];
+}
+
+Class meta::pure::functions::string::tests::plus::model::P_Person
+{
+    firstName : String[1];
+    lastName: String[1];
+}
+
+Enum meta::pure::functions::string::tests::plus::model::P_GeographicEntityType
+{
+    {doc.doc = 'A city, town, village, or other urban area.'} CITY,
+    <<doc.deprecated>> COUNTRY,
+    {doc.doc = 'Any geographic entity other than a city or country.'} REGION
+}

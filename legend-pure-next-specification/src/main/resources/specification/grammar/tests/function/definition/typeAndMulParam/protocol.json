@@ -1,0 +1,112 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "ArrowInvocation",
+        "functionName" : "toMultiplicity",
+        "parametersValues" : [ {
+          "_type" : "ArrowInvocation",
+          "functionName" : "cast",
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 7,
+              "endLine" : 4,
+              "startColumn" : 5,
+              "startLine" : 4
+            },
+            "value" : "1"
+          }, {
+            "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+            "genericType" : {
+              "typeParameter" : {
+                "name" : "T"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 4,
+              "startColumn" : 15,
+              "startLine" : 4
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 39,
+            "endLine" : 4,
+            "startColumn" : 8,
+            "startLine" : 4
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "multiplicity" : {
+            "multiplicityParameter" : "m"
+          },
+          "sourceInformation" : {
+            "endColumn" : 38,
+            "endLine" : 4,
+            "startColumn" : 35,
+            "startLine" : 4
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 39,
+          "endLine" : 4,
+          "startColumn" : 8,
+          "startLine" : 4
+        }
+      } ],
+      "functionName" : "with",
+      "multiplicityParameters" : [ {
+        "name" : "m"
+      } ],
+      "name" : "with_T_m__T_m_",
+      "package" : {
+        "pointerValue" : "meta::pure::mapping"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "typeParameter" : {
+            "name" : "T"
+          }
+        },
+        "multiplicity" : {
+          "multiplicityParameter" : "m"
+        },
+        "name" : "t",
+        "sourceInformation" : {
+          "endColumn" : 47,
+          "endLine" : 2,
+          "startColumn" : 41,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "typeParameter" : {
+          "name" : "T"
+        }
+      },
+      "returnMultiplicity" : {
+        "multiplicityParameter" : "m"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "typeParameters" : [ {
+        "name" : "T"
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

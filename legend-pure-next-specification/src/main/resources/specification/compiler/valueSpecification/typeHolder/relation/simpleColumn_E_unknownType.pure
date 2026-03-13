@@ -1,0 +1,8 @@
+###Error
+The type 'x::UnknownType' can't be found in function 'test_Relation_1__Any_MANY_' (at valueSpecification/typeHolder/relation/simpleColumn_E_unknownType 5:32-5:45)
+
+###Pure
+function test(x:Relation<(name:x::UnknownType[1])>[1]):Any[*]
+{
+    []
+}

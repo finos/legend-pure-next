@@ -1,0 +1,5 @@
+###Pure
+Primitive protocol::Varchar extends String
+
+###CompiledGraph
+primitive protocol::Varchar  ~PrimitiveType  @2:1-2:42

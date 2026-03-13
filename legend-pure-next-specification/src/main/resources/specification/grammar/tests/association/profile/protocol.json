@@ -1,0 +1,220 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Association",
+      "name" : "AnAssociation1",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::AssociationClassA",
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 5,
+              "startColumn" : 6,
+              "startLine" : 5
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "a",
+        "sourceInformation" : {
+          "endColumn" : 45,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::AssociationClassB",
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 6,
+              "startColumn" : 6,
+              "startLine" : 6
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "b",
+        "sourceInformation" : {
+          "endColumn" : 48,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "stereotypes" : [ {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 3,
+            "startColumn" : 24,
+            "startLine" : 3
+          },
+          "value" : "flag"
+        } ],
+        "pointerValue" : "AProfile",
+        "sourceInformation" : {
+          "endColumn" : 22,
+          "endLine" : 3,
+          "startColumn" : 15,
+          "startLine" : 3
+        }
+      }, {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 64,
+            "endLine" : 3,
+            "startColumn" : 58,
+            "startLine" : 3
+          },
+          "value" : "newFlag"
+        } ],
+        "pointerValue" : "protocol::support::AProfile",
+        "sourceInformation" : {
+          "endColumn" : 56,
+          "endLine" : 3,
+          "startColumn" : 30,
+          "startLine" : 3
+        }
+      } ],
+      "taggedValues" : [ {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 100,
+              "endLine" : 3,
+              "startColumn" : 97,
+              "startLine" : 3
+            },
+            "value" : "tag1"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 95,
+            "endLine" : 3,
+            "startColumn" : 69,
+            "startLine" : 3
+          }
+        },
+        "value" : "yeah"
+      }, {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 124,
+              "endLine" : 3,
+              "startColumn" : 121,
+              "startLine" : 3
+            },
+            "value" : "tag2"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 119,
+            "endLine" : 3,
+            "startColumn" : 112,
+            "startLine" : 3
+          }
+        },
+        "value" : "ok"
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_stereotypes" : [ {
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 11,
+          "startColumn" : 17,
+          "startLine" : 11
+        },
+        "value" : "flag"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 29,
+          "endLine" : 11,
+          "startColumn" : 23,
+          "startLine" : 11
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 12,
+          "startColumn" : 10,
+          "startLine" : 12
+        },
+        "value" : "tag1"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 12,
+          "startColumn" : 16,
+          "startLine" : 12
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 13,
+        "startColumn" : 1,
+        "startLine" : 9
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassA",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 17,
+        "startColumn" : 1,
+        "startLine" : 15
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassB",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 21,
+        "startColumn" : 1,
+        "startLine" : 19
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

@@ -1,0 +1,13 @@
+###Error
+No matching function 'sw' found for argument types (String[1], String[1]) (at valueSpecification/functionApplication/generics/lambda_E_errorInBody 12:24-12:33)
+
+###Pure
+import test::*;
+
+native function test::fl<T>(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*];
+native function test::sw(x:Integer[1], y:String[1]):Boolean[1];
+
+function test::tst():Any[*]
+{
+    ['a', 'b']->fl(x|$x->sw('ok'));
+}

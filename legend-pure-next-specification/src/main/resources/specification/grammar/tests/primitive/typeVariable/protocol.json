@@ -1,0 +1,125 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "PrimitiveType",
+      "constraints" : [ {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "lessThan",
+            "parametersValues" : [ {
+              "_type" : "ArrowInvocation",
+              "functionName" : "length",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 9,
+                  "endLine" : 4,
+                  "startColumn" : 5,
+                  "startLine" : 4
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 19,
+                "endLine" : 4,
+                "startColumn" : 10,
+                "startLine" : 4
+              }
+            }, {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "sourceInformation" : {
+                "endColumn" : 24,
+                "endLine" : 4,
+                "startColumn" : 23,
+                "startLine" : 4
+              }
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 24,
+              "endLine" : 4,
+              "startColumn" : 21,
+              "startLine" : 4
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 24,
+            "endLine" : 4,
+            "startColumn" : 5,
+            "startLine" : 4
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 24,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        }
+      } ],
+      "generalizations" : [ {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 57,
+              "endLine" : 2,
+              "startColumn" : 52,
+              "startLine" : 2
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 57,
+          "endLine" : 2,
+          "startColumn" : 52,
+          "startLine" : 2
+        }
+      } ],
+      "name" : "Varchar",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "typeVariables" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 38,
+              "endLine" : 2,
+              "startColumn" : 32,
+              "startLine" : 2
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "x",
+        "sourceInformation" : {
+          "endColumn" : 41,
+          "endLine" : 2,
+          "startColumn" : 29,
+          "startLine" : 2
+        }
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

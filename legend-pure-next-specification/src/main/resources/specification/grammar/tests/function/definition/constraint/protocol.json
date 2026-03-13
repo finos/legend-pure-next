@@ -1,0 +1,263 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "plus",
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "sourceInformation" : {
+            "endColumn" : 6,
+            "endLine" : 9,
+            "startColumn" : 5,
+            "startLine" : 9
+          }
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 10,
+            "endLine" : 9,
+            "startColumn" : 10,
+            "startLine" : 9
+          },
+          "value" : 1
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 10,
+          "endLine" : 9,
+          "startColumn" : 8,
+          "startLine" : 9
+        }
+      } ],
+      "functionName" : "constrained",
+      "name" : "constrained_Integer_1__Integer_1_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 2,
+              "startColumn" : 35,
+              "startLine" : 2
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "x",
+        "sourceInformation" : {
+          "endColumn" : 44,
+          "endLine" : 2,
+          "startColumn" : 32,
+          "startLine" : 2
+        }
+      } ],
+      "postConstraints" : [ {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "greaterThan",
+            "parametersValues" : [ {
+              "_type" : "VariableExpression",
+              "name" : "return",
+              "sourceInformation" : {
+                "endColumn" : 11,
+                "endLine" : 6,
+                "startColumn" : 5,
+                "startLine" : 6
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 15,
+                "endLine" : 6,
+                "startColumn" : 15,
+                "startLine" : 6
+              },
+              "value" : 2
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 15,
+              "endLine" : 6,
+              "startColumn" : 13,
+              "startLine" : 6
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 15,
+            "endLine" : 6,
+            "startColumn" : 5,
+            "startLine" : 6
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 15,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        }
+      } ],
+      "preConstraints" : [ {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "greaterThan",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "sourceInformation" : {
+                "endColumn" : 5,
+                "endLine" : 4,
+                "startColumn" : 5,
+                "startLine" : 4
+              },
+              "value" : {
+                "pointerValue" : "x"
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 9,
+                "endLine" : 4,
+                "startColumn" : 9,
+                "startLine" : 4
+              },
+              "value" : 0
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 9,
+              "endLine" : 4,
+              "startColumn" : 7,
+              "startLine" : 4
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 9,
+            "endLine" : 4,
+            "startColumn" : 5,
+            "startLine" : 4
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 9,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        }
+      }, {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "greaterThan",
+            "parametersValues" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "sourceInformation" : {
+                "endColumn" : 16,
+                "endLine" : 5,
+                "startColumn" : 15,
+                "startLine" : 5
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 20,
+                "endLine" : 5,
+                "startColumn" : 20,
+                "startLine" : 5
+              },
+              "value" : 0
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 20,
+              "endLine" : 5,
+              "startColumn" : 18,
+              "startLine" : 5
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 20,
+            "endLine" : 5,
+            "startColumn" : 5,
+            "startLine" : 5
+          }
+        },
+        "name" : "positive",
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 5,
+          "startColumn" : 5,
+          "startLine" : 5
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Integer",
+          "sourceInformation" : {
+            "endColumn" : 54,
+            "endLine" : 2,
+            "startColumn" : 48,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 1
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

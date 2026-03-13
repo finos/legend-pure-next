@@ -1,0 +1,25 @@
+###Pure
+Enum test::primitive::MyEnum
+{
+  A,
+  B,
+  C
+}
+
+function test::primitive::testEnumValue(): Any[*]
+{
+  test::primitive::MyEnum.A;
+  test::primitive::MyEnum.B;
+}
+
+###CompiledGraph
+enumeration test::primitive::MyEnum extends Enum  ~Enumeration<test::primitive::MyEnum>  @2:1-7:1
+  property A  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum | 1>  = ^test::primitive::MyEnum(name='A')  @4:3-4:3
+  property B  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum | 1>  = ^test::primitive::MyEnum(name='B')  @5:3-5:3
+  property C  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum | 1>  = ^test::primitive::MyEnum(name='C')  @6:3-6:3
+
+function test::primitive::testEnumValue__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  DotApplication test::primitive::MyEnum.A :#test::primitive::MyEnum##[1]#  @11:26-11:27
+    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  @11:3-11:25
+  DotApplication test::primitive::MyEnum.B :#test::primitive::MyEnum##[1]#  @12:26-12:27
+    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  @12:3-12:25

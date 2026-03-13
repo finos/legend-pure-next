@@ -1,0 +1,9 @@
+###Error
+No matching function 'plus' found for argument types (Integer[1], String[1]) (at valueSpecification/functionApplication/generics/lambdaReturnfunctionTypeInference_E_error 8:10-8:13)
+
+###Pure
+native function f<T>(s:Function<{->T[1]}>[1]):T[1];
+function test():Any[*]
+{
+    f(|1)+'1';
+}

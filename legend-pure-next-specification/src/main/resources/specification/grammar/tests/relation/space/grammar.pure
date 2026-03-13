@@ -1,0 +1,2 @@
+###Pure
+native function test(r: Relation<('with space':String[1],other:Integer[0..1],ok:Boolean)>[1]): Boolean[1];

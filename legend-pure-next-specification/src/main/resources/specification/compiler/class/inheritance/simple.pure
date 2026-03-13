@@ -1,0 +1,18 @@
+###Pure
+
+Class pack::Animal
+{
+  name: String[1];
+}
+
+Class pack::Dog extends pack::Animal
+{
+  breed: String[1];
+}
+
+###CompiledGraph
+class pack::Animal  ~Class<pack::Animal>  @3:1-6:1
+  property name :String[1]  ~Property<pack::Animal, String | 1>
+
+class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @8:1-11:1
+  property breed :String[1]  ~Property<pack::Dog, String | 1>

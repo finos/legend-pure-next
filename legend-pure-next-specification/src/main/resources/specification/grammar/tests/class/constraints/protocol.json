@@ -1,0 +1,374 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "constraints" : [ {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "ArrowInvocation",
+            "functionName" : "startsWith",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 7,
+                  "endLine" : 4,
+                  "startColumn" : 3,
+                  "startLine" : 4
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 13,
+                "endLine" : 4,
+                "startColumn" : 8,
+                "startLine" : 4
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 29,
+                "endLine" : 4,
+                "startColumn" : 27,
+                "startLine" : 4
+              },
+              "value" : "x"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 30,
+              "endLine" : 4,
+              "startColumn" : 14,
+              "startLine" : 4
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 30,
+            "endLine" : 4,
+            "startColumn" : 3,
+            "startLine" : 4
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 30,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "ArrowInvocation",
+            "functionName" : "endsWith",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 11,
+                  "endLine" : 5,
+                  "startColumn" : 7,
+                  "startLine" : 5
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 17,
+                "endLine" : 5,
+                "startColumn" : 12,
+                "startLine" : 5
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 31,
+                "endLine" : 5,
+                "startColumn" : 29,
+                "startLine" : 5
+              },
+              "value" : "z"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 32,
+              "endLine" : 5,
+              "startColumn" : 18,
+              "startLine" : 5
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 32,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          }
+        },
+        "name" : "id",
+        "sourceInformation" : {
+          "endColumn" : 32,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "enforcementLevel" : "Error",
+        "externalId" : "someId",
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "greaterThan",
+            "parametersValues" : [ {
+              "_type" : "ArrowInvocation",
+              "functionName" : "length",
+              "parametersValues" : [ {
+                "_type" : "DotApplication",
+                "functionName" : "other",
+                "parametersValues" : [ {
+                  "_type" : "VariableExpression",
+                  "name" : "this",
+                  "sourceInformation" : {
+                    "endColumn" : 20,
+                    "endLine" : 10,
+                    "startColumn" : 16,
+                    "startLine" : 10
+                  }
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 26,
+                  "endLine" : 10,
+                  "startColumn" : 21,
+                  "startLine" : 10
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 36,
+                "endLine" : 10,
+                "startColumn" : 27,
+                "startLine" : 10
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 10,
+                "startColumn" : 40,
+                "startLine" : 10
+              },
+              "value" : 2
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 40,
+              "endLine" : 10,
+              "startColumn" : 38,
+              "startLine" : 10
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 40,
+            "endLine" : 10,
+            "startColumn" : 5,
+            "startLine" : 10
+          }
+        },
+        "messageFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "plus",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 19,
+                  "endLine" : 12,
+                  "startColumn" : 15,
+                  "startLine" : 12
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 25,
+                "endLine" : 12,
+                "startColumn" : 20,
+                "startLine" : 12
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 41,
+                "endLine" : 12,
+                "startColumn" : 29,
+                "startLine" : 12
+              },
+              "value" : " has issues"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 12,
+              "startColumn" : 27,
+              "startLine" : 12
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 41,
+            "endLine" : 12,
+            "startColumn" : 5,
+            "startLine" : 12
+          }
+        },
+        "name" : "other",
+        "owner" : "theOwner",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 13,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "externalId" : "ok",
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "lessThan",
+            "parametersValues" : [ {
+              "_type" : "ArrowInvocation",
+              "functionName" : "length",
+              "parametersValues" : [ {
+                "_type" : "DotApplication",
+                "functionName" : "other",
+                "parametersValues" : [ {
+                  "_type" : "VariableExpression",
+                  "name" : "this",
+                  "sourceInformation" : {
+                    "endColumn" : 20,
+                    "endLine" : 17,
+                    "startColumn" : 16,
+                    "startLine" : 17
+                  }
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 26,
+                  "endLine" : 17,
+                  "startColumn" : 21,
+                  "startLine" : 17
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 36,
+                "endLine" : 17,
+                "startColumn" : 27,
+                "startLine" : 17
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 17,
+                "startColumn" : 40,
+                "startLine" : 17
+              },
+              "value" : 4
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 40,
+              "endLine" : 17,
+              "startColumn" : 38,
+              "startLine" : 17
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 40,
+            "endLine" : 17,
+            "startColumn" : 5,
+            "startLine" : 17
+          }
+        },
+        "name" : "other2",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 18,
+          "startColumn" : 3,
+          "startLine" : 14
+        }
+      } ],
+      "name" : "SuperClass",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 15,
+              "endLine" : 21,
+              "startColumn" : 10,
+              "startLine" : 21
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "other",
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 21,
+          "startColumn" : 3,
+          "startLine" : 21
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 22,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

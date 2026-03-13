@@ -1,0 +1,56 @@
+###Pure
+native function test<Z,V,K>(z:Relation<Z>[1], x:AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1];
+
+native function _sum(x:Integer[*]):Integer[1];
+native function _concat(x:String[*]):String[1];
+
+function test():Any[1]
+{
+   test(@Relation<(ok:String[1])>, ~[name:{p,f,r|1}:y|$y->_sum(), other:{p,f,r|'p'}:y|$y->_concat()]);
+}
+
+###CompiledGraph
+native function test_Relation_1__AggColSpecArray_1__Any_1_(z:Relation<Z>[1], x:AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z>[1], AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]->Any[1]}>
+
+native function _sum_Integer_MANY__Integer_1_(x:Integer[*]):Integer[1]  ~NativeFunction<{Integer[*]->Integer[1]}>
+
+native function _concat_String_MANY__String_1_(x:String[*]):String[1]  ~NativeFunction<{String[*]->String[1]}>
+
+function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
+  FunctionInvocation test_Relation_1__AggColSpecArray_1__Any_1_ :#Any##[1]#  @9:4-9:101
+    typeParam K -> Any
+    typeParam V -> #Any#
+    typeParam Z -> #(ok:#String##[1]#)#
+    TypeHolder :Relation<(ok:String[1])>[1]  @9:9-9:33
+    FunctionInvocation aggColSpecArray2_AggColSpec_MANY__P_1__AggColSpecArray_1_ :#AggColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[0..1]}#, #{Nil[*]->Any[0..1]}#, #(name:#Integer##[1]#, other:#String##[1]#)#>##[1]#  @9:36-9:100
+      typeParam K -> #Any#
+      typeParam P -> #(name:#Integer##[1]#, other:#String##[1]#)#
+      typeParam T -> #Any#
+      typeParam U -> #(ok:#String##[1]#)#
+      typeParam V -> #Any#
+      Collection :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Any##[*]#->#Any##[0..1]#}#, #Any#>#[2]
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__T_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  @9:38-9:64
+          typeParam K -> #Integer#
+          typeParam T -> #(name:#Integer##[1]#)#
+          typeParam U -> #(ok:String[1])#
+          typeParam V -> #Integer#
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  @9:43-9:51
+            AtomicValue  1 :Integer[1]  @9:50-9:50
+          Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  @9:53-9:64
+            ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  @9:57-9:64
+              Variable y :#Integer##[*]#  @9:55-9:56
+          AtomicValue  'name' :String[1]
+          TypeHolder :#(name:#Integer##[1]#)#[1]
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__T_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  @9:67-9:99
+          typeParam K -> #String#
+          typeParam T -> #(other:#String##[1]#)#
+          typeParam U -> #(ok:String[1])#
+          typeParam V -> #String#
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  @9:73-9:83
+            AtomicValue  'p' :String[1]  @9:80-9:82
+          Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  @9:85-9:99
+            ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  @9:89-9:99
+              Variable y :#String##[*]#  @9:87-9:88
+          AtomicValue  'other' :String[1]
+          TypeHolder :#(other:#String##[1]#)#[1]
+      TypeHolder :#(name:#Integer##[1]#, other:#String##[1]#)#[1]

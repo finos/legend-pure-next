@@ -1,0 +1,29 @@
+###Pure
+import test::*;
+
+native function test::fl<T>(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*];
+
+native function test::sw(x:String[1], y:String[1]):Boolean[1];
+
+function test::tst():Boolean[1]
+{
+    ['a', 'b']->fl(x|$x->sw('ok'));
+    true;
+}
+
+###CompiledGraph
+native function test::fl_T_MANY__Function_1__T_MANY_(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*]  ~NativeFunction<{T[*], Function<{T[1]->Boolean[1]}>[1]->T[*]}>
+
+native function test::sw_String_1__String_1__Boolean_1_(x:String[1], y:String[1]):Boolean[1]  ~NativeFunction<{String[1], String[1]->Boolean[1]}>
+
+function test::tst__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  ArrowInvocation test::fl_T_MANY__Function_1__T_MANY_ :#String##[*]#  @10:15-10:34
+    typeParam T -> #String#
+    Collection :#String#[2]  @10:5-10:14
+      AtomicValue  'a' :String[1]  @10:6-10:8
+      AtomicValue  'b' :String[1]  @10:11-10:13
+    Lambda(x:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#Boolean##[1]#}#>#[1]  @10:20-10:33
+      ArrowInvocation test::sw_String_1__String_1__Boolean_1_ :#Boolean##[1]#  @10:24-10:33
+        Variable x :#String##[1]#  @10:22-10:23
+        AtomicValue  'ok' :String[1]  @10:29-10:32
+  AtomicValue  true :Boolean[1]  @11:5-11:8

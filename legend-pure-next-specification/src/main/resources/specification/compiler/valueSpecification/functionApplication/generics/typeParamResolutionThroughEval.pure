@@ -1,0 +1,16 @@
+###Pure
+import test::*;
+
+Class test::TPR_Person
+{
+    firstName : String[1];
+    lastName : String[1];
+}
+
+// PCT pattern: <Z|y> type param should be resolved through eval's lambda argument.
+// The lambda |^TPR_Person(...) returns TPR_Person[1], so eval should bind Z->TPR_Person, y->[1].
+// However, the compiler cannot resolve Z statically, so .lastName on Z is an error.
+function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Any[*]
+{
+    $f->eval(|^TPR_Person(firstName='A', lastName='B')).lastName;
+}

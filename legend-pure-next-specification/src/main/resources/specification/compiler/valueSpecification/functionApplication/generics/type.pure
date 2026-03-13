@@ -1,0 +1,31 @@
+###Pure
+function f<T>(s:T[1]):T[1]
+{
+    $s
+}
+
+function pl(a:String[1], b:String[1]):String[1]
+{
+    $a+$b
+}
+
+function test():Any[*]
+{
+    f('a')->pl('ok')
+}
+
+###CompiledGraph
+function f_T_1__T_1_(s:T[1]):T[1]  ~UserDefinedFunction<{T[1]->T[1]}>
+  Variable s :#T##[1]#  @4:5-4:6
+
+function pl_String_1__String_1__String_1_(a:String[1], b:String[1]):String[1]  ~UserDefinedFunction<{String[1], String[1]->String[1]}>
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @9:7-9:9
+    Variable a :#String##[1]#  @9:5-9:6
+    Variable b :#String##[1]#  @9:8-9:9
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  ArrowInvocation pl_String_1__String_1__String_1_ :#String##[1]#  @14:11-14:20
+    FunctionInvocation f_T_1__T_1_ :#String##[1]#  @14:5-14:10
+      typeParam T -> String
+      AtomicValue  'a' :String[1]  @14:7-14:9
+    AtomicValue  'ok' :String[1]  @14:16-14:19

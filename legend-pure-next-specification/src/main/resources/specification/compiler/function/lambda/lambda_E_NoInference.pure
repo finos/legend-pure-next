@@ -1,0 +1,8 @@
+###Error
+Can't resolve lambda parameter types (at function/lambda/lambda_E_NoInference 7:5-7:12)
+
+###Pure
+function test::myTest():Any[*]
+{
+    z|$x+$z;
+}

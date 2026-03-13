@@ -1,0 +1,9 @@
+###Pure
+function test():Relation<(name:Number[0..1])>[1]
+{
+   @Relation<(name:Integer[1])>;
+}
+
+###CompiledGraph
+function test__Relation_1_():Relation<(name:Number[0..1])>[1]  ~UserDefinedFunction<{->Relation<(name:Number[0..1])>[1]}>
+  TypeHolder :Relation<(name:Integer[1])>[1]  @4:4-4:31

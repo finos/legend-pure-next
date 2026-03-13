@@ -1,0 +1,7 @@
+###Pure
+import protocol::support::*;
+function protocol::test(): Any[*]
+{
+    f(1);
+    f(1, 2);
+}

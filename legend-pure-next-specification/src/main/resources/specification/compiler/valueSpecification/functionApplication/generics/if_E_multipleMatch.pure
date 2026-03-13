@@ -1,0 +1,11 @@
+###Error
+Ambiguous function call: multiple equally-specific matches found [meta::pure::functions::lang::if(test: Boolean[1], valid: Function<{->T[m]}>[1], invalid: Function<{->T[m]}>[1]): T[m], test::if(test: Boolean[1], valid: Function<{->T[m]}>[1], invalid: Function<{->T[m]}>[1]): T[m]] (at valueSpecification/functionApplication/generics/if_E_multipleMatch 10:5-10:18)
+
+###Pure
+import test::*;
+native function test::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+
+function test::tst():Any[*]
+{
+    if(true,|3,|1) + 2;
+}

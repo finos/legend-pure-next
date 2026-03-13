@@ -1,0 +1,9 @@
+###Error
+Return multiplicity error in qualified property 'badMulProp': expected [1], got [*] (at class/qualifiedProperty/qualifiedProperty_E_returnMultiplicityMismatch 8:33-8:38)
+
+###Pure
+Class test::MyClass
+{
+  names: String[*];
+  badMulProp(s: String[1]){$this.names}: String[1];
+}

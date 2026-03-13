@@ -1,0 +1,20 @@
+###Pure
+native function test(x:FuncColSpec<{String[1]->Any[0..1]},Any>[1]):Any[1];
+
+function test():Any[1]
+{
+   test(~name:x|'ok');
+}
+
+###CompiledGraph
+native function test_FuncColSpec_1__Any_1_(x:FuncColSpec<{String[1]->Any[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{FuncColSpec<{String[1]->Any[0..1]}, Any>[1]->Any[1]}>
+
+function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
+  FunctionInvocation test_FuncColSpec_1__Any_1_ :#Any##[1]#  @6:4-6:21
+    FunctionInvocation funcColSpec_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#String#[1]->Any[1]}#, #(name:String[1])#>##[1]#  @6:10-6:20
+      typeParam T -> #(name:String[1])#
+      typeParam U -> #String#
+      Lambda(x:#String##[1]#) :#LambdaFunction<#{#String##[1]#->String[1]}#>#[1]  @6:15-6:20
+        AtomicValue  'ok' :String[1]  @6:17-6:20
+      AtomicValue  'name' :String[1]
+      TypeHolder :#(name:String[1])#[1]

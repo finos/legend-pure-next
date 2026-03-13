@@ -1,0 +1,12 @@
+###Pure
+function test():ColSpec<(name:String)>[1]
+{
+   ~name:String[1];
+}
+
+###CompiledGraph
+function test__ColSpec_1_():ColSpec<(name:String[1])>[1]  ~UserDefinedFunction<{->ColSpec<(name:String[1])>[1]}>
+  FunctionInvocation colSpec_String_1__T_1__ColSpec_1_ :#ColSpec<(name:String[1])>##[1]#  @4:5-4:18
+    typeParam T -> (name:String[1])
+    AtomicValue  'name' :String[1]
+    TypeHolder :(name:String[1])[1]

@@ -1,0 +1,14 @@
+###Pure
+function test():ColSpecArray<(name:String, id:Integer)>[1]
+{
+   ~[name:String, id:Integer];
+}
+
+###CompiledGraph
+function test__ColSpecArray_1_():ColSpecArray<(name:String[1], id:Integer[1])>[1]  ~UserDefinedFunction<{->ColSpecArray<(name:String[1], id:Integer[1])>[1]}>
+  FunctionInvocation colSpecArray_String_MANY__T_1__ColSpecArray_1_ :#ColSpecArray<(name:String[1], id:Integer[1])>##[1]#  @4:4-4:29
+    typeParam T -> (name:String[1], id:Integer[1])
+    Collection :#String#[2]
+      AtomicValue  'name' :String[1]
+      AtomicValue  'id' :String[1]
+    TypeHolder :(name:String[1], id:Integer[1])[1]

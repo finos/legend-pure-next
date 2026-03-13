@@ -1,0 +1,35 @@
+###Pure
+native function test<U>(x:Relation<U>[1], z:FuncColSpecArray<{Relation<U>[1], Window<U>[1], U[1]->Any[*]}, Any>[1]):Any[1];
+
+function test():Any[1]
+{
+   test(@Relation<(ok:String[1])>, ~[name:{p,f,r|'ok'}, other:{p,f,r|1}]);
+}
+
+###CompiledGraph
+native function test_Relation_1__FuncColSpecArray_1__Any_1_(x:Relation<U>[1], z:FuncColSpecArray<{Relation<U>[1], Window<U>[1], U[1]->Any[*]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<U>[1], FuncColSpecArray<{Relation<U>[1], Window<U>[1], U[1]->Any[*]}, Any>[1]->Any[1]}>
+
+function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
+  FunctionInvocation test_Relation_1__FuncColSpecArray_1__Any_1_ :#Any##[1]#  @6:4-6:73
+    typeParam U -> #(ok:#String##[1]#)#
+    TypeHolder :Relation<(ok:String[1])>[1]  @6:9-6:33
+    FunctionInvocation funcColSpecArray2_FuncColSpec_MANY__P_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[*]}#, #(name:String[1], other:Integer[1])#>##[1]#  @6:36-6:72
+      typeParam P -> #(name:String[1], other:Integer[1])#
+      typeParam T -> #Any#
+      typeParam U -> #(ok:#String##[1]#)#
+      Collection :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[1]#}#, #Any#>#[2]
+        FunctionInvocation funcColSpec2_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(name:String[1])#>##[1]#  @6:38-6:54
+          typeParam T -> #(name:String[1])#
+          typeParam U -> #(ok:String[1])#
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  @6:43-6:54
+            AtomicValue  'ok' :String[1]  @6:50-6:53
+          AtomicValue  'name' :String[1]
+          TypeHolder :#(name:String[1])#[1]
+        FunctionInvocation funcColSpec2_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(other:Integer[1])#>##[1]#  @6:57-6:71
+          typeParam T -> #(other:Integer[1])#
+          typeParam U -> #(ok:String[1])#
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  @6:63-6:71
+            AtomicValue  1 :Integer[1]  @6:70-6:70
+          AtomicValue  'other' :String[1]
+          TypeHolder :#(other:Integer[1])#[1]
+      TypeHolder :#(name:String[1], other:Integer[1])#[1]

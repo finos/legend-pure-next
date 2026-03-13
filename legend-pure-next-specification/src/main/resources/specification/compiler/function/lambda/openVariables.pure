@@ -1,0 +1,19 @@
+###Pure
+function test::t():Any[*]
+{
+    let x = 1;
+    z:Integer[1]|$x+$z;
+}
+
+###CompiledGraph
+function test::t__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  @4:5-4:13
+    typeParam T -> Integer
+    mulParam m -> [1]
+    AtomicValue  'x' :String[1]
+    AtomicValue  1 :Integer[1]  @4:13-4:13
+  Lambda(z:Integer[1]) :#LambdaFunction<#{Integer[1]->#Integer##[1]#}#>#[1]  @5:5-5:22
+    openVar x :#Integer##[1]#
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @5:20-5:22
+      Variable x :#Integer##[1]#  @5:18-5:19
+      Variable z :#Integer##[1]#  @5:21-5:22

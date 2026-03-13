@@ -1,0 +1,11 @@
+###Pure
+function protocol::f(): Any[*]
+{
+    [1, 2];
+    ['a', 2, true];
+    [1 + 1, 'a'];
+    [1->f(), 2];
+    [$a.property, 'a'];
+    [x::A, 2];
+    [^A(x=1), ^B(y=2)];
+}

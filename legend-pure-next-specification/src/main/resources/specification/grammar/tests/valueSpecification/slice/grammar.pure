@@ -1,0 +1,7 @@
+###Pure
+function protocol::sliceExpressions(): Any[*]
+{
+  [:10];
+  [1:10];
+  [1:10:2];
+}

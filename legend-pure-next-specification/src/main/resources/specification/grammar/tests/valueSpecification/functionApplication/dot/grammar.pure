@@ -1,0 +1,14 @@
+###Pure
+import protocol::support::*;
+function protocol::dotExpressions(): Any[*]
+{
+  $x.name;
+  $x.address.city;
+  $x.address.city.length;
+  $x.name->toUpper();
+}
+
+Class protocol::support::Address
+{
+  city: String[1];
+}

@@ -1,0 +1,11 @@
+###Pure
+Measure protocol::TestMeasure
+{
+  *Gram: x -> $x;
+  Kilogram: x -> $x * 1000;
+}
+
+function protocol::unitExpressions(): Any[*]
+{
+  5 TestMeasure~Kilogram
+}

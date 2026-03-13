@@ -1,0 +1,9 @@
+###Error
+Variable 'x' is already defined (at valueSpecification/let/let_E_conflict 8:3-8:13)
+
+###Pure
+function test::new::testNew(): Any[*]
+{
+  let x = 1;
+  let x = 'a';
+}

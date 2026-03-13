@@ -1,0 +1,11 @@
+###Error
+Default value multiplicity mismatch: expected [1] but got [2] (at class/property/defaultValue_E_wrongMultiplicity 9:3-9:28)
+
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[1] = [1,2];
+}
+

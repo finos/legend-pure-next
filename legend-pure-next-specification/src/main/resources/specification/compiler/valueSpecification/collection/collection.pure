@@ -1,0 +1,74 @@
+###Pure
+import a::*;
+import protocol::*;
+
+function protocol::f(x:X[1]): Any[*]
+{
+    [1, 2];
+    ['a', 2, true];
+    [1 + 1, 'a'];
+    [1->plus(1), 2];
+    [$x.property, 10];
+    [a::A, 2];
+    [^A(), ^B()];
+}
+
+Class a::A extends C
+{
+}
+
+Class a::B extends C
+{
+}
+
+Class a::C
+{
+}
+
+Class a::X
+{
+    property : Integer[1];
+}
+
+###CompiledGraph
+function protocol::f_X_1__Any_MANY_(x:a::X[1]):Any[*]  ~UserDefinedFunction<{a::X[1]->Any[*]}>
+  Collection :#Integer#[2]  @7:5-7:10
+    AtomicValue  1 :Integer[1]  @7:6-7:6
+    AtomicValue  2 :Integer[1]  @7:9-7:9
+  Collection :#Any#[3]  @8:5-8:18
+    AtomicValue  'a' :String[1]  @8:6-8:8
+    AtomicValue  2 :Integer[1]  @8:11-8:11
+    AtomicValue  true :Boolean[1]  @8:14-8:17
+  Collection :#Any#[2]  @9:5-9:16
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @9:8-9:10
+      AtomicValue  1 :Integer[1]  @9:6-9:6
+      AtomicValue  1 :Integer[1]  @9:10-9:10
+    AtomicValue  'a' :String[1]  @9:13-9:15
+  Collection :#Integer#[2]  @10:5-10:19
+    ArrowInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @10:7-10:15
+      AtomicValue  1 :Integer[1]  @10:6-10:6
+      AtomicValue  1 :Integer[1]  @10:14-10:14
+    AtomicValue  2 :Integer[1]  @10:18-10:18
+  Collection :#Integer#[2]  @11:5-11:21
+    DotApplication a::X.property :#Integer##[1]#  @11:8-11:16
+      Variable x :#a::X##[1]#  @11:6-11:7
+    AtomicValue  10 :Integer[1]  @11:19-11:20
+  Collection :#Any#[2]  @12:5-12:13
+    AtomicValue  a::A :#Class<a::A>#[1]  @12:6-12:9
+    AtomicValue  2 :Integer[1]  @12:12-12:12
+  Collection :#a::C#[2]  @13:5-13:16
+    FunctionInvocation new_T_1__T_1_ :#a::A##[1]#  @13:6-13:9
+      typeParam T -> a::A
+      TypeHolder :a::A[1]  @13:6-13:9
+    FunctionInvocation new_T_1__T_1_ :#a::B##[1]#  @13:12-13:15
+      typeParam T -> a::B
+      TypeHolder :a::B[1]  @13:12-13:15
+
+class a::A extends a::C  ~Class<a::A>  @16:1-18:1
+
+class a::B extends a::C  ~Class<a::B>  @20:1-22:1
+
+class a::C  ~Class<a::C>  @24:1-26:1
+
+class a::X  ~Class<a::X>  @28:1-31:1
+  property property :Integer[1]  ~Property<a::X, Integer | 1>

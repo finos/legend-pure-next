@@ -1,0 +1,5 @@
+###Pure
+function protocol::dslExpression(): Any[*]
+{
+  #{}#
+}

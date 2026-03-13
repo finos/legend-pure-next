@@ -1,0 +1,23 @@
+###Pure
+import a::*;
+import protocol::*;
+
+function protocol::f(): Any[*]
+{
+    [
+        x:Integer[1]|1,
+        x::f_Float_1__Float_1_
+
+    ]
+}
+
+native function x::f(x:Float[1]):Float[1];
+
+###CompiledGraph
+function protocol::f__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  Collection :#FunctionWithParameters<#{#Nil##[1]#->#Number##[1]#}#>#[2]  @7:5-11:5
+    Lambda(x:Integer[1]) :#LambdaFunction<#{Integer[1]->Integer[1]}#>#[1]  @8:9-8:22
+      AtomicValue  1 :Integer[1]  @8:22-8:22
+    AtomicValue  x::f_Float_1__Float_1_ :#NativeFunction<{Float[1]->Float[1]}>#[1]  @9:9-9:30
+
+native function x::f_Float_1__Float_1_(x:Float[1]):Float[1]  ~NativeFunction<{Float[1]->Float[1]}>

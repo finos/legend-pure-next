@@ -1,0 +1,22 @@
+###Pure
+Class test::Class
+[
+  $this.other->_startsWith('x')
+]
+{
+  other: String[1];
+}
+
+native function _startsWith(source:String[1], val:String[1]):Boolean[1];
+
+###CompiledGraph
+class test::Class  ~Class<test::Class>  @2:1-8:1
+  property other :String[1]  ~Property<test::Class, String | 1>
+  constraint
+    Lambda(this:test::Class[1])
+      ArrowInvocation _startsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  @4:14-4:31
+        DotApplication test::Class.other :#String##[1]#  @4:8-4:13
+          Variable this :#test::Class##[1]#  @4:3-4:7
+        AtomicValue  'x' :String[1]  @4:28-4:30
+
+native function _startsWith_String_1__String_1__Boolean_1_(source:String[1], val:String[1]):Boolean[1]  ~NativeFunction<{String[1], String[1]->Boolean[1]}>

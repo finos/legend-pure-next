@@ -1,0 +1,383 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "ClassWithPropertiesWithDefaultValues",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 37,
+              "endLine" : 5,
+              "startColumn" : 29,
+              "startLine" : 5
+            },
+            "value" : "default"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 37,
+            "endLine" : 5,
+            "startColumn" : 27,
+            "startLine" : 5
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 22,
+              "endLine" : 5,
+              "startColumn" : 17,
+              "startLine" : 5
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultValue",
+        "sourceInformation" : {
+          "endColumn" : 38,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "Collection",
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 2
+              },
+              "upperBound" : {
+                "value" : 2
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 46,
+              "endLine" : 6,
+              "startColumn" : 37,
+              "startLine" : 6
+            },
+            "values" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 6,
+                "startColumn" : 38,
+                "startLine" : 6
+              },
+              "value" : "a"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 45,
+                "endLine" : 6,
+                "startColumn" : 43,
+                "startLine" : 6
+              },
+              "value" : "b"
+            } ]
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 6,
+            "startColumn" : 35,
+            "startLine" : 6
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 27,
+              "endLine" : 6,
+              "startColumn" : 22,
+              "startLine" : 6
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultValueArray",
+        "sourceInformation" : {
+          "endColumn" : 47,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "new",
+            "parametersValues" : [ {
+              "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Light"
+                }
+              },
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 41,
+                "endLine" : 7,
+                "startColumn" : 27,
+                "startLine" : 7
+              }
+            }, {
+              "_type" : "Collection",
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 41,
+                "endLine" : 7,
+                "startColumn" : 27,
+                "startLine" : 7
+              },
+              "values" : [ {
+                "_type" : "FunctionInvocation",
+                "functionName" : "keyExpression",
+                "parametersValues" : [ {
+                  "_type" : "AtomicValue",
+                  "genericType" : {
+                    "rawType" : {
+                      "_type" : "Type_Pointer",
+                      "pointerValue" : "String"
+                    }
+                  },
+                  "sourceInformation" : {
+                    "endColumn" : 40,
+                    "endLine" : 7,
+                    "startColumn" : 34,
+                    "startLine" : 7
+                  },
+                  "value" : "value"
+                }, {
+                  "_type" : "AtomicValue",
+                  "genericType" : {
+                    "rawType" : {
+                      "_type" : "Type_Pointer",
+                      "pointerValue" : "Integer"
+                    }
+                  },
+                  "sourceInformation" : {
+                    "endColumn" : 40,
+                    "endLine" : 7,
+                    "startColumn" : 40,
+                    "startLine" : 7
+                  },
+                  "value" : 1
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 40,
+                  "endLine" : 7,
+                  "startColumn" : 34,
+                  "startLine" : 7
+                }
+              } ]
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 7,
+              "startColumn" : 27,
+              "startLine" : 7
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 41,
+            "endLine" : 7,
+            "startColumn" : 25,
+            "startLine" : 7
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Light",
+            "sourceInformation" : {
+              "endColumn" : 20,
+              "endLine" : 7,
+              "startColumn" : 16,
+              "startLine" : 7
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultType",
+        "sourceInformation" : {
+          "endColumn" : 42,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "DotApplication",
+            "functionName" : "name",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "sourceInformation" : {
+                "endColumn" : 26,
+                "endLine" : 8,
+                "startColumn" : 22,
+                "startLine" : 8
+              },
+              "value" : {
+                "pointerValue" : "Class"
+              }
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 31,
+              "endLine" : 8,
+              "startColumn" : 27,
+              "startLine" : 8
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 31,
+            "endLine" : 8,
+            "startColumn" : 20,
+            "startLine" : 8
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 15,
+              "endLine" : 8,
+              "startColumn" : 10,
+              "startLine" : 8
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "graph",
+        "sourceInformation" : {
+          "endColumn" : 32,
+          "endLine" : 8,
+          "startColumn" : 3,
+          "startLine" : 8
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Light",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 13,
+              "startColumn" : 10,
+              "startLine" : 13
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 13,
+          "startColumn" : 3,
+          "startLine" : 13
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 11
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

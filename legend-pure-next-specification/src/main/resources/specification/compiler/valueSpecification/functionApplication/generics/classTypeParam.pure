@@ -1,0 +1,38 @@
+###Pure
+Class MyClass<Z>
+{
+    value:Z[1];
+}
+
+function f<T>(s:T[*]):MyClass<T>[1]
+{
+    ^MyClass<T>(value='ok')
+}
+
+function test():Any[*]
+{
+    f(['a','b']).value+'ee';
+}
+
+###CompiledGraph
+class MyClass  ~Class<MyClass<Z>>  @2:1-5:1
+  property value :Z[1]  ~Property<MyClass<Z>, Z | 1>
+
+function f_T_MANY__MyClass_1_(s:T[*]):MyClass<T>[1]  ~UserDefinedFunction<{T[*]->MyClass<T>[1]}>
+  FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#MyClass<T>##[1]#  @9:5-9:27
+    typeParam T -> MyClass<T>
+    TypeHolder :MyClass<T>[1]  @9:5-9:27
+    Collection :#KeyExpression#[1]  @9:5-9:27
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @9:17-9:26
+        AtomicValue  'value' :String[1]  @9:17-9:26
+        AtomicValue  'ok' :String[1]  @9:23-9:26
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @14:23-14:27
+    DotApplication MyClass.value :#String##[1]#  @14:17-14:22
+      FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  @14:5-14:16
+        typeParam T -> #String#
+        Collection :#String#[2]  @14:7-14:15
+          AtomicValue  'a' :String[1]  @14:8-14:10
+          AtomicValue  'b' :String[1]  @14:12-14:14
+    AtomicValue  'ee' :String[1]  @14:24-14:27

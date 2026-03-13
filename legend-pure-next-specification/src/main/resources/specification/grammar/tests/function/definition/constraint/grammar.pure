@@ -1,0 +1,10 @@
+###Pure
+function protocol::constrained(x: Integer[1]): Integer[1]
+[
+    x > 0,
+    positive: $x > 0,
+    $return > 2
+]
+{
+    $x + 1
+}

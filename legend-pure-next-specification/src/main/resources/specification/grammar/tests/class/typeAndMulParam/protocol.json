@@ -1,0 +1,42 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "multiplicityParameters" : [ {
+        "name" : "m"
+      } ],
+      "name" : "X",
+      "package" : {
+        "pointerValue" : "x"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "typeParameter" : {
+            "name" : "T"
+          }
+        },
+        "multiplicity" : {
+          "multiplicityParameter" : "m"
+        },
+        "name" : "val",
+        "sourceInformation" : {
+          "endColumn" : 14,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "typeParameters" : [ {
+        "name" : "T"
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

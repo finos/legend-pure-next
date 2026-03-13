@@ -1,0 +1,23 @@
+###Pure
+import x::b::*;
+
+Class x::b::MyClass
+{
+    prop: Prop[1];
+}
+
+Class x::b::Prop
+{
+}
+
+###Pure
+import a::b::*;
+
+Class a::b::MyOtherClass
+{
+    prop: Prop[1];
+}
+
+Class a::b::Prop
+{
+}

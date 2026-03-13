@@ -1,0 +1,5 @@
+###Error
+The type 'UnknownType' can't be found in native function 'pack::broken_String_1__UnknownType_1_' (at function/native/simple_E_unknownReturnType 5:45-5:55)
+
+###Pure
+native function pack::broken(x: String[1]): UnknownType[1];

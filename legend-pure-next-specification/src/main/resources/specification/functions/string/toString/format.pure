@@ -1,0 +1,127 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+// Used by Pair
+native function
+    <<PCT.function>>
+    {
+        doc.doc=''
+    }
+    meta::pure::functions::string::format(format:String[1], args:Any[*]):String[1];
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', 'dog'])));
+    assertEquals('the quick brown fox jumps over the lazy box', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', 'box'])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 3', $f->eval(|format('the quick brown %s jumps over the lazy %d', ['fox', 3])));
+    assertEquals('the quick brown fox jumps over the lazy -3', $f->eval(|format('the quick brown %s jumps over the lazy %d', ['fox', -3])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatIntegerWithZeroPadding<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 00003', $f->eval(|format('the quick brown %s jumps over the lazy %05d', ['fox', 3])));
+    assertEquals('the quick brown fox jumps over the lazy -00003', $f->eval(|format('the quick brown %s jumps over the lazy %05d', ['fox', -3])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 1.5', $f->eval(|format('the quick brown %s jumps over the lazy %f', ['fox', 1.5])));
+    assertEquals('the quick brown fox jumps over the lazy -1.5', $f->eval(|format('the quick brown %s jumps over the lazy %f', ['fox', -1.5])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatFloatWithZeroPadding<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 1.5000', $f->eval(|format('the quick brown %s jumps over the lazy %.4f', ['fox', 1.5])));
+    assertEquals('the quick brown fox jumps over the lazy -1.5000', $f->eval(|format('the quick brown %s jumps over the lazy %.4f', ['fox', -1.5])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatFloatWithTruncation<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 1.1', $f->eval(|format('the quick brown %s jumps over the lazy %.1f', ['fox', 1.11])));
+    assertEquals('the quick brown fox jumps over the lazy -1.1', $f->eval(|format('the quick brown %s jumps over the lazy %.1f', ['fox', -1.11])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatFloatWithRounding<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 1.34', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 1.338])));
+    assertEquals('the quick brown fox jumps over the lazy -1.34', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -1.338])));
+    assertEquals('the quick brown fox jumps over the lazy 10.00', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 9.999])));
+    assertEquals('the quick brown fox jumps over the lazy -10.00', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -9.999])));
+    assertEquals('the quick brown fox jumps over the lazy 1.61', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 1.613])));
+    assertEquals('the quick brown fox jumps over the lazy -1.61', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -1.613])));
+    assertEquals('the quick brown fox jumps over the lazy 0.61', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 0.613])));
+    assertEquals('the quick brown fox jumps over the lazy -0.61', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -0.613])));
+    assertEquals('the quick brown fox jumps over the lazy 0.06', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 0.0553])));
+    assertEquals('the quick brown fox jumps over the lazy -0.06', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -0.0553])));
+    assertEquals('the quick brown fox jumps over the lazy 0.01', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 0.00553])));
+    assertEquals('the quick brown fox jumps over the lazy -0.01', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -0.00553])));
+    assertEquals('the quick brown fox jumps over the lazy 0.00', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', 0.000553])));
+    assertEquals('the quick brown fox jumps over the lazy -0.00', $f->eval(|format('the quick brown %s jumps over the lazy %.2f', ['fox', -0.000553])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testSimpleFormatDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy 2014-01-01T00:00:00.000+0000', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', %2014-01-01T00:00:00.000])));
+    assertEquals('the quick brown fox jumps over the lazy 2014-01-01T00:00:00.000+0000', $f->eval(|format('the quick brown %s jumps over the lazy %t', ['fox', %2014-01-01T00:00:00.000])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('on 2014-03-10', $f->eval(|format('on %t{yyyy-MM-dd}', %2014-03-10)));
+    assertEquals('on 2014-03-10', $f->eval(|format('on %t{yyyy-MM-dd}', %2014-03-10T12:00:00)));
+    assertEquals('on 2014-03-10 1:07:44PM', $f->eval(|format('on %t{yyyy-MM-dd h:mm:ssa}', %2014-03-10T13:07:44.001)));
+    assertEquals('on 2014-03-10 01:07:44PM', $f->eval(|format('on %t{yyyy-MM-dd hh:mm:ssa}', %2014-03-10T13:07:44.001)));
+    assertEquals('on 2014-03-10T13:07:44.001+0000', $f->eval(|format('on %t{yyyy-MM-dd"T"HH:mm:ss.SSSZ}', %2014-03-10T13:07:44.001)));
+    assertEquals('on 2014-03-10 13:07:44.001Z', $f->eval(|format('on %t{yyyy-MM-dd HH:mm:ss.SSSX}', %2014-03-10T13:07:44.001)));
+    assertEquals('on 2014-03-10 08:07:44.001-0500', $f->eval(|format('on %t{[EST]yyyy-MM-dd HH:mm:ss.SSSZ}', %2014-03-10T13:07:44.001)));
+    assertEquals('on 2014-03-10 14:07:44.001+0100', $f->eval(|format('on %t{[CET]yyyy-MM-dd HH:mm:ss.SSSZ}', %2014-03-10T13:07:44.001)));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy true', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', true])));
+    assertEquals('the quick brown fox jumps over the lazy false', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', false])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatList<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy [dog, [cat, mouse]]', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', ^List<Any>(values=['dog', ^List<String>(values=['cat', 'mouse'])])])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatPair<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy <dog, <cat, mouse>>', $f->eval(|format('the quick brown %s jumps over the lazy %s', ['fox', ^Pair<Any, Any>(first='dog', second=^Pair<String, String>(first='cat', second='mouse'))])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatRepr<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy \'dog \\\\ \\\'dog\\\'\'', $f->eval(|format('the quick brown %s jumps over the lazy %r', ['fox', 'dog \\ \'dog\''])));
+    assertEquals('the quick brown fox jumps over the lazy %2014-01-01T00:00:00.000+0000', $f->eval(|format('the quick brown %s jumps over the lazy %r', ['fox', %2014-01-01T00:00:00.000])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatInEval<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|format_String_1__Any_MANY__String_1_->eval('the quick brown %s jumps over the lazy %s', ['fox', 'dog'])));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::format::testFormatInEvaluate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('the quick brown fox jumps over the lazy dog', $f->eval(|format_String_1__Any_MANY__String_1_->evaluate([^List<String>(values='the quick brown %s jumps over the lazy %s'), ^List<Any>(values=['fox', 'dog'])])));
+}

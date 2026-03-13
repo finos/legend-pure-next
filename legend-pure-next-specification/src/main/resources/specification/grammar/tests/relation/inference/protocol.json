@@ -1,0 +1,243 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "NativeFunction",
+      "functionName" : "rename",
+      "name" : "rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_",
+      "package" : {
+        "pointerValue" : "meta::pure::functions::relation"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Relation",
+            "sourceInformation" : {
+              "endColumn" : 93,
+              "endLine" : 2,
+              "startColumn" : 86,
+              "startLine" : 2
+            }
+          },
+          "typeArguments" : [ {
+            "typeParameter" : {
+              "name" : "T"
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "r",
+        "sourceInformation" : {
+          "endColumn" : 99,
+          "endLine" : 2,
+          "startColumn" : 83,
+          "startLine" : 2
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "ColSpec",
+            "sourceInformation" : {
+              "endColumn" : 113,
+              "endLine" : 2,
+              "startColumn" : 107,
+              "startLine" : 2
+            }
+          },
+          "typeArguments" : [ {
+            "left" : {
+              "left" : {
+                "typeParameter" : {
+                  "name" : "Z"
+                }
+              },
+              "right" : {
+                "rawType" : {
+                  "_type" : "RelationType",
+                  "columns" : [ {
+                    "genericType" : {
+                      "typeParameter" : {
+                        "name" : "K"
+                      }
+                    },
+                    "nameWildCard" : true,
+                    "sourceInformation" : {
+                      "endColumn" : 120,
+                      "endLine" : 2,
+                      "startColumn" : 118,
+                      "startLine" : 2
+                    }
+                  } ]
+                }
+              },
+              "type" : "EQUAL"
+            },
+            "right" : {
+              "typeParameter" : {
+                "name" : "T"
+              }
+            },
+            "type" : "SUBSET"
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "old",
+        "sourceInformation" : {
+          "endColumn" : 127,
+          "endLine" : 2,
+          "startColumn" : 102,
+          "startLine" : 2
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "ColSpec",
+            "sourceInformation" : {
+              "endColumn" : 141,
+              "endLine" : 2,
+              "startColumn" : 135,
+              "startLine" : 2
+            }
+          },
+          "typeArguments" : [ {
+            "left" : {
+              "typeParameter" : {
+                "name" : "V"
+              }
+            },
+            "right" : {
+              "rawType" : {
+                "_type" : "RelationType",
+                "columns" : [ {
+                  "genericType" : {
+                    "typeParameter" : {
+                      "name" : "K"
+                    }
+                  },
+                  "nameWildCard" : true,
+                  "sourceInformation" : {
+                    "endColumn" : 148,
+                    "endLine" : 2,
+                    "startColumn" : 146,
+                    "startLine" : 2
+                  }
+                } ]
+              }
+            },
+            "type" : "EQUAL"
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "new",
+        "sourceInformation" : {
+          "endColumn" : 153,
+          "endLine" : 2,
+          "startColumn" : 130,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Relation",
+          "sourceInformation" : {
+            "endColumn" : 164,
+            "endLine" : 2,
+            "startColumn" : 157,
+            "startLine" : 2
+          }
+        },
+        "typeArguments" : [ {
+          "left" : {
+            "left" : {
+              "typeParameter" : {
+                "name" : "T"
+              }
+            },
+            "right" : {
+              "typeParameter" : {
+                "name" : "Z"
+              }
+            },
+            "type" : "DIFFERENCE"
+          },
+          "right" : {
+            "typeParameter" : {
+              "name" : "V"
+            }
+          },
+          "type" : "UNION"
+        } ]
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 1
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 175,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "stereotypes" : [ {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 30,
+            "endLine" : 2,
+            "startColumn" : 23,
+            "startLine" : 2
+          },
+          "value" : "function"
+        } ],
+        "pointerValue" : "PCT",
+        "sourceInformation" : {
+          "endColumn" : 21,
+          "endLine" : 2,
+          "startColumn" : 19,
+          "startLine" : 2
+        }
+      } ],
+      "typeParameters" : [ {
+        "name" : "T"
+      }, {
+        "name" : "Z"
+      }, {
+        "name" : "K"
+      }, {
+        "name" : "V"
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

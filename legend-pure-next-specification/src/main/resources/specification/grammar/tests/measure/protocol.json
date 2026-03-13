@@ -1,0 +1,164 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Measure",
+      "canonicalUnit" : {
+        "conversionFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x",
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 4,
+              "startColumn" : 15,
+              "startLine" : 4
+            }
+          } ],
+          "parameters" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 17,
+            "endLine" : 4,
+            "startColumn" : 10,
+            "startLine" : 4
+          }
+        },
+        "name" : "Gram",
+        "sourceInformation" : {
+          "endColumn" : 17,
+          "endLine" : 4,
+          "startColumn" : 4,
+          "startLine" : 4
+        }
+      },
+      "name" : "Mass",
+      "nonCanonicalUnits" : [ {
+        "conversionFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "times",
+            "parametersValues" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "sourceInformation" : {
+                "endColumn" : 19,
+                "endLine" : 5,
+                "startColumn" : 18,
+                "startLine" : 5
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 26,
+                "endLine" : 5,
+                "startColumn" : 23,
+                "startLine" : 5
+              },
+              "value" : 1000
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 26,
+              "endLine" : 5,
+              "startColumn" : 21,
+              "startLine" : 5
+            }
+          } ],
+          "parameters" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 5,
+            "startColumn" : 13,
+            "startLine" : 5
+          }
+        },
+        "name" : "Kilogram",
+        "sourceInformation" : {
+          "endColumn" : 27,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "conversionFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "times",
+            "parametersValues" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "sourceInformation" : {
+                "endColumn" : 16,
+                "endLine" : 6,
+                "startColumn" : 15,
+                "startLine" : 6
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Float"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 25,
+                "endLine" : 6,
+                "startColumn" : 20,
+                "startLine" : 6
+              },
+              "value" : 453.59
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 25,
+              "endLine" : 6,
+              "startColumn" : 18,
+              "startLine" : 6
+            }
+          } ],
+          "parameters" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 26,
+            "endLine" : 6,
+            "startColumn" : 10,
+            "startLine" : 6
+          }
+        },
+        "name" : "Pound",
+        "sourceInformation" : {
+          "endColumn" : 26,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ],
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

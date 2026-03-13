@@ -1,0 +1,11 @@
+###Error
+Property with a default value cannot have a multiplicity with a lower bound of 0 (at class/property/defaultValue_E_NoZeroOne 9:3-9:27)
+
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[0..1] = 1;
+}
+

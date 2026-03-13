@@ -1,0 +1,5 @@
+###Error
+The type 'WrongType' can't be found in super type in primitive type 'protocol::Varchar' (at primitive/simple_E_wrongSuperType 5:37-5:45)
+
+###Pure
+Primitive protocol::Varchar extends WrongType

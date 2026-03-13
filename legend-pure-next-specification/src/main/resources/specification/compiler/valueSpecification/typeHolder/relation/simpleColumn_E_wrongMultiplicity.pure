@@ -1,0 +1,8 @@
+###Error
+Return type error in function 'test__Relation_1_': expected Relation<(name:String[1])>, got Relation<(name:String[*])> (at valueSpecification/typeHolder/relation/simpleColumn_E_wrongMultiplicity 7:4-7:30)
+
+###Pure
+function test():Relation<(name:String[1])>[1]
+{
+   @Relation<(name:String[*])>;
+}

@@ -1,0 +1,10 @@
+###Error
+The variable 'y' is unknown! (at primitive/constraints_E_wrongVariable 7:24-7:25)
+
+###Pure
+Primitive protocol::Varchar(x: Integer[1]) extends String
+[
+    $this->_length() < $y
+]
+
+native function _length(str:String[1]):Integer[1];

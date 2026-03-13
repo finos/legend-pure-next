@@ -1,0 +1,24 @@
+###Pure
+import meta::pure::metamodel::relation::*;
+
+function f(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1], y:Relation<(bla:String[1])>[1]):Any[*]
+{
+   $x->select(~[legal, other])
+}
+
+native function select<T,Z>(r:Relation<T>[1], cols:ColSpecArray<Z⊆T>[1]):Relation<Z>[1];
+
+###CompiledGraph
+function f_Relation_1__Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1], y:Relation<(bla:String[1])>[1]):Any[*]  ~UserDefinedFunction<{Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1], Relation<(bla:String[1])>[1]->Any[*]}>
+  ArrowInvocation select_Relation_1__ColSpecArray_1__Relation_1_ :#Relation<#(legal:String[1], other:Integer[0..1])#>##[1]#  @6:6-6:30
+    typeParam T -> (legal:String[1], other:Integer[0..1], yeah:Float[1])
+    typeParam Z -> #(legal:String[1], other:Integer[0..1])#
+    Variable x :#Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>##[1]#  @6:4-6:5
+    FunctionInvocation colSpecArray_String_MANY__T_1__ColSpecArray_1_ :#ColSpecArray<#(legal:String[1], other:Integer[0..1])#>##[1]#  @6:15-6:29
+      typeParam T -> #(legal:String[1], other:Integer[0..1])#
+      Collection :#String#[2]
+        AtomicValue  'legal' :String[1]
+        AtomicValue  'other' :String[1]
+      TypeHolder :#(legal:String[1], other:Integer[0..1])#[1]
+
+native function select_Relation_1__ColSpecArray_1__Relation_1_(r:Relation<T>[1], cols:ColSpecArray<Z⊆T>[1]):Relation<Z>[1]  ~NativeFunction<{Relation<T>[1], ColSpecArray<Z⊆T>[1]->Relation<Z>[1]}>

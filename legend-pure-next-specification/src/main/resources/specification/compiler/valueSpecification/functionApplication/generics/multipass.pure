@@ -1,0 +1,32 @@
+###Pure
+import test::*;
+
+native function test::mp<T,K>(g:Function<{K[1]->Boolean[1]}>[1], f:Function<{T[1]->K[1]}>[1], v:T[1]):Boolean[1];
+
+native function test::toNum(x:String[1]):Integer[1];
+
+native function test::isPositive(x:Integer[1]):Boolean[1];
+
+function test::tst():Boolean[1]
+{
+    mp(y|$y->isPositive(), x|$x->toNum(), 'hello');
+}
+
+###CompiledGraph
+native function test::mp_Function_1__Function_1__T_1__Boolean_1_(g:Function<{K[1]->Boolean[1]}>[1], f:Function<{T[1]->K[1]}>[1], v:T[1]):Boolean[1]  ~NativeFunction<{Function<{K[1]->Boolean[1]}>[1], Function<{T[1]->K[1]}>[1], T[1]->Boolean[1]}>
+
+native function test::toNum_String_1__Integer_1_(x:String[1]):Integer[1]  ~NativeFunction<{String[1]->Integer[1]}>
+
+native function test::isPositive_Integer_1__Boolean_1_(x:Integer[1]):Boolean[1]  ~NativeFunction<{Integer[1]->Boolean[1]}>
+
+function test::tst__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  FunctionInvocation test::mp_Function_1__Function_1__T_1__Boolean_1_ :#Boolean##[1]#  @12:5-12:50
+    typeParam K -> #Integer#
+    typeParam T -> #String#
+    Lambda(y:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Boolean##[1]#}#>#[1]  @12:8-12:25
+      ArrowInvocation test::isPositive_Integer_1__Boolean_1_ :#Boolean##[1]#  @12:12-12:25
+        Variable y :#Integer##[1]#  @12:10-12:11
+    Lambda(x:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#Integer##[1]#}#>#[1]  @12:28-12:40
+      ArrowInvocation test::toNum_String_1__Integer_1_ :#Integer##[1]#  @12:32-12:40
+        Variable x :#String##[1]#  @12:30-12:31
+    AtomicValue  'hello' :String[1]  @12:43-12:49

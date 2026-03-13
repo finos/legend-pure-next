@@ -1,0 +1,169 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "DotApplication",
+        "functionName" : "A",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "sourceInformation" : {
+            "endColumn" : 8,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          },
+          "value" : {
+            "pointerValue" : "myEnum"
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 10,
+          "endLine" : 5,
+          "startColumn" : 9,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "DotApplication",
+        "functionName" : "B",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "sourceInformation" : {
+            "endColumn" : 8,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          },
+          "value" : {
+            "pointerValue" : "myEnum"
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 10,
+          "endLine" : 6,
+          "startColumn" : 9,
+          "startLine" : 6
+        }
+      }, {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 2
+          },
+          "upperBound" : {
+            "value" : 2
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 22,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        },
+        "values" : [ {
+          "_type" : "DotApplication",
+          "functionName" : "A",
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "sourceInformation" : {
+              "endColumn" : 9,
+              "endLine" : 7,
+              "startColumn" : 4,
+              "startLine" : 7
+            },
+            "value" : {
+              "pointerValue" : "myEnum"
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 11,
+            "endLine" : 7,
+            "startColumn" : 10,
+            "startLine" : 7
+          }
+        }, {
+          "_type" : "DotApplication",
+          "functionName" : "B",
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "sourceInformation" : {
+              "endColumn" : 19,
+              "endLine" : 7,
+              "startColumn" : 14,
+              "startLine" : 7
+            },
+            "value" : {
+              "pointerValue" : "myEnum"
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 21,
+            "endLine" : 7,
+            "startColumn" : 20,
+            "startLine" : 7
+          }
+        } ]
+      } ],
+      "functionName" : "f",
+      "name" : "f__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 3,
+            "startColumn" : 25,
+            "startLine" : 3
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "Enumeration",
+      "name" : "myEnum",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "properties" : [ {
+        "name" : "A",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 12,
+          "startColumn" : 3,
+          "startLine" : 12
+        }
+      }, {
+        "name" : "B",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 13,
+          "startColumn" : 3,
+          "startLine" : 13
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 10
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

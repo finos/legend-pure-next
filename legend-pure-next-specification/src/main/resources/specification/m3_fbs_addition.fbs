@@ -1,0 +1,35 @@
+// Additional FlatBuffer structures for the Pure M3 model
+// Merged with m3.fbs at compile time
+
+table FunctionIndexEntry {
+    full_path: string;
+    function_name: string;
+    function_type: FunctionTypeDef;
+}
+
+table FunctionIndex {
+    entries: [FunctionIndexEntry];
+}
+
+table ElementIndexEntry {
+    element_path: string;
+    element_type: string;
+}
+
+table ElementIndex {
+    elements: [ElementIndexEntry];
+}
+
+table Manifest {
+    name: string;
+    pattern: string;
+    dependencies: [string];
+    format: Format;
+}
+
+table Format {
+    m3_model_hash: string;
+    id_encoding: string;
+    optimizations: [string];
+}
+

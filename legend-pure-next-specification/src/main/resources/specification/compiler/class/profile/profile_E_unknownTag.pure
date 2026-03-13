@@ -1,0 +1,16 @@
+###Error
+The tag 'unknown' can't be found in profile 'AProfile' in class 'pack::MyClass' (at class/profile/profile_E_unknownTag 13:17-13:23)
+
+###Pure
+import pack::*;
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class {AProfile.unknown = 'value'} pack::MyClass
+{
+  value: Integer[1];
+}

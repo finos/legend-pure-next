@@ -1,0 +1,16 @@
+###Error
+The profile 'Unknown' can't be found in class 'pack::MyClass' (at class/profile/profile_E_unknownProfile 13:9-13:15)
+
+###Pure
+import pack::*;
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class <<Unknown.flag>> pack::MyClass
+{
+  value: Integer[1];
+}

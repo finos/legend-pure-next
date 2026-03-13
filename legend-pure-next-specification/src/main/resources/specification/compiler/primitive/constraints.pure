@@ -1,0 +1,19 @@
+###Pure
+Primitive protocol::Varchar(x: Integer[1]) extends String
+[
+    $this->_length() < $x
+]
+
+native function _length(str:String[1]):Integer[1];
+
+###CompiledGraph
+primitive protocol::Varchar  ~PrimitiveType  @2:1-5:1
+  typeVariable x :Integer[1]
+  constraint
+    Lambda(this:protocol::Varchar[1], x:Integer[1])
+      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  @4:22-4:25
+        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  @4:10-4:20
+          Variable this :#protocol::Varchar##[1]#  @4:5-4:9
+        Variable x :#Integer##[1]#  @4:24-4:25
+
+native function _length_String_1__Integer_1_(str:String[1]):Integer[1]  ~NativeFunction<{String[1]->Integer[1]}>

@@ -1,0 +1,15 @@
+###Pure
+function protocol::test(): Any[*]
+{
+    protocol::MyClass.all()
+}
+
+function protocol::test2(): Any[*]
+{
+    protocol::MyClass.allVersions()
+}
+
+function protocol::test3(start: Date[1], end: Date[1]): Any[*]
+{
+    protocol::MyClass.allVersionsInRange($start, $end)
+}

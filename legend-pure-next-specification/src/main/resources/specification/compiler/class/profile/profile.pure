@@ -1,0 +1,25 @@
+###Pure
+import protocol::support::*;
+
+Class <<AProfile.flag, protocol::support::AProfile.newFlag>> {protocol::support::AProfile.tag1 = 'yeah', AProfile.tag2 = 'ok'} protocol::LightProfileStereotypesTaggedValues
+{
+  value: Integer[1];
+}
+
+Profile protocol::support::AProfile
+{
+  stereotypes: [flag, newFlag];
+  tags: [tag1, tag2];
+}
+
+###CompiledGraph
+class protocol::LightProfileStereotypesTaggedValues  ~Class<protocol::LightProfileStereotypesTaggedValues>  @4:1-7:1
+  <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
+  {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
+  property value :Integer[1]  ~Property<protocol::LightProfileStereotypesTaggedValues, Integer | 1>
+
+profile protocol::support::AProfile  ~Profile
+  stereotype flag
+  stereotype newFlag
+  tag tag1
+  tag tag2

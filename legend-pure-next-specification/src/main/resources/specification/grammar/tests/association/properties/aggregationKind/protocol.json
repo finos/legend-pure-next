@@ -1,0 +1,98 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Association",
+      "name" : "AnAssociation3",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::AssociationClassA",
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 4,
+              "startColumn" : 6,
+              "startLine" : 4
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "a",
+        "sourceInformation" : {
+          "endColumn" : 45,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "aggregation" : "COMPOSITE",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::AssociationClassB",
+            "sourceInformation" : {
+              "endColumn" : 53,
+              "endLine" : 5,
+              "startColumn" : 18,
+              "startLine" : 5
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "b",
+        "sourceInformation" : {
+          "endColumn" : 60,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 6,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassA",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 8
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassB",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 12
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

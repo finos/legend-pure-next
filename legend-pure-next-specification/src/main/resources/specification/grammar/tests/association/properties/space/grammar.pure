@@ -1,0 +1,16 @@
+###Pure
+import protocol::support::*;
+
+Association protocol::AnAssociationWithSpace
+{
+  'other property': protocol::support::AssociationClassA[1];
+  'oh yeah': protocol::support::AssociationClassB[0..1];
+}
+
+Class protocol::support::AssociationClassA
+{
+}
+
+Class protocol::support::AssociationClassB
+{
+}

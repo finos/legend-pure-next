@@ -1,0 +1,11 @@
+###Pure
+Enum protocol::AnEnum
+{
+  Val,
+  Val2
+}
+
+###CompiledGraph
+enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @2:1-6:1
+  property Val  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum | 1>  = ^protocol::AnEnum(name='Val')  @4:3-4:5
+  property Val2  ~Property<Enumeration<protocol::AnEnum>, protocol::AnEnum | 1>  = ^protocol::AnEnum(name='Val2')  @5:3-5:6

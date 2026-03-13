@@ -1,0 +1,25 @@
+###Pure
+native function f<T>(s:Function<{->T[1]}>[1]):T[1];
+
+function test():Any[*]
+{
+    f(|1)+1;
+    f(|'1')+'1';
+}
+
+###CompiledGraph
+native function f_Function_1__T_1_(s:Function<{->T[1]}>[1]):T[1]  ~NativeFunction<{Function<{->T[1]}>[1]->T[1]}>
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @6:10-6:11
+    FunctionInvocation f_Function_1__T_1_ :#Integer##[1]#  @6:5-6:9
+      typeParam T -> Integer
+      Lambda :#LambdaFunction<#{->Integer[1]}#>#[1]  @6:7-6:8
+        AtomicValue  1 :Integer[1]  @6:8-6:8
+    AtomicValue  1 :Integer[1]  @6:11-6:11
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @7:12-7:15
+    FunctionInvocation f_Function_1__T_1_ :#String##[1]#  @7:5-7:11
+      typeParam T -> String
+      Lambda :#LambdaFunction<#{->String[1]}#>#[1]  @7:7-7:10
+        AtomicValue  '1' :String[1]  @7:8-7:10
+    AtomicValue  '1' :String[1]  @7:13-7:15

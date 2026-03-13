@@ -1,0 +1,9 @@
+###Pure
+function test::primitive::testDecimal(): Any[*]
+{
+  3.14D;
+}
+
+###CompiledGraph
+function test::primitive::testDecimal__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  AtomicValue  3.14 :Decimal[1]  @4:3-4:7

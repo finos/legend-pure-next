@@ -1,0 +1,14 @@
+###Error
+Can't find column 'unknown' in relation type '(legal:String[1], other:Integer[0..1])' (at valueSpecification/functionApplication/generics/relation/extend_E_unknownColumn 9:46-9:53)
+
+###Pure
+import meta::pure::metamodel::relation::*;
+
+function ftest(x:Relation<(legal:String[1], other:Integer[0..1])>[1]):Any[*]
+{
+   $x->extend(over(), ~new:{p,w,r|$p->lag($r).unknown});
+}
+
+native function over<T>():Window<T>[1];
+native function extend<T,R>(r:Relation<T>[1], window:Window<T>[1], f:FuncColSpec<{Relation<T>[1],Window<T>[1],T[1]->Any[0..1]},R>[1]):Relation<T+R>[1];
+native function lag<T>(w:Relation<T>[1],r:T[1]):T[0..1];

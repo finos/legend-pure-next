@@ -1,0 +1,11 @@
+###Pure
+function test::primitive::testInteger(): Any[*]
+{
+  42;
+  -1;
+}
+
+###CompiledGraph
+function test::primitive::testInteger__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  AtomicValue  42 :Integer[1]  @4:3-4:4
+  AtomicValue  -1 :Integer[1]  @5:4-5:4

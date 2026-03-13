@@ -1,0 +1,108 @@
+###Pure
+function protocol::precedenceArithmetic(): Any[*]
+{
+  2 * 4 + 2;
+  2 + 2 * 4;
+  2 + 2 / 4;
+  2 / 4 - 4;
+}
+
+function protocol::precedenceComparison(): Any[*]
+{
+  2 + 3 > 4;
+  2 > 3 + 4;
+  2 + 3 > 4 * 5;
+  2 * 3 < 4 + 5;
+  2 + 3 >= 4;
+  2 <= 3 * 4;
+}
+
+function protocol::precedenceBooleanWithEqual(): Any[*]
+{
+  true == false && true == false;
+  true == false && true == false || false == false;
+  true == false || true == false && false == false;
+  true == !false || !(true == false) && false == false;
+  not(true != false && true == !false);
+  not(true != false && true == !false || !(true && false && true == !false));
+  true && false == $x->isNumber();
+  $x->isNumber() && false == $x->isNumber();
+  $x->isNumber() && false == true;
+}
+
+function protocol::precedenceComparisonBoolean(): Any[*]
+{
+  2 > 3 && 4 < 5;
+  2 > 3 || 4 < 5;
+  2 > 3 && 4 < 5 || 6 > 7;
+  2 > 3 || 4 < 5 && 6 > 7;
+}
+
+function protocol::precedenceMixed(): Any[*]
+{
+  2 + 3 > 4 && 5 * 6 < 7;
+  2 + 3 > 4 || 5 * 6 < 7 && 8 >= 9;
+  2 + 3 > 4 && 5 * 6 < 7 || 8 >= 9;
+}
+
+function protocol::precedenceEqualityArithmetic(): Any[*]
+{
+  2 + 3 == 4 * 5;
+  2 + 3 != 4;
+  2 * 3 != 4 + 5;
+}
+
+function protocol::precedenceEqualityComparison(): Any[*]
+{
+  2 > 3 == 4 < 5;
+  2 + 3 > 4 != 5 * 6 < 7;
+  2 >= 3 == 4 <= 5;
+}
+
+function protocol::precedenceWithDotAndArrow(): Any[*]
+{
+  $x->size() + 3 > 4;
+  $x.a + $y.b * 2;
+  $x.a > $y.b && $x.c < $y.d;
+  $x->size() == $y->size();
+  $x->size() * 2 == $y->size() + 1;
+  $x.a == $y.b && $x->isValid() || $y->isValid();
+  $x->size() > 0 || $y.name == 'test' && $z->isValid();
+}
+
+function protocol::precedenceMinusMultiply(): Any[*]
+{
+  2 - 3 * 4;
+  2 * 3 - 4;
+  2 - 3 * 4 + 5;
+}
+
+function protocol::precedenceChaining(): Any[*]
+{
+  2 + 3 + 4;
+  2 * 3 * 4;
+  2 + 3 + 4 * 5;
+  2 * 3 + 4 + 5;
+  true && false && true;
+  true || false || true;
+  true && false && true || false;
+}
+
+function protocol::precedenceNotExpr(): Any[*]
+{
+  !(2 > 3);
+  !$x == $y;
+  !(2 > 3) && 4 < 5;
+  !$x == $y || !$z;
+}
+
+function protocol::precedenceFullStack(): Any[*]
+{
+  1 * 2 + 3 > 4 == true && false || true;
+}
+
+function protocol::precedenceBoolean(): Any[*]
+{
+  true && false || true;
+  true || true && false;
+}

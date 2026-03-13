@@ -1,0 +1,7 @@
+###Error
+No matching function 'pl' found for argument types (Integer[1], String[1]) (at valueSpecification/functionApplication/generics/type_E_paramValueWrongType 7:28-7:37)
+
+###Pure
+function f<T>(s:T[1]):T[1]{$s}
+function pl(a:String[1], b:String[1]):String[1]{$a+$b}
+function test():Any[*]{f(1)->pl('ok')}

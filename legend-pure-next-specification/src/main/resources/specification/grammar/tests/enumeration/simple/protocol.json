@@ -1,0 +1,37 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Enumeration",
+      "name" : "AnEnum",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "name" : "Val",
+        "sourceInformation" : {
+          "endColumn" : 5,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "name" : "Val2",
+        "sourceInformation" : {
+          "endColumn" : 6,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

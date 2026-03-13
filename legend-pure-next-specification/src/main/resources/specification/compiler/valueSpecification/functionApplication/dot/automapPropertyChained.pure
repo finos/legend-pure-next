@@ -1,0 +1,26 @@
+###Pure
+import test::*;
+
+Class test::CMP_Person
+{
+    firstName : String[1];
+    lastName : String[1];
+    address : CMP_Address[0..1];
+}
+
+Class test::CMP_Address
+{
+    name : String[1];
+}
+
+// Chained automap: [$p1, $p2].address.name
+// .address on [*] receiver triggers automap map for .address
+// Then .name on the [*] result triggers automap map again
+function test::testChainedAutomap():Any[*]
+{
+    let p1 = ^CMP_Person(firstName='A', lastName='A');
+    let p2 = ^CMP_Person(firstName='B', lastName='B');
+    [$p1, $p2].address.name;
+}
+
+

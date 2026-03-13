@@ -1,0 +1,53 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 6,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        },
+        "value" : "#{}#"
+      } ],
+      "functionName" : "dslExpression",
+      "name" : "dslExpression__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 39,
+            "endLine" : 2,
+            "startColumn" : 37,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

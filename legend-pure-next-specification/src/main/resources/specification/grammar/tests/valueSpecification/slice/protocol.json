@@ -1,0 +1,158 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "slice",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 6,
+            "endLine" : 4,
+            "startColumn" : 5,
+            "startLine" : 4
+          },
+          "value" : 10
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 7,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "slice",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 4,
+            "endLine" : 5,
+            "startColumn" : 4,
+            "startLine" : 5
+          },
+          "value" : 1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 6,
+            "startLine" : 5
+          },
+          "value" : 10
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 8,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "slice",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 4,
+            "endLine" : 6,
+            "startColumn" : 4,
+            "startLine" : 6
+          },
+          "value" : 1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 6,
+            "startColumn" : 6,
+            "startLine" : 6
+          },
+          "value" : 10
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 9,
+            "endLine" : 6,
+            "startColumn" : 9,
+            "startLine" : 6
+          },
+          "value" : 2
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 10,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ],
+      "functionName" : "sliceExpressions",
+      "name" : "sliceExpressions__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 42,
+            "endLine" : 2,
+            "startColumn" : 40,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

@@ -1,0 +1,8 @@
+###Pure
+import protocol::support::*;
+
+Class protocol::ClassWithPropertiesWithSpace
+{
+  'default Value': String[1];
+  graph: String[1];
+}

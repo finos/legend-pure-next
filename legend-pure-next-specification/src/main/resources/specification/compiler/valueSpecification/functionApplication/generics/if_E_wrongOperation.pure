@@ -1,0 +1,10 @@
+###Error
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionApplication/generics/if_E_wrongOperation 9:30-9:32)
+
+###Pure
+native function test::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+
+function test::tst():Any[*]
+{
+    test::if(true,|'3',|'1') + 2;
+}

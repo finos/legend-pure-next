@@ -1,0 +1,68 @@
+class test::AggregateValue  ~Class<test::AggregateValue<A, B, C>>
+  property mapFn :FunctionDefinition<{A[1]->B[1]}>[1]  ~Property<test::AggregateValue<A, B, C>, FunctionDefinition<{A[1]->B[1]}> | 1>
+  property aggregateFn :FunctionDefinition<{B[*]->C[1]}>[1]  ~Property<test::AggregateValue<A, B, C>, FunctionDefinition<{B[*]->C[1]}> | 1>
+
+class test::TabularDataSet  ~Class<test::TabularDataSet>
+
+native function sum_Number_MANY__Number_1_(s:Number[*]):Number[1]  ~NativeFunction<{Number[*]->Number[1]}>
+
+native function count_Any_MANY__Integer_1_(s:Any[*]):Integer[1]  ~NativeFunction<{Any[*]->Integer[1]}>
+
+function test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_(mapFn:FunctionDefinition<{K[1]->L[1]}>[1], aggregateFn:FunctionDefinition<{L[*]->M[1]}>[1]):test::AggregateValue<K, L, M>[1]  ~UserDefinedFunction<{FunctionDefinition<{K[1]->L[1]}>[1], FunctionDefinition<{L[*]->M[1]}>[1]->test::AggregateValue<K, L, M>[1]}>
+  FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::AggregateValue<K, L, M>##[1]#  @19:4-19:71
+    typeParam T -> test::AggregateValue<K, L, M>
+    TypeHolder :test::AggregateValue<K, L, M>[1]  @19:4-19:71
+    Collection :#KeyExpression#[2]  @19:4-19:71
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @19:33-19:44
+        AtomicValue  'mapFn' :String[1]  @19:33-19:44
+        Variable mapFn :#FunctionDefinition<{K[1]->L[1]}>##[1]#  @19:39-19:44
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @19:47-19:70
+        AtomicValue  'aggregateFn' :String[1]  @19:47-19:70
+        Variable aggregateFn :#FunctionDefinition<{L[*]->M[1]}>##[1]#  @19:59-19:70
+
+function test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_(set:T[*], functions:Function<{T[1]->Any[*]}>[*], aggValues:test::AggregateValue<T, V, U>[*], ids:String[*]):test::TabularDataSet[1]  ~UserDefinedFunction<{T[*], Function<{T[1]->Any[*]}>[*], test::AggregateValue<T, V, U>[*], String[*]->test::TabularDataSet[1]}>
+  FunctionInvocation new_T_1__T_1_ :#test::TabularDataSet##[1]#  @24:4-24:20
+    typeParam T -> test::TabularDataSet
+    TypeHolder :test::TabularDataSet[1]  @24:4-24:20
+
+class Trade  ~Class<Trade>
+  property tradeId :Integer[1]  ~Property<Trade, Integer | 1>
+  property quantity :Float[1]  ~Property<Trade, Float | 1>
+
+function go__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  ArrowInvocation test::groupBy_T_MANY__Function_MANY__AggregateValue_MANY__String_MANY__TabularDataSet_1_ :#test::TabularDataSet##[1]#  @36:10-41:41
+    typeParam T -> #~Trade~#
+    typeParam U -> #~Number~#
+    typeParam V -> #~Number~#
+    FunctionInvocation getAll_Class_1__T_MANY_ :#Trade##[*]#  @35:7-35:17
+      typeParam T -> Trade
+      AtomicValue  Trade :#Class<Trade>#[1]  @35:7-35:17
+    Collection :#LambdaFunction<#{#~Trade~##~[1]~#->#Float##[1]#}#>#[1]  @36:20-36:34
+      Lambda(f:#~Trade~##~[1]~#) :#LambdaFunction<#{#~Trade~##~[1]~#->#Float##[1]#}#>#[1]  @36:21-36:33
+        DotApplication Trade.quantity :#Float##[1]#  @36:25-36:33
+          Variable f :#~Trade~##~[1]~#  @36:23-36:24
+    Collection :#test::AggregateValue<#~Trade~#, #~Number~#, #~Number~#>#[2]  @37:19-40:19
+      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#~Trade~#, #~Integer~#, #~Integer~#>##[1]#  @38:22-38:53
+        typeParam K -> #~Trade~#
+        typeParam L -> #~Integer~#
+        typeParam M -> #~Integer~#
+        Lambda(f:#~Trade~##~[1]~#) :#LambdaFunction<#{#~Trade~##~[1]~#->#Integer##[1]#}#>#[1]  @38:26-38:37
+          DotApplication Trade.tradeId :#Integer##[1]#  @38:30-38:37
+            Variable f :#~Trade~##~[1]~#  @38:28-38:29
+        Lambda(f:#~Integer~##~[*]~#) :#LambdaFunction<#{#~Integer~##~[*]~#->#Integer##[1]#}#>#[1]  @38:40-38:52
+          ArrowInvocation count_Any_MANY__Integer_1_ :#Integer##[1]#  @38:44-38:52
+            Variable f :#~Integer~##~[*]~#  @38:42-38:43
+      FunctionInvocation test::agg_FunctionDefinition_1__FunctionDefinition_1__AggregateValue_1_ :#test::AggregateValue<#~Trade~#, #~Float~#, #~Number~#>##[1]#  @39:22-39:52
+        typeParam K -> #~Trade~#
+        typeParam L -> #~Float~#
+        typeParam M -> #~Number~#
+        Lambda(x:#~Trade~##~[1]~#) :#LambdaFunction<#{#~Trade~##~[1]~#->#Float##[1]#}#>#[1]  @39:26-39:38
+          DotApplication Trade.quantity :#Float##[1]#  @39:30-39:38
+            Variable x :#~Trade~##~[1]~#  @39:28-39:29
+        Lambda(x:#~Float~##~[*]~#) :#LambdaFunction<#{#~Float~##~[*]~#->#Number##[1]#}#>#[1]  @39:41-39:51
+          ArrowInvocation sum_Number_MANY__Number_1_ :#Number##[1]#  @39:45-39:51
+            Variable x :#~Float~##~[*]~#  @39:43-39:44
+    Collection :#String#[3]  @41:13-41:40
+      AtomicValue  'region' :String[1]  @41:14-41:21
+      AtomicValue  'total' :String[1]  @41:24-41:30
+      AtomicValue  'count' :String[1]  @41:33-41:39

@@ -1,0 +1,4 @@
+###Pure
+native function protocol::plus(left: Number[1], right: Number[1]): Number[1];
+
+native function protocol::toString(value: Any[1]): String[1];

@@ -1,0 +1,24 @@
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[1] = 1;
+  str : String[1] = 'ok';
+  advanced : String[1] = $this.str + 'bla';
+}
+
+###CompiledGraph
+class pack::MyClass  ~Class<pack::MyClass>  @4:1-9:1
+  property value :Integer[1]  ~Property<pack::MyClass, Integer | 1>
+    defaultValue Lambda()
+      AtomicValue  1 :Integer[1]  @6:23-6:23
+  property str :String[1]  ~Property<pack::MyClass, String | 1>
+    defaultValue Lambda()
+      AtomicValue  'ok' :String[1]  @7:21-7:24
+  property advanced :String[1]  ~Property<pack::MyClass, String | 1>
+    defaultValue Lambda()
+      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @8:36-8:42
+        DotApplication pack::MyClass.str :#String##[1]#  @8:31-8:34
+          Variable this :#pack::MyClass##[1]#  @8:26-8:30
+        AtomicValue  'bla' :String[1]  @8:38-8:42

@@ -1,0 +1,39 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "PrimitiveType",
+      "generalizations" : [ {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 42,
+              "endLine" : 2,
+              "startColumn" : 37,
+              "startLine" : 2
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 42,
+          "endLine" : 2,
+          "startColumn" : 37,
+          "startLine" : 2
+        }
+      } ],
+      "name" : "Varchar",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 42,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

@@ -1,0 +1,104 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "f",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 7,
+            "startLine" : 5
+          },
+          "value" : 1
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 8,
+          "endLine" : 5,
+          "startColumn" : 5,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "f",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 6,
+            "startColumn" : 7,
+            "startLine" : 6
+          },
+          "value" : 1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 10,
+            "endLine" : 6,
+            "startColumn" : 10,
+            "startLine" : 6
+          },
+          "value" : 2
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 11,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        }
+      } ],
+      "functionName" : "test",
+      "name" : "test__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 30,
+            "endLine" : 3,
+            "startColumn" : 28,
+            "startLine" : 3
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

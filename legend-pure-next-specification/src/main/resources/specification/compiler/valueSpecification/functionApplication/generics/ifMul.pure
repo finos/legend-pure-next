@@ -1,0 +1,24 @@
+###Pure
+import test::*;
+
+native function test::xif<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+
+function test():Any[*]
+{
+    xif(true,|[1,2],|1)
+}
+
+###CompiledGraph
+native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m]  ~NativeFunction<{Boolean[1], Function<{->T[m]}>[1], Function<{->T[m]}>[1]->T[m]}>
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation test::xif_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[1..2]#  @8:5-8:23
+    typeParam T -> #Integer#
+    mulParam m -> #[1..2]#
+    AtomicValue  true :Boolean[1]  @8:9-8:12
+    Lambda :#LambdaFunction<#{->#Integer#[2]}#>#[1]  @8:14-8:19
+      Collection :#Integer#[2]  @8:15-8:19
+        AtomicValue  1 :Integer[1]  @8:16-8:16
+        AtomicValue  2 :Integer[1]  @8:18-8:18
+    Lambda :#LambdaFunction<#{->Integer[1]}#>#[1]  @8:21-8:22
+      AtomicValue  1 :Integer[1]  @8:22-8:22

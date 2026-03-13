@@ -1,0 +1,162 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "NativeFunction",
+      "functionName" : "plus",
+      "name" : "plus_Number_1__Number_1__Number_1_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Number",
+            "sourceInformation" : {
+              "endColumn" : 43,
+              "endLine" : 2,
+              "startColumn" : 38,
+              "startLine" : 2
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "left",
+        "sourceInformation" : {
+          "endColumn" : 46,
+          "endLine" : 2,
+          "startColumn" : 32,
+          "startLine" : 2
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Number",
+            "sourceInformation" : {
+              "endColumn" : 61,
+              "endLine" : 2,
+              "startColumn" : 56,
+              "startLine" : 2
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "right",
+        "sourceInformation" : {
+          "endColumn" : 64,
+          "endLine" : 2,
+          "startColumn" : 49,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Number",
+          "sourceInformation" : {
+            "endColumn" : 73,
+            "endLine" : 2,
+            "startColumn" : 68,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 1
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 77,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    }, {
+      "_type" : "NativeFunction",
+      "functionName" : "toString",
+      "name" : "toString_Any_1__String_1_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Any",
+            "sourceInformation" : {
+              "endColumn" : 45,
+              "endLine" : 4,
+              "startColumn" : 43,
+              "startLine" : 4
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "sourceInformation" : {
+          "endColumn" : 48,
+          "endLine" : 4,
+          "startColumn" : 36,
+          "startLine" : 4
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "String",
+          "sourceInformation" : {
+            "endColumn" : 57,
+            "endLine" : 4,
+            "startColumn" : 52,
+            "startLine" : 4
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 1
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 61,
+        "endLine" : 4,
+        "startColumn" : 1,
+        "startLine" : 4
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

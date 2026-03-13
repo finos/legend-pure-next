@@ -1,0 +1,68 @@
+###Pure
+Class test::Class
+[
+  $this.other->_startsWith('x'),
+  id: $this.other->_endsWith('z'),
+  other
+  (
+    ~owner: theOwner
+    ~externalId: 'someId'
+    ~function: $this.other->_length() > 2
+    ~enforcementLevel: Error
+    ~message: $this.other + ' has issues'
+  ),
+  other2
+  (
+    ~externalId: 'ok'
+    ~function: $this.other->_length() < 4
+  )
+]
+{
+  other: String[1];
+}
+
+native function _length(str:String[1]):Integer[1];
+native function _startsWith(source:String[1], val:String[1]):Boolean[1];
+native function _endsWith(source:String[1], val:String[1]):Boolean[1];
+
+###CompiledGraph
+class test::Class  ~Class<test::Class>  @2:1-22:1
+  property other :String[1]  ~Property<test::Class, String | 1>
+  constraint
+    Lambda(this:test::Class[1])
+      ArrowInvocation _startsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  @4:14-4:31
+        DotApplication test::Class.other :#String##[1]#  @4:8-4:13
+          Variable this :#test::Class##[1]#  @4:3-4:7
+        AtomicValue  'x' :String[1]  @4:28-4:30
+  constraint id
+    Lambda(this:test::Class[1])
+      ArrowInvocation _endsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  @5:18-5:33
+        DotApplication test::Class.other :#String##[1]#  @5:12-5:17
+          Variable this :#test::Class##[1]#  @5:7-5:11
+        AtomicValue  'z' :String[1]  @5:30-5:32
+  constraint other ~owner:theOwner ~externalId:someId ~enforcementLevel:Error
+    Lambda(this:test::Class[1])
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  @10:39-10:41
+        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  @10:27-10:37
+          DotApplication test::Class.other :#String##[1]#  @10:21-10:26
+            Variable this :#test::Class##[1]#  @10:16-10:20
+        AtomicValue  2 :Integer[1]  @10:41-10:41
+    messageFunction
+      Lambda(this:test::Class[1])
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @12:27-12:41
+          DotApplication test::Class.other :#String##[1]#  @12:20-12:25
+            Variable this :#test::Class##[1]#  @12:15-12:19
+          AtomicValue  ' has issues' :String[1]  @12:29-12:41
+  constraint other2 ~externalId:ok
+    Lambda(this:test::Class[1])
+      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  @17:39-17:41
+        ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  @17:27-17:37
+          DotApplication test::Class.other :#String##[1]#  @17:21-17:26
+            Variable this :#test::Class##[1]#  @17:16-17:20
+        AtomicValue  4 :Integer[1]  @17:41-17:41
+
+native function _length_String_1__Integer_1_(str:String[1]):Integer[1]  ~NativeFunction<{String[1]->Integer[1]}>
+
+native function _startsWith_String_1__String_1__Boolean_1_(source:String[1], val:String[1]):Boolean[1]  ~NativeFunction<{String[1], String[1]->Boolean[1]}>
+
+native function _endsWith_String_1__String_1__Boolean_1_(source:String[1], val:String[1]):Boolean[1]  ~NativeFunction<{String[1], String[1]->Boolean[1]}>

@@ -1,0 +1,107 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "ClassWithPropertiesWithAggregationKind",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "aggregation" : "NONE",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 23,
+              "endLine" : 4,
+              "startColumn" : 17,
+              "startLine" : 4
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "sourceInformation" : {
+          "endColumn" : 27,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "aggregation" : "COMPOSITE",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 29,
+              "endLine" : 5,
+              "startColumn" : 23,
+              "startLine" : 5
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value2",
+        "sourceInformation" : {
+          "endColumn" : 33,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "aggregation" : "SHARED",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 26,
+              "endLine" : 6,
+              "startColumn" : 20,
+              "startLine" : 6
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value3",
+        "sourceInformation" : {
+          "endColumn" : 30,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

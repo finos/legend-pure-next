@@ -1,0 +1,9 @@
+###Error
+Can't resolve lambda parameter types (at valueSpecification/relation/colFunc_E_NoInference 8:10-8:15)
+
+###Pure
+
+function test():Any[1]
+{
+   ~name:x|'ok'
+}

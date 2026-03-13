@@ -1,0 +1,11 @@
+###Error
+The type 'OtherClass' can't be found in property 'other' in class 'pack::MyClass' (at class/property/simple_E_unknownTypeInProperty 10:11-10:20)
+
+###Pure
+import pack::*;
+
+Class pack::MyClass
+{
+  value: Integer[1];
+  other : OtherClass[*];
+}

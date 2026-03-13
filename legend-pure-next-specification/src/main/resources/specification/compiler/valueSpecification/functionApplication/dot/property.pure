@@ -1,0 +1,28 @@
+###Pure
+import test::*;
+
+function test::tst():Any[*]
+{
+    ^MyClass(name='ok').name + 'e';
+}
+
+Class test::MyClass
+{
+    name : String[1];
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @6:30-6:34
+    DotApplication test::MyClass.name :#String##[1]#  @6:24-6:28
+      FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  @6:5-6:23
+        typeParam T -> test::MyClass
+        TypeHolder :test::MyClass[1]  @6:5-6:23
+        Collection :#KeyExpression#[1]  @6:5-6:23
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @6:14-6:22
+            AtomicValue  'name' :String[1]  @6:14-6:22
+            AtomicValue  'ok' :String[1]  @6:19-6:22
+    AtomicValue  'e' :String[1]  @6:32-6:34
+
+class test::MyClass  ~Class<test::MyClass>  @9:1-12:1
+  property name :String[1]  ~Property<test::MyClass, String | 1>

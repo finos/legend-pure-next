@@ -1,0 +1,8 @@
+###Error
+The variable 'unknown' is unknown! (at function/userDefined/simple_E_unknownVariable 7:14-7:21)
+
+###Pure
+function test::greet(name: String[1]): String[1]
+{
+  'Hello ' + $unknown;
+}

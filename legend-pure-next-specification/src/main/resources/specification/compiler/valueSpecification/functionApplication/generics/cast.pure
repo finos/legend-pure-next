@@ -1,0 +1,13 @@
+###Pure
+function test::tst():Any[*]
+{
+    []->cast(@Integer);
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  ArrowInvocation cast_Any_m__T_1__T_m_ :#Integer##[0]#  @4:7-4:22
+    typeParam T -> Integer
+    mulParam m -> [0]
+    Collection :#Nil#[0]  @4:5-4:6
+    TypeHolder :Integer[1]  @4:14-4:21

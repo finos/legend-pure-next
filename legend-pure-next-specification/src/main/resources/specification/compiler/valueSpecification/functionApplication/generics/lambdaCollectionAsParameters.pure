@@ -1,0 +1,36 @@
+###Pure
+Class Person{age:Integer[1];}
+
+function tt<T>(a:T[*],e:Function<{T[1]->Integer[1]}>[*]):Any[*]
+{
+ 'aa';
+}
+
+function a(k:FunctionExpression[1]):Any[*]
+{
+   tt([1,2,3],[f|$f+2, f|$f+4]);
+}
+
+###CompiledGraph
+class Person  ~Class<Person>  @2:1-2:29
+  property age :Integer[1]  ~Property<Person, Integer | 1>
+
+function tt_T_MANY__Function_MANY__Any_MANY_(a:T[*], e:Function<{T[1]->Integer[1]}>[*]):Any[*]  ~UserDefinedFunction<{T[*], Function<{T[1]->Integer[1]}>[*]->Any[*]}>
+  AtomicValue  'aa' :String[1]  @6:2-6:5
+
+function a_FunctionExpression_1__Any_MANY_(k:FunctionExpression[1]):Any[*]  ~UserDefinedFunction<{FunctionExpression[1]->Any[*]}>
+  FunctionInvocation tt_T_MANY__Function_MANY__Any_MANY_ :#Any##[*]#  @11:4-11:31
+    typeParam T -> #Integer#
+    Collection :#Integer#[3]  @11:7-11:13
+      AtomicValue  1 :Integer[1]  @11:8-11:8
+      AtomicValue  2 :Integer[1]  @11:10-11:10
+      AtomicValue  3 :Integer[1]  @11:12-11:12
+    Collection :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[2]  @11:15-11:30
+      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  @11:16-11:21
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @11:20-11:21
+          Variable f :#Integer##[1]#  @11:18-11:19
+          AtomicValue  2 :Integer[1]  @11:21-11:21
+      Lambda(f:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#->#Integer##[1]#}#>#[1]  @11:24-11:29
+        FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @11:28-11:29
+          Variable f :#Integer##[1]#  @11:26-11:27
+          AtomicValue  4 :Integer[1]  @11:29-11:29

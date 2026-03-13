@@ -1,0 +1,14 @@
+###Error
+The type 'Unknown' can't be found in class 'pack::Child' (at class/inheritance/typeArguments_E_Unknown 11:38-11:44)
+
+###Pure
+
+Class pack::Base<T>
+{
+  value: T[1];
+}
+
+Class pack::Child extends pack::Base<Unknown>
+{
+  extra: Integer[1];
+}

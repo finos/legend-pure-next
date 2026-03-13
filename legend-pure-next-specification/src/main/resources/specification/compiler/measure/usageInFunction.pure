@@ -1,0 +1,33 @@
+###Pure
+import pack::*;
+
+Measure pack::Mass
+{
+  *Gram: x -> $x;
+  Kilogram: x -> $x * 1000;
+  Pound: x -> $x * 453.59;
+}
+
+function x::a(bla:Mass~Pound[1]):Mass[0..1]
+{
+    [];
+}
+
+###CompiledGraph
+measure pack::Mass  ~Measure  @4:1-9:1
+  canonicalUnit Gram  @6:4-6:17
+    Lambda(x:Number[1])
+      Variable x  @6:15-6:16
+  unit Kilogram  @7:3-7:27
+    Lambda(x:Number[1])
+      FunctionInvocation times  @7:21-7:26
+        Variable x  @7:18-7:19
+        AtomicValue  1000 :Integer[1]  @7:23-7:26
+  unit Pound  @8:3-8:26
+    Lambda(x:Number[1])
+      FunctionInvocation times  @8:18-8:25
+        Variable x  @8:15-8:16
+        AtomicValue  453.59 :Float[1]  @8:20-8:25
+
+function x::a_Mass~Pound_1__Mass_$0_1$_(bla:pack::Mass~Pound[1]):pack::Mass[0..1]  ~UserDefinedFunction<{pack::Mass~Pound[1]->pack::Mass[0..1]}>
+  Collection :#Nil#[0]  @13:5-13:6

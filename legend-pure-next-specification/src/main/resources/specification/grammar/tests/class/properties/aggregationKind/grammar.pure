@@ -1,0 +1,7 @@
+###Pure
+Class protocol::ClassWithPropertiesWithAggregationKind
+{
+  (none) value: Integer[1];
+  (composite) value2: Integer[1];
+  (shared) value3: Integer[1];
+}

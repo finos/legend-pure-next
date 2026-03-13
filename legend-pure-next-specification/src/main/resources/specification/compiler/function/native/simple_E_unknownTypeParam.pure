@@ -1,0 +1,8 @@
+###Error
+The type 'U' can't be found in native function 'pack::broken_MyClass_1__Any_1_' (at function/native/simple_E_unknownTypeParam 8:41-8:41)
+
+###Pure
+Class MyClass<T>
+{
+}
+native function pack::broken(x: MyClass<U>[1]): Any[1];

@@ -1,0 +1,17 @@
+###Pure
+function protocol::relationExpressions(): Any[*]
+{
+  ~name;
+  ~name : String;
+  ~name : String[0..1];
+  ~name : String[1];
+  ~name : x|1;
+  ~name : {p, f, r|1};
+  ~name : {p, f, r|1} : y|$y->sum();
+  ~[name, age];
+  ~[name : String, age : Integer];
+  ~[name : String[1], age : Integer[0..1]];
+  ~[name : x|1, other : x|'a'];
+  ~[name : {p, f, r|1}, other : {p, f, r|'a'}];
+  ~[name : {p, f, r|1} : y|$y->sum(), other : {p, f, r|'a'} : y|$y->sum()];
+}

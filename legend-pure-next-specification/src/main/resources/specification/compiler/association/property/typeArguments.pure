@@ -1,0 +1,35 @@
+###Pure
+import pack::*;
+
+Class pack::XPair<U, V>
+{
+  first: U[1];
+  second: V[1];
+}
+
+Class pack::Animal
+{
+}
+
+Class pack::Dog extends pack::Animal
+{
+}
+
+Association pack::AnimalPairLink
+{
+  owner: Animal[1];
+  pets: XPair<Dog, String>[*];
+}
+
+###CompiledGraph
+class pack::XPair  ~Class<pack::XPair<U, V>>  @4:1-8:1
+  property first :U[1]  ~Property<pack::XPair<U, V>, U | 1>
+  property second :V[1]  ~Property<pack::XPair<U, V>, V | 1>
+
+class pack::Animal  ~Class<pack::Animal>  @10:1-12:1
+
+class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @14:1-16:1
+
+association pack::AnimalPairLink  @18:1-22:1
+  property owner :pack::Animal[1]  ~Property<pack::XPair<pack::Dog, String>, pack::Animal | 1>
+  property pets :pack::XPair<pack::Dog, String>[*]  ~Property<pack::Animal, pack::XPair<pack::Dog, String> | *>

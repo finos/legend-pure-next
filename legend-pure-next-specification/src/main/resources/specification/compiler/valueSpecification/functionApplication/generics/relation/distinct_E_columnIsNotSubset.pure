@@ -1,0 +1,12 @@
+###Error
+The column 'NotInRel' can't be found in the relation (legal:String[1], other:Integer[0..1], yeah:Float[1]) (at valueSpecification/functionApplication/generics/relation/distinct_E_columnIsNotSubset 9:17-9:27)
+
+###Pure
+import meta::pure::metamodel::relation::*;
+
+function f(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1]):Any[*]
+{
+   $x->distinct(~[NotInRel]);
+}
+
+native function distinct<X,T>(rel:Relation<T>[1], columns:ColSpecArray<X⊆T>[1]):Relation<X>[1];

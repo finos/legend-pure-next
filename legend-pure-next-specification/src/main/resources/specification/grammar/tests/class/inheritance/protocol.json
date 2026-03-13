@@ -1,0 +1,173 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "generalizations" : [ {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::SuperClass",
+            "sourceInformation" : {
+              "endColumn" : 60,
+              "endLine" : 3,
+              "startColumn" : 32,
+              "startLine" : 3
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 60,
+          "endLine" : 3,
+          "startColumn" : 32,
+          "startLine" : 3
+        }
+      }, {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Light",
+            "sourceInformation" : {
+              "endColumn" : 67,
+              "endLine" : 3,
+              "startColumn" : 63,
+              "startLine" : 3
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 67,
+          "endLine" : 3,
+          "startColumn" : 63,
+          "startLine" : 3
+        }
+      } ],
+      "name" : "AClass",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "Class",
+      "generalizations" : [ {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::Light",
+            "sourceInformation" : {
+              "endColumn" : 60,
+              "endLine" : 7,
+              "startColumn" : 37,
+              "startLine" : 7
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 60,
+          "endLine" : 7,
+          "startColumn" : 37,
+          "startLine" : 7
+        }
+      } ],
+      "name" : "SimpleClass",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 7
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Light",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 13,
+        "startColumn" : 1,
+        "startLine" : 11
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "SuperClass",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 18,
+              "endLine" : 17,
+              "startColumn" : 13,
+              "startLine" : 17
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "property",
+        "sourceInformation" : {
+          "endColumn" : 25,
+          "endLine" : 17,
+          "startColumn" : 3,
+          "startLine" : 17
+        }
+      }, {
+        "aggregation" : "NONE",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 21,
+              "endLine" : 18,
+              "startColumn" : 15,
+              "startLine" : 18
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "val",
+        "sourceInformation" : {
+          "endColumn" : 25,
+          "endLine" : 18,
+          "startColumn" : 3,
+          "startLine" : 18
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 15
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

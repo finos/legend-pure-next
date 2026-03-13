@@ -1,0 +1,9 @@
+###Error
+Variable 'z' is already defined (at function/lambda/lambda_E_VarConflicts 8:13-8:25)
+
+###Pure
+function test::t():Any[*]
+{
+    let z = 10;
+    let w = z:String[1]|1;
+}

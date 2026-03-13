@@ -1,0 +1,15 @@
+###Error
+No matching function 'tt' found for argument types (Integer[3], LambdaFunction<{Integer[1]->Integer[1]}>[2]) (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_noMatch 14:4-14:31)
+
+###Pure
+Class Person{age:Integer[1];}
+
+function tt<T>(a:T[*],e:Function<{T[1]->String[1]}>[*]):Any[*]
+{
+ 'aa';
+}
+
+function a(k:FunctionExpression[1]):Any[*]
+{
+   tt([1,2,3],[f|$f+2, f|$f+4]);
+}

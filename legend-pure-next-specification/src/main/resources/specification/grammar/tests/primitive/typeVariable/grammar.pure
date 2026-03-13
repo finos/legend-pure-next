@@ -1,0 +1,5 @@
+###Pure
+Primitive protocol::Varchar(x: Integer[1]) extends String
+[
+    $this->length() < $x
+]

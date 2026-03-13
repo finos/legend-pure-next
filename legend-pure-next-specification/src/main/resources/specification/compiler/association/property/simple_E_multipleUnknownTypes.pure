@@ -1,0 +1,12 @@
+###Error
+The type 'UnknownA' can't be found in property 'a' in association 'pack::MyAssociation' (at association/property/simple_E_multipleUnknownTypes 10:6-10:13)
+The type 'UnknownB' can't be found in property 'b' in association 'pack::MyAssociation' (at association/property/simple_E_multipleUnknownTypes 11:6-11:13)
+
+###Pure
+import pack::*;
+
+Association pack::MyAssociation
+{
+  a: UnknownA[1];
+  b: UnknownB[*];
+}

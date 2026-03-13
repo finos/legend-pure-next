@@ -1,0 +1,21 @@
+###Pure
+function test::tst():Any[*]
+{
+    fold([1,2,3], {val, acc| $acc + $val}, 0)
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation fold_T_MANY__Function_1__V_m__V_m_ :#Integer##[1]#  @4:5-4:45
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    mulParam m -> #[1]#
+    Collection :#Integer#[3]  @4:10-4:16
+      AtomicValue  1 :Integer[1]  @4:11-4:11
+      AtomicValue  2 :Integer[1]  @4:13-4:13
+      AtomicValue  3 :Integer[1]  @4:15-4:15
+    Lambda(val:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  @4:19-4:41
+      FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @4:35-4:40
+        Variable acc :#Integer##[1]#  @4:30-4:33
+        Variable val :#Integer##[1]#  @4:37-4:40
+    AtomicValue  0 :Integer[1]  @4:44-4:44

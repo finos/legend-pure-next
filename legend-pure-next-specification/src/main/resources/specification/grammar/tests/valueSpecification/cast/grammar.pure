@@ -1,0 +1,17 @@
+###Pure
+import protocol::support::*;
+function protocol::castExpressions(): Any[*]
+{
+  $x->cast(@MyClass);
+  $x->cast(@MyClass<String>);
+  $x->cast(@MyClass<String, Integer>);
+  $x->cast(@MyClass<String|*>);
+  $x->cast(@Varchar(200));
+}
+
+Primitive protocol::support::Varchar extends String
+
+Class protocol::support::MyClass
+{
+  name: String[1];
+}

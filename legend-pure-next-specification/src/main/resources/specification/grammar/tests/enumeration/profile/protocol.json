@@ -1,0 +1,235 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Enumeration",
+      "name" : "AnEnum2",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "name" : "Val",
+        "sourceInformation" : {
+          "endColumn" : 5,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "name" : "Val2",
+        "sourceInformation" : {
+          "endColumn" : 127,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        },
+        "stereotypes" : [ {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 17,
+              "endLine" : 7,
+              "startColumn" : 14,
+              "startLine" : 7
+            },
+            "value" : "flag"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 12,
+            "endLine" : 7,
+            "startColumn" : 5,
+            "startLine" : 7
+          }
+        }, {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 54,
+              "endLine" : 7,
+              "startColumn" : 48,
+              "startLine" : 7
+            },
+            "value" : "newFlag"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 7,
+            "startColumn" : 20,
+            "startLine" : 7
+          }
+        } ],
+        "taggedValues" : [ {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 90,
+                "endLine" : 7,
+                "startColumn" : 87,
+                "startLine" : 7
+              },
+              "value" : "tag1"
+            } ],
+            "pointerValue" : "protocol::support::AProfile",
+            "sourceInformation" : {
+              "endColumn" : 85,
+              "endLine" : 7,
+              "startColumn" : 59,
+              "startLine" : 7
+            }
+          },
+          "value" : "yeah"
+        }, {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 114,
+                "endLine" : 7,
+                "startColumn" : 111,
+                "startLine" : 7
+              },
+              "value" : "tag2"
+            } ],
+            "pointerValue" : "AProfile",
+            "sourceInformation" : {
+              "endColumn" : 109,
+              "endLine" : 7,
+              "startColumn" : 102,
+              "startLine" : 7
+            }
+          },
+          "value" : "ok"
+        } ]
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "stereotypes" : [ {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 20,
+            "endLine" : 4,
+            "startColumn" : 17,
+            "startLine" : 4
+          },
+          "value" : "flag"
+        } ],
+        "pointerValue" : "AProfile",
+        "sourceInformation" : {
+          "endColumn" : 15,
+          "endLine" : 4,
+          "startColumn" : 8,
+          "startLine" : 4
+        }
+      }, {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 57,
+            "endLine" : 4,
+            "startColumn" : 51,
+            "startLine" : 4
+          },
+          "value" : "newFlag"
+        } ],
+        "pointerValue" : "protocol::support::AProfile",
+        "sourceInformation" : {
+          "endColumn" : 49,
+          "endLine" : 4,
+          "startColumn" : 23,
+          "startLine" : 4
+        }
+      } ],
+      "taggedValues" : [ {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 93,
+              "endLine" : 4,
+              "startColumn" : 90,
+              "startLine" : 4
+            },
+            "value" : "tag1"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 88,
+            "endLine" : 4,
+            "startColumn" : 62,
+            "startLine" : 4
+          }
+        },
+        "value" : "yeah"
+      }, {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 117,
+              "endLine" : 4,
+              "startColumn" : 114,
+              "startLine" : 4
+            },
+            "value" : "tag2"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 112,
+            "endLine" : 4,
+            "startColumn" : 105,
+            "startLine" : 4
+          }
+        },
+        "value" : "ok"
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_stereotypes" : [ {
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 12,
+          "startColumn" : 17,
+          "startLine" : 12
+        },
+        "value" : "flag"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 29,
+          "endLine" : 12,
+          "startColumn" : 23,
+          "startLine" : 12
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 13,
+          "startColumn" : 10,
+          "startLine" : 13
+        },
+        "value" : "tag1"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 13,
+          "startColumn" : 16,
+          "startLine" : 13
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 10
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

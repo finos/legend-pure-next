@@ -1,0 +1,21 @@
+###Error
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:16-20:18)
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:21-20:27)
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:16-20:18)
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:21-20:27)
+
+###Pure
+Class Person
+{
+    age:Integer[1];
+}
+
+function tt<T>(a:T[*],e:Function<Any>[*]):Any[*]
+{
+ 'aa';
+}
+
+function a(k:FunctionExpression[1]):Any[*]
+{
+   tt([1,2,3],[f|2, {f,k|4}]);
+}

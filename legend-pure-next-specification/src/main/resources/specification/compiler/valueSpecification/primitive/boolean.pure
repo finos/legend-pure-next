@@ -1,0 +1,11 @@
+###Pure
+function test::primitive::testBoolean(): Any[*]
+{
+  true;
+  false;
+}
+
+###CompiledGraph
+function test::primitive::testBoolean__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  AtomicValue  true :Boolean[1]  @4:3-4:6
+  AtomicValue  false :Boolean[1]  @5:3-5:7

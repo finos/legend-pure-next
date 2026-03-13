@@ -1,0 +1,18 @@
+###Pure
+
+Class pack::Base<T>
+{
+  value: T[1];
+}
+
+Class pack::Child extends pack::Base<String>
+{
+  extra: Integer[1];
+}
+
+###CompiledGraph
+class pack::Base  ~Class<pack::Base<T>>  @3:1-6:1
+  property value :T[1]  ~Property<pack::Base<T>, T | 1>
+
+class pack::Child extends pack::Base<String>  ~Class<pack::Child>  @8:1-11:1
+  property extra :Integer[1]  ~Property<pack::Child, Integer | 1>

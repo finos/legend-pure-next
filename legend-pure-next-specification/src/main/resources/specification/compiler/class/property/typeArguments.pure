@@ -1,0 +1,19 @@
+###Pure
+import pack::*;
+
+Class pack::Wrapper<T>
+{
+  value: T[1];
+}
+
+Class pack::MyClass
+{
+  items: Wrapper<String>[*];
+}
+
+###CompiledGraph
+class pack::Wrapper  ~Class<pack::Wrapper<T>>  @4:1-7:1
+  property value :T[1]  ~Property<pack::Wrapper<T>, T | 1>
+
+class pack::MyClass  ~Class<pack::MyClass>  @9:1-12:1
+  property items :pack::Wrapper<String>[*]  ~Property<pack::MyClass, pack::Wrapper<String> | *>

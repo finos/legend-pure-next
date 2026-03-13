@@ -1,0 +1,118 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "MyClass",
+      "package" : {
+        "pointerValue" : "x::b"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Prop",
+            "sourceInformation" : {
+              "endColumn" : 14,
+              "endLine" : 6,
+              "startColumn" : 11,
+              "startLine" : 6
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "prop",
+        "sourceInformation" : {
+          "endColumn" : 18,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 4
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Prop",
+      "package" : {
+        "pointerValue" : "x::b"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 11,
+        "startColumn" : 1,
+        "startLine" : 9
+      }
+    } ],
+    "imports" : [ "x::b::*" ],
+    "parserName" : "Pure"
+  }, {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "MyOtherClass",
+      "package" : {
+        "pointerValue" : "a::b"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Prop",
+            "sourceInformation" : {
+              "endColumn" : 14,
+              "endLine" : 18,
+              "startColumn" : 11,
+              "startLine" : 18
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "prop",
+        "sourceInformation" : {
+          "endColumn" : 18,
+          "endLine" : 18,
+          "startColumn" : 5,
+          "startLine" : 18
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 16
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Prop",
+      "package" : {
+        "pointerValue" : "a::b"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 23,
+        "startColumn" : 1,
+        "startLine" : 21
+      }
+    } ],
+    "imports" : [ "a::b::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

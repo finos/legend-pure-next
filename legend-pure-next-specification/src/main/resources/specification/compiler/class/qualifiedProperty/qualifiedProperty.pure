@@ -1,0 +1,15 @@
+###Pure
+Class test::ClassWithQualifiedProperty
+{
+  name: String[1];
+  qualifiedProp(s: String[1]){$s + $this.name}: String[1];
+}
+
+###CompiledGraph
+class test::ClassWithQualifiedProperty  ~Class<test::ClassWithQualifiedProperty>  @2:1-6:1
+  property name :String[1]  ~Property<test::ClassWithQualifiedProperty, String | 1>
+  qualifiedProperty qualifiedProp(s:String[1]) :String[1]
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @5:34-5:45
+      Variable s :#String##[1]#  @5:31-5:32
+      DotApplication test::ClassWithQualifiedProperty.name :#String##[1]#  @5:41-5:45
+        Variable this :#test::ClassWithQualifiedProperty##[1]#  @5:36-5:40

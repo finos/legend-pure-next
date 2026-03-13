@@ -1,0 +1,61 @@
+###Pure
+import test::*;
+
+function test::tst():Any[*]
+{
+    ^MyClass().maybeValue.name;
+    ^MyClass().value.name;
+    ^MyClass().values.name;
+}
+
+Class test::Other
+{
+    name : String[0..1];
+}
+
+Class test::MyClass
+{
+    maybeValue : Other[0..1];
+    value : Other[1] = ^Other();
+    values : Other[*];
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  @6:26-6:30
+    typeParam T -> #test::Other#
+    typeParam V -> #String#
+    DotApplication test::MyClass.maybeValue :#test::Other##[0..1]#  @6:15-6:25
+      FunctionInvocation new_T_1__T_1_ :#test::MyClass##[1]#  @6:5-6:14
+        typeParam T -> test::MyClass
+        TypeHolder :test::MyClass[1]  @6:5-6:14
+    Lambda(v_automap:#test::Other#[1]) :#LambdaFunction<#{#test::Other#[1]->#String##[0..1]#}#>#[1]
+      DotApplication test::Other.name :#String##[0..1]#  @6:26-6:30
+        Variable v_automap :#test::Other##[1]#
+  DotApplication test::Other.name :#String##[0..1]#  @7:21-7:25
+    DotApplication test::MyClass.value :#test::Other##[1]#  @7:15-7:20
+      FunctionInvocation new_T_1__T_1_ :#test::MyClass##[1]#  @7:5-7:14
+        typeParam T -> test::MyClass
+        TypeHolder :test::MyClass[1]  @7:5-7:14
+  FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#String##[*]#  @8:22-8:26
+    typeParam T -> #test::Other#
+    typeParam V -> #String#
+    DotApplication test::MyClass.values :#test::Other##[*]#  @8:15-8:21
+      FunctionInvocation new_T_1__T_1_ :#test::MyClass##[1]#  @8:5-8:14
+        typeParam T -> test::MyClass
+        TypeHolder :test::MyClass[1]  @8:5-8:14
+    Lambda(v_automap:#test::Other#[1]) :#LambdaFunction<#{#test::Other#[1]->#String##[0..1]#}#>#[1]
+      DotApplication test::Other.name :#String##[0..1]#  @8:22-8:26
+        Variable v_automap :#test::Other##[1]#
+
+class test::Other  ~Class<test::Other>  @11:1-14:1
+  property name :String[0..1]  ~Property<test::Other, String | 0..1>
+
+class test::MyClass  ~Class<test::MyClass>  @16:1-21:1
+  property maybeValue :test::Other[0..1]  ~Property<test::MyClass, test::Other | 0..1>
+  property value :test::Other[1]  ~Property<test::MyClass, test::Other | 1>
+    defaultValue Lambda()
+      FunctionInvocation new_T_1__T_1_ :#test::Other##[1]#  @19:24-19:31
+        typeParam T -> test::Other
+        TypeHolder :test::Other[1]  @19:24-19:31
+  property values :test::Other[*]  ~Property<test::MyClass, test::Other | *>

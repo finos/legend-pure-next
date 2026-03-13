@@ -1,0 +1,17 @@
+###Pure
+native function test::f(x:String[1]):String[1];
+
+function test::tst():Any[*]
+{
+    test::f('a');
+    'a'->test::f();
+}
+
+###CompiledGraph
+native function test::f_String_1__String_1_(x:String[1]):String[1]  ~NativeFunction<{String[1]->String[1]}>
+
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation test::f_String_1__String_1_ :#String##[1]#  @6:5-6:16
+    AtomicValue  'a' :String[1]  @6:13-6:15
+  ArrowInvocation test::f_String_1__String_1_ :#String##[1]#  @7:8-7:18
+    AtomicValue  'a' :String[1]  @7:5-7:7

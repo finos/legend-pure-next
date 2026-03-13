@@ -1,0 +1,60 @@
+@prefix : <https://finos.org/legend/pure/m3#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# =============================================================================
+# PROTOCOL CONCEPTS (depends on m3.ttl)
+# =============================================================================
+
+:meta_pure_protocol a :Package ;
+    :name "meta::pure::protocol" .
+
+# --- Section ---
+
+:Section a :Class ;
+    :name "Section" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :Section ] ] ;
+    :package :meta_pure_protocol ;
+    :generalizations [ :general [ :rawType :Any ] ] .
+
+:Section_elements a :Property ;
+    :name "elements" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Section ] [ :rawType :PackageableElement ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :Section ;
+    :genericType [ :rawType :PackageableElement ] ;
+    :multiplicity :ZeroMany .
+
+:Section_imports a :Property ;
+    :name "imports" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Section ] [ :rawType :String ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :Section ;
+    :genericType [ :rawType :String ] ;
+    :multiplicity :ZeroMany .
+
+:Section_parserName a :Property ;
+    :name "parserName" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Section ] [ :rawType :String ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :Section ;
+    :genericType [ :rawType :String ] ;
+    :multiplicity :PureOne .
+
+# --- PureFile ---
+
+:PureFile a :Class ;
+    :name "PureFile" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :PureFile ] ] ;
+    :package :meta_pure_protocol ;
+    :generalizations [ :general [ :rawType :Any ] ] .
+
+:PureFile_sections a :Property ;
+    :name "sections" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :PureFile ] [ :rawType :Section ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :PureFile ;
+    :genericType [ :rawType :Section ] ;
+    :multiplicity :ZeroMany .
+
+:PureFile_sourceId a :Property ;
+    :name "sourceId" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :PureFile ] [ :rawType :String ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :PureFile ;
+    :genericType [ :rawType :String ] ;
+    :multiplicity :ZeroOne .

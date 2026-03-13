@@ -1,0 +1,8 @@
+###Error
+Duplicate parameter name 'name' in function 'test::greet_String_1__String_1__String_1_' (at function/userDefined/simple_E_dupParamName 5:1-8:1)
+
+###Pure
+function test::greet(name: String[1], name:String[1]): String[1]
+{
+  'Hello ' + $name;
+}

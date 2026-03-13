@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2024 Goldman Sachs
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-java</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-compiler</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Compiler</name>
+    <description>Generated Java classes from the Pure M3 metamodel RDF specification, including FlatBuffer serialization support.</description>
+
+    <dependencies>
+        <!-- Jackson annotations for JSON serialization -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+
+        <!-- Apache Jena for RDF/TTL parsing -->
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-arq</artifactId>
+            <version>${jena.version}</version>
+        </dependency>
+
+        <!-- Parser (protocol-grammar model) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-parser</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Java generation utilities (JavaGeneratorUtils) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-java-generators</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- FlatBuffers -->
+        <dependency>
+            <groupId>com.google.flatbuffers</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <version>25.2.10</version>
+        </dependency>
+
+        <!-- Eclipse Collections -->
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-specification</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Step 1: Generate M3 interfaces + impls from TTL (via exec) -->
+            <!-- Step 2: Unpack the .fbs schema from specification JAR -->
+            <!-- Step 3: Compile .fbs schema to Java FlatBuffer accessors (flatc) -->
+            <!-- Step 4: Generate FBS Java wrappers/writer/resolver -->
+            <!-- Step 5: Compile specification Pure files into a .pdb archive -->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-fbs-schema</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.finos.legend.pure</groupId>
+                                    <artifactId>legend-pure-next-specification</artifactId>
+                                    <version>${project.version}</version>
+                                    <includes>specification/m3.fbs</includes>
+                                    <outputDirectory>${project.build.directory}/unpacked-resources</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-m3-classes</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.generators.RdfJavaGenerator</mainClass>
+                            <arguments>
+                                <argument>${project.basedir}/../../legend-pure-next-specification/src/main/resources/specification/m3.ttl</argument>
+                                <argument>${project.build.directory}/generated-sources</argument>
+                                <argument>org.finos.legend.pure.m3.generated</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>flatc-generate</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.basedir}/../../flatbuffers_bin/flatc</executable>
+                            <arguments>
+                                <argument>--java</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/generated-sources</argument>
+                                <argument>${project.build.directory}/unpacked-resources/specification/m3.fbs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-fbs-java</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.generators.RdfFbsJavaGenerator</mainClass>
+                            <arguments>
+                                <argument>${project.basedir}/../../legend-pure-next-specification/src/main/resources/specification/m3.ttl</argument>
+                                <argument>${project.build.directory}/generated-sources</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile-pure-spec</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.m3.SpecificationBinaryBuilder</mainClass>
+                            <arguments>
+                                <argument>${project.basedir}/../../legend-pure-next-specification/src/main/resources/specification/functions</argument>
+                                <argument>${project.build.directory}/core.pdb</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

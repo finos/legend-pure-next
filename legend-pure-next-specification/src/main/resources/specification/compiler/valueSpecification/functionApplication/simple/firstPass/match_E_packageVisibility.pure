@@ -1,0 +1,11 @@
+###Error
+The function 'doStuff' with 1 parameter(s) can't be found. Possible matches with 1 parameter(s) not in scope:
+    other_pack::doStuff(a: String[1]): String[1] (at valueSpecification/functionApplication/simple/firstPass/match_E_packageVisibility 10:6-10:16)
+
+###Pure
+import pack::*;
+native function other_pack::doStuff(a: String[1]): String[1];
+function pack::test(x: String[1]): String[1]
+{
+   $x->doStuff();
+}

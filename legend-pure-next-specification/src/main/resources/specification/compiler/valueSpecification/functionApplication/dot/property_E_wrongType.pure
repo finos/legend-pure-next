@@ -1,0 +1,15 @@
+###Error
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionApplication/dot/property_E_wrongType 9:30-9:32)
+
+###Pure
+import test::*;
+
+function test::tst():Any[*]
+{
+    ^MyClass(name='ok').name + 1;
+}
+
+Class test::MyClass
+{
+    name : String[1];
+}

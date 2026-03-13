@@ -1,0 +1,44 @@
+###Pure
+function test::tst():Any[*]
+{
+    [1, 2, 3, 4]->fold({x:Integer[1], y:Integer[*] | if($y->size() < 3, |$y->add($x), |$y->add($x)->tail())}, [-1, 0]);
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  ArrowInvocation fold_T_MANY__Function_1__V_m__V_m_ :#Integer##[*]#  @4:17-4:118
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    mulParam m -> #[*]#
+    Collection :#Integer#[4]  @4:5-4:16
+      AtomicValue  1 :Integer[1]  @4:6-4:6
+      AtomicValue  2 :Integer[1]  @4:9-4:9
+      AtomicValue  3 :Integer[1]  @4:12-4:12
+      AtomicValue  4 :Integer[1]  @4:15-4:15
+    Lambda(x:Integer[1], y:Integer[*]) :#LambdaFunction<#{Integer[1], Integer[*]->#Integer##[*]#}#>#[1]  @4:24-4:108
+      FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#Integer##[*]#  @4:54-4:107
+        typeParam T -> #Integer#
+        mulParam m -> #[*]#
+        FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  @4:68-4:70
+          ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  @4:59-4:66
+            Variable y :#Integer##[*]#  @4:57-4:58
+          AtomicValue  3 :Integer[1]  @4:70-4:70
+        Lambda :#LambdaFunction<#{->#Integer##[1..*]#}#>#[1]  @4:73-4:84
+          openVar y :#Integer##[*]#
+          openVar x :#Integer##[1]#
+          ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  @4:76-4:84
+            typeParam T -> #Integer#
+            Variable y :#Integer##[*]#  @4:74-4:75
+            Variable x :#Integer##[1]#  @4:82-4:83
+        Lambda :#LambdaFunction<#{->#Integer##[*]#}#>#[1]  @4:87-4:106
+          openVar y :#Integer##[*]#
+          openVar x :#Integer##[1]#
+          ArrowInvocation tail_T_MANY__T_MANY_ :#Integer##[*]#  @4:90-4:106
+            typeParam T -> #Integer#
+            ArrowInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  @4:90-4:106
+              typeParam T -> #Integer#
+              Variable y :#Integer##[*]#  @4:88-4:89
+              Variable x :#Integer##[1]#  @4:96-4:97
+    Collection :#Integer#[2]  @4:111-4:117
+      AtomicValue  -1 :Integer[1]  @4:113-4:113
+      AtomicValue  0 :Integer[1]  @4:116-4:116

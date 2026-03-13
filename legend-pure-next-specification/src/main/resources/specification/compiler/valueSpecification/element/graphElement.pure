@@ -1,0 +1,32 @@
+Class a::A {}
+native function x::b::f():Any[1];
+Profile z::AProfile
+{
+  stereotypes: [flag, newFlag];
+  tags: [tag1, tag2];
+}
+
+function test():Any[*]
+{
+    [
+        a::A,
+        x::b::f__Any_1_,
+        z::AProfile
+    ]
+}
+###CompiledGraph
+class a::A  ~Class<a::A>  @1:1-1:13
+
+native function x::b::f__Any_1_():Any[1]  ~NativeFunction<{->Any[1]}>
+
+profile z::AProfile  ~Profile
+  stereotype flag
+  stereotype newFlag
+  tag tag1
+  tag tag2
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  Collection :#PackageableElement#[3]  @11:5-15:5
+    AtomicValue  a::A :#Class<a::A>#[1]  @12:9-12:12
+    AtomicValue  x::b::f__Any_1_ :#NativeFunction<{->Any[1]}>#[1]  @13:9-13:23
+    AtomicValue  z::AProfile :#Profile#[1]  @14:9-14:19

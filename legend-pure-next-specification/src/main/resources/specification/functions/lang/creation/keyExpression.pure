@@ -1,0 +1,13 @@
+import meta::pure::functions::lang::*;
+import meta::pure::test::pct::*;
+
+Class meta::pure::functions::lang::KeyExpression
+{
+    name : String[1];
+    expression : Any[1];
+    add : Boolean[0..1];
+}
+
+native function <<PCT.platformOnly>> meta::pure::functions::lang::keyExpression(key:String[1], expression:Any[*]):KeyExpression[1];
+
+native function <<PCT.platformOnly>> meta::pure::functions::lang::keyExpression(key:String[1], expression:Any[*], add:Boolean[1]):KeyExpression[1];

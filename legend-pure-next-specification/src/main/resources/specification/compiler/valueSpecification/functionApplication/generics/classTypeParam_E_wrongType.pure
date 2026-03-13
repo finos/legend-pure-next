@@ -1,0 +1,18 @@
+###Error
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionApplication/generics/classTypeParam_E_wrongType 17:24-17:26)
+
+###Pure
+Class MyClass<Z>
+{
+    value:Z[1];
+}
+
+function f<T>(s:T[*]):MyClass<T>[1]
+{
+    ^MyClass<T>(value='ok')
+}
+
+function test():Any[*]
+{
+    f(['a','b']).value + 1;
+}

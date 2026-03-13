@@ -1,0 +1,19 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "Light",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 4,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

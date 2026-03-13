@@ -1,0 +1,731 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "MyClass"
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 23,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 23,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 22,
+                "endLine" : 5,
+                "startColumn" : 12,
+                "startLine" : 5
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 22,
+                "endLine" : 5,
+                "startColumn" : 17,
+                "startLine" : 5
+              },
+              "value" : "test"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 22,
+              "endLine" : 5,
+              "startColumn" : 12,
+              "startLine" : 5
+            }
+          } ]
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 23,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "MyClass"
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 34,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 2
+            },
+            "upperBound" : {
+              "value" : 2
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 34,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 23,
+                "endLine" : 6,
+                "startColumn" : 12,
+                "startLine" : 6
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 23,
+                "endLine" : 6,
+                "startColumn" : 17,
+                "startLine" : 6
+              },
+              "value" : "hello"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 23,
+              "endLine" : 6,
+              "startColumn" : 12,
+              "startLine" : 6
+            }
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 33,
+                "endLine" : 6,
+                "startColumn" : 26,
+                "startLine" : 6
+              },
+              "value" : "value"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 33,
+                "endLine" : 6,
+                "startColumn" : 32,
+                "startLine" : 6
+              },
+              "value" : 42
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 33,
+              "endLine" : 6,
+              "startColumn" : 26,
+              "startLine" : 6
+            }
+          } ]
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 34,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 2
+          },
+          "upperBound" : {
+            "value" : 2
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 42,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        },
+        "values" : [ {
+          "_type" : "FunctionInvocation",
+          "functionName" : "new",
+          "parametersValues" : [ {
+            "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "MyClass"
+              }
+            },
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 21,
+              "endLine" : 7,
+              "startColumn" : 4,
+              "startLine" : 7
+            }
+          }, {
+            "_type" : "Collection",
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 21,
+              "endLine" : 7,
+              "startColumn" : 4,
+              "startLine" : 7
+            },
+            "values" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "keyExpression",
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 20,
+                  "endLine" : 7,
+                  "startColumn" : 13,
+                  "startLine" : 7
+                },
+                "value" : "name"
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 20,
+                  "endLine" : 7,
+                  "startColumn" : 18,
+                  "startLine" : 7
+                },
+                "value" : "a"
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 20,
+                "endLine" : 7,
+                "startColumn" : 13,
+                "startLine" : 7
+              }
+            } ]
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 21,
+            "endLine" : 7,
+            "startColumn" : 4,
+            "startLine" : 7
+          }
+        }, {
+          "_type" : "FunctionInvocation",
+          "functionName" : "new",
+          "parametersValues" : [ {
+            "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "MyClass"
+              }
+            },
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 7,
+              "startColumn" : 24,
+              "startLine" : 7
+            }
+          }, {
+            "_type" : "Collection",
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 7,
+              "startColumn" : 24,
+              "startLine" : 7
+            },
+            "values" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "keyExpression",
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 40,
+                  "endLine" : 7,
+                  "startColumn" : 33,
+                  "startLine" : 7
+                },
+                "value" : "name"
+              }, {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 40,
+                  "endLine" : 7,
+                  "startColumn" : 38,
+                  "startLine" : 7
+                },
+                "value" : "b"
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 7,
+                "startColumn" : 33,
+                "startLine" : 7
+              }
+            } ]
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 41,
+            "endLine" : 7,
+            "startColumn" : 24,
+            "startLine" : 7
+          }
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "MyClass"
+            },
+            "typeArguments" : [ {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String",
+                "sourceInformation" : {
+                  "endColumn" : 17,
+                  "endLine" : 8,
+                  "startColumn" : 12,
+                  "startLine" : 8
+                }
+              }
+            } ]
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 32,
+            "endLine" : 8,
+            "startColumn" : 3,
+            "startLine" : 8
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 32,
+            "endLine" : 8,
+            "startColumn" : 3,
+            "startLine" : 8
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 31,
+                "endLine" : 8,
+                "startColumn" : 20,
+                "startLine" : 8
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 31,
+                "endLine" : 8,
+                "startColumn" : 25,
+                "startLine" : 8
+              },
+              "value" : "typed"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 31,
+              "endLine" : 8,
+              "startColumn" : 20,
+              "startLine" : 8
+            }
+          } ]
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 32,
+          "endLine" : 8,
+          "startColumn" : 3,
+          "startLine" : 8
+        }
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "new",
+        "parametersValues" : [ {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "multiplicityArguments" : [ {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            } ],
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "MyClass"
+            },
+            "typeArguments" : [ {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String",
+                "sourceInformation" : {
+                  "endColumn" : 17,
+                  "endLine" : 9,
+                  "startColumn" : 12,
+                  "startLine" : 9
+                }
+              }
+            } ]
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 38,
+            "endLine" : 9,
+            "startColumn" : 3,
+            "startLine" : 9
+          }
+        }, {
+          "_type" : "Collection",
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 38,
+            "endLine" : 9,
+            "startColumn" : 3,
+            "startLine" : 9
+          },
+          "values" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "keyExpression",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 37,
+                "endLine" : 9,
+                "startColumn" : 22,
+                "startLine" : 9
+              },
+              "value" : "name"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 37,
+                "endLine" : 9,
+                "startColumn" : 27,
+                "startLine" : 9
+              },
+              "value" : "typedMult"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 37,
+              "endLine" : 9,
+              "startColumn" : 22,
+              "startLine" : 9
+            }
+          } ]
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 38,
+          "endLine" : 9,
+          "startColumn" : 3,
+          "startLine" : 9
+        }
+      } ],
+      "functionName" : "newExpressions",
+      "name" : "newExpressions__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 40,
+            "endLine" : 3,
+            "startColumn" : 38,
+            "startLine" : 3
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "MyClass",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 14,
+              "endLine" : 14,
+              "startColumn" : 9,
+              "startLine" : 14
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "name",
+        "sourceInformation" : {
+          "endColumn" : 18,
+          "endLine" : 14,
+          "startColumn" : 3,
+          "startLine" : 14
+        }
+      }, {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 15,
+              "startColumn" : 10,
+              "startLine" : 15
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "sourceInformation" : {
+          "endColumn" : 23,
+          "endLine" : 15,
+          "startColumn" : 3,
+          "startLine" : 15
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 16,
+        "startColumn" : 1,
+        "startLine" : 12
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

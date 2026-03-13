@@ -1,0 +1,7 @@
+###Error
+No matching function 'pl' found for argument types (String[2], String[1]) (at valueSpecification/functionApplication/generics/multiplicity_E_paramValueTooBig 7:36-7:45)
+
+###Pure
+function f<|m>(s:String[m]):String[m]{$s}
+function pl(a:String[1], b:String[1]):String[1]{$a+$b}
+function test():Any[*]{f(['a','b'])->pl('ok')}

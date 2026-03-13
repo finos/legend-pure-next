@@ -1,0 +1,11 @@
+###Error
+The function 'myPlus' with 3 parameter(s) can't be found. Possible matches with different number of parameters:
+    pack::myPlus(left: Number[1], right: Number[1]): Number[1] (at valueSpecification/functionApplication/simple/firstPass/match_E_wrongParameterCount 10:5-10:20)
+
+###Pure
+import pack::*;
+native function pack::myPlus(left: Number[1], right: Number[1]): Number[1];
+function pack::test(a: Number[1], b: Number[1], c: Number[1]): Number[1]
+{
+  $a->myPlus($b, $c);
+}

@@ -1,0 +1,12 @@
+###Pure
+import protocol::support::*;
+Primitive <<AProfile.flag>> {AProfile.tag1 = 'yeah'} protocol::Varchar(x: Integer[1]) extends String
+[
+    $this->length() < $x
+]
+
+Profile protocol::support::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}

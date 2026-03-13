@@ -1,0 +1,45 @@
+###Pure
+import pack::*;
+native function pack::doStuff(a: String[1]): String[1];
+native function pack::doStuff(a: Number[1]): Number[1];
+function pack::test(a: Number[1], b: Number[1]): Number[1]
+{
+  $a->plus($b);
+}
+function pack::compute(x: Number[1], y: Number[1]): Number[1]
+{
+  $x->plus($y)->minus($x);
+}
+function pack::testOverloadNumber(n: Number[1]): Number[1]
+{
+  $n->doStuff();
+}
+function pack::testOverloadString(s: String[1]): String[1]
+{
+  $s->doStuff();
+}
+
+###CompiledGraph
+native function pack::doStuff_String_1__String_1_(a:String[1]):String[1]  ~NativeFunction<{String[1]->String[1]}>
+
+native function pack::doStuff_Number_1__Number_1_(a:Number[1]):Number[1]  ~NativeFunction<{Number[1]->Number[1]}>
+
+function pack::test_Number_1__Number_1__Number_1_(a:Number[1], b:Number[1]):Number[1]  ~UserDefinedFunction<{Number[1], Number[1]->Number[1]}>
+  ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  @7:5-7:14
+    Variable a :#Number##[1]#  @7:3-7:4
+    Variable b :#Number##[1]#  @7:12-7:13
+
+function pack::compute_Number_1__Number_1__Number_1_(x:Number[1], y:Number[1]):Number[1]  ~UserDefinedFunction<{Number[1], Number[1]->Number[1]}>
+  ArrowInvocation minus_Number_1__Number_1__Number_1_ :#Number##[1]#  @11:5-11:25
+    ArrowInvocation plus_Number_1__Number_1__Number_1_ :#Number##[1]#  @11:5-11:25
+      Variable x :#Number##[1]#  @11:3-11:4
+      Variable y :#Number##[1]#  @11:12-11:13
+    Variable x :#Number##[1]#  @11:23-11:24
+
+function pack::testOverloadNumber_Number_1__Number_1_(n:Number[1]):Number[1]  ~UserDefinedFunction<{Number[1]->Number[1]}>
+  ArrowInvocation pack::doStuff_Number_1__Number_1_ :#Number##[1]#  @15:5-15:15
+    Variable n :#Number##[1]#  @15:3-15:4
+
+function pack::testOverloadString_String_1__String_1_(s:String[1]):String[1]  ~UserDefinedFunction<{String[1]->String[1]}>
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  @19:5-19:15
+    Variable s :#String##[1]#  @19:3-19:4

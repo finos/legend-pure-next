@@ -1,0 +1,5 @@
+###Pure
+function meta::pure::mapping::with<T|m>(t: T[m]): T[m]
+{
+    '1'->cast(@T)->toMultiplicity(@[m])
+}

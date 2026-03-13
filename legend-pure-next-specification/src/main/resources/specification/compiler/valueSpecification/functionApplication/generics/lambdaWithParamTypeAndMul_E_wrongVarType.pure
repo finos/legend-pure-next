@@ -1,0 +1,14 @@
+###Error
+No matching function 'fl' found for argument types (String[2], LambdaFunction<{Integer[1]->Boolean[1]}>[1]) (at valueSpecification/functionApplication/generics/lambdaWithParamTypeAndMul_E_wrongVarType 12:15-12:45)
+
+###Pure
+import test::*;
+
+native function test::fl<T>(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*];
+native function test::sw(x:Integer[1], y:String[1]):Boolean[1];
+
+function test::tst():Boolean[1]
+{
+    ['a', 'b']->fl(x:Integer[1]|$x->sw('ok'));
+    true;
+}

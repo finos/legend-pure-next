@@ -1,0 +1,167 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Measure",
+      "canonicalUnit" : {
+        "conversionFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x",
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 4,
+              "startColumn" : 15,
+              "startLine" : 4
+            }
+          } ],
+          "parameters" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 17,
+            "endLine" : 4,
+            "startColumn" : 10,
+            "startLine" : 4
+          }
+        },
+        "name" : "Gram",
+        "sourceInformation" : {
+          "endColumn" : 17,
+          "endLine" : 4,
+          "startColumn" : 4,
+          "startLine" : 4
+        }
+      },
+      "name" : "TestMeasure",
+      "nonCanonicalUnits" : [ {
+        "conversionFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "times",
+            "parametersValues" : [ {
+              "_type" : "VariableExpression",
+              "name" : "x",
+              "sourceInformation" : {
+                "endColumn" : 19,
+                "endLine" : 5,
+                "startColumn" : 18,
+                "startLine" : 5
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 26,
+                "endLine" : 5,
+                "startColumn" : 23,
+                "startLine" : 5
+              },
+              "value" : 1000
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 26,
+              "endLine" : 5,
+              "startColumn" : 21,
+              "startLine" : 5
+            }
+          } ],
+          "parameters" : [ {
+            "_type" : "VariableExpression",
+            "name" : "x"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 5,
+            "startColumn" : 13,
+            "startLine" : 5
+          }
+        },
+        "name" : "Kilogram",
+        "sourceInformation" : {
+          "endColumn" : 27,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      } ],
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 6,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "unitInstance",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String"
+            }
+          },
+          "value" : "5"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String"
+            }
+          },
+          "value" : "TestMeasure~Kilogram"
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 24,
+          "endLine" : 10,
+          "startColumn" : 3,
+          "startLine" : 10
+        }
+      } ],
+      "functionName" : "unitExpressions",
+      "name" : "unitExpressions__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 41,
+            "endLine" : 8,
+            "startColumn" : 39,
+            "startLine" : 8
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 11,
+        "startColumn" : 1,
+        "startLine" : 8
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

@@ -1,0 +1,23 @@
+###Pure
+function test::tst():Any[*]
+{
+    fold([]->cast(@Integer), {val, acc| add($acc, $val)}, [])
+}
+
+###CompiledGraph
+function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation fold_T_MANY__Function_1__V_m__V_m_ :#Integer##[*]#  @4:5-4:61
+    typeParam T -> #Integer#
+    typeParam V -> #Integer#
+    mulParam m -> #[*]#
+    ArrowInvocation cast_Any_m__T_1__T_m_ :#Integer##[0]#  @4:12-4:27
+      typeParam T -> Integer
+      mulParam m -> [0]
+      Collection :#Nil#[0]  @4:10-4:11
+      TypeHolder :Integer[1]  @4:19-4:26
+    Lambda(val:#Integer##[1]#, acc:#Integer##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[*]#->#Integer##[1..*]#}#>#[1]  @4:30-4:56
+      FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  @4:41-4:55
+        typeParam T -> #Integer#
+        Variable acc :#Nil##[0]#  @4:45-4:48
+        Variable val :#Integer##[1]#  @4:51-4:54
+    Collection :#Nil#[0]  @4:59-4:60

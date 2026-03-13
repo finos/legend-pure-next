@@ -1,0 +1,10 @@
+###Error
+No matching function 'doStuff' found for argument types (Integer[1]) (at valueSpecification/functionApplication/simple/type/type_e_wrongParameterType 9:5-9:15)
+
+###Pure
+import pack::*;
+native function pack::doStuff(a: String[1]): String[1];
+function pack::test(x: Integer[1]): String[1]
+{
+  $x->doStuff();
+}

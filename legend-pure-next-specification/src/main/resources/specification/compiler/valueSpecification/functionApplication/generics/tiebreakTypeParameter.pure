@@ -1,0 +1,41 @@
+###Pure
+import x::*;
+
+function x::myFunc<T,K>(p:T[1], z:K[1]):String[1]
+{
+    'x';
+}
+
+function x::myFunc<T>(p:T[1], z:T[1]):String[1]
+{
+    'x';
+}
+
+
+function x::testF():String[1]
+{
+    myFunc('a', 'b');
+    myFunc(1, 2);
+    myFunc(1, 'a');
+}
+
+###CompiledGraph
+function x::myFunc_T_1__K_1__String_1_(p:T[1], z:K[1]):String[1]  ~UserDefinedFunction<{T[1], K[1]->String[1]}>
+  AtomicValue  'x' :String[1]  @6:5-6:7
+
+function x::myFunc_T_1__T_1__String_1_(p:T[1], z:T[1]):String[1]  ~UserDefinedFunction<{T[1], T[1]->String[1]}>
+  AtomicValue  'x' :String[1]  @11:5-11:7
+
+function x::testF__String_1_():String[1]  ~UserDefinedFunction<{->String[1]}>
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  @17:5-17:20
+    typeParam T -> #String#
+    AtomicValue  'a' :String[1]  @17:12-17:14
+    AtomicValue  'b' :String[1]  @17:17-17:19
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  @18:5-18:16
+    typeParam T -> #Integer#
+    AtomicValue  1 :Integer[1]  @18:12-18:12
+    AtomicValue  2 :Integer[1]  @18:15-18:15
+  FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  @19:5-19:18
+    typeParam T -> #Any#
+    AtomicValue  1 :Integer[1]  @19:12-19:12
+    AtomicValue  'a' :String[1]  @19:15-19:17

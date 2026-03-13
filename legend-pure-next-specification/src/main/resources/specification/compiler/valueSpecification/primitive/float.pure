@@ -1,0 +1,11 @@
+###Pure
+function test::primitive::testFloat(): Any[*]
+{
+  3.14;
+  0.5;
+}
+
+###CompiledGraph
+function test::primitive::testFloat__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  AtomicValue  3.14 :Float[1]  @4:3-4:6
+  AtomicValue  0.5 :Float[1]  @5:3-5:5

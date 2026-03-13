@@ -1,0 +1,10 @@
+###Error
+Can't resolve lambda parameter types (at valueSpecification/relation/2colFunc_E_NoInference 9:15-9:26)
+
+###Pure
+native function test<U>(x:FuncColSpec<{Relation<U>[1], Window<U>[1], U[1]->Any[1]}, Any>[1]):Any[1];
+
+function test():Any[1]
+{
+   test(~name:{p,f,r|'ok'});
+}

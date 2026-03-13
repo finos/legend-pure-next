@@ -1,0 +1,385 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        },
+        "value" : 1
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 4,
+          "endLine" : 5,
+          "startColumn" : 4,
+          "startLine" : 5
+        },
+        "value" : -1
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Float"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 5,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        },
+        "value" : 1.9
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Float"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 6,
+          "endLine" : 7,
+          "startColumn" : 4,
+          "startLine" : 7
+        },
+        "value" : -1.9
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Decimal"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 6,
+          "endLine" : 8,
+          "startColumn" : 3,
+          "startLine" : 8
+        },
+        "value" : 1.2
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Decimal"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 7,
+          "endLine" : 9,
+          "startColumn" : 4,
+          "startLine" : 9
+        },
+        "value" : -1.2
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Boolean"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 6,
+          "endLine" : 10,
+          "startColumn" : 3,
+          "startLine" : 10
+        },
+        "value" : true
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 15,
+          "endLine" : 11,
+          "startColumn" : 3,
+          "startLine" : 11
+        },
+        "value" : "stringValue"
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "StrictDate"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 12,
+          "startColumn" : 3,
+          "startLine" : 12
+        },
+        "value" : "%2013-10-10"
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "DateTime"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 22,
+          "endLine" : 13,
+          "startColumn" : 3,
+          "startLine" : 13
+        },
+        "value" : "%2013-10-10T10:10:10"
+      }, {
+        "_type" : "AtomicValue",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "StrictTime"
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 11,
+          "endLine" : 14,
+          "startColumn" : 3,
+          "startLine" : 14
+        },
+        "value" : "%10:10:10"
+      }, {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 11
+          },
+          "upperBound" : {
+            "value" : 11
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 100,
+          "endLine" : 15,
+          "startColumn" : 3,
+          "startLine" : 15
+        },
+        "values" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 4,
+            "endLine" : 15,
+            "startColumn" : 4,
+            "startLine" : 15
+          },
+          "value" : 1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 8,
+            "endLine" : 15,
+            "startColumn" : 8,
+            "startLine" : 15
+          },
+          "value" : -1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Float"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 13,
+            "endLine" : 15,
+            "startColumn" : 11,
+            "startLine" : 15
+          },
+          "value" : 1.9
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Float"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 19,
+            "endLine" : 15,
+            "startColumn" : 17,
+            "startLine" : 15
+          },
+          "value" : -1.9
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Decimal"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 25,
+            "endLine" : 15,
+            "startColumn" : 22,
+            "startLine" : 15
+          },
+          "value" : 1.2
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Decimal"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 32,
+            "endLine" : 15,
+            "startColumn" : 29,
+            "startLine" : 15
+          },
+          "value" : -1.2
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Boolean"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 38,
+            "endLine" : 15,
+            "startColumn" : 35,
+            "startLine" : 15
+          },
+          "value" : true
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 53,
+            "endLine" : 15,
+            "startColumn" : 41,
+            "startLine" : 15
+          },
+          "value" : "stringValue"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "StrictDate"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 66,
+            "endLine" : 15,
+            "startColumn" : 56,
+            "startLine" : 15
+          },
+          "value" : "%2013-10-10"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "DateTime"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 88,
+            "endLine" : 15,
+            "startColumn" : 69,
+            "startLine" : 15
+          },
+          "value" : "%2013-10-10T10:10:10"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "StrictTime"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 99,
+            "endLine" : 15,
+            "startColumn" : 91,
+            "startLine" : 15
+          },
+          "value" : "%10:10:10"
+        } ]
+      } ],
+      "functionName" : "f",
+      "name" : "f__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 2,
+            "startColumn" : 25,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 16,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

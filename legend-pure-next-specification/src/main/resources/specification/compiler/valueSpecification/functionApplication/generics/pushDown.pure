@@ -1,0 +1,29 @@
+###Pure
+native function check(s:String[1]):Boolean[1];
+function g<K>(f:Function<{K[1]->Boolean[1]}>[1]):K[0..1]{[]}
+function f<T>(s:T[*], a:T[0..1]):String[1]{'a'}
+function test():Any[*]
+{
+    f(['a','b'], g(t|$t->check()))
+}
+
+###CompiledGraph
+native function check_String_1__Boolean_1_(s:String[1]):Boolean[1]  ~NativeFunction<{String[1]->Boolean[1]}>
+
+function g_Function_1__K_$0_1$_(f:Function<{K[1]->Boolean[1]}>[1]):K[0..1]  ~UserDefinedFunction<{Function<{K[1]->Boolean[1]}>[1]->K[0..1]}>
+  Collection :#Nil#[0]  @3:58-3:59
+
+function f_T_MANY__T_$0_1$__String_1_(s:T[*], a:T[0..1]):String[1]  ~UserDefinedFunction<{T[*], T[0..1]->String[1]}>
+  AtomicValue  'a' :String[1]  @4:44-4:46
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation f_T_MANY__T_$0_1$__String_1_ :#String##[1]#  @7:5-7:34
+    typeParam T -> #String#
+    Collection :#String#[2]  @7:7-7:15
+      AtomicValue  'a' :String[1]  @7:8-7:10
+      AtomicValue  'b' :String[1]  @7:12-7:14
+    FunctionInvocation g_Function_1__K_$0_1$_ :#String##[0..1]#  @7:18-7:33
+      typeParam K -> #String#
+      Lambda(t:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#Boolean##[1]#}#>#[1]  @7:20-7:32
+        ArrowInvocation check_String_1__Boolean_1_ :#Boolean##[1]#  @7:24-7:32
+          Variable t :#String##[1]#  @7:22-7:23

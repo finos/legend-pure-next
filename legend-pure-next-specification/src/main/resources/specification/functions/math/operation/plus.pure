@@ -1,0 +1,93 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+native function
+    <<PCT.function>>
+    {
+        doc.doc='Adds all the provided values',
+        PCT.grammarDoc='4 + 1',
+        PCT.grammarCharacters='+'
+    }
+    meta::pure::functions::math::plus(left:Integer[1], right:Integer[1]):Integer[1];
+
+native function <<PCT.function>> meta::pure::functions::math::plus(left:Float[1], right:Float[1]):Float[1];
+
+native function <<PCT.function>> meta::pure::functions::math::plus(left:Decimal[1], right:Decimal[1]):Decimal[1];
+
+native function <<PCT.function>> meta::pure::functions::math::plus(left:Number[1], right:Number[1]):Number[1];
+
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testSimplePlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3, $f->eval(|1 + 2));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testComplexPlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(19, $f->eval(|3 + (4 + 5) + 7));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testNegativePlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(-1, $f->eval(|1 + -2));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testPlusMany<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(19, $f->eval(|3 + 4 + 5 + 7));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testSinglePlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(1, $f->eval(|+1));
+    assertEquals(1, $f->eval(|++1));
+    assertEquals(1, $f->eval(|+++1));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testSinglePlusType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertIs(Integer, $f->eval(|type(+1)->toOne()));
+    assertIs(Float, $f->eval(|type(+1.0)->toOne()));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testFloatPlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEqWithinTolerance(1.7, $f->eval(|0.9 + 0.8), 0.01);
+    assertEqWithinTolerance(1.7, $f->eval(|1 + 0.7), 0.01);
+    assertEqWithinTolerance(1.7, $f->eval(|2 + -0.3), 0.01);
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testPlusInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(28, $f->eval(|plus(15,13)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testPlusFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(26.0, $f->eval(|plus(12.5,13.5)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testPlusNumber<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(17.0, $f->eval(|plus(15,2.0)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::plus::testDecimalPlus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3.0d, $f->eval(|plus(1.0d, 2.0d)));
+    assertEquals(4.0d, $f->eval(|plus(1.0d, 3)));
+    assertEquals(-1.0d, $f->eval(|-4.0d+2.0d+1));
+}

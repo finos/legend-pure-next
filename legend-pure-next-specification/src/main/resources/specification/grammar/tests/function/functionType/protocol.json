@@ -1,0 +1,306 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "ArrowInvocation",
+        "functionName" : "eval",
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "f",
+          "sourceInformation" : {
+            "endColumn" : 4,
+            "endLine" : 4,
+            "startColumn" : 3,
+            "startLine" : 4
+          }
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 17,
+            "endLine" : 4,
+            "startColumn" : 12,
+            "startLine" : 4
+          },
+          "value" : "test"
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 18,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        }
+      } ],
+      "functionName" : "takesFunction",
+      "name" : "takesFunction_UNKNOWN_1__Boolean_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "FunctionType",
+            "parameters" : [ {
+              "_type" : "VariableExpression",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String",
+                  "sourceInformation" : {
+                    "endColumn" : 43,
+                    "endLine" : 2,
+                    "startColumn" : 38,
+                    "startLine" : 2
+                  }
+                }
+              },
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              }
+            } ],
+            "returnMultiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "returnType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "Boolean",
+                "sourceInformation" : {
+                  "endColumn" : 55,
+                  "endLine" : 2,
+                  "startColumn" : 49,
+                  "startLine" : 2
+                }
+              }
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "f",
+        "sourceInformation" : {
+          "endColumn" : 62,
+          "endLine" : 2,
+          "startColumn" : 34,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Boolean",
+          "sourceInformation" : {
+            "endColumn" : 72,
+            "endLine" : 2,
+            "startColumn" : 66,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "ArrowInvocation",
+        "functionName" : "eval",
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "f",
+          "sourceInformation" : {
+            "endColumn" : 4,
+            "endLine" : 9,
+            "startColumn" : 3,
+            "startLine" : 9
+          }
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 17,
+            "endLine" : 9,
+            "startColumn" : 12,
+            "startLine" : 9
+          },
+          "value" : "test"
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Integer"
+            }
+          },
+          "sourceInformation" : {
+            "endColumn" : 20,
+            "endLine" : 9,
+            "startColumn" : 20,
+            "startLine" : 9
+          },
+          "value" : 1
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 21,
+          "endLine" : 9,
+          "startColumn" : 5,
+          "startLine" : 9
+        }
+      } ],
+      "functionName" : "takesBiFunction",
+      "name" : "takesBiFunction_UNKNOWN_1__Boolean_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "FunctionType",
+            "parameters" : [ {
+              "_type" : "VariableExpression",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String",
+                  "sourceInformation" : {
+                    "endColumn" : 45,
+                    "endLine" : 7,
+                    "startColumn" : 40,
+                    "startLine" : 7
+                  }
+                }
+              },
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              }
+            }, {
+              "_type" : "VariableExpression",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer",
+                  "sourceInformation" : {
+                    "endColumn" : 56,
+                    "endLine" : 7,
+                    "startColumn" : 50,
+                    "startLine" : 7
+                  }
+                }
+              },
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              }
+            } ],
+            "returnMultiplicity" : {
+              "lowerBound" : {
+                "value" : 1
+              },
+              "upperBound" : {
+                "value" : 1
+              }
+            },
+            "returnType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "Boolean",
+                "sourceInformation" : {
+                  "endColumn" : 68,
+                  "endLine" : 7,
+                  "startColumn" : 62,
+                  "startLine" : 7
+                }
+              }
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "f",
+        "sourceInformation" : {
+          "endColumn" : 75,
+          "endLine" : 7,
+          "startColumn" : 36,
+          "startLine" : 7
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Boolean",
+          "sourceInformation" : {
+            "endColumn" : 85,
+            "endLine" : 7,
+            "startColumn" : 79,
+            "startLine" : 7
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 7
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

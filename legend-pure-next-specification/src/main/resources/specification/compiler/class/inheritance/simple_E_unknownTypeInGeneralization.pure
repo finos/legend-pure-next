@@ -1,0 +1,9 @@
+###Error
+The type 'MissingParent' can't be found in super type in class 'pack::Child' (at class/inheritance/simple_E_unknownTypeInGeneralization 6:27-6:39)
+
+###Pure
+
+Class pack::Child extends MissingParent
+{
+  value: Integer[1];
+}

@@ -1,0 +1,1290 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "constraints" : [ {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "ArrowInvocation",
+            "functionName" : "startsWith",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 7,
+                  "endLine" : 5,
+                  "startColumn" : 3,
+                  "startLine" : 5
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 13,
+                "endLine" : 5,
+                "startColumn" : 8,
+                "startLine" : 5
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 29,
+                "endLine" : 5,
+                "startColumn" : 27,
+                "startLine" : 5
+              },
+              "value" : "x"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 30,
+              "endLine" : 5,
+              "startColumn" : 14,
+              "startLine" : 5
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 30,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 30,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "ArrowInvocation",
+            "functionName" : "endsWith",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 11,
+                  "endLine" : 6,
+                  "startColumn" : 7,
+                  "startLine" : 6
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 17,
+                "endLine" : 6,
+                "startColumn" : 12,
+                "startLine" : 6
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 31,
+                "endLine" : 6,
+                "startColumn" : 29,
+                "startLine" : 6
+              },
+              "value" : "z"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 32,
+              "endLine" : 6,
+              "startColumn" : 18,
+              "startLine" : 6
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 32,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        },
+        "name" : "id",
+        "sourceInformation" : {
+          "endColumn" : 32,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "enforcementLevel" : "Error",
+        "externalId" : "someId",
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "greaterThan",
+            "parametersValues" : [ {
+              "_type" : "ArrowInvocation",
+              "functionName" : "length",
+              "parametersValues" : [ {
+                "_type" : "DotApplication",
+                "functionName" : "other",
+                "parametersValues" : [ {
+                  "_type" : "VariableExpression",
+                  "name" : "this",
+                  "sourceInformation" : {
+                    "endColumn" : 20,
+                    "endLine" : 11,
+                    "startColumn" : 16,
+                    "startLine" : 11
+                  }
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 26,
+                  "endLine" : 11,
+                  "startColumn" : 21,
+                  "startLine" : 11
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 36,
+                "endLine" : 11,
+                "startColumn" : 27,
+                "startLine" : 11
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 11,
+                "startColumn" : 40,
+                "startLine" : 11
+              },
+              "value" : 2
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 40,
+              "endLine" : 11,
+              "startColumn" : 38,
+              "startLine" : 11
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 40,
+            "endLine" : 11,
+            "startColumn" : 5,
+            "startLine" : 11
+          }
+        },
+        "messageFunction" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "plus",
+            "parametersValues" : [ {
+              "_type" : "DotApplication",
+              "functionName" : "other",
+              "parametersValues" : [ {
+                "_type" : "VariableExpression",
+                "name" : "this",
+                "sourceInformation" : {
+                  "endColumn" : 19,
+                  "endLine" : 13,
+                  "startColumn" : 15,
+                  "startLine" : 13
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 25,
+                "endLine" : 13,
+                "startColumn" : 20,
+                "startLine" : 13
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 41,
+                "endLine" : 13,
+                "startColumn" : 29,
+                "startLine" : 13
+              },
+              "value" : " has issues"
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 41,
+              "endLine" : 13,
+              "startColumn" : 27,
+              "startLine" : 13
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 41,
+            "endLine" : 13,
+            "startColumn" : 5,
+            "startLine" : 13
+          }
+        },
+        "name" : "other",
+        "owner" : "theOwner",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 14,
+          "startColumn" : 3,
+          "startLine" : 7
+        }
+      }, {
+        "externalId" : "ok",
+        "functionDefinition" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "lessThan",
+            "parametersValues" : [ {
+              "_type" : "ArrowInvocation",
+              "functionName" : "length",
+              "parametersValues" : [ {
+                "_type" : "DotApplication",
+                "functionName" : "other",
+                "parametersValues" : [ {
+                  "_type" : "VariableExpression",
+                  "name" : "this",
+                  "sourceInformation" : {
+                    "endColumn" : 20,
+                    "endLine" : 18,
+                    "startColumn" : 16,
+                    "startLine" : 18
+                  }
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 26,
+                  "endLine" : 18,
+                  "startColumn" : 21,
+                  "startLine" : 18
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 36,
+                "endLine" : 18,
+                "startColumn" : 27,
+                "startLine" : 18
+              }
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Integer"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 18,
+                "startColumn" : 40,
+                "startLine" : 18
+              },
+              "value" : 4
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 40,
+              "endLine" : 18,
+              "startColumn" : 38,
+              "startLine" : 18
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 40,
+            "endLine" : 18,
+            "startColumn" : 5,
+            "startLine" : 18
+          }
+        },
+        "name" : "other2",
+        "sourceInformation" : {
+          "endColumn" : 3,
+          "endLine" : 19,
+          "startColumn" : 3,
+          "startLine" : 15
+        }
+      } ],
+      "generalizations" : [ {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "protocol::support::SuperClass",
+            "sourceInformation" : {
+              "endColumn" : 181,
+              "endLine" : 3,
+              "startColumn" : 153,
+              "startLine" : 3
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 181,
+          "endLine" : 3,
+          "startColumn" : 153,
+          "startLine" : 3
+        }
+      }, {
+        "general" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Light",
+            "sourceInformation" : {
+              "endColumn" : 188,
+              "endLine" : 3,
+              "startColumn" : 184,
+              "startLine" : 3
+            }
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 188,
+          "endLine" : 3,
+          "startColumn" : 184,
+          "startLine" : 3
+        }
+      } ],
+      "name" : "AClass",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "properties" : [ {
+        "aggregation" : "COMPOSITE",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 148,
+              "endLine" : 22,
+              "startColumn" : 143,
+              "startLine" : 22
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "other",
+        "sourceInformation" : {
+          "endColumn" : 152,
+          "endLine" : 22,
+          "startColumn" : 3,
+          "startLine" : 22
+        },
+        "stereotypes" : [ {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 17,
+              "endLine" : 22,
+              "startColumn" : 14,
+              "startLine" : 22
+            },
+            "value" : "flag"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 12,
+            "endLine" : 22,
+            "startColumn" : 5,
+            "startLine" : 22
+          }
+        }, {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 54,
+              "endLine" : 22,
+              "startColumn" : 48,
+              "startLine" : 22
+            },
+            "value" : "newFlag"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 22,
+            "startColumn" : 20,
+            "startLine" : 22
+          }
+        } ],
+        "taggedValues" : [ {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 90,
+                "endLine" : 22,
+                "startColumn" : 87,
+                "startLine" : 22
+              },
+              "value" : "tag1"
+            } ],
+            "pointerValue" : "protocol::support::AProfile",
+            "sourceInformation" : {
+              "endColumn" : 85,
+              "endLine" : 22,
+              "startColumn" : 59,
+              "startLine" : 22
+            }
+          },
+          "value" : "yeah"
+        }, {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 114,
+                "endLine" : 22,
+                "startColumn" : 111,
+                "startLine" : 22
+              },
+              "value" : "tag2"
+            } ],
+            "pointerValue" : "AProfile",
+            "sourceInformation" : {
+              "endColumn" : 109,
+              "endLine" : 22,
+              "startColumn" : 102,
+              "startLine" : 22
+            }
+          },
+          "value" : "ok"
+        } ]
+      }, {
+        "aggregation" : "SHARED",
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 46,
+              "endLine" : 23,
+              "startColumn" : 38,
+              "startLine" : 23
+            },
+            "value" : "default"
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 23,
+            "startColumn" : 36,
+            "startLine" : 23
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 31,
+              "endLine" : 23,
+              "startColumn" : 26,
+              "startLine" : 23
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultValue",
+        "sourceInformation" : {
+          "endColumn" : 47,
+          "endLine" : 23,
+          "startColumn" : 3,
+          "startLine" : 23
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "Collection",
+            "multiplicity" : {
+              "lowerBound" : {
+                "value" : 2
+              },
+              "upperBound" : {
+                "value" : 2
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 46,
+              "endLine" : 24,
+              "startColumn" : 37,
+              "startLine" : 24
+            },
+            "values" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 40,
+                "endLine" : 24,
+                "startColumn" : 38,
+                "startLine" : 24
+              },
+              "value" : "a"
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "String"
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 45,
+                "endLine" : 24,
+                "startColumn" : 43,
+                "startLine" : 24
+              },
+              "value" : "b"
+            } ]
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 24,
+            "startColumn" : 35,
+            "startLine" : 24
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 27,
+              "endLine" : 24,
+              "startColumn" : 22,
+              "startLine" : 24
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultValueArray",
+        "sourceInformation" : {
+          "endColumn" : 47,
+          "endLine" : 24,
+          "startColumn" : 3,
+          "startLine" : 24
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "new",
+            "parametersValues" : [ {
+              "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+              "genericType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "LightP"
+                }
+              },
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 43,
+                "endLine" : 25,
+                "startColumn" : 28,
+                "startLine" : 25
+              }
+            }, {
+              "_type" : "Collection",
+              "multiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              },
+              "sourceInformation" : {
+                "endColumn" : 43,
+                "endLine" : 25,
+                "startColumn" : 28,
+                "startLine" : 25
+              },
+              "values" : [ {
+                "_type" : "FunctionInvocation",
+                "functionName" : "keyExpression",
+                "parametersValues" : [ {
+                  "_type" : "AtomicValue",
+                  "genericType" : {
+                    "rawType" : {
+                      "_type" : "Type_Pointer",
+                      "pointerValue" : "String"
+                    }
+                  },
+                  "sourceInformation" : {
+                    "endColumn" : 42,
+                    "endLine" : 25,
+                    "startColumn" : 36,
+                    "startLine" : 25
+                  },
+                  "value" : "value"
+                }, {
+                  "_type" : "AtomicValue",
+                  "genericType" : {
+                    "rawType" : {
+                      "_type" : "Type_Pointer",
+                      "pointerValue" : "Integer"
+                    }
+                  },
+                  "sourceInformation" : {
+                    "endColumn" : 42,
+                    "endLine" : 25,
+                    "startColumn" : 42,
+                    "startLine" : 25
+                  },
+                  "value" : 1
+                } ],
+                "sourceInformation" : {
+                  "endColumn" : 42,
+                  "endLine" : 25,
+                  "startColumn" : 36,
+                  "startLine" : 25
+                }
+              } ]
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 43,
+              "endLine" : 25,
+              "startColumn" : 28,
+              "startLine" : 25
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 43,
+            "endLine" : 25,
+            "startColumn" : 26,
+            "startLine" : 25
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "LightP",
+            "sourceInformation" : {
+              "endColumn" : 21,
+              "endLine" : 25,
+              "startColumn" : 16,
+              "startLine" : 25
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "defaultType",
+        "sourceInformation" : {
+          "endColumn" : 44,
+          "endLine" : 25,
+          "startColumn" : 3,
+          "startLine" : 25
+        }
+      }, {
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "DotApplication",
+            "functionName" : "name",
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "sourceInformation" : {
+                "endColumn" : 26,
+                "endLine" : 26,
+                "startColumn" : 22,
+                "startLine" : 26
+              },
+              "value" : {
+                "pointerValue" : "Class"
+              }
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 31,
+              "endLine" : 26,
+              "startColumn" : 27,
+              "startLine" : 26
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 31,
+            "endLine" : 26,
+            "startColumn" : 20,
+            "startLine" : 26
+          }
+        },
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 15,
+              "endLine" : 26,
+              "startColumn" : 10,
+              "startLine" : 26
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "graph",
+        "sourceInformation" : {
+          "endColumn" : 32,
+          "endLine" : 26,
+          "startColumn" : 3,
+          "startLine" : 26
+        }
+      }, {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "meta::pure::precisePrimitives::Varchar",
+            "sourceInformation" : {
+              "endColumn" : 59,
+              "endLine" : 27,
+              "startColumn" : 22,
+              "startLine" : 27
+            }
+          },
+          "typeVariableValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "Integer"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 63,
+              "endLine" : 27,
+              "startColumn" : 61,
+              "startLine" : 27
+            },
+            "value" : 200
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "extendedPrimitive",
+        "sourceInformation" : {
+          "endColumn" : 68,
+          "endLine" : 27,
+          "startColumn" : 3,
+          "startLine" : 27
+        }
+      } ],
+      "qualifiedProperties" : [ {
+        "expressionSequence" : [ {
+          "_type" : "FunctionInvocation",
+          "functionName" : "letFunction",
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String"
+              }
+            },
+            "value" : "x"
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "plus",
+            "parametersValues" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "plus",
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 16,
+                  "endLine" : 29,
+                  "startColumn" : 13,
+                  "startLine" : 29
+                },
+                "value" : "ok"
+              }, {
+                "_type" : "VariableExpression",
+                "name" : "param",
+                "sourceInformation" : {
+                  "endColumn" : 25,
+                  "endLine" : 29,
+                  "startColumn" : 20,
+                  "startLine" : 29
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 35,
+                "endLine" : 29,
+                "startColumn" : 18,
+                "startLine" : 29
+              }
+            }, {
+              "_type" : "VariableExpression",
+              "name" : "param2",
+              "sourceInformation" : {
+                "endColumn" : 35,
+                "endLine" : 29,
+                "startColumn" : 29,
+                "startLine" : 29
+              }
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 35,
+              "endLine" : 29,
+              "startColumn" : 18,
+              "startLine" : 29
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 35,
+            "endLine" : 29,
+            "startColumn" : 5,
+            "startLine" : 29
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "sourceInformation" : {
+            "endColumn" : 6,
+            "endLine" : 30,
+            "startColumn" : 5,
+            "startLine" : 30
+          }
+        } ],
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 11,
+              "endLine" : 31,
+              "startColumn" : 6,
+              "startLine" : 31
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "qualifiedProperty",
+        "parameters" : [ {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String",
+              "sourceInformation" : {
+                "endColumn" : 154,
+                "endLine" : 28,
+                "startColumn" : 149,
+                "startLine" : 28
+              }
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "name" : "param",
+          "sourceInformation" : {
+            "endColumn" : 157,
+            "endLine" : 28,
+            "startColumn" : 142,
+            "startLine" : 28
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String",
+              "sourceInformation" : {
+                "endColumn" : 173,
+                "endLine" : 28,
+                "startColumn" : 168,
+                "startLine" : 28
+              }
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "name" : "param2",
+          "sourceInformation" : {
+            "endColumn" : 176,
+            "endLine" : 28,
+            "startColumn" : 160,
+            "startLine" : 28
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 15,
+          "endLine" : 31,
+          "startColumn" : 3,
+          "startLine" : 28
+        },
+        "stereotypes" : [ {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 17,
+              "endLine" : 28,
+              "startColumn" : 14,
+              "startLine" : 28
+            },
+            "value" : "flag"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 12,
+            "endLine" : 28,
+            "startColumn" : 5,
+            "startLine" : 28
+          }
+        }, {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 54,
+              "endLine" : 28,
+              "startColumn" : 48,
+              "startLine" : 28
+            },
+            "value" : "newFlag"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 28,
+            "startColumn" : 20,
+            "startLine" : 28
+          }
+        } ],
+        "taggedValues" : [ {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 90,
+                "endLine" : 28,
+                "startColumn" : 87,
+                "startLine" : 28
+              },
+              "value" : "tag1"
+            } ],
+            "pointerValue" : "protocol::support::AProfile",
+            "sourceInformation" : {
+              "endColumn" : 85,
+              "endLine" : 28,
+              "startColumn" : 59,
+              "startLine" : 28
+            }
+          },
+          "value" : "yeah"
+        }, {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 114,
+                "endLine" : 28,
+                "startColumn" : 111,
+                "startLine" : 28
+              },
+              "value" : "tag2"
+            } ],
+            "pointerValue" : "AProfile",
+            "sourceInformation" : {
+              "endColumn" : 109,
+              "endLine" : 28,
+              "startColumn" : 102,
+              "startLine" : 28
+            }
+          },
+          "value" : "ok"
+        } ]
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 32,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "stereotypes" : [ {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 21,
+            "endLine" : 3,
+            "startColumn" : 18,
+            "startLine" : 3
+          },
+          "value" : "flag"
+        } ],
+        "pointerValue" : "AProfile",
+        "sourceInformation" : {
+          "endColumn" : 16,
+          "endLine" : 3,
+          "startColumn" : 9,
+          "startLine" : 3
+        }
+      }, {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 58,
+            "endLine" : 3,
+            "startColumn" : 52,
+            "startLine" : 3
+          },
+          "value" : "newFlag"
+        } ],
+        "pointerValue" : "protocol::support::AProfile",
+        "sourceInformation" : {
+          "endColumn" : 50,
+          "endLine" : 3,
+          "startColumn" : 24,
+          "startLine" : 3
+        }
+      } ],
+      "taggedValues" : [ {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 94,
+              "endLine" : 3,
+              "startColumn" : 91,
+              "startLine" : 3
+            },
+            "value" : "tag1"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 89,
+            "endLine" : 3,
+            "startColumn" : 63,
+            "startLine" : 3
+          }
+        },
+        "value" : "yeah"
+      }, {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 118,
+              "endLine" : 3,
+              "startColumn" : 115,
+              "startLine" : 3
+            },
+            "value" : "tag2"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 113,
+            "endLine" : 3,
+            "startColumn" : 106,
+            "startLine" : 3
+          }
+        },
+        "value" : "ok"
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_stereotypes" : [ {
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 36,
+          "startColumn" : 17,
+          "startLine" : 36
+        },
+        "value" : "flag"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 29,
+          "endLine" : 36,
+          "startColumn" : 23,
+          "startLine" : 36
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 37,
+          "startColumn" : 10,
+          "startLine" : 37
+        },
+        "value" : "tag1"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 37,
+          "startColumn" : 16,
+          "startLine" : 37
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 38,
+        "startColumn" : 1,
+        "startLine" : 34
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Light",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 42,
+        "startColumn" : 1,
+        "startLine" : 40
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "LightP",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "properties" : [ {
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 16,
+              "endLine" : 46,
+              "startColumn" : 10,
+              "startLine" : 46
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 46,
+          "startColumn" : 3,
+          "startLine" : 46
+        }
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 47,
+        "startColumn" : 1,
+        "startLine" : 44
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "SuperClass",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 51,
+        "startColumn" : 1,
+        "startLine" : 49
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

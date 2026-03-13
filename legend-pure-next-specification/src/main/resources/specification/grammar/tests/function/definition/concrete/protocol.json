@@ -1,0 +1,672 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 0
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 4,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      } ],
+      "functionName" : "f1",
+      "name" : "f1_Integer_1__String_MANY__String_$0_1$_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 32,
+              "endLine" : 3,
+              "startColumn" : 26,
+              "startLine" : 3
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "p",
+        "sourceInformation" : {
+          "endColumn" : 35,
+          "endLine" : 3,
+          "startColumn" : 23,
+          "startLine" : 3
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 46,
+              "endLine" : 3,
+              "startColumn" : 41,
+              "startLine" : 3
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          }
+        },
+        "name" : "z",
+        "sourceInformation" : {
+          "endColumn" : 49,
+          "endLine" : 3,
+          "startColumn" : 38,
+          "startLine" : 3
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "String",
+          "sourceInformation" : {
+            "endColumn" : 58,
+            "endLine" : 3,
+            "startColumn" : 53,
+            "startLine" : 3
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 6,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 0
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 4,
+          "endLine" : 10,
+          "startColumn" : 3,
+          "startLine" : 10
+        }
+      } ],
+      "functionName" : "f2",
+      "name" : "f2_Relation_1__Light_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "meta::pure::metamodel::relation::Relation",
+            "sourceInformation" : {
+              "endColumn" : 66,
+              "endLine" : 8,
+              "startColumn" : 26,
+              "startLine" : 8
+            }
+          },
+          "typeArguments" : [ {
+            "rawType" : {
+              "_type" : "RelationType",
+              "columns" : [ {
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String",
+                    "sourceInformation" : {
+                      "endColumn" : 78,
+                      "endLine" : 8,
+                      "startColumn" : 73,
+                      "startLine" : 8
+                    }
+                  }
+                },
+                "name" : "col",
+                "sourceInformation" : {
+                  "endColumn" : 78,
+                  "endLine" : 8,
+                  "startColumn" : 69,
+                  "startLine" : 8
+                }
+              }, {
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "Integer",
+                    "sourceInformation" : {
+                      "endColumn" : 91,
+                      "endLine" : 8,
+                      "startColumn" : 85,
+                      "startLine" : 8
+                    }
+                  }
+                },
+                "name" : "col2",
+                "sourceInformation" : {
+                  "endColumn" : 91,
+                  "endLine" : 8,
+                  "startColumn" : 80,
+                  "startLine" : 8
+                }
+              } ]
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "r",
+        "sourceInformation" : {
+          "endColumn" : 96,
+          "endLine" : 8,
+          "startColumn" : 23,
+          "startLine" : 8
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "protocol::support::Light",
+          "sourceInformation" : {
+            "endColumn" : 123,
+            "endLine" : 8,
+            "startColumn" : 100,
+            "startLine" : 8
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 11,
+        "startColumn" : 1,
+        "startLine" : 8
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 0
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 4,
+          "endLine" : 15,
+          "startColumn" : 3,
+          "startLine" : 15
+        }
+      } ],
+      "functionName" : "applyFilter",
+      "name" : "applyFilter_Function_1__String_MANY_",
+      "package" : {
+        "pointerValue" : "test"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "meta::pure::metamodel::function::Function",
+            "sourceInformation" : {
+              "endColumn" : 71,
+              "endLine" : 13,
+              "startColumn" : 31,
+              "startLine" : 13
+            }
+          },
+          "typeArguments" : [ {
+            "rawType" : {
+              "_type" : "FunctionType",
+              "parameters" : [ {
+                "_type" : "VariableExpression",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String",
+                    "sourceInformation" : {
+                      "endColumn" : 79,
+                      "endLine" : 13,
+                      "startColumn" : 74,
+                      "startLine" : 13
+                    }
+                  }
+                },
+                "multiplicity" : {
+                  "lowerBound" : {
+                    "value" : 1
+                  },
+                  "upperBound" : {
+                    "value" : 1
+                  }
+                }
+              } ],
+              "returnMultiplicity" : {
+                "lowerBound" : {
+                  "value" : 1
+                },
+                "upperBound" : {
+                  "value" : 1
+                }
+              },
+              "returnType" : {
+                "rawType" : {
+                  "_type" : "Type_Pointer",
+                  "pointerValue" : "Boolean",
+                  "sourceInformation" : {
+                    "endColumn" : 91,
+                    "endLine" : 13,
+                    "startColumn" : 85,
+                    "startLine" : 13
+                  }
+                }
+              }
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "f",
+        "sourceInformation" : {
+          "endColumn" : 99,
+          "endLine" : 13,
+          "startColumn" : 28,
+          "startLine" : 13
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "String",
+          "sourceInformation" : {
+            "endColumn" : 108,
+            "endLine" : 13,
+            "startColumn" : 103,
+            "startLine" : 13
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 16,
+        "startColumn" : 1,
+        "startLine" : 13
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 0
+          },
+          "upperBound" : {
+            "value" : 0
+          }
+        },
+        "sourceInformation" : {
+          "endColumn" : 4,
+          "endLine" : 20,
+          "startColumn" : 3,
+          "startLine" : 20
+        }
+      } ],
+      "functionName" : "f3",
+      "name" : "f3_Integer_1__Property_$1_MANY$__Varchar_1__String_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Integer",
+            "sourceInformation" : {
+              "endColumn" : 153,
+              "endLine" : 18,
+              "startColumn" : 147,
+              "startLine" : 18
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "x",
+        "sourceInformation" : {
+          "endColumn" : 156,
+          "endLine" : 18,
+          "startColumn" : 144,
+          "startLine" : 18
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "multiplicityArguments" : [ {
+            "lowerBound" : {
+              "value" : 0
+            }
+          } ],
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Property",
+            "sourceInformation" : {
+              "endColumn" : 169,
+              "endLine" : 18,
+              "startColumn" : 162,
+              "startLine" : 18
+            }
+          },
+          "typeArguments" : [ {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "Nil",
+              "sourceInformation" : {
+                "endColumn" : 173,
+                "endLine" : 18,
+                "startColumn" : 171,
+                "startLine" : 18
+              }
+            }
+          }, {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String",
+              "sourceInformation" : {
+                "endColumn" : 181,
+                "endLine" : 18,
+                "startColumn" : 176,
+                "startLine" : 18
+              }
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "z",
+        "sourceInformation" : {
+          "endColumn" : 190,
+          "endLine" : 18,
+          "startColumn" : 159,
+          "startLine" : 18
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "meta::pure::precisePrimitives::Varchar",
+            "sourceInformation" : {
+              "endColumn" : 237,
+              "endLine" : 18,
+              "startColumn" : 200,
+              "startLine" : 18
+            }
+          },
+          "typeVariableValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "Integer"
+              }
+            },
+            "sourceInformation" : {
+              "endColumn" : 241,
+              "endLine" : 18,
+              "startColumn" : 239,
+              "startLine" : 18
+            },
+            "value" : 200
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "other",
+        "sourceInformation" : {
+          "endColumn" : 245,
+          "endLine" : 18,
+          "startColumn" : 193,
+          "startLine" : 18
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "String",
+          "sourceInformation" : {
+            "endColumn" : 254,
+            "endLine" : 18,
+            "startColumn" : 249,
+            "startLine" : 18
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 21,
+        "startColumn" : 1,
+        "startLine" : 18
+      },
+      "stereotypes" : [ {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 24,
+            "endLine" : 18,
+            "startColumn" : 21,
+            "startLine" : 18
+          },
+          "value" : "flag"
+        } ],
+        "pointerValue" : "AProfile",
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 18,
+          "startColumn" : 12,
+          "startLine" : 18
+        }
+      }, {
+        "extraPointerValues" : [ {
+          "sourceInformation" : {
+            "endColumn" : 61,
+            "endLine" : 18,
+            "startColumn" : 55,
+            "startLine" : 18
+          },
+          "value" : "newFlag"
+        } ],
+        "pointerValue" : "protocol::support::AProfile",
+        "sourceInformation" : {
+          "endColumn" : 53,
+          "endLine" : 18,
+          "startColumn" : 27,
+          "startLine" : 18
+        }
+      } ],
+      "taggedValues" : [ {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 97,
+              "endLine" : 18,
+              "startColumn" : 94,
+              "startLine" : 18
+            },
+            "value" : "tag1"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 92,
+            "endLine" : 18,
+            "startColumn" : 66,
+            "startLine" : 18
+          }
+        },
+        "value" : "yeah"
+      }, {
+        "tag" : {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 121,
+              "endLine" : 18,
+              "startColumn" : 118,
+              "startLine" : 18
+            },
+            "value" : "tag2"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 116,
+            "endLine" : 18,
+            "startColumn" : 109,
+            "startLine" : 18
+          }
+        },
+        "value" : "ok"
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_stereotypes" : [ {
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 25,
+          "startColumn" : 17,
+          "startLine" : 25
+        },
+        "value" : "flag"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 29,
+          "endLine" : 25,
+          "startColumn" : 23,
+          "startLine" : 25
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 26,
+          "startColumn" : 10,
+          "startLine" : 26
+        },
+        "value" : "tag1"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 26,
+          "startColumn" : 16,
+          "startLine" : 26
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 27,
+        "startColumn" : 1,
+        "startLine" : 23
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Light",
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 31,
+        "startColumn" : 1,
+        "startLine" : 29
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

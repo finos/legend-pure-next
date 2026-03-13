@@ -1,0 +1,14 @@
+###Pure
+Association protocol::AnAssociation3
+{
+  a: protocol::support::AssociationClassA[1];
+  (composite) b: protocol::support::AssociationClassB[1..*];
+}
+
+Class protocol::support::AssociationClassA
+{
+}
+
+Class protocol::support::AssociationClassB
+{
+}

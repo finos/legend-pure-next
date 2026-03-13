@@ -1,0 +1,27 @@
+###Pure
+Class test::Person
+{
+}
+
+Class test::Firm
+{
+}
+
+Association test::Employment
+{
+  employees: test::Person[*];
+  employer: test::Firm[1];
+  activeEmployees(date: String[1]){$this.employees}: test::Person[*];
+}
+
+###CompiledGraph
+class test::Person  ~Class<test::Person>  @2:1-4:1
+
+class test::Firm  ~Class<test::Firm>  @6:1-8:1
+
+association test::Employment  @10:1-15:1
+  property employees :test::Person[*]  ~Property<test::Firm, test::Person | *>
+  property employer :test::Firm[1]  ~Property<test::Person, test::Firm | 1>
+  qualifiedProperty activeEmployees(date:String[1]) :test::Person[*]
+    DotApplication test::Employment.employees :#test::Person##[*]#  @14:41-14:50
+      Variable this :#test::Firm##[1]#  @14:36-14:40

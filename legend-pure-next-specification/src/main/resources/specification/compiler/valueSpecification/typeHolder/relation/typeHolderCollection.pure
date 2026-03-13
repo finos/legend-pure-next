@@ -1,0 +1,14 @@
+###Pure
+function test():Relation<(name:Number[0..1])>[*]
+{
+   [
+        @Relation<(name:Integer[1])>,
+        @Relation<(name:Float[1])>
+   ]
+}
+
+###CompiledGraph
+function test__Relation_MANY_():Relation<(name:Number[0..1])>[*]  ~UserDefinedFunction<{->Relation<(name:Number[0..1])>[*]}>
+  Collection :#Relation<#(name:#Number##[1]#)#>#[2]  @4:4-7:4
+    TypeHolder :Relation<(name:Integer[1])>[1]  @5:9-5:36
+    TypeHolder :Relation<(name:Float[1])>[1]  @6:9-6:34

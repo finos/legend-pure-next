@@ -1,0 +1,21 @@
+###Error
+The type 'Unknown' can't be found in association 'pack::AnimalPairLink' (at association/property/typeArguments_E_Unknown 20:15-20:21)
+
+###Pure
+import pack::*;
+
+Class pack::XPair<U, V>
+{
+  first: U[1];
+  second: V[1];
+}
+
+Class pack::Animal
+{
+}
+
+Association pack::AnimalPairLink
+{
+  owner: Animal[1];
+  pets: XPair<Unknown, String>[*];
+}

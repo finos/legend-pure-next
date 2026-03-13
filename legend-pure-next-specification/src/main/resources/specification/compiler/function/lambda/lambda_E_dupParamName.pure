@@ -1,0 +1,8 @@
+###Error
+Duplicate parameter name 'z' (at function/lambda/lambda_E_dupParamName 7:5-7:33)
+
+###Pure
+function test::t():Any[*]
+{
+    {z:String[1], z:Integer[1]|1};
+}

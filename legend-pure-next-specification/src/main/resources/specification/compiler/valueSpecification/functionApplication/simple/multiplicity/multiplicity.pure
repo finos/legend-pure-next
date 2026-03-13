@@ -1,0 +1,49 @@
+###Pure
+import pack::*;
+native function pack::doStuff(a: String[1]): String[1];
+native function pack::doStuff(a: String[*]): String[1];
+native function pack::global(a: String[*]): String[1];
+
+function pack::computeSubsumes(x: String[1]): String[1]
+{
+  $x->global();
+}
+
+function pack::compute(x: String[*]): String[1]
+{
+  $x->doStuff()->doStuff();
+}
+
+function pack::testOverloadNumber(n: String[1]): String[1]
+{
+  $n->doStuff();
+}
+
+function pack::testOverloadString(s: String[*]): String[1]
+{
+  $s->doStuff();
+}
+
+###CompiledGraph
+native function pack::doStuff_String_1__String_1_(a:String[1]):String[1]  ~NativeFunction<{String[1]->String[1]}>
+
+native function pack::doStuff_String_MANY__String_1_(a:String[*]):String[1]  ~NativeFunction<{String[*]->String[1]}>
+
+native function pack::global_String_MANY__String_1_(a:String[*]):String[1]  ~NativeFunction<{String[*]->String[1]}>
+
+function pack::computeSubsumes_String_1__String_1_(x:String[1]):String[1]  ~UserDefinedFunction<{String[1]->String[1]}>
+  ArrowInvocation pack::global_String_MANY__String_1_ :#String##[1]#  @9:5-9:14
+    Variable x :#String##[1]#  @9:3-9:4
+
+function pack::compute_String_MANY__String_1_(x:String[*]):String[1]  ~UserDefinedFunction<{String[*]->String[1]}>
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  @14:5-14:26
+    ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  @14:5-14:26
+      Variable x :#String##[*]#  @14:3-14:4
+
+function pack::testOverloadNumber_String_1__String_1_(n:String[1]):String[1]  ~UserDefinedFunction<{String[1]->String[1]}>
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  @19:5-19:15
+    Variable n :#String##[1]#  @19:3-19:4
+
+function pack::testOverloadString_String_MANY__String_1_(s:String[*]):String[1]  ~UserDefinedFunction<{String[*]->String[1]}>
+  ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  @24:5-24:15
+    Variable s :#String##[*]#  @24:3-24:4

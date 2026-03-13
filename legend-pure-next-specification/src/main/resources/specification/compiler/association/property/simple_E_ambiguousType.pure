@@ -1,0 +1,25 @@
+###Error
+The element 'Pair' is ambiguous, found in multiple imports: 'meta::pure::functions::collection::Pair', 'pack::Pair' in property 'pets' in association 'pack::AnimalPairLink' (at association/property/simple_E_ambiguousType 24:9-24:12)
+
+###Pure
+import pack::*;
+
+Class pack::Pair<U, V>
+{
+  first: U[1];
+  second: V[1];
+}
+
+Class pack::Animal
+{
+}
+
+Class pack::Dog extends pack::Animal
+{
+}
+
+Association pack::AnimalPairLink
+{
+  owner: Animal[1];
+  pets: Pair<Dog, String>[*];
+}

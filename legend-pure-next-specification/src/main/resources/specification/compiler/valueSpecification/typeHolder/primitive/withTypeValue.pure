@@ -1,0 +1,16 @@
+###Pure
+import prim::*;
+
+Primitive prim::Varchar(x: Integer[1]) extends String
+
+function test():String[1]
+{
+   @Varchar(200);
+}
+
+###CompiledGraph
+primitive prim::Varchar  ~PrimitiveType  @4:1-4:53
+  typeVariable x :Integer[1]
+
+function test__String_1_():String[1]  ~UserDefinedFunction<{->String[1]}>
+  TypeHolder :prim::Varchar(200)[1]  @8:4-8:16

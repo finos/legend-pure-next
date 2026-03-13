@@ -1,0 +1,12 @@
+###Error
+No matching function 'doStuff' found for argument types (String[*]) (at valueSpecification/functionApplication/simple/multiplicity/multiplicity_E_wrongParameterMultiplicity 11:5-11:15)
+
+###Pure
+import pack::*;
+
+native function pack::doStuff(a: String[1]): String[1];
+
+function pack::test(x: String[*]): String[1]
+{
+  $x->doStuff();
+}

@@ -1,0 +1,8 @@
+###Pure
+function protocol::letExpressions(): Any[*]
+{
+  let x = 1;
+  let name = 'hello';
+  let flag = true;
+  let result = 2 + 3;
+}

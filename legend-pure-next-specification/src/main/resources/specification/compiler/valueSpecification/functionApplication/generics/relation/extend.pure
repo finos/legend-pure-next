@@ -1,0 +1,46 @@
+###Pure
+import meta::pure::metamodel::relation::*;
+
+function f(x:Relation<(legal:String[1], other:Integer[0..1])>[1]):Any[*]
+{
+   $x->extend(over(), ~new:{p,w,r|$p->lag($r).legal->toOne() + 'w'});
+}
+
+native function over<T>():Window<T>[1];
+native function extend<T,R>(r:Relation<T>[1], window:Window<T>[1], f:FuncColSpec<{Relation<T>[1],Window<T>[1],T[1]->Any[0..1]},R>[1]):Relation<T+R>[1];
+native function lag<T>(w:Relation<T>[1],r:T[1]):T[0..1];
+
+###CompiledGraph
+function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1])>[1]):Any[*]  ~UserDefinedFunction<{Relation<(legal:String[1], other:Integer[0..1])>[1]->Any[*]}>
+  ArrowInvocation extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_ :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#, new:#String##[1]#)#>##[1]#  @6:6-6:68
+    typeParam R -> #(new:#String##[1]#)#
+    typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
+    Variable x :#Relation<(legal:String[1], other:Integer[0..1])>##[1]#  @6:4-6:5
+    FunctionInvocation over__Window_1_ :#Window<#(legal:String[1], other:Integer[0..1])#>##[1]#  @6:15-6:20
+      typeParam T -> #(legal:String[1], other:Integer[0..1])#
+    FunctionInvocation funcColSpec2_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->Any[1]}#, #(new:#String##[1]#)#>##[1]#  @6:24-6:67
+      typeParam T -> #(new:#String##[1]#)#
+      typeParam U -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
+      Lambda(p:#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, w:#Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, r:#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#) :#LambdaFunction<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#->#String##[1]#}#>#[1]  @6:28-6:67
+        FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @6:62-6:66
+          ArrowInvocation toOne_T_MANY__T_1_ :#String##[1]#  @6:52-6:60
+            typeParam T -> #String#
+            FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  @6:46-6:51
+              typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
+              typeParam V -> #String#
+              ArrowInvocation lag_Relation_1__T_1__T_$0_1$_ :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[0..1]#  @6:37-6:45
+                typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
+                Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  @6:35-6:36
+                Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  @6:43-6:44
+              Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[m]#}#>#[1]
+                DotApplication legal :#String##[m]#  @6:46-6:51
+                  Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#
+          AtomicValue  'w' :String[1]  @6:64-6:66
+      AtomicValue  'new' :String[1]
+      TypeHolder :#(new:#String##[1]#)#[1]
+
+native function over__Window_1_():Window<T>[1]  ~NativeFunction<{->Window<T>[1]}>
+
+native function extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_(r:Relation<T>[1], window:Window<T>[1], f:FuncColSpec<{Relation<T>[1], Window<T>[1], T[1]->Any[0..1]}, R>[1]):Relation<T+R>[1]  ~NativeFunction<{Relation<T>[1], Window<T>[1], FuncColSpec<{Relation<T>[1], Window<T>[1], T[1]->Any[0..1]}, R>[1]->Relation<T+R>[1]}>
+
+native function lag_Relation_1__T_1__T_$0_1$_(w:Relation<T>[1], r:T[1]):T[0..1]  ~NativeFunction<{Relation<T>[1], T[1]->T[0..1]}>

@@ -1,0 +1,5 @@
+###Pure
+native function pack::plus(left: Number[1], right: Number[1]): Number[1];
+
+###CompiledGraph
+native function pack::plus_Number_1__Number_1__Number_1_(left:Number[1], right:Number[1]):Number[1]  ~NativeFunction<{Number[1], Number[1]->Number[1]}>

@@ -1,0 +1,240 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "getAll",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "sourceInformation" : {
+            "endColumn" : 27,
+            "endLine" : 4,
+            "startColumn" : 5,
+            "startLine" : 4
+          },
+          "value" : {
+            "pointerValue" : "protocol::MyClass"
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 27,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        }
+      } ],
+      "functionName" : "test",
+      "name" : "test__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 30,
+            "endLine" : 2,
+            "startColumn" : 28,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "getAllVersions",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "sourceInformation" : {
+            "endColumn" : 35,
+            "endLine" : 9,
+            "startColumn" : 5,
+            "startLine" : 9
+          },
+          "value" : {
+            "pointerValue" : "protocol::MyClass"
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 35,
+          "endLine" : 9,
+          "startColumn" : 5,
+          "startLine" : 9
+        }
+      } ],
+      "functionName" : "test2",
+      "name" : "test2__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 31,
+            "endLine" : 7,
+            "startColumn" : 29,
+            "startLine" : 7
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 7
+      }
+    }, {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "FunctionInvocation",
+        "functionName" : "getAllVersionsInRange",
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "sourceInformation" : {
+            "endColumn" : 54,
+            "endLine" : 14,
+            "startColumn" : 5,
+            "startLine" : 14
+          },
+          "value" : {
+            "pointerValue" : "protocol::MyClass"
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "name" : "start",
+          "sourceInformation" : {
+            "endColumn" : 47,
+            "endLine" : 14,
+            "startColumn" : 42,
+            "startLine" : 14
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "name" : "end",
+          "sourceInformation" : {
+            "endColumn" : 53,
+            "endLine" : 14,
+            "startColumn" : 50,
+            "startLine" : 14
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 54,
+          "endLine" : 14,
+          "startColumn" : 5,
+          "startLine" : 14
+        }
+      } ],
+      "functionName" : "test3",
+      "name" : "test3_Date_1__Date_1__Any_MANY_",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Date",
+            "sourceInformation" : {
+              "endColumn" : 36,
+              "endLine" : 12,
+              "startColumn" : 33,
+              "startLine" : 12
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "start",
+        "sourceInformation" : {
+          "endColumn" : 39,
+          "endLine" : 12,
+          "startColumn" : 26,
+          "startLine" : 12
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Date",
+            "sourceInformation" : {
+              "endColumn" : 50,
+              "endLine" : 12,
+              "startColumn" : 47,
+              "startLine" : 12
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "end",
+        "sourceInformation" : {
+          "endColumn" : 53,
+          "endLine" : 12,
+          "startColumn" : 42,
+          "startLine" : 12
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Any",
+          "sourceInformation" : {
+            "endColumn" : 59,
+            "endLine" : 12,
+            "startColumn" : 57,
+            "startLine" : 12
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 0
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 15,
+        "startColumn" : 1,
+        "startLine" : 12
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

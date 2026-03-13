@@ -1,0 +1,322 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::boolean::tests::equalitymodel::*;
+import meta::pure::test::pct::*;
+
+native function
+    <<PCT.function>>
+    {
+        doc.doc='General equality. Identity, primitive equality, collection equality, and model-defined equality. ' +
+                'For model-defined equality, the properties used to define equality should be given the ' +
+                'meta::pure::profiles::equality.Key stereotype. Then two instances are equal if all of the ' +
+                'properties with this stereotype have equal values.',
+        PCT.grammarDoc='$first == $second',
+        PCT.grammarCharacters='=='
+    }
+    meta::pure::functions::boolean::equal(left:Any[*], right:Any[*]):Boolean[1];
+
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualInteger<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|6 == 6));
+    assert($f->eval(|equal(6, 6)));
+    assert($f->eval(|6 == 3 + 3));
+    assert($f->eval(|equal(6, 3 + 3)));
+    assert($f->eval(|6 != 7));
+    assert($f->eval(|!equal(6, 7)));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualFloat<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|6.3 == 6.3));
+    assert($f->eval(|equal(6.3, 6.3)));
+    assert($f->eval(|6.3 == 6.3 + 0.0));
+    assert($f->eval(|equal(6.3, 6.3 + 0.0)));
+    assert($f->eval(|6.3 != 7.8));
+    assert($f->eval(|!equal(6.3, 7.8)));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|'ab' == 'ab'));
+    assert($f->eval(|equal('ab', 'ab')));
+    assert($f->eval(|'ab' == ('a' + 'b')));
+    assert($f->eval(|equal('ab', 'a' + 'b')));
+    assert($f->eval(|'ab' != 'cd'));
+    assert($f->eval(|!equal('ab', 'cd')));
+}
+
+function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::testEqualDate<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|%2014-02-27T05:01:35.231+0000 == %2014-02-27T05:01:35.231+0000));
+    assert($f->eval(|equal(%2014-02-27T05:01:35.231+0000, %2014-02-27T05:01:35.231+0000)));
+    assert($f->eval(|%2014-02-27T10:01:35.231+0500 == %2014-02-27T05:01:35.231+0000));
+    assert($f->eval(|equal(%2014-02-27T10:01:35.231+0500, %2014-02-27T05:01:35.231+0000)));
+    assert($f->eval(|%2014-02-27T05:01:35.231+0000 != %2014-02-27T05:01:35.231-0500));
+    assert($f->eval(|!equal(%2014-02-27T05:01:35.231+0000, %2014-02-27T05:01:35.231-0500)));
+}
+
+function <<PCT.test>>  meta::pure::functions::boolean::tests::equality::equal::testEqualDateStrictYear<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|%2014 == %2014));
+    assert($f->eval(|equal(%2014, %2014)));
+    assert($f->eval(|%2014 != %2014-01-01));
+    assert($f->eval(|!equal(%2014, %2014-01-01)));
+    assert($f->eval(|%2014 != %2013));
+    assert($f->eval(|!equal(%2014, %2013)));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualBoolean<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|true == true));
+    assert($f->eval(|equal(true, true)));
+    assert($f->eval(|false == false));
+    assert($f->eval(|equal(false, false)));
+    assert($f->eval(|true != false));
+    assert($f->eval(|!equal(true, false)));
+    assert($f->eval(|false != true));
+    assert($f->eval(|!equal(false, true)));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualEnum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|equal(TestEnum1.FIRST, TestEnum1.FIRST)));
+    assert($f->eval(|TestEnum1.FIRST == TestEnum1.FIRST));
+    assert($f->eval(|equal(TestEnum1.SECOND, TestEnum1.SECOND)));
+    assert($f->eval(|TestEnum1.SECOND == TestEnum1.SECOND));
+
+    assert($f->eval(|!equal(TestEnum1.FIRST, TestEnum1.SECOND)));
+    assert($f->eval(|TestEnum1.FIRST != TestEnum1.SECOND));
+    assert($f->eval(|!equal(TestEnum1.SECOND, TestEnum1.FIRST)));
+    assert($f->eval(|TestEnum1.SECOND != TestEnum1.FIRST));
+
+    assert($f->eval(|!equal(TestEnum1.FIRST, TestEnum2.FIRST)));
+    assert($f->eval(|TestEnum1.FIRST != TestEnum2.FIRST));
+    assert($f->eval(|!equal(TestEnum1.SECOND, TestEnum2.SECOND)));
+    assert($f->eval(|TestEnum1.SECOND != TestEnum2.SECOND));
+
+    assert($f->eval(|!equal(TestEnum1.FIRST, 1)));
+    assert($f->eval(|TestEnum1.FIRST != 1));
+    assert($f->eval(|!equal('a', TestEnum1.SECOND)));
+    assert($f->eval(|'a' != TestEnum1.SECOND));
+
+    let x = TestEnum1.FIRST;
+    assert($f->eval(|equal($x, TestEnum1.FIRST)));
+    assert($f->eval(|$x == TestEnum1.FIRST));
+    assert($f->eval(|!equal($x, TestEnum1.SECOND)));
+    assert($f->eval(|$x != TestEnum1.SECOND));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualVarIdentity<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let x = 6;
+    assert($f->eval(|$x == $x));
+    assert($f->eval(|equal($x, $x)));
+
+    let y = 'the quick brown fox jumps over the lazy dog';
+    assert($f->eval(|$y == $y));
+    assert($f->eval(|equal($y, $y)));
+
+    let instance = ^BottomClass(name='name', left=1, right=2);
+    assert($f->eval(|$instance == $instance));
+    assert($f->eval(|equal($instance, $instance)));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNonPrimitive<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side1 = ^SideClass(stringId='firstSide', intId=1);
+    let side2 = ^SideClass(stringId='firstSide', intId=1);
+    let side3 = ^SideClass(stringId='secondSide', intId=1);
+    let side4 = ^SideClass(stringId='secondSide', intId=2);
+
+    assert($f->eval(|$side1 == $side1));
+    assert($f->eval(|equal($side1, $side1)));
+    assert($f->eval(|$side1 == $side2));
+    assert($f->eval(|equal($side1, $side2)));
+    assert($f->eval(|$side2 == $side1));
+    assert($f->eval(|equal($side2, $side1)));
+    assert($f->eval(|$side1 != $side3));
+    assert($f->eval(|!equal($side1, $side3)));
+    assert($f->eval(|$side3 != $side1));
+    assert($f->eval(|!equal($side3, $side1)));
+    assert($f->eval(|$side1 != $side4));
+    assert($f->eval(|!equal($side1, $side4)));
+
+    let left11 = ^LeftClass(name='left', left=1, sides=[$side1, $side3]);
+    let left12 = ^LeftClass(name='left', left=1, sides=[$side2, $side3]);
+    let left21 = ^LeftClass(name='left', left=2, sides=[$side1]);
+
+    assert($f->eval(|$left11 == $left11));
+    assert($f->eval(|equal($left11, $left11)));
+    assert($f->eval(|$left11 == $left12));
+    assert($f->eval(|equal($left11, $left12)));
+    assert($f->eval(|$left12 == $left11));
+    assert($f->eval(|equal($left12, $left11)));
+    assert($f->eval(|$left11 != $left21));
+    assert($f->eval(|!equal($left11, $left21)));
+    assert($f->eval(|$left21 != $left11));
+    assert($f->eval(|!equal($left21, $left11)));
+
+    let right11 = ^RightClass(name='right1', right=1, sides=[$side1]);
+    let right12 = ^RightClass(name='right1', right=2, sides=[$side1]);
+    let right21 = ^RightClass(name='right2', right=1, sides=[$side1]);
+    let right22 = ^RightClass(name='right2', right=1, sides=[$side2]);
+    let right23 = ^RightClass(name='right2', right=1, sides=[$side3]);
+
+    assert($f->eval(|$right11 == $right11));
+    assert($f->eval(|equal($right11, $right11)));
+    assert($f->eval(|$right11 == $right12));
+    assert($f->eval(|equal($right11, $right12)));
+    assert($f->eval(|$right12 == $right11));
+    assert($f->eval(|equal($right12, $right11)));
+    assert($f->eval(|$right11 != $right21));
+    assert($f->eval(|!equal($right11, $right21)));
+    assert($f->eval(|$right21 == $right22));
+    assert($f->eval(|equal($right21, $right22)));
+    assert($f->eval(|$right21 != $right23));
+    assert($f->eval(|!equal($right21, $right23)));
+
+    assert($f->eval(|$left11 != $right11));
+    assert($f->eval(|!equal($left11, $right11)));
+
+    let bot11 = ^BottomClass(name='left', left=1, right=1, sides=[$side1, $side3]);
+    let bot12 = ^BottomClass(name='left', left=1, right=2, sides=[$side2, $side3]);
+    let bot21 = ^BottomClass(name='left', left=2, right=1, sides=[$side1, $side3]);
+
+    assert($f->eval(|$bot11 == $bot11));
+    assert($f->eval(|equal($bot11, $bot11)));
+    assert($f->eval(|$bot11 == $bot12));
+    assert($f->eval(|equal($bot11, $bot12)));
+    assert($f->eval(|$bot11 != $bot21));
+    assert($f->eval(|!equal($bot11, $bot21)));
+
+    assert($f->eval(|$left11 != $bot11));
+    assert($f->eval(|!equal($left11, $bot11)));
+
+    let otherBot11 = ^OtherBottomClass(name='left', left=1, right=1, sides=[$side1, $side2]);
+    let otherBot12 = ^OtherBottomClass(name='left', left=1, right=2, sides=[$side1, $side2]);
+    let otherBot21 = ^OtherBottomClass(name='left', left=1, right=1, sides=[$side2, $side3]);
+
+    assert($f->eval(|$otherBot11 != $otherBot12));
+    assert($f->eval(|!equal($otherBot11, $otherBot12)));
+    assert($f->eval(|$otherBot11 == $otherBot21));
+    assert($f->eval(|equal($otherBot11, $otherBot21)));
+    assert($f->eval(|$otherBot12 != $otherBot21));
+    assert($f->eval(|!equal($otherBot12, $otherBot21)));
+}
+
+// Find a better place... Not a PCT test
+function meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert(['a', 'b'] == ['a', 'b']);
+    assert(equal(['a', 'b'], ['a', 'b']));
+
+    assert(['a', 'b', 'c'] == ['a', 'b', 'c']);
+    assert(equal(['a', 'b', 'c'], ['a', 'b', 'c']));
+
+    assertFalse(['a', 'b'] == ['a', 'b', 'c']);
+    assertFalse(equal(['a', 'b'], ['a', 'b', 'c']));
+
+    assertFalse(['a', 'b', 'c'] == ['a', 'b']);
+    assertFalse(equal(['a', 'b', 'c'], ['a', 'b']));
+
+    assertFalse(['a', 'b'] == ['b', 'a']);
+    assertFalse(equal(['a', 'b'], ['b', 'a']));
+}
+
+// Find a better place... Not a PCT test
+function meta::pure::functions::boolean::tests::equality::equal::testEqualRecursivePrimitiveCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side1 = ^SideClass(stringId='firstSide', intId=1);
+    let side2 = ^SideClass(stringId='firstSide', intId=1);
+    let side3 = ^SideClass(stringId='secondSide', intId=1);
+    let side4 = ^SideClass(stringId='secondSide', intId=2);
+
+    let bot11 = ^BottomClass(name='left', left=1, right=1, sides=[$side1, $side3]);
+    let bot12 = ^BottomClass(name='left', left=1, right=2, sides=[$side2, $side3]);
+    let bot21 = ^BottomClass(name='left', left=2, right=1, sides=[$side1, $side3]);
+
+    assert([$bot11, $bot21] == [$bot11, $bot21]);
+    assert(equal([$bot11, $bot21], [$bot11, $bot21]));
+
+    assert([$bot11, $bot21] == [$bot12, $bot21]);
+    assert(equal([$bot11, $bot21], [$bot12, $bot21]));
+
+    assertFalse([$bot11, $bot21] == [$bot11, $bot12, $bot21]);
+    assertFalse(equal([$bot11, $bot21], [$bot11, $bot12, $bot21]));
+
+    assertFalse([$bot11, $bot12, $bot21] == [$bot11, $bot21]);
+    assertFalse(equal([$bot11, $bot12, $bot21], [$bot11, $bot21]));
+
+    assertFalse([$bot11, $bot21] == [$bot11, $bot12]);
+    assertFalse(equal([$bot11, $bot21], [$bot11, $bot12]));
+}
+
+// Find a better place... Not a PCT test
+function meta::pure::functions::boolean::tests::equality::equal::testEqualMixedCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let side1 = ^SideClass(stringId='firstSide', intId=1);
+    let side2 = ^SideClass(stringId='firstSide', intId=1);
+    let side3 = ^SideClass(stringId='secondSide', intId=1);
+    let side4 = ^SideClass(stringId='secondSide', intId=2);
+
+    let bot11 = ^BottomClass(name='left', left=1, right=1, sides=[$side1, $side3]);
+    let bot12 = ^BottomClass(name='left', left=1, right=2, sides=[$side2, $side3]);
+    let bot21 = ^BottomClass(name='left', left=2, right=1, sides=[$side1, $side3]);
+
+    assert([$bot11, 'a', $bot21] == [$bot11, 'a', $bot21]);
+    assert(equal([$bot11, 'a', $bot21], [$bot11, 'a', $bot21]));
+
+    assert([$bot11, 'a', $bot21] == [$bot12, 'a', $bot21]);
+    assert(equal([$bot11, 'a', $bot21], [$bot12, 'a', $bot21]));
+
+    assertFalse([$bot11, 'a', $bot21] == [$bot11, $bot12, 'a', $bot21]);
+    assertFalse(equal([$bot11, 'a', $bot21], [$bot11, $bot12, 'a', $bot21]));
+
+    assertFalse([$bot11, $bot12, 'a', $bot21] == [$bot11, 'a', $bot21]);
+    assertFalse(equal([$bot11, $bot12, 'a', $bot21], [$bot11, 'a', $bot21]));
+
+    assertFalse([$bot11, $bot21] == [$bot11, 'a']);
+    assertFalse(equal([$bot11, $bot21], [$bot11, 'a']));
+}
+
+// Find a better place... Not a PCT test
+function meta::pure::functions::boolean::tests::equality::equal::testEqualEmptyCollections<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert([] == []);
+    assert(equal([], []));
+
+    let top = ^TopClass(name='top');
+
+    assert($top.sides == []);
+    assert(equal($top.sides, []));
+    assert([] == $top.sides);
+    assert(equal([], $top.sides));
+
+    assert($top.nickName == []);
+    assert(equal($top.nickName, []));
+    assert([] == $top.nickName);
+    assert(equal([], $top.nickName));
+}
+
+function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveExtension<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assert($f->eval(|equal(1, 1->cast(@ExtendedInteger))));
+    assert($f->eval(|equal(1->cast(@ExtendedInteger), 1)));
+    assertFalse($f->eval(|equal(1, 2->cast(@ExtendedInteger))));
+    assertFalse($f->eval(|equal(2->cast(@ExtendedInteger), 1)));
+    assertFalse($f->eval(|equal(^SideClass(stringId='firstSide', intId=1), 1->cast(@ExtendedInteger))));
+    assertFalse($f->eval(|equal(1->cast(@ExtendedInteger), ^SideClass(stringId='firstSide', intId=1))));
+}

@@ -1,0 +1,17 @@
+###Error
+No matching function 'a' found for argument types (Integer[1..2], Integer[1]) (at valueSpecification/functionApplication/generics/if_E_wrongMul 16:5-16:28)
+
+###Pure
+import test::*;
+
+native function test::xif<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];
+
+function a(a:Integer[1],b:Integer[1]):Integer[1]
+{
+    $a + $b;
+}
+
+function test():Any[*]
+{
+    a(xif(true,|[1,2],|1),2);
+}

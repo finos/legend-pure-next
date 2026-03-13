@@ -1,0 +1,312 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "ClassWithQualifiedProperties",
+      "package" : {
+        "pointerValue" : "protocol"
+      },
+      "qualifiedProperties" : [ {
+        "expressionSequence" : [ {
+          "_type" : "FunctionInvocation",
+          "functionName" : "letFunction",
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "rawType" : {
+                "_type" : "Type_Pointer",
+                "pointerValue" : "String"
+              }
+            },
+            "value" : "x"
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "plus",
+            "parametersValues" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "plus",
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String"
+                  }
+                },
+                "sourceInformation" : {
+                  "endColumn" : 16,
+                  "endLine" : 6,
+                  "startColumn" : 13,
+                  "startLine" : 6
+                },
+                "value" : "ok"
+              }, {
+                "_type" : "VariableExpression",
+                "name" : "param",
+                "sourceInformation" : {
+                  "endColumn" : 25,
+                  "endLine" : 6,
+                  "startColumn" : 20,
+                  "startLine" : 6
+                }
+              } ],
+              "sourceInformation" : {
+                "endColumn" : 35,
+                "endLine" : 6,
+                "startColumn" : 18,
+                "startLine" : 6
+              }
+            }, {
+              "_type" : "VariableExpression",
+              "name" : "param2",
+              "sourceInformation" : {
+                "endColumn" : 35,
+                "endLine" : 6,
+                "startColumn" : 29,
+                "startLine" : 6
+              }
+            } ],
+            "sourceInformation" : {
+              "endColumn" : 35,
+              "endLine" : 6,
+              "startColumn" : 18,
+              "startLine" : 6
+            }
+          } ],
+          "sourceInformation" : {
+            "endColumn" : 35,
+            "endLine" : 6,
+            "startColumn" : 5,
+            "startLine" : 6
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "sourceInformation" : {
+            "endColumn" : 6,
+            "endLine" : 7,
+            "startColumn" : 5,
+            "startLine" : 7
+          }
+        } ],
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "String",
+            "sourceInformation" : {
+              "endColumn" : 11,
+              "endLine" : 8,
+              "startColumn" : 6,
+              "startLine" : 8
+            }
+          }
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "qualifiedProperty",
+        "parameters" : [ {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String",
+              "sourceInformation" : {
+                "endColumn" : 154,
+                "endLine" : 5,
+                "startColumn" : 149,
+                "startLine" : 5
+              }
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "name" : "param",
+          "sourceInformation" : {
+            "endColumn" : 157,
+            "endLine" : 5,
+            "startColumn" : 142,
+            "startLine" : 5
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "rawType" : {
+              "_type" : "Type_Pointer",
+              "pointerValue" : "String",
+              "sourceInformation" : {
+                "endColumn" : 173,
+                "endLine" : 5,
+                "startColumn" : 168,
+                "startLine" : 5
+              }
+            }
+          },
+          "multiplicity" : {
+            "lowerBound" : {
+              "value" : 1
+            },
+            "upperBound" : {
+              "value" : 1
+            }
+          },
+          "name" : "param2",
+          "sourceInformation" : {
+            "endColumn" : 176,
+            "endLine" : 5,
+            "startColumn" : 160,
+            "startLine" : 5
+          }
+        } ],
+        "sourceInformation" : {
+          "endColumn" : 15,
+          "endLine" : 8,
+          "startColumn" : 3,
+          "startLine" : 5
+        },
+        "stereotypes" : [ {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 17,
+              "endLine" : 5,
+              "startColumn" : 14,
+              "startLine" : 5
+            },
+            "value" : "flag"
+          } ],
+          "pointerValue" : "AProfile",
+          "sourceInformation" : {
+            "endColumn" : 12,
+            "endLine" : 5,
+            "startColumn" : 5,
+            "startLine" : 5
+          }
+        }, {
+          "extraPointerValues" : [ {
+            "sourceInformation" : {
+              "endColumn" : 54,
+              "endLine" : 5,
+              "startColumn" : 48,
+              "startLine" : 5
+            },
+            "value" : "newFlag"
+          } ],
+          "pointerValue" : "protocol::support::AProfile",
+          "sourceInformation" : {
+            "endColumn" : 46,
+            "endLine" : 5,
+            "startColumn" : 20,
+            "startLine" : 5
+          }
+        } ],
+        "taggedValues" : [ {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 90,
+                "endLine" : 5,
+                "startColumn" : 87,
+                "startLine" : 5
+              },
+              "value" : "tag1"
+            } ],
+            "pointerValue" : "protocol::support::AProfile",
+            "sourceInformation" : {
+              "endColumn" : 85,
+              "endLine" : 5,
+              "startColumn" : 59,
+              "startLine" : 5
+            }
+          },
+          "value" : "yeah"
+        }, {
+          "tag" : {
+            "extraPointerValues" : [ {
+              "sourceInformation" : {
+                "endColumn" : 114,
+                "endLine" : 5,
+                "startColumn" : 111,
+                "startLine" : 5
+              },
+              "value" : "tag2"
+            } ],
+            "pointerValue" : "AProfile",
+            "sourceInformation" : {
+              "endColumn" : 109,
+              "endLine" : 5,
+              "startColumn" : 102,
+              "startLine" : 5
+            }
+          },
+          "value" : "ok"
+        } ]
+      } ],
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 3
+      }
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_stereotypes" : [ {
+        "sourceInformation" : {
+          "endColumn" : 20,
+          "endLine" : 13,
+          "startColumn" : 17,
+          "startLine" : 13
+        },
+        "value" : "flag"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 29,
+          "endLine" : 13,
+          "startColumn" : 23,
+          "startLine" : 13
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "sourceInformation" : {
+          "endColumn" : 13,
+          "endLine" : 14,
+          "startColumn" : 10,
+          "startLine" : 14
+        },
+        "value" : "tag1"
+      }, {
+        "sourceInformation" : {
+          "endColumn" : 19,
+          "endLine" : 14,
+          "startColumn" : 16,
+          "startLine" : 14
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "pointerValue" : "protocol::support"
+      },
+      "sourceInformation" : {
+        "endColumn" : 1,
+        "endLine" : 15,
+        "startColumn" : 1,
+        "startLine" : 11
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

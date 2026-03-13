@@ -1,0 +1,30 @@
+function f<|m>(s:String[m]):String[m]
+{
+    $s
+}
+
+function pl(a:String[1], b:String[1]):String[1]
+{
+    $a+$b
+}
+
+function test():Any[*]
+{
+    f('a')->pl('ok')
+}
+
+###CompiledGraph
+function f_String_m__String_m_(s:String[m]):String[m]  ~UserDefinedFunction<{String[m]->String[m]}>
+  Variable s :#String##[m]#  @3:5-3:6
+
+function pl_String_1__String_1__String_1_(a:String[1], b:String[1]):String[1]  ~UserDefinedFunction<{String[1], String[1]->String[1]}>
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @8:7-8:9
+    Variable a :#String##[1]#  @8:5-8:6
+    Variable b :#String##[1]#  @8:8-8:9
+
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  ArrowInvocation pl_String_1__String_1__String_1_ :#String##[1]#  @13:11-13:20
+    FunctionInvocation f_String_m__String_m_ :#String##[1]#  @13:5-13:10
+      mulParam m -> [1]
+      AtomicValue  'a' :String[1]  @13:7-13:9
+    AtomicValue  'ok' :String[1]  @13:16-13:19

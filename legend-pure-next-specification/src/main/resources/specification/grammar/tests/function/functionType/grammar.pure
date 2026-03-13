@@ -1,0 +1,10 @@
+###Pure
+function protocol::takesFunction(f: {String[1]->Boolean[1]}[1]): Boolean[*]
+{
+  $f->eval('test')
+}
+
+function protocol::takesBiFunction(f: {String[1],Integer[1]->Boolean[1]}[1]): Boolean[*]
+{
+  $f->eval('test', 1)
+}

@@ -1,0 +1,149 @@
+{
+  "sections" : [ {
+    "elements" : [ {
+      "_type" : "NativeFunction",
+      "functionName" : "test",
+      "name" : "test_Relation_1__Boolean_1_",
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "rawType" : {
+            "_type" : "Type_Pointer",
+            "pointerValue" : "Relation",
+            "sourceInformation" : {
+              "endColumn" : 32,
+              "endLine" : 2,
+              "startColumn" : 25,
+              "startLine" : 2
+            }
+          },
+          "typeArguments" : [ {
+            "rawType" : {
+              "_type" : "RelationType",
+              "columns" : [ {
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "String",
+                    "sourceInformation" : {
+                      "endColumn" : 44,
+                      "endLine" : 2,
+                      "startColumn" : 39,
+                      "startLine" : 2
+                    }
+                  }
+                },
+                "multiplicity" : {
+                  "lowerBound" : {
+                    "value" : 1
+                  },
+                  "upperBound" : {
+                    "value" : 1
+                  }
+                },
+                "name" : "val",
+                "sourceInformation" : {
+                  "endColumn" : 47,
+                  "endLine" : 2,
+                  "startColumn" : 35,
+                  "startLine" : 2
+                }
+              }, {
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "Integer",
+                    "sourceInformation" : {
+                      "endColumn" : 61,
+                      "endLine" : 2,
+                      "startColumn" : 55,
+                      "startLine" : 2
+                    }
+                  }
+                },
+                "multiplicity" : {
+                  "lowerBound" : {
+                    "value" : 0
+                  },
+                  "upperBound" : {
+                    "value" : 1
+                  }
+                },
+                "name" : "other",
+                "sourceInformation" : {
+                  "endColumn" : 67,
+                  "endLine" : 2,
+                  "startColumn" : 49,
+                  "startLine" : 2
+                }
+              }, {
+                "genericType" : {
+                  "rawType" : {
+                    "_type" : "Type_Pointer",
+                    "pointerValue" : "Boolean",
+                    "sourceInformation" : {
+                      "endColumn" : 78,
+                      "endLine" : 2,
+                      "startColumn" : 72,
+                      "startLine" : 2
+                    }
+                  }
+                },
+                "name" : "ok",
+                "sourceInformation" : {
+                  "endColumn" : 78,
+                  "endLine" : 2,
+                  "startColumn" : 69,
+                  "startLine" : 2
+                }
+              } ]
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "lowerBound" : {
+            "value" : 1
+          },
+          "upperBound" : {
+            "value" : 1
+          }
+        },
+        "name" : "r",
+        "sourceInformation" : {
+          "endColumn" : 83,
+          "endLine" : 2,
+          "startColumn" : 22,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "rawType" : {
+          "_type" : "Type_Pointer",
+          "pointerValue" : "Boolean",
+          "sourceInformation" : {
+            "endColumn" : 93,
+            "endLine" : 2,
+            "startColumn" : 87,
+            "startLine" : 2
+          }
+        }
+      },
+      "returnMultiplicity" : {
+        "lowerBound" : {
+          "value" : 1
+        },
+        "upperBound" : {
+          "value" : 1
+        }
+      },
+      "sourceInformation" : {
+        "endColumn" : 97,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

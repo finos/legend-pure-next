@@ -1,0 +1,33 @@
+###Pure
+native function test<Z,V,K>(z:Relation<Z>[1], x:AggColSpec<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1];
+
+native function _sum(x:Integer[*]):Integer[1];
+
+function test():Any[1]
+{
+   test(@Relation<(ok:String[1])>, ~name:{p,f,r|1}:y|$y->_sum());
+}
+
+###CompiledGraph
+native function test_Relation_1__AggColSpec_1__Any_1_(z:Relation<Z>[1], x:AggColSpec<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z>[1], AggColSpec<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]->Any[1]}>
+
+native function _sum_Integer_MANY__Integer_1_(x:Integer[*]):Integer[1]  ~NativeFunction<{Integer[*]->Integer[1]}>
+
+function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
+  FunctionInvocation test_Relation_1__AggColSpec_1__Any_1_ :#Any##[1]#  @8:4-8:64
+    typeParam K -> #Integer#
+    typeParam V -> #Integer#
+    typeParam Z -> #(ok:#String##[1]#)#
+    TypeHolder :Relation<(ok:String[1])>[1]  @8:9-8:33
+    FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__T_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  @8:37-8:63
+      typeParam K -> #Integer#
+      typeParam T -> #(name:#Integer##[1]#)#
+      typeParam U -> #(ok:String[1])#
+      typeParam V -> #Integer#
+      Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  @8:42-8:50
+        AtomicValue  1 :Integer[1]  @8:49-8:49
+      Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  @8:52-8:63
+        ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  @8:56-8:63
+          Variable y :#Integer##[*]#  @8:54-8:55
+      AtomicValue  'name' :String[1]
+      TypeHolder :#(name:#Integer##[1]#)#[1]
