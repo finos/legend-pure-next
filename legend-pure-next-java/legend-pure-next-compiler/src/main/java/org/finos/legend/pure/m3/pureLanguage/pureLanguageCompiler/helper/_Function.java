@@ -17,7 +17,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.Function;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.LazyPackageableFunction;
+import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -58,15 +58,14 @@ public class _Function
 
     /**
      * Get the {@link FunctionType} for a function, preferring the cached type
-     * from the {@link LazyPackageableFunction} proxy (no element loading) when available,
-     * falling back to {@link #resolveFunctionType} for non-lazy functions.
+     * from the {@link FunctionIndexEntry} (no element loading) when available,
+     * falling back to {@link #resolveFunctionType} for other functions.
      */
     public static FunctionType getFunctionType(Function func, MetadataAccess model)
     {
-        LazyPackageableFunction lazy = LazyPackageableFunction.unwrap(func);
-        if (lazy != null)
+        if (func instanceof FunctionIndexEntry fie)
         {
-            return lazy.functionType();
+            return fie.functionType();
         }
         return resolveFunctionType(func._classifierGenericType(), model);
     }

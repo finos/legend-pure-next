@@ -14,93 +14,213 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
+import meta.pure.metamodel.type.generics.MultiplicityParameter;
+import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
+import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
-import org.eclipse.collections.api.factory.Stacks;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.stack.MutableStack;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.eclipse.collections.impl.factory.Stacks;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
+import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 
 /**
- * Pure-language-specific compilation context that manages variable scopes
- * and type/multiplicity parameter names during the third compilation pass.
+ * Pure-language-specific compilation context that manages variable scopes,
+ * type/multiplicity parameter names, and the binding tree during the third
+ * compilation pass.
  *
- * <p>This is separated from {@link CompilationContext} because variable
- * scoping is specific to the Pure language compiler, not a generic
- * concern of the top-level compilation orchestrator.</p>
+ * <p>The binding tree has two node types:
+ * <ul>
+ *   <li>{@link EnclosingOwnerParametersBinding} — the root, representing the function or
+ *       class being compiled. Created by {@link #setEnclosingOwner}.</li>
+ *   <li>{@link FunctionCallParametersBinding} — one per function call being resolved.
+ *       Pushed/popped by {@link #pushBindingNode}/{@link #popBindingNode}.</li>
+ * </ul>
+ * </p>
  */
 public class PureLanguageCompilerContext implements CompilerContextExtension
 {
     private final MutableStack<MutableList<VariableExpression>> variableScopes = Stacks.mutable.empty();
-    private MutableSet<String> scopeTypeParamNames = Sets.mutable.empty();
-    private MutableSet<String> scopeMultiplicityParamNames = Sets.mutable.empty();
 
     /**
-     * Push a new variable scope (e.g. function parameters, lambda parameters).
-     * Creates a defensive copy so the original list is not mutated.
+     * The root of the binding tree for the element currently being compiled.
+     * Null outside of function/class compilation.
      */
+    private EnclosingOwnerParametersBinding enclosingOwnerParametersBinding;
+
+    /** The current function call node, null when not inside a function call. */
+    private FunctionCallParametersBinding currentFunctionCallNode;
+
+    // ========================================================================
+    // Binding tree management
+    // ========================================================================
+
+    /**
+     * Push a new {@link FunctionCallParametersBinding} when starting to resolve a function call.
+     * Seeds it with any pre-resolved type/multiplicity parameter bindings.
+     */
+    public FunctionCallParametersBinding pushBindingNode(FunctionExpression expr, FunctionIndexEntry entry)
+    {
+        FunctionCallParametersBinding node = new FunctionCallParametersBinding(
+                                                    expr, entry,
+                                                    _FunctionExpression.extractResolvedParametersBinding(expr),
+                                                    enclosingOwnerParametersBinding
+                                             );
+        currentFunctionCallNode = node;
+        return node;
+    }
+
+    /**
+     * Pop the current {@link FunctionCallParametersBinding} after function resolution completes.
+     */
+    public void popBindingNode()
+    {
+        currentFunctionCallNode = null;
+    }
+
+    /**
+     * Return the current function call node, or null between function calls.
+     */
+    public FunctionCallParametersBinding currentFunctionCallNode()
+    {
+        return currentFunctionCallNode;
+    }
+
+    // ========================================================================
+    // Variable scope management
+    // ========================================================================
+
+    /** Push a new variable scope (e.g. function parameters, lambda parameters). */
     public void pushScope(MutableList<VariableExpression> variables)
     {
         this.variableScopes.push(Lists.mutable.withAll(variables));
     }
 
-    /**
-     * Pop the most recent variable scope.
-     */
+    /** Pop the most recent variable scope. */
     public void popScope()
     {
         this.variableScopes.pop();
     }
 
-    /**
-     * Add a variable to the current (topmost) scope.
-     * Used to register variables introduced by {@code letFunction}.
-     */
+    /** Add a variable to the current (topmost) scope (used for {@code letFunction}). */
     public void addToCurrentScope(VariableExpression variable)
     {
         this.variableScopes.peek().add(variable);
     }
 
+    // ========================================================================
+    // Enclosing owner (the function or class being compiled)
+    // ========================================================================
+
     /**
-     * Set the in-scope type parameter names (from the enclosing function or class).
+     * Set the enclosing owner and create the root {@link EnclosingOwnerParametersBinding}.
      */
-    public void setScopeTypeParamNames(MutableSet<String> names)
+    public void setEnclosingOwner(TypeAndMultiplicityParametersOwner owner)
     {
-        this.scopeTypeParamNames = names;
+        this.enclosingOwnerParametersBinding = new EnclosingOwnerParametersBinding(owner);
+    }
+
+    /** Clear the enclosing owner (called after compilation of function/class finishes). */
+    public void clearEnclosingOwner()
+    {
+        this.enclosingOwnerParametersBinding = null;
+        this.currentFunctionCallNode = null;
+    }
+
+    /** Return the root-level bindings for the enclosing function/class. */
+    public EnclosingOwnerParametersBinding enclosingBindings()
+    {
+        return enclosingOwnerParametersBinding;
+    }
+
+    // ========================================================================
+    // Helpers to extract params from the enclosing owner
+    // ========================================================================
+
+    private MutableList<TypeParameter> enclosingTypeParams()
+    {
+        return enclosingOwnerParametersBinding != null ? enclosingOwnerParametersBinding.owner()._typeParameters() : null;
+    }
+
+    private MutableList<MultiplicityParameter> enclosingMultiplicityParams()
+    {
+        return enclosingOwnerParametersBinding != null ? enclosingOwnerParametersBinding.owner()._multiplicityParameters() : null;
+    }
+
+    // ========================================================================
+    // Unified lookup — checks enclosing scope, then current binding node
+    // ========================================================================
+
+    /**
+     * Look up a TypeParameter by name. Checks the enclosing owner's params first,
+     * then the current binding node's own type params.
+     */
+    public TypeParameter lookupTypeParameter(String name)
+    {
+        MutableList<TypeParameter> params = enclosingTypeParams();
+        if (params != null)
+        {
+            TypeParameter tp = params.detect(p -> p._name().equals(name));
+            if (tp != null)
+            {
+                return tp;
+            }
+        }
+        if (currentFunctionCallNode != null)
+        {
+            return currentFunctionCallNode.ownTypeParams().get(name);
+        }
+        return null;
     }
 
     /**
-     * Return the in-scope type parameter names.
+     * Look up a MultiplicityParameter by name. Checks the enclosing owner's params first,
+     * then the current binding node's own multiplicity params.
      */
-    public MutableSet<String> scopeTypeParamNames()
+    public MultiplicityParameter lookupMultiplicityParameter(String name)
     {
-        return this.scopeTypeParamNames;
+        MutableList<MultiplicityParameter> params = enclosingMultiplicityParams();
+        if (params != null)
+        {
+            MultiplicityParameter mp = params.detect(p -> p._name().equals(name));
+            if (mp != null)
+            {
+                return mp;
+            }
+        }
+        if (currentFunctionCallNode != null)
+        {
+            return currentFunctionCallNode.ownMulParams().get(name);
+        }
+        return null;
     }
 
     /**
-     * Set the in-scope multiplicity parameter names (from the enclosing function or class).
+     * Return the enclosing type parameter names (from the function or class being compiled).
      */
-    public void setScopeMultiplicityParamNames(MutableSet<String> names)
+    public MutableSet<String> inScopeTypeParamNames()
     {
-        this.scopeMultiplicityParamNames = names;
+        MutableList<TypeParameter> params = enclosingTypeParams();
+        return params != null ? params.collect(TypeParameter::_name).toSet() : Sets.mutable.empty();
     }
 
     /**
-     * Return the in-scope multiplicity parameter names.
+     * Return the enclosing multiplicity parameter names (from the function or class being compiled).
      */
-    public MutableSet<String> scopeMultiplicityParamNames()
+    public MutableSet<String> inScopeMultiplicityParamNames()
     {
-        return this.scopeMultiplicityParamNames;
+        MutableList<MultiplicityParameter> params = enclosingMultiplicityParams();
+        return params != null ? params.collect(MultiplicityParameter::_name).toSet() : Sets.mutable.empty();
     }
 
     /**
      * Resolve a variable name to its declaration by searching scopes
      * from innermost to outermost.
-     *
-     * @return the matching VariableExpression, or null if not found
      */
     public VariableExpression resolveVariable(String name)
     {

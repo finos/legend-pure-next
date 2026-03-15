@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;

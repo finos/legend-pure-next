@@ -30,6 +30,7 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Unit;
 
@@ -72,7 +73,7 @@ public final class GenericTypeCompiler
         if (grammarGenericType._rawType() == null)
         {
             return new ConcreteGenericTypeImpl()
-                    ._typeParameter(compileTypeParameter(grammarGenericType._typeParameter()));
+                    ._typeParameter(resolveOrCompileTypeParameter(grammarGenericType._typeParameter(), context));
         }
 
         Type rawType = resolveType(grammarGenericType._rawType(), imports, model, context);
@@ -84,9 +85,9 @@ public final class GenericTypeCompiler
         return new ConcreteGenericTypeImpl()
                 ._rawType(rawType)
                 ._typeArguments(grammarGenericType._typeArguments().collect(arg -> compile(arg, imports, model, context)))
-                ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model)))
+                ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                 ._typeVariableValues(grammarGenericType._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)))
-                ._typeParameter(compileTypeParameter(grammarGenericType._typeParameter()));
+                ._typeParameter(resolveOrCompileTypeParameter(grammarGenericType._typeParameter(), context));
     }
 
     private static GenericType compileGenericTypeOperation(GenericTypeOperation gto, MutableList<String> imports, MetadataAccess model, CompilationContext context)
@@ -148,11 +149,39 @@ public final class GenericTypeCompiler
     }
 
 
-    public static TypeParameter compileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter)
+    public static TypeParameter compileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
+                                                      meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         if (grammarTypeParameter == null)
         {
             return null;
+        }
+        return new TypeParameterImpl()
+                ._name(grammarTypeParameter._name())
+                ._contravariant(grammarTypeParameter._contravariant())
+                ._owner(owner);
+    }
+
+    /**
+     * Resolve a type parameter reference by looking up the declared TypeParameter from
+     * the compilation scope. Falls back to creating a fresh TypeParameter if not in scope
+     * (e.g. during bootstrap or when compiling type arguments in class definitions).
+     */
+    private static TypeParameter resolveOrCompileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
+                                                                CompilationContext context)
+    {
+        if (grammarTypeParameter == null)
+        {
+            return null;
+        }
+        PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+        if (plcc != null)
+        {
+            TypeParameter scoped = plcc.lookupTypeParameter(grammarTypeParameter._name());
+            if (scoped != null)
+            {
+                return scoped;
+            }
         }
         return new TypeParameterImpl()
                 ._name(grammarTypeParameter._name())

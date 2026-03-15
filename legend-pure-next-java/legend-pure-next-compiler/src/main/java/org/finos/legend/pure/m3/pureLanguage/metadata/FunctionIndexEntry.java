@@ -14,17 +14,30 @@
 
 package org.finos.legend.pure.m3.pureLanguage.metadata;
 
+import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.SourceInformation;
+import meta.pure.metamodel.constraint.Constraint;
+import meta.pure.metamodel.extension.Stereotype;
+import meta.pure.metamodel.extension.TaggedValue;
+import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.ElementOverride;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.MultiplicityParameter;
+import meta.pure.metamodel.type.generics.MultiplicityParameterImpl;
+import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
-import org.eclipse.collections.impl.factory.Sets;
+import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
@@ -32,30 +45,66 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 import java.util.Comparator;
 
 /**
- * An entry in the function index, containing a FunctionType (the signature)
- * and the fully qualified path to the function element.
+ * An entry in the function index that implements {@link PackageableFunction}
+ * as a lightweight, lazy proxy.
  * <p>
- * The FunctionType captures parameters (with types and multiplicities),
- * return type, and return multiplicity — everything needed for function
- * matching and specificity ordering.
+ * Most properties are answered directly from the {@link FunctionType} and
+ * path information stored at index construction time. Properties that
+ * require the full compiled element (e.g., {@code _package()},
+ * {@code _stereotypes()}) are lazily resolved via
+ * {@code model.getElement(fullPath)} only when actually accessed at
+ * execution time — never during compilation.
  * </p>
  */
-public class FunctionIndexEntry
+public class FunctionIndexEntry implements PackageableFunction
 {
+    /**
+     * When true, any call to {@link #resolve()} will throw an {@link AssertionError}.
+     * Enable this in tests to verify that compilation never triggers function element loading.
+     */
+    private static volatile boolean failOnResolve = false;
+
+    public static void setFailOnResolve(boolean fail)
+    {
+        failOnResolve = fail;
+    }
+
+    public static boolean isFailOnResolve()
+    {
+        return failOnResolve;
+    }
     private final FunctionType functionType;
     private final String fullPath;
     private final String functionName;
+    private final MetadataAccess model;
     private final int typeParamCount;
     private final int multiplicityParamCount;
+    private final MutableList<TypeParameter> typeParameters;
+    private final MutableList<MultiplicityParameter> multiplicityParameters;
 
-    public FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType)
+    private volatile PackageableFunction resolved;
+
+    public FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType, MetadataAccess model)
     {
         this.functionType = functionType;
         this.fullPath = fullPath;
         this.functionName = functionName;
-        this.typeParamCount = computeTypeParamCount(functionType);
-        this.multiplicityParamCount = computeMultiplicityParamCount(functionType);
+        this.model = model;
+
+        MutableSet<String> typeParamNames = _FunctionType.collectReferencedTypeParameterNames(functionType);
+        this.typeParamCount = typeParamNames.size();
+        this.typeParameters = typeParamNames.collect(name ->
+                (TypeParameter) new TypeParameterImpl()._name(name)._owner(this)).toList();
+
+        MutableSet<String> mulParamNames = _FunctionType.collectReferencedMultiplicityParameterNames(functionType);
+        this.multiplicityParamCount = mulParamNames.size();
+        this.multiplicityParameters = mulParamNames.collect(name ->
+                (MultiplicityParameter) new MultiplicityParameterImpl()._name(name)._owner(this)).toList();
     }
+
+    // ========================================================================
+    // Direct accessors (no lazy resolution needed)
+    // ========================================================================
 
     public FunctionType functionType()
     {
@@ -65,11 +114,6 @@ public class FunctionIndexEntry
     public String fullPath()
     {
         return fullPath;
-    }
-
-    public String functionName()
-    {
-        return functionName;
     }
 
     public int typeParamCount()
@@ -82,36 +126,188 @@ public class FunctionIndexEntry
         return multiplicityParamCount;
     }
 
-    private static int computeTypeParamCount(FunctionType functionType)
+    // ========================================================================
+    // PackageableFunction — answered from existing data
+    // ========================================================================
+
+    @Override
+    public String _functionName()
     {
-        MutableSet<String> names = Sets.mutable.empty();
-        if (functionType._parameters() != null)
-        {
-            functionType._parameters().forEach(p -> _GenericType.collectReferencedTypeParameterNames(p._genericType(), names));
-        }
-        _GenericType.collectReferencedTypeParameterNames(functionType._returnType(), names);
-        return names.size();
+        return functionName;
     }
 
-    private static int computeMultiplicityParamCount(FunctionType functionType)
+    @Override
+    public MutableList<VariableExpression> _parameters()
     {
-        MutableSet<String> names = Sets.mutable.empty();
-        if (functionType._parameters() != null)
-        {
-            functionType._parameters().forEach(p ->
-            {
-                if (p._multiplicity() != null && p._multiplicity()._multiplicityParameter() != null)
-                {
-                    names.add(p._multiplicity()._multiplicityParameter());
-                }
-            });
-        }
-        if (functionType._returnMultiplicity() != null && functionType._returnMultiplicity()._multiplicityParameter() != null)
-        {
-            names.add(functionType._returnMultiplicity()._multiplicityParameter());
-        }
-        return names.size();
+        return functionType._parameters();
     }
+
+    @Override
+    public GenericType _returnGenericType()
+    {
+        return functionType._returnType();
+    }
+
+    @Override
+    public Multiplicity _returnMultiplicity()
+    {
+        return functionType._returnMultiplicity();
+    }
+
+    @Override
+    public MutableList<TypeParameter> _typeParameters()
+    {
+        return typeParameters;
+    }
+
+    @Override
+    public MutableList<MultiplicityParameter> _multiplicityParameters()
+    {
+        return multiplicityParameters;
+    }
+
+    // ========================================================================
+    // PackageableElement — answered from path data
+    // ========================================================================
+
+    @Override
+    public String _name()
+    {
+        // The fullPath is the function ID like "meta::pure::functions::boolean::greaterThan_Number_1__Number_1__Boolean_1_"
+        // _name() should return just the element name (last segment)
+        int sep = fullPath.lastIndexOf("::");
+        return sep >= 0 ? fullPath.substring(sep + 2) : fullPath;
+    }
+
+    // ========================================================================
+    // Any — classifierGenericType built from FunctionType
+    // ========================================================================
+
+    @Override
+    public GenericType _classifierGenericType()
+    {
+        // Build PackageableFunction<{FunctionType}> from the stored FunctionType
+        Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
+        return new ConcreteGenericTypeImpl()
+                ._rawType(pfType)
+                ._typeArguments(Lists.mutable.with(
+                        new ConcreteGenericTypeImpl()._rawType(functionType)));
+    }
+
+    // ========================================================================
+    // Lazy-resolved properties (delegate to real PackageableFunction)
+    // ========================================================================
+
+    private PackageableFunction resolve()
+    {
+        if (resolved == null)
+        {
+            if (failOnResolve)
+            {
+                throw new AssertionError("FunctionIndexEntry.resolve() was called during compilation for: " + fullPath);
+            }
+            resolved = (PackageableFunction) model.getElement(fullPath);
+        }
+        return resolved;
+    }
+
+    @Override
+    public Package _package()
+    {
+        // Derive the package from the fullPath prefix — no lazy resolution needed
+        int sep = fullPath.lastIndexOf("::");
+        if (sep > 0 && model != null)
+        {
+            String pkgPath = fullPath.substring(0, sep);
+            return (Package) model.getElement(pkgPath);
+        }
+        return null;
+    }
+
+    @Override
+    public MutableList<Stereotype> _stereotypes()
+    {
+        return resolve()._stereotypes();
+    }
+
+    @Override
+    public MutableList<TaggedValue> _taggedValues()
+    {
+        return resolve()._taggedValues();
+    }
+
+    @Override
+    public MutableList<Constraint> _preConstraints()
+    {
+        return resolve()._preConstraints();
+    }
+
+    @Override
+    public MutableList<Constraint> _postConstraints()
+    {
+        return resolve()._postConstraints();
+    }
+
+    @Override
+    public ElementOverride _elementOverride()
+    {
+        return null;
+    }
+
+    @Override
+    public SourceInformation _sourceInformation()
+    {
+        return resolve()._sourceInformation();
+    }
+
+    // ========================================================================
+    // Read-only setters — throw UnsupportedOperationException
+    // ========================================================================
+
+    @Override
+    public PackageableFunction _functionName(String value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _returnMultiplicity(Multiplicity value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _returnGenericType(GenericType value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _typeParameters(MutableList<TypeParameter> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _multiplicityParameters(MutableList<MultiplicityParameter> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _preConstraints(MutableList<Constraint> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableFunction _postConstraints(MutableList<Constraint> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.function.FunctionWithParameters _parameters(MutableList<VariableExpression> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableElement _package(Package value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public PackageableElement _name(String value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.extension.ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.extension.ElementWithStereotypes _stereotypes(MutableList<Stereotype> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.type.Any _elementOverride(ElementOverride value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.type.Any _classifierGenericType(GenericType value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+
+    @Override
+    public meta.pure.metamodel.type.Any _sourceInformation(SourceInformation value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
 
     // ========================================================================
     // Specificity comparator
@@ -284,7 +480,7 @@ public class FunctionIndexEntry
         }
         if (m._multiplicityParameter() != null)
         {
-            return "[" + m._multiplicityParameter() + "]";
+            return "[" + m._multiplicityParameter()._name() + "]";
         }
         long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
         Long upper = m._upperBound() != null ? m._upperBound()._value() : null;

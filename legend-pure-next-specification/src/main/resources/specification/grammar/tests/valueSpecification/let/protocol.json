@@ -13,6 +13,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 4,
+            "startColumn" : 7,
+            "startLine" : 4
+          },
           "value" : "x"
         }, {
           "_type" : "AtomicValue",
@@ -46,6 +52,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 10,
+            "endLine" : 5,
+            "startColumn" : 7,
+            "startLine" : 5
           },
           "value" : "name"
         }, {
@@ -81,6 +93,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 10,
+            "endLine" : 6,
+            "startColumn" : 7,
+            "startLine" : 6
+          },
           "value" : "flag"
         }, {
           "_type" : "AtomicValue",
@@ -114,6 +132,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 12,
+            "endLine" : 7,
+            "startColumn" : 7,
+            "startLine" : 7
           },
           "value" : "result"
         }, {

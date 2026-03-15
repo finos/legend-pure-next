@@ -16,7 +16,9 @@
           }
         },
         "multiplicity" : {
-          "multiplicityParameter" : "m"
+          "multiplicityParameter" : {
+            "name" : "m"
+          }
         },
         "name" : "val",
         "sourceInformation" : {

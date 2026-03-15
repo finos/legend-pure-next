@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
 
 
@@ -36,7 +37,8 @@ import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -81,7 +83,8 @@ public final class RelationColumnResolver
         {
             return;
         }
-        context.debug("enrichRelationTypeHolder: %s bindings=%s", funcName, bindings);
+        FunctionCallParametersBinding currentNode = context.compilerContextExtensions(PureLanguageCompilerContext.class).currentFunctionCallNode();
+        context.debug("enrichRelationTypeHolder: %s bindings=%s parentBindings=%s", funcName, bindings, lazy(() -> currentNode != null ? currentNode.printParentBindings() : "[]"));
         if ((funcName.equals("funcColSpec") || funcName.equals("funcColSpec2")) && paramValues.size() == 3)
         {
             context.debug("enrichRelationTypeHolder: funcColSpec branch");

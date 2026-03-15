@@ -20,7 +20,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.LazyPackageableFunction;
+import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 
@@ -201,7 +201,7 @@ public class PureModel
      */
     public CompilationResult compile()
     {
-        LazyPackageableFunction.setFailOnResolve(true);
+        FunctionIndexEntry.setFailOnResolve(true);
         try
         {
             // Compile each module in dependency order
@@ -218,7 +218,7 @@ public class PureModel
         }
         finally
         {
-            LazyPackageableFunction.setFailOnResolve(false);
+            FunctionIndexEntry.setFailOnResolve(false);
         }
     }
 

@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -417,8 +419,7 @@ public class _GenericType
         {
             return true;
         }
-        MutableSet<String> referencedParams = Sets.mutable.empty();
-        collectReferencedTypeParameterNames(genericType, referencedParams);
+        MutableSet<String> referencedParams = collectReferencedTypeParameterNames(genericType);
         // If no type params were found but isConcrete was false, the type has
         // structural incompleteness (e.g. null rawType) — not concrete in any context.
         return referencedParams.notEmpty() && scopeTypeParams.containsAll(referencedParams);
@@ -428,7 +429,14 @@ public class _GenericType
      * Recursively collect all type parameter names referenced within a GenericType.
      * For example, for {@code MyClass<T>}, this returns {@code {"T"}}.
      */
-    public static void collectReferencedTypeParameterNames(GenericType genericType, MutableSet<String> names)
+    public static MutableSet<String> collectReferencedTypeParameterNames(GenericType genericType)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        collectReferencedTypeParameterNames(genericType, names);
+        return names;
+    }
+
+    static void collectReferencedTypeParameterNames(GenericType genericType, MutableSet<String> names)
     {
         if (genericType == null)
         {
@@ -446,15 +454,63 @@ public class _GenericType
         }
         if (genericType._rawType() instanceof FunctionType ft)
         {
-            if (ft._parameters() != null)
-            {
-                ft._parameters().forEach(p -> { if (p != null) collectReferencedTypeParameterNames(p._genericType(), names); });
-            }
-            collectReferencedTypeParameterNames(ft._returnType(), names);
+            names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
+        }
+        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        {
+            names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
         }
         if (genericType._typeArguments() != null)
         {
             genericType._typeArguments().forEach(arg -> collectReferencedTypeParameterNames(arg, names));
+        }
+    }
+
+    /**
+     * Recursively collect all multiplicity parameter names referenced
+     * within a GenericType (including nested FunctionTypes and typeArguments).
+     */
+    public static MutableSet<String> collectReferencedMultiplicityParameterNames(GenericType genericType)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        collectReferencedMultiplicityParameterNames(genericType, names);
+        return names;
+    }
+
+    static void collectReferencedMultiplicityParameterNames(GenericType genericType, MutableSet<String> names)
+    {
+        if (genericType == null)
+        {
+            return;
+        }
+        // GenericTypeOperation: recurse into left and right (e.g., T-Z+V, ⊆T)
+        if (genericType instanceof GenericTypeOperation gto)
+        {
+            collectReferencedMultiplicityParameterNames(gto._left(), names);
+            collectReferencedMultiplicityParameterNames(gto._right(), names);
+            return;
+        }
+        if (genericType._rawType() instanceof FunctionType ft)
+        {
+            names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
+        }
+        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        {
+            names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
+        }
+        if (genericType._typeArguments() != null)
+        {
+            genericType._typeArguments().forEach(arg -> collectReferencedMultiplicityParameterNames(arg, names));
+        }
+        if (genericType._multiplicityArguments() != null)
+        {
+            genericType._multiplicityArguments().forEach(mul ->
+            {
+                if (mul._multiplicityParameter() != null)
+                {
+                    names.add(mul._multiplicityParameter()._name());
+                }
+            });
         }
     }
 
@@ -475,8 +531,7 @@ public class _GenericType
         // If the parameter side is a type parameter reference, bind it
         if (paramGT._typeParameter() != null && paramGT._rawType() == null)
         {
-            String name = paramGT._typeParameter()._name();
-            bindings.typeBindings().computeIfAbsent(name, k -> Sets.mutable.empty()) .add(argGT);
+            bindings.addTypeBinding(paramGT._typeParameter(), argGT);
             return;
         }
 
@@ -627,7 +682,10 @@ public class _GenericType
         {
             target._multiplicityArguments(source._multiplicityArguments());
         }
-        if (source._typeParameter() != null)
+        // Only copy typeParameter when rawType is absent — a GenericType
+        // cannot be both a concrete type (rawType) and a type parameter
+        // reference (_typeParameter) at the same time.
+        if (source._typeParameter() != null && source._rawType() == null)
         {
             target._typeParameter(source._typeParameter());
         }
@@ -675,7 +733,7 @@ public class _GenericType
 
         // Build bindings from the source type's declared parameters to the
         // source GenericType's concrete arguments
-        ParametersBinding bindings = new ParametersBinding();
+        ParametersBinding bindings = PlainParametersBinding.empty();
 
         if (sourceType instanceof Class cls)
         {

@@ -13,12 +13,12 @@ function go():Any[*]
 }
 
 ###CompiledGraph
-function f_T_MANY__T_MANY_(a:T[*]):T[*]  ~UserDefinedFunction<{T[*]->T[*]}>
-  Variable a :#T##[*]#  @4:6-4:7
+function f_T_MANY__T_MANY_(a:T~f_T_MANY__T_MANY_[*]):T~f_T_MANY__T_MANY_[*]  ~UserDefinedFunction<{T~f_T_MANY__T_MANY_[*]->T~f_T_MANY__T_MANY_[*]}>
+  Variable a :#T~f_T_MANY__T_MANY_##[*]#  @4:6-4:7
 
 function t_Function_1__Any_MANY_(f:Function<Any>[1]):Any[*]  ~UserDefinedFunction<{Function<Any>[1]->Any[*]}>
   Variable f :#Function<Any>##[1]#  @8:6-8:7
 
 function go__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
   FunctionInvocation t_Function_1__Any_MANY_ :#Any##[*]#  @12:6-12:25
-    AtomicValue  f_T_MANY__T_MANY_ :#UserDefinedFunction<{T[*]->T[*]}>#[1]  @12:8-12:24
+    AtomicValue  f_T_MANY__T_MANY_ :#UserDefinedFunction<{T~f_T_MANY__T_MANY_[*]->T~f_T_MANY__T_MANY_[*]}>#[1]  @12:8-12:24

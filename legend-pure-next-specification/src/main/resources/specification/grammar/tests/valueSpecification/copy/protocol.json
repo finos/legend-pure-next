@@ -13,6 +13,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 7,
+            "startLine" : 5
+          },
           "value" : "x"
         }, {
           "_type" : "FunctionInvocation",
@@ -120,6 +126,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 6,
+            "startColumn" : 7,
+            "startLine" : 6
           },
           "value" : "z"
         }, {

@@ -8,7 +8,7 @@ function test():Any[*]
 }
 
 ###CompiledGraph
-native function f_Function_1__T_1_(s:Function<{->T[1]}>[1]):T[1]  ~NativeFunction<{Function<{->T[1]}>[1]->T[1]}>
+native function f_Function_1__T_1_(s:Function<{->T~f_Function_1__T_1_[1]}>[1]):T~f_Function_1__T_1_[1]  ~NativeFunction<{Function<{->T~f_Function_1__T_1_[1]}>[1]->T~f_Function_1__T_1_[1]}>
 
 function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
   FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @6:10-6:11

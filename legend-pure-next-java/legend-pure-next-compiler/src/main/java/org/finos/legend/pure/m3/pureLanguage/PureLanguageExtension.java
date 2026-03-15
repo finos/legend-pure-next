@@ -85,13 +85,13 @@ public class PureLanguageExtension implements LanguageExtension
                 meta.pure.metamodel.type.FunctionType functionType =
                         new FunctionTypeFlatBufferWrapper(fbEntry.functionType(), resolver);
                 FunctionIndexEntry entry = new FunctionIndexEntry(
-                        fbEntry.fullPath(), fbEntry.functionName(), functionType);
+                        fbEntry.fullPath(), fbEntry.functionName(), functionType, resolver);
 
                 int paramCount = functionType._parameters() != null
                         ? functionType._parameters().size() : 0;
 
                 functionIndex
-                        .getIfAbsentPut(entry.functionName(), Maps.mutable::empty)
+                        .getIfAbsentPut(entry._functionName(), Maps.mutable::empty)
                         .getIfAbsentPut(paramCount, Lists.mutable::empty)
                         .add(entry);
             }

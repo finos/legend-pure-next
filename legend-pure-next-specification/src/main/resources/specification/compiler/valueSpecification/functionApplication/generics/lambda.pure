@@ -12,7 +12,7 @@ function test::tst():Boolean[1]
 }
 
 ###CompiledGraph
-native function test::fl_T_MANY__Function_1__T_MANY_(x:T[*], f:Function<{T[1]->Boolean[1]}>[1]):T[*]  ~NativeFunction<{T[*], Function<{T[1]->Boolean[1]}>[1]->T[*]}>
+native function test::fl_T_MANY__Function_1__T_MANY_(x:T~test::fl_T_MANY__Function_1__T_MANY_[*], f:Function<{T~test::fl_T_MANY__Function_1__T_MANY_[1]->Boolean[1]}>[1]):T~test::fl_T_MANY__Function_1__T_MANY_[*]  ~NativeFunction<{T~test::fl_T_MANY__Function_1__T_MANY_[*], Function<{T~test::fl_T_MANY__Function_1__T_MANY_[1]->Boolean[1]}>[1]->T~test::fl_T_MANY__Function_1__T_MANY_[*]}>
 
 native function test::sw_String_1__String_1__Boolean_1_(x:String[1], y:String[1]):Boolean[1]  ~NativeFunction<{String[1], String[1]->Boolean[1]}>
 

@@ -72,6 +72,7 @@ public final class EnumerationHandler
             LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
             defaultValueLambda._expressionSequence(Lists.mutable.with(
                     new AtomicValueImpl()
+                                ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation()))
                                 ._value(enumInstance)
                                 ._genericType(enumGT)
                                 ._multiplicity(pureOne)

@@ -13,6 +13,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 4,
+            "startColumn" : 4,
+            "startLine" : 4
+          },
           "value" : "name"
         }, {
           "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -33,6 +39,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 4,
+            "startLine" : 5
           },
           "value" : "name"
         }, {
@@ -74,6 +86,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 6,
+            "startColumn" : 4,
+            "startLine" : 6
           },
           "value" : "name"
         }, {
@@ -123,6 +141,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 7,
+            "startColumn" : 4,
+            "startLine" : 7
           },
           "value" : "name"
         }, {
@@ -209,6 +233,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 8,
+            "startColumn" : 4,
+            "startLine" : 8
+          },
           "value" : "name"
         }, {
           "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -271,6 +301,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 9,
+            "startColumn" : 4,
+            "startLine" : 9
           },
           "value" : "name"
         }, {
@@ -375,6 +411,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 7,
+            "endLine" : 10,
+            "startColumn" : 4,
+            "startLine" : 10
+          },
           "value" : "name"
         }, {
           "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -406,6 +448,12 @@
                 "pointerValue" : "String"
               }
             },
+            "sourceInformation" : {
+              "endColumn" : 8,
+              "endLine" : 11,
+              "startColumn" : 5,
+              "startLine" : 11
+            },
             "value" : "name"
           }, {
             "_type" : "AtomicValue",
@@ -414,6 +462,12 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
+            },
+            "sourceInformation" : {
+              "endColumn" : 13,
+              "endLine" : 11,
+              "startColumn" : 11,
+              "startLine" : 11
             },
             "value" : "age"
           } ]
@@ -447,6 +501,12 @@
                 "pointerValue" : "String"
               }
             },
+            "sourceInformation" : {
+              "endColumn" : 8,
+              "endLine" : 12,
+              "startColumn" : 5,
+              "startLine" : 12
+            },
             "value" : "name"
           }, {
             "_type" : "AtomicValue",
@@ -455,6 +515,12 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
+            },
+            "sourceInformation" : {
+              "endColumn" : 22,
+              "endLine" : 12,
+              "startColumn" : 20,
+              "startLine" : 12
             },
             "value" : "age"
           } ]
@@ -522,6 +588,12 @@
                 "pointerValue" : "String"
               }
             },
+            "sourceInformation" : {
+              "endColumn" : 8,
+              "endLine" : 13,
+              "startColumn" : 5,
+              "startLine" : 13
+            },
             "value" : "name"
           }, {
             "_type" : "AtomicValue",
@@ -530,6 +602,12 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
+            },
+            "sourceInformation" : {
+              "endColumn" : 25,
+              "endLine" : 13,
+              "startColumn" : 23,
+              "startLine" : 13
             },
             "value" : "age"
           } ]
@@ -652,6 +730,12 @@
                   "pointerValue" : "String"
                 }
               },
+              "sourceInformation" : {
+                "endColumn" : 8,
+                "endLine" : 14,
+                "startColumn" : 5,
+                "startLine" : 14
+              },
               "value" : "name"
             }, {
               "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -708,6 +792,12 @@
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
+              },
+              "sourceInformation" : {
+                "endColumn" : 21,
+                "endLine" : 14,
+                "startColumn" : 17,
+                "startLine" : 14
               },
               "value" : "other"
             }, {
@@ -795,6 +885,12 @@
                   "pointerValue" : "String"
                 }
               },
+              "sourceInformation" : {
+                "endColumn" : 8,
+                "endLine" : 15,
+                "startColumn" : 5,
+                "startLine" : 15
+              },
               "value" : "name"
             }, {
               "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -857,6 +953,12 @@
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
+              },
+              "sourceInformation" : {
+                "endColumn" : 29,
+                "endLine" : 15,
+                "startColumn" : 25,
+                "startLine" : 15
               },
               "value" : "other"
             }, {
@@ -984,6 +1086,12 @@
                   "pointerValue" : "String"
                 }
               },
+              "sourceInformation" : {
+                "endColumn" : 8,
+                "endLine" : 16,
+                "startColumn" : 5,
+                "startLine" : 16
+              },
               "value" : "name"
             }, {
               "_type" : "CompilerGenericTypeAndMultiplicityHolder"
@@ -1086,6 +1194,12 @@
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
+              },
+              "sourceInformation" : {
+                "endColumn" : 43,
+                "endLine" : 16,
+                "startColumn" : 39,
+                "startLine" : 16
               },
               "value" : "other"
             }, {

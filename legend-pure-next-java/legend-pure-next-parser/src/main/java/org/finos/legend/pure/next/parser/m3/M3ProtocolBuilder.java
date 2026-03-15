@@ -377,7 +377,7 @@ public class M3ProtocolBuilder
         if (multParamNames.contains(inner))
         {
             return new ConcreteMultiplicityImpl()
-                    ._multiplicityParameter(inner);
+                    ._multiplicityParameter(new meta.pure.protocol.grammar.type.generics.MultiplicityParameterImpl()._name(inner));
         }
 
         ConcreteMultiplicityImpl result = new ConcreteMultiplicityImpl();
@@ -769,6 +769,7 @@ public class M3ProtocolBuilder
                 ._functionName("letFunction")
                 ._parametersValues(Lists.mutable.with(
                         new AtomicValueImpl()
+                                ._sourceInformation(buildSourceInfo(ctx.identifier()))
                                 ._genericType(buildPrimitiveGenericType("String"))
                                 ._value(ctx.identifier().getText()),
                         visitCombinedExpr(ctx.combinedExpression(), typeParamNames, multParamNames)));
@@ -950,9 +951,11 @@ public class M3ProtocolBuilder
                     ._functionName("unitInstance")
                     ._parametersValues(Lists.mutable.with(
                             new AtomicValueImpl()
+                                    ._sourceInformation(buildSourceInfo(uiCtx.unitInstanceLiteral()))
                                     ._genericType(buildPrimitiveGenericType("String"))
                                     ._value(uiCtx.unitInstanceLiteral().getText()),
                             new AtomicValueImpl()
+                                    ._sourceInformation(buildSourceInfo(uiCtx.unitName()))
                                     ._genericType(buildPrimitiveGenericType("String"))
                                     ._value(uiCtx.unitName().getText())));
         }
@@ -998,6 +1001,7 @@ public class M3ProtocolBuilder
 
                 // Column name (String)
                 paramVals.add(new AtomicValueImpl()
+                        ._sourceInformation(buildSourceInfo(colSpec.columnName()))
                         ._genericType(buildPrimitiveGenericType("String"))
                         ._value(colSpec.columnName().getText()));
 
@@ -1089,6 +1093,7 @@ public class M3ProtocolBuilder
                     // Collect all column names as String values
                     MutableList<ValueSpecification> nameValues = ListAdapter.adapt(colSpecs).collect(colSpec ->
                             (ValueSpecification) new AtomicValueImpl()
+                                    ._sourceInformation(buildSourceInfo(colSpec.columnName()))
                                     ._genericType(buildPrimitiveGenericType("String"))
                                     ._value(colSpec.columnName().getText()));
                     arrayParams.add(new CollectionImpl()
@@ -1229,6 +1234,7 @@ public class M3ProtocolBuilder
                     if (assignCtx.PLUS() != null)
                     {
                         keParams.add(new AtomicValueImpl()
+                                ._sourceInformation(buildSourceInfo(assignCtx))
                                 ._genericType(buildPrimitiveGenericType("Boolean"))
                                 ._value(true));
                     }
@@ -2174,7 +2180,7 @@ public class M3ProtocolBuilder
         if (ctx.identifier() != null)
         {
             return new ConcreteMultiplicityImpl()
-                    ._multiplicityParameter(ctx.identifier().getText());
+                    ._multiplicityParameter(new meta.pure.protocol.grammar.type.generics.MultiplicityParameterImpl()._name(ctx.identifier().getText()));
         }
 
         ConcreteMultiplicityImpl mult = new ConcreteMultiplicityImpl();

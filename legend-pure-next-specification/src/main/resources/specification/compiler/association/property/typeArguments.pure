@@ -22,9 +22,9 @@ Association pack::AnimalPairLink
 }
 
 ###CompiledGraph
-class pack::XPair  ~Class<pack::XPair<U, V>>  @4:1-8:1
-  property first :U[1]  ~Property<pack::XPair<U, V>, U | 1>
-  property second :V[1]  ~Property<pack::XPair<U, V>, V | 1>
+class pack::XPair  ~Class<pack::XPair<U~pack::XPair, V~pack::XPair>>  @4:1-8:1
+  property first :U~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, U~pack::XPair | 1>
+  property second :V~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, V~pack::XPair | 1>
 
 class pack::Animal  ~Class<pack::Animal>  @10:1-12:1
 

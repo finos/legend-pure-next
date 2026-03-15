@@ -16,7 +16,8 @@
         [ :general [ :rawType :Type ] ],
         [ :general [ :rawType :PropertyOwner ] ],
         [ :general [ :rawType :ElementWithConstraints ] ],
-        [ :general [ :rawType :Testable ] ] .
+        [ :general [ :rawType :Testable ] ],
+        [ :general [ :rawType :TypeAndMultiplicityParametersOwner ] ] .
 
 :qualifiedProperties a :Property ;
     :name "qualifiedProperties" ;
@@ -41,25 +42,11 @@
     :genericType [ :rawType :QualifiedProperty ; :typeArguments [ :rawType :Any ] ] ;
     :multiplicity :ZeroMany .
 
-:typeParameters a :Property ;
-    :name "typeParameters" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :rawType :TypeParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :Class ;
-    :genericType [ :rawType :TypeParameter ] ;
-    :multiplicity :ZeroMany .
-
 :typeVariables a :Property ;
     :name "typeVariables" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :rawType :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Class ;
     :genericType [ :rawType :VariableExpression ] ;
-    :multiplicity :ZeroMany .
-
-:multiplicityParameters a :Property ;
-    :name "multiplicityParameters" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :rawType :MultiplicityParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :Class ;
-    :genericType [ :rawType :MultiplicityParameter ] ;
     :multiplicity :ZeroMany .
 
 :originalMilestonedProperties a :Property ;
@@ -486,6 +473,28 @@
 
 
 
+# --- TypeAndMultiplicityParametersOwner ---
+
+:TypeAndMultiplicityParametersOwner a :Class ;
+    :name "TypeAndMultiplicityParametersOwner" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :TypeAndMultiplicityParametersOwner ] ] ;
+    :package :meta_pure_metamodel_type_generics ;
+    :generalizations [ :general [ :rawType :Any ] ] .
+
+:TypeAndMultiplicityParametersOwner_typeParameters a :Property ;
+    :name "typeParameters" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :TypeAndMultiplicityParametersOwner ] [ :rawType :TypeParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :TypeAndMultiplicityParametersOwner ;
+    :genericType [ :rawType :TypeParameter ] ;
+    :multiplicity :ZeroMany .
+
+:TypeAndMultiplicityParametersOwner_multiplicityParameters a :Property ;
+    :name "multiplicityParameters" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :TypeAndMultiplicityParametersOwner ] [ :rawType :MultiplicityParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :TypeAndMultiplicityParametersOwner ;
+    :genericType [ :rawType :MultiplicityParameter ] ;
+    :multiplicity :ZeroMany .
+
 # --- TypeParameter ---
 
 :TypeParameter a :Class ;
@@ -508,6 +517,14 @@
     :genericType [ :rawType :String ] ;
     :multiplicity :PureOne .
 
+:typeParameter_owner a :Property ;
+    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
+    :name "owner" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :TypeParameter ] [ :rawType :TypeAndMultiplicityParametersOwner ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :TypeParameter ;
+    :genericType [ :rawType :TypeAndMultiplicityParametersOwner ] ;
+    :multiplicity :ZeroOne .
+
 # --- MultiplicityParameter ---
 
 :MultiplicityParameter a :Class ;
@@ -522,6 +539,14 @@
     :owner :MultiplicityParameter ;
     :genericType [ :rawType :String ] ;
     :multiplicity :PureOne .
+
+:multiplicityParameter_owner a :Property ;
+    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
+    :name "owner" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :MultiplicityParameter ] [ :rawType :TypeAndMultiplicityParametersOwner ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :owner :MultiplicityParameter ;
+    :genericType [ :rawType :TypeAndMultiplicityParametersOwner ] ;
+    :multiplicity :ZeroOne .
 
 # --- ResolvedTypeParameter ---
 
@@ -735,7 +760,8 @@
     :typeParameters [ :name "K" ] ;
     :generalizations 
         [ :general [ :rawType :FunctionWithParameters ; :typeArguments [ :typeParameter [ :name "K" ] ] ] ],
-        [ :general [ :rawType :PackageableElement ] ] .
+        [ :general [ :rawType :PackageableElement ] ],
+        [ :general [ :rawType :TypeAndMultiplicityParametersOwner ] ] .
 
 :preConstraints a :Property ;
     :name "preConstraints" ;
@@ -751,19 +777,7 @@
     :genericType [ :rawType :Constraint ] ;
     :multiplicity :ZeroMany .
 
-:PackageableFunction_typeParameters a :Property ;
-    :name "typeParameters" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :rawType :TypeParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :PackageableFunction ;
-    :genericType [ :rawType :TypeParameter ] ;
-    :multiplicity :ZeroMany .
 
-:PackageableFunction_multiplicityParameters a :Property ;
-    :name "multiplicityParameters" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :rawType :MultiplicityParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :PackageableFunction ;
-    :genericType [ :rawType :MultiplicityParameter ] ;
-    :multiplicity :ZeroMany .
 
 :PackageableFunction_returnGenericType a :Property ;
     :name "returnGenericType" ;
@@ -934,9 +948,9 @@
 
 :multiplicityParameter a :Property ;
     :name "multiplicityParameter" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Multiplicity ] [ :rawType :String ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Multiplicity ] [ :rawType :MultiplicityParameter ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :Multiplicity ;
-    :genericType [ :rawType :String ] ;
+    :genericType [ :rawType :MultiplicityParameter ] ;
     :multiplicity :ZeroOne .
 
 # --- ConcreteMultiplicity ---
@@ -1608,68 +1622,89 @@
 # PACKAGES
 # =============================================================================
 
+:Root a :Package ;
+    :name "::" ;
+    :classifierGenericType [ :rawType :Package ] .
+
 :meta a :Package ;
-    :name "meta" .
+    :name "meta" ;
+    :package :Root ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure a :Package ;
     :name "pure" ;
-    :package :meta .
+    :package :meta ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel a :Package ;
     :name "metamodel" ;
-    :package :meta_pure .
+    :package :meta_pure ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_type a :Package ;
     :name "type" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_type_generics a :Package ;
     :name "generics" ;
-    :package :meta_pure_metamodel_type .
+    :package :meta_pure_metamodel_type ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_type_primitives a :Package ;
     :name "primitives" ;
-    :package :meta_pure_metamodel_type .
+    :package :meta_pure_metamodel_type ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_function a :Package ;
     :name "function" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_function_property a :Package ;
     :name "property" ;
-    :package :meta_pure_metamodel_function .
+    :package :meta_pure_metamodel_function ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_multiplicity a :Package ;
     :name "multiplicity" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_valuespecification a :Package ;
     :name "valuespecification" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_extension a :Package ;
     :name "extension" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_constraint a :Package ;
     :name "constraint" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_import a :Package ;
     :name "import" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_relationship a :Package ;
     :name "relationship" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_testable a :Package ;
     :name "testable" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 :meta_pure_metamodel_relation a :Package ;
     :name "relation" ;
-    :package :meta_pure_metamodel .
+    :package :meta_pure_metamodel ;
+    :classifierGenericType [ :rawType :Package ] .
 
 # =============================================================================
 # PROFILES AND STEREOTYPES

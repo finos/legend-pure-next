@@ -20,11 +20,11 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
     Variable x :#Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>##[1]#  @6:4-6:5
     FunctionInvocation colSpec_String_1__T_1__ColSpec_1_ :#ColSpec<#(legal:String[1])#>##[1]#  @6:16-6:20
       typeParam T -> #(legal:String[1])#
-      AtomicValue  'legal' :String[1]
+      AtomicValue  'legal' :String[1]  @6:16-6:20
       TypeHolder :#(legal:String[1])#[1]
     FunctionInvocation colSpec_String_1__T_1__ColSpec_1_ :#ColSpec<#(newLegal:String[1])#>##[1]#  @6:24-6:31
       typeParam T -> #(newLegal:String[1])#
-      AtomicValue  'newLegal' :String[1]
+      AtomicValue  'newLegal' :String[1]  @6:24-6:31
       TypeHolder :#(newLegal:String[1])#[1]
   ArrowInvocation rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_ :#Relation<#(legal:String[1], yeah:Float[1], newOther:Integer[0..1])#>##[1]#  @7:6-7:32
     typeParam K -> Integer
@@ -35,11 +35,11 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
     Variable x :#Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>##[1]#  @7:4-7:5
     FunctionInvocation colSpec_String_1__T_1__ColSpec_1_ :#ColSpec<#(other:Integer[0..1])#>##[1]#  @7:16-7:20
       typeParam T -> #(other:Integer[0..1])#
-      AtomicValue  'other' :String[1]
+      AtomicValue  'other' :String[1]  @7:16-7:20
       TypeHolder :#(other:Integer[0..1])#[1]
     FunctionInvocation colSpec_String_1__T_1__ColSpec_1_ :#ColSpec<#(newOther:Integer[0..1])#>##[1]#  @7:24-7:31
       typeParam T -> #(newOther:Integer[0..1])#
-      AtomicValue  'newOther' :String[1]
+      AtomicValue  'newOther' :String[1]  @7:24-7:31
       TypeHolder :#(newOther:Integer[0..1])#[1]
 
-native function rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_(r:Relation<T>[1], old:ColSpec<Z=(?:K[m])⊆T>[1], new:ColSpec<V=(?:K[m])>[1]):Relation<T-Z+V>[1]  ~NativeFunction<{Relation<T>[1], ColSpec<Z=(?:K[m])⊆T>[1], ColSpec<V=(?:K[m])>[1]->Relation<T-Z+V>[1]}>
+native function rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_(r:Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], old:ColSpec<Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])⊆T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], new:ColSpec<V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])>[1]):Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_-Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_+V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], ColSpec<Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])⊆T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1], ColSpec<V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_=(?:K~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_[m])>[1]->Relation<T~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_-Z~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_+V~rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_>[1]}>

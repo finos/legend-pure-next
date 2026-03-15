@@ -81,10 +81,10 @@ class test::new::support::MyClass  ~Class<test::new::support::MyClass>  @13:1-17
   property name :String[1]  ~Property<test::new::support::MyClass, String | 1>
   property value :Integer[0..1]  ~Property<test::new::support::MyClass, Integer | 0..1>
 
-class test::new::support::MyClassWithK  ~Class<test::new::support::MyClassWithK<K>>  @19:1-23:1
-  property name :String[1]  ~Property<test::new::support::MyClassWithK<K>, String | 1>
-  property value :K[0..1]  ~Property<test::new::support::MyClassWithK<K>, K | 0..1>
+class test::new::support::MyClassWithK  ~Class<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>>  @19:1-23:1
+  property name :String[1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, String | 1>
+  property value :K~test::new::support::MyClassWithK[0..1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, K~test::new::support::MyClassWithK | 0..1>
 
-class test::new::support::MyClassWithKandM  ~Class<test::new::support::MyClassWithKandM<K>>  @25:1-29:1
-  property name :String[1]  ~Property<test::new::support::MyClassWithKandM<K>, String | 1>
-  property value :K[m]  ~Property<test::new::support::MyClassWithKandM<K>, K | m>
+class test::new::support::MyClassWithKandM  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>>  @25:1-29:1
+  property name :String[1]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>, String | 1>
+  property value :K~test::new::support::MyClassWithKandM[m]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>, K~test::new::support::MyClassWithKandM | m>

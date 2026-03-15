@@ -40,7 +40,7 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
       Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  @14:31-14:44
         DotApplication Firm.legalName :#String##[1]#  @14:35-14:44
           Variable x :#Firm##[1]#  @14:33-14:34
-      AtomicValue  'legal' :String[1]
+      AtomicValue  'legal' :String[1]  @14:25-14:29
       TypeHolder :#(legal:#String##[1]#)#[1]
   ArrowInvocation project_Z_MANY__FuncColSpecArray_1__Relation_1_ :#Relation<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  @15:14-15:69
     typeParam T -> #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#
@@ -59,7 +59,7 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
           Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#String##[1]#}#>#[1]  @15:32-15:45
             DotApplication Firm.legalName :#String##[1]#  @15:36-15:45
               Variable x :#Firm##[1]#  @15:34-15:35
-          AtomicValue  'legal' :String[1]
+          AtomicValue  'legal' :String[1]  @15:26-15:30
           TypeHolder :#(legal:#String##[1]#)#[1]
         FunctionInvocation funcColSpec_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->Any[1]}#, #(numeric:#x::Numeric##[1]#)#>##[1]#  @15:48-15:67
           typeParam T -> #(numeric:#x::Numeric##[1]#)#
@@ -67,10 +67,10 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
           Lambda(x:#Firm##[1]#) :#LambdaFunction<#{#Firm##[1]#->#x::Numeric##[1]#}#>#[1]  @15:56-15:67
             DotApplication Firm.numeric :#x::Numeric##[1]#  @15:60-15:67
               Variable x :#Firm##[1]#  @15:58-15:59
-          AtomicValue  'numeric' :String[1]
+          AtomicValue  'numeric' :String[1]  @15:48-15:54
           TypeHolder :#(numeric:#x::Numeric##[1]#)#[1]
       TypeHolder :#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#[1]
 
-native function project_Z_MANY__FuncColSpec_1__Relation_1_(cl:Z[*], x:FuncColSpec<{Z[1]->Any[*]}, T>[1]):Relation<T>[1]  ~NativeFunction<{Z[*], FuncColSpec<{Z[1]->Any[*]}, T>[1]->Relation<T>[1]}>
+native function project_Z_MANY__FuncColSpec_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], x:FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]}>
 
-native function project_Z_MANY__FuncColSpecArray_1__Relation_1_(cl:Z[*], x:FuncColSpecArray<{Z[1]->Any[*]}, T>[1]):Relation<T>[1]  ~NativeFunction<{Z[*], FuncColSpecArray<{Z[1]->Any[*]}, T>[1]->Relation<T>[1]}>
+native function project_Z_MANY__FuncColSpecArray_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], x:FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[*], FuncColSpecArray<{Z~project_Z_MANY__FuncColSpecArray_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpecArray_1__Relation_1_>[1]}>

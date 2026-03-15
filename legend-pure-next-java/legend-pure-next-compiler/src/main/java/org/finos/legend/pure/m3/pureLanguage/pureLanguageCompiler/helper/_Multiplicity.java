@@ -1,5 +1,7 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import meta.pure.metamodel.type.generics.GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.InferredMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -74,7 +76,7 @@ public final class _Multiplicity
 
     /**
      * Check multiplicity compatibility with variance awareness.
-     * Mirrors {@link _GenericType#isCompatible(GenericType, GenericType, boolean)}.
+     * Mirrors {@link _GenericType#isCompatible(GenericType, GenericType, MetadataAccess)}.
      * <p>
      * When {@code contravariant} is false (covariant): declared must subsume actual.
      * When {@code contravariant} is true: actual must subsume declared.
@@ -125,7 +127,7 @@ public final class _Multiplicity
         }
         if (m._multiplicityParameter() != null)
         {
-            return "[" + m._multiplicityParameter() + "]";
+            return "[" + m._multiplicityParameter()._name() + "]";
         }
         long lower = lowerBound(m);
         long upper = upperBound(m);
@@ -168,7 +170,7 @@ public final class _Multiplicity
         {
             return true;
         }
-        return scopeMulParams.contains(multiplicity._multiplicityParameter());
+        return scopeMulParams.contains(multiplicity._multiplicityParameter()._name());
     }
 
     /**
@@ -190,15 +192,12 @@ public final class _Multiplicity
             return;
         }
         // If the parameter side has a multiplicity parameter, bind it
+        // (including binding to other multiplicity parameters for transitive resolution)
         if (paramMul._multiplicityParameter() != null)
         {
-            String name = paramMul._multiplicityParameter();
-            // Only bind to concrete multiplicities (not other parameters)
-            if (argMul._multiplicityParameter() == null)
-            {
-                bindings.multiplicityBindings().computeIfAbsent(name, k -> Sets.mutable.empty())
-                        .add(argMul);
-            }
+            String name = paramMul._multiplicityParameter()._name();
+            bindings.multiplicityBindings().computeIfAbsent(name, k -> Sets.mutable.empty())
+                    .add(argMul);
         }
     }
 
@@ -222,7 +221,7 @@ public final class _Multiplicity
         }
         if (multiplicity._multiplicityParameter() != null)
         {
-            String name = multiplicity._multiplicityParameter();
+            String name = multiplicity._multiplicityParameter()._name();
             MutableSet<Multiplicity> boundMuls = bindings.multiplicityBindings().get(name);
             if (boundMuls != null && boundMuls.notEmpty())
             {
