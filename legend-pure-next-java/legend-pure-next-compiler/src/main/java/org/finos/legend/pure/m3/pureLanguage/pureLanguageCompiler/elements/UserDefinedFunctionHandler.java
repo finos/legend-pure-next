@@ -19,7 +19,7 @@ import meta.pure.metamodel.function.UserDefinedFunctionImpl;
 import meta.pure.metamodel.type.generics.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.factory.Sets;
+import org.eclipse.collections.impl.factory.Maps;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -80,10 +80,7 @@ public final class UserDefinedFunctionHandler
     {
         // Set in-scope type/multiplicity params so inner FunctionExpressions
         // can validate that unresolved type params come from this enclosing scope.
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeTypeParamNames(result._typeParameters()
-                .collect(TypeParameter::_name).toSet());
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeMultiplicityParamNames(result._multiplicityParameters()
-                .collect(MultiplicityParameter::_name).toSet());
+        context.compilerContextExtensions(PureLanguageCompilerContext.class).setEnclosingOwner(result);
 
         FunctionDefinitionResolver.resolveAndValidate(
                 result,
@@ -95,8 +92,7 @@ public final class UserDefinedFunctionHandler
                 context);
 
         // Clear scope params
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeTypeParamNames(Sets.mutable.empty());
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeMultiplicityParamNames(Sets.mutable.empty());
+        context.compilerContextExtensions(PureLanguageCompilerContext.class).clearEnclosingOwner();
 
         return result;
     }

@@ -10,7 +10,7 @@ function test():Any[1]
 }
 
 ###CompiledGraph
-native function test_Relation_1__AggColSpecArray_1__Any_1_(z:Relation<Z>[1], x:AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z>[1], AggColSpecArray<{Relation<Z>[1], Window<Z>[1], Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]->Any[1]}>
+native function test_Relation_1__AggColSpecArray_1__Any_1_(z:Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], x:AggColSpecArray<{Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], Window<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], Z~test_Relation_1__AggColSpecArray_1__Any_1_[1]->V~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpecArray_1__Any_1_[*]->K~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], AggColSpecArray<{Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], Window<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], Z~test_Relation_1__AggColSpecArray_1__Any_1_[1]->V~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpecArray_1__Any_1_[*]->K~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, Any>[1]->Any[1]}>
 
 native function _sum_Integer_MANY__Integer_1_(x:Integer[*]):Integer[1]  ~NativeFunction<{Integer[*]->Integer[1]}>
 
@@ -39,7 +39,7 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
           Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  @9:53-9:64
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  @9:57-9:64
               Variable y :#Integer##[*]#  @9:55-9:56
-          AtomicValue  'name' :String[1]
+          AtomicValue  'name' :String[1]  @9:38-9:41
           TypeHolder :#(name:#Integer##[1]#)#[1]
         FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__T_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  @9:67-9:99
           typeParam K -> #String#
@@ -51,6 +51,6 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
           Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  @9:85-9:99
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  @9:89-9:99
               Variable y :#String##[*]#  @9:87-9:88
-          AtomicValue  'other' :String[1]
+          AtomicValue  'other' :String[1]  @9:67-9:71
           TypeHolder :#(other:#String##[1]#)#[1]
       TypeHolder :#(name:#Integer##[1]#, other:#String##[1]#)#[1]

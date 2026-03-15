@@ -114,6 +114,12 @@
               "pointerValue" : "String"
             }
           },
+          "sourceInformation" : {
+            "endColumn" : 3,
+            "endLine" : 10,
+            "startColumn" : 3,
+            "startLine" : 10
+          },
           "value" : "5"
         }, {
           "_type" : "AtomicValue",
@@ -122,6 +128,12 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
+          },
+          "sourceInformation" : {
+            "endColumn" : 24,
+            "endLine" : 10,
+            "startColumn" : 5,
+            "startLine" : 10
           },
           "value" : "TestMeasure~Kilogram"
         } ],

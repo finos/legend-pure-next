@@ -23,6 +23,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
 
@@ -51,12 +52,18 @@ public final class PackageableFunctionCompiler
             CompilationContext context)
     {
         result._typeParameters(grammar._typeParameters()
-                        .collect(GenericTypeCompiler::compileTypeParameter)
+                        .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result))
                         .select(Objects::nonNull))
                 ._multiplicityParameters(grammar._multiplicityParameters()
-                        .collect(MultiplicityCompiler::compileMultiplicityParameter)
-                        .select(Objects::nonNull))
-                ._parameters(grammar._parameters()
+                        .collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result))
+                        .select(Objects::nonNull));
+
+        // Register declared type/multiplicity params in scope so GenericTypeCompiler
+        // reuses the same TypeParameter/MultiplicityParameter objects for references
+        PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+        plcc.setEnclosingOwner(result);
+
+        result._parameters(grammar._parameters()
                         .collect(p -> VariableCompiler.compileParameter(p, imports, model, context))
                         .select(Objects::nonNull));
 

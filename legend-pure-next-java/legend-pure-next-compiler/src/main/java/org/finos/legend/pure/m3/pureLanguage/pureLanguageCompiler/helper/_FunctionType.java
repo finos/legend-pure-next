@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
@@ -22,7 +23,9 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
+import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
 /**
@@ -367,5 +370,47 @@ public final class _FunctionType
             return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._rawType(newFT)._typeArguments(genericType._typeArguments());
         }
         return null;
+    }
+
+    /**
+     * Collect type parameter names referenced in a FunctionType's parameters and return type.
+     */
+    public static MutableSet<String> collectReferencedTypeParameterNames(FunctionType ft)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        if (ft._parameters() != null)
+        {
+            ft._parameters().forEach(p -> { if (p != null) _GenericType.collectReferencedTypeParameterNames(p._genericType(), names); });
+        }
+        _GenericType.collectReferencedTypeParameterNames(ft._returnType(), names);
+        return names;
+    }
+
+    /**
+     * Collect multiplicity parameter names referenced in a FunctionType's parameters and return type.
+     */
+    public static MutableSet<String> collectReferencedMultiplicityParameterNames(FunctionType ft)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        if (ft._parameters() != null)
+        {
+            ft._parameters().forEach(p ->
+            {
+                if (p != null)
+                {
+                    if (p._multiplicity() != null && p._multiplicity()._multiplicityParameter() != null)
+                    {
+                        names.add(p._multiplicity()._multiplicityParameter()._name());
+                    }
+                    _GenericType.collectReferencedMultiplicityParameterNames(p._genericType(), names);
+                }
+            });
+        }
+        if (ft._returnMultiplicity() != null && ft._returnMultiplicity()._multiplicityParameter() != null)
+        {
+            names.add(ft._returnMultiplicity()._multiplicityParameter()._name());
+        }
+        _GenericType.collectReferencedMultiplicityParameterNames(ft._returnType(), names);
+        return names;
     }
 }

@@ -1,5 +1,6 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -8,7 +9,9 @@ import meta.pure.metamodel.valuespecification.FunctionApplication;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper.ParametersBinding;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
@@ -59,18 +62,20 @@ public final class FunctionExpressionResolver
         {
             if (expr instanceof DotApplication dotApplication && expr._parametersValues().notEmpty())
             {
+                int checkpoint = context.currentErrorCount();
                 ValueSpecification dotResult = DotApplicationResolver.resolveDotApplication(dotApplication, model, context);
                 // Enum value resolution returns an AtomicValue, not a FunctionExpression
                 if (dotResult instanceof FunctionExpression fe)
                 {
-                    finalizeFunctionExpression(fe, model, context);
+                    finalizeFunctionExpression(fe, checkpoint, model, context);
                 }
                 return dotResult;
             }
             else
             {
+                int checkpoint = context.currentErrorCount();
                 FunctionExpression expression = expr._func(FunctionApplicationResolver.resolveFunctionApplication((FunctionApplication) expr, model, context));
-                finalizeFunctionExpression(expression, model, context);
+                finalizeFunctionExpression(expression, checkpoint, model, context);
                 return expression;
             }
         }
@@ -80,7 +85,7 @@ public final class FunctionExpressionResolver
         }
     }
 
-    public static void finalizeFunctionExpression(FunctionExpression resolved, MetadataAccess model, CompilationContext context)
+    public static void finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)
     {
         if (resolved._func() != null)
         {
@@ -88,7 +93,8 @@ public final class FunctionExpressionResolver
             FunctionType ft = _Function.getFunctionType(resolved._func(), model);
             GenericType returnGT = _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(ft._returnType(), bindings, model));
             Multiplicity returnMul = _Multiplicity.asInferred(_Multiplicity.makeAsConcreteAsPossible(ft._returnMultiplicity(), bindings), model);
-            context.debug("finalize: %s func=%s gt=%s mul=%s bindings=%s", resolved._functionName(), lazy(() -> CompilationContext.debugFunc(resolved._func())), lazy(() -> _GenericType.print(returnGT)), lazy(() -> _Multiplicity.print(returnMul)), bindings);
+            FunctionCallParametersBinding currentNode = context.compilerContextExtensions(PureLanguageCompilerContext.class).currentFunctionCallNode();
+            context.debug("finalize: %s func=%s gt=%s mul=%s bindings=%s parentBindings=%s", resolved._functionName(), lazy(() -> CompilationContext.debugFunc(resolved._func())), lazy(() -> _GenericType.print(returnGT)), lazy(() -> _Multiplicity.print(returnMul)), bindings, lazy(() -> currentNode != null ? currentNode.printParentBindings() : "[]"));
             resolved._genericType(returnGT)
                     ._multiplicity(returnMul);
 
@@ -103,6 +109,14 @@ public final class FunctionExpressionResolver
         {
             resolved._genericType(null)
                     ._multiplicity(null);
+            // Only report if no specific error was already added by resolveFunctionApplication.
+            // This avoids duplicate errors when e.g. "No matching function 'X' found" was already reported.
+            if (context.currentErrorCount() == errorCheckpoint)
+            {
+                context.addError(new CompilationError(
+                        "Can't resolve the function '" + resolved._functionName() + "'",
+                        resolved._sourceInformation()));
+            }
         }
     }
 }

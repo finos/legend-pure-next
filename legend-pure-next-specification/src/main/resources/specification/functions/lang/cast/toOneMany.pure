@@ -28,10 +28,10 @@ native function <<PCT.function>> meta::pure::functions::multiplicity::toOneMany<
 
 function <<test.Test>> meta::pure::functions::multiplicity::tests::toOneMany::testToOneManyMultiplicity():Boolean[1]
 {
-    assertIs(OneMany, {|toOneMany('a')}.expressionSequence->at(0)->evaluateAndDeactivate().multiplicity);
-    assertIs(OneMany, {|toOneMany(['a', 'b', 'c'])}.expressionSequence->at(0)->evaluateAndDeactivate().multiplicity);
-    assertIs(OneMany, {|[1, 2, 3]->first()->toOneMany()}.expressionSequence->at(0)->evaluateAndDeactivate().multiplicity);
-    assertIs(OneMany, {|[1, 2, 3]->filter(x | $x > 1)->toOneMany()}.expressionSequence->at(0)->evaluateAndDeactivate().multiplicity);
+    assertIs(OneMany, {|toOneMany('a')}.expressionSequence->at(0).multiplicity);
+    assertIs(OneMany, {|toOneMany(['a', 'b', 'c'])}.expressionSequence->at(0).multiplicity);
+    assertIs(OneMany, {|[1, 2, 3]->first()->toOneMany()}.expressionSequence->at(0).multiplicity);
+    assertIs(OneMany, {|[1, 2, 3]->filter(x | $x > 1)->toOneMany()}.expressionSequence->at(0).multiplicity);
 }
 
 function <<test.Test>> meta::pure::functions::multiplicity::tests::toOneMany::testToOneMany():Boolean[1]

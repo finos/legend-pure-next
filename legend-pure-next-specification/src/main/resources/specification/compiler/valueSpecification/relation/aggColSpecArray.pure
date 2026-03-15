@@ -10,7 +10,7 @@ function test():Any[1]
 }
 
 ###CompiledGraph
-native function test_Relation_1__AggColSpecArray_1__Any_1_(z:Relation<Z>[1], x:AggColSpecArray<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z>[1], AggColSpecArray<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]->Any[1]}>
+native function test_Relation_1__AggColSpecArray_1__Any_1_(z:Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], x:AggColSpecArray<{Z~test_Relation_1__AggColSpecArray_1__Any_1_[1]->V~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpecArray_1__Any_1_[*]->K~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z~test_Relation_1__AggColSpecArray_1__Any_1_>[1], AggColSpecArray<{Z~test_Relation_1__AggColSpecArray_1__Any_1_[1]->V~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpecArray_1__Any_1_[*]->K~test_Relation_1__AggColSpecArray_1__Any_1_[0..1]}, Any>[1]->Any[1]}>
 
 native function _sum_Integer_MANY__Integer_1_(x:Integer[*]):Integer[1]  ~NativeFunction<{Integer[*]->Integer[1]}>
 
@@ -39,7 +39,7 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
           Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  @9:47-9:58
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  @9:51-9:58
               Variable y :#Integer##[*]#  @9:49-9:50
-          AtomicValue  'name' :String[1]
+          AtomicValue  'name' :String[1]  @9:38-9:41
           TypeHolder :#(name:#Integer##[1]#)#[1]
         FunctionInvocation aggColSpec_Function_1__Function_1__String_1__T_1__AggColSpec_1_ :#AggColSpec<#{#(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  @9:61-9:87
           typeParam K -> #String#
@@ -51,6 +51,6 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
           Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  @9:73-9:87
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  @9:77-9:87
               Variable y :#String##[*]#  @9:75-9:76
-          AtomicValue  'other' :String[1]
+          AtomicValue  'other' :String[1]  @9:61-9:65
           TypeHolder :#(other:#String##[1]#)#[1]
       TypeHolder :#(name:#Integer##[1]#, other:#String##[1]#)#[1]

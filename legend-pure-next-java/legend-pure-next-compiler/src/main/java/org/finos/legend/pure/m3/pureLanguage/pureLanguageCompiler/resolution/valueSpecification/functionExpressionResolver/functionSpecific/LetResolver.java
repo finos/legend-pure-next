@@ -14,6 +14,12 @@ public class LetResolver
     /**
      * If the expression is a letFunction call, register the variable
      * into the current scope so subsequent expressions can reference it.
+     * <p>
+     * The variable's type and multiplicity come from the VALUE expression
+     * (second parameter), not the letFunction's return type. This is
+     * important because the return type T[m] depends on resolved bindings
+     * which may be empty after snapshot rollback, while the value
+     * expression has already been resolved to a concrete type.
      */
     public static void registerLetVariable(ValueSpecification vs, CompilationContext context)
     {
@@ -22,7 +28,7 @@ public class LetResolver
                 && fe._func() instanceof PackageableFunction pf
                 && "letFunction".equals(pf._functionName())
                 && fe._parametersValues() != null
-                && !fe._parametersValues().isEmpty()
+                && fe._parametersValues().size() >= 2
                 && fe._parametersValues().getFirst() instanceof AtomicValue av
                 && av._value() instanceof String varName)
         {
@@ -32,11 +38,14 @@ public class LetResolver
                         "Variable '" + varName + "' is already defined",
                         fe._sourceInformation()));
             }
+            // Use the value expression's (param[1]) type, which is the
+            // concrete resolved type of the assigned value.
+            ValueSpecification valueExpr = fe._parametersValues().get(1);
             context.compilerContextExtensions(PureLanguageCompilerContext.class).addToCurrentScope(
                     new VariableExpressionImpl()
                             ._name(varName)
-                            ._genericType(fe._genericType())
-                            ._multiplicity(fe._multiplicity()));
+                            ._genericType(valueExpr._genericType())
+                            ._multiplicity(valueExpr._multiplicity()));
         }
     }
 }

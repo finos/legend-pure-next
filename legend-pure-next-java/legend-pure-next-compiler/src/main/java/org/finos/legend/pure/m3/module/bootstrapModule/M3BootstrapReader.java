@@ -119,10 +119,12 @@ public class M3BootstrapReader
             wireGeneralizations(model, m3PrimitiveType, index);
             wireGeneralizations(model, m3Enumeration, index);
 
-            // Wire classifierGenericType on types (e.g., Any → Class<Any>)
+            // Wire classifierGenericType on types and packages
             wireClassifierGenericType(model, m3Class, index);
             wireClassifierGenericType(model, m3PrimitiveType, index);
             wireClassifierGenericType(model, m3Enumeration, index);
+            Resource m3Package = model.createResource(M3_NS + "Package");
+            wireClassifierGenericType(model, m3Package, index);
 
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
@@ -158,13 +160,13 @@ public class M3BootstrapReader
                 {
                     ClassImpl clazz = new ClassImpl()._name(name)._package(pkg);
                     // Set type parameters
-                    MutableList<TypeParameter> typeParams = getTypeParameters(model, res);
+                    MutableList<TypeParameter> typeParams = getTypeParameters(model, res, clazz);
                     if (typeParams.notEmpty())
                     {
                         clazz._typeParameters(typeParams);
                     }
                     // Set multiplicity parameters
-                    MutableList<MultiplicityParameter> mulParams = getMultiplicityParameters(model, res);
+                    MutableList<MultiplicityParameter> mulParams = getMultiplicityParameters(model, res, clazz);
                     if (mulParams.notEmpty())
                     {
                         clazz._multiplicityParameters(mulParams);
@@ -384,14 +386,14 @@ public class M3BootstrapReader
             Resource res = it.next();
             String name = getName(model, res);
             String packagePath = getPackagePath(model, res);
-            if (name == null || packagePath == null)
+            if (name == null)
             {
                 continue;
             }
 
-            String fullPath = packagePath + "::" + name;
+            String fullPath = packagePath != null ? packagePath + "::" + name : name;
             PackageableElement element = index.get(fullPath);
-            if (!(element instanceof Type specificType))
+            if (element == null)
             {
                 continue;
             }
@@ -399,7 +401,8 @@ public class M3BootstrapReader
             Statement cgtStmt = getM3Statement(model, res, "classifierGenericType");
             if (cgtStmt != null && cgtStmt.getObject().isResource())
             {
-                specificType._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                GenericType cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
+                element._classifierGenericType(cgt);
             }
         }
     }
@@ -524,8 +527,9 @@ public class M3BootstrapReader
             return null;
         }
         String localName = getLocalName(stmt.getObject().asResource());
-        if (localName == null)
+        if (localName == null || "Root".equals(localName))
         {
+            // Root is the top-level package; treat as no parent
             return null;
         }
         // Convert underscore-separated ref to :: path
@@ -599,7 +603,8 @@ public class M3BootstrapReader
         return result;
     }
 
-    private static MutableList<TypeParameter> getTypeParameters(Model model, Resource res)
+    private static MutableList<TypeParameter> getTypeParameters(Model model, Resource res,
+            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         MutableList<TypeParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "typeParameters"))
@@ -607,13 +612,14 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                result.add(new TypeParameterImpl()._name(paramName));
+                result.add(new TypeParameterImpl()._name(paramName)._owner(owner));
             }
         }
         return result;
     }
 
-    private static MutableList<MultiplicityParameter> getMultiplicityParameters(Model model, Resource res)
+    private static MutableList<MultiplicityParameter> getMultiplicityParameters(Model model, Resource res,
+            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         MutableList<MultiplicityParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "multiplicityParameters"))
@@ -621,7 +627,7 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                result.add(new MultiplicityParameterImpl()._name(paramName));
+                result.add(new MultiplicityParameterImpl()._name(paramName)._owner(owner));
             }
         }
         return result;
@@ -686,7 +692,7 @@ public class M3BootstrapReader
             {
                 // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
                 ft._returnMultiplicity(new ConcreteMultiplicityImpl()
-                        ._multiplicityParameter(mulParamStmt.getString()));
+                        ._multiplicityParameter(new meta.pure.metamodel.type.generics.MultiplicityParameterImpl()._name(mulParamStmt.getString())));
             }
             else
             {

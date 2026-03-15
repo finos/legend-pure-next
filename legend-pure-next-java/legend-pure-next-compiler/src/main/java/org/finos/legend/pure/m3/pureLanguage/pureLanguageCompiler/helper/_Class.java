@@ -1,5 +1,8 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.EnclosingOwnerParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.SimplePropertyOwner;
 import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.function.property.QualifiedProperty;
@@ -28,7 +31,7 @@ public final class _Class
      */
     public static ParametersBinding buildBindingsFromGenericType(Class ownerClass, GenericType receiverType)
     {
-        ParametersBinding bindings = new ParametersBinding();
+        ParametersBinding bindings = PlainParametersBinding.empty();
         if (ownerClass._typeParameters().notEmpty())
         {
             for (int i = 0; i < ownerClass._typeParameters().size(); i++)

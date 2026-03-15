@@ -36,11 +36,11 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
                 DotApplication legal :#String##[m]#  @6:46-6:51
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#
           AtomicValue  'w' :String[1]  @6:64-6:66
-      AtomicValue  'new' :String[1]
+      AtomicValue  'new' :String[1]  @6:24-6:26
       TypeHolder :#(new:#String##[1]#)#[1]
 
-native function over__Window_1_():Window<T>[1]  ~NativeFunction<{->Window<T>[1]}>
+native function over__Window_1_():Window<T~over__Window_1_>[1]  ~NativeFunction<{->Window<T~over__Window_1_>[1]}>
 
-native function extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_(r:Relation<T>[1], window:Window<T>[1], f:FuncColSpec<{Relation<T>[1], Window<T>[1], T[1]->Any[0..1]}, R>[1]):Relation<T+R>[1]  ~NativeFunction<{Relation<T>[1], Window<T>[1], FuncColSpec<{Relation<T>[1], Window<T>[1], T[1]->Any[0..1]}, R>[1]->Relation<T+R>[1]}>
+native function extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_(r:Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], window:Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], f:FuncColSpec<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_[1]->Any[0..1]}, R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]):Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], FuncColSpec<{Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], Window<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1], T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_[1]->Any[0..1]}, R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]->Relation<T~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_+R~extend_Relation_1__Window_1__FuncColSpec_1__Relation_1_>[1]}>
 
-native function lag_Relation_1__T_1__T_$0_1$_(w:Relation<T>[1], r:T[1]):T[0..1]  ~NativeFunction<{Relation<T>[1], T[1]->T[0..1]}>
+native function lag_Relation_1__T_1__T_$0_1$_(w:Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], r:T~lag_Relation_1__T_1__T_$0_1$_[1]):T~lag_Relation_1__T_1__T_$0_1$_[0..1]  ~NativeFunction<{Relation<T~lag_Relation_1__T_1__T_$0_1$_>[1], T~lag_Relation_1__T_1__T_$0_1$_[1]->T~lag_Relation_1__T_1__T_$0_1$_[0..1]}>

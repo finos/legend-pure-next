@@ -21,7 +21,7 @@ function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  @6:3-6:31
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'c' :String[1]
+    AtomicValue  'c' :String[1]  @6:7-6:7
     FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  @6:11-6:31
       typeParam T -> test::new::support::MyClass
       TypeHolder :test::new::support::MyClass[1]  @6:11-6:31
@@ -32,7 +32,7 @@ function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  @7:3-7:27
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'n' :String[1]
+    AtomicValue  'n' :String[1]  @7:7-7:7
     FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  @7:11-7:27
       typeParam T -> #test::new::support::MyClass#
       Variable c :#test::new::support::MyClass##[1]#  @7:12-7:13
@@ -43,13 +43,13 @@ function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#String##[1]#  @8:3-8:17
     typeParam T -> #String#
     mulParam m -> #[1]#
-    AtomicValue  'z' :String[1]
+    AtomicValue  'z' :String[1]  @8:7-8:7
     DotApplication test::new::support::MyClass.name :#String##[1]#  @8:13-8:17
       Variable n :#test::new::support::MyClass##[1]#  @8:11-8:12
   FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  @9:3-9:31
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'a' :String[1]
+    AtomicValue  'a' :String[1]  @9:7-9:7
     FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  @9:11-9:31
       typeParam T -> #test::new::support::MyClass#
       Variable c :#test::new::support::MyClass##[1]#  @9:12-9:13
@@ -57,7 +57,7 @@ function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}
         FunctionInvocation keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_ :#KeyExpression##[1]#  @9:15-9:30
           AtomicValue  'names' :String[1]  @9:15-9:30
           AtomicValue  'added' :String[1]  @9:24-9:30
-          AtomicValue  true :Boolean[1]
+          AtomicValue  true :Boolean[1]  @9:15-9:30
 
 class test::new::support::MyClass  ~Class<test::new::support::MyClass>  @12:1-17:1
   property name :String[1]  ~Property<test::new::support::MyClass, String | 1>

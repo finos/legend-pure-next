@@ -193,7 +193,7 @@ public class PureLanguageSerialization implements PDBExtension
         {
             FunctionIndexEntry entry = entries.get(i);
             int fullPathOffset = builder.createString(entry.fullPath());
-            int functionNameOffset = builder.createString(entry.functionName());
+            int functionNameOffset = builder.createString(entry._functionName());
             int functionTypeOffset = writer.writeFunctionType(entry.functionType());
             entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
                     .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset);
@@ -224,6 +224,15 @@ public class PureLanguageSerialization implements PDBExtension
     {
         if (vs instanceof FunctionExpression fe)
         {
+            if (fe._func() == null)
+            {
+                throw new IllegalStateException(
+                        "FunctionExpression '" + fe._functionName() + "' has null _func() in " + funcPath
+                                + " at " + (fe._sourceInformation() != null
+                                ? fe._sourceInformation()._sourceId() + ":" + fe._sourceInformation()._startLine() + ":" + fe._sourceInformation()._startColumn()
+                                        + "-" + fe._sourceInformation()._endLine() + ":" + fe._sourceInformation()._endColumn()
+                                : "unknown"));
+            }
             if (fe._parametersValues() != null)
             {
                 fe._parametersValues().forEach(pv -> validateValueSpecification(pv, funcPath));

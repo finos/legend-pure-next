@@ -46,7 +46,9 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "multiplicity" : {
-            "multiplicityParameter" : "m"
+            "multiplicityParameter" : {
+              "name" : "m"
+            }
           },
           "sourceInformation" : {
             "endColumn" : 38,
@@ -78,7 +80,9 @@
           }
         },
         "multiplicity" : {
-          "multiplicityParameter" : "m"
+          "multiplicityParameter" : {
+            "name" : "m"
+          }
         },
         "name" : "t",
         "sourceInformation" : {
@@ -94,7 +98,9 @@
         }
       },
       "returnMultiplicity" : {
-        "multiplicityParameter" : "m"
+        "multiplicityParameter" : {
+          "name" : "m"
+        }
       },
       "sourceInformation" : {
         "endColumn" : 1,

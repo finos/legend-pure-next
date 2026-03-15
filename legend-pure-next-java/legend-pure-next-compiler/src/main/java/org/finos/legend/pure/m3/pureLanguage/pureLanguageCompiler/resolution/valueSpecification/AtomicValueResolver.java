@@ -81,8 +81,8 @@ public class AtomicValueResolver
         // Phase 2 (resolveLambdaWithBindings) will set param types
         // from bindings before calling resolve again.
         // Use isConcreteInContext to allow in-scope type params (e.g., class-level T)
-        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), context.compilerContextExtensions(PureLanguageCompilerContext.class).scopeTypeParamNames()) ||
-                                   !_Multiplicity.isConcreteInContext(p._multiplicity(), context.compilerContextExtensions(PureLanguageCompilerContext.class).scopeMultiplicityParamNames())))
+        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeTypeParamNames()) ||
+                                   !_Multiplicity.isConcreteInContext(p._multiplicity(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeMultiplicityParamNames())))
         {
             context.addError(new CompilationError("Can't resolve lambda parameter types", av._sourceInformation()));
             return av;

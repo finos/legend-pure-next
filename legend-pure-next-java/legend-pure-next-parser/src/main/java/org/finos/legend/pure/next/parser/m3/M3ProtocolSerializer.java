@@ -962,14 +962,14 @@ public class M3ProtocolSerializer
                 if (param._multiplicity() != null
                         && param._multiplicity()._multiplicityParameter() != null)
                 {
-                    names.add(String.valueOf(param._multiplicity()._multiplicityParameter()));
+                    names.add(param._multiplicity()._multiplicityParameter()._name());
                 }
             }
         }
         if (func._returnMultiplicity() != null
                 && func._returnMultiplicity()._multiplicityParameter() != null)
         {
-            names.add(String.valueOf(func._returnMultiplicity()._multiplicityParameter()));
+            names.add(func._returnMultiplicity()._multiplicityParameter()._name());
         }
         return names;
     }
@@ -987,7 +987,7 @@ public class M3ProtocolSerializer
                 if (prop._multiplicity() != null
                         && prop._multiplicity()._multiplicityParameter() != null)
                 {
-                    names.add(String.valueOf(prop._multiplicity()._multiplicityParameter()));
+                    names.add(prop._multiplicity()._multiplicityParameter()._name());
                 }
             }
         }
@@ -2090,7 +2090,7 @@ private void serializeQualifiedProperty(
         // Check for multiplicity parameter reference
         if (mult._multiplicityParameter() != null)
         {
-            return "[" + mult._multiplicityParameter() + "]";
+            return "[" + mult._multiplicityParameter()._name() + "]";
         }
 
         int lower = 0;

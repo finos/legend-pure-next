@@ -14,6 +14,9 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.EnclosingOwnerParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -46,7 +49,7 @@ public final class _FunctionExpression
      */
     public static ParametersBinding extractResolvedParametersBinding(FunctionExpression expr)
     {
-        ParametersBinding bindings = new ParametersBinding();
+        ParametersBinding bindings = PlainParametersBinding.empty();
         MutableList<? extends ResolvedTypeParameter> resolvedTypeParameters = expr._resolvedTypeParameters();
         if (resolvedTypeParameters != null && resolvedTypeParameters.notEmpty())
         {
@@ -74,7 +77,7 @@ public final class _FunctionExpression
             FunctionExpression expr,
             PackageableFunction function)
     {
-        ParametersBinding bindings = new ParametersBinding();
+        ParametersBinding bindings = PlainParametersBinding.empty();
         ListIterable<? extends ValueSpecification> args = expr._parametersValues();
         MutableList<VariableExpression> params = function._parameters();
         int count = Math.min(params.size(), args.size());
@@ -98,18 +101,38 @@ public final class _FunctionExpression
 
     /**
      * Build and set resolved type and multiplicity parameters on the expression.
+     * Overload that writes ALL bindings (no scope filtering).
      */
     public static void populateResolvedParameters(
             FunctionExpression expr,
             ParametersBinding bindings,
             MetadataAccess model)
     {
-        // Resolve type parameters
+        populateResolvedParameters(expr, bindings, null, null, model);
+    }
+
+    /**
+     * Build and set resolved type and multiplicity parameters on the expression.
+     * Only writes bindings for the function's own params (ownTypeParams/ownMulParams),
+     * filtering out bindings from outer scopes (e.g., Z, y from enclosing function).
+     */
+    public static void populateResolvedParameters(
+            FunctionExpression expr,
+            ParametersBinding bindings,
+            MutableSet<String> ownTypeParams,
+            MutableSet<String> ownMulParams,
+            MetadataAccess model)
+    {
+        // Resolve type parameters — only write this function's own params
         if (!bindings.typeBindings().isEmpty())
         {
             MutableList<ResolvedTypeParameter> resolvedTypes = Lists.mutable.empty();
             for (var entry : bindings.typeBindings().entrySet())
             {
+                if (ownTypeParams != null && !ownTypeParams.contains(entry.getKey()))
+                {
+                    continue;
+                }
                 MutableSet<GenericType> boundTypes = entry.getValue();
                 if (boundTypes != null && boundTypes.notEmpty())
                 {
@@ -130,12 +153,16 @@ public final class _FunctionExpression
             }
         }
 
-        // Resolve multiplicity parameters
+        // Resolve multiplicity parameters — only write this function's own params
         if (!bindings.multiplicityBindings().isEmpty())
         {
             MutableList<ResolvedMultiplicityParameter> resolvedMuls = Lists.mutable.empty();
             for (var entry : bindings.multiplicityBindings().entrySet())
             {
+                if (ownMulParams != null && !ownMulParams.contains(entry.getKey()))
+                {
+                    continue;
+                }
                 MutableSet<Multiplicity> boundMuls = entry.getValue();
                 if (boundMuls != null && boundMuls.notEmpty() && boundMuls.size() == 1)
                 {

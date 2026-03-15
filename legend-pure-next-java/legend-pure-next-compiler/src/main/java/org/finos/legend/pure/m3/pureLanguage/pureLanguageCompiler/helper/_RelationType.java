@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relation.Column;
@@ -357,5 +358,38 @@ public class _RelationType
             return newOwnerGT;
         }
         return null;
+    }
+
+    /**
+     * Collect type parameter names referenced in RelationType column types.
+     */
+    public static MutableSet<String> collectReferencedTypeParameterNames(RelationType rt)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        if (rt._columns() != null)
+        {
+            rt._columns().forEach(col -> _GenericType.collectReferencedTypeParameterNames(col._genericType(), names));
+        }
+        return names;
+    }
+
+    /**
+     * Collect multiplicity parameter names referenced in RelationType column types and multiplicities.
+     */
+    public static MutableSet<String> collectReferencedMultiplicityParameterNames(RelationType rt)
+    {
+        MutableSet<String> names = Sets.mutable.empty();
+        if (rt._columns() != null)
+        {
+            rt._columns().forEach(col ->
+            {
+                _GenericType.collectReferencedMultiplicityParameterNames(col._genericType(), names);
+                if (col._multiplicity() != null && col._multiplicity()._multiplicityParameter() != null)
+                {
+                    names.add(col._multiplicity()._multiplicityParameter()._name());
+                }
+            });
+        }
+        return names;
     }
 }

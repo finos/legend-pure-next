@@ -18,6 +18,12 @@
                 "pointerValue" : "String"
               }
             },
+            "sourceInformation" : {
+              "endColumn" : 9,
+              "endLine" : 6,
+              "startColumn" : 9,
+              "startLine" : 6
+            },
             "value" : "x"
           }, {
             "_type" : "FunctionInvocation",

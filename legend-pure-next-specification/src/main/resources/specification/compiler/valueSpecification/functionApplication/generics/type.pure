@@ -15,8 +15,8 @@ function test():Any[*]
 }
 
 ###CompiledGraph
-function f_T_1__T_1_(s:T[1]):T[1]  ~UserDefinedFunction<{T[1]->T[1]}>
-  Variable s :#T##[1]#  @4:5-4:6
+function f_T_1__T_1_(s:T~f_T_1__T_1_[1]):T~f_T_1__T_1_[1]  ~UserDefinedFunction<{T~f_T_1__T_1_[1]->T~f_T_1__T_1_[1]}>
+  Variable s :#T~f_T_1__T_1_##[1]#  @4:5-4:6
 
 function pl_String_1__String_1__String_1_(a:String[1], b:String[1]):String[1]  ~UserDefinedFunction<{String[1], String[1]->String[1]}>
   FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  @9:7-9:9

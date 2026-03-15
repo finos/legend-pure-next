@@ -166,7 +166,7 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
                 functionIndex
                         .getIfAbsentPut(shortName, Maps.mutable::empty)
                         .getIfAbsentPut(paramCount, Lists.mutable::empty)
-                        .add(new FunctionIndexEntry(path, shortName, functionType));
+                        .add(new FunctionIndexEntry(path, shortName, functionType, model));
             }
         }
 

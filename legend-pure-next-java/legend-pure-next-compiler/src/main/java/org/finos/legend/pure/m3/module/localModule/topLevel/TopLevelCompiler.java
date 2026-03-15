@@ -18,6 +18,10 @@ import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
+import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.ConcreteGenericType;
+import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
@@ -126,7 +130,7 @@ public class TopLevelCompiler
             return false;
         }
 
-        updatePackageTree();
+        updatePackageTree(model);
         thirdPass(localModule, model, context);
         return context.errors().isEmpty();
     }
@@ -302,7 +306,7 @@ public class TopLevelCompiler
     // Package tree (local only)
     // -----------------------------------------------------------------------
 
-    private void updatePackageTree()
+    private void updatePackageTree(MetadataAccess model)
     {
         // Snapshot entries — getOrCreatePackage modifies elementIndex
         var snapshot = Lists.mutable.withAll(elementIndex.keyValuesView());
@@ -316,7 +320,7 @@ public class TopLevelCompiler
                         ? entry.grammarElement()._package()._pointerValue()
                         : null;
                 Package parent = packagePath != null
-                        ? getOrCreatePackage(root, packagePath)
+                        ? getOrCreatePackage(root, packagePath, new ConcreteGenericTypeImpl()._rawType((Type)model.getElement("meta::pure::metamodel::Package")))
                         : root;
                 entry.element()._package(parent);
                 parent._children().add(entry.element());
@@ -336,24 +340,26 @@ public class TopLevelCompiler
         return allImports;
     }
 
-    private Package getOrCreatePackage(Package root, String packagePath)
+    private Package getOrCreatePackage(Package root, String packagePath, GenericType packageGT)
     {
         Package current = root;
         StringBuilder currentPath = new StringBuilder();
         for (String part : packagePath.split("::"))
         {
-            if (currentPath.length() > 0)
+            if (!currentPath.isEmpty())
             {
                 currentPath.append("::");
             }
             currentPath.append(part);
 
-            String partName = part;
             Package existing = (Package) current._children()
-                    .detect(c -> c instanceof Package && partName.equals(c._name()));
+                    .detect(c -> c instanceof Package && part.equals(c._name()));
             if (existing == null)
             {
-                PackageImpl newPkg = new PackageImpl()._name(part)._package(current);
+                PackageImpl newPkg = new PackageImpl()
+                                            ._name(part)
+                                            ._package(current)
+                                            ._classifierGenericType(packageGT);
                 current._children().add(newPkg);
                 elementIndex.put(currentPath.toString(), new IndexEntry(newPkg, null, null, null));
                 existing = newPkg;

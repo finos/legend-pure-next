@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;

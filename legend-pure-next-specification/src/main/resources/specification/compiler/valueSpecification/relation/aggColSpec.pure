@@ -9,7 +9,7 @@ function test():Any[1]
 }
 
 ###CompiledGraph
-native function test_Relation_1__AggColSpec_1__Any_1_(z:Relation<Z>[1], x:AggColSpec<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z>[1], AggColSpec<{Z[1]->V[0..1]}, {V[*]->K[0..1]}, Any>[1]->Any[1]}>
+native function test_Relation_1__AggColSpec_1__Any_1_(z:Relation<Z~test_Relation_1__AggColSpec_1__Any_1_>[1], x:AggColSpec<{Z~test_Relation_1__AggColSpec_1__Any_1_[1]->V~test_Relation_1__AggColSpec_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpec_1__Any_1_[*]->K~test_Relation_1__AggColSpec_1__Any_1_[0..1]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<Z~test_Relation_1__AggColSpec_1__Any_1_>[1], AggColSpec<{Z~test_Relation_1__AggColSpec_1__Any_1_[1]->V~test_Relation_1__AggColSpec_1__Any_1_[0..1]}, {V~test_Relation_1__AggColSpec_1__Any_1_[*]->K~test_Relation_1__AggColSpec_1__Any_1_[0..1]}, Any>[1]->Any[1]}>
 
 native function _sum_Integer_MANY__Integer_1_(x:Integer[*]):Integer[1]  ~NativeFunction<{Integer[*]->Integer[1]}>
 
@@ -29,5 +29,5 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  @8:46-8:57
         ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  @8:50-8:57
           Variable y :#Integer##[*]#  @8:48-8:49
-      AtomicValue  'name' :String[1]
+      AtomicValue  'name' :String[1]  @8:37-8:40
       TypeHolder :#(name:#Integer##[1]#)#[1]

@@ -1,0 +1,11 @@
+###Pure
+import test::new::support::*;
+
+function test::new::testNew(): Any[*]
+{
+  meta::pure
+}
+
+###CompiledGraph
+function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  AtomicValue  meta::pure :#Package#[1]  @6:3-6:12

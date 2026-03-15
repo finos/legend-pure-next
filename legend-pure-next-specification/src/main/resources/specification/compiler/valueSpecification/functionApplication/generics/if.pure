@@ -8,7 +8,7 @@ function test::tst():Any[*]
 }
 
 ###CompiledGraph
-native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m]  ~NativeFunction<{Boolean[1], Function<{->T[m]}>[1], Function<{->T[m]}>[1]->T[m]}>
+native function test::xif_Boolean_1__Function_1__Function_1__T_m_(test:Boolean[1], valid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], invalid:Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]):T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]  ~NativeFunction<{Boolean[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1], Function<{->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>[1]->T~test::xif_Boolean_1__Function_1__Function_1__T_m_[m]}>
 
 function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
   FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  @7:21-7:23

@@ -855,6 +855,12 @@
                 "pointerValue" : "String"
               }
             },
+            "sourceInformation" : {
+              "endColumn" : 9,
+              "endLine" : 29,
+              "startColumn" : 9,
+              "startLine" : 29
+            },
             "value" : "x"
           }, {
             "_type" : "FunctionInvocation",

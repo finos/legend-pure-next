@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
-import org.eclipse.collections.impl.factory.Lists;
-import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
 import java.util.Map;
 
@@ -28,15 +29,20 @@ import java.util.Map;
  * Groups type parameter bindings and multiplicity parameter bindings
  * collected during function signature matching.
  *
- * <p>Type bindings map each type parameter name (e.g. {@code "T"}) to the
- * set of concrete {@link GenericType}s bound to it. Multiplicity bindings
- * map each multiplicity parameter name (e.g. {@code "m"}) to the set of
- * concrete {@link Multiplicity} values bound to it.</p>
+ * <p>This is an abstract base class. Concrete subtypes:
+ * <ul>
+ *   <li>{@link EnclosingOwnerParametersBinding} — the root scope, adds bindings locally.</li>
+ *   <li>{@link FunctionCallParametersBinding} — per-call scope, routes bindings by owner
+ *       to the enclosing owner during cross-match unification.</li>
+ *   <li>{@link PlainParametersBinding} — no owner, no routing; for temporary
+ *       accumulation and snapshots ({@link #copy()}).</li>
+ * </ul>
+ * </p>
  */
-public class ParametersBinding
+public abstract class ParametersBinding
 {
-    private final MutableMap<String, MutableSet<GenericType>> typeBindings = Maps.mutable.empty();
-    private final MutableMap<String, MutableSet<Multiplicity>> multiplicityBindings = Maps.mutable.empty();
+    protected final MutableMap<String, MutableSet<GenericType>> typeBindings = Maps.mutable.empty();
+    protected final MutableMap<String, MutableSet<Multiplicity>> multiplicityBindings = Maps.mutable.empty();
 
     public MutableMap<String, MutableSet<GenericType>> typeBindings()
     {
@@ -49,12 +55,19 @@ public class ParametersBinding
     }
 
     /**
-     * Create a shallow copy of this binding set.
-     * Each type/multiplicity parameter gets its own mutable set copy.
+     * Add a type parameter binding. {@link EnclosingOwnerParametersBinding} adds locally;
+     * {@link FunctionCallParametersBinding} may route to the enclosing owner
+     * during cross-match unification.
+     */
+    public abstract void addTypeBinding(TypeParameter typeParam, GenericType argGT);
+
+    /**
+     * Create a plain data-only copy of this binding set (no routing).
+     * Used to snapshot bindings for validation or rollback.
      */
     public ParametersBinding copy()
     {
-        ParametersBinding result = new ParametersBinding();
+        PlainParametersBinding result = PlainParametersBinding.empty();
         for (Map.Entry<String, MutableSet<GenericType>> e : typeBindings.entrySet())
         {
             result.typeBindings.put(e.getKey(), e.getValue().clone());
@@ -66,33 +79,6 @@ public class ParametersBinding
         return result;
     }
 
-    /**
-     * Unify parameters that are bound to multiple values by finding their
-     * common type/multiplicity. Returns {@code true} if all bindings were
-     * successfully reduced to a single value, {@code false} if any conflicts
-     * remain (e.g. common type is {@code Any}, or no common multiplicity).
-     */
-    public void unify(MetadataAccess model)
-    {
-        for (var entry : typeBindings.entrySet())
-        {
-            if (entry.getValue().size() > 1)
-            {
-                GenericType common = _GenericType.findCommonGenericType(Lists.mutable.withAll(entry.getValue()), model);
-                entry.getValue().clear();
-                entry.getValue().add(common);
-            }
-        }
-        for (var entry : multiplicityBindings.entrySet())
-        {
-            if (entry.getValue().size() > 1)
-            {
-                Multiplicity common = _Multiplicity.findCommonMultiplicity(Lists.mutable.withAll(entry.getValue()));
-                entry.getValue().clear();
-                entry.getValue().add(common);
-            }
-        }
-    }
 
     @Override
     public String toString()

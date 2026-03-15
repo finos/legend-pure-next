@@ -81,7 +81,7 @@ public class _PackageableFunction
         }
         if (m._multiplicityParameter() != null)
         {
-            return "[" + m._multiplicityParameter() + "]";
+            return "[" + m._multiplicityParameter()._name() + "]";
         }
         long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
         Long upper = m._upperBound() != null ? m._upperBound()._value() : null;

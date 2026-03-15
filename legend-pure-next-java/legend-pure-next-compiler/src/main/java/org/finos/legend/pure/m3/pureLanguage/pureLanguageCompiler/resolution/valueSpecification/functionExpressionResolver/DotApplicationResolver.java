@@ -11,7 +11,6 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
-import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
@@ -56,17 +55,26 @@ public final class DotApplicationResolver
             CompilationContext context)
     {
         String functionName = expr._functionName();
-        ListIterable<? extends ValueSpecification> parametersValues = expr._parametersValues();
 
         // Resolve the receiver to get its genericType before property lookup
-        ValueSpecification receiver = parametersValues.getFirst();
-        ValueSpecificationResolver.resolve(receiver, model, context);
+        ValueSpecification receiver = ValueSpecificationResolver.resolve(expr._parametersValues().getFirst(), model, context);
+        expr._parametersValues(Lists.mutable.<ValueSpecification>with(receiver).withAll(expr._parametersValues().subList(1, expr._parametersValues().size())));
 
         if (receiver._genericType() != null)
         {
             Type ownerType = receiver._genericType()._rawType();
             context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
                     functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
+
+            // Type parameter reference (e.g., Z from a PCT function) — can't resolve properties
+            if (ownerType == null)
+            {
+                context.addError(new CompilationError(
+                        "Can't resolve property '" + functionName + "' on unresolved type parameter '"
+                                + _GenericType.print(receiver._genericType()) + "'",
+                        expr._sourceInformation()));
+                return expr;
+            }
 
             Function result = null;
 
@@ -235,6 +243,14 @@ public final class DotApplicationResolver
         context.debugDepthDec();
         context.debug("  automap: map() resolved gt=%s mul=%s",
                 lazy(() -> _GenericType.print(mapExpr._genericType())), lazy(() -> _Multiplicity.print(mapExpr._multiplicity())));
+
+        if (mapExpr._func() == null)
+        {
+            context.addError(new CompilationError(
+                    "Can't resolve automap for property '" + accessName + "' on '"
+                            + _GenericType.print(receiver._genericType()) + _Multiplicity.print(receiver._multiplicity()) + "'",
+                    expr._sourceInformation()));
+        }
 
         return mapExpr;
     }

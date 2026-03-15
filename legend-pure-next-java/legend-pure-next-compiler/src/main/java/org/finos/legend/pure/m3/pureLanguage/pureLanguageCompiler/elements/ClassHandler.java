@@ -20,12 +20,11 @@ import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeParameter;
-import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.factory.Sets;
+import org.eclipse.collections.impl.factory.Maps;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -64,12 +63,16 @@ public final class ClassHandler
     {
         // Compile and set type parameters (e.g., T, U for Class<T, U>)
         MutableList<TypeParameter> typeParameters = grammar._typeParameters()
-                .collect(GenericTypeCompiler::compileTypeParameter)
+                .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result))
                 .select(Objects::nonNull);
         if (typeParameters.notEmpty())
         {
             result._typeParameters(typeParameters);
         }
+
+        // Register declared type params in scope so property GenericType references reuse the same objects
+        PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+        plcc.setEnclosingOwner(result);
 
         // Build the owner GenericType: for Pair<U,V> this is Pair<U,V>, not just Pair
         ConcreteGenericTypeImpl ownerGenericType = new ConcreteGenericTypeImpl()._rawType(result);
@@ -78,7 +81,7 @@ public final class ClassHandler
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
                             (GenericType) new ConcreteGenericTypeImpl()
-                                    ._typeParameter(new TypeParameterImpl()._name(tp._name()))));
+                                    ._typeParameter(tp)));
         }
 
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
@@ -135,12 +138,7 @@ public final class ClassHandler
     {
         // Set in-scope type/multiplicity params so inner FunctionExpressions in qualified
         // properties can validate that unresolved params come from this class.
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeTypeParamNames(cls._typeParameters() != null
-                ? cls._typeParameters().collect(TypeParameter::_name).toSet()
-                : Sets.mutable.empty());
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeMultiplicityParamNames(cls._multiplicityParameters() != null
-                ? cls._multiplicityParameters().collect(MultiplicityParameter::_name).toSet()
-                : Sets.mutable.empty());
+        context.compilerContextExtensions(PureLanguageCompilerContext.class).setEnclosingOwner(cls);
 
         // Push type variables into scope so they are visible in qualifiers and constraints
         if (cls._typeVariables() != null && cls._typeVariables().notEmpty())
@@ -239,8 +237,7 @@ public final class ClassHandler
             context.compilerContextExtensions(PureLanguageCompilerContext.class).popScope();
         }
 
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeTypeParamNames(Sets.mutable.empty());
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).setScopeMultiplicityParamNames(Sets.mutable.empty());
+        context.compilerContextExtensions(PureLanguageCompilerContext.class).clearEnclosingOwner();
 
         return cls;
     }

@@ -687,7 +687,12 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
         }
         if (gt._typeParameter() != null)
         {
-            return gt._typeParameter()._name();
+            String name = gt._typeParameter()._name();
+            if (gt._typeParameter()._owner() != null && gt._typeParameter()._owner() instanceof PackageableElement ownerElem)
+            {
+                name += "~" + shortPath(ownerElem);
+            }
+            return name;
         }
         if (gt._rawType() == null)
         {
@@ -842,7 +847,12 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
     {
         if (multiplicity._multiplicityParameter() != null)
         {
-            return "[" + multiplicity._multiplicityParameter() + "]";
+            String name = multiplicity._multiplicityParameter()._name();
+            if (multiplicity._multiplicityParameter()._owner() != null && multiplicity._multiplicityParameter()._owner() instanceof PackageableElement ownerElem)
+            {
+                name += "~" + shortPath(ownerElem);
+            }
+            return "[" + name + "]";
         }
         if (multiplicity instanceof PackageableMultiplicity pm)
         {
