@@ -82,14 +82,14 @@ public class _GenericType
                     ._rawType((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
-        // If all elements are the same type parameter reference (no rawType),
-        // return that type parameter directly. This preserves type arguments
-        // like <T, V, U> when unifying a Collection of identical generic types.
+        // If all elements are the same type parameter reference (no rawType), return it directly.
         MutableList<GenericType> nonNull = genericTypes.select(gt -> gt != null);
-        if (nonNull.notEmpty() && nonNull.allSatisfy(gt -> gt._typeParameter() != null && gt._rawType() == null))
+        if (nonNull.notEmpty())
         {
-            String firstName = nonNull.getFirst()._typeParameter()._name();
-            if (nonNull.allSatisfy(gt -> firstName.equals(gt._typeParameter()._name())))
+            String firstName = nonNull.getFirst()._typeParameter() != null ? nonNull.getFirst()._typeParameter()._name() : null;
+            if (firstName != null && nonNull.allSatisfy(gt -> gt._rawType() == null
+                    && gt._typeParameter() != null
+                    && firstName.equals(gt._typeParameter()._name())))
             {
                 return nonNull.getFirst();
             }
@@ -134,17 +134,13 @@ public class _GenericType
         MutableList<GenericType> projected;
         if (rawTypes.allSatisfy(t -> t == commonType))
         {
-            projected = genericTypes.select(gt -> gt != null);
+            projected = nonNull;  // already filtered above
         }
         else
         {
             projected = Lists.mutable.empty();
-            for (GenericType gt : genericTypes)
+            for (GenericType gt : nonNull)
             {
-                if (gt == null)
-                {
-                    continue;
-                }
                 GenericType p = resolveForTarget(gt, commonType, model);
                 if (p != null)
                 {
@@ -158,8 +154,7 @@ public class _GenericType
         if (withArgs.size() == projected.size() && withArgs.notEmpty())
         {
             int argCount = withArgs.getFirst()._typeArguments().size();
-            boolean allSameArgCount = withArgs.allSatisfy(gt -> gt._typeArguments().size() == argCount);
-            if (allSameArgCount && argCount > 0)
+            if (withArgs.allSatisfy(gt -> gt._typeArguments().size() == argCount) && argCount > 0)
             {
                 // Get type parameters from the common type to determine variance
                 MutableList<TypeParameter> typeParams = (commonType instanceof Class cls && cls._typeParameters() != null)
@@ -177,38 +172,7 @@ public class _GenericType
                     boolean argContravariant = idx < typeParams.size()
                             && Boolean.TRUE.equals(typeParams.get(idx)._contravariant());
 
-                    GenericType commonArg;
-                    // Check if the type arguments wrap FunctionTypes
-                    MutableList<FunctionType> functionTypes = argsAtPosition
-                            .select(gt -> gt._rawType() instanceof FunctionType)
-                            .collect(gt -> (FunctionType) gt._rawType());
-                    if (functionTypes.size() == argsAtPosition.size() && functionTypes.notEmpty())
-                    {
-                        // Unify FunctionTypes with variance-aware logic
-                        FunctionType commonFT = _FunctionType.findCommonFunctionType(functionTypes, model);
-                        commonArg = commonFT != null
-                                ? new InferredGenericTypeImpl()._rawType(commonFT)
-                                : null;
-                    }
-                    // Check if the type arguments wrap RelationTypes
-                    else
-                    {
-                        MutableList<meta.pure.metamodel.relation.RelationType> relationTypes = argsAtPosition
-                                .select(gt -> gt._rawType() instanceof meta.pure.metamodel.relation.RelationType)
-                                .collect(gt -> (meta.pure.metamodel.relation.RelationType) gt._rawType());
-                        if (relationTypes.size() == argsAtPosition.size() && relationTypes.notEmpty())
-                        {
-                            Type commonRT = _RelationType.findCommonRelationType(relationTypes, argContravariant, model);
-                            commonArg = commonRT != null
-                                    ? new InferredGenericTypeImpl()._rawType(commonRT)
-                                    : null;
-                        }
-                        else
-                        {
-                            commonArg = findCommonGenericType(argsAtPosition, argContravariant, model);
-                        }
-                    }
-
+                    GenericType commonArg = findCommonGenericType(argsAtPosition, argContravariant, model);
                     if (commonArg != null)
                     {
                         commonArgs.add(commonArg);
