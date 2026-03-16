@@ -26,7 +26,8 @@
           }, {
             "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
             "genericType" : {
-              "typeParameter" : {
+              "rawType" : {
+                "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
@@ -74,7 +75,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "typeParameter" : {
+          "rawType" : {
+            "_type" : "TypeParameter",
             "name" : "T"
           }
         },
@@ -91,7 +93,8 @@
         }
       } ],
       "returnGenericType" : {
-        "typeParameter" : {
+        "rawType" : {
+          "_type" : "TypeParameter",
           "name" : "T"
         }
       },
@@ -106,6 +109,7 @@
         "startLine" : 2
       },
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       } ]
     } ],

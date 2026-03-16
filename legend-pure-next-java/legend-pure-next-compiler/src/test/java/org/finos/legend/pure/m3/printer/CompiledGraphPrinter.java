@@ -685,10 +685,10 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
-        if (gt._typeParameter() != null)
+        if (gt._rawType() instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
         {
-            String name = gt._typeParameter()._name();
-            if (gt._typeParameter()._owner() != null && gt._typeParameter()._owner() instanceof PackageableElement ownerElem)
+            String name = tp._name();
+            if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
             {
                 name += "~" + shortPath(ownerElem);
             }

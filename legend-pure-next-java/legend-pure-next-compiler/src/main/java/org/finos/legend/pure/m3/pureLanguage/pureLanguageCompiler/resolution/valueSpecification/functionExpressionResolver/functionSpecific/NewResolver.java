@@ -63,7 +63,7 @@ public class NewResolver
             {
                 // Skip inferred/excluded system properties (e.g., classifierGenericType)
                 if (prop._stereotypes() != null && prop._stereotypes().anySatisfy(s ->
-                        "inferred".equals(s._value()) || "excluded".equals(s._value())))
+                        "inferred".equals(s._value()) || "excluded".equals(s._value()) || "pointer".equals(s._value())))
                 {
                     return;
                 }

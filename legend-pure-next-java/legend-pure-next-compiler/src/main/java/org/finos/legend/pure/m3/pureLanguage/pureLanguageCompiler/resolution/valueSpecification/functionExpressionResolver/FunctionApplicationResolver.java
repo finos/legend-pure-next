@@ -6,6 +6,7 @@ import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
@@ -317,7 +318,7 @@ public class FunctionApplicationResolver
             // When the arg type is a subtype of the param type (e.g., Property vs Function),
             // resolve to the param's raw type level before collecting bindings to ensure
             // type arguments are positionally aligned.
-            if (paramGT._rawType() != null && paramGT._rawType() != argGT._rawType())
+            if (!(paramGT._rawType() instanceof TypeParameter) && paramGT._rawType() != argGT._rawType())
             {
                 argGT = _GenericType.resolveForTarget(argGT, paramGT._rawType(), model);
             }

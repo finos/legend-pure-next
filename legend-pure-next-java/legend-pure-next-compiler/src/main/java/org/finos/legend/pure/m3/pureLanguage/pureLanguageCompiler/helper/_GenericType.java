@@ -82,22 +82,21 @@ public class _GenericType
                     ._rawType((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
-        // If all elements are the same type parameter reference (no rawType), return it directly.
+        // If all elements are the same type parameter reference, return it directly.
         MutableList<GenericType> nonNull = genericTypes.select(gt -> gt != null);
         if (nonNull.notEmpty())
         {
-            String firstName = nonNull.getFirst()._typeParameter() != null ? nonNull.getFirst()._typeParameter()._name() : null;
-            if (firstName != null && nonNull.allSatisfy(gt -> gt._rawType() == null
-                    && gt._typeParameter() != null
-                    && firstName.equals(gt._typeParameter()._name())))
+            String firstName = nonNull.getFirst()._rawType() instanceof TypeParameter tp ? tp._name() : null;
+            if (firstName != null && nonNull.allSatisfy(gt -> gt._rawType() instanceof TypeParameter tp2
+                    && firstName.equals(tp2._name())))
             {
                 return nonNull.getFirst();
             }
         }
 
-        // Collect raw types, skipping nulls
+        // Collect raw types, skipping nulls and TypeParameter references
         MutableList<Type> rawTypes = nonNull
-                .select(gt -> gt._rawType() != null)
+                .select(gt -> gt._rawType() != null && !(gt._rawType() instanceof TypeParameter))
                 .collect(GenericType::_rawType);
 
         if (rawTypes.isEmpty())
@@ -229,18 +228,13 @@ public class _GenericType
             return;
         }
 
-        if (genericType._typeParameter() != null && genericType._typeParameter()._name() != null)
+        if (genericType._rawType() instanceof TypeParameter tp)
         {
-            sb.append(genericType._typeParameter()._name());
+            sb.append(tp._name());
             return;
         }
 
         Type rawType = genericType._rawType();
-        if (rawType == null)
-        {
-            sb.append("Unknown");
-            return;
-        }
 
         if (rawType instanceof meta.pure.metamodel.type.FunctionType ft)
         {
@@ -315,7 +309,7 @@ public class _GenericType
     /**
      * Returns true iff the GenericType is fully concrete — i.e. it has no type-parameter
      * references anywhere in its structure (rawType, typeArguments, FunctionType params/return).
-     * A GenericType is non-concrete if {@code _typeParameter() != null} at any level.
+     * A GenericType is non-concrete if its {@code _rawType()} is a {@code TypeParameter}.
      */
     public static boolean isConcrete(GenericType genericType)
     {
@@ -329,12 +323,7 @@ public class _GenericType
             return _GenericTypeOperation.isConcrete(gto);
         }
         // Type-parameter reference: e.g. K, T
-        if (genericType._typeParameter() != null)
-        {
-            return false;
-        }
-        // No raw type at all — incomplete
-        if (genericType._rawType() == null)
+        if (genericType._rawType() instanceof TypeParameter)
         {
             return false;
         }
@@ -412,9 +401,9 @@ public class _GenericType
             _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
             return;
         }
-        if (genericType._typeParameter() != null)
+        if (genericType._rawType() instanceof TypeParameter tp)
         {
-            names.add(genericType._typeParameter()._name());
+            names.add(tp._name());
         }
         if (genericType._rawType() instanceof FunctionType ft)
         {
@@ -493,9 +482,9 @@ public class _GenericType
         }
 
         // If the parameter side is a type parameter reference, bind it
-        if (paramGT._typeParameter() != null && paramGT._rawType() == null)
+        if (paramGT._rawType() instanceof TypeParameter tp)
         {
-            bindings.addTypeBinding(paramGT._typeParameter(), argGT);
+            bindings.addTypeBinding(tp, argGT);
             return;
         }
 
@@ -549,9 +538,9 @@ public class _GenericType
         }
 
         // If this is a type parameter reference, substitute it
-        if (genericType._typeParameter() != null && genericType._rawType() == null)
+        if (genericType._rawType() instanceof TypeParameter tp)
         {
-            String name = genericType._typeParameter()._name();
+            String name = tp._name();
             MutableSet<GenericType> boundTypes = bindings.typeBindings().get(name);
             if (boundTypes != null && boundTypes.notEmpty())
             {
@@ -645,13 +634,6 @@ public class _GenericType
         if (source._multiplicityArguments() != null)
         {
             target._multiplicityArguments(source._multiplicityArguments());
-        }
-        // Only copy typeParameter when rawType is absent — a GenericType
-        // cannot be both a concrete type (rawType) and a type parameter
-        // reference (_typeParameter) at the same time.
-        if (source._typeParameter() != null && source._rawType() == null)
-        {
-            target._typeParameter(source._typeParameter());
         }
         return target;
     }
@@ -791,6 +773,20 @@ public class _GenericType
 
         Type declaredType = declared._rawType();
         Type actualType = actual._rawType();
+
+        // TypeParameter compatibility: same name = compatible; one-sided TypeParameter = assume compatible
+        if (declaredType instanceof TypeParameter declaredTP)
+        {
+            if (actualType instanceof TypeParameter actualTP)
+            {
+                return declaredTP._name().equals(actualTP._name());
+            }
+            return true; // unresolved type param vs concrete — assume compatible
+        }
+        if (actualType instanceof TypeParameter)
+        {
+            return true; // concrete vs unresolved type param — assume compatible
+        }
 
         // FunctionTypes are structural — compare param and return types
         if (declaredType instanceof FunctionType declaredFT && actualType instanceof FunctionType actualFT)

@@ -21,7 +21,8 @@
             }
           },
           "typeArguments" : [ {
-            "typeParameter" : {
+            "rawType" : {
+              "_type" : "TypeParameter",
               "name" : "T"
             }
           } ]
@@ -58,7 +59,8 @@
           "typeArguments" : [ {
             "left" : {
               "left" : {
-                "typeParameter" : {
+                "rawType" : {
+                  "_type" : "TypeParameter",
                   "name" : "Z"
                 }
               },
@@ -67,7 +69,8 @@
                   "_type" : "RelationType",
                   "columns" : [ {
                     "genericType" : {
-                      "typeParameter" : {
+                      "rawType" : {
+                        "_type" : "TypeParameter",
                         "name" : "K"
                       }
                     },
@@ -84,7 +87,8 @@
               "type" : "EQUAL"
             },
             "right" : {
-              "typeParameter" : {
+              "rawType" : {
+                "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
@@ -122,7 +126,8 @@
           },
           "typeArguments" : [ {
             "left" : {
-              "typeParameter" : {
+              "rawType" : {
+                "_type" : "TypeParameter",
                 "name" : "V"
               }
             },
@@ -131,7 +136,8 @@
                 "_type" : "RelationType",
                 "columns" : [ {
                   "genericType" : {
-                    "typeParameter" : {
+                    "rawType" : {
+                      "_type" : "TypeParameter",
                       "name" : "K"
                     }
                   },
@@ -179,19 +185,22 @@
         "typeArguments" : [ {
           "left" : {
             "left" : {
-              "typeParameter" : {
+              "rawType" : {
+                "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
             "right" : {
-              "typeParameter" : {
+              "rawType" : {
+                "_type" : "TypeParameter",
                 "name" : "Z"
               }
             },
             "type" : "DIFFERENCE"
           },
           "right" : {
-            "typeParameter" : {
+            "rawType" : {
+              "_type" : "TypeParameter",
               "name" : "V"
             }
           },
@@ -232,12 +241,16 @@
         }
       } ],
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       }, {
+        "_type" : "TypeParameter",
         "name" : "Z"
       }, {
+        "_type" : "TypeParameter",
         "name" : "K"
       }, {
+        "_type" : "TypeParameter",
         "name" : "V"
       } ]
     } ],

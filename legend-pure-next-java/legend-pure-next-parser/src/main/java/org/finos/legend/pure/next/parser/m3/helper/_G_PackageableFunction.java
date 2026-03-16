@@ -81,9 +81,9 @@ public class _G_PackageableFunction
         {
             return "UNKNOWN";
         }
-        if (gt._typeParameter() != null && gt._typeParameter()._name() != null)
+        if (gt._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
         {
-            return gt._typeParameter()._name();
+            return tp._name();
         }
         if (gt._rawType() instanceof Type_Pointer tp && tp._pointerValue() != null)
         {

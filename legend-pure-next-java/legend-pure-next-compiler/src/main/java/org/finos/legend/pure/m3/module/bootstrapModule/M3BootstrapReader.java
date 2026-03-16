@@ -321,7 +321,7 @@ public class M3BootstrapReader
                         if (paramName != null)
                         {
                             typeArgs.add(new UserDefinedGenericTypeImpl()
-                                    ._typeParameter(new TypeParameterImpl()._name(paramName)));
+                                    ._rawType(new TypeParameterImpl()._name(paramName)));
                         }
                     }
                     else
@@ -719,7 +719,7 @@ public class M3BootstrapReader
             if (paramName != null)
             {
                 UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl()
-                        ._typeParameter(new TypeParameterImpl()._name(paramName));
+                        ._rawType(new TypeParameterImpl()._name(paramName));
                 return gt;
             }
         }

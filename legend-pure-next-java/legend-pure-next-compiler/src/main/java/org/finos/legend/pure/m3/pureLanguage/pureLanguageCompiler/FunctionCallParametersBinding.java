@@ -162,14 +162,14 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     GenericType gt = entry.getValue().getFirst();
-                    if (gt != null && gt._typeParameter() != null && gt._rawType() == null)
+                    if (gt != null && gt._rawType() instanceof TypeParameter tp)
                     {
-                        String targetName = gt._typeParameter()._name();
+                        String targetName = tp._name();
                         MutableSet<GenericType> targetBinding = typeBindings.get(targetName);
 
                         if ((targetBinding == null || targetBinding.isEmpty()) && enclosingOwner != null)
                         {
-                            Object targetOwner = gt._typeParameter()._owner();
+                            Object targetOwner = tp._owner();
                             if (targetOwner == enclosingOwner.owner())
                             {
                                 targetBinding = enclosingOwner.typeBindings().get(targetName);
@@ -179,7 +179,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             GenericType resolved = targetBinding.getFirst();
-                            if (resolved._rawType() != null)
+                            if (!(resolved._rawType() instanceof TypeParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);
@@ -233,15 +233,15 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     boolean anyResolved = false;
                     for (GenericType gt : entry.getValue())
                     {
-                        if (gt._typeParameter() != null && gt._rawType() == null
-                                && gt._typeParameter()._owner() == enclosingOwner.owner())
+                        if (gt._rawType() instanceof TypeParameter tp
+                                && tp._owner() == enclosingOwner.owner())
                         {
                             MutableSet<GenericType> ownerBinding = enclosingOwner.typeBindings()
-                                    .get(gt._typeParameter()._name());
+                                    .get(tp._name());
                             if (ownerBinding != null && ownerBinding.size() == 1)
                             {
                                 GenericType ownerResolved = ownerBinding.getFirst();
-                                if (ownerResolved._rawType() != null)
+                                if (!(ownerResolved._rawType() instanceof TypeParameter))
                                 {
                                     resolved.add(ownerResolved);
                                     anyResolved = true;

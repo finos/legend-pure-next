@@ -2053,7 +2053,7 @@ public class M3ProtocolBuilder
             // Check if this is a reference to a declared type parameter
             if (typeParamNames.contains(typeName))
             {
-                gt._typeParameter(new TypeParameterImpl()
+                gt._rawType(new TypeParameterImpl()
                         ._name(typeName));
             }
             else

@@ -11,7 +11,8 @@
       },
       "properties" : [ {
         "genericType" : {
-          "typeParameter" : {
+          "rawType" : {
+            "_type" : "TypeParameter",
             "name" : "T"
           }
         },
@@ -34,6 +35,7 @@
         "startLine" : 2
       },
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       } ]
     } ],

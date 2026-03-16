@@ -69,11 +69,11 @@ public final class GenericTypeCompiler
             return compileGenericTypeOperation(gto, imports, model, context);
         }
 
-        // Type parameter reference (e.g., T) — no raw type to resolve
-        if (grammarGenericType._rawType() == null)
+        // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
+        if (grammarGenericType._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
         {
             return new UserDefinedGenericTypeImpl()
-                    ._typeParameter(resolveOrCompileTypeParameter(grammarGenericType._typeParameter(), context));
+                    ._rawType(resolveOrCompileTypeParameter(grammarTP, context));
         }
 
         Type rawType = resolveType(grammarGenericType._rawType(), imports, model, context);
@@ -86,8 +86,7 @@ public final class GenericTypeCompiler
                 ._rawType(rawType)
                 ._typeArguments(grammarGenericType._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                 ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
-                ._typeVariableValues(grammarGenericType._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)))
-                ._typeParameter(resolveOrCompileTypeParameter(grammarGenericType._typeParameter(), context));
+                ._typeVariableValues(grammarGenericType._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
     }
 
     private static GenericType compileGenericTypeOperation(GenericTypeOperation gto, MutableList<String> imports, MetadataAccess model, CompilationContext context)

@@ -166,7 +166,7 @@
 # --- Type ---
 
 :Type a :Class ;
-    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "FunctionType,RelationType" ] ;
+    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "FunctionType,RelationType,TypeParameter" ] ;
     :name "Type" ;
     :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :Type ] ] ;
     :package :meta_pure_metamodel_type ;
@@ -421,17 +421,10 @@
 :rawType a :Property ;
     :stereotypes :ProtocolInfo_pointer ;
     :name "rawType" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :GenericType ] [ :rawType :Type ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :GenericType ] [ :rawType :Type ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :GenericType ;
     :genericType [ :rawType :Type ] ;
-    :multiplicity :ZeroOne .
-
-:typeParameter a :Property ;
-    :name "typeParameter" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :GenericType ] [ :rawType :TypeParameter ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :GenericType ;
-    :genericType [ :rawType :TypeParameter ] ;
-    :multiplicity :ZeroOne .
+    :multiplicity :PureOne .
 
 :typeArguments a :Property ;
     :name "typeArguments" ;
@@ -503,7 +496,7 @@
     :name "TypeParameter" ;
     :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :TypeParameter ] ] ;
     :package :meta_pure_metamodel_type_generics ;
-    :generalizations [ :general [ :rawType :Any ] ] .
+    :generalizations [ :general [ :rawType :Type ] ] .
 
 :contravariant a :Property ;
     :name "contravariant" ;

@@ -79,7 +79,7 @@ public final class ClassHandler
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
                             (GenericType) new UserDefinedGenericTypeImpl()
-                                    ._typeParameter(tp)));
+                                    ._rawType(tp)));
         }
 
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()

@@ -137,11 +137,11 @@ public final class RelationColumnResolver
     {
         // Get the TypeHolder's type parameter name (T)
         GenericType typeHolderParamGT = functionType._parameters().get(1)._genericType();
-        if (typeHolderParamGT._typeParameter() == null)
+        if (!(typeHolderParamGT._rawType() instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
         {
             return;
         }
-        String typeParamName = typeHolderParamGT._typeParameter()._name();
+        String typeParamName = typeHolderTP._name();
 
         // Check if bindings have T bound
         MutableSet<GenericType> boundTypes = bindings.typeBindings().get(typeParamName);
@@ -369,7 +369,7 @@ public final class RelationColumnResolver
     {
         GenericType enrichedGT = paramValues.get(typeHolderArgIdx)._genericType();
         GenericType paramGT = functionType._parameters().get(typeHolderArgIdx)._genericType();
-        String typeParamName = paramGT._typeParameter()._name();
+        String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) paramGT._rawType())._name();
         MutableSet<GenericType> bound = bindings.typeBindings().getIfAbsentPut(typeParamName, Sets.mutable::empty);
         bound.clear();
         bound.add(enrichedGT);

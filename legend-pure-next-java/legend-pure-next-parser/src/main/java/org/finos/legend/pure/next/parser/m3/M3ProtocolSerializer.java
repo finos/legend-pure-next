@@ -541,9 +541,9 @@ public class M3ProtocolSerializer
         }
 
         // Handle type parameter references (e.g., T, Z, K, V)
-        if (gt._typeParameter() != null && gt._typeParameter()._name() != null)
+        if (gt._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp)
         {
-            sb.append(gt._typeParameter()._name().toString());
+            sb.append(tp._name().toString());
             return;
         }
 
