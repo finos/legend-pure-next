@@ -16,11 +16,11 @@ package org.finos.legend.pure.m3.module.pdbModule;
 
 import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.MetadataAccessExtension;
-import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
+import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveReader;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PdbLoader;
 

@@ -396,6 +396,7 @@
     :multiplicity :PureOne .
 
 :returnMultiplicity a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "returnMultiplicity" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :FunctionType ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :FunctionType ;
@@ -444,7 +445,8 @@
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :GenericType ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :GenericType ;
     :genericType [ :rawType :Multiplicity ] ;
-    :multiplicity :ZeroMany .
+    :multiplicity :ZeroMany ;
+    :stereotypes :ProtocolInfo_pointer .
 
 :typeVariableValues a :Property ;
     :name "typeVariableValues" ;
@@ -453,11 +455,11 @@
     :genericType [ :rawType :ValueSpecification ] ;
     :multiplicity :ZeroMany .
 
-# --- ConcreteGenericType ---
+# --- UserDefinedGenericType ---
 
-:ConcreteGenericType a :Class ;
-    :name "ConcreteGenericType" ;
-    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :ConcreteGenericType ] ] ;
+:UserDefinedGenericType a :Class ;
+    :name "UserDefinedGenericType" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :UserDefinedGenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations [ :general [ :rawType :GenericType ] ] .
 
@@ -530,8 +532,8 @@
 :MultiplicityParameter a :Class ;
     :name "MultiplicityParameter" ;
     :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :MultiplicityParameter ] ] ;
-    :package :meta_pure_metamodel_type_generics ;
-    :generalizations [ :general [ :rawType :Any ] ] .
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ :general [ :rawType :Multiplicity ] ] .
 
 :MultiplicityParameter_name a :Property ;
     :name "name" ;
@@ -547,6 +549,24 @@
     :owner :MultiplicityParameter ;
     :genericType [ :rawType :TypeAndMultiplicityParametersOwner ] ;
     :multiplicity :ZeroOne .
+
+# --- UserDefinedMultiplicityParameter ---
+
+:UserDefinedMultiplicityParameter a :Class ;
+    :name "UserDefinedMultiplicityParameter" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :UserDefinedMultiplicityParameter ] ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ :general [ :rawType :MultiplicityParameter ] ] .
+
+# --- InferredMultiplicityParameter ---
+
+:InferredMultiplicityParameter a :Class ;
+    :name "InferredMultiplicityParameter" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :InferredMultiplicityParameter ] ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations
+        [ :general [ :rawType :MultiplicityParameter ] ],
+        [ :general [ :rawType :Inferred ] ] .
 
 # --- ResolvedTypeParameter ---
 
@@ -586,6 +606,7 @@
     :multiplicity :PureOne .
 
 :ResolvedMultiplicityParameter_value a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "value" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ResolvedMultiplicityParameter ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :ResolvedMultiplicityParameter ;
@@ -787,6 +808,7 @@
     :multiplicity :PureOne .
 
 :PackageableFunction_returnMultiplicity a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "returnMultiplicity" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :PackageableFunction ;
@@ -881,6 +903,7 @@
     :multiplicity :PureOne .
 
 :multiplicity a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "multiplicity" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
@@ -927,31 +950,11 @@
 # --- Multiplicity ---
 
 :Multiplicity a :Class ;
+    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter" ] ;
     :name "Multiplicity" ;
     :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :Multiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations [ :general [ :rawType :Any ] ] .
-
-:lowerBound a :Property ;
-    :name "lowerBound" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Multiplicity ] [ :rawType :MultiplicityValue ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Multiplicity ;
-    :genericType [ :rawType :MultiplicityValue ] ;
-    :multiplicity :ZeroOne .
-
-:upperBound a :Property ;
-    :name "upperBound" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Multiplicity ] [ :rawType :MultiplicityValue ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Multiplicity ;
-    :genericType [ :rawType :MultiplicityValue ] ;
-    :multiplicity :ZeroOne .
-
-:multiplicityParameter a :Property ;
-    :name "multiplicityParameter" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Multiplicity ] [ :rawType :MultiplicityParameter ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Multiplicity ;
-    :genericType [ :rawType :MultiplicityParameter ] ;
-    :multiplicity :ZeroOne .
 
 # --- ConcreteMultiplicity ---
 
@@ -961,23 +964,51 @@
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations [ :general [ :rawType :Multiplicity ] ] .
 
-# --- InferredMultiplicity ---
+:lowerBound a :Property ;
+    :name "lowerBound" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ConcreteMultiplicity ] [ :rawType :MultiplicityValue ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :ConcreteMultiplicity ;
+    :genericType [ :rawType :MultiplicityValue ] ;
+    :multiplicity :PureOne .
 
-:InferredMultiplicity a :Class ;
-    :name "InferredMultiplicity" ;
-    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :InferredMultiplicity ] ] ;
+:upperBound a :Property ;
+    :name "upperBound" ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ConcreteMultiplicity ] [ :rawType :MultiplicityValue ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :ConcreteMultiplicity ;
+    :genericType [ :rawType :MultiplicityValue ] ;
+    :multiplicity :PureOne .
+
+# --- AdHocMultiplicity ---
+
+:AdHocMultiplicity a :Class ;
+    :name "AdHocMultiplicity" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :AdHocMultiplicity ] ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ :general [ :rawType :ConcreteMultiplicity ] ] .
+
+# --- UserDefinedAdHocMultiplicity ---
+
+:UserDefinedAdHocMultiplicity a :Class ;
+    :name "UserDefinedAdHocMultiplicity" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :UserDefinedAdHocMultiplicity ] ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ :general [ :rawType :AdHocMultiplicity ] ] .
+
+# --- InferredAdHocMultiplicity ---
+
+:InferredAdHocMultiplicity a :Class ;
+    :name "InferredAdHocMultiplicity" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :InferredAdHocMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations
-        [ :general [ :rawType :Multiplicity ] ],
+        [ :general [ :rawType :AdHocMultiplicity ] ],
         [ :general [ :rawType :Inferred ] ] .
 
+# --- InferredPackageableMultiplicity ---
 
-
-# --- PackageableInferredMultiplicity ---
-
-:PackageableInferredMultiplicity a :Class ;
-    :name "PackageableInferredMultiplicity" ;
-    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :PackageableInferredMultiplicity ] ] ;
+:InferredPackageableMultiplicity a :Class ;
+    :name "InferredPackageableMultiplicity" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :InferredPackageableMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations
         [ :general [ :rawType :PackageableMultiplicity ] ],
@@ -1006,14 +1037,14 @@
     :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :PackageableMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations 
-        [ :general [ :rawType :Multiplicity ] ],
+        [ :general [ :rawType :ConcreteMultiplicity ] ],
         [ :general [ :rawType :PackageableElement ] ] .
 
-# --- ConcretePackageableMultiplicity ---
+# --- UserDefinedPackageableMultiplicity ---
 
-:ConcretePackageableMultiplicity a :Class ;
-    :name "ConcretePackageableMultiplicity" ;
-    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :ConcretePackageableMultiplicity ] ] ;
+:UserDefinedPackageableMultiplicity a :Class ;
+    :name "UserDefinedPackageableMultiplicity" ;
+    :classifierGenericType [ :rawType :Class ; :typeArguments [ :rawType :UserDefinedPackageableMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations [ :general [ :rawType :PackageableMultiplicity ] ] .
 
@@ -1028,17 +1059,18 @@
 
 :ValueSpecification_genericType a :Property ;
     :name "genericType" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ValueSpecification ] [ :rawType :GenericType ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ValueSpecification ] [ :rawType :GenericType ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
     :genericType [ :rawType :GenericType ] ;
-    :multiplicity :ZeroOne .
+    :multiplicity :PureOne .
 
 :ValueSpecification_multiplicity a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "multiplicity" ;
-    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ValueSpecification ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :ValueSpecification ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
     :genericType [ :rawType :Multiplicity ] ;
-    :multiplicity :ZeroOne .
+    :multiplicity :PureOne .
 
 # --- AtomicValue ---
 
@@ -1574,49 +1606,58 @@
 # =============================================================================
 # PACKAGES
 # =============================================================================
-:PureOne a :ConcretePackageableMultiplicity ;
+:PureOne a :UserDefinedPackageableMultiplicity ;
     :name "PureOne" ;
     :lowerBound [ :value 1 ] ;
     :upperBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:ZeroOne a :ConcretePackageableMultiplicity ;
+:ZeroOne a :UserDefinedPackageableMultiplicity ;
     :name "ZeroOne" ;
     :lowerBound [ :value 0 ] ;
     :upperBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:ZeroMany a :ConcretePackageableMultiplicity ;
+:ZeroMany a :UserDefinedPackageableMultiplicity ;
     :name "ZeroMany" ;
     :lowerBound [ :value 0 ] ;
+    :classifierGenericType [ :rawType :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:OneMany a :ConcretePackageableMultiplicity ;
+:OneMany a :UserDefinedPackageableMultiplicity ;
     :name "OneMany" ;
     :lowerBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:InferredPureOne a :PackageableInferredMultiplicity ;
+:InferredPureOne a :InferredPackageableMultiplicity ;
     :name "InferredPureOne" ;
     :lowerBound [ :value 1 ] ;
     :upperBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:InferredZeroOne a :PackageableInferredMultiplicity ;
+:InferredZeroOne a :InferredPackageableMultiplicity ;
     :name "InferredZeroOne" ;
     :lowerBound [ :value 0 ] ;
     :upperBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:InferredZeroMany a :PackageableInferredMultiplicity ;
+:InferredZeroMany a :InferredPackageableMultiplicity ;
     :name "InferredZeroMany" ;
     :lowerBound [ :value 0 ] ;
+    :classifierGenericType [ :rawType :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
-:InferredOneMany a :PackageableInferredMultiplicity ;
+:InferredOneMany a :InferredPackageableMultiplicity ;
     :name "InferredOneMany" ;
     :lowerBound [ :value 1 ] ;
+    :classifierGenericType [ :rawType :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
+
 
 # =============================================================================
 # PACKAGES

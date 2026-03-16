@@ -15,15 +15,15 @@
 package org.finos.legend.pure.m3.module.bootstrapModule;
 
 import meta.pure.metamodel.Package;
-import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.PackageImpl;
+import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
+import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.PureModel;
 
 import java.util.List;
 import java.util.Set;

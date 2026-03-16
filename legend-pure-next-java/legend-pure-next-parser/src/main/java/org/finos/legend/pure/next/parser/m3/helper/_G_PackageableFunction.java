@@ -15,7 +15,11 @@
 package org.finos.legend.pure.next.parser.m3.helper;
 
 import meta.pure.protocol.grammar.function.PackageableFunction;
+import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity;
+import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.generics.GenericType;
 import meta.pure.protocol.grammar.valuespecification.VariableExpression;
@@ -89,26 +93,56 @@ public class _G_PackageableFunction
         return "UNKNOWN";
     }
 
-    private static String getMultiplicitySignature(Multiplicity m)
+    private static String getMultiplicitySignature(Multiplicity_Protocol mp)
+    {
+        if (mp == null)
+        {
+            return "MANY";
+        }
+        if (mp instanceof Multiplicity m)
+        {
+            return getMultiplicitySignatureDirect(m);
+        }
+        if (mp instanceof Multiplicity_Pointer ptr)
+        {
+            String path = ptr._pointerValue();
+            String name = path != null && path.contains("::") ? path.substring(path.lastIndexOf("::") + 2) : path;
+            return switch (name != null ? name : "")
+            {
+                case "PureOne" -> "1";
+                case "ZeroOne" -> "$0_1$";
+                case "ZeroMany" -> "MANY";
+                case "OneMany" -> "$1_MANY$";
+                default -> "MANY";
+            };
+        }
+        return "MANY";
+    }
+
+    private static String getMultiplicitySignatureDirect(Multiplicity m)
     {
         if (m == null)
         {
             return "MANY";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof MultiplicityParameter mp)
         {
-            return m._multiplicityParameter()._name();
+            return mp._name();
         }
-        long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
-        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
-        if (upper == null)
+        if (m instanceof ConcreteMultiplicity cm)
         {
-            return lower == 0 ? "MANY" : "$" + lower + "_MANY$";
+            long lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
+            Long upper = cm._upperBound() != null ? cm._upperBound()._value() : null;
+            if (upper == null)
+            {
+                return lower == 0 ? "MANY" : "$" + lower + "_MANY$";
+            }
+            if (lower == upper)
+            {
+                return String.valueOf(lower);
+            }
+            return "$" + lower + "_" + upper + "$";
         }
-        if (lower == upper)
-        {
-            return String.valueOf(lower);
-        }
-        return "$" + lower + "_" + upper + "$";
+        return "MANY";
     }
 }

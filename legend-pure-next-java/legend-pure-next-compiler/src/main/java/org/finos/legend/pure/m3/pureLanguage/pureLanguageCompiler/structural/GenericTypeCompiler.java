@@ -19,17 +19,17 @@ import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;
 import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperation;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Unit;
@@ -72,7 +72,7 @@ public final class GenericTypeCompiler
         // Type parameter reference (e.g., T) — no raw type to resolve
         if (grammarGenericType._rawType() == null)
         {
-            return new ConcreteGenericTypeImpl()
+            return new UserDefinedGenericTypeImpl()
                     ._typeParameter(resolveOrCompileTypeParameter(grammarGenericType._typeParameter(), context));
         }
 
@@ -82,7 +82,7 @@ public final class GenericTypeCompiler
             return null;
         }
 
-        return new ConcreteGenericTypeImpl()
+        return new UserDefinedGenericTypeImpl()
                 ._rawType(rawType)
                 ._typeArguments(grammarGenericType._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                 ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))

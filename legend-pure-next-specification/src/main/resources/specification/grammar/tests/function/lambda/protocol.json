@@ -64,6 +64,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -159,6 +160,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -188,6 +190,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -223,6 +226,7 @@
         "parametersValues" : [ {
           "_type" : "Collection",
           "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
               "value" : 2
             },
@@ -348,6 +352,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -363,6 +368,7 @@
       "expressionSequence" : [ {
         "_type" : "Collection",
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },
@@ -409,6 +415,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -437,6 +444,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }

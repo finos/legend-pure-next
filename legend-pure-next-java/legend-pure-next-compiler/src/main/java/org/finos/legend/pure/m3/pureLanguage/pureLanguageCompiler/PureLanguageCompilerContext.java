@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.FunctionExpression;

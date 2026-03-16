@@ -19,15 +19,15 @@ import meta.pure.metamodel.function.property.QualifiedPropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 
 import java.util.Objects;
@@ -107,10 +107,10 @@ public final class QualifiedPropertyCompiler
         if (owner != null)
         {
             result._classifierGenericType(
-                    new ConcreteGenericTypeImpl()
+                    new UserDefinedGenericTypeImpl()
                             ._rawType((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"))
                             ._typeArguments(Lists.mutable.with(
-                                    new ConcreteGenericTypeImpl()._rawType(
+                                    new UserDefinedGenericTypeImpl()._rawType(
                                             new FunctionTypeImpl()
                                                     ._parameters(parameters)
                                                     ._returnType(genericType)

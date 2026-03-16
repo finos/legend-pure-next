@@ -16,27 +16,25 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.type.ClassImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.factory.Maps;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GeneralizationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GenericTypeCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PropertyCompiler;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.VariableCompiler;
@@ -75,12 +73,12 @@ public final class ClassHandler
         plcc.setEnclosingOwner(result);
 
         // Build the owner GenericType: for Pair<U,V> this is Pair<U,V>, not just Pair
-        ConcreteGenericTypeImpl ownerGenericType = new ConcreteGenericTypeImpl()._rawType(result);
+        UserDefinedGenericTypeImpl ownerGenericType = new UserDefinedGenericTypeImpl()._rawType(result);
         if (typeParameters.notEmpty())
         {
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
-                            (GenericType) new ConcreteGenericTypeImpl()
+                            (GenericType) new UserDefinedGenericTypeImpl()
                                     ._typeParameter(tp)));
         }
 
@@ -106,7 +104,7 @@ public final class ClassHandler
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
                 ._classifierGenericType(
-                        new ConcreteGenericTypeImpl()
+                        new UserDefinedGenericTypeImpl()
                                 ._rawType((Type) model.getElement("meta::pure::metamodel::type::Class"))
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
@@ -179,7 +177,7 @@ public final class ClassHandler
                                 && cls._classifierGenericType()._typeArguments() != null
                                 && cls._classifierGenericType()._typeArguments().notEmpty()
                                 ? cls._classifierGenericType()._typeArguments().getFirst()
-                                : new meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl()._rawType(cls);
+                                : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._rawType(cls);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
                                 new meta.pure.metamodel.valuespecification.VariableExpressionImpl()
                                         ._name("this")
@@ -254,7 +252,7 @@ public final class ClassHandler
                 && cls._classifierGenericType()._typeArguments() != null
                 && cls._classifierGenericType()._typeArguments().notEmpty()
                 ? cls._classifierGenericType()._typeArguments().getFirst()
-                : new ConcreteGenericTypeImpl()._rawType(cls);
+                : new UserDefinedGenericTypeImpl()._rawType(cls);
         VariableExpressionImpl thisVar = new VariableExpressionImpl()
                 ._name("this")
                 ._genericType(ownerGenericType)

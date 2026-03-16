@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -32,6 +30,8 @@ import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
 
 /**
  * Helper methods for {@link GenericType}.
@@ -470,9 +470,9 @@ public class _GenericType
         {
             genericType._multiplicityArguments().forEach(mul ->
             {
-                if (mul._multiplicityParameter() != null)
+                if (mul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
                 {
-                    names.add(mul._multiplicityParameter()._name());
+                    names.add(mp._name());
                 }
             });
         }

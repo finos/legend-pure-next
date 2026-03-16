@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
@@ -27,6 +26,7 @@ import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 /**
  * Utility methods for {@link FunctionType}.
@@ -398,17 +398,17 @@ public final class _FunctionType
             {
                 if (p != null)
                 {
-                    if (p._multiplicity() != null && p._multiplicity()._multiplicityParameter() != null)
+                    if (p._multiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
                     {
-                        names.add(p._multiplicity()._multiplicityParameter()._name());
+                        names.add(mp._name());
                     }
                     _GenericType.collectReferencedMultiplicityParameterNames(p._genericType(), names);
                 }
             });
         }
-        if (ft._returnMultiplicity() != null && ft._returnMultiplicity()._multiplicityParameter() != null)
+        if (ft._returnMultiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter retMp)
         {
-            names.add(ft._returnMultiplicity()._multiplicityParameter()._name());
+            names.add(retMp._name());
         }
         _GenericType.collectReferencedMultiplicityParameterNames(ft._returnType(), names);
         return names;

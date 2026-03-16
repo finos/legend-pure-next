@@ -2,8 +2,8 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.va
 
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 
 public class GenericTypeAndMultiplicityHolderResolver
 {

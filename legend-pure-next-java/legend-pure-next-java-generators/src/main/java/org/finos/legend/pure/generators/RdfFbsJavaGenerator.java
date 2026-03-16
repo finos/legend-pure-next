@@ -30,8 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.finos.legend.pure.specification.generation.model.ModelUtils.*;
 import static org.finos.legend.pure.generators.JavaGeneratorUtils.*;
+import static org.finos.legend.pure.specification.generation.model.ModelUtils.*;
 
 /**
  * Generates Java FlatBuffer artifacts from the M3 metamodel.
@@ -297,12 +297,20 @@ public class RdfFbsJavaGenerator
             }
             else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
             {
-                // Union getter for AtomicValue.value (PrimitiveValueDef or LambdaFunctionDef)
+                // Union getter for AtomicValue.value (PrimitiveValueDef=1, LambdaFunctionDef=2, PointerRef=3)
                 sb.append("        byte vType = fb.valueType();\n");
                 sb.append("        if (vType == 2)\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef ld = (org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef());\n");
                 sb.append("            return ld != null ? new meta.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver) : null;\n");
+                sb.append("        }\n");
+                sb.append("        if (vType == 3)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef pr = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef());\n");
+                sb.append("            if (pr == null) { return null; }\n");
+                sb.append("            String path = pr.path();\n");
+                sb.append("            if (path == null) { return null; }\n");
+                sb.append("            return resolver.getElement(path);\n");
                 sb.append("        }\n");
                 sb.append("        if (vType == 1)\n");
                 sb.append("        {\n");
@@ -340,7 +348,7 @@ public class RdfFbsJavaGenerator
                 sb.append("                                    // Create a fresh EnumImpl with correct type\n");
                 sb.append("                                    return new meta.pure.metamodel.type.EnumImpl()\n");
                 sb.append("                                            ._name(enumValueName)\n");
-                sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl()._rawType((meta.pure.metamodel.type.Type) enumeration));\n");
+                sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._rawType((meta.pure.metamodel.type.Type) enumeration));\n");
                 sb.append("                                }\n");
                 sb.append("                            }\n");
                 sb.append("                        }\n");
@@ -390,6 +398,10 @@ public class RdfFbsJavaGenerator
             sb.append("            return ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
             sb.append("        }\n");
             sb.append("        return null;\n");
+        }
+        else if (nps.notEmpty() && prop.isMany)
+        {
+            generateNonPointerSubtypeListGetter(sb, prop, javaType, fbField);
         }
         else if (prop.isMany)
         {
@@ -497,6 +509,47 @@ public class RdfFbsJavaGenerator
         sb.append("                case ").append(baseIdx).append(": { ");
         sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def(), i); ");
         sb.append("if (d != null) result.add(new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver)); break; }\n");
+
+        sb.append("                default: break;\n");
+        sb.append("            }\n");
+        sb.append("        }\n");
+        sb.append("        return result;\n");
+    }
+
+    /**
+     * Generate a getter for a list property whose type has nonPointerSubtypes.
+     * Uses the FlatBuffer union vector to dispatch to the correct concrete wrapper.
+     * Union layout: PointerRef=1, then subtypes from index 2+.
+     */
+    private void generateNonPointerSubtypeListGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField)
+    {
+        String innerType = mapToJavaType(prop.typeName, false);
+        MutableList<String> nps = getNonPointerSubtypes(m3Model, prop);
+
+        sb.append("        int len = fb.").append(fbField).append("Length();\n");
+        sb.append("        MutableList<").append(boxType(innerType)).append("> result = Lists.mutable.ofInitialCapacity(len);\n");
+        sb.append("        for (int i = 0; i < len; i++)\n");
+        sb.append("        {\n");
+        sb.append("            byte uType = fb.").append(fbField).append("Type(i);\n");
+        sb.append("            switch (uType)\n");
+        sb.append("            {\n");
+
+        // PointerRef = 1 (resolve via MetadataAccess)
+        sb.append("                case 1: { PointerRef ref = (PointerRef) fb.").append(fbField)
+          .append("(new PointerRef(), i); if (ref != null && ref.path() != null) result.add((").append(innerType)
+          .append(") resolver.getElement(ref.path())); break; }\n");
+
+        // Each subtype at index 2+
+        nps.forEachWithIndex((subtype, idx) ->
+        {
+            int unionIdx = idx + 2;
+            String defType = subtype + "Def";
+            String wrapperType = subtype + "FlatBufferWrapper";
+            sb.append("                case ").append(unionIdx).append(": { ");
+            sb.append(defType).append(" d = (").append(defType).append(") fb.").append(fbField)
+              .append("(new ").append(defType).append("(), i); ");
+            sb.append("if (d != null) result.add(new ").append(wrapperType).append("(d, resolver)); break; }\n");
+        });
 
         sb.append("                default: break;\n");
         sb.append("            }\n");
@@ -682,7 +735,43 @@ public class RdfFbsJavaGenerator
                 if (prop.isMany)
                 {
                     sb.append("        // ").append(prop.name).append("\n");
-                    if (isPointer || "String".equals(prop.typeName) || (!isClassType && !"Boolean".equals(prop.typeName) && !"Integer".equals(prop.typeName) && !"Float".equals(prop.typeName)))
+                    MutableList<String> npsMany = getNonPointerSubtypes(m3Model, prop);
+                    if (isPointer && npsMany.notEmpty())
+                    {
+                        // pointer + nonPointerSubtypes isMany → union offset+type arrays
+                        sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
+                        sb.append("        byte[] ").append(fbField).append("Types = null;\n");
+                        sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
+                        sb.append("        {\n");
+                        sb.append("            var ").append(fbField).append("List = obj._").append(prop.name).append("();\n");
+                        sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
+                        sb.append("            ").append(fbField).append("Types = new byte[").append(fbField).append("List.size()];\n");
+                        sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
+                        sb.append("            {\n");
+                        sb.append("                var _item = ").append(fbField).append("List.get(i);\n");
+                        // PackageableElement → PointerRef (index 1)
+                        sb.append("                if (_item instanceof meta.pure.metamodel.PackageableElement)\n");
+                        sb.append("                {\n");
+                        sb.append("                    int pathOff = builder.createString(pointerPath(_item));\n");
+                        sb.append("                    PointerRef.startPointerRef(builder);\n");
+                        sb.append("                    PointerRef.addPath(builder, pathOff);\n");
+                        sb.append("                    ").append(fbField).append("Offsets[i] = PointerRef.endPointerRef(builder);\n");
+                        sb.append("                    ").append(fbField).append("Types[i] = 1;\n");
+                        sb.append("                }\n");
+                        MutableList<String> orderedNpsMany = orderMostSpecificFirst(npsMany);
+                        orderedNpsMany.forEachWithIndex((subtype, idx) ->
+                        {
+                            int unionIdx = npsMany.indexOf(subtype) + 2;
+                            sb.append("                else if (_item instanceof ").append(subtype).append(" _pnv").append(idx).append(")\n");
+                            sb.append("                {\n");
+                            sb.append("                    ").append(fbField).append("Offsets[i] = write").append(subtype).append("(_pnv").append(idx).append(");\n");
+                            sb.append("                    ").append(fbField).append("Types[i] = ").append(unionIdx).append(";\n");
+                            sb.append("                }\n");
+                        });
+                        sb.append("            }\n");
+                        sb.append("        }\n");
+                    }
+                    else if (isPointer || "String".equals(prop.typeName) || (!isClassType && !"Boolean".equals(prop.typeName) && !"Integer".equals(prop.typeName) && !"Float".equals(prop.typeName)))
                     {
                         sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
                         sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
@@ -735,6 +824,7 @@ public class RdfFbsJavaGenerator
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
+
                     else if (isClassType)
                     {
                         sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
@@ -759,11 +849,19 @@ public class RdfFbsJavaGenerator
                         sb.append("        byte ").append(fbField).append("UnionType = 0;\n");
                         sb.append("        if (obj._").append(prop.name).append("() != null)\n");
                         sb.append("        {\n");
+                        // Named elements (PackageableElement) must always use PointerRef regardless of subtype
+                        sb.append("            if (obj._").append(prop.name).append("() instanceof meta.pure.metamodel.PackageableElement)\n");
+                        sb.append("            {\n");
+                        sb.append("                int pathOff = builder.createString(pointerPath(obj._").append(prop.name).append("()));\n");
+                        sb.append("                PointerRef.startPointerRef(builder);\n");
+                        sb.append("                PointerRef.addPath(builder, pathOff);\n");
+                        sb.append("                ").append(fbField).append("Offset = PointerRef.endPointerRef(builder);\n");
+                        sb.append("                ").append(fbField).append("UnionType = 1;\n");
+                        sb.append("            }\n");
                         nps.forEachWithIndex((subtype, idx) ->
                         {
                             int unionIdx = idx + 2;
-                            String keyword = idx == 0 ? "if" : "else if";
-                            sb.append("            ").append(keyword).append(" (obj._").append(prop.name).append("() instanceof ").append(subtype).append(" _").append(fbField).append("Val)\n");
+                            sb.append("            else if (obj._").append(prop.name).append("() instanceof ").append(subtype).append(" _").append(fbField).append("Val)\n");
                             sb.append("            {\n");
                             sb.append("                ").append(fbField).append("Offset = write").append(subtype).append("(_").append(fbField).append("Val);\n");
                             sb.append("                ").append(fbField).append("UnionType = ").append(unionIdx).append(";\n");
@@ -814,11 +912,12 @@ public class RdfFbsJavaGenerator
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.PackageableElement pe)\n");
                 sb.append("        {\n");
-                sb.append("            int primStrOff = builder.createString(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe));\n");
-                sb.append("            PrimitiveValueDef.startPrimitiveValueDef(builder);\n");
-                sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
-                sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
-                sb.append("            valueUnionType = 1;\n");
+                sb.append("            // PackageableElement: write as PointerRef (type 3) so reader resolves without genericType\n");
+                sb.append("            int pathOff = builder.createString(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe));\n");
+                sb.append("            PointerRef.startPointerRef(builder);\n");
+                sb.append("            PointerRef.addPath(builder, pathOff);\n");
+                sb.append("            valueUnionOffset = PointerRef.endPointerRef(builder);\n");
+                sb.append("            valueUnionType = 3;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");
                 sb.append("        {\n");
@@ -864,6 +963,17 @@ public class RdfFbsJavaGenerator
                     sb.append("            ").append(fbField).append("TypeVector = ").append(classInfo.name).append("Def.create").append(capitalize(builderAccessor)).append("TypeVector(builder, ").append(fbField).append("Types);\n");
                     sb.append("        }\n");
                 }
+                else if (getNonPointerSubtypes(m3Model, prop).notEmpty())
+                {
+                    // pointer+nonPointerSubtypes union vector: create both type vector and value vector
+                    sb.append("        int ").append(fbField).append("Vector = 0;\n");
+                    sb.append("        int ").append(fbField).append("TypeVector = 0;\n");
+                    sb.append("        if (").append(fbField).append("Offsets != null)\n");
+                    sb.append("        {\n");
+                    sb.append("            ").append(fbField).append("Vector = ").append(classInfo.name).append("Def.create").append(capitalize(builderAccessor)).append("Vector(builder, ").append(fbField).append("Offsets);\n");
+                    sb.append("            ").append(fbField).append("TypeVector = ").append(classInfo.name).append("Def.create").append(capitalize(builderAccessor)).append("TypeVector(builder, ").append(fbField).append("Types);\n");
+                    sb.append("        }\n");
+                }
                 else
                 {
                     sb.append("        int ").append(fbField).append("Vector = 0;\n");
@@ -893,7 +1003,7 @@ public class RdfFbsJavaGenerator
 
                 if (prop.isMany)
                 {
-                    if (isMainTaxonomyType(prop.typeName) && !isPointer)
+                    if ((isMainTaxonomyType(prop.typeName) && !isPointer) || getNonPointerSubtypes(m3Model, prop).notEmpty())
                     {
                         // Union vector: add both type vector and value vector
                         sb.append("        if (").append(fbField).append("Vector != 0)\n");

@@ -27,7 +27,11 @@ import meta.pure.protocol.grammar.function.UserDefinedFunction;
 import meta.pure.protocol.grammar.function.property.AggregationKind;
 import meta.pure.protocol.grammar.function.property.Property;
 import meta.pure.protocol.grammar.function.property.QualifiedProperty;
+import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity;
+import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import meta.pure.protocol.grammar.relation.Column;
 import meta.pure.protocol.grammar.relation.GenericTypeOperation;
 import meta.pure.protocol.grammar.relation.RelationType;
@@ -567,7 +571,7 @@ public class M3ProtocolSerializer
         // Add type arguments if present
         MutableList<GenericType> typeArgs = gt._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
-        MutableList<Multiplicity> multArgs = gt._multiplicityArguments();
+        MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gt._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
 
         if (hasTypeArgs || hasMultArgs)
@@ -581,10 +585,10 @@ public class M3ProtocolSerializer
             // e.g. Property<Nil, String|*>
             if (hasMultArgs)
             {
-                for (Multiplicity mult : multArgs)
+                for (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
                 {
                     sb.append("|");
-                    sb.append(serializeMultiplicityParts(mult));
+                    sb.append(serializeMultiplicityParts((Multiplicity) mult));
                 }
             }
             sb.append(">");
@@ -665,7 +669,7 @@ public class M3ProtocolSerializer
     {
         MutableList<GenericType> typeArgs = gt._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
-        MutableList<Multiplicity> multArgs = gt._multiplicityArguments();
+        MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gt._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
         if (hasTypeArgs || hasMultArgs)
         {
@@ -676,10 +680,10 @@ public class M3ProtocolSerializer
             }
             if (hasMultArgs)
             {
-                for (Multiplicity mult : multArgs)
+                for (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol mult : multArgs)
                 {
                     sb.append("|");
-                    sb.append(serializeMultiplicityParts(mult));
+                    sb.append(serializeMultiplicityParts((Multiplicity) mult));
                 }
             }
             sb.append(">");
@@ -697,15 +701,22 @@ public class M3ProtocolSerializer
         {
             return "*";
         }
+        if (mult instanceof MultiplicityParameter mp)
+        {
+            return mp._name();
+        }
         int lower = 0;
         int upper = -1;
-        if (mult._lowerBound() != null && mult._lowerBound()._value() != null)
+        if (mult instanceof ConcreteMultiplicity cm)
         {
-            lower = ((Number) mult._lowerBound()._value()).intValue();
-        }
-        if (mult._upperBound() != null && mult._upperBound()._value() != null)
-        {
-            upper = ((Number) mult._upperBound()._value()).intValue();
+            if (cm._lowerBound() != null && cm._lowerBound()._value() != null)
+            {
+                lower = ((Number) cm._lowerBound()._value()).intValue();
+            }
+            if (cm._upperBound() != null && cm._upperBound()._value() != null)
+            {
+                upper = ((Number) cm._upperBound()._value()).intValue();
+            }
         }
         if (upper == -1)
         {
@@ -959,17 +970,15 @@ public class M3ProtocolSerializer
         {
             for (VariableExpression param : func._parameters())
             {
-                if (param._multiplicity() != null
-                        && param._multiplicity()._multiplicityParameter() != null)
+                if (param._multiplicity() instanceof MultiplicityParameter mp)
                 {
-                    names.add(param._multiplicity()._multiplicityParameter()._name());
+                    names.add(mp._name());
                 }
             }
         }
-        if (func._returnMultiplicity() != null
-                && func._returnMultiplicity()._multiplicityParameter() != null)
+        if (func._returnMultiplicity() instanceof MultiplicityParameter retMp)
         {
-            names.add(func._returnMultiplicity()._multiplicityParameter()._name());
+            names.add(retMp._name());
         }
         return names;
     }
@@ -984,10 +993,9 @@ public class M3ProtocolSerializer
         {
             for (Property prop : classDef._properties())
             {
-                if (prop._multiplicity() != null
-                        && prop._multiplicity()._multiplicityParameter() != null)
+                if (prop._multiplicity() instanceof MultiplicityParameter mp)
                 {
-                    names.add(prop._multiplicity()._multiplicityParameter()._name());
+                    names.add(mp._name());
                 }
             }
         }
@@ -2088,23 +2096,26 @@ private void serializeQualifiedProperty(
         }
 
         // Check for multiplicity parameter reference
-        if (mult._multiplicityParameter() != null)
+        if (mult instanceof MultiplicityParameter mp)
         {
-            return "[" + mult._multiplicityParameter()._name() + "]";
+            return "[" + mp._name() + "]";
         }
 
         int lower = 0;
         int upper = -1;
 
-        if (mult._lowerBound() != null && mult._lowerBound()._value() != null)
+        if (mult instanceof ConcreteMultiplicity cm)
         {
-            lower = ((Number) mult._lowerBound()._value()).intValue();
-        }
+            if (cm._lowerBound() != null && cm._lowerBound()._value() != null)
+            {
+                lower = ((Number) cm._lowerBound()._value()).intValue();
+            }
 
-        if (mult._upperBound() != null
-                && mult._upperBound()._value() != null)
-        {
-            upper = ((Number) mult._upperBound()._value()).intValue();
+            if (cm._upperBound() != null
+                    && cm._upperBound()._value() != null)
+            {
+                upper = ((Number) cm._upperBound()._value()).intValue();
+            }
         }
 
         if (upper == -1)
@@ -2123,6 +2134,49 @@ private void serializeQualifiedProperty(
         {
             return "[" + lower + ".." + upper + "]";
         }
+    }
+
+    /**
+     * Overload for Multiplicity_Protocol (the union of pointer + inline Multiplicity).
+     * Dispatches to the Multiplicity overload for inline instances (UserDefinedAdHocMultiplicity),
+     * and converts a Multiplicity_Pointer path to its Pure notation for named multiplicities.
+     */
+    private String serializeMultiplicity(final Multiplicity_Protocol mp)
+    {
+        if (mp == null)
+        {
+            return "[1]";
+        }
+        if (mp instanceof Multiplicity m)
+        {
+            return serializeMultiplicity(m);
+        }
+        if (mp instanceof Multiplicity_Pointer ptr)
+        {
+            return multiplicityPathToNotation(ptr._pointerValue());
+        }
+        return "[1]";
+    }
+
+    /**
+     * Convert a named multiplicity path to its Pure notation.
+     * e.g. "meta::pure::metamodel::multiplicity::OneMany" → "[1..*]"
+     */
+    private static String multiplicityPathToNotation(final String path)
+    {
+        if (path == null)
+        {
+            return "[1]";
+        }
+        String name = path.contains("::") ? path.substring(path.lastIndexOf("::") + 2) : path;
+        return switch (name)
+        {
+            case "PureOne" -> "[1]";
+            case "ZeroOne" -> "[0..1]";
+            case "ZeroMany" -> "[*]";
+            case "OneMany" -> "[1..*]";
+            default -> "[1]";
+        };
     }
 
     /**

@@ -14,10 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
-import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
-
-
 import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
@@ -35,15 +31,18 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
-import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._RelationType;
+
+import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
 
 /**
  * Handles relation-column-specific enrichment for "magical" column spec
@@ -274,7 +273,7 @@ public final class RelationColumnResolver
         {
             meta.pure.metamodel.multiplicity.Multiplicity colMul = wildcardCol._multiplicity() != null
                     ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
-                    : new meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl()
+                    : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl()
                             ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L))
                             ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L));
             enrichedColumns.add(_Column.build(

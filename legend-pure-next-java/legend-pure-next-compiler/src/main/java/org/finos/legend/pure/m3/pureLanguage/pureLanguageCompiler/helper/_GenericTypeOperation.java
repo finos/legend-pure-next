@@ -14,21 +14,21 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;
 import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 /**
  * Utility methods for {@link GenericTypeOperation}.
@@ -99,7 +99,7 @@ public final class _GenericTypeOperation
             case UNION ->
             {
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new ConcreteGenericTypeImpl()._rawType(result);
+                GenericType ownerGT = new UserDefinedGenericTypeImpl()._rawType(result);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {
@@ -125,7 +125,7 @@ public final class _GenericTypeOperation
                     rightRT._columns().forEach(c -> rightNames.add(c._name()));
                 }
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new ConcreteGenericTypeImpl()._rawType(result);
+                GenericType ownerGT = new UserDefinedGenericTypeImpl()._rawType(result);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {

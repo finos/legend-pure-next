@@ -16,13 +16,10 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.function.UserDefinedFunction;
 import meta.pure.metamodel.function.UserDefinedFunctionImpl;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
-import meta.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.factory.Maps;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PackageableFunctionCompiler;

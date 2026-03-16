@@ -47,10 +47,10 @@ import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Measure;
 import meta.pure.metamodel.type.PrimitiveType;
 import meta.pure.metamodel.type.Unit;
-import meta.pure.metamodel.type.generics.ConcreteGenericType;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
+import meta.pure.metamodel.type.generics.UserDefinedGenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -743,7 +743,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             path += ">";
         }
         // Type variable values (e.g. Varchar(200))
-        if (gt instanceof ConcreteGenericType cgt && cgt._typeVariableValues() != null && cgt._typeVariableValues().notEmpty())
+        if (gt instanceof UserDefinedGenericType cgt && cgt._typeVariableValues() != null && cgt._typeVariableValues().notEmpty())
         {
             path += "(" + cgt._typeVariableValues().collect(CompiledGraphPrinter::printValueInline).makeString(", ") + ")";
         }
@@ -845,10 +845,10 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
 
     private static String printMulCore(Multiplicity multiplicity)
     {
-        if (multiplicity._multiplicityParameter() != null)
+        if (multiplicity instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
         {
-            String name = multiplicity._multiplicityParameter()._name();
-            if (multiplicity._multiplicityParameter()._owner() != null && multiplicity._multiplicityParameter()._owner() instanceof PackageableElement ownerElem)
+            String name = mp._name();
+            if (mp._owner() != null && mp._owner() instanceof PackageableElement ownerElem)
             {
                 name += "~" + shortPath(ownerElem);
             }
@@ -876,17 +876,21 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
         }
         // Concrete multiplicity
-        String lower = formatBound(multiplicity._lowerBound());
-        String upper = formatBound(multiplicity._upperBound());
-        if (upper.equals("*"))
+        if (multiplicity instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
         {
-            return lower.equals("0") ? "[*]" : "[" + lower + "..*]";
+            String lower = formatBound(cm._lowerBound());
+            String upper = formatBound(cm._upperBound());
+            if (upper.equals("*"))
+            {
+                return lower.equals("0") ? "[*]" : "[" + lower + "..*]";
+            }
+            if (lower.equals(upper))
+            {
+                return "[" + lower + "]";
+            }
+            return "[" + lower + ".." + upper + "]";
         }
-        if (lower.equals(upper))
-        {
-            return "[" + lower + "]";
-        }
-        return "[" + lower + ".." + upper + "]";
+        return "[?]";
     }
 
     private static String formatBound(MultiplicityValue mv)

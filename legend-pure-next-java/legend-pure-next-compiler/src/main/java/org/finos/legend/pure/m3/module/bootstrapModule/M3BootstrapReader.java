@@ -16,32 +16,31 @@ package org.finos.legend.pure.m3.module.bootstrapModule;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
-import meta.pure.metamodel.SimplePropertyOwner;
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.SimplePropertyOwner;
 import meta.pure.metamodel.extension.ProfileImpl;
 import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.extension.StereotypeImpl;
-import meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl;
-import meta.pure.metamodel.multiplicity.ConcretePackageableMultiplicityImpl;
+import meta.pure.metamodel.function.property.PropertyImpl;
+import meta.pure.metamodel.multiplicity.InferredPackageableMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
-import meta.pure.metamodel.multiplicity.PackageableInferredMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
+import meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
+import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityImpl;
 import meta.pure.metamodel.relationship.Generalization;
 import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.ClassImpl;
 import meta.pure.metamodel.type.EnumerationImpl;
-import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.PrimitiveTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
-import meta.pure.metamodel.type.generics.MultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -103,16 +102,16 @@ public class M3BootstrapReader
             Resource m3PrimitiveType = model.createResource(M3_NS + "PrimitiveType");
             Resource m3Enumeration = model.createResource(M3_NS + "Enumeration");
             Resource m3Profile = model.createResource(M3_NS + "Profile");
-            Resource m3ConcretePackageableMultiplicity = model.createResource(M3_NS + "ConcretePackageableMultiplicity");
-            Resource m3PackageableInferredMultiplicity = model.createResource(M3_NS + "PackageableInferredMultiplicity");
+            Resource m3UserDefinedPackageableMultiplicity = model.createResource(M3_NS + "UserDefinedPackageableMultiplicity");
+            Resource m3InferredPackageableMultiplicity = model.createResource(M3_NS + "InferredPackageableMultiplicity");
 
             // First pass: create all elements
             bootstrapType(model, m3Class, root, index, "Class");
             bootstrapType(model, m3PrimitiveType, root, index, "PrimitiveType");
             bootstrapType(model, m3Enumeration, root, index, "Enumeration");
             bootstrapType(model, m3Profile, root, index, "Profile");
-            bootstrapMultiplicities(model, m3ConcretePackageableMultiplicity, root, index, ConcretePackageableMultiplicityImpl::new);
-            bootstrapMultiplicities(model, m3PackageableInferredMultiplicity, root, index, PackageableInferredMultiplicityImpl::new);
+            bootstrapMultiplicities(model, m3UserDefinedPackageableMultiplicity, root, index, UserDefinedPackageableMultiplicityImpl::new);
+            bootstrapMultiplicities(model, m3InferredPackageableMultiplicity, root, index, InferredPackageableMultiplicityImpl::new);
 
             // Second pass: wire generalizations now that all types exist
             wireGeneralizations(model, m3Class, index);
@@ -125,6 +124,9 @@ public class M3BootstrapReader
             wireClassifierGenericType(model, m3Enumeration, index);
             Resource m3Package = model.createResource(M3_NS + "Package");
             wireClassifierGenericType(model, m3Package, index);
+            // Wire classifierGenericType on multiplicity instances
+            wireClassifierGenericType(model, m3UserDefinedPackageableMultiplicity, index);
+            wireClassifierGenericType(model, m3InferredPackageableMultiplicity, index);
 
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
@@ -299,7 +301,7 @@ public class M3BootstrapReader
                 }
 
                 // Build the GenericType for the generalization
-                ConcreteGenericTypeImpl generalGT = new ConcreteGenericTypeImpl()._rawType(generalType);
+                UserDefinedGenericTypeImpl generalGT = new UserDefinedGenericTypeImpl()._rawType(generalType);
 
                 // Extract type arguments
                 MutableList<GenericType> typeArgs = Lists.mutable.empty();
@@ -318,7 +320,7 @@ public class M3BootstrapReader
                         String paramName = getName(model, typeParamStmt.getObject().asResource());
                         if (paramName != null)
                         {
-                            typeArgs.add(new ConcreteGenericTypeImpl()
+                            typeArgs.add(new UserDefinedGenericTypeImpl()
                                     ._typeParameter(new TypeParameterImpl()._name(paramName)));
                         }
                     }
@@ -335,7 +337,7 @@ public class M3BootstrapReader
                             if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource()
                                     && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
                             {
-                                typeArgs.add(new ConcreteGenericTypeImpl()
+                                typeArgs.add(new UserDefinedGenericTypeImpl()
                                         ._rawType(buildFunctionType(model, argRawTypeRes, index)));
                             }
                             else
@@ -346,7 +348,7 @@ public class M3BootstrapReader
                                     Type argType = findType(argTypeName, index);
                                     if (argType != null)
                                     {
-                                        typeArgs.add(new ConcreteGenericTypeImpl()._rawType(argType));
+                                        typeArgs.add(new UserDefinedGenericTypeImpl()._rawType(argType));
                                     }
                                 }
                             }
@@ -627,7 +629,7 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                result.add(new MultiplicityParameterImpl()._name(paramName)._owner(owner));
+                result.add(new UserDefinedMultiplicityParameterImpl()._name(paramName)._owner(owner));
             }
         }
         return result;
@@ -691,8 +693,7 @@ public class M3BootstrapReader
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
-                ft._returnMultiplicity(new ConcreteMultiplicityImpl()
-                        ._multiplicityParameter(new meta.pure.metamodel.type.generics.MultiplicityParameterImpl()._name(mulParamStmt.getString())));
+                ft._returnMultiplicity(new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));
             }
             else
             {
@@ -717,13 +718,13 @@ public class M3BootstrapReader
             String paramName = getName(model, typeParamStmt.getObject().asResource());
             if (paramName != null)
             {
-                ConcreteGenericTypeImpl gt = new ConcreteGenericTypeImpl()
+                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl()
                         ._typeParameter(new TypeParameterImpl()._name(paramName));
                 return gt;
             }
         }
 
-        ConcreteGenericTypeImpl gt = new ConcreteGenericTypeImpl();
+        UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         // Concrete rawType reference
         Statement rawTypeStmt = getM3Statement(model, gtRes, "rawType");

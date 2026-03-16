@@ -27,10 +27,10 @@ import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.PureParser;
 
 import java.io.IOException;

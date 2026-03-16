@@ -16,8 +16,6 @@ package org.finos.legend.pure.m3.module;
 
 import org.finos.legend.pure.m3.PureModel;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 /**

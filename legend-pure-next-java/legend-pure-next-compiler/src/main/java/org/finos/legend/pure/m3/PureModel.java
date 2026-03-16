@@ -18,11 +18,11 @@ import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
 import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
-import org.finos.legend.pure.m3.module.CompilationResult;
-import org.finos.legend.pure.m3.module.Module;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 
 /**

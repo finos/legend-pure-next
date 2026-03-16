@@ -19,8 +19,8 @@ import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.relationship.Generalization}

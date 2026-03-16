@@ -3,14 +3,14 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 import meta.pure.metamodel.type.PrimitiveType;
 import meta.pure.metamodel.type.PrimitiveTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GeneralizationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -45,7 +45,7 @@ public final class PrimitiveTypeHandler
                 .select(Objects::nonNull));
 
         result._classifierGenericType(
-                new ConcreteGenericTypeImpl()._rawType((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType")));
+                new UserDefinedGenericTypeImpl()._rawType((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType")));
 
         // Compile type variables (e.g., Primitive Varchar(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -81,7 +81,7 @@ public final class PrimitiveTypeHandler
 
         VariableExpressionImpl thisVar = new VariableExpressionImpl()
                 ._name("this")
-                ._genericType(new ConcreteGenericTypeImpl()._rawType(pt))
+                ._genericType(new UserDefinedGenericTypeImpl()._rawType(pt))
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
 
         // Push $this and type variables into scope

@@ -16,11 +16,11 @@ package org.finos.legend.pure.m3.localModule;
 
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.module.CompilationError;
-import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.localModule.error.Error;
 import org.finos.legend.pure.m3.localModule.error.ErrorLanguageExtension;
+import org.finos.legend.pure.m3.module.CompilationError;
+import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;

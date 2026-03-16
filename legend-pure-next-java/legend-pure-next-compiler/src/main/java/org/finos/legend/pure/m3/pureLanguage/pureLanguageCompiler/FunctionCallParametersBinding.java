@@ -15,8 +15,8 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -201,14 +201,14 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     Multiplicity mul = entry.getValue().getFirst();
-                    if (mul._multiplicityParameter() != null)
+                    if (mul instanceof MultiplicityParameter mulParam)
                     {
-                        String targetName = mul._multiplicityParameter()._name();
+                        String targetName = mulParam._name();
                         MutableSet<Multiplicity> targetBinding = multiplicityBindings.get(targetName);
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             Multiplicity resolved = targetBinding.getFirst();
-                            if (resolved._multiplicityParameter() == null)
+                            if (!(resolved instanceof MultiplicityParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);

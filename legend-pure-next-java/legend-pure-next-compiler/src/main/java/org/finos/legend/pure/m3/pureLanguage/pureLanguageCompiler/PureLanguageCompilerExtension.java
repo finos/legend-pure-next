@@ -33,6 +33,9 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
+import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.AssociationHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.ClassHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.EnumerationHandler;
@@ -43,9 +46,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.Profi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.UserDefinedFunctionHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
-import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 
 /**
  * Core compiler extension for the Pure language.

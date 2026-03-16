@@ -386,6 +386,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -516,6 +517,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -536,6 +538,7 @@
           "expressionSequence" : [ {
             "_type" : "Collection",
             "multiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 2
               },
@@ -601,6 +604,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           }
@@ -627,6 +631,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -643,6 +648,7 @@
             }, {
               "_type" : "Collection",
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -725,6 +731,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -784,6 +791,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -828,6 +836,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -945,6 +954,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -968,6 +978,7 @@
             }
           },
           "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
               "value" : 1
             },
@@ -997,6 +1008,7 @@
             }
           },
           "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
               "value" : 1
             },
@@ -1255,6 +1267,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },

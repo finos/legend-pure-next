@@ -24,9 +24,9 @@ import meta.pure.metamodel.extension.TaggedValueImpl;
 import meta.pure.protocol.grammar.extension.Stereotype_Pointer;
 import meta.pure.protocol.grammar.extension.Tag_Pointer;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 /**

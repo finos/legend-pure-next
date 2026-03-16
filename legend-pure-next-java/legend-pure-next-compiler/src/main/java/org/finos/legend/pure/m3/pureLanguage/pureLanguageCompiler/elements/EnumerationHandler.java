@@ -16,17 +16,17 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.function.property.PropertyImpl;
+import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.EnumImpl;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
-import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
 /**
@@ -53,9 +53,9 @@ public final class EnumerationHandler
         Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         // GenericType for this specific enumeration (e.g., CC_GeographicEntityType)
-        meta.pure.metamodel.type.generics.GenericType enumGT = new ConcreteGenericTypeImpl()._rawType(result);
+        meta.pure.metamodel.type.generics.GenericType enumGT = new UserDefinedGenericTypeImpl()._rawType(result);
         // GenericType for Enumeration<E> parameterized with this enum type
-        meta.pure.metamodel.type.generics.GenericType enumerationOfE = new ConcreteGenericTypeImpl()
+        meta.pure.metamodel.type.generics.GenericType enumerationOfE = new UserDefinedGenericTypeImpl()
                 ._rawType(enumerationType)
                 ._typeArguments(Lists.mutable.with(enumGT));
 
@@ -86,7 +86,7 @@ public final class EnumerationHandler
                     ._genericType(enumGT)
                     ._multiplicity(pureOne)
                     ._classifierGenericType(
-                            new ConcreteGenericTypeImpl()
+                            new UserDefinedGenericTypeImpl()
                                     ._rawType(propertyType)
                                     ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                                     ._multiplicityArguments(Lists.mutable.with(pureOne)))
@@ -101,7 +101,7 @@ public final class EnumerationHandler
                 ._classifierGenericType(enumerationOfE)
                 ._generalizations(Lists.mutable.with(
                         new GeneralizationImpl()
-                                ._general(new ConcreteGenericTypeImpl()._rawType(enumType))))
+                                ._general(new UserDefinedGenericTypeImpl()._rawType(enumType))))
                 ._properties(props)
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
     }

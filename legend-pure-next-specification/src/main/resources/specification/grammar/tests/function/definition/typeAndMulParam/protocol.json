@@ -46,9 +46,8 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "multiplicity" : {
-            "multiplicityParameter" : {
-              "name" : "m"
-            }
+            "_type" : "UserDefinedMultiplicityParameter",
+            "name" : "m"
           },
           "sourceInformation" : {
             "endColumn" : 38,
@@ -80,9 +79,8 @@
           }
         },
         "multiplicity" : {
-          "multiplicityParameter" : {
-            "name" : "m"
-          }
+          "_type" : "UserDefinedMultiplicityParameter",
+          "name" : "m"
         },
         "name" : "t",
         "sourceInformation" : {
@@ -98,9 +96,8 @@
         }
       },
       "returnMultiplicity" : {
-        "multiplicityParameter" : {
-          "name" : "m"
-        }
+        "_type" : "UserDefinedMultiplicityParameter",
+        "name" : "m"
       },
       "sourceInformation" : {
         "endColumn" : 1,

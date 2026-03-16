@@ -21,13 +21,13 @@ import meta.pure.metamodel.relationship.Association;
 import meta.pure.metamodel.relationship.AssociationImpl;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -104,7 +104,7 @@ public final class AssociationHandler
     private static void setPropertyClassifierGenericType(PropertyImpl property, GenericType owner, Type propertyType)
     {
         property._classifierGenericType(
-                new ConcreteGenericTypeImpl()
+                new UserDefinedGenericTypeImpl()
                         ._rawType(propertyType)
                         ._typeArguments(Lists.mutable.with(owner, property._genericType()))
                         ._multiplicityArguments(Lists.mutable.with(property._multiplicity())));

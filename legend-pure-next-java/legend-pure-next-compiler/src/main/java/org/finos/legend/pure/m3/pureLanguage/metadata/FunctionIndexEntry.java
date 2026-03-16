@@ -22,15 +22,15 @@ import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.extension.TaggedValue;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
+import meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.ElementOverride;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
-import meta.pure.metamodel.type.generics.MultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -99,7 +99,7 @@ public class FunctionIndexEntry implements PackageableFunction
         MutableSet<String> mulParamNames = _FunctionType.collectReferencedMultiplicityParameterNames(functionType);
         this.multiplicityParamCount = mulParamNames.size();
         this.multiplicityParameters = mulParamNames.collect(name ->
-                (MultiplicityParameter) new MultiplicityParameterImpl()._name(name)._owner(this)).toList();
+                (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(name)._owner(this)).toList();
     }
 
     // ========================================================================
@@ -188,10 +188,10 @@ public class FunctionIndexEntry implements PackageableFunction
     {
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
         Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
-        return new ConcreteGenericTypeImpl()
+        return new UserDefinedGenericTypeImpl()
                 ._rawType(pfType)
                 ._typeArguments(Lists.mutable.with(
-                        new ConcreteGenericTypeImpl()._rawType(functionType)));
+                        new UserDefinedGenericTypeImpl()._rawType(functionType)));
     }
 
     // ========================================================================
@@ -391,8 +391,8 @@ public class FunctionIndexEntry implements PackageableFunction
 
             // Multiplicity parameter (e.g. [m]) is less specific than any concrete multiplicity.
             // Must handle explicitly before subsumption to maintain transitivity.
-            boolean m1IsParam = m1 != null && m1._multiplicityParameter() != null;
-            boolean m2IsParam = m2 != null && m2._multiplicityParameter() != null;
+            boolean m1IsParam = m1 instanceof MultiplicityParameter;
+            boolean m2IsParam = m2 instanceof MultiplicityParameter;
             if (m1IsParam && !m2IsParam)
             {
                 return 1; // m2 concrete is more specific
@@ -478,12 +478,17 @@ public class FunctionIndexEntry implements PackageableFunction
         {
             return "[*]";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof MultiplicityParameter mp)
         {
-            return "[" + m._multiplicityParameter()._name() + "]";
+            return "[" + mp._name() + "]";
         }
-        long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
-        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
+        long lower = 0;
+        Long upper = null;
+        if (m instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+        {
+            lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
+            upper = cm._upperBound() != null ? cm._upperBound()._value() : null;
+        }
         if (upper == null)
         {
             return lower == 0 ? "[*]" : "[" + lower + "..*]";

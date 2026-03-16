@@ -1,14 +1,8 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
-
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ArrowInvocationImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.CollectionImpl;
@@ -17,8 +11,14 @@ import meta.pure.metamodel.valuespecification.FunctionInvocationImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 
 /**
  * Compiles grammar-level {@link meta.pure.protocol.grammar.valuespecification.ValueSpecification}
@@ -213,7 +213,7 @@ public final class ValueSpecificationCompiler
             PackageableElement dateType = model.getElement(dateTypePath);
             if (dateType instanceof meta.pure.metamodel.type.Type)
             {
-                ConcreteGenericTypeImpl gt = new ConcreteGenericTypeImpl();
+                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
                 gt._rawType((meta.pure.metamodel.type.Type) dateType);
                 result._genericType(gt);
             }

@@ -79,12 +79,17 @@ public class _PackageableFunction
         {
             return "[*]";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
         {
-            return "[" + m._multiplicityParameter()._name() + "]";
+            return "[" + mp._name() + "]";
         }
-        long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
-        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
+        long lower = 0;
+        Long upper = null;
+        if (m instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+        {
+            lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
+            upper = cm._upperBound() != null ? cm._upperBound()._value() : null;
+        }
         if (upper == null)
         {
             return lower == 0 ? "[*]" : "[" + lower + "..*]";
