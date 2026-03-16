@@ -1217,7 +1217,7 @@ public class M3ProtocolSerializer
                 MutableList<ValueSpecification> names = nameCol._values();
                 // Build column-to-type map from RelationType if present
                 java.util.Map<String, GenericType> typeMap = new java.util.LinkedHashMap<>();
-                java.util.Map<String, Multiplicity> mulMap = new java.util.LinkedHashMap<>();
+                java.util.Map<String, Multiplicity_Protocol> mulMap = new java.util.LinkedHashMap<>();
                 if (params.size() >= 2 && params.get(1) instanceof GenericTypeAndMultiplicityHolder holder
                         && holder._genericType() != null
                         && holder._genericType()._rawType() instanceof meta.pure.protocol.grammar.relation.RelationType rt

@@ -1502,6 +1502,7 @@
     :multiplicity :PureOne .
 
 :Column_multiplicity a :Property ;
+    :stereotypes :ProtocolInfo_pointer ;
     :name "multiplicity" ;
     :classifierGenericType [ :rawType :Property ; :typeArguments ( [ :rawType :Column ] [ :rawType :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :Column ;

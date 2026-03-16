@@ -1015,7 +1015,7 @@ public class M3ProtocolBuilder
                     }
                     if (colSpec.multiplicity() != null)
                     {
-                        col._multiplicity((meta.pure.protocol.grammar.multiplicity.Multiplicity) parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
+                        col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
                     }
                     RelationTypeImpl relationType = new RelationTypeImpl()
                             ._columns(Lists.mutable.with(col));
@@ -1115,7 +1115,7 @@ public class M3ProtocolBuilder
                             }
                             if (colSpec.multiplicity() != null)
                             {
-                                col._multiplicity((meta.pure.protocol.grammar.multiplicity.Multiplicity) parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
+                                col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
                             }
                             columns.add(col);
                         }
@@ -2161,7 +2161,7 @@ public class M3ProtocolBuilder
                             // Column multiplicity (optional)
                             if (colCtx.multiplicity() != null)
                             {
-                                col._multiplicity((meta.pure.protocol.grammar.multiplicity.Multiplicity) parseMultiplicity(colCtx.multiplicity().getText(), multParamNames));
+                                col._multiplicity(parseMultiplicity(colCtx.multiplicity().getText(), multParamNames));
                             }
 
                             return col._sourceInformation(buildSourceInfo(colCtx));
