@@ -1020,7 +1020,7 @@ public class M3ProtocolBuilder
                     RelationTypeImpl relationType = new RelationTypeImpl()
                             ._columns(Lists.mutable.with(col));
                     UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                            ._genericType(new UserDefinedGenericTypeImpl()._rawType(relationType));
+                            ._genericType(new UserDefinedGenericTypeImpl()._type(relationType));
                     paramVals.add(holder);
                 }
                 else if (hasLambda)
@@ -1124,7 +1124,7 @@ public class M3ProtocolBuilder
                     {
                         RelationTypeImpl relationType = new RelationTypeImpl()._columns(columns);
                         UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                                ._genericType(new UserDefinedGenericTypeImpl()._rawType(relationType));
+                                ._genericType(new UserDefinedGenericTypeImpl()._type(relationType));
                         arrayParams.add(holder);
                     }
                     else
@@ -1191,7 +1191,7 @@ public class M3ProtocolBuilder
                     : "Unknown";
 
             UserDefinedGenericTypeImpl genericType = new UserDefinedGenericTypeImpl()
-                    ._rawType(new Type_PointerImpl()._pointerValue(typeName));
+                    ._type(new Type_PointerImpl()._pointerValue(typeName));
 
             // Type arguments and multiplicity arguments: ^Type<Args|MultArgs>(...)
             if (ctx.typeArguments() != null)
@@ -1351,7 +1351,7 @@ public class M3ProtocolBuilder
     private UserDefinedGenericTypeImpl buildPrimitiveGenericType(final String typeName)
     {
         return new UserDefinedGenericTypeImpl()
-                ._rawType(new Type_PointerImpl()._pointerValue(typeName));
+                ._type(new Type_PointerImpl()._pointerValue(typeName));
     }
 
     private UserDefinedAdHocMultiplicityImpl buildPureOne()
@@ -2000,7 +2000,7 @@ public class M3ProtocolBuilder
         if (ctx.equalType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._type(GenericTypeOperationType.EQUAL)
+                    ._operationType(GenericTypeOperationType.EQUAL)
                     ._left(result)
                     ._right(buildGenericType(ctx.equalType().type(), typeParamNames, multParamNames));
         }
@@ -2011,14 +2011,14 @@ public class M3ProtocolBuilder
             if (opCtx.addType() != null)
             {
                 result = new GenericTypeOperationImpl()
-                        ._type(GenericTypeOperationType.UNION)
+                        ._operationType(GenericTypeOperationType.UNION)
                         ._left(result)
                         ._right(buildGenericType(opCtx.addType().type(), typeParamNames, multParamNames));
             }
             else
             {
                 result = new GenericTypeOperationImpl()
-                        ._type(GenericTypeOperationType.DIFFERENCE)
+                        ._operationType(GenericTypeOperationType.DIFFERENCE)
                         ._left(result)
                         ._right(buildGenericType(opCtx.subType().type(), typeParamNames, multParamNames));
             }
@@ -2028,7 +2028,7 @@ public class M3ProtocolBuilder
         if (ctx.subsetType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._type(GenericTypeOperationType.SUBSET)
+                    ._operationType(GenericTypeOperationType.SUBSET)
                     ._left(result)
                     ._right(buildGenericType(ctx.subsetType().type(), typeParamNames, multParamNames));
         }
@@ -2053,12 +2053,12 @@ public class M3ProtocolBuilder
             // Check if this is a reference to a declared type parameter
             if (typeParamNames.contains(typeName))
             {
-                gt._rawType(new TypeParameterImpl()
+                gt._type(new TypeParameterImpl()
                         ._name(typeName));
             }
             else
             {
-                gt._rawType(new Type_PointerImpl()
+                gt._type(new Type_PointerImpl()
                         ._pointerValue(typeName)
                         ._sourceInformation(buildSourceInfo(ctx.qualifiedName())));
             }
@@ -2088,19 +2088,19 @@ public class M3ProtocolBuilder
         }
         else if (ctx.unitName() != null)
         {
-            gt._rawType(new Type_PointerImpl()
+            gt._type(new Type_PointerImpl()
                     ._pointerValue(ctx.unitName().getText())
                     ._sourceInformation(buildSourceInfo(ctx.unitName())));
         }
         else if (ctx.CURLY_BRACKET_OPEN() != null)
         {
             // FunctionType: {ParamType1[m1], ParamType2[m2] -> ReturnType[m]}
-            gt._rawType(buildFunctionType(ctx, typeParamNames, multParamNames));
+            gt._type(buildFunctionType(ctx, typeParamNames, multParamNames));
         }
         else if (ctx.GROUP_OPEN() != null && !ctx.columnType().isEmpty())
         {
             // RelationType: (col:String, col2:Integer)
-            gt._rawType(buildRelationType(ctx, typeParamNames, multParamNames));
+            gt._type(buildRelationType(ctx, typeParamNames, multParamNames));
         }
 
         return gt;

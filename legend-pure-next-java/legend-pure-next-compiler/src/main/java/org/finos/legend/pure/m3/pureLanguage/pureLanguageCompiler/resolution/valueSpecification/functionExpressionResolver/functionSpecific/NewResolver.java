@@ -20,7 +20,7 @@ public class NewResolver
     {
         // Get the class being instantiated from the return type
         GenericType returnGT = fe._genericType();
-        if (returnGT == null || !(returnGT._rawType() instanceof meta.pure.metamodel.type.Class cls))
+        if (returnGT == null || !(returnGT._type() instanceof meta.pure.metamodel.type.Class cls))
         {
             return;
         }
@@ -84,9 +84,9 @@ public class NewResolver
         {
             type._generalizations().forEach(gen ->
             {
-                if (gen._general() != null && gen._general()._rawType() != null)
+                if (gen._general() != null && gen._general()._type() != null)
                 {
-                    checkMissingProperties(gen._general()._rawType(), providedNames, fe, context);
+                    checkMissingProperties(gen._general()._type(), providedNames, fe, context);
                 }
             });
         }

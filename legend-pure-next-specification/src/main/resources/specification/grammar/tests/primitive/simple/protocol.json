@@ -4,7 +4,7 @@
       "_type" : "PrimitiveType",
       "generalizations" : [ {
         "general" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {

@@ -318,9 +318,9 @@ public class FunctionApplicationResolver
             // When the arg type is a subtype of the param type (e.g., Property vs Function),
             // resolve to the param's raw type level before collecting bindings to ensure
             // type arguments are positionally aligned.
-            if (!(paramGT._rawType() instanceof TypeParameter) && paramGT._rawType() != argGT._rawType())
+            if (!(paramGT._type() instanceof TypeParameter) && paramGT._type() != argGT._type())
             {
-                argGT = _GenericType.resolveForTarget(argGT, paramGT._rawType(), model);
+                argGT = _GenericType.resolveForTarget(argGT, paramGT._type(), model);
             }
             _GenericType.collectTypeParameterBindings(paramGT, argGT, bindings);
             _Multiplicity.collectMultiplicityParameterBindings(paramMul, processed._multiplicity(), bindings);
@@ -417,7 +417,7 @@ public class FunctionApplicationResolver
             if (concreteGT._typeArguments() != null && concreteGT._typeArguments().notEmpty())
             {
                 GenericType innerGT = concreteGT._typeArguments().getFirst();
-                if (innerGT._rawType() instanceof FunctionType ft)
+                if (innerGT._type() instanceof FunctionType ft)
                 {
                     // Set (or update) lambda variable types from the resolved FunctionType parameters.
                     MutableList<VariableExpression> ftParams = ft._parameters();
@@ -585,7 +585,7 @@ public class FunctionApplicationResolver
     private static Type resolvedRawType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._rawType() : null;
+        return gt != null ? gt._type() : null;
     }
 
     private static boolean isSuccessfullyProcessed(ValueSpecification parameterValue, ValueSpecification reprocessed, MutableSet<String> scopeTypeParams, MutableSet<String> scopeMulParams)

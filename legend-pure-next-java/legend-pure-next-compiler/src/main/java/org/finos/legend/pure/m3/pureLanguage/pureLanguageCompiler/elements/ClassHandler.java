@@ -73,13 +73,13 @@ public final class ClassHandler
         plcc.setEnclosingOwner(result);
 
         // Build the owner GenericType: for Pair<U,V> this is Pair<U,V>, not just Pair
-        UserDefinedGenericTypeImpl ownerGenericType = new UserDefinedGenericTypeImpl()._rawType(result);
+        UserDefinedGenericTypeImpl ownerGenericType = new UserDefinedGenericTypeImpl()._type(result);
         if (typeParameters.notEmpty())
         {
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
                             (GenericType) new UserDefinedGenericTypeImpl()
-                                    ._rawType(tp)));
+                                    ._type(tp)));
         }
 
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
@@ -105,7 +105,7 @@ public final class ClassHandler
                         .select(Objects::nonNull))
                 ._classifierGenericType(
                         new UserDefinedGenericTypeImpl()
-                                ._rawType((Type) model.getElement("meta::pure::metamodel::type::Class"))
+                                ._type((Type) model.getElement("meta::pure::metamodel::type::Class"))
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
 
@@ -177,7 +177,7 @@ public final class ClassHandler
                                 && cls._classifierGenericType()._typeArguments() != null
                                 && cls._classifierGenericType()._typeArguments().notEmpty()
                                 ? cls._classifierGenericType()._typeArguments().getFirst()
-                                : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._rawType(cls);
+                                : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(cls);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
                                 new meta.pure.metamodel.valuespecification.VariableExpressionImpl()
                                         ._name("this")
@@ -202,11 +202,11 @@ public final class ClassHandler
                                 prop._sourceInformation();
 
                         // Type check
-                        if (lastExpr._genericType() != null && lastExpr._genericType()._rawType() != null
-                                && prop._genericType() != null && prop._genericType()._rawType() != null)
+                        if (lastExpr._genericType() != null && lastExpr._genericType()._type() != null
+                                && prop._genericType() != null && prop._genericType()._type() != null)
                         {
-                            meta.pure.metamodel.type.Type defaultType = lastExpr._genericType()._rawType();
-                            meta.pure.metamodel.type.Type propertyType = prop._genericType()._rawType();
+                            meta.pure.metamodel.type.Type defaultType = lastExpr._genericType()._type();
+                            meta.pure.metamodel.type.Type propertyType = prop._genericType()._type();
                             if (defaultType != propertyType)
                             {
                                 context.addError(new CompilationError(
@@ -252,7 +252,7 @@ public final class ClassHandler
                 && cls._classifierGenericType()._typeArguments() != null
                 && cls._classifierGenericType()._typeArguments().notEmpty()
                 ? cls._classifierGenericType()._typeArguments().getFirst()
-                : new UserDefinedGenericTypeImpl()._rawType(cls);
+                : new UserDefinedGenericTypeImpl()._type(cls);
         VariableExpressionImpl thisVar = new VariableExpressionImpl()
                 ._name("this")
                 ._genericType(ownerGenericType)

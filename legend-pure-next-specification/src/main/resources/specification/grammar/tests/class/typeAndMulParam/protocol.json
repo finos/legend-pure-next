@@ -11,7 +11,7 @@
       },
       "properties" : [ {
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "TypeParameter",
             "name" : "T"
           }

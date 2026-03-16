@@ -55,7 +55,7 @@ public final class _Column
                 ._multiplicity(mul)
                 ._classifierGenericType(
                         new UserDefinedGenericTypeImpl()
-                                ._rawType((Type) model.getElement("meta::pure::metamodel::relation::Column"))
+                                ._type((Type) model.getElement("meta::pure::metamodel::relation::Column"))
                                 ._typeArguments(Lists.mutable.with(owner, genericType))
                                 ._multiplicityArguments(Lists.mutable.with(mul)));
     }

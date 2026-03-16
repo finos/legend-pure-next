@@ -17,7 +17,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
             }
@@ -45,7 +45,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -91,7 +91,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -145,7 +145,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -196,7 +196,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -232,7 +232,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Integer",
           "sourceInformation" : {

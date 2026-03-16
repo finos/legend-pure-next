@@ -9,7 +9,7 @@
       "properties" : [ {
         "aggregation" : "NONE",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -39,7 +39,7 @@
       }, {
         "aggregation" : "COMPOSITE",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -69,7 +69,7 @@
       }, {
         "aggregation" : "SHARED",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {

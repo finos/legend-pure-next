@@ -81,11 +81,11 @@ public class _G_PackageableFunction
         {
             return "UNKNOWN";
         }
-        if (gt._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
+        if (gt._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
         {
             return tp._name();
         }
-        if (gt._rawType() instanceof Type_Pointer tp && tp._pointerValue() != null)
+        if (gt._type() instanceof Type_Pointer tp && tp._pointerValue() != null)
         {
             String fullPath = tp._pointerValue();
             return fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;

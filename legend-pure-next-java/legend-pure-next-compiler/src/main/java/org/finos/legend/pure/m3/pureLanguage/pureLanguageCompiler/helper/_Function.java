@@ -53,7 +53,7 @@ public class _Function
     public static FunctionType resolveFunctionType(GenericType genericType, MetadataAccess model)
     {
         Type functionType = (Type) model.getElement("meta::pure::metamodel::function::Function");
-        return (FunctionType)_GenericType.resolveForTarget(genericType, functionType, model)._typeArguments().getFirst()._rawType();
+        return (FunctionType)_GenericType.resolveForTarget(genericType, functionType, model)._typeArguments().getFirst()._type();
     }
 
     /**

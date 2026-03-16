@@ -108,9 +108,9 @@ public final class QualifiedPropertyCompiler
         {
             result._classifierGenericType(
                     new UserDefinedGenericTypeImpl()
-                            ._rawType((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"))
+                            ._type((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"))
                             ._typeArguments(Lists.mutable.with(
-                                    new UserDefinedGenericTypeImpl()._rawType(
+                                    new UserDefinedGenericTypeImpl()._type(
                                             new FunctionTypeImpl()
                                                     ._parameters(parameters)
                                                     ._returnType(genericType)

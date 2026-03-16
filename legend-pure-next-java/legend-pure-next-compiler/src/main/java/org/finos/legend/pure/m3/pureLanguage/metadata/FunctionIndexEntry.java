@@ -189,9 +189,9 @@ public class FunctionIndexEntry implements PackageableFunction
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
         Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
         return new UserDefinedGenericTypeImpl()
-                ._rawType(pfType)
+                ._type(pfType)
                 ._typeArguments(Lists.mutable.with(
-                        new UserDefinedGenericTypeImpl()._rawType(functionType)));
+                        new UserDefinedGenericTypeImpl()._type(functionType)));
     }
 
     // ========================================================================
@@ -423,7 +423,7 @@ public class FunctionIndexEntry implements PackageableFunction
     private static Type resolvedRawType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._rawType() : null;
+        return gt != null ? gt._type() : null;
     }
 
     // ========================================================================

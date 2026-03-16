@@ -35,7 +35,7 @@ public class _Property
         Multiplicity resolvedMultiplicity = prop._multiplicity();
         GenericType resolvedClassifierGenericType = prop._classifierGenericType();
 
-        if (receiverType._rawType() instanceof Class ownerClass)
+        if (receiverType._type() instanceof Class ownerClass)
         {
             ParametersBinding bindings = _Class.buildBindingsFromGenericType(ownerClass, receiverType);
             if (!bindings.typeBindings().isEmpty() || !bindings.multiplicityBindings().isEmpty())

@@ -79,15 +79,15 @@ public class _GenericType
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
             return new InferredGenericTypeImpl()
-                    ._rawType((Type) model.getElement("meta::pure::metamodel::type::Nil"));
+                    ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
         // If all elements are the same type parameter reference, return it directly.
         MutableList<GenericType> nonNull = genericTypes.select(gt -> gt != null);
         if (nonNull.notEmpty())
         {
-            String firstName = nonNull.getFirst()._rawType() instanceof TypeParameter tp ? tp._name() : null;
-            if (firstName != null && nonNull.allSatisfy(gt -> gt._rawType() instanceof TypeParameter tp2
+            String firstName = nonNull.getFirst()._type() instanceof TypeParameter tp ? tp._name() : null;
+            if (firstName != null && nonNull.allSatisfy(gt -> gt._type() instanceof TypeParameter tp2
                     && firstName.equals(tp2._name())))
             {
                 return nonNull.getFirst();
@@ -96,8 +96,8 @@ public class _GenericType
 
         // Collect raw types, skipping nulls and TypeParameter references
         MutableList<Type> rawTypes = nonNull
-                .select(gt -> gt._rawType() != null && !(gt._rawType() instanceof TypeParameter))
-                .collect(GenericType::_rawType);
+                .select(gt -> gt._type() != null && !(gt._type() instanceof TypeParameter))
+                .collect(GenericType::_type);
 
         if (rawTypes.isEmpty())
         {
@@ -109,7 +109,7 @@ public class _GenericType
                 .selectInstancesOf(meta.pure.metamodel.relation.RelationType.class);
         if (rawRelationTypes.size() == rawTypes.size() && rawRelationTypes.notEmpty())
         {
-            return new InferredGenericTypeImpl()._rawType(
+            return new InferredGenericTypeImpl()._type(
                     _RelationType.findCommonRelationType(rawRelationTypes, contravariant, model));
         }
 
@@ -119,13 +119,13 @@ public class _GenericType
         if (rawFunctionTypes.size() == rawTypes.size() && rawFunctionTypes.notEmpty())
         {
             FunctionType common = _FunctionType.findCommonFunctionType(rawFunctionTypes, model);
-            return common != null ? new InferredGenericTypeImpl()._rawType(common) : null;
+            return common != null ? new InferredGenericTypeImpl()._type(common) : null;
         }
 
         Type commonType = _Type.findCommonType(rawTypes, contravariant, model);
 
         // Build a GenericType wrapping the common rawType.
-        InferredGenericTypeImpl result = new InferredGenericTypeImpl()._rawType(commonType);
+        InferredGenericTypeImpl result = new InferredGenericTypeImpl()._type(commonType);
 
         // Collect projected GenericTypes at the common-type level.
         // If all inputs already have the same raw type, use their type args directly.
@@ -228,13 +228,13 @@ public class _GenericType
             return;
         }
 
-        if (genericType._rawType() instanceof TypeParameter tp)
+        if (genericType._type() instanceof TypeParameter tp)
         {
             sb.append(tp._name());
             return;
         }
 
-        Type rawType = genericType._rawType();
+        Type rawType = genericType._type();
 
         if (rawType instanceof meta.pure.metamodel.type.FunctionType ft)
         {
@@ -309,7 +309,7 @@ public class _GenericType
     /**
      * Returns true iff the GenericType is fully concrete — i.e. it has no type-parameter
      * references anywhere in its structure (rawType, typeArguments, FunctionType params/return).
-     * A GenericType is non-concrete if its {@code _rawType()} is a {@code TypeParameter}.
+     * A GenericType is non-concrete if its {@code _type()} is a {@code TypeParameter}.
      */
     public static boolean isConcrete(GenericType genericType)
     {
@@ -323,12 +323,12 @@ public class _GenericType
             return _GenericTypeOperation.isConcrete(gto);
         }
         // Type-parameter reference: e.g. K, T
-        if (genericType._rawType() instanceof TypeParameter)
+        if (genericType._type() instanceof TypeParameter)
         {
             return false;
         }
         // Recurse into FunctionType parameters and return type
-        if (genericType._rawType() instanceof FunctionType ft)
+        if (genericType._type() instanceof FunctionType ft)
         {
             if (!_FunctionType.isConcrete(ft))
             {
@@ -336,7 +336,7 @@ public class _GenericType
             }
         }
         // Recurse into RelationType column types
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        if (genericType._type() instanceof meta.pure.metamodel.relation.RelationType rt)
         {
             if (!_RelationType.isConcrete(rt))
             {
@@ -401,15 +401,15 @@ public class _GenericType
             _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
             return;
         }
-        if (genericType._rawType() instanceof TypeParameter tp)
+        if (genericType._type() instanceof TypeParameter tp)
         {
             names.add(tp._name());
         }
-        if (genericType._rawType() instanceof FunctionType ft)
+        if (genericType._type() instanceof FunctionType ft)
         {
             names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
         }
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        if (genericType._type() instanceof meta.pure.metamodel.relation.RelationType rt)
         {
             names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
         }
@@ -443,11 +443,11 @@ public class _GenericType
             collectReferencedMultiplicityParameterNames(gto._right(), names);
             return;
         }
-        if (genericType._rawType() instanceof FunctionType ft)
+        if (genericType._type() instanceof FunctionType ft)
         {
             names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
         }
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        if (genericType._type() instanceof meta.pure.metamodel.relation.RelationType rt)
         {
             names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
         }
@@ -482,21 +482,21 @@ public class _GenericType
         }
 
         // If the parameter side is a type parameter reference, bind it
-        if (paramGT._rawType() instanceof TypeParameter tp)
+        if (paramGT._type() instanceof TypeParameter tp)
         {
             bindings.addTypeBinding(tp, argGT);
             return;
         }
 
         // If both sides have FunctionType as rawType, recurse into parameters and return type
-        if (paramGT._rawType() instanceof FunctionType paramFT && argGT._rawType() instanceof FunctionType argFT)
+        if (paramGT._type() instanceof FunctionType paramFT && argGT._type() instanceof FunctionType argFT)
         {
             _FunctionType.collectTypeParameterBindings(paramFT, argFT, bindings);
         }
 
         // If both sides have RelationType as rawType, match columns (wildcard support for (?:K))
-        if (paramGT._rawType() instanceof meta.pure.metamodel.relation.RelationType paramRT
-                && argGT._rawType() instanceof meta.pure.metamodel.relation.RelationType argRT)
+        if (paramGT._type() instanceof meta.pure.metamodel.relation.RelationType paramRT
+                && argGT._type() instanceof meta.pure.metamodel.relation.RelationType argRT)
         {
             _RelationType.collectTypeParameterBindings(paramRT, argRT, bindings);
         }
@@ -538,7 +538,7 @@ public class _GenericType
         }
 
         // If this is a type parameter reference, substitute it
-        if (genericType._rawType() instanceof TypeParameter tp)
+        if (genericType._type() instanceof TypeParameter tp)
         {
             String name = tp._name();
             MutableSet<GenericType> boundTypes = bindings.typeBindings().get(name);
@@ -552,7 +552,7 @@ public class _GenericType
         }
 
         // If rawType is a FunctionType, resolve type and multiplicity parameters inside it
-        if (genericType._rawType() instanceof FunctionType ft)
+        if (genericType._type() instanceof FunctionType ft)
         {
             GenericType resolved = _FunctionType.makeAsConcreteAsPossible(genericType, ft, bindings, model);
             if (resolved != null)
@@ -562,7 +562,7 @@ public class _GenericType
         }
 
         // If rawType is a RelationType, resolve type parameters in column types
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+        if (genericType._type() instanceof meta.pure.metamodel.relation.RelationType rt)
         {
             GenericType resolved = _RelationType.makeAsConcreteAsPossible(rt, bindings, model);
             if (resolved != null)
@@ -594,7 +594,7 @@ public class _GenericType
         if (changed)
         {
             InferredGenericTypeImpl result = new InferredGenericTypeImpl()
-                    ._rawType(genericType._rawType());
+                    ._type(genericType._type());
             if (resolvedTypeArgs != null)
             {
                 result._typeArguments(resolvedTypeArgs);
@@ -626,7 +626,7 @@ public class _GenericType
 
     private static GenericType copyInto(GenericType source, InferredGenericTypeImpl target)
     {
-        target._rawType(source._rawType());
+        target._type(source._type());
         if (source._typeArguments() != null)
         {
             target._typeArguments(source._typeArguments());
@@ -665,7 +665,7 @@ public class _GenericType
             return null;
         }
 
-        Type sourceType = sourceGenericType._rawType();
+        Type sourceType = sourceGenericType._type();
         if (sourceType == null)
         {
             return null;
@@ -705,13 +705,13 @@ public class _GenericType
             for (Generalization gen : sourceType._generalizations())
             {
                 GenericType generalGT = gen._general();
-                if (generalGT == null || generalGT._rawType() == null)
+                if (generalGT == null || generalGT._type() == null)
                 {
                     continue;
                 }
 
                 // Check if this generalization's rawType leads to the target
-                if (_Type.linearize(generalGT._rawType(), model).contains(targetType))
+                if (_Type.linearize(generalGT._type(), model).contains(targetType))
                 {
                     // Substitute the current bindings into the generalization's GenericType
                     GenericType resolvedGT = makeAsConcreteAsPossible(generalGT, bindings, model);
@@ -766,13 +766,13 @@ public class _GenericType
         }
 
         // Unresolved type parameters — assume compatible
-        if (declared._rawType() == null || actual._rawType() == null)
+        if (declared._type() == null || actual._type() == null)
         {
             return true;
         }
 
-        Type declaredType = declared._rawType();
-        Type actualType = actual._rawType();
+        Type declaredType = declared._type();
+        Type actualType = actual._type();
 
         // TypeParameter compatibility: same name = compatible; one-sided TypeParameter = assume compatible
         if (declaredType instanceof TypeParameter declaredTP)
@@ -892,8 +892,8 @@ public class _GenericType
             return;
         }
 
-        Type expectedType = expected._rawType();
-        Type actualType = actual._rawType();
+        Type expectedType = expected._type();
+        Type actualType = actual._type();
 
         // FunctionTypes: reconcile param and return types/multiplicities
         if (expectedType instanceof FunctionType expectedFT && actualType instanceof FunctionType actualFT)

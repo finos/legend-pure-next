@@ -60,7 +60,7 @@
       } ],
       "generalizations" : [ {
         "general" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -130,7 +130,7 @@
       "typeVariables" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {

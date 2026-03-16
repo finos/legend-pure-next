@@ -65,7 +65,7 @@ public final class DotApplicationResolver
             return expr;
         }
 
-        Type ownerType = receiver._genericType()._rawType();
+        Type ownerType = receiver._genericType()._type();
         context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
                 functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
 

@@ -13,7 +13,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -34,7 +34,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
                   }
@@ -96,7 +96,7 @@
           }
         } ],
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -120,7 +120,7 @@
         "parameters" : [ {
           "_type" : "VariableExpression",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
               "sourceInformation" : {
@@ -150,7 +150,7 @@
         }, {
           "_type" : "VariableExpression",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
               "sourceInformation" : {

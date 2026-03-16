@@ -5,7 +5,7 @@
       "expressionSequence" : [ {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer"
           }
@@ -20,7 +20,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer"
           }
@@ -35,7 +35,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Float"
           }
@@ -50,7 +50,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Float"
           }
@@ -65,7 +65,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Decimal"
           }
@@ -80,7 +80,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Decimal"
           }
@@ -95,7 +95,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Boolean"
           }
@@ -110,7 +110,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String"
           }
@@ -125,7 +125,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "StrictDate"
           }
@@ -140,7 +140,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "DateTime"
           }
@@ -155,7 +155,7 @@
       }, {
         "_type" : "AtomicValue",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "StrictTime"
           }
@@ -187,7 +187,7 @@
         "values" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
             }
@@ -202,7 +202,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
             }
@@ -217,7 +217,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Float"
             }
@@ -232,7 +232,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Float"
             }
@@ -247,7 +247,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Decimal"
             }
@@ -262,7 +262,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Decimal"
             }
@@ -277,7 +277,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
             }
@@ -292,7 +292,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -307,7 +307,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "StrictDate"
             }
@@ -322,7 +322,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "DateTime"
             }
@@ -337,7 +337,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "StrictTime"
             }
@@ -357,7 +357,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {

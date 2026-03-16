@@ -350,7 +350,7 @@ public class M3MetamodelReader
         {
             return null;
         }
-        Statement rawTypeStmt = getM3Statement(node.asResource(), "rawType");
+        Statement rawTypeStmt = getM3Statement(node.asResource(), "type");
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
             return getLocalName(rawTypeStmt.getObject().asResource());
@@ -405,7 +405,7 @@ public class M3MetamodelReader
             return null;
         }
         Resource gtRes = node.asResource();
-        Statement rawTypeStmt = getM3Statement(gtRes, "rawType");
+        Statement rawTypeStmt = getM3Statement(gtRes, "type");
         if (rawTypeStmt == null || !rawTypeStmt.getObject().isResource())
         {
             return null;
@@ -461,7 +461,7 @@ public class M3MetamodelReader
     private void addTypeArgument(MutableList<String> result, Resource taRes)
     {
         // Check for FunctionType
-        Statement rawTypeStmt = getM3Statement(taRes, "rawType");
+        Statement rawTypeStmt = getM3Statement(taRes, "type");
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
             Resource rawTypeRes = rawTypeStmt.getObject().asResource();

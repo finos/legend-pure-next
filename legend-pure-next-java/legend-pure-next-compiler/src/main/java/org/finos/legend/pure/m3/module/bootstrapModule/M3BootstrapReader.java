@@ -283,7 +283,7 @@ public class M3BootstrapReader
                 Resource generalGTRes = generalStmt.getObject().asResource();
 
                 // Get :rawType from the GenericType
-                Statement rawTypeStmt = getM3Statement(model, generalGTRes, "rawType");
+                Statement rawTypeStmt = getM3Statement(model, generalGTRes, "type");
                 if (rawTypeStmt == null || !rawTypeStmt.getObject().isResource())
                 {
                     continue;
@@ -301,7 +301,7 @@ public class M3BootstrapReader
                 }
 
                 // Build the GenericType for the generalization
-                UserDefinedGenericTypeImpl generalGT = new UserDefinedGenericTypeImpl()._rawType(generalType);
+                UserDefinedGenericTypeImpl generalGT = new UserDefinedGenericTypeImpl()._type(generalType);
 
                 // Extract type arguments
                 MutableList<GenericType> typeArgs = Lists.mutable.empty();
@@ -321,13 +321,13 @@ public class M3BootstrapReader
                         if (paramName != null)
                         {
                             typeArgs.add(new UserDefinedGenericTypeImpl()
-                                    ._rawType(new TypeParameterImpl()._name(paramName)));
+                                    ._type(new TypeParameterImpl()._name(paramName)));
                         }
                     }
                     else
                     {
                         // Concrete type argument (has :rawType)
-                        Statement argRawTypeStmt = getM3Statement(model, typeArgRes, "rawType");
+                        Statement argRawTypeStmt = getM3Statement(model, typeArgRes, "type");
                         if (argRawTypeStmt != null && argRawTypeStmt.getObject().isResource())
                         {
                             Resource argRawTypeRes = argRawTypeStmt.getObject().asResource();
@@ -338,7 +338,7 @@ public class M3BootstrapReader
                                     && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
                             {
                                 typeArgs.add(new UserDefinedGenericTypeImpl()
-                                        ._rawType(buildFunctionType(model, argRawTypeRes, index)));
+                                        ._type(buildFunctionType(model, argRawTypeRes, index)));
                             }
                             else
                             {
@@ -348,7 +348,7 @@ public class M3BootstrapReader
                                     Type argType = findType(argTypeName, index);
                                     if (argType != null)
                                     {
-                                        typeArgs.add(new UserDefinedGenericTypeImpl()._rawType(argType));
+                                        typeArgs.add(new UserDefinedGenericTypeImpl()._type(argType));
                                     }
                                 }
                             }
@@ -719,7 +719,7 @@ public class M3BootstrapReader
             if (paramName != null)
             {
                 UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl()
-                        ._rawType(new TypeParameterImpl()._name(paramName));
+                        ._type(new TypeParameterImpl()._name(paramName));
                 return gt;
             }
         }
@@ -727,7 +727,7 @@ public class M3BootstrapReader
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         // Concrete rawType reference
-        Statement rawTypeStmt = getM3Statement(model, gtRes, "rawType");
+        Statement rawTypeStmt = getM3Statement(model, gtRes, "type");
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
             Resource rawTypeRes = rawTypeStmt.getObject().asResource();
@@ -737,7 +737,7 @@ public class M3BootstrapReader
             if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource()
                     && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
             {
-                gt._rawType(buildFunctionType(model, rawTypeRes, index));
+                gt._type(buildFunctionType(model, rawTypeRes, index));
             }
             else
             {
@@ -747,7 +747,7 @@ public class M3BootstrapReader
                     Type type = findType(typeName, index);
                     if (type != null)
                     {
-                        gt._rawType(type);
+                        gt._type(type);
                     }
                 }
             }

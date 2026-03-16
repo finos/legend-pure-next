@@ -162,9 +162,9 @@ public class M3ProtocolSerializer
             sb.append(" extends ");
             appendJoining(sb, classDef._generalizations(), ", ", (b, gen) ->
             {
-                if (gen._general() != null && gen._general()._rawType() != null)
+                if (gen._general() != null && gen._general()._type() != null)
                 {
-                    b.append(getPointerValueFromProtocol(gen._general()._rawType()));
+                    b.append(getPointerValueFromProtocol(gen._general()._type()));
                 }
             });
         }
@@ -517,7 +517,7 @@ public class M3ProtocolSerializer
     private boolean hasLambdaTypeAnnotation(final MutableList<VariableExpression> params)
     {
         return params != null && ListIterate.anySatisfy(params,
-                param -> param._genericType() != null && param._genericType()._rawType() != null);
+                param -> param._genericType() != null && param._genericType()._type() != null);
     }
 
     /**
@@ -541,19 +541,19 @@ public class M3ProtocolSerializer
         }
 
         // Handle type parameter references (e.g., T, Z, K, V)
-        if (gt._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp)
+        if (gt._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp)
         {
             sb.append(tp._name().toString());
             return;
         }
 
-        if (gt._rawType() == null)
+        if (gt._type() == null)
         {
             sb.append("Any");
             return;
         }
 
-        Type_Protocol rawType = gt._rawType();
+        Type_Protocol rawType = gt._type();
 
         if (rawType instanceof FunctionType ft)
         {
@@ -625,7 +625,7 @@ public class M3ProtocolSerializer
                     if (cp instanceof GenericTypeAndMultiplicityHolder holder)
                     {
                         GenericType gt = holder._genericType();
-                        if (gt != null && gt._rawType() instanceof meta.pure.protocol.grammar.relation.RelationType rt
+                        if (gt != null && gt._type() instanceof meta.pure.protocol.grammar.relation.RelationType rt
                                 && rt._columns() != null && rt._columns().notEmpty())
                         {
                             // Extract type and multiplicity from the RelationType's column
@@ -773,9 +773,9 @@ public class M3ProtocolSerializer
 
     private String getTypeName(final ValueSpecification vs)
     {
-        if (vs._genericType() != null && vs._genericType()._rawType() != null)
+        if (vs._genericType() != null && vs._genericType()._type() != null)
         {
-            return getPointerValueFromProtocol(vs._genericType()._rawType());
+            return getPointerValueFromProtocol(vs._genericType()._type());
         }
         return null;
     }
@@ -876,7 +876,7 @@ public class M3ProtocolSerializer
     private void serializeGenericTypeOperation(final StringBuilder sb, final GenericTypeOperation op)
     {
         serializeGenericType(sb, op._left());
-        switch (op._type())
+        switch (op._operationType())
         {
             case EQUAL:
                 sb.append("=");
@@ -891,7 +891,7 @@ public class M3ProtocolSerializer
                 sb.append("⊆");
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown GenericTypeOperation type: " + op._type());
+                throw new UnsupportedOperationException("Unknown GenericTypeOperation type: " + op._operationType());
         }
         serializeGenericType(sb, op._right());
     }
@@ -1220,7 +1220,7 @@ public class M3ProtocolSerializer
                 java.util.Map<String, Multiplicity_Protocol> mulMap = new java.util.LinkedHashMap<>();
                 if (params.size() >= 2 && params.get(1) instanceof GenericTypeAndMultiplicityHolder holder
                         && holder._genericType() != null
-                        && holder._genericType()._rawType() instanceof meta.pure.protocol.grammar.relation.RelationType rt
+                        && holder._genericType()._type() instanceof meta.pure.protocol.grammar.relation.RelationType rt
                         && rt._columns() != null)
                 {
                     for (meta.pure.protocol.grammar.relation.Column col : rt._columns())
@@ -1381,7 +1381,7 @@ public class M3ProtocolSerializer
         {
             // First param: GenericTypeAndMultiplicityHolder with type name and optional type/mult args
             GenericType gt = typeHolder._genericType();
-            String typeName = ((Type_Pointer) gt._rawType())._pointerValue();
+            String typeName = ((Type_Pointer) gt._type())._pointerValue();
             sb.append("^").append(typeName);
 
             // Serialize type arguments / multiplicity arguments if present

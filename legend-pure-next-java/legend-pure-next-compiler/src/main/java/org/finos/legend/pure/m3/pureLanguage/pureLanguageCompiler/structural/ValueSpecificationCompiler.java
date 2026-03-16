@@ -214,7 +214,7 @@ public final class ValueSpecificationCompiler
             if (dateType instanceof meta.pure.metamodel.type.Type)
             {
                 UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
-                gt._rawType((meta.pure.metamodel.type.Type) dateType);
+                gt._type((meta.pure.metamodel.type.Type) dateType);
                 result._genericType(gt);
             }
         }

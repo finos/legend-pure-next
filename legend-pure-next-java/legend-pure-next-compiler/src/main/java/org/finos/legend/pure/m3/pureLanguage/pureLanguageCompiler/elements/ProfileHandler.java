@@ -53,7 +53,7 @@ public final class ProfileHandler
     {
         return result._classifierGenericType(
                 new UserDefinedGenericTypeImpl()
-                        ._rawType((Type) model.getElement("meta::pure::metamodel::extension::Profile")));
+                        ._type((Type) model.getElement("meta::pure::metamodel::extension::Profile")));
     }
 
     public static PackageableElement thirdPass(Profile pr, MetadataAccess pureModel, CompilationContext context)

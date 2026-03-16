@@ -42,7 +42,7 @@ public final class RelationTypeCompiler
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         RelationTypeImpl result = new RelationTypeImpl();
-        GenericType ownerGT = new UserDefinedGenericTypeImpl()._rawType(result);
+        GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
         return result._columns(rt._columns().collect(col -> _Column.build(
                 col._name(),
                 ownerGT,

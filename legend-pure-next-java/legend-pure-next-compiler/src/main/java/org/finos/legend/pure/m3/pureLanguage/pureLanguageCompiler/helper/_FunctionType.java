@@ -367,7 +367,7 @@ public final class _FunctionType
             }
             newFT._returnType(resolvedReturnType);
             newFT._returnMultiplicity(resolvedReturnMul);
-            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._rawType(newFT)._typeArguments(genericType._typeArguments());
+            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newFT)._typeArguments(genericType._typeArguments());
         }
         return null;
     }

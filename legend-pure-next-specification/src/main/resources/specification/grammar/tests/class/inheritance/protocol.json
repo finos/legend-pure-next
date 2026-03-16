@@ -4,7 +4,7 @@
       "_type" : "Class",
       "generalizations" : [ {
         "general" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::SuperClass",
             "sourceInformation" : {
@@ -23,7 +23,7 @@
         }
       }, {
         "general" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Light",
             "sourceInformation" : {
@@ -55,7 +55,7 @@
       "_type" : "Class",
       "generalizations" : [ {
         "general" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::Light",
             "sourceInformation" : {
@@ -103,7 +103,7 @@
       },
       "properties" : [ {
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -133,7 +133,7 @@
       }, {
         "aggregation" : "NONE",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {

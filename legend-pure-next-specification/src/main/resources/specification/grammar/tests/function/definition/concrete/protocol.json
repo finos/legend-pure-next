@@ -28,7 +28,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -58,7 +58,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -84,7 +84,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {
@@ -138,7 +138,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::relation::Relation",
             "sourceInformation" : {
@@ -149,11 +149,11 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -173,7 +173,7 @@
                 }
               }, {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
                     "sourceInformation" : {
@@ -213,7 +213,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "protocol::support::Light",
           "sourceInformation" : {
@@ -264,7 +264,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::function::Function",
             "sourceInformation" : {
@@ -275,12 +275,12 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "type" : {
               "_type" : "FunctionType",
               "parameters" : [ {
                 "_type" : "VariableExpression",
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -311,7 +311,7 @@
                 }
               },
               "returnType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean",
                   "sourceInformation" : {
@@ -343,7 +343,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {
@@ -394,7 +394,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -430,7 +430,7 @@
               "value" : 0
             }
           } ],
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Property",
             "sourceInformation" : {
@@ -441,7 +441,7 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Nil",
               "sourceInformation" : {
@@ -452,7 +452,7 @@
               }
             }
           }, {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
               "sourceInformation" : {
@@ -480,7 +480,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::precisePrimitives::Varchar",
             "sourceInformation" : {
@@ -493,7 +493,7 @@
           "typeVariableValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
               }
@@ -525,7 +525,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {

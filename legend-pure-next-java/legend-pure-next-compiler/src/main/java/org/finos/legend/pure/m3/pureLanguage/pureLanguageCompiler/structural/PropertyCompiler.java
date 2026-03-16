@@ -71,7 +71,7 @@ public final class PropertyCompiler
         {
             result._classifierGenericType(
                     new UserDefinedGenericTypeImpl()
-                            ._rawType((Type) model.getElement("meta::pure::metamodel::function::property::Property"))
+                            ._type((Type) model.getElement("meta::pure::metamodel::function::property::Property"))
                             ._typeArguments(Lists.mutable.with(owner, genericType))
                             ._multiplicityArguments(Lists.mutable.with(result._multiplicity())));
         }

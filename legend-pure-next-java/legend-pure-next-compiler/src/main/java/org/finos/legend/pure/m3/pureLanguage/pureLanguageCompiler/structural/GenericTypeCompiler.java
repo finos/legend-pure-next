@@ -70,20 +70,20 @@ public final class GenericTypeCompiler
         }
 
         // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
-        if (grammarGenericType._rawType() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
+        if (grammarGenericType._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
         {
             return new UserDefinedGenericTypeImpl()
-                    ._rawType(resolveOrCompileTypeParameter(grammarTP, context));
+                    ._type(resolveOrCompileTypeParameter(grammarTP, context));
         }
 
-        Type rawType = resolveType(grammarGenericType._rawType(), imports, model, context);
+        Type rawType = resolveType(grammarGenericType._type(), imports, model, context);
         if (rawType == null)
         {
             return null;
         }
 
         return new UserDefinedGenericTypeImpl()
-                ._rawType(rawType)
+                ._type(rawType)
                 ._typeArguments(grammarGenericType._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                 ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                 ._typeVariableValues(grammarGenericType._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
@@ -93,7 +93,7 @@ public final class GenericTypeCompiler
     {
         GenericType left = compile(gto._left(), imports, model, context);
         GenericType right = compile(gto._right(), imports, model, context);
-        GenericTypeOperationType opType = switch (gto._type())
+        GenericTypeOperationType opType = switch (gto._operationType())
         {
             case UNION -> GenericTypeOperationType.UNION;
             case DIFFERENCE -> GenericTypeOperationType.DIFFERENCE;
@@ -103,7 +103,7 @@ public final class GenericTypeCompiler
         return new GenericTypeOperationImpl()
                 ._left(left)
                 ._right(right)
-                ._type(opType);
+                ._operationType(opType);
     }
 
     private static Type resolveType(meta.pure.protocol.grammar.type.Type_Protocol rawType, MutableList<String> imports, MetadataAccess model, CompilationContext context)

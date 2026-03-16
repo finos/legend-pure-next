@@ -8,7 +8,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -35,7 +35,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -50,11 +50,11 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -82,7 +82,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -97,11 +97,11 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -138,7 +138,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -153,11 +153,11 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -203,7 +203,7 @@
             "expressionSequence" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -230,7 +230,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -266,7 +266,7 @@
             "expressionSequence" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -299,7 +299,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -335,7 +335,7 @@
             "expressionSequence" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
                 }
@@ -408,7 +408,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -446,7 +446,7 @@
           "values" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -461,7 +461,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -500,7 +500,7 @@
           "values" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -515,7 +515,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -531,11 +531,11 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -549,7 +549,7 @@
                 "name" : "name"
               }, {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
                     "sourceInformation" : {
@@ -588,7 +588,7 @@
           "values" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -603,7 +603,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -619,11 +619,11 @@
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
-            "rawType" : {
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -646,7 +646,7 @@
                 "name" : "name"
               }, {
                 "genericType" : {
-                  "rawType" : {
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
                     "sourceInformation" : {
@@ -706,7 +706,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Integer"
                     }
@@ -733,7 +733,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -769,7 +769,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "String"
                     }
@@ -796,7 +796,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -856,7 +856,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Integer"
                     }
@@ -889,7 +889,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -925,7 +925,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "String"
                     }
@@ -958,7 +958,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -1018,7 +1018,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Integer"
                     }
@@ -1091,7 +1091,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -1127,7 +1127,7 @@
                 "expressionSequence" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "String"
                     }
@@ -1200,7 +1200,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
                 }
@@ -1238,7 +1238,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {

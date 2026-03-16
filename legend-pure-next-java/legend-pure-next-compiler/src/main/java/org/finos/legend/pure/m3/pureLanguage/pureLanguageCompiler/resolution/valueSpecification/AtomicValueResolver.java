@@ -125,9 +125,9 @@ public class AtomicValueResolver
 
                 meta.pure.metamodel.type.Type lambdaType = (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction");
                 GenericType lambdaGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()
-                        ._rawType(lambdaType)
+                        ._type(lambdaType)
                         ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._rawType(ft)));
+                                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(ft)));
                 ((AtomicValueImpl) av)._genericType(lambdaGT);
                 context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
             }

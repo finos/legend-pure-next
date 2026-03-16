@@ -53,10 +53,10 @@ public final class EnumerationHandler
         Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         // GenericType for this specific enumeration (e.g., CC_GeographicEntityType)
-        meta.pure.metamodel.type.generics.GenericType enumGT = new UserDefinedGenericTypeImpl()._rawType(result);
+        meta.pure.metamodel.type.generics.GenericType enumGT = new UserDefinedGenericTypeImpl()._type(result);
         // GenericType for Enumeration<E> parameterized with this enum type
         meta.pure.metamodel.type.generics.GenericType enumerationOfE = new UserDefinedGenericTypeImpl()
-                ._rawType(enumerationType)
+                ._type(enumerationType)
                 ._typeArguments(Lists.mutable.with(enumGT));
 
         // Create one Property per enum value, each with a defaultValue containing the Enum instance
@@ -87,7 +87,7 @@ public final class EnumerationHandler
                     ._multiplicity(pureOne)
                     ._classifierGenericType(
                             new UserDefinedGenericTypeImpl()
-                                    ._rawType(propertyType)
+                                    ._type(propertyType)
                                     ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                                     ._multiplicityArguments(Lists.mutable.with(pureOne)))
                     ._defaultValue(defaultValueLambda)
@@ -101,7 +101,7 @@ public final class EnumerationHandler
                 ._classifierGenericType(enumerationOfE)
                 ._generalizations(Lists.mutable.with(
                         new GeneralizationImpl()
-                                ._general(new UserDefinedGenericTypeImpl()._rawType(enumType))))
+                                ._general(new UserDefinedGenericTypeImpl()._type(enumType))))
                 ._properties(props)
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
     }

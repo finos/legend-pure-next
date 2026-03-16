@@ -319,7 +319,7 @@ public class TopLevelCompiler
                         ? entry.grammarElement()._package()._pointerValue()
                         : null;
                 Package parent = packagePath != null
-                        ? getOrCreatePackage(root, packagePath, new UserDefinedGenericTypeImpl()._rawType((Type)model.getElement("meta::pure::metamodel::Package")))
+                        ? getOrCreatePackage(root, packagePath, new UserDefinedGenericTypeImpl()._type((Type)model.getElement("meta::pure::metamodel::Package")))
                         : root;
                 entry.element()._package(parent);
                 parent._children().add(entry.element());

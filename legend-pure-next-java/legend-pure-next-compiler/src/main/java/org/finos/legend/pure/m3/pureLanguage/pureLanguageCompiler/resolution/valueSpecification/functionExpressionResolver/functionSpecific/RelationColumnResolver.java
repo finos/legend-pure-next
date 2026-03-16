@@ -137,7 +137,7 @@ public final class RelationColumnResolver
     {
         // Get the TypeHolder's type parameter name (T)
         GenericType typeHolderParamGT = functionType._parameters().get(1)._genericType();
-        if (!(typeHolderParamGT._rawType() instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
+        if (!(typeHolderParamGT._type() instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
         {
             return;
         }
@@ -152,14 +152,14 @@ public final class RelationColumnResolver
         GenericType boundGT = boundTypes.getAny();
 
         // Case 1: T bound to SUBSET operation (Z=(?:K)⊆referenceRelation) — look up columns
-        if (boundGT instanceof GenericTypeOperation gto && gto._type() == GenericTypeOperationType.SUBSET)
+        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.SUBSET)
         {
             resolveFromSubset(expr, gto, paramValues, bindings, model, context);
             return;
         }
 
         // Case 2: T bound to EQUAL with wildcard (V=(?:K)) — resolve K from bindings
-        if (boundGT instanceof GenericTypeOperation gto && gto._type() == GenericTypeOperationType.EQUAL)
+        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.EQUAL)
         {
             resolveFromEqualWithWildcard(expr, gto, paramValues, bindings, model, context);
         }
@@ -179,7 +179,7 @@ public final class RelationColumnResolver
     {
         // Resolve the right side (reference relation) of the SUBSET
         GenericType resolvedRight = _GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model);
-        if (!(resolvedRight._rawType() instanceof meta.pure.metamodel.relation.RelationType referenceRT))
+        if (!(resolvedRight._type() instanceof meta.pure.metamodel.relation.RelationType referenceRT))
         {
             return;
         }
@@ -193,7 +193,7 @@ public final class RelationColumnResolver
 
         // Look up each column in the reference relation — this IS the SUBSET result
         RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl()._rawType(enrichedRT);
+        GenericType enrichedGT = new InferredGenericTypeImpl()._type(enrichedRT);
         MutableList<Column> enrichedColumns = Lists.mutable.empty();
 
         for (String colName : columnNames)
@@ -238,7 +238,7 @@ public final class RelationColumnResolver
     {
         // The right side of EQUAL should be a RelationType with a wildcard column: (?:K)
         GenericType right = _GenericType.makeAsConcreteAsPossible(equalOp._right(), bindings, model);
-        if (!(right._rawType() instanceof meta.pure.metamodel.relation.RelationType wildcardRT)
+        if (!(right._type() instanceof meta.pure.metamodel.relation.RelationType wildcardRT)
                 || wildcardRT._columns() == null || wildcardRT._columns().isEmpty())
         {
             return;
@@ -252,7 +252,7 @@ public final class RelationColumnResolver
 
         // Resolve the wildcard column's type (K) from bindings
         GenericType resolvedColType = _GenericType.makeAsConcreteAsPossible(wildcardCol._genericType(), bindings, model);
-        if (resolvedColType == null || resolvedColType._rawType() == null)
+        if (resolvedColType == null || resolvedColType._type() == null)
         {
             return;
         }
@@ -266,7 +266,7 @@ public final class RelationColumnResolver
 
         // Build the enriched RelationType using the column name + resolved K type
         RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl()._rawType(enrichedRT);
+        GenericType enrichedGT = new InferredGenericTypeImpl()._type(enrichedRT);
         MutableList<Column> enrichedColumns = Lists.mutable.empty();
 
         for (String colName : columnNames)
@@ -342,7 +342,7 @@ public final class RelationColumnResolver
             if (v instanceof FunctionExpression k)
             {
                 GenericType typeHolderGT = k._parametersValues().getLast()._genericType();
-                if (typeHolderGT != null && typeHolderGT._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (typeHolderGT != null && typeHolderGT._type() instanceof meta.pure.metamodel.relation.RelationType rt)
                 {
                     mergedColumns.addAllIterable(rt._columns());
                 }
@@ -352,7 +352,7 @@ public final class RelationColumnResolver
         {
             meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl()._columns(mergedColumns);
             ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) paramValues.get(1))
-                    ._genericType(new InferredGenericTypeImpl()._rawType(mergedRT));
+                    ._genericType(new InferredGenericTypeImpl()._type(mergedRT));
         }
     }
 
@@ -369,7 +369,7 @@ public final class RelationColumnResolver
     {
         GenericType enrichedGT = paramValues.get(typeHolderArgIdx)._genericType();
         GenericType paramGT = functionType._parameters().get(typeHolderArgIdx)._genericType();
-        String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) paramGT._rawType())._name();
+        String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) paramGT._type())._name();
         MutableSet<GenericType> bound = bindings.typeBindings().getIfAbsentPut(typeParamName, Sets.mutable::empty);
         bound.clear();
         bound.add(enrichedGT);
@@ -406,7 +406,7 @@ public final class RelationColumnResolver
             if (colName != null && lastExpr._genericType() != null)
             {
                 RelationTypeImpl relationType = new RelationTypeImpl();
-                GenericType ownerGT = new InferredGenericTypeImpl()._rawType(relationType);
+                GenericType ownerGT = new InferredGenericTypeImpl()._type(relationType);
                 Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
                 relationType._columns(Lists.mutable.with(col));
                 ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) typeHolderArg)

@@ -76,11 +76,11 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let f1 = 'meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy__Boolean_1_'->pathToElement();
     let type = $f1->genericType();
-    assertIs(PackageableFunction, $type.rawType->toOne());
+    assertIs(PackageableFunction, $type.type->toOne());
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type.rawType, $f2->genericType().rawType);
+    assertEquals($type.type, $f2->genericType().type);
     assertEquals($type.typeArguments->size(), $f2->genericType().typeArguments->size());
     assertEmpty($type->properties()->filter(p | $p->eval($f1) != $p->eval($f2)));
 }
@@ -89,11 +89,11 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let f1 = 'meta::pure::functions::lang::tests::copy::testFlatCopyToOne__Boolean_1_'->pathToElement();
     let type = $f1->genericType();
-    assertIs(PackageableFunction, $type.rawType->toOne());
+    assertIs(PackageableFunction, $type.type->toOne());
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type.rawType, $f2->genericType().rawType);
+    assertEquals($type.type, $f2->genericType().type);
     assertEquals($type.typeArguments->size(), $f2->genericType().typeArguments->size());
     assertEmpty($type->properties()->filter(p | $p->eval($f1) != $p->eval($f2)));
 }

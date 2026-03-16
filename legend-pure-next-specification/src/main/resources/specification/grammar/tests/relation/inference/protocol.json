@@ -10,7 +10,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
             "sourceInformation" : {
@@ -21,7 +21,7 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "type" : {
               "_type" : "TypeParameter",
               "name" : "T"
             }
@@ -46,7 +46,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
@@ -59,17 +59,17 @@
           "typeArguments" : [ {
             "left" : {
               "left" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "TypeParameter",
                   "name" : "Z"
                 }
               },
               "right" : {
-                "rawType" : {
+                "type" : {
                   "_type" : "RelationType",
                   "columns" : [ {
                     "genericType" : {
-                      "rawType" : {
+                      "type" : {
                         "_type" : "TypeParameter",
                         "name" : "K"
                       }
@@ -84,15 +84,15 @@
                   } ]
                 }
               },
-              "type" : "EQUAL"
+              "operationType" : "EQUAL"
             },
             "right" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
-            "type" : "SUBSET"
+            "operationType" : "SUBSET"
           } ]
         },
         "multiplicity" : {
@@ -114,7 +114,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
@@ -126,17 +126,17 @@
           },
           "typeArguments" : [ {
             "left" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "TypeParameter",
                 "name" : "V"
               }
             },
             "right" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "RelationType",
                 "columns" : [ {
                   "genericType" : {
-                    "rawType" : {
+                    "type" : {
                       "_type" : "TypeParameter",
                       "name" : "K"
                     }
@@ -151,7 +151,7 @@
                 } ]
               }
             },
-            "type" : "EQUAL"
+            "operationType" : "EQUAL"
           } ]
         },
         "multiplicity" : {
@@ -172,7 +172,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Relation",
           "sourceInformation" : {
@@ -185,26 +185,26 @@
         "typeArguments" : [ {
           "left" : {
             "left" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
             "right" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "TypeParameter",
                 "name" : "Z"
               }
             },
-            "type" : "DIFFERENCE"
+            "operationType" : "DIFFERENCE"
           },
           "right" : {
-            "rawType" : {
+            "type" : {
               "_type" : "TypeParameter",
               "name" : "V"
             }
           },
-          "type" : "UNION"
+          "operationType" : "UNION"
         } ]
       },
       "returnMultiplicity" : {

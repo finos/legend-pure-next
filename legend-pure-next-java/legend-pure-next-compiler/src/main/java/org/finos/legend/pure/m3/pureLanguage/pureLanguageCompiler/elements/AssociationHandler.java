@@ -91,7 +91,7 @@ public final class AssociationHandler
             registerOnTargetClass(compiled.get(1), compiled.get(0)._genericType(), model);
 
             // Register qualified properties on the owner class
-            if (qpOwner != null && qpOwner._rawType() instanceof Class ownerCls)
+            if (qpOwner != null && qpOwner._type() instanceof Class ownerCls)
             {
                 ownerCls._qualifiedPropertiesFromAssociations().addAll(compiledQPs.toList());
             }
@@ -105,7 +105,7 @@ public final class AssociationHandler
     {
         property._classifierGenericType(
                 new UserDefinedGenericTypeImpl()
-                        ._rawType(propertyType)
+                        ._type(propertyType)
                         ._typeArguments(Lists.mutable.with(owner, property._genericType()))
                         ._multiplicityArguments(Lists.mutable.with(property._multiplicity())));
     }
@@ -126,7 +126,7 @@ public final class AssociationHandler
      */
     private static void registerOnTargetClass(Property property, GenericType ownerGT, MetadataAccess model)
     {
-        if (ownerGT != null && ownerGT._rawType() instanceof Class targetCls)
+        if (ownerGT != null && ownerGT._type() instanceof Class targetCls)
         {
             targetCls._propertiesFromAssociations().add(property);
         }

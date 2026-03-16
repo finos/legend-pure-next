@@ -67,7 +67,7 @@ public final class MeasureHandler
     {
         result._classifierGenericType(
                 new UserDefinedGenericTypeImpl()
-                        ._rawType((Type) model.getElement("meta::pure::metamodel::type::Measure")))
+                        ._type((Type) model.getElement("meta::pure::metamodel::type::Measure")))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
 
         // Wire each unit: measure backlink, classifierGenericType, generalizations, conversionFunction
@@ -92,10 +92,10 @@ public final class MeasureHandler
     private static UnitImpl wireUnit(UnitImpl unit, meta.pure.protocol.grammar.type.Unit grammarUnit, MeasureImpl measure, Type unitType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         unit._measure(measure)
-                ._classifierGenericType(new UserDefinedGenericTypeImpl()._rawType(unitType))
+                ._classifierGenericType(new UserDefinedGenericTypeImpl()._type(unitType))
                 ._generalizations(Lists.mutable.with(
                         new GeneralizationImpl()
-                                ._general(new UserDefinedGenericTypeImpl()._rawType(measure))));
+                                ._general(new UserDefinedGenericTypeImpl()._type(measure))));
 
         if (grammarUnit != null && grammarUnit._conversionFunction() != null)
         {
@@ -105,7 +105,7 @@ public final class MeasureHandler
             {
                 compiledLambda._parameters().forEach(p ->
                         ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) p)
-                                ._genericType(new UserDefinedGenericTypeImpl()._rawType((Type) model.getElement("meta::pure::metamodel::type::primitives::Number")))
+                                ._genericType(new UserDefinedGenericTypeImpl()._type((Type) model.getElement("meta::pure::metamodel::type::primitives::Number")))
                                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")));
             }
             unit._conversionFunction(compiledLambda);

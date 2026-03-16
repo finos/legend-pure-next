@@ -45,7 +45,7 @@ public final class PrimitiveTypeHandler
                 .select(Objects::nonNull));
 
         result._classifierGenericType(
-                new UserDefinedGenericTypeImpl()._rawType((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType")));
+                new UserDefinedGenericTypeImpl()._type((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType")));
 
         // Compile type variables (e.g., Primitive Varchar(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -81,7 +81,7 @@ public final class PrimitiveTypeHandler
 
         VariableExpressionImpl thisVar = new VariableExpressionImpl()
                 ._name("this")
-                ._genericType(new UserDefinedGenericTypeImpl()._rawType(pt))
+                ._genericType(new UserDefinedGenericTypeImpl()._type(pt))
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
 
         // Push $this and type variables into scope

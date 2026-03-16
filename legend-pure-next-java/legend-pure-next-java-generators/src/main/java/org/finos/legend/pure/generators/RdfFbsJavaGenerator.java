@@ -320,9 +320,9 @@ public class RdfFbsJavaGenerator
                 sb.append("            if (raw == null) { return null; }\n");
                 sb.append("            // Use genericType to interpret the primitive value\n");
                 sb.append("            meta.pure.metamodel.type.generics.GenericType gt = _genericType();\n");
-                sb.append("            if (gt != null && gt._rawType() != null)\n");
+                sb.append("            if (gt != null && gt._type() != null)\n");
                 sb.append("            {\n");
-                sb.append("                String typeName = (gt._rawType() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
+                sb.append("                String typeName = (gt._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
                 sb.append("                if (\"Integer\".equals(typeName)) { return Long.parseLong(raw); }\n");
                 sb.append("                if (\"Float\".equals(typeName)) { return Double.parseDouble(raw); }\n");
                 sb.append("                if (\"Boolean\".equals(typeName)) { return Boolean.parseBoolean(raw); }\n");
@@ -348,7 +348,7 @@ public class RdfFbsJavaGenerator
                 sb.append("                                    // Create a fresh EnumImpl with correct type\n");
                 sb.append("                                    return new meta.pure.metamodel.type.EnumImpl()\n");
                 sb.append("                                            ._name(enumValueName)\n");
-                sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._rawType((meta.pure.metamodel.type.Type) enumeration));\n");
+                sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type((meta.pure.metamodel.type.Type) enumeration));\n");
                 sb.append("                                }\n");
                 sb.append("                            }\n");
                 sb.append("                        }\n");
@@ -386,13 +386,13 @@ public class RdfFbsJavaGenerator
             {
                 String wrapperType = subtype + "FlatBufferWrapper";
                 int unionIdx = idx + 2;
-                sb.append("        if (fb.").append(accessor).append("Type() == ").append(unionIdx).append(")\n");
+                sb.append("        if (fb.").append(unionTypeAccessor(accessor)).append("() == ").append(unionIdx).append(")\n");
                 sb.append("        {\n");
                 sb.append("            ").append(subtype).append("Def def = (").append(subtype).append("Def) fb.").append(accessor).append("(new ").append(subtype).append("Def());\n");
                 sb.append("            return def != null ? new ").append(wrapperType).append("(def, resolver) : null;\n");
                 sb.append("        }\n");
             });
-            sb.append("        if (fb.").append(accessor).append("Type() == 1)\n");
+            sb.append("        if (fb.").append(unionTypeAccessor(accessor)).append("() == 1)\n");
             sb.append("        {\n");
             sb.append("            PointerRef ref = (PointerRef) fb.").append(accessor).append("(new PointerRef());\n");
             sb.append("            return ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
@@ -489,7 +489,7 @@ public class RdfFbsJavaGenerator
         sb.append("        MutableList<").append(boxType(innerType)).append("> result = Lists.mutable.ofInitialCapacity(len);\n");
         sb.append("        for (int i = 0; i < len; i++)\n");
         sb.append("        {\n");
-        sb.append("            byte uType = fb.").append(fbField).append("Type(i);\n");
+        sb.append("            byte uType = fb.").append(unionTypeAccessor(fbField)).append("(i);\n");
         sb.append("            switch (uType)\n");
         sb.append("            {\n");
 
@@ -530,7 +530,7 @@ public class RdfFbsJavaGenerator
         sb.append("        MutableList<").append(boxType(innerType)).append("> result = Lists.mutable.ofInitialCapacity(len);\n");
         sb.append("        for (int i = 0; i < len; i++)\n");
         sb.append("        {\n");
-        sb.append("            byte uType = fb.").append(fbField).append("Type(i);\n");
+        sb.append("            byte uType = fb.").append(unionTypeAccessor(fbField)).append("(i);\n");
         sb.append("            switch (uType)\n");
         sb.append("            {\n");
 
@@ -922,7 +922,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");
                 sb.append("        {\n");
                 sb.append("            // Enum value: serialize as enumerationPath.enumName\n");
-                sb.append("            meta.pure.metamodel.type.Type enumType = obj._genericType() != null ? obj._genericType()._rawType() : null;\n");
+                sb.append("            meta.pure.metamodel.type.Type enumType = obj._genericType() != null ? obj._genericType()._type() : null;\n");
                 sb.append("            String enumPath = (enumType instanceof meta.pure.metamodel.PackageableElement enumPe)\n");
                 sb.append("                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(enumPe) + \".\" + ev._name()\n");
                 sb.append("                : ev._name();\n");
@@ -1008,7 +1008,7 @@ public class RdfFbsJavaGenerator
                         // Union vector: add both type vector and value vector
                         sb.append("        if (").append(fbField).append("Vector != 0)\n");
                         sb.append("        {\n");
-                        sb.append("            ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("Type(builder, ").append(fbField).append("TypeVector);\n");
+                        sb.append("            ").append(classInfo.name).append("Def.add").append(unionTypeAccessor(capitalize(builderAccessor))).append("(builder, ").append(fbField).append("TypeVector);\n");
                         sb.append("            ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("(builder, ").append(fbField).append("Vector);\n");
                         sb.append("        }\n");
                     }
@@ -1022,7 +1022,7 @@ public class RdfFbsJavaGenerator
                     MutableList<String> nps2 = getNonPointerSubtypes(m3Model, prop);
                     if (nps2.notEmpty() && !prop.isMany)
                     {
-                        sb.append("        if (").append(fbField).append("Offset != 0) { ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("Type(builder, ").append(fbField).append("UnionType); ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("(builder, ").append(fbField).append("Offset); }\n");
+                        sb.append("        if (").append(fbField).append("Offset != 0) { ").append(classInfo.name).append("Def.add").append(unionTypeAccessor(capitalize(builderAccessor))).append("(builder, ").append(fbField).append("UnionType); ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("(builder, ").append(fbField).append("Offset); }\n");
                     }
                     else
                     {

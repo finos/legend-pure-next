@@ -83,7 +83,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
             {
-                if (gen._general() != null && gen._general()._rawType() instanceof SimplePropertyOwner superOwner)
+                if (gen._general() != null && gen._general()._type() instanceof SimplePropertyOwner superOwner)
                 {
                     Property match = findProperty(superOwner, name);
                     if (match != null)
@@ -116,7 +116,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
             {
-                if (gen._general() != null && gen._general()._rawType() instanceof Class superClass)
+                if (gen._general() != null && gen._general()._type() instanceof Class superClass)
                 {
                     QualifiedProperty match = findQualifiedProperty(superClass, name);
                     if (match != null)

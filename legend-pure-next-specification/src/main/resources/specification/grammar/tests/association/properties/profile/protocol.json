@@ -8,7 +8,7 @@
       },
       "properties" : [ {
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassA",
             "sourceInformation" : {
@@ -72,7 +72,7 @@
         } ]
       }, {
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassB",
             "sourceInformation" : {

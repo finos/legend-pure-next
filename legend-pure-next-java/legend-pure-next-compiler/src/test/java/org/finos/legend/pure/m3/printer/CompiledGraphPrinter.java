@@ -676,7 +676,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
         // Handle GenericTypeOperation (type algebra: T+R, T-R, T=R, T⊆R)
         if (gt instanceof GenericTypeOperation gto)
         {
-            String op = switch (gto._type())
+            String op = switch (gto._operationType())
             {
                 case UNION -> "+";
                 case DIFFERENCE -> "-";
@@ -685,7 +685,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
-        if (gt._rawType() instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+        if (gt._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
         {
             String name = tp._name();
             if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
@@ -694,19 +694,19 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             }
             return name;
         }
-        if (gt._rawType() == null)
+        if (gt._type() == null)
         {
             return "?";
         }
-        if (gt._rawType() instanceof FunctionType ft)
+        if (gt._type() instanceof FunctionType ft)
         {
             return printFunctionType(ft);
         }
-        if (gt._rawType() instanceof RelationType rt)
+        if (gt._type() instanceof RelationType rt)
         {
             return printRelationType(rt);
         }
-        if (gt._rawType() instanceof Unit unit)
+        if (gt._type() instanceof Unit unit)
         {
             // Unit is not PackageableElement — use measure path + ~unitName
             if (unit._measure() != null)
@@ -715,7 +715,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             }
             return String.valueOf(unit._name());
         }
-        String path = shortPath((PackageableElement) gt._rawType());
+        String path = shortPath((PackageableElement) gt._type());
         // Type arguments and multiplicity arguments (e.g. Property<Owner, String | [1]>)
         MutableList<GenericType> typeArgs = gt._typeArguments();
         MutableList<Multiplicity> mulArgs = gt._multiplicityArguments();

@@ -11,7 +11,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -26,7 +26,7 @@
           }, {
             "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
             "genericType" : {
-              "rawType" : {
+              "type" : {
                 "_type" : "TypeParameter",
                 "name" : "T"
               }
@@ -75,7 +75,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "type" : {
             "_type" : "TypeParameter",
             "name" : "T"
           }
@@ -93,7 +93,7 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "type" : {
           "_type" : "TypeParameter",
           "name" : "T"
         }

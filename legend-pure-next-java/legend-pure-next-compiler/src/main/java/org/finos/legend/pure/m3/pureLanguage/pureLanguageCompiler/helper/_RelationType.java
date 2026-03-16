@@ -180,7 +180,7 @@ public class _RelationType
 
         // For each common column, find the common type and multiplicity
         RelationTypeImpl result = new RelationTypeImpl();
-        GenericType ownerGT = new UserDefinedGenericTypeImpl()._rawType(result);
+        GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
 
         MutableList<Column> commonColumns = Lists.mutable.empty();
         for (String colName : commonNames)
@@ -335,7 +335,7 @@ public class _RelationType
                                 ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L))
                                 ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L));
                 RelationTypeImpl tempRT = new RelationTypeImpl();
-                GenericType tempOwnerGT = new UserDefinedGenericTypeImpl()._rawType(tempRT);
+                GenericType tempOwnerGT = new UserDefinedGenericTypeImpl()._type(tempRT);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,
                         col._nameWildCard() != null && col._nameWildCard(), model));
             }
@@ -347,7 +347,7 @@ public class _RelationType
         if (changed)
         {
             RelationTypeImpl newRT = new RelationTypeImpl();
-            GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._rawType(newRT);
+            GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newRT);
             MutableList<Column> rebuiltColumns = Lists.mutable.empty();
             for (Column col : resolvedColumns)
             {

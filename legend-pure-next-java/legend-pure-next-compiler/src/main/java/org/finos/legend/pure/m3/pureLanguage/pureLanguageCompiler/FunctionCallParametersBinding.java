@@ -162,7 +162,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     GenericType gt = entry.getValue().getFirst();
-                    if (gt != null && gt._rawType() instanceof TypeParameter tp)
+                    if (gt != null && gt._type() instanceof TypeParameter tp)
                     {
                         String targetName = tp._name();
                         MutableSet<GenericType> targetBinding = typeBindings.get(targetName);
@@ -179,7 +179,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             GenericType resolved = targetBinding.getFirst();
-                            if (!(resolved._rawType() instanceof TypeParameter))
+                            if (!(resolved._type() instanceof TypeParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);
@@ -233,7 +233,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     boolean anyResolved = false;
                     for (GenericType gt : entry.getValue())
                     {
-                        if (gt._rawType() instanceof TypeParameter tp
+                        if (gt._type() instanceof TypeParameter tp
                                 && tp._owner() == enclosingOwner.owner())
                         {
                             MutableSet<GenericType> ownerBinding = enclosingOwner.typeBindings()
@@ -241,7 +241,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                             if (ownerBinding != null && ownerBinding.size() == 1)
                             {
                                 GenericType ownerResolved = ownerBinding.getFirst();
-                                if (!(ownerResolved._rawType() instanceof TypeParameter))
+                                if (!(ownerResolved._type() instanceof TypeParameter))
                                 {
                                     resolved.add(ownerResolved);
                                     anyResolved = true;
