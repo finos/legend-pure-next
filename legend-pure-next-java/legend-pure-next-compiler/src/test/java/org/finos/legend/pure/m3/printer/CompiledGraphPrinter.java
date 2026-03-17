@@ -62,6 +62,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
 import java.util.List;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Produces the human-readable {@code ###CompiledGraph} text block for a list of
@@ -685,7 +686,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
-        if (gt._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
+        if (_GenericType.type(gt) instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
         {
             String name = tp._name();
             if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
@@ -694,19 +695,19 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             }
             return name;
         }
-        if (gt._type() == null)
+        if (_GenericType.type(gt) == null)
         {
             return "?";
         }
-        if (gt._type() instanceof FunctionType ft)
+        if (_GenericType.type(gt) instanceof FunctionType ft)
         {
             return printFunctionType(ft);
         }
-        if (gt._type() instanceof RelationType rt)
+        if (_GenericType.type(gt) instanceof RelationType rt)
         {
             return printRelationType(rt);
         }
-        if (gt._type() instanceof Unit unit)
+        if (_GenericType.type(gt) instanceof Unit unit)
         {
             // Unit is not PackageableElement — use measure path + ~unitName
             if (unit._measure() != null)
@@ -715,10 +716,10 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             }
             return String.valueOf(unit._name());
         }
-        String path = shortPath((PackageableElement) gt._type());
+        String path = shortPath((PackageableElement) _GenericType.type(gt));
         // Type arguments and multiplicity arguments (e.g. Property<Owner, String | [1]>)
-        MutableList<GenericType> typeArgs = gt._typeArguments();
-        MutableList<Multiplicity> mulArgs = gt._multiplicityArguments();
+        MutableList<GenericType> typeArgs = _GenericType.typeArguments(gt);
+        MutableList<Multiplicity> mulArgs = _GenericType.multiplicityArguments(gt);
         boolean hasTypeArgs = typeArgs != null && typeArgs.notEmpty();
         boolean hasMulArgs = mulArgs != null && mulArgs.notEmpty();
         if (hasTypeArgs || hasMulArgs)

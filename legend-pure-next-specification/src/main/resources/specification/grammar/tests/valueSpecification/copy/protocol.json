@@ -8,6 +8,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
@@ -26,6 +27,7 @@
           "parametersValues" : [ {
             "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "MyClass"
@@ -69,6 +71,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
@@ -84,6 +87,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
@@ -124,6 +128,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
@@ -171,6 +176,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
@@ -186,6 +192,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
@@ -227,6 +234,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -258,6 +266,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -287,6 +296,7 @@
         }
       }, {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",

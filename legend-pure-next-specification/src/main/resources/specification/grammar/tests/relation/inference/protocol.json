@@ -10,6 +10,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
@@ -21,6 +22,7 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "TypeParameter",
               "name" : "T"
@@ -46,6 +48,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
@@ -57,18 +60,24 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
             "left" : {
+              "_type" : "GenericTypeOperation",
               "left" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "TypeParameter",
                   "name" : "Z"
                 }
               },
+              "operationType" : "EQUAL",
               "right" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "RelationType",
                   "columns" : [ {
                     "genericType" : {
+                      "_type" : "UserDefinedGenericType",
                       "type" : {
                         "_type" : "TypeParameter",
                         "name" : "K"
@@ -83,16 +92,16 @@
                     }
                   } ]
                 }
-              },
-              "operationType" : "EQUAL"
+              }
             },
+            "operationType" : "SUBSET",
             "right" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "TypeParameter",
                 "name" : "T"
               }
-            },
-            "operationType" : "SUBSET"
+            }
           } ]
         },
         "multiplicity" : {
@@ -114,6 +123,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
@@ -125,17 +135,22 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
             "left" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "TypeParameter",
                 "name" : "V"
               }
             },
+            "operationType" : "EQUAL",
             "right" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "RelationType",
                 "columns" : [ {
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "TypeParameter",
                       "name" : "K"
@@ -150,8 +165,7 @@
                   }
                 } ]
               }
-            },
-            "operationType" : "EQUAL"
+            }
           } ]
         },
         "multiplicity" : {
@@ -172,6 +186,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Relation",
@@ -183,28 +198,33 @@
           }
         },
         "typeArguments" : [ {
+          "_type" : "GenericTypeOperation",
           "left" : {
+            "_type" : "GenericTypeOperation",
             "left" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
+            "operationType" : "DIFFERENCE",
             "right" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "TypeParameter",
                 "name" : "Z"
               }
-            },
-            "operationType" : "DIFFERENCE"
+            }
           },
+          "operationType" : "UNION",
           "right" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "TypeParameter",
               "name" : "V"
             }
-          },
-          "operationType" : "UNION"
+          }
         } ]
       },
       "returnMultiplicity" : {

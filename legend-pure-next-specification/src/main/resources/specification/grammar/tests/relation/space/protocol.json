@@ -7,6 +7,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
@@ -18,10 +19,12 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
@@ -51,6 +54,7 @@
                 }
               }, {
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
@@ -80,6 +84,7 @@
                 }
               }, {
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean",
@@ -120,6 +125,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",

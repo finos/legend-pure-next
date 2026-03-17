@@ -8,6 +8,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -33,6 +34,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -48,6 +50,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -74,6 +77,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",

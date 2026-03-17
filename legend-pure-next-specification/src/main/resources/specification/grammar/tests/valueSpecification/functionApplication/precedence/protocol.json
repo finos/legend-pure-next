@@ -11,6 +11,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -26,6 +27,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -48,6 +50,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -73,6 +76,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -91,6 +95,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -106,6 +111,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -138,6 +144,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -156,6 +163,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -171,6 +179,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -206,6 +215,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -221,6 +231,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -243,6 +254,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -269,6 +281,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -303,6 +316,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -318,6 +332,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -340,6 +355,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -365,6 +381,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -383,6 +400,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -398,6 +416,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -433,6 +452,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -448,6 +468,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -473,6 +494,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -488,6 +510,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -523,6 +546,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -538,6 +562,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -563,6 +588,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -578,6 +604,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -613,6 +640,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -628,6 +656,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -650,6 +679,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -675,6 +705,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -693,6 +724,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -708,6 +740,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -741,6 +774,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -775,6 +809,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -790,6 +825,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -815,6 +851,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -830,6 +867,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -868,6 +906,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -883,6 +922,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -908,6 +948,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -923,6 +964,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -955,6 +997,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -970,6 +1013,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1005,6 +1049,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1020,6 +1065,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1048,6 +1094,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1063,6 +1110,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1088,6 +1136,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1103,6 +1152,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1145,6 +1195,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1163,6 +1214,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1201,6 +1253,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1216,6 +1269,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1248,6 +1302,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1263,6 +1318,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1311,6 +1367,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1326,6 +1383,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1358,6 +1416,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -1376,6 +1435,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1434,6 +1494,7 @@
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1449,6 +1510,7 @@
                 }, {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1481,6 +1543,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -1499,6 +1562,7 @@
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1544,6 +1608,7 @@
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1559,6 +1624,7 @@
                 }, {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1584,6 +1650,7 @@
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Boolean"
@@ -1602,6 +1669,7 @@
                   "parametersValues" : [ {
                     "_type" : "AtomicValue",
                     "genericType" : {
+                      "_type" : "UserDefinedGenericType",
                       "type" : {
                         "_type" : "Type_Pointer",
                         "pointerValue" : "Boolean"
@@ -1662,6 +1730,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -1680,6 +1749,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1753,6 +1823,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1826,6 +1897,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1841,6 +1913,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -1874,6 +1947,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -1908,6 +1982,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -1923,6 +1998,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -1948,6 +2024,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -1963,6 +2040,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -1998,6 +2076,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2013,6 +2092,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2038,6 +2118,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2053,6 +2134,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2091,6 +2173,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2106,6 +2189,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2131,6 +2215,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2146,6 +2231,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2178,6 +2264,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2193,6 +2280,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2228,6 +2316,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2243,6 +2332,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2271,6 +2361,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2286,6 +2377,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2311,6 +2403,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2326,6 +2419,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2366,6 +2460,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -2403,6 +2498,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2418,6 +2514,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2440,6 +2537,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2468,6 +2566,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2483,6 +2582,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2505,6 +2605,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2543,6 +2644,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2558,6 +2660,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2580,6 +2683,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2611,6 +2715,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2626,6 +2731,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2648,6 +2754,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2673,6 +2780,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2688,6 +2796,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2736,6 +2845,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2751,6 +2861,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2773,6 +2884,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2801,6 +2913,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2816,6 +2929,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -2838,6 +2952,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -2870,6 +2985,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2885,6 +3001,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2918,6 +3035,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -2952,6 +3070,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2967,6 +3086,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -2992,6 +3112,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3007,6 +3128,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3045,6 +3167,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3060,6 +3183,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3082,6 +3206,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3120,6 +3245,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3135,6 +3261,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3160,6 +3287,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3175,6 +3303,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3215,6 +3344,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -3249,6 +3379,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3264,6 +3395,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3289,6 +3421,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3304,6 +3437,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3345,6 +3479,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -3360,6 +3495,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -3382,6 +3518,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3410,6 +3547,7 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -3425,6 +3563,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -3447,6 +3586,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -3489,6 +3629,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3504,6 +3645,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3529,6 +3671,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3544,6 +3687,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3577,6 +3721,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -3630,6 +3775,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3652,6 +3798,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -3718,6 +3865,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3926,6 +4074,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -3970,6 +4119,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4130,6 +4280,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4177,6 +4328,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
@@ -4236,6 +4388,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -4267,6 +4420,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4285,6 +4439,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4300,6 +4455,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4335,6 +4491,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4350,6 +4507,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4372,6 +4530,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4400,6 +4559,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4418,6 +4578,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -4433,6 +4594,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -4462,6 +4624,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4488,6 +4651,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -4522,6 +4686,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4537,6 +4702,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4559,6 +4725,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4587,6 +4754,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4602,6 +4770,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4624,6 +4793,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4652,6 +4822,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4667,6 +4838,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4692,6 +4864,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4707,6 +4880,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4745,6 +4919,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -4760,6 +4935,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -4782,6 +4958,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -4804,6 +4981,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -4832,6 +5010,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -4847,6 +5026,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -4869,6 +5049,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -4897,6 +5078,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -4912,6 +5094,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -4934,6 +5117,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -4965,6 +5149,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -4980,6 +5165,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -5002,6 +5188,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5024,6 +5211,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -5050,6 +5238,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -5084,6 +5273,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -5099,6 +5289,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -5175,6 +5366,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -5190,6 +5382,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -5222,6 +5415,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -5237,6 +5431,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -5337,6 +5532,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -5383,6 +5579,7 @@
                   "parametersValues" : [ {
                     "_type" : "AtomicValue",
                     "genericType" : {
+                      "_type" : "UserDefinedGenericType",
                       "type" : {
                         "_type" : "Type_Pointer",
                         "pointerValue" : "Integer"
@@ -5398,6 +5595,7 @@
                   }, {
                     "_type" : "AtomicValue",
                     "genericType" : {
+                      "_type" : "UserDefinedGenericType",
                       "type" : {
                         "_type" : "Type_Pointer",
                         "pointerValue" : "Integer"
@@ -5420,6 +5618,7 @@
                 }, {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Integer"
@@ -5442,6 +5641,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -5464,6 +5664,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean"
@@ -5486,6 +5687,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5508,6 +5710,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -5534,6 +5737,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -5568,6 +5772,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5583,6 +5788,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5605,6 +5811,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -5630,6 +5837,7 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Boolean"
@@ -5648,6 +5856,7 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5663,6 +5872,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean"
@@ -5696,6 +5906,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",

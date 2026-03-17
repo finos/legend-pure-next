@@ -53,6 +53,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer"
@@ -109,6 +110,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Float"

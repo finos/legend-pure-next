@@ -12,6 +12,7 @@
           "expressionSequence" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
@@ -33,6 +34,7 @@
           }
         },
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -83,6 +85,7 @@
             "values" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
@@ -98,6 +101,7 @@
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String"
@@ -120,6 +124,7 @@
           }
         },
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -153,6 +158,7 @@
             "parametersValues" : [ {
               "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Light"
@@ -196,6 +202,7 @@
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "String"
@@ -211,6 +218,7 @@
                 }, {
                   "_type" : "AtomicValue",
                   "genericType" : {
+                    "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
                       "pointerValue" : "Integer"
@@ -247,6 +255,7 @@
           }
         },
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Light",
@@ -307,6 +316,7 @@
           }
         },
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -349,6 +359,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",

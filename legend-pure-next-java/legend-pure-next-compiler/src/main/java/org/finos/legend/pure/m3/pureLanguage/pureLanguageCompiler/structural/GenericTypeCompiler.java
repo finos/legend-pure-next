@@ -24,6 +24,7 @@ import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperation;
+import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.PureModel;
@@ -31,6 +32,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Unit;
 
@@ -63,30 +65,32 @@ public final class GenericTypeCompiler
      */
     public static GenericType compile(meta.pure.protocol.grammar.type.generics.GenericType grammarGenericType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        // GenericTypeOperation (type algebra: T+R, T-Z, Z=K, Z⊆T)
-        if (grammarGenericType instanceof GenericTypeOperation gto)
+        return switch (grammarGenericType)
         {
-            return compileGenericTypeOperation(gto, imports, model, context);
-        }
+            case GenericTypeOperation gto -> compileGenericTypeOperation(gto, imports, model, context);
+            case GenericTypeValue gtv ->
+            {
+                // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
+                if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
+                {
+                    yield new UserDefinedGenericTypeImpl()
+                            ._type(resolveOrCompileTypeParameter(grammarTP, context));
+                }
 
-        // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
-        if (grammarGenericType._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
-        {
-            return new UserDefinedGenericTypeImpl()
-                    ._type(resolveOrCompileTypeParameter(grammarTP, context));
-        }
+                Type rawType = resolveType(gtv._type(), imports, model, context);
+                if (rawType == null)
+                {
+                    yield null;
+                }
 
-        Type rawType = resolveType(grammarGenericType._type(), imports, model, context);
-        if (rawType == null)
-        {
-            return null;
-        }
-
-        return new UserDefinedGenericTypeImpl()
-                ._type(rawType)
-                ._typeArguments(grammarGenericType._typeArguments().collect(arg -> compile(arg, imports, model, context)))
-                ._multiplicityArguments(grammarGenericType._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
-                ._typeVariableValues(grammarGenericType._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
+                yield new UserDefinedGenericTypeImpl()
+                        ._type(rawType)
+                        ._typeArguments(gtv._typeArguments().collect(arg -> compile(arg, imports, model, context)))
+                        ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
+                        ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
+            }
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + grammarGenericType.getClass());
+        };
     }
 
     private static GenericType compileGenericTypeOperation(GenericTypeOperation gto, MutableList<String> imports, MetadataAccess model, CompilationContext context)

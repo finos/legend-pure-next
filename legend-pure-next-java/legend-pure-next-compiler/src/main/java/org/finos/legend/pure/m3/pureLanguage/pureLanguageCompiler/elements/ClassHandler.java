@@ -174,9 +174,9 @@ public final class ClassHandler
                     {
                         // Build a 'this' variable of the owning class type and push it into scope
                         GenericType ownerGenericType = cls._classifierGenericType() != null
-                                && cls._classifierGenericType()._typeArguments() != null
-                                && cls._classifierGenericType()._typeArguments().notEmpty()
-                                ? cls._classifierGenericType()._typeArguments().getFirst()
+                                && _GenericType.typeArguments(cls._classifierGenericType()) != null
+                                && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
+                                ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                                 : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(cls);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
                                 new meta.pure.metamodel.valuespecification.VariableExpressionImpl()
@@ -202,11 +202,11 @@ public final class ClassHandler
                                 prop._sourceInformation();
 
                         // Type check
-                        if (lastExpr._genericType() != null && lastExpr._genericType()._type() != null
-                                && prop._genericType() != null && prop._genericType()._type() != null)
+                        if (lastExpr._genericType() != null && _GenericType.type(lastExpr._genericType()) != null
+                                && prop._genericType() != null && _GenericType.type(prop._genericType()) != null)
                         {
-                            meta.pure.metamodel.type.Type defaultType = lastExpr._genericType()._type();
-                            meta.pure.metamodel.type.Type propertyType = prop._genericType()._type();
+                            meta.pure.metamodel.type.Type defaultType = _GenericType.type(lastExpr._genericType());
+                            meta.pure.metamodel.type.Type propertyType = _GenericType.type(prop._genericType());
                             if (defaultType != propertyType)
                             {
                                 context.addError(new CompilationError(
@@ -249,9 +249,9 @@ public final class ClassHandler
         }
 
         GenericType ownerGenericType = cls._classifierGenericType() != null
-                && cls._classifierGenericType()._typeArguments() != null
-                && cls._classifierGenericType()._typeArguments().notEmpty()
-                ? cls._classifierGenericType()._typeArguments().getFirst()
+                && _GenericType.typeArguments(cls._classifierGenericType()) != null
+                && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
+                ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                 : new UserDefinedGenericTypeImpl()._type(cls);
         VariableExpressionImpl thisVar = new VariableExpressionImpl()
                 ._name("this")

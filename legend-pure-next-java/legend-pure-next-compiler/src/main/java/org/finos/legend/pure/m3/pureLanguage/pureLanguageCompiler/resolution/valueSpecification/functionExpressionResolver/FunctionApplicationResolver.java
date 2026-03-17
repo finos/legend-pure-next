@@ -318,9 +318,9 @@ public class FunctionApplicationResolver
             // When the arg type is a subtype of the param type (e.g., Property vs Function),
             // resolve to the param's raw type level before collecting bindings to ensure
             // type arguments are positionally aligned.
-            if (!(paramGT._type() instanceof TypeParameter) && paramGT._type() != argGT._type())
+            if (!(_GenericType.type(paramGT) instanceof TypeParameter) && _GenericType.type(paramGT) != _GenericType.type(argGT))
             {
-                argGT = _GenericType.resolveForTarget(argGT, paramGT._type(), model);
+                argGT = _GenericType.resolveForTarget(argGT, _GenericType.type(paramGT), model);
             }
             _GenericType.collectTypeParameterBindings(paramGT, argGT, bindings);
             _Multiplicity.collectMultiplicityParameterBindings(paramMul, processed._multiplicity(), bindings);
@@ -414,10 +414,10 @@ public class FunctionApplicationResolver
             // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
             // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
             GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-            if (concreteGT._typeArguments() != null && concreteGT._typeArguments().notEmpty())
+            if (_GenericType.typeArguments(concreteGT) != null && _GenericType.typeArguments(concreteGT).notEmpty())
             {
-                GenericType innerGT = concreteGT._typeArguments().getFirst();
-                if (innerGT._type() instanceof FunctionType ft)
+                GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
+                if (_GenericType.type(innerGT) instanceof FunctionType ft)
                 {
                     // Set (or update) lambda variable types from the resolved FunctionType parameters.
                     MutableList<VariableExpression> ftParams = ft._parameters();
@@ -585,7 +585,7 @@ public class FunctionApplicationResolver
     private static Type resolvedRawType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._type() : null;
+        return gt != null ? _GenericType.type(gt) : null;
     }
 
     private static boolean isSuccessfullyProcessed(ValueSpecification parameterValue, ValueSpecification reprocessed, MutableSet<String> scopeTypeParams, MutableSet<String> scopeMulParams)

@@ -8,6 +8,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
@@ -85,6 +86,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
@@ -203,6 +205,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",

@@ -8,6 +8,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassA",
@@ -62,6 +63,7 @@
               "parametersValues" : [ {
                 "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "AssociationClassB"
@@ -99,6 +101,7 @@
           }
         },
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "AssociationClassB",
@@ -235,6 +238,7 @@
               "expressionSequence" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Boolean"
@@ -268,6 +272,7 @@
           }
         } ],
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassB",

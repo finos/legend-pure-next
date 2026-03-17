@@ -21,6 +21,7 @@ import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
@@ -60,8 +61,8 @@ public final class _GenericTypeOperation
         GenericType resolvedRight = _GenericType.makeAsConcreteAsPossible(gto._right(), bindings, model);
 
         // If both sides are concrete RelationTypes, evaluate the operation
-        if (resolvedLeft._type() instanceof RelationType leftRT
-                && resolvedRight._type() instanceof RelationType rightRT)
+        if (resolvedLeft instanceof GenericTypeValue && _GenericType.type(resolvedLeft) instanceof RelationType leftRT
+                && resolvedRight instanceof GenericTypeValue && _GenericType.type(resolvedRight) instanceof RelationType rightRT)
         {
             RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, gto._operationType(), model);
             if (resultRT != null)
@@ -221,10 +222,6 @@ public final class _GenericTypeOperation
     public static boolean isCompatible(GenericTypeOperation gto, GenericType other, boolean contravariant, MetadataAccess model)
     {
         GenericType right = gto._right();
-        if (right == null || right._type() == null)
-        {
-            return true;
-        }
         if (gto._operationType() == GenericTypeOperationType.EQUAL)
         {
             return _GenericType.isCompatible(right, other, contravariant, model);

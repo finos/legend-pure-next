@@ -29,6 +29,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer"
@@ -52,6 +53,7 @@
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer",
@@ -148,6 +150,7 @@
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
@@ -178,6 +181,7 @@
             }, {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer",
@@ -243,6 +247,7 @@
           "values" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
@@ -258,6 +263,7 @@
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
@@ -295,6 +301,7 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
@@ -340,6 +347,7 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
@@ -391,6 +399,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Function",
@@ -402,6 +411,7 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Any",
@@ -432,6 +442,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Nil",

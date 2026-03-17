@@ -17,6 +17,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -162,7 +163,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     GenericType gt = entry.getValue().getFirst();
-                    if (gt != null && gt._type() instanceof TypeParameter tp)
+                    if (gt instanceof GenericTypeValue && _GenericType.type(gt) instanceof TypeParameter tp)
                     {
                         String targetName = tp._name();
                         MutableSet<GenericType> targetBinding = typeBindings.get(targetName);
@@ -179,7 +180,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             GenericType resolved = targetBinding.getFirst();
-                            if (!(resolved._type() instanceof TypeParameter))
+                            if (!(_GenericType.type(resolved) instanceof TypeParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);
@@ -233,7 +234,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     boolean anyResolved = false;
                     for (GenericType gt : entry.getValue())
                     {
-                        if (gt._type() instanceof TypeParameter tp
+                        if (_GenericType.type(gt) instanceof TypeParameter tp
                                 && tp._owner() == enclosingOwner.owner())
                         {
                             MutableSet<GenericType> ownerBinding = enclosingOwner.typeBindings()
@@ -241,7 +242,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                             if (ownerBinding != null && ownerBinding.size() == 1)
                             {
                                 GenericType ownerResolved = ownerBinding.getFirst();
-                                if (!(ownerResolved._type() instanceof TypeParameter))
+                                if (!(_GenericType.type(ownerResolved) instanceof TypeParameter))
                                 {
                                     resolved.add(ownerResolved);
                                     anyResolved = true;

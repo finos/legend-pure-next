@@ -27,6 +27,7 @@ import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Utility methods for {@link FunctionType}.
@@ -367,7 +368,7 @@ public final class _FunctionType
             }
             newFT._returnType(resolvedReturnType);
             newFT._returnMultiplicity(resolvedReturnMul);
-            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newFT)._typeArguments(genericType._typeArguments());
+            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
         }
         return null;
     }

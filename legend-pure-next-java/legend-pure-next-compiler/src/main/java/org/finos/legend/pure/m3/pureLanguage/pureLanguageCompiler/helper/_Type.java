@@ -206,7 +206,7 @@ public final class _Type
             return Lists.mutable.empty();
         }
         return type._generalizations()
-                .collect(g -> g._general()._type())
+                .collect(g -> _GenericType.type(g._general()))
                 .select(t -> t != null)
                 .toList();
     }

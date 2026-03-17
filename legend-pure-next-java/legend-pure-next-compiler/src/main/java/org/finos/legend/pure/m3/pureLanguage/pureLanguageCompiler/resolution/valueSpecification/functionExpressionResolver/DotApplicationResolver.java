@@ -65,7 +65,7 @@ public final class DotApplicationResolver
             return expr;
         }
 
-        Type ownerType = receiver._genericType()._type();
+        Type ownerType = _GenericType.type(receiver._genericType());
         context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
                 functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
 
@@ -128,8 +128,8 @@ public final class DotApplicationResolver
                 context.debug("  enum property found: %s", matchedProp._name());
                 return matchedProp;
             }
-            String enumName = (receiver._genericType()._typeArguments() != null && receiver._genericType()._typeArguments().notEmpty())
-                    ? _GenericType.print(receiver._genericType()._typeArguments().getFirst())
+            String enumName = (_GenericType.typeArguments(receiver._genericType()) != null && _GenericType.typeArguments(receiver._genericType()).notEmpty())
+                    ? _GenericType.print(_GenericType.typeArguments(receiver._genericType()).getFirst())
                     : _GenericType.print(receiver._genericType());
             context.addError(new CompilationError(
                     "Can't find enum value '" + functionName + "' in enumeration '" + enumName + "'",

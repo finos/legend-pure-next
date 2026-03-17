@@ -350,8 +350,8 @@ public class FunctionIndexEntry implements PackageableFunction
 
         for (int i = 0; i < count; i++)
         {
-            Type t1 = resolvedRawType(params1.get(i));
-            Type t2 = resolvedRawType(params2.get(i));
+            Type t1 = resolvedType(params1.get(i));
+            Type t2 = resolvedType(params2.get(i));
 
             // Concrete types are more specific than type parameters
             if (t1 != null && t2 == null)
@@ -420,10 +420,10 @@ public class FunctionIndexEntry implements PackageableFunction
         return 0;
     }
 
-    private static Type resolvedRawType(ValueSpecification vs)
+    private static Type resolvedType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._type() : null;
+        return gt != null ? _GenericType.type(gt) : null;
     }
 
     // ========================================================================

@@ -4,6 +4,7 @@
       "_type" : "PrimitiveType",
       "generalizations" : [ {
         "general" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",

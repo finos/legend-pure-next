@@ -17,6 +17,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
@@ -45,11 +46,13 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "FunctionType",
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
@@ -81,6 +84,7 @@
               }
             },
             "returnType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
@@ -112,6 +116,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",
@@ -152,6 +157,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
@@ -167,6 +173,7 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
@@ -195,11 +202,13 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "FunctionType",
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
@@ -223,6 +232,7 @@
             }, {
               "_type" : "VariableExpression",
               "genericType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer",
@@ -254,6 +264,7 @@
               }
             },
             "returnType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
@@ -285,6 +296,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",

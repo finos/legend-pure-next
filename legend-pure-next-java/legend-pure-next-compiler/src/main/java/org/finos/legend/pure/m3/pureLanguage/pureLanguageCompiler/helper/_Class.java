@@ -38,7 +38,7 @@ public final class _Class
                 String paramName = ownerClass._typeParameters().get(i)._name();
                 bindings.typeBindings()
                         .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(receiverType._typeArguments().get(i));
+                        .add(_GenericType.typeArguments(receiverType).get(i));
             }
         }
         if (ownerClass._multiplicityParameters().notEmpty())
@@ -48,7 +48,7 @@ public final class _Class
                 String paramName = ownerClass._multiplicityParameters().get(i)._name();
                 bindings.multiplicityBindings()
                         .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(receiverType._multiplicityArguments().get(i));
+                        .add(_GenericType.multiplicityArguments(receiverType).get(i));
             }
         }
         return bindings;
@@ -83,7 +83,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
             {
-                if (gen._general() != null && gen._general()._type() instanceof SimplePropertyOwner superOwner)
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof SimplePropertyOwner superOwner)
                 {
                     Property match = findProperty(superOwner, name);
                     if (match != null)
@@ -116,7 +116,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
             {
-                if (gen._general() != null && gen._general()._type() instanceof Class superClass)
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof Class superClass)
                 {
                     QualifiedProperty match = findQualifiedProperty(superClass, name);
                     if (match != null)

@@ -230,10 +230,11 @@ public class RdfFbsSchemaGenerator
             return isMany ? "[string]" : "string";
         }
 
-        // For many-valued properties of mainTaxonomy types, use the union
-        if (isMany && mainTaxonomyUnions.containsKey(m3Type))
+        // For properties of mainTaxonomy types, use the union
+        if (mainTaxonomyUnions.containsKey(m3Type))
         {
-            return "[" + mainTaxonomyUnions.get(m3Type) + "]";
+            String unionName = mainTaxonomyUnions.get(m3Type);
+            return isMany ? "[" + unionName + "]" : unionName;
         }
 
         String baseType = switch (m3Type)

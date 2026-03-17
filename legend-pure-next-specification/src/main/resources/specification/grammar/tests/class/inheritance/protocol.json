@@ -4,6 +4,7 @@
       "_type" : "Class",
       "generalizations" : [ {
         "general" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::SuperClass",
@@ -23,6 +24,7 @@
         }
       }, {
         "general" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Light",
@@ -55,6 +57,7 @@
       "_type" : "Class",
       "generalizations" : [ {
         "general" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::Light",
@@ -103,6 +106,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -133,6 +137,7 @@
       }, {
         "aggregation" : "NONE",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",

@@ -137,7 +137,7 @@ public final class RelationColumnResolver
     {
         // Get the TypeHolder's type parameter name (T)
         GenericType typeHolderParamGT = functionType._parameters().get(1)._genericType();
-        if (!(typeHolderParamGT._type() instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
+        if (!(_GenericType.type(typeHolderParamGT) instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
         {
             return;
         }
@@ -179,7 +179,7 @@ public final class RelationColumnResolver
     {
         // Resolve the right side (reference relation) of the SUBSET
         GenericType resolvedRight = _GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model);
-        if (!(resolvedRight._type() instanceof meta.pure.metamodel.relation.RelationType referenceRT))
+        if (!(_GenericType.type(resolvedRight) instanceof meta.pure.metamodel.relation.RelationType referenceRT))
         {
             return;
         }
@@ -238,7 +238,7 @@ public final class RelationColumnResolver
     {
         // The right side of EQUAL should be a RelationType with a wildcard column: (?:K)
         GenericType right = _GenericType.makeAsConcreteAsPossible(equalOp._right(), bindings, model);
-        if (!(right._type() instanceof meta.pure.metamodel.relation.RelationType wildcardRT)
+        if (!(_GenericType.type(right) instanceof meta.pure.metamodel.relation.RelationType wildcardRT)
                 || wildcardRT._columns() == null || wildcardRT._columns().isEmpty())
         {
             return;
@@ -252,7 +252,7 @@ public final class RelationColumnResolver
 
         // Resolve the wildcard column's type (K) from bindings
         GenericType resolvedColType = _GenericType.makeAsConcreteAsPossible(wildcardCol._genericType(), bindings, model);
-        if (resolvedColType == null || resolvedColType._type() == null)
+        if (resolvedColType == null || _GenericType.type(resolvedColType) == null)
         {
             return;
         }
@@ -342,7 +342,7 @@ public final class RelationColumnResolver
             if (v instanceof FunctionExpression k)
             {
                 GenericType typeHolderGT = k._parametersValues().getLast()._genericType();
-                if (typeHolderGT != null && typeHolderGT._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                if (typeHolderGT != null && _GenericType.type(typeHolderGT) instanceof meta.pure.metamodel.relation.RelationType rt)
                 {
                     mergedColumns.addAllIterable(rt._columns());
                 }
@@ -369,7 +369,7 @@ public final class RelationColumnResolver
     {
         GenericType enrichedGT = paramValues.get(typeHolderArgIdx)._genericType();
         GenericType paramGT = functionType._parameters().get(typeHolderArgIdx)._genericType();
-        String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) paramGT._type())._name();
+        String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) _GenericType.type(paramGT))._name();
         MutableSet<GenericType> bound = bindings.typeBindings().getIfAbsentPut(typeParamName, Sets.mutable::empty);
         bound.clear();
         bound.add(enrichedGT);

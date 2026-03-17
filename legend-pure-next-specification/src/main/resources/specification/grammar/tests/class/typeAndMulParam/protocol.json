@@ -11,6 +11,7 @@
       },
       "properties" : [ {
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "TypeParameter",
             "name" : "T"

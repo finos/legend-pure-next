@@ -22,6 +22,7 @@ import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.generics.GenericType;
+import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import meta.pure.protocol.grammar.valuespecification.VariableExpression;
 
 /**
@@ -81,16 +82,23 @@ public class _G_PackageableFunction
         {
             return "UNKNOWN";
         }
-        if (gt._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
+        return switch (gt)
         {
-            return tp._name();
-        }
-        if (gt._type() instanceof Type_Pointer tp && tp._pointerValue() != null)
-        {
-            String fullPath = tp._pointerValue();
-            return fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
-        }
-        return "UNKNOWN";
+            case GenericTypeValue gtv ->
+            {
+                if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
+                {
+                    yield tp._name();
+                }
+                if (gtv._type() instanceof Type_Pointer tp && tp._pointerValue() != null)
+                {
+                    String fullPath = tp._pointerValue();
+                    yield fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
+                }
+                yield "UNKNOWN";
+            }
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
+        };
     }
 
     private static String getMultiplicitySignature(Multiplicity_Protocol mp)

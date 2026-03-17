@@ -28,6 +28,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
@@ -58,6 +59,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
@@ -84,6 +86,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
@@ -138,6 +141,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::relation::Relation",
@@ -149,10 +153,12 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
@@ -173,6 +179,7 @@
                 }
               }, {
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
@@ -213,6 +220,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "protocol::support::Light",
@@ -264,6 +272,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::function::Function",
@@ -275,11 +284,13 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "FunctionType",
               "parameters" : [ {
                 "_type" : "VariableExpression",
                 "genericType" : {
+                  "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
@@ -311,6 +322,7 @@
                 }
               },
               "returnType" : {
+                "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean",
@@ -343,6 +355,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
@@ -394,6 +407,7 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
@@ -424,6 +438,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "multiplicityArguments" : [ {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
@@ -441,6 +456,7 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Nil",
@@ -452,6 +468,7 @@
               }
             }
           }, {
+            "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
@@ -480,6 +497,7 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::precisePrimitives::Varchar",
@@ -493,6 +511,7 @@
           "typeVariableValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
+              "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
@@ -525,6 +544,7 @@
         }
       } ],
       "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",

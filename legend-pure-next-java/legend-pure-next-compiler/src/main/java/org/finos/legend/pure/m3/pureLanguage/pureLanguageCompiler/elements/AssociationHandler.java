@@ -32,6 +32,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.Pro
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.Objects;
 
@@ -91,7 +92,7 @@ public final class AssociationHandler
             registerOnTargetClass(compiled.get(1), compiled.get(0)._genericType(), model);
 
             // Register qualified properties on the owner class
-            if (qpOwner != null && qpOwner._type() instanceof Class ownerCls)
+            if (qpOwner != null && _GenericType.type(qpOwner) instanceof Class ownerCls)
             {
                 ownerCls._qualifiedPropertiesFromAssociations().addAll(compiledQPs.toList());
             }
@@ -126,7 +127,7 @@ public final class AssociationHandler
      */
     private static void registerOnTargetClass(Property property, GenericType ownerGT, MetadataAccess model)
     {
-        if (ownerGT != null && ownerGT._type() instanceof Class targetCls)
+        if (ownerGT != null && _GenericType.type(ownerGT) instanceof Class targetCls)
         {
             targetCls._propertiesFromAssociations().add(property);
         }

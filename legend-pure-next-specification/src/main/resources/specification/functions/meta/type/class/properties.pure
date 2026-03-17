@@ -20,7 +20,7 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::propert
     // TODO use this once problems with compiled execution are fixed
 //    $genericType.type->toOne()->generalizations()->map(cls | $cls->cast(@Class<Any>).properties->concatenate($cls->cast(@Class<Any>).propertiesFromAssociations))
 
-    let theClass = $genericType.type->toOne()->cast(@Class<Any>);
+    let theClass = $genericType->cast(@GenericTypeValue).type->toOne()->cast(@Class<Any>);
     let result = ^List<Property<Nil,Any|*>>(values = $theClass.properties);
     let resultWithAssoProps = ^$result(values += $theClass.propertiesFromAssociations);
     ^$resultWithAssoProps(values += $theClass.generalizations->map(generalization | properties($generalization.general))).values;

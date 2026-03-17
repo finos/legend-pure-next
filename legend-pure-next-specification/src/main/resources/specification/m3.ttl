@@ -413,38 +413,47 @@
 # --- GenericType ---
 
 :GenericType a :Class ;
+    :stereotypes :ProtocolInfo_mainTaxonomy ;
     :name "GenericType" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations [ :general [ :type :Any ] ] .
 
+# --- GenericTypeValue ---
+
+:GenericTypeValue a :Class ;
+    :name "GenericTypeValue" ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericTypeValue ] ] ;
+    :package :meta_pure_metamodel_type_generics ;
+    :generalizations [ :general [ :type :GenericType ] ] .
+
 :type a :Property ;
     :stereotypes :ProtocolInfo_pointer ;
     :name "type" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericType ] [ :type :Type ] ) ; :multiplicityArguments :PureOne ] ;
-    :owner :GenericType ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericTypeValue ] [ :type :Type ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :GenericTypeValue ;
     :genericType [ :type :Type ] ;
     :multiplicity :PureOne .
 
 :typeArguments a :Property ;
     :name "typeArguments" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericType ] [ :type :GenericType ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :GenericType ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericTypeValue ] [ :type :GenericType ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :GenericTypeValue ;
     :genericType [ :type :GenericType ] ;
     :multiplicity :ZeroMany .
 
 :multiplicityArguments a :Property ;
     :name "multiplicityArguments" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericType ] [ :type :Multiplicity ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :GenericType ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericTypeValue ] [ :type :Multiplicity ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :GenericTypeValue ;
     :genericType [ :type :Multiplicity ] ;
     :multiplicity :ZeroMany ;
     :stereotypes :ProtocolInfo_pointer .
 
 :typeVariableValues a :Property ;
     :name "typeVariableValues" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericType ] [ :type :ValueSpecification ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :GenericType ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :GenericTypeValue ] [ :type :ValueSpecification ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :GenericTypeValue ;
     :genericType [ :type :ValueSpecification ] ;
     :multiplicity :ZeroMany .
 
@@ -454,7 +463,7 @@
     :name "UserDefinedGenericType" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedGenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
-    :generalizations [ :general [ :type :GenericType ] ] .
+    :generalizations [ :general [ :type :GenericTypeValue ] ] .
 
 # --- InferredGenericType ---
 
@@ -463,7 +472,7 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :InferredGenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations
-        [ :general [ :type :GenericType ] ],
+        [ :general [ :type :GenericTypeValue ] ],
         [ :general [ :type :Inferred ] ] .
 
 

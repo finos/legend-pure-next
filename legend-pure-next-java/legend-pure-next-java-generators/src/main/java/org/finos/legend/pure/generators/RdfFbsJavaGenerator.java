@@ -164,7 +164,7 @@ public class RdfFbsJavaGenerator
                 boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer && !"Any".equals(prop.typeName);
 
                 // For mainTaxonomy union types, import all subtype Defs and Wrappers
-                if (isMainTaxonomyType(prop.typeName) && prop.isMany)
+                if (isMainTaxonomyType(prop.typeName))
                 {
                     MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
                     subtypes.forEach(subtype ->
@@ -258,7 +258,7 @@ public class RdfFbsJavaGenerator
             if (hasStereotype(prop.stereotypes, "excluded"))
             {
                 String javaType = mapToJavaType(prop.typeName, prop.isMany);
-                generateExcludedProperty(sb, classInfo, prop, javaType);
+                generateExcludedProperty(sb, classInfo.name, prop, javaType);
                 return;
             }
 
@@ -286,6 +286,10 @@ public class RdfFbsJavaGenerator
             else if (isMainTaxonomyType(prop.typeName) && prop.isMany)
             {
                 generateMainTaxonomyListGetter(sb, prop, javaType, javaAccessor);
+            }
+            else if (isMainTaxonomyType(prop.typeName))
+            {
+                generateMainTaxonomySingleGetter(sb, prop, javaType, javaAccessor);
             }
             else if (isClassType && prop.isMany)
             {
@@ -320,9 +324,9 @@ public class RdfFbsJavaGenerator
                 sb.append("            if (raw == null) { return null; }\n");
                 sb.append("            // Use genericType to interpret the primitive value\n");
                 sb.append("            meta.pure.metamodel.type.generics.GenericType gt = _genericType();\n");
-                sb.append("            if (gt != null && gt._type() != null)\n");
+                sb.append("            if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() != null)\n");
                 sb.append("            {\n");
-                sb.append("                String typeName = (gt._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
+                sb.append("                String typeName = (gtv._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
                 sb.append("                if (\"Integer\".equals(typeName)) { return Long.parseLong(raw); }\n");
                 sb.append("                if (\"Float\".equals(typeName)) { return Double.parseDouble(raw); }\n");
                 sb.append("                if (\"Boolean\".equals(typeName)) { return Boolean.parseBoolean(raw); }\n");
@@ -368,7 +372,7 @@ public class RdfFbsJavaGenerator
             sb.append("    }\n\n");
 
             // Setter (throws)
-            generateReadOnlySetter(sb, classInfo, prop, javaType);
+            generateReadOnlySetter(sb, classInfo.name, prop, javaType);
         });
 
         sb.append("}\n");
@@ -517,6 +521,39 @@ public class RdfFbsJavaGenerator
     }
 
     /**
+     * Generate a getter for a single-valued property whose type is a mainTaxonomy class.
+     * Reads the FlatBuffer union discriminator to create the correct wrapper.
+     */
+    private void generateMainTaxonomySingleGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField)
+    {
+        MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
+
+        sb.append("        byte uType = fb.").append(unionTypeAccessor(fbField)).append("();\n");
+        sb.append("        switch (uType)\n");
+        sb.append("        {\n");
+
+        // Each subtype at 1-based index
+        subtypes.forEachWithIndex((subtype, idx) ->
+        {
+            int unionIdx = idx + 1;
+            String defType = subtype + "Def";
+            String wrapperType = subtype + "FlatBufferWrapper";
+            sb.append("            case ").append(unionIdx).append(": { ");
+            sb.append(defType).append(" d = (").append(defType).append(") fb.").append(fbField).append("(new ").append(defType).append("()); ");
+            sb.append("return d != null ? new ").append(wrapperType).append("(d, resolver) : null; }\n");
+        });
+
+        // Base type fallback
+        int baseIdx = subtypes.size() + 1;
+        sb.append("            case ").append(baseIdx).append(": { ");
+        sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def()); ");
+        sb.append("return d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver) : null; }\n");
+
+        sb.append("            default: return null;\n");
+        sb.append("        }\n");
+    }
+
+    /**
      * Generate a getter for a list property whose type has nonPointerSubtypes.
      * Uses the FlatBuffer union vector to dispatch to the correct concrete wrapper.
      * Union layout: PointerRef=1, then subtypes from index 2+.
@@ -606,7 +643,7 @@ public class RdfFbsJavaGenerator
         }
     }
 
-    private void generateExcludedProperty(StringBuilder sb, ClassInfo classInfo, PropertyInfo prop, String javaType)
+    private void generateExcludedProperty(StringBuilder sb, String returnType, PropertyInfo prop, String javaType)
     {
         sb.append("    @Override\n");
         sb.append("    public ").append(javaType).append(" _").append(prop.name).append("()\n");
@@ -620,13 +657,13 @@ public class RdfFbsJavaGenerator
             sb.append("        return null;\n");
         }
         sb.append("    }\n\n");
-        generateReadOnlySetter(sb, classInfo, prop, javaType);
+        generateReadOnlySetter(sb, returnType, prop, javaType);
     }
 
-    private void generateReadOnlySetter(StringBuilder sb, ClassInfo classInfo, PropertyInfo prop, String javaType)
+    private void generateReadOnlySetter(StringBuilder sb, String returnType, PropertyInfo prop, String javaType)
     {
         sb.append("    @Override\n");
-        sb.append("    public ").append(classInfo.name).append(" _").append(prop.name).append("(");
+        sb.append("    public ").append(returnType).append(" _").append(prop.name).append("(");
         sb.append(javaType).append(" value)\n");
         sb.append("    {\n");
         sb.append("        throw new UnsupportedOperationException(\"Read-only FlatBuffer wrapper\");\n");
@@ -712,6 +749,7 @@ public class RdfFbsJavaGenerator
 
             sb.append("    public int write").append(classInfo.name).append("(").append(classInfo.name).append(" obj)\n");
             sb.append("    {\n");
+
 
             // Pre-create string and nested offsets
             allProps.forEach(prop ->
@@ -890,6 +928,33 @@ public class RdfFbsJavaGenerator
                         }
                     }
                 }
+                else if (isMainTaxonomyType(prop.typeName) && isClassType && !prop.isMany)
+                {
+                    // Single-valued mainTaxonomy union: instanceof dispatch
+                    MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
+                    sb.append("        int ").append(fbField).append("Offset = 0;\n");
+                    sb.append("        byte ").append(fbField).append("UnionType = 0;\n");
+                    sb.append("        if (obj._").append(prop.name).append("() != null)\n");
+                    sb.append("        {\n");
+                    subtypes.forEachWithIndex((subtype, idx) ->
+                    {
+                        int unionIdx = idx + 1;
+                        String prefix = idx == 0 ? "            if" : "            else if";
+                        sb.append(prefix).append(" (obj._").append(prop.name).append("() instanceof ").append(subtype).append(" _sub").append(idx).append(")\n");
+                        sb.append("            {\n");
+                        sb.append("                ").append(fbField).append("Offset = write").append(subtype).append("(_sub").append(idx).append(");\n");
+                        sb.append("                ").append(fbField).append("UnionType = ").append(unionIdx).append(";\n");
+                        sb.append("            }\n");
+                    });
+                    // Fallback: write as the base type
+                    int baseIdx = subtypes.size() + 1;
+                    sb.append("            else\n");
+                    sb.append("            {\n");
+                    sb.append("                ").append(fbField).append("Offset = write").append(prop.typeName).append("((").append(prop.typeName).append(") obj._").append(prop.name).append("());\n");
+                    sb.append("                ").append(fbField).append("UnionType = ").append(baseIdx).append(";\n");
+                    sb.append("            }\n");
+                    sb.append("        }\n");
+                }
                 else if (isClassType)
                 {
                     sb.append("        int ").append(fbField).append("Offset = 0;\n");
@@ -922,7 +987,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");
                 sb.append("        {\n");
                 sb.append("            // Enum value: serialize as enumerationPath.enumName\n");
-                sb.append("            meta.pure.metamodel.type.Type enumType = obj._genericType() != null ? obj._genericType()._type() : null;\n");
+                sb.append("            meta.pure.metamodel.type.Type enumType = (obj._genericType() instanceof meta.pure.metamodel.type.generics.GenericTypeValue _gtv) ? _gtv._type() : null;\n");
                 sb.append("            String enumPath = (enumType instanceof meta.pure.metamodel.PackageableElement enumPe)\n");
                 sb.append("                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(enumPe) + \".\" + ev._name()\n");
                 sb.append("                : ev._name();\n");
@@ -1020,7 +1085,7 @@ public class RdfFbsJavaGenerator
                 else if ("String".equals(prop.typeName) || isPointer || "Decimal".equals(prop.typeName) || isClassType)
                 {
                     MutableList<String> nps2 = getNonPointerSubtypes(m3Model, prop);
-                    if (nps2.notEmpty() && !prop.isMany)
+                    if ((nps2.notEmpty() && !prop.isMany) || (isMainTaxonomyType(prop.typeName) && isClassType && !prop.isMany))
                     {
                         sb.append("        if (").append(fbField).append("Offset != 0) { ").append(classInfo.name).append("Def.add").append(unionTypeAccessor(capitalize(builderAccessor))).append("(builder, ").append(fbField).append("UnionType); ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("(builder, ").append(fbField).append("Offset); }\n");
                     }
