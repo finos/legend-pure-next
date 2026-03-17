@@ -31,11 +31,11 @@ function <<test.Test>>  meta::pure::functions::meta::tests::properties::testProp
     let props = ^CC_Address(name='Hoboken', type=CC_GeographicEntityType.CITY)->genericType()->properties();
     assertEquals(CC_Address.properties->concatenate(CC_Address.propertiesFromAssociations)->concatenate(CC_GeographicEntity.properties)->concatenate(Any.properties), $props);
 
-    assertSize($props, 7);
-    assertIs(CC_Address.properties->filter(p|$p.name == 'name')->at(0), $props->at(0));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'street')->at(0), $props->at(1));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'comments')->at(0), $props->at(2));
-    assertIs(CC_Address.propertiesFromAssociations->filter(p|$p.name == 'location')->at(0), $props->at(3));
-    assertIs(CC_GeographicEntity.properties->filter(p|$p.name == 'type')->at(0), $props->at(4));
-    assertIs(Any.properties->filter(p|$p.name == 'classifierGenericType')->at(0), $props->at(5));
+    assertSize($props, 8);
+    assertIs(CC_Address.properties->filter(p|$p.name == 'name')->at(0), $props->filter(p|$p.name == 'name')->at(0));
+    assertIs(CC_Address.properties->filter(p|$p.name == 'street')->at(0), $props->filter(p|$p.name == 'street')->at(0));
+    assertIs(CC_Address.properties->filter(p|$p.name == 'comments')->at(0), $props->filter(p|$p.name == 'comments')->at(0));
+    assertIs(CC_Address.propertiesFromAssociations->filter(p|$p.name == 'location')->at(0), $props->filter(p|$p.name == 'location')->at(0));
+    assertIs(CC_GeographicEntity.properties->filter(p|$p.name == 'type')->at(0), $props->filter(p|$p.name == 'type')->at(0));
+    assertIs(Any.properties->filter(p|$p.name == 'classifierGenericType')->at(0), $props->filter(p|$p.name == 'classifierGenericType')->at(0));
 }

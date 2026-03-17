@@ -1108,8 +1108,10 @@
 
 :GenericTypeAndMultiplicityHolder a :Class ;
     :name "GenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericTypeAndMultiplicityHolder ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
+    :typeParameters [ :name "T" ] ;
+    :multiplicityParameters [ :name "m" ] ;
     :generalizations [ :general [ :type :ValueSpecification ] ] .
 
 # --- CompilerGenericTypeAndMultiplicityHolder ---
@@ -1118,9 +1120,11 @@
 
 :CompilerGenericTypeAndMultiplicityHolder a :Class ;
     :name "CompilerGenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :CompilerGenericTypeAndMultiplicityHolder ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :CompilerGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
-    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ] ] .
+    :typeParameters [ :name "T" ] ;
+    :multiplicityParameters [ :name "m" ] ;
+    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
 
 # --- UserDefinedGenericTypeAndMultiplicityHolder ---
 # Marker subtype for TypeHolders whose genericType is provided by the user
@@ -1128,9 +1132,11 @@
 
 :UserDefinedGenericTypeAndMultiplicityHolder a :Class ;
     :name "UserDefinedGenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedGenericTypeAndMultiplicityHolder ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
-    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ] ] .
+    :typeParameters [ :name "T" ] ;
+    :multiplicityParameters [ :name "m" ] ;
+    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
 
 # --- VariableExpression ---
 

@@ -20,14 +20,14 @@ function x::myFunc_T_1__T_1__String_1_(p:T~x::myFunc_T_1__T_1__String_1_[1], z:T
 
 class x::A extends x::B  ~Class<x::A>  @9:1-9:23
 
-class x::B  ~Class<x::B>  @10:1-10:13
+class x::B extends Any  ~Class<x::B>  @10:1-10:13
 
 function x::testF__String_1_():String[1]  ~UserDefinedFunction<{->String[1]}>
   FunctionInvocation x::myFunc_T_1__T_1__String_1_ :#String##[1]#  @14:5-14:22
     typeParam T -> #x::B#
-    FunctionInvocation new_T_1__T_1_ :#x::A##[1]#  @14:12-14:15
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#x::A##[1]#  @14:12-14:15
       typeParam T -> x::A
-      TypeHolder :x::A[1]  @14:12-14:15
-    FunctionInvocation new_T_1__T_1_ :#x::B##[1]#  @14:18-14:21
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<x::A | 1>[1]  @14:12-14:15
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#x::B##[1]#  @14:18-14:21
       typeParam T -> x::B
-      TypeHolder :x::B[1]  @14:18-14:21
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<x::B | 1>[1]  @14:18-14:21

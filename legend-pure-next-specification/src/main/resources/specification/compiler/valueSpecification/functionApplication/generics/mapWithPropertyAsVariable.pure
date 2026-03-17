@@ -18,7 +18,7 @@ function test::testMapWithPropertyAsVariable():Boolean[1]
 }
 
 ###CompiledGraph
-class test::MPV_Person  ~Class<test::MPV_Person>  @4:1-8:1
+class test::MPV_Person extends Any  ~Class<test::MPV_Person>  @4:1-8:1
   property firstName :String[1]  ~Property<test::MPV_Person, String | 1>
   property lastName :String[1]  ~Property<test::MPV_Person, String | 1>
 
@@ -28,9 +28,9 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():Boolean[1]  ~UserDefi
     mulParam m -> [2]
     AtomicValue  'vals' :String[1]  @15:9-15:12
     Collection :#test::MPV_Person#[2]  @15:16-15:99
-      FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  @15:17-15:56
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  @15:17-15:56
         typeParam T -> test::MPV_Person
-        TypeHolder :test::MPV_Person[1]  @15:17-15:56
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person | 1>[1]  @15:17-15:56
         Collection :#KeyExpression#[2]  @15:17-15:56
           FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @15:29-15:41
             AtomicValue  'firstName' :String[1]  @15:29-15:41
@@ -38,9 +38,9 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():Boolean[1]  ~UserDefi
           FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @15:44-15:55
             AtomicValue  'lastName' :String[1]  @15:44-15:55
             AtomicValue  'a' :String[1]  @15:53-15:55
-      FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  @15:59-15:98
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MPV_Person##[1]#  @15:59-15:98
         typeParam T -> test::MPV_Person
-        TypeHolder :test::MPV_Person[1]  @15:59-15:98
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MPV_Person | 1>[1]  @15:59-15:98
         Collection :#KeyExpression#[2]  @15:59-15:98
           FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @15:71-15:83
             AtomicValue  'firstName' :String[1]  @15:71-15:83

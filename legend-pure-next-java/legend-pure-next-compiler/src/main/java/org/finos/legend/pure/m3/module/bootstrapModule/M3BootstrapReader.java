@@ -128,6 +128,10 @@ public class M3BootstrapReader
             wireClassifierGenericType(model, m3UserDefinedPackageableMultiplicity, index);
             wireClassifierGenericType(model, m3InferredPackageableMultiplicity, index);
 
+            // Wire stereotypes into their parent profiles
+            Resource m3Stereotype = model.createResource(M3_NS + "Stereotype");
+            wireStereotypesToProfiles(model, m3Stereotype, index);
+
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
             bootstrapProperties(model, m3Property, index);
@@ -410,6 +414,49 @@ public class M3BootstrapReader
     }
 
     /**
+     * Wire Stereotype instances into their parent Profile's {@code _p_stereotypes()} list.
+     * This is needed so the PDB writer can compute stereotype paths and the PDB reader
+     * can resolve them via {@code profile._p_stereotypes().detect(...)}.
+     */
+    private static void wireStereotypesToProfiles(
+            Model model,
+            Resource stereotypeResource,
+            MutableMap<String, PackageableElement> index)
+    {
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, stereotypeResource); it.hasNext();)
+        {
+            Resource stRes = it.next();
+            String stName = getName(model, stRes);
+            if (stName == null)
+            {
+                continue;
+            }
+
+            Statement profStmt = getM3Statement(model, stRes, "profile");
+            if (profStmt == null || !profStmt.getObject().isResource())
+            {
+                continue;
+            }
+            String profName = getLocalName(profStmt.getObject().asResource());
+            if (profName == null)
+            {
+                continue;
+            }
+
+            // Find the Profile in the index
+            for (PackageableElement el : index.valuesView())
+            {
+                if (el instanceof meta.pure.metamodel.extension.Profile profile && profName.equals(el._name()))
+                {
+                    StereotypeImpl st = new StereotypeImpl()._value(stName)._profile(profile);
+                    profile._p_stereotypes().add(st);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
      * Wire properties to their owner types.
      * This must be done after all types and generalizations are bootstrapped.
      */
@@ -480,10 +527,31 @@ public class M3BootstrapReader
                 Statement stStmt = stIt.next();
                 if (stStmt.getObject().isResource())
                 {
-                    String stName = getName(model, stStmt.getObject().asResource());
+                    Resource stRes = stStmt.getObject().asResource();
+                    String stName = getName(model, stRes);
                     if (stName != null)
                     {
-                        stereotypes.add(new StereotypeImpl()._value(stName));
+                        // Look up the existing Stereotype from its parent Profile (created by wireStereotypesToProfiles)
+                        Statement profStmt = getM3Statement(model, stRes, "profile");
+                        if (profStmt != null && profStmt.getObject().isResource())
+                        {
+                            String profName = getLocalName(profStmt.getObject().asResource());
+                            if (profName != null)
+                            {
+                                for (PackageableElement el : index.valuesView())
+                                {
+                                    if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
+                                    {
+                                        Stereotype found = p._p_stereotypes().detect(s -> stName.equals(s._value()));
+                                        if (found != null)
+                                        {
+                                            stereotypes.add(found);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -768,10 +836,19 @@ public class M3BootstrapReader
         MutableList<Multiplicity> mulArgs = Lists.mutable.empty();
         for (Resource mulArgRes : extractPropertyResources(model, gtRes, "multiplicityArguments"))
         {
-            Multiplicity mul = lookupMultiplicity(mulArgRes, index);
-            if (mul != null)
+            // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
+            Statement mulParamStmt = getM3Statement(model, mulArgRes, "multiplicityParameter");
+            if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
-                mulArgs.add(mul);
+                mulArgs.add(new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));
+            }
+            else
+            {
+                Multiplicity mul = lookupMultiplicity(mulArgRes, index);
+                if (mul != null)
+                {
+                    mulArgs.add(mul);
+                }
             }
         }
         if (mulArgs.notEmpty())

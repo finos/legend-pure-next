@@ -11,7 +11,7 @@ Class pack::Dog extends pack::Animal
 }
 
 ###CompiledGraph
-class pack::Animal  ~Class<pack::Animal>  @3:1-6:1
+class pack::Animal extends Any  ~Class<pack::Animal>  @3:1-6:1
   property name :String[1]  ~Property<pack::Animal, String | 1>
 
 class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @8:1-11:1

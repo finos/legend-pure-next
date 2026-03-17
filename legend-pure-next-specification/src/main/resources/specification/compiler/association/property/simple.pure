@@ -20,6 +20,6 @@ association pack::MyAssociation  @4:1-8:1
   property a :pack::ClassA[1]  ~Property<pack::ClassB, pack::ClassA | 1>
   property b :pack::ClassB[*]  ~Property<pack::ClassA, pack::ClassB | *>
 
-class pack::ClassA  ~Class<pack::ClassA>  @10:1-12:1
+class pack::ClassA extends Any  ~Class<pack::ClassA>  @10:1-12:1
 
-class pack::ClassB  ~Class<pack::ClassB>  @14:1-16:1
+class pack::ClassB extends Any  ~Class<pack::ClassB>  @14:1-16:1

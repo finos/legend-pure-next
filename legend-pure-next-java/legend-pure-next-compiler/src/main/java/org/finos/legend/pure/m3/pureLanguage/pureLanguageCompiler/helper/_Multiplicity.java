@@ -145,6 +145,32 @@ public final class _Multiplicity
     }
 
     /**
+     * Format a multiplicity without brackets, for use in type argument notation (e.g. {@code <T|1>}).
+     */
+    public static String printBare(Multiplicity m)
+    {
+        if (m == null)
+        {
+            return "*";
+        }
+        if (m instanceof MultiplicityParameter mp)
+        {
+            return mp._name();
+        }
+        long lower = lowerBound(m);
+        long upper = upperBound(m);
+        if (upper == -1)
+        {
+            return lower == 0 ? "*" : lower + "..*";
+        }
+        if (lower == upper)
+        {
+            return String.valueOf(lower);
+        }
+        return lower + ".." + upper;
+    }
+
+    /**
      * Returns true if the Multiplicity is concrete — i.e. it has no
      * multiplicity parameter reference (e.g. {@code [1]}, {@code [*]} are
      * concrete, but {@code [m]} is not).

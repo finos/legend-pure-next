@@ -242,7 +242,24 @@ public class RdfFbsJavaGenerator
 
         // Fields
         sb.append("    private final ").append(classInfo.name).append("Def fb;\n");
-        sb.append("    private final MetadataAccess resolver;\n\n");
+        sb.append("    private final MetadataAccess resolver;\n");
+
+        // Lazy cache fields for list properties that create wrapper objects
+        allProps.forEach(prop ->
+        {
+            if (hasStereotype(prop.stereotypes, "excluded")) { return; }
+            boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
+            boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer
+                    && !"Any".equals(prop.typeName);
+            boolean needsListCache = prop.isMany && (isPointer || isClassType
+                    || (getNonPointerSubtypes(m3Model, prop).notEmpty()));
+            if (needsListCache)
+            {
+                String innerType = mapToJavaType(prop.typeName, false);
+                sb.append("    private MutableList<").append(boxType(innerType)).append("> cached_").append(prop.name).append(";\n");
+            }
+        });
+        sb.append("\n");
 
         // Constructor
         sb.append("    public ").append(classInfo.name).append("FlatBufferWrapper(");
@@ -270,10 +287,19 @@ public class RdfFbsJavaGenerator
                     && !"Any".equals(prop.typeName);
             boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
 
+            // Determine if this list getter needs caching (creates wrapper objects)
+            boolean needsListCache = prop.isMany && (isPointer || isClassType
+                    || (getNonPointerSubtypes(m3Model, prop).notEmpty()));
+
             // Getter
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(prop.name).append("()\n");
             sb.append("    {\n");
+
+            if (needsListCache)
+            {
+                sb.append("        if (cached_").append(prop.name).append(" != null) { return cached_").append(prop.name).append("; }\n");
+            }
 
             if (isPointer)
             {
@@ -369,6 +395,18 @@ public class RdfFbsJavaGenerator
                 generatePrimitiveGetter(sb, prop, javaType, javaAccessor);
             }
 
+            // For cached list getters, replace "return result;" with cache assignment
+            if (needsListCache)
+            {
+                String returnResult = "        return result;\n";
+                String cacheAssign = "        cached_" + prop.name + " = result;\n        return cached_" + prop.name + ";\n";
+                int lastIdx = sb.lastIndexOf(returnResult);
+                if (lastIdx >= 0)
+                {
+                    sb.replace(lastIdx, lastIdx + returnResult.length(), cacheAssign);
+                }
+            }
+
             sb.append("    }\n\n");
 
             // Setter (throws)
@@ -436,7 +474,28 @@ public class RdfFbsJavaGenerator
             }
             else
             {
-                sb.append("            if (path != null) { result.add((").append(innerType).append(") resolver.getElement(path)); }\n");
+                // Property pointers: "ownerPath.propertyName" — resolve through owner
+                sb.append("            if (path != null)\n");
+                sb.append("            {\n");
+                sb.append("                int dotIdx = path.lastIndexOf('.');\n");
+                sb.append("                if (dotIdx > 0 && path.indexOf(\"::\") < dotIdx)\n");
+                sb.append("                {\n");
+                sb.append("                    String ownerPath = path.substring(0, dotIdx);\n");
+                sb.append("                    String propName = path.substring(dotIdx + 1);\n");
+                sb.append("                    meta.pure.metamodel.PackageableElement owner = resolver.getElement(ownerPath);\n");
+                sb.append("                    if (owner instanceof meta.pure.metamodel.PropertyOwner po)\n");
+                sb.append("                    {\n");
+                sb.append("                        meta.pure.metamodel.function.property.AbstractProperty found = po._properties().detect(p -> propName.equals(p._name()));\n");
+                sb.append("                        if (found == null) { found = po._qualifiedProperties().detect(p -> propName.equals(p._name())); }\n");
+                sb.append("                        if (found != null) { result.add((").append(innerType).append(") found); }\n");
+                sb.append("                    }\n");
+                sb.append("                }\n");
+                sb.append("                else\n");
+                sb.append("                {\n");
+                sb.append("                    ").append(innerType).append(" resolved = (").append(innerType).append(") resolver.getElement(path);\n");
+                sb.append("                    if (resolved != null) { result.add(resolved); }\n");
+                sb.append("                }\n");
+                sb.append("            }\n");
             }
 
             sb.append("        }\n");
@@ -736,6 +795,7 @@ public class RdfFbsJavaGenerator
         sb.append("    private static String pointerPath(Object obj)\n");
         sb.append("    {\n");
         sb.append("        if (obj instanceof PackageableElement pe) { return _PackageableElement.path(pe); }\n");
+        sb.append("        if (obj instanceof meta.pure.metamodel.type.Unit u && u._measure() != null) { return _PackageableElement.path(u._measure()) + \"~\" + u._name(); }\n");
         sb.append("        if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".\" + ap._name(); }\n");
         sb.append("        if (obj instanceof Stereotype s && s._profile() != null) { return _PackageableElement.path(s._profile()) + \".\" + s._value(); }\n");
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
@@ -996,6 +1056,16 @@ public class RdfFbsJavaGenerator
                 sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
                 sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
                 sb.append("            valueUnionType = 1;\n");
+                sb.append("        }\n");
+                sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Unit unitVal && unitVal._measure() != null)\n");
+                sb.append("        {\n");
+                sb.append("            // Unit: write as PointerRef with measurePath~unitName\n");
+                sb.append("            String unitPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(unitVal._measure()) + \"~\" + unitVal._name();\n");
+                sb.append("            int pathOff = builder.createString(unitPath);\n");
+                sb.append("            PointerRef.startPointerRef(builder);\n");
+                sb.append("            PointerRef.addPath(builder, pathOff);\n");
+                sb.append("            valueUnionOffset = PointerRef.endPointerRef(builder);\n");
+                sb.append("            valueUnionType = 3;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() != null)\n");
                 sb.append("        {\n");

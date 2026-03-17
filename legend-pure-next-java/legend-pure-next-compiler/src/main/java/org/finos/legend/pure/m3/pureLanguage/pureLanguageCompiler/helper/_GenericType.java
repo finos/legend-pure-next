@@ -325,18 +325,31 @@ public class _GenericType
             sb.append(rawType.getClass().getSimpleName());
         }
 
-        if (genericType._typeArguments() != null && genericType._typeArguments().notEmpty())
+        boolean hasTypeArgs = genericType._typeArguments() != null && genericType._typeArguments().notEmpty();
+        boolean hasMulArgs = genericType._multiplicityArguments() != null && genericType._multiplicityArguments().notEmpty();
+        if (hasTypeArgs || hasMulArgs)
         {
             sb.append('<');
-            boolean first = true;
-            for (GenericType arg : genericType._typeArguments())
+            if (hasTypeArgs)
             {
-                if (!first)
+                boolean first = true;
+                for (GenericType arg : genericType._typeArguments())
                 {
-                    sb.append(", ");
+                    if (!first)
+                    {
+                        sb.append(", ");
+                    }
+                    first = false;
+                    printTo(arg, fullPath, sb);
                 }
-                first = false;
-                printTo(arg, fullPath, sb);
+            }
+            if (hasMulArgs)
+            {
+                for (meta.pure.metamodel.multiplicity.Multiplicity mul : genericType._multiplicityArguments())
+                {
+                    sb.append('|');
+                    sb.append(_Multiplicity.printBare(mul));
+                }
             }
             sb.append('>');
         }

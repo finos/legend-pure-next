@@ -15,13 +15,13 @@ function test():Any[*]
 }
 
 ###CompiledGraph
-class MyClass  ~Class<MyClass<Z~MyClass>>  @2:1-5:1
+class MyClass extends Any  ~Class<MyClass<Z~MyClass>>  @2:1-5:1
   property value :Z~MyClass[1]  ~Property<MyClass<Z~MyClass>, Z~MyClass | 1>
 
 function f_T_MANY__MyClass_1_(s:T~f_T_MANY__MyClass_1_[*]):MyClass<T~f_T_MANY__MyClass_1_>[1]  ~UserDefinedFunction<{T~f_T_MANY__MyClass_1_[*]->MyClass<T~f_T_MANY__MyClass_1_>[1]}>
-  FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  @9:5-9:27
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#MyClass<T~f_T_MANY__MyClass_1_>##[1]#  @9:5-9:27
     typeParam T -> MyClass<T~f_T_MANY__MyClass_1_>
-    TypeHolder :MyClass<T~f_T_MANY__MyClass_1_>[1]  @9:5-9:27
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<MyClass<T~f_T_MANY__MyClass_1_> | 1>[1]  @9:5-9:27
     Collection :#KeyExpression#[1]  @9:5-9:27
       FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @9:17-9:26
         AtomicValue  'value' :String[1]  @9:17-9:26

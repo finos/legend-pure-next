@@ -28,10 +28,10 @@ native function <<PCT.function>> meta::pure::functions::multiplicity::toOne<T>(v
 
 function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testToOneMultiplicity():Boolean[1]
 {
-    assertIs(PureOne, {|toOne('a')}.expressionSequence->at(0).multiplicity);
-    assertIs(PureOne, {|toOne(['a'])}.expressionSequence->at(0).multiplicity);
-    assertIs(PureOne, {|[1, 2, 3]->first()->toOne()}.expressionSequence->at(0).multiplicity);
-    assertIs(PureOne, {|[1, 2, 3]->filter(x | $x == 1)->toOne()}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredPureOne, {|toOne('a')}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredPureOne, {|toOne(['a'])}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredPureOne, {|[1, 2, 3]->first()->toOne()}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredPureOne, {|[1, 2, 3]->filter(x | $x == 1)->toOne()}.expressionSequence->at(0).multiplicity);
 }
 
 function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testToOne():Boolean[1]

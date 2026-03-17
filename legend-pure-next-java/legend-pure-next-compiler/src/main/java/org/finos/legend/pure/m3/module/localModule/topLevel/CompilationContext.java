@@ -238,6 +238,14 @@ public class CompilationContext
     }
 
     /**
+     * Return the source identifier for the file currently being compiled.
+     */
+    public String getSourceId()
+    {
+        return this.sourceId;
+    }
+
+    /**
      * Set the import paths for the element currently being compiled.
      * These represent the packages visible at the call site.
      */

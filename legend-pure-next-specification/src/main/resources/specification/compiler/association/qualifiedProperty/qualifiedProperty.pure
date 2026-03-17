@@ -15,9 +15,9 @@ Association test::Employment
 }
 
 ###CompiledGraph
-class test::Person  ~Class<test::Person>  @2:1-4:1
+class test::Person extends Any  ~Class<test::Person>  @2:1-4:1
 
-class test::Firm  ~Class<test::Firm>  @6:1-8:1
+class test::Firm extends Any  ~Class<test::Firm>  @6:1-8:1
 
 association test::Employment  @10:1-15:1
   property employees :test::Person[*]  ~Property<test::Firm, test::Person | *>
