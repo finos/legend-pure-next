@@ -353,14 +353,17 @@ public class FunctionIndexEntry implements PackageableFunction
             Type t1 = resolvedType(params1.get(i));
             Type t2 = resolvedType(params2.get(i));
 
-            // Concrete types are more specific than type parameters
+            // Type parameter (e.g. T) vs concrete type:
+            // - T is MORE specific than Any (the top type), because T binds to
+            //   the exact type of the actual argument.
+            // - T is LESS specific than any other concrete type (e.g. String, Integer).
             if (t1 != null && t2 == null)
             {
-                return -1;
+                return _Type.isTopType(t1) ? 1 : -1;
             }
             if (t1 == null && t2 != null)
             {
-                return 1;
+                return _Type.isTopType(t2) ? -1 : 1;
             }
 
             if (t1 != null && t1 != t2)
@@ -389,17 +392,19 @@ public class FunctionIndexEntry implements PackageableFunction
             Multiplicity m1 = params1.get(i)._multiplicity();
             Multiplicity m2 = params2.get(i)._multiplicity();
 
-            // Multiplicity parameter (e.g. [m]) is less specific than any concrete multiplicity.
-            // Must handle explicitly before subsumption to maintain transitivity.
+            // Multiplicity parameter (e.g. [m]) vs concrete:
+            // - [m] is MORE specific than [*] (the universal wildcard), because
+            //   [m] binds to the exact multiplicity of the actual argument.
+            // - [m] is LESS specific than any other concrete multiplicity (e.g. [1], [0..1]).
             boolean m1IsParam = m1 instanceof MultiplicityParameter;
             boolean m2IsParam = m2 instanceof MultiplicityParameter;
             if (m1IsParam && !m2IsParam)
             {
-                return 1; // m2 concrete is more specific
+                return _Multiplicity.isUniversal(m2) ? -1 : 1;
             }
             if (!m1IsParam && m2IsParam)
             {
-                return -1; // m1 concrete is more specific
+                return _Multiplicity.isUniversal(m1) ? 1 : -1;
             }
 
             if (!m1IsParam && !m2IsParam)

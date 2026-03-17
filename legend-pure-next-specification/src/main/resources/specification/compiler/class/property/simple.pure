@@ -14,8 +14,8 @@ Class pack::OtherClass
 
 ###CompiledGraph
 class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-8:1
-  property value :Integer[1]  ~Property<pack::MyClass, Integer | 1>
-  property other :pack::OtherClass[*]  ~Property<pack::MyClass, pack::OtherClass | *>
+  property value :Integer[1]  ~Property<pack::MyClass, Integer|1>
+  property other :pack::OtherClass[*]  ~Property<pack::MyClass, pack::OtherClass|*>
 
 class pack::OtherClass extends Any  ~Class<pack::OtherClass>  @10:1-13:1
-  property value :Integer[1]  ~Property<pack::OtherClass, Integer | 1>
+  property value :Integer[1]  ~Property<pack::OtherClass, Integer|1>

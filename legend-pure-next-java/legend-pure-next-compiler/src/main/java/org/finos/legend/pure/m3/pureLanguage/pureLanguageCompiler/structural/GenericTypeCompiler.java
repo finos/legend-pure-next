@@ -67,6 +67,7 @@ public final class GenericTypeCompiler
     {
         return switch (grammarGenericType)
         {
+            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl();
             case GenericTypeOperation gto -> compileGenericTypeOperation(gto, imports, model, context);
             case GenericTypeValue gtv ->
             {

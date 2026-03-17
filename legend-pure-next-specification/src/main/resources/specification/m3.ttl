@@ -475,6 +475,14 @@
         [ :general [ :type :GenericTypeValue ] ],
         [ :general [ :type :Inferred ] ] .
 
+# --- UndefinedGenericType ---
+
+:UndefinedGenericType a :Class ;
+    :name "UndefinedGenericType" ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UndefinedGenericType ] ] ;
+    :package :meta_pure_metamodel_type_generics ;
+    :generalizations [ :general [ :type :GenericType ] ] .
+
 
 
 # --- TypeAndMultiplicityParametersOwner ---
@@ -569,6 +577,14 @@
     :generalizations
         [ :general [ :type :MultiplicityParameter ] ],
         [ :general [ :type :Inferred ] ] .
+
+# --- UndefinedMultiplicity ---
+
+:UndefinedMultiplicity a :Class ;
+    :name "UndefinedMultiplicity" ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UndefinedMultiplicity ] ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ :general [ :type :Multiplicity ] ] .
 
 # --- ResolvedTypeParameter ---
 
@@ -952,7 +968,7 @@
 # --- Multiplicity ---
 
 :Multiplicity a :Class ;
-    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter" ] ;
+    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter,UndefinedMultiplicity" ] ;
     :name "Multiplicity" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Multiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;

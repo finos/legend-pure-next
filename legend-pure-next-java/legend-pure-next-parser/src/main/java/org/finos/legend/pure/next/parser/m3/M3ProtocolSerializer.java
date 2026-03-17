@@ -536,6 +536,10 @@ public class M3ProtocolSerializer
 
         switch (gt)
         {
+            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored ->
+            {
+                sb.append("?");
+            }
             case GenericTypeOperation gto ->
             {
                 serializeGenericTypeOperation(sb, gto);
@@ -716,6 +720,10 @@ public class M3ProtocolSerializer
         {
             return "*";
         }
+        if (mult instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
+        {
+            return "?";
+        }
         if (mult instanceof MultiplicityParameter mp)
         {
             return mp._name();
@@ -749,13 +757,18 @@ public class M3ProtocolSerializer
                                              final GenericTypeAndMultiplicityHolder gth)
     {
         sb.append("@");
-        if (gth._genericType() != null)
+        boolean hasType = gth._genericType() != null
+                && !(gth._genericType() instanceof meta.pure.protocol.grammar.type.generics.UndefinedGenericType);
+        boolean hasMul = gth._multiplicity() != null
+                && !(gth._multiplicity() instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity);
+        if (hasType)
         {
             serializeGenericType(sb, gth._genericType());
         }
-        else if (gth._multiplicity() != null)
+        if (hasMul)
         {
-            sb.append(serializeMultiplicity(gth._multiplicity()));
+            sb.append("|");
+            sb.append(serializeMultiplicityParts((Multiplicity) gth._multiplicity()));
         }
     }
 

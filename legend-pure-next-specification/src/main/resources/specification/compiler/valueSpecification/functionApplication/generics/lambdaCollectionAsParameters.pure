@@ -13,7 +13,7 @@ function a(k:FunctionExpression[1]):Any[*]
 
 ###CompiledGraph
 class Person extends Any  ~Class<Person>  @2:1-2:29
-  property age :Integer[1]  ~Property<Person, Integer | 1>
+  property age :Integer[1]  ~Property<Person, Integer|1>
 
 function tt_T_MANY__Function_MANY__Any_MANY_(a:T~tt_T_MANY__Function_MANY__Any_MANY_[*], e:Function<{T~tt_T_MANY__Function_MANY__Any_MANY_[1]->Integer[1]}>[*]):Any[*]  ~UserDefinedFunction<{T~tt_T_MANY__Function_MANY__Any_MANY_[*], Function<{T~tt_T_MANY__Function_MANY__Any_MANY_[1]->Integer[1]}>[*]->Any[*]}>
   AtomicValue  'aa' :String[1]  @6:2-6:5

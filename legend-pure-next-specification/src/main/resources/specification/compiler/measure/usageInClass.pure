@@ -29,5 +29,5 @@ measure pack::Mass  ~Measure  @2:1-7:1
         AtomicValue  453.59 :Float[1]  @6:20-6:25
 
 class a::MyClass extends Any  ~Class<a::MyClass>  @9:1-13:1
-  property property :pack::Mass~Pound[1]  ~Property<a::MyClass, pack::Mass~Pound | 1>
-  property other :pack::Mass[1]  ~Property<a::MyClass, pack::Mass | 1>
+  property property :pack::Mass~Pound[1]  ~Property<a::MyClass, pack::Mass~Pound|1>
+  property other :pack::Mass[1]  ~Property<a::MyClass, pack::Mass|1>

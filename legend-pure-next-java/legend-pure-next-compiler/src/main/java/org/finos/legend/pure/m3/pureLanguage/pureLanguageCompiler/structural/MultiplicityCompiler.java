@@ -68,6 +68,10 @@ public final class MultiplicityCompiler
         {
             return (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + "PureOne");
         }
+        if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
+        {
+            return new meta.pure.metamodel.multiplicity.UndefinedMultiplicityImpl();
+        }
         if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.Multiplicity m)
         {
             return compile(m, model, context);

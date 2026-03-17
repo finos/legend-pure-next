@@ -27,7 +27,7 @@ native function _endsWith(source:String[1], val:String[1]):Boolean[1];
 
 ###CompiledGraph
 class test::Class extends Any  ~Class<test::Class>  @2:1-22:1
-  property other :String[1]  ~Property<test::Class, String | 1>
+  property other :String[1]  ~Property<test::Class, String|1>
   constraint
     Lambda(this:test::Class[1])
       ArrowInvocation _startsWith_String_1__String_1__Boolean_1_ :#Boolean##[1]#  @4:14-4:31

@@ -15,8 +15,11 @@
 import meta::pure::test::pct::*;
 import meta::pure::functions::lang::tests::cast::*;
 
-native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:Any[m], object:GenericTypeAndMultiplicityHolder<T|m>[1]):T[m];
+native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:Any[m], object:GenericTypeAndMultiplicityHolder<T|?>[1]):T[m];
 
+native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:T[*], object:GenericTypeAndMultiplicityHolder<?|m>[1]):T[m];
+
+native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:Any[*], object:GenericTypeAndMultiplicityHolder<T|m>[1]):T[m];
 
 Primitive meta::pure::functions::lang::tests::cast::P8 extends Integer
 

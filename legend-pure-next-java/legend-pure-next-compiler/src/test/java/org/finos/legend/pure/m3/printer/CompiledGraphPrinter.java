@@ -717,7 +717,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             return String.valueOf(unit._name());
         }
         String path = shortPath((PackageableElement) _GenericType.type(gt));
-        // Type arguments and multiplicity arguments (e.g. Property<Owner, String | [1]>)
+        // Type arguments and multiplicity arguments (e.g. Property<Owner, String|[1]>)
         MutableList<GenericType> typeArgs = _GenericType.typeArguments(gt);
         MutableList<Multiplicity> mulArgs = _GenericType.multiplicityArguments(gt);
         boolean hasTypeArgs = typeArgs != null && typeArgs.notEmpty();
@@ -733,7 +733,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             {
                 if (hasTypeArgs)
                 {
-                    path += " | ";
+                    path += "|";
                 }
                 path += mulArgs.collect(m -> {
                     String s = printMul(m);

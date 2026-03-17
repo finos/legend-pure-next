@@ -9,6 +9,7 @@ The `mainTaxonomy` stereotype marks polymorphic root classes. All subtypes are s
 ```
 GenericType
 ├── GenericTypeOperation
+├── UndefinedGenericType
 └── GenericTypeValue
     ├── InferredGenericType
     └── UserDefinedGenericType
@@ -94,7 +95,8 @@ Multiplicity
 │   └── PackageableMultiplicity
 │       ├── InferredPackageableMultiplicity     [pointer]
 │       └── UserDefinedPackageableMultiplicity  [pointer]
-└── MultiplicityParameter
-    ├── InferredMultiplicityParameter           [inline]
-    └── UserDefinedMultiplicityParameter        [inline]
+├── MultiplicityParameter
+│   ├── InferredMultiplicityParameter           [inline]
+│   └── UserDefinedMultiplicityParameter        [inline]
+└── UndefinedMultiplicity
 ```

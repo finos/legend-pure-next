@@ -18,6 +18,6 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
       typeParam T -> #(legal:String[1])#
       Collection :#String#[1]
         AtomicValue  'legal' :String[1]  @6:19-6:23
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:String[1])# | 1>[1]
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:String[1])#|1>[1]
 
 native function distinct_Relation_1__ColSpecArray_1__Relation_1_(rel:Relation<T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1], columns:ColSpecArray<X~distinct_Relation_1__ColSpecArray_1__Relation_1_⊆T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]):Relation<X~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1], ColSpecArray<X~distinct_Relation_1__ColSpecArray_1__Relation_1_⊆T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]->Relation<X~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]}>

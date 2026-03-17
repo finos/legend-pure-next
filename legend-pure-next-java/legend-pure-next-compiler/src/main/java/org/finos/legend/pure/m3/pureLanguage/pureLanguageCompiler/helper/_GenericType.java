@@ -26,6 +26,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.type.generics.UndefinedGenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -51,6 +52,7 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case UndefinedGenericType undefined -> null;
             case GenericTypeValue gtv -> gtv._type();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -63,6 +65,7 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case UndefinedGenericType undefined -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._typeArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -75,6 +78,7 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case UndefinedGenericType undefined -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._multiplicityArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -262,6 +266,11 @@ public class _GenericType
 
         switch (genericType)
         {
+            case UndefinedGenericType undefined ->
+            {
+                sb.append("?");
+                return;
+            }
             case GenericTypeOperation gto ->
             {
                 _GenericTypeOperation.printTo(gto, fullPath, sb);
@@ -382,6 +391,7 @@ public class _GenericType
         }
         return switch (genericType)
         {
+            case UndefinedGenericType undefined -> true;
             case GenericTypeOperation gto -> _GenericTypeOperation.isConcrete(gto);
             case GenericTypeValue gtv ->
             {
@@ -463,6 +473,7 @@ public class _GenericType
         }
         switch (genericType)
         {
+            case UndefinedGenericType undefined -> { /* no-op */ }
             case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
             case GenericTypeValue gtv ->
             {
@@ -506,6 +517,7 @@ public class _GenericType
         }
         switch (genericType)
         {
+            case UndefinedGenericType undefined -> { /* no-op */ }
             case GenericTypeOperation gto ->
             {
                 collectReferencedMultiplicityParameterNames(gto._left(), names);
@@ -549,6 +561,7 @@ public class _GenericType
 
         switch (paramGT)
         {
+            case UndefinedGenericType undefined -> { /* no-op: undefined wildcard doesn't bind */ }
             case GenericTypeOperation gto ->
             {
                 _GenericTypeOperation.collectTypeParameterBindings(gto, argGT, bindings);
@@ -592,6 +605,18 @@ public class _GenericType
                             }
                         }
                     }
+
+                    // Recurse into multiplicityArguments positionally
+                    MutableList<Multiplicity> paramMulArgs = paramV._multiplicityArguments();
+                    MutableList<Multiplicity> argMulArgs = argV._multiplicityArguments();
+                    if (paramMulArgs != null && argMulArgs != null)
+                    {
+                        int count = Math.min(paramMulArgs.size(), argMulArgs.size());
+                        for (int i = 0; i < count; i++)
+                        {
+                            _Multiplicity.collectMultiplicityParameterBindings(paramMulArgs.get(i), argMulArgs.get(i), bindings);
+                        }
+                    }
                 }
             }
             default -> throw new IllegalArgumentException("Unexpected GenericType: " + paramGT.getClass());
@@ -614,6 +639,7 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case UndefinedGenericType undefined -> genericType;
             case GenericTypeOperation gto -> _GenericTypeOperation.makeAsConcreteAsPossible(gto, bindings, model);
             case GenericTypeValue gtv ->
             {
@@ -699,7 +725,7 @@ public class _GenericType
      */
     public static GenericType asInferred(GenericType gt)
     {
-        if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation)
+        if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation || gt instanceof UndefinedGenericType)
         {
             return gt;
         }
@@ -813,6 +839,7 @@ public class _GenericType
 
                 yield null;
             }
+            case UndefinedGenericType undefined -> null;
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + sourceGenericType.getClass());
         };
     }
@@ -856,6 +883,14 @@ public class _GenericType
         if (actual instanceof GenericTypeOperation actualOp)
         {
             return _GenericTypeOperation.isCompatible(actualOp, declared, !contravariant, model);
+        }
+
+        // UndefinedGenericType matches only other UndefinedGenericType
+        boolean declaredUndefined = declared instanceof UndefinedGenericType;
+        boolean actualUndefined = actual instanceof UndefinedGenericType;
+        if (declaredUndefined || actualUndefined)
+        {
+            return declaredUndefined == actualUndefined;
         }
 
         // Both must be GenericTypeValue at this point
@@ -954,6 +989,28 @@ public class _GenericType
                 if (!isCompatible(declaredV._typeArguments().get(i), resolvedActualV._typeArguments().get(i), argContravariant, model))
                 {
                     return false;
+                }
+            }
+        }
+
+        // Check multiplicity arguments
+        if (declaredV._multiplicityArguments() != null && declaredV._multiplicityArguments().notEmpty())
+        {
+            MutableList<Multiplicity> actualMulArgs = resolvedActual instanceof GenericTypeValue resolvedActualV2
+                    ? resolvedActualV2._multiplicityArguments()
+                    : null;
+            if (actualMulArgs != null && actualMulArgs.notEmpty())
+            {
+                if (declaredV._multiplicityArguments().size() != actualMulArgs.size())
+                {
+                    return false;
+                }
+                for (int i = 0; i < declaredV._multiplicityArguments().size(); i++)
+                {
+                    if (!_Multiplicity.subsumes(declaredV._multiplicityArguments().get(i), actualMulArgs.get(i)))
+                    {
+                        return false;
+                    }
                 }
             }
         }

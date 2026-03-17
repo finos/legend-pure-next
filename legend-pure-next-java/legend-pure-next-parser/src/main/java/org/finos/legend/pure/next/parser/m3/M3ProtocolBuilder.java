@@ -36,6 +36,7 @@ import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
 import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
 import meta.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
+import meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;
 import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
 import meta.pure.protocol.grammar.relation.ColumnImpl;
@@ -54,6 +55,7 @@ import meta.pure.protocol.grammar.type.UnitImpl;
 import meta.pure.protocol.grammar.type.generics.GenericType;
 import meta.pure.protocol.grammar.type.generics.TypeParameter;
 import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;
+import meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;
 import meta.pure.protocol.grammar.valuespecification.AtomicValueImpl;
@@ -1143,23 +1145,38 @@ public class M3ProtocolBuilder
         }
         else if (ctx.AT() != null)
         {
-            // @Type reference — produces a GenericTypeHolder
+            // @Type|mul, @Type, @|mul, or @[mul]
+            UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
+                    ._sourceInformation(buildSourceInfo(ctx));
             if (ctx.type() != null)
             {
-                return new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                        ._sourceInformation(buildSourceInfo(ctx))
-                        ._genericType(buildGenericType(ctx.type(), typeParamNames));
+                holder._genericType(buildGenericType(ctx.type(), typeParamNames));
+            }
+            if (ctx.multiplicityArgument() != null)
+            {
+                // Bare multiplicity from @Type|mul or @|mul — wrap in brackets for parseMultiplicity
+                holder._multiplicity(parseMultiplicity("[" + ctx.multiplicityArgument().getText() + "]", multParamNames));
             }
             else if (ctx.multiplicity() != null)
             {
-                return new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                        ._sourceInformation(buildSourceInfo(ctx))
-                        ._multiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
+                // Legacy @[mul] syntax
+                holder._multiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
             }
-            else
+            // Fill in undefined defaults for the missing half:
+            // @Type → <Type|?>, @|mul → <?|mul>
+            if (holder._genericType() != null && holder._multiplicity() == null)
+            {
+                holder._multiplicity(new meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl());
+            }
+            if (holder._genericType() == null && holder._multiplicity() != null)
+            {
+                holder._genericType(new meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl());
+            }
+            if (holder._genericType() == null && holder._multiplicity() == null)
             {
                 throw new RuntimeException("@Type reference without type or multiplicity: " + ctx.getText());
             }
+            return holder;
         }
         throw new RuntimeException("Unsupported atomicExpression: " + ctx.getText());
     }
@@ -1197,8 +1214,8 @@ public class M3ProtocolBuilder
             if (ctx.typeArguments() != null)
             {
                 genericType._typeArguments(
-                        ListAdapter.adapt(ctx.typeArguments().typeWithOperation())
-                                .collect(twCtx -> buildTypeWithOperation(twCtx, typeParamNames, multParamNames)));
+                        ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
+                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
             }
             if (ctx.multiplicityArguments() != null)
             {
@@ -1988,6 +2005,19 @@ public class M3ProtocolBuilder
     // ========================================================================
 
     /**
+     * Build a GenericType from a typeOrUndefined context.
+     * Grammar: typeOrUndefined: (QUESTION | typeWithOperation)
+     */
+    private GenericType buildTypeOrUndefined(final M3Parser.TypeOrUndefinedContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        if (ctx.QUESTION() != null)
+        {
+            return new UndefinedGenericTypeImpl();
+        }
+        return buildTypeWithOperation(ctx.typeWithOperation(), typeParamNames, multParamNames);
+    }
+
+    /**
      * Build a GenericType from a typeWithOperation context.
      * Handles type algebra: equal (=), add (+), sub (-), subset (⊆).
      * Grammar: typeWithOperation : type equalType? (typeAddSubOperation)* subsetType?
@@ -2066,8 +2096,8 @@ public class M3ProtocolBuilder
             if (ctx.typeArguments() != null)
             {
                 gt._typeArguments(
-                        ListAdapter.adapt(ctx.typeArguments().typeWithOperation())
-                                .collect(twCtx -> buildTypeWithOperation(twCtx, typeParamNames, multParamNames)));
+                        ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
+                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
             }
 
             // Handle multiplicity arguments: Type<Arg|*>
@@ -2176,6 +2206,10 @@ public class M3ProtocolBuilder
      */
     private Multiplicity_Protocol parseMultiplicityArgument(final M3Parser.MultiplicityArgumentContext ctx)
     {
+        if (ctx.QUESTION() != null)
+        {
+            return new UndefinedMultiplicityImpl();
+        }
         if (ctx.identifier() != null)
         {
             return new UserDefinedMultiplicityParameterImpl()._name(ctx.identifier().getText());

@@ -49,6 +49,14 @@ public final class _Multiplicity
             return true;
         }
 
+        // Undefined multiplicities match only other undefined multiplicities
+        boolean generalUndefined = general instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        boolean specificUndefined = specific instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        if (generalUndefined || specificUndefined)
+        {
+            return generalUndefined == specificUndefined;
+        }
+
         long generalLower = lowerBound(general);
         long specificLower = lowerBound(specific);
         long generalUpper = upperBound(general);   // -1 means unbounded (*)
@@ -94,6 +102,15 @@ public final class _Multiplicity
     }
 
     /**
+     * Returns true if the multiplicity is [*] (0..*) — the universal multiplicity
+     * that subsumes all others.
+     */
+    public static boolean isUniversal(Multiplicity m)
+    {
+        return m instanceof ConcreteMultiplicity && lowerBound(m) == 0 && upperBound(m) == -1;
+    }
+
+    /**
      * Return the lower bound of a multiplicity, defaulting to 0.
      */
     public static long lowerBound(Multiplicity m)
@@ -131,6 +148,10 @@ public final class _Multiplicity
         {
             return "[" + mp._name() + "]";
         }
+        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        {
+            return "[?]";
+        }
         long lower = lowerBound(m);
         long upper = upperBound(m);
         if (upper == -1)
@@ -156,6 +177,10 @@ public final class _Multiplicity
         if (m instanceof MultiplicityParameter mp)
         {
             return mp._name();
+        }
+        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        {
+            return "?";
         }
         long lower = lowerBound(m);
         long upper = upperBound(m);
@@ -287,7 +312,8 @@ public final class _Multiplicity
      */
     public static Multiplicity asInferred(Multiplicity multiplicity, MetadataAccess model)
     {
-        if (multiplicity == null || multiplicity instanceof meta.pure.metamodel.Inferred)
+        if (multiplicity == null || multiplicity instanceof meta.pure.metamodel.Inferred
+                || multiplicity instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
         {
             return multiplicity;
         }

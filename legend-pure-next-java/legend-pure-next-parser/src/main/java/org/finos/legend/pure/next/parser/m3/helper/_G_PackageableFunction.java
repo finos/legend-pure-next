@@ -84,6 +84,7 @@ public class _G_PackageableFunction
         }
         return switch (gt)
         {
+            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> "UNDEFINED";
             case GenericTypeValue gtv ->
             {
                 if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
@@ -97,7 +98,7 @@ public class _G_PackageableFunction
                 }
                 yield "UNKNOWN";
             }
-            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
+            default -> "UNKNOWN";
         };
     }
 
@@ -132,6 +133,10 @@ public class _G_PackageableFunction
         if (m == null)
         {
             return "MANY";
+        }
+        if (m instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
+        {
+            return "UNDEFINED";
         }
         if (m instanceof MultiplicityParameter mp)
         {

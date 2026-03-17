@@ -33,6 +33,9 @@
                 "name" : "T"
               }
             },
+            "multiplicity" : {
+              "_type" : "UndefinedMultiplicity"
+            },
             "sourceInformation" : {
               "endColumn" : 16,
               "endLine" : 4,
@@ -41,26 +44,29 @@
             }
           } ],
           "sourceInformation" : {
-            "endColumn" : 39,
+            "endColumn" : 38,
             "endLine" : 4,
             "startColumn" : 8,
             "startLine" : 4
           }
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UndefinedGenericType"
+          },
           "multiplicity" : {
             "_type" : "UserDefinedMultiplicityParameter",
             "name" : "m"
           },
           "sourceInformation" : {
-            "endColumn" : 38,
+            "endColumn" : 37,
             "endLine" : 4,
             "startColumn" : 35,
             "startLine" : 4
           }
         } ],
         "sourceInformation" : {
-          "endColumn" : 39,
+          "endColumn" : 38,
           "endLine" : 4,
           "startColumn" : 8,
           "startLine" : 4
