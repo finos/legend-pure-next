@@ -257,7 +257,7 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let f1 = 'meta::pure::functions::lang::tests::copy::testFunctionDefinitionCopy__Boolean_1_'->pathToElement();
     let type = $f1->genericType();
-    assertIs(PackageableFunction, $type->cast(@GenericTypeValue).type->toOne());
+    assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
@@ -269,7 +269,7 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let f1 = 'meta::pure::functions::lang::tests::copy::testFlatCopyToOne__Boolean_1_'->pathToElement();
     let type = $f1->genericType();
-    assertIs(PackageableFunction, $type->cast(@GenericTypeValue).type->toOne());
+    assertIs(UserDefinedFunction, $type->cast(@GenericTypeValue).type->toOne());
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);

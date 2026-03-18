@@ -1224,6 +1224,12 @@ public class M3ProtocolBuilder
                                         .multiplicityArgument())
                                 .collect(ma -> (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol) parseMultiplicityArgument(ma)));
             }
+            if (ctx.typeVariableValues() != null)
+            {
+                genericType._typeVariableValues(
+                        ListAdapter.adapt(ctx.typeVariableValues().instanceLiteral())
+                                .collect(this::buildInstanceLiteralValue));
+            }
 
             params = Lists.mutable.with(
                     new UserDefinedGenericTypeAndMultiplicityHolderImpl()

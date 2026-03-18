@@ -244,21 +244,35 @@ public class RdfFbsJavaGenerator
         sb.append("    private final ").append(classInfo.name).append("Def fb;\n");
         sb.append("    private final MetadataAccess resolver;\n");
 
-        // Lazy cache fields for list properties that create wrapper objects
+        // Lazy cache fields for properties that create wrapper objects
         allProps.forEach(prop ->
         {
             if (hasStereotype(prop.stereotypes, "excluded")) { return; }
             boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
             boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer
                     && !"Any".equals(prop.typeName);
-            boolean needsListCache = prop.isMany && (isPointer || isClassType
-                    || (getNonPointerSubtypes(m3Model, prop).notEmpty()));
-            if (needsListCache)
+            boolean createsWrapper = isPointer || isClassType
+                    || isMainTaxonomyType(prop.typeName)
+                    || (getNonPointerSubtypes(m3Model, prop).notEmpty());
+            if (createsWrapper)
             {
-                String innerType = mapToJavaType(prop.typeName, false);
-                sb.append("    private MutableList<").append(boxType(innerType)).append("> cached_").append(prop.name).append(";\n");
+                if (prop.isMany)
+                {
+                    String innerType = mapToJavaType(prop.typeName, false);
+                    sb.append("    private MutableList<").append(boxType(innerType)).append("> cached_").append(prop.name).append(";\n");
+                }
+                else
+                {
+                    String javaType = mapToJavaType(prop.typeName, false);
+                    sb.append("    private ").append(javaType).append(" cached_").append(prop.name).append(";\n");
+                }
             }
         });
+        // Add cached_value field for AtomicValue's union value getter
+        if ("AtomicValue".equals(classInfo.name))
+        {
+            sb.append("    private Object cached_value;\n");
+        }
         sb.append("\n");
 
         // Constructor
@@ -287,16 +301,17 @@ public class RdfFbsJavaGenerator
                     && !"Any".equals(prop.typeName);
             boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
 
-            // Determine if this list getter needs caching (creates wrapper objects)
-            boolean needsListCache = prop.isMany && (isPointer || isClassType
-                    || (getNonPointerSubtypes(m3Model, prop).notEmpty()));
+            // Determine if this getter needs caching (creates wrapper objects)
+            boolean needsCache = isPointer || isClassType
+                    || isMainTaxonomyType(prop.typeName)
+                    || (getNonPointerSubtypes(m3Model, prop).notEmpty());
 
             // Getter
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(prop.name).append("()\n");
             sb.append("    {\n");
 
-            if (needsListCache)
+            if (needsCache)
             {
                 sb.append("        if (cached_").append(prop.name).append(" != null) { return cached_").append(prop.name).append("; }\n");
             }
@@ -328,11 +343,14 @@ public class RdfFbsJavaGenerator
             else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
             {
                 // Union getter for AtomicValue.value (PrimitiveValueDef=1, LambdaFunctionDef=2, PointerRef=3)
+                // Cached because enum value resolution creates fresh EnumImpl instances
+                sb.append("        if (cached_value != null) { return cached_value; }\n");
                 sb.append("        byte vType = fb.valueType();\n");
                 sb.append("        if (vType == 2)\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef ld = (org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef());\n");
-                sb.append("            return ld != null ? new meta.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver) : null;\n");
+                sb.append("            cached_value = ld != null ? new meta.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver) : null;\n");
+                sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        if (vType == 3)\n");
                 sb.append("        {\n");
@@ -340,7 +358,8 @@ public class RdfFbsJavaGenerator
                 sb.append("            if (pr == null) { return null; }\n");
                 sb.append("            String path = pr.path();\n");
                 sb.append("            if (path == null) { return null; }\n");
-                sb.append("            return resolver.getElement(path);\n");
+                sb.append("            cached_value = resolver.getElement(path);\n");
+                sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        if (vType == 1)\n");
                 sb.append("        {\n");
@@ -353,14 +372,14 @@ public class RdfFbsJavaGenerator
                 sb.append("            if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() != null)\n");
                 sb.append("            {\n");
                 sb.append("                String typeName = (gtv._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
-                sb.append("                if (\"Integer\".equals(typeName)) { return Long.parseLong(raw); }\n");
-                sb.append("                if (\"Float\".equals(typeName)) { return Double.parseDouble(raw); }\n");
-                sb.append("                if (\"Boolean\".equals(typeName)) { return Boolean.parseBoolean(raw); }\n");
+                sb.append("                if (\"Integer\".equals(typeName)) { cached_value = Long.parseLong(raw); return cached_value; }\n");
+                sb.append("                if (\"Float\".equals(typeName)) { cached_value = Double.parseDouble(raw); return cached_value; }\n");
+                sb.append("                if (\"Boolean\".equals(typeName)) { cached_value = Boolean.parseBoolean(raw); return cached_value; }\n");
                 sb.append("                if (typeName != null && !\"String\".equals(typeName) && !\"Date\".equals(typeName) && !\"DateTime\".equals(typeName) && !\"StrictDate\".equals(typeName) && !\"StrictTime\".equals(typeName) && !\"Decimal\".equals(typeName) && !\"Number\".equals(typeName))\n");
                 sb.append("                {\n");
                 sb.append("                    // Non-primitive type — resolve as element pointer\n");
                 sb.append("                    meta.pure.metamodel.PackageableElement resolved = resolver.getElement(raw);\n");
-                sb.append("                    if (resolved != null) { return resolved; }\n");
+                sb.append("                    if (resolved != null) { cached_value = resolved; return cached_value; }\n");
                 sb.append("                    // Try enum value: format is enumerationPath.enumValueName\n");
                 sb.append("                    int dotIdx = raw.lastIndexOf('.');\n");
                 sb.append("                    if (dotIdx > 0)\n");
@@ -375,10 +394,11 @@ public class RdfFbsJavaGenerator
                 sb.append("                            {\n");
                 sb.append("                                if (enumValueName.equals(p._name()))\n");
                 sb.append("                                {\n");
-                sb.append("                                    // Create a fresh EnumImpl with correct type\n");
-                sb.append("                                    return new meta.pure.metamodel.type.EnumImpl()\n");
+                sb.append("                                    // Create and cache EnumImpl with correct type\n");
+                sb.append("                                    cached_value = new meta.pure.metamodel.type.EnumImpl()\n");
                 sb.append("                                            ._name(enumValueName)\n");
                 sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type((meta.pure.metamodel.type.Type) enumeration));\n");
+                sb.append("                                    return cached_value;\n");
                 sb.append("                                }\n");
                 sb.append("                            }\n");
                 sb.append("                        }\n");
@@ -386,7 +406,8 @@ public class RdfFbsJavaGenerator
                 sb.append("                    throw new RuntimeException(\"Failed to resolve element pointer '\" + raw + \"' (type: \" + typeName + \")\");\n");
                 sb.append("                }\n");
                 sb.append("            }\n");
-                sb.append("            return raw;\n");
+                sb.append("            cached_value = raw;\n");
+                sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        return null;\n");
             }
@@ -395,15 +416,46 @@ public class RdfFbsJavaGenerator
                 generatePrimitiveGetter(sb, prop, javaType, javaAccessor);
             }
 
-            // For cached list getters, replace "return result;" with cache assignment
-            if (needsListCache)
+            // For cached getters, replace return statements with cache assignment
+            if (needsCache)
             {
-                String returnResult = "        return result;\n";
-                String cacheAssign = "        cached_" + prop.name + " = result;\n        return cached_" + prop.name + ";\n";
-                int lastIdx = sb.lastIndexOf(returnResult);
-                if (lastIdx >= 0)
+                if (prop.isMany)
                 {
-                    sb.replace(lastIdx, lastIdx + returnResult.length(), cacheAssign);
+                    // List getters use "return result;" pattern
+                    String returnResult = "        return result;\n";
+                    String cacheAssign = "        cached_" + prop.name + " = result;\n        return cached_" + prop.name + ";\n";
+                    int lastIdx = sb.lastIndexOf(returnResult);
+                    if (lastIdx >= 0)
+                    {
+                        sb.replace(lastIdx, lastIdx + returnResult.length(), cacheAssign);
+                    }
+                }
+                else
+                {
+                    // Single-valued getters use "return <expr>;" or "return new Wrapper(...);" patterns
+                    // Replace all "return <expr>;" with "cached_X = <expr>; return cached_X;"
+                    // but not "return null;" (null means absent, should not be cached)
+                    String cacheField = "cached_" + prop.name;
+                    String search = "        return ";
+                    int searchFrom = sb.lastIndexOf("    {\n") + 1; // start of getter body
+                    int idx;
+                    while ((idx = sb.indexOf(search, searchFrom)) >= 0)
+                    {
+                        // Find the end of this return statement
+                        int lineEnd = sb.indexOf("\n", idx);
+                        String returnLine = sb.substring(idx, lineEnd + 1);
+                        String returnExpr = returnLine.substring(search.length(), returnLine.length() - 2); // strip "return " prefix and ";\n" suffix
+                        if (!"null".equals(returnExpr.trim()))
+                        {
+                            String replacement = "        " + cacheField + " = " + returnExpr + ";\n        return " + cacheField + ";\n";
+                            sb.replace(idx, lineEnd + 1, replacement);
+                            searchFrom = idx + replacement.length();
+                        }
+                        else
+                        {
+                            searchFrom = lineEnd + 1;
+                        }
+                    }
                 }
             }
 

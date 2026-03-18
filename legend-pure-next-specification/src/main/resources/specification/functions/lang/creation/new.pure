@@ -76,7 +76,14 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 //    assert($l2->id()->startsWith('Anonymous_') || $l2->id()->startsWith('@_'));
     assertEmpty($l2->cast(@LA_List<String>).values);
 
-    let l3 = new(@LA_List<String>, [^KeyExpression(name = ^AtomicValue(value='values', genericType=^GenericTypeValue(type=String), multiplicity=PureOne), expression = ^Collection(values=[^AtomicValue(value='a', genericType=^GenericTypeValue(type=String), multiplicity=PureOne), ^AtomicValue(value='b', genericType=^GenericTypeValue(type=String), multiplicity=PureOne), ^AtomicValue(value='c', genericType=^GenericTypeValue(type=String), multiplicity=PureOne)], genericType=^GenericTypeValue(type=String), multiplicity=ZeroMany))]);
+    let l3 = new(@LA_List<String>, [
+                                        ^KeyExpression
+                                        (
+                                            name = ^AtomicValue(value='values', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne),
+                                            expression = ^Collection(values=[^AtomicValue(value='a', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='b', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='c', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne)], genericType=^UserDefinedGenericType(type=String), multiplicity=ZeroMany)
+                                        )
+                                   ]
+            );
     assertIs(LA_List, $l3->type()->toOne());
     assertIs(String, $l3->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l3->id()->startsWith('Anonymous_') || $l3->id()->startsWith('@_'));
