@@ -138,6 +138,24 @@ public class LocalModule implements Module
         return state != null ? state.elementPaths() : Set.of();
     }
 
+    @Override
+    public Set<String> sourceFiles()
+    {
+        if (state == null)
+        {
+            return Set.of();
+        }
+        Set<String> files = new java.util.LinkedHashSet<>();
+        state.elementIndex().forEachValue(entry ->
+        {
+            if (entry.sourceId() != null)
+            {
+                files.add(entry.sourceId());
+            }
+        });
+        return files;
+    }
+
     /**
      * Parse source files and run the full compilation pipeline.
      *

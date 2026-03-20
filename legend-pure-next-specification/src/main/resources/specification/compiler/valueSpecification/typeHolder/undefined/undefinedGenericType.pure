@@ -1,0 +1,11 @@
+###Pure
+function test():Any[*]
+{
+    @|*;
+    @|1;
+}
+
+###CompiledGraph
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|*>[1]  @4:5-4:7
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|1>[1]  @5:5-5:7

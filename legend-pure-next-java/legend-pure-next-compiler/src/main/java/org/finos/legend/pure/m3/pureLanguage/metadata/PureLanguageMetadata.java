@@ -5,6 +5,7 @@ import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 
 public class PureLanguageMetadata implements MetadataAccessExtension, PureLanguageMetadataAccess
 {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.pureLanguage.metadata;
+package org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
@@ -56,7 +56,7 @@ import java.util.Comparator;
  * execution time — never during compilation.
  * </p>
  */
-public class FunctionIndexEntry implements PackageableFunction
+public abstract class FunctionIndexEntry implements PackageableFunction
 {
     /**
      * When true, any call to {@link #resolve()} will throw an {@link AssertionError}.
@@ -84,7 +84,7 @@ public class FunctionIndexEntry implements PackageableFunction
 
     private volatile PackageableFunction resolved;
 
-    public FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType, MetadataAccess model)
+    protected FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType, MetadataAccess model)
     {
         this.functionType = functionType;
         this.fullPath = fullPath;
@@ -198,7 +198,7 @@ public class FunctionIndexEntry implements PackageableFunction
     // Lazy-resolved properties (delegate to real PackageableFunction)
     // ========================================================================
 
-    private PackageableFunction resolve()
+    protected PackageableFunction resolve()
     {
         if (resolved == null)
         {

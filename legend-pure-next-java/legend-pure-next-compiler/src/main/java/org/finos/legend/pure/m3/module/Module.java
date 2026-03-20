@@ -17,6 +17,7 @@ package org.finos.legend.pure.m3.module;
 import org.finos.legend.pure.m3.PureModel;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * A module that provides access to pre-compiled Pure elements.
@@ -43,5 +44,15 @@ public interface Module extends ModuleDefinition, MetadataAccess
     default CompilationResult compile()
     {
         return new CompilationResult(List.of());
+    }
+
+    /**
+     * Get the source file identifiers in scope for this module.
+     * For local modules these are the parsed source files;
+     * for PDB modules this is empty until file tracking is added.
+     */
+    default Set<String> sourceFiles()
+    {
+        return Set.of();
     }
 }

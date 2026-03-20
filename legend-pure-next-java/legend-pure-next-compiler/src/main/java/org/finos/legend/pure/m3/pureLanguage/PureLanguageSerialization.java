@@ -38,7 +38,8 @@ import org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveTypeDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ProfileDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedFunctionDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedPackageableMultiplicityDef;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
@@ -195,8 +196,9 @@ public class PureLanguageSerialization implements PDBExtension
             int fullPathOffset = builder.createString(entry.fullPath());
             int functionNameOffset = builder.createString(entry._functionName());
             int functionTypeOffset = writer.writeFunctionType(entry.functionType());
+            boolean isNative = entry instanceof NativeFunctionIndexEntry;
             entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
-                    .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset);
+                    .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset, isNative);
         }
 
         int entriesVectorOffset = FunctionIndex
