@@ -14,20 +14,20 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 /**
  * Helper methods for {@link RelationType}.
@@ -180,7 +180,7 @@ public class _RelationType
 
         // For each common column, find the common type and multiplicity
         RelationTypeImpl result = new RelationTypeImpl();
-        GenericType ownerGT = new ConcreteGenericTypeImpl()._rawType(result);
+        GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
 
         MutableList<Column> commonColumns = Lists.mutable.empty();
         for (String colName : commonNames)
@@ -331,11 +331,11 @@ public class _RelationType
             {
                 changed = true;
                 Multiplicity finalMul = resolvedColMul != null ? resolvedColMul
-                        : new meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl()
+                        : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl()
                                 ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L))
                                 ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L));
                 RelationTypeImpl tempRT = new RelationTypeImpl();
-                GenericType tempOwnerGT = new ConcreteGenericTypeImpl()._rawType(tempRT);
+                GenericType tempOwnerGT = new UserDefinedGenericTypeImpl()._type(tempRT);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,
                         col._nameWildCard() != null && col._nameWildCard(), model));
             }
@@ -347,7 +347,7 @@ public class _RelationType
         if (changed)
         {
             RelationTypeImpl newRT = new RelationTypeImpl();
-            GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._rawType(newRT);
+            GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newRT);
             MutableList<Column> rebuiltColumns = Lists.mutable.empty();
             for (Column col : resolvedColumns)
             {
@@ -384,9 +384,9 @@ public class _RelationType
             rt._columns().forEach(col ->
             {
                 _GenericType.collectReferencedMultiplicityParameterNames(col._genericType(), names);
-                if (col._multiplicity() != null && col._multiplicity()._multiplicityParameter() != null)
+                if (col._multiplicity() instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
                 {
-                    names.add(col._multiplicity()._multiplicityParameter()._name());
+                    names.add(mp._name());
                 }
             });
         }

@@ -1,21 +1,7 @@
 package org.finos.legend.pure.m3.pureLanguage;
 
-import com.google.flatbuffers.FlatBufferBuilder;
-import meta.pure.metamodel.PackageFlatBufferWrapper;
 import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.extension.ProfileFlatBufferWrapper;
-import meta.pure.metamodel.function.NativeFunction;
-import meta.pure.metamodel.function.NativeFunctionFlatBufferWrapper;
-import meta.pure.metamodel.function.UserDefinedFunction;
-import meta.pure.metamodel.function.UserDefinedFunctionFlatBufferWrapper;
-import meta.pure.metamodel.multiplicity.ConcretePackageableMultiplicityFlatBufferWrapper;
-import meta.pure.metamodel.multiplicity.PackageableInferredMultiplicityFlatBufferWrapper;
-import meta.pure.metamodel.relationship.AssociationFlatBufferWrapper;
-import meta.pure.metamodel.type.ClassFlatBufferWrapper;
-import meta.pure.metamodel.type.EnumerationFlatBufferWrapper;
 import meta.pure.metamodel.type.FunctionTypeFlatBufferWrapper;
-import meta.pure.metamodel.type.MeasureFlatBufferWrapper;
-import meta.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -28,11 +14,12 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
 import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
-import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
-
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
-import org.finos.legend.pure.m3.module.pdbModule.fbs.*;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.UserDefinedFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
 import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
@@ -84,8 +71,9 @@ public class PureLanguageExtension implements LanguageExtension
             {
                 meta.pure.metamodel.type.FunctionType functionType =
                         new FunctionTypeFlatBufferWrapper(fbEntry.functionType(), resolver);
-                FunctionIndexEntry entry = new FunctionIndexEntry(
-                        fbEntry.fullPath(), fbEntry.functionName(), functionType, resolver);
+                FunctionIndexEntry entry = fbEntry.isNative()
+                        ? new NativeFunctionIndexEntry(fbEntry.fullPath(), fbEntry.functionName(), functionType, resolver)
+                        : new UserDefinedFunctionIndexEntry(fbEntry.fullPath(), fbEntry.functionName(), functionType, resolver);
 
                 int paramCount = functionType._parameters() != null
                         ? functionType._parameters().size() : 0;

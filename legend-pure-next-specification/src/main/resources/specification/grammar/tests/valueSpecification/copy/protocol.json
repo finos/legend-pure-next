@@ -8,7 +8,8 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -26,12 +27,14 @@
           "parametersValues" : [ {
             "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
             "genericType" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "MyClass"
               }
             },
             "multiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 1
               },
@@ -48,6 +51,7 @@
           }, {
             "_type" : "Collection",
             "multiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 1
               },
@@ -67,7 +71,8 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
                   }
@@ -82,7 +87,8 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
                   }
@@ -122,7 +128,8 @@
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -149,6 +156,7 @@
           }, {
             "_type" : "Collection",
             "multiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 1
               },
@@ -168,7 +176,8 @@
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
                   }
@@ -183,7 +192,8 @@
               }, {
                 "_type" : "AtomicValue",
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String"
                   }
@@ -224,7 +234,8 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
@@ -236,6 +247,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -254,7 +266,8 @@
       },
       "properties" : [ {
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -266,6 +279,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -282,7 +296,8 @@
         }
       }, {
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -294,6 +309,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },

@@ -33,6 +33,11 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
+import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.UserDefinedFunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.AssociationHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.ClassHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.EnumerationHandler;
@@ -43,9 +48,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.Profi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.UserDefinedFunctionHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
-import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 
 /**
  * Core compiler extension for the Pure language.
@@ -166,7 +168,9 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
                 functionIndex
                         .getIfAbsentPut(shortName, Maps.mutable::empty)
                         .getIfAbsentPut(paramCount, Lists.mutable::empty)
-                        .add(new FunctionIndexEntry(path, shortName, functionType, model));
+                        .add(fn instanceof meta.pure.metamodel.function.NativeFunction
+                                ? new NativeFunctionIndexEntry(path, shortName, functionType, model)
+                                : new UserDefinedFunctionIndexEntry(path, shortName, functionType, model));
             }
         }
 

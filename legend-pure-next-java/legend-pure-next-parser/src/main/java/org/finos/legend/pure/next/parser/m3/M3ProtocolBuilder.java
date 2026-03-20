@@ -33,8 +33,12 @@ import meta.pure.protocol.grammar.function.UserDefinedFunctionImpl;
 import meta.pure.protocol.grammar.function.property.AggregationKind;
 import meta.pure.protocol.grammar.function.property.PropertyImpl;
 import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
-import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicityImpl;
+import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
 import meta.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
+import meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;
+import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
+import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
 import meta.pure.protocol.grammar.relation.ColumnImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperationImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperationType;
@@ -42,19 +46,17 @@ import meta.pure.protocol.grammar.relation.RelationTypeImpl;
 import meta.pure.protocol.grammar.relationship.AssociationImpl;
 import meta.pure.protocol.grammar.relationship.GeneralizationImpl;
 import meta.pure.protocol.grammar.type.ClassImpl;
-import meta.pure.protocol.grammar.type.EnumImpl;
 import meta.pure.protocol.grammar.type.EnumerationImpl;
 import meta.pure.protocol.grammar.type.FunctionTypeImpl;
 import meta.pure.protocol.grammar.type.MeasureImpl;
 import meta.pure.protocol.grammar.type.PrimitiveTypeImpl;
 import meta.pure.protocol.grammar.type.Type_PointerImpl;
 import meta.pure.protocol.grammar.type.UnitImpl;
-import meta.pure.protocol.grammar.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.protocol.grammar.type.generics.GenericType;
-import meta.pure.protocol.grammar.type.generics.MultiplicityParameter;
-import meta.pure.protocol.grammar.type.generics.MultiplicityParameterImpl;
 import meta.pure.protocol.grammar.type.generics.TypeParameter;
 import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;
+import meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;
+import meta.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;
 import meta.pure.protocol.grammar.valuespecification.AtomicValueImpl;
 import meta.pure.protocol.grammar.valuespecification.CollectionImpl;
@@ -155,7 +157,7 @@ public class M3ProtocolBuilder
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
-            classDef._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new MultiplicityParameterImpl()._name(n)));
+            classDef._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(n)));
         }
 
         // Handle type variable parameters (e.g., Class Foo(x:Integer[1]))
@@ -360,12 +362,12 @@ public class M3ProtocolBuilder
         return qp;
     }
 
-    private ConcreteMultiplicityImpl parseMultiplicity(final String mult, final Set<String> multParamNames)
+    private Multiplicity_Protocol parseMultiplicity(final String mult, final Set<String> multParamNames)
     {
         // Handle malformed or null input
         if (mult == null || !mult.startsWith("[") || !mult.endsWith("]"))
         {
-            return new ConcreteMultiplicityImpl()
+            return new UserDefinedAdHocMultiplicityImpl()
                     ._lowerBound(multVal(1))
                     ._upperBound(multVal(1));
         }
@@ -376,11 +378,10 @@ public class M3ProtocolBuilder
         // Check if this is a multiplicity parameter reference
         if (multParamNames.contains(inner))
         {
-            return new ConcreteMultiplicityImpl()
-                    ._multiplicityParameter(new meta.pure.protocol.grammar.type.generics.MultiplicityParameterImpl()._name(inner));
+            return new UserDefinedMultiplicityParameterImpl()._name(inner);
         }
 
-        ConcreteMultiplicityImpl result = new ConcreteMultiplicityImpl();
+        UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl();
         try
         {
             if (inner.equals("*"))
@@ -667,7 +668,7 @@ public class M3ProtocolBuilder
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
-            func._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new MultiplicityParameterImpl()._name(n)));
+            func._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(n)));
         }
 
         M3Parser.FunctionTypeSignatureContext sigCtx = ctx.functionTypeSignature();
@@ -725,7 +726,7 @@ public class M3ProtocolBuilder
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
-            func._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new MultiplicityParameterImpl()._name(n)));
+            func._multiplicityParameters(Lists.mutable.withAll(multParamNames).collect(n -> (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(n)));
         }
 
         M3Parser.FunctionTypeSignatureContext sigCtx = ctx.functionTypeSignature();
@@ -1021,7 +1022,7 @@ public class M3ProtocolBuilder
                     RelationTypeImpl relationType = new RelationTypeImpl()
                             ._columns(Lists.mutable.with(col));
                     UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                            ._genericType(new ConcreteGenericTypeImpl()._rawType(relationType));
+                            ._genericType(new UserDefinedGenericTypeImpl()._type(relationType));
                     paramVals.add(holder);
                 }
                 else if (hasLambda)
@@ -1073,7 +1074,7 @@ public class M3ProtocolBuilder
                     MutableList<ValueSpecification> arrayParams = Lists.mutable.empty();
                     arrayParams.add(new CollectionImpl()
                             ._values(builtCols)
-                            ._multiplicity(new ConcreteMultiplicityImpl()
+                            ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                                     ._lowerBound(multVal(builtCols.size()))
                                     ._upperBound(multVal(builtCols.size()))));
 
@@ -1098,7 +1099,7 @@ public class M3ProtocolBuilder
                                     ._value(colSpec.columnName().getText()));
                     arrayParams.add(new CollectionImpl()
                             ._values(nameValues)
-                            ._multiplicity(new ConcreteMultiplicityImpl()
+                            ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                                     ._lowerBound(multVal(nameValues.size()))
                                     ._upperBound(multVal(nameValues.size()))));
 
@@ -1125,7 +1126,7 @@ public class M3ProtocolBuilder
                     {
                         RelationTypeImpl relationType = new RelationTypeImpl()._columns(columns);
                         UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                                ._genericType(new ConcreteGenericTypeImpl()._rawType(relationType));
+                                ._genericType(new UserDefinedGenericTypeImpl()._type(relationType));
                         arrayParams.add(holder);
                     }
                     else
@@ -1144,23 +1145,38 @@ public class M3ProtocolBuilder
         }
         else if (ctx.AT() != null)
         {
-            // @Type reference — produces a GenericTypeHolder
+            // @Type|mul, @Type, @|mul, or @[mul]
+            UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
+                    ._sourceInformation(buildSourceInfo(ctx));
             if (ctx.type() != null)
             {
-                return new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                        ._sourceInformation(buildSourceInfo(ctx))
-                        ._genericType(buildGenericType(ctx.type(), typeParamNames));
+                holder._genericType(buildGenericType(ctx.type(), typeParamNames));
+            }
+            if (ctx.multiplicityArgument() != null)
+            {
+                // Bare multiplicity from @Type|mul or @|mul — wrap in brackets for parseMultiplicity
+                holder._multiplicity(parseMultiplicity("[" + ctx.multiplicityArgument().getText() + "]", multParamNames));
             }
             else if (ctx.multiplicity() != null)
             {
-                return new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                        ._sourceInformation(buildSourceInfo(ctx))
-                        ._multiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
+                // Legacy @[mul] syntax
+                holder._multiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
             }
-            else
+            // Fill in undefined defaults for the missing half:
+            // @Type → <Type|?>, @|mul → <?|mul>
+            if (holder._genericType() != null && holder._multiplicity() == null)
+            {
+                holder._multiplicity(new meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl());
+            }
+            if (holder._genericType() == null && holder._multiplicity() != null)
+            {
+                holder._genericType(new meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl());
+            }
+            if (holder._genericType() == null && holder._multiplicity() == null)
             {
                 throw new RuntimeException("@Type reference without type or multiplicity: " + ctx.getText());
             }
+            return holder;
         }
         throw new RuntimeException("Unsupported atomicExpression: " + ctx.getText());
     }
@@ -1191,22 +1207,28 @@ public class M3ProtocolBuilder
                     ? ctx.qualifiedName().getText()
                     : "Unknown";
 
-            ConcreteGenericTypeImpl genericType = new ConcreteGenericTypeImpl()
-                    ._rawType(new Type_PointerImpl()._pointerValue(typeName));
+            UserDefinedGenericTypeImpl genericType = new UserDefinedGenericTypeImpl()
+                    ._type(new Type_PointerImpl()._pointerValue(typeName));
 
             // Type arguments and multiplicity arguments: ^Type<Args|MultArgs>(...)
             if (ctx.typeArguments() != null)
             {
                 genericType._typeArguments(
-                        ListAdapter.adapt(ctx.typeArguments().typeWithOperation())
-                                .collect(twCtx -> buildTypeWithOperation(twCtx, typeParamNames, multParamNames)));
+                        ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
+                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
             }
             if (ctx.multiplicityArguments() != null)
             {
                 genericType._multiplicityArguments(
                         ListAdapter.adapt(ctx.multiplicityArguments()
                                         .multiplicityArgument())
-                                .collect(this::parseMultiplicityArgument));
+                                .collect(ma -> (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol) parseMultiplicityArgument(ma)));
+            }
+            if (ctx.typeVariableValues() != null)
+            {
+                genericType._typeVariableValues(
+                        ListAdapter.adapt(ctx.typeVariableValues().instanceLiteral())
+                                .collect(this::buildInstanceLiteralValue));
             }
 
             params = Lists.mutable.with(
@@ -1246,7 +1268,7 @@ public class M3ProtocolBuilder
             params.add(new CollectionImpl()
                     ._sourceInformation(buildSourceInfo(ctx))
                     ._values(keyExprs)
-                    ._multiplicity(new ConcreteMultiplicityImpl()
+                    ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                             ._lowerBound(multVal(keyExprs.size()))
                             ._upperBound(multVal(keyExprs.size()))));
         }
@@ -1349,15 +1371,15 @@ public class M3ProtocolBuilder
                 ._genericType(buildPrimitiveGenericType(genericTypeName));
     }
 
-    private ConcreteGenericTypeImpl buildPrimitiveGenericType(final String typeName)
+    private UserDefinedGenericTypeImpl buildPrimitiveGenericType(final String typeName)
     {
-        return new ConcreteGenericTypeImpl()
-                ._rawType(new Type_PointerImpl()._pointerValue(typeName));
+        return new UserDefinedGenericTypeImpl()
+                ._type(new Type_PointerImpl()._pointerValue(typeName));
     }
 
-    private ConcreteMultiplicityImpl buildPureOne()
+    private UserDefinedAdHocMultiplicityImpl buildPureOne()
     {
-        return new ConcreteMultiplicityImpl()
+        return new UserDefinedAdHocMultiplicityImpl()
                 ._lowerBound(multVal(1))
                 ._upperBound(multVal(1));
     }
@@ -1906,7 +1928,7 @@ public class M3ProtocolBuilder
         return new CollectionImpl()
                 ._sourceInformation(buildSourceInfo(ctx))
                 ._values(vals)
-                ._multiplicity(new ConcreteMultiplicityImpl()
+                ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                         ._lowerBound(multVal(vals.size()))
                         ._upperBound(multVal(vals.size())));
     }
@@ -1989,6 +2011,19 @@ public class M3ProtocolBuilder
     // ========================================================================
 
     /**
+     * Build a GenericType from a typeOrUndefined context.
+     * Grammar: typeOrUndefined: (QUESTION | typeWithOperation)
+     */
+    private GenericType buildTypeOrUndefined(final M3Parser.TypeOrUndefinedContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        if (ctx.QUESTION() != null)
+        {
+            return new UndefinedGenericTypeImpl();
+        }
+        return buildTypeWithOperation(ctx.typeWithOperation(), typeParamNames, multParamNames);
+    }
+
+    /**
      * Build a GenericType from a typeWithOperation context.
      * Handles type algebra: equal (=), add (+), sub (-), subset (⊆).
      * Grammar: typeWithOperation : type equalType? (typeAddSubOperation)* subsetType?
@@ -2001,7 +2036,7 @@ public class M3ProtocolBuilder
         if (ctx.equalType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._type(GenericTypeOperationType.EQUAL)
+                    ._operationType(GenericTypeOperationType.EQUAL)
                     ._left(result)
                     ._right(buildGenericType(ctx.equalType().type(), typeParamNames, multParamNames));
         }
@@ -2012,14 +2047,14 @@ public class M3ProtocolBuilder
             if (opCtx.addType() != null)
             {
                 result = new GenericTypeOperationImpl()
-                        ._type(GenericTypeOperationType.UNION)
+                        ._operationType(GenericTypeOperationType.UNION)
                         ._left(result)
                         ._right(buildGenericType(opCtx.addType().type(), typeParamNames, multParamNames));
             }
             else
             {
                 result = new GenericTypeOperationImpl()
-                        ._type(GenericTypeOperationType.DIFFERENCE)
+                        ._operationType(GenericTypeOperationType.DIFFERENCE)
                         ._left(result)
                         ._right(buildGenericType(opCtx.subType().type(), typeParamNames, multParamNames));
             }
@@ -2029,7 +2064,7 @@ public class M3ProtocolBuilder
         if (ctx.subsetType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._type(GenericTypeOperationType.SUBSET)
+                    ._operationType(GenericTypeOperationType.SUBSET)
                     ._left(result)
                     ._right(buildGenericType(ctx.subsetType().type(), typeParamNames, multParamNames));
         }
@@ -2038,14 +2073,14 @@ public class M3ProtocolBuilder
     }
 
 
-    private ConcreteGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames)
+    private UserDefinedGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames)
     {
         return buildGenericType(ctx, typeParamNames, java.util.Collections.emptySet());
     }
 
-    private ConcreteGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private UserDefinedGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
-        ConcreteGenericTypeImpl gt = new ConcreteGenericTypeImpl();
+        UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         if (ctx.qualifiedName() != null)
         {
@@ -2054,12 +2089,12 @@ public class M3ProtocolBuilder
             // Check if this is a reference to a declared type parameter
             if (typeParamNames.contains(typeName))
             {
-                gt._typeParameter(new TypeParameterImpl()
+                gt._type(new TypeParameterImpl()
                         ._name(typeName));
             }
             else
             {
-                gt._rawType(new Type_PointerImpl()
+                gt._type(new Type_PointerImpl()
                         ._pointerValue(typeName)
                         ._sourceInformation(buildSourceInfo(ctx.qualifiedName())));
             }
@@ -2067,8 +2102,8 @@ public class M3ProtocolBuilder
             if (ctx.typeArguments() != null)
             {
                 gt._typeArguments(
-                        ListAdapter.adapt(ctx.typeArguments().typeWithOperation())
-                                .collect(twCtx -> buildTypeWithOperation(twCtx, typeParamNames, multParamNames)));
+                        ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
+                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
             }
 
             // Handle multiplicity arguments: Type<Arg|*>
@@ -2076,7 +2111,7 @@ public class M3ProtocolBuilder
             {
                 gt._multiplicityArguments(
                         ListAdapter.adapt(ctx.multiplicityArguments().multiplicityArgument())
-                                .collect(this::parseMultiplicityArgument));
+                                .collect(ma -> (meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol) parseMultiplicityArgument(ma)));
             }
 
             // Handle type variable values: Varchar(200)
@@ -2089,19 +2124,19 @@ public class M3ProtocolBuilder
         }
         else if (ctx.unitName() != null)
         {
-            gt._rawType(new Type_PointerImpl()
+            gt._type(new Type_PointerImpl()
                     ._pointerValue(ctx.unitName().getText())
                     ._sourceInformation(buildSourceInfo(ctx.unitName())));
         }
         else if (ctx.CURLY_BRACKET_OPEN() != null)
         {
             // FunctionType: {ParamType1[m1], ParamType2[m2] -> ReturnType[m]}
-            gt._rawType(buildFunctionType(ctx, typeParamNames, multParamNames));
+            gt._type(buildFunctionType(ctx, typeParamNames, multParamNames));
         }
         else if (ctx.GROUP_OPEN() != null && !ctx.columnType().isEmpty())
         {
             // RelationType: (col:String, col2:Integer)
-            gt._rawType(buildRelationType(ctx, typeParamNames, multParamNames));
+            gt._type(buildRelationType(ctx, typeParamNames, multParamNames));
         }
 
         return gt;
@@ -2175,15 +2210,18 @@ public class M3ProtocolBuilder
      * multiplicityArgument: identifier
      * | ((fromMultiplicity DOTDOT)? toMultiplicity)
      */
-    private ConcreteMultiplicityImpl parseMultiplicityArgument(final M3Parser.MultiplicityArgumentContext ctx)
+    private Multiplicity_Protocol parseMultiplicityArgument(final M3Parser.MultiplicityArgumentContext ctx)
     {
+        if (ctx.QUESTION() != null)
+        {
+            return new UndefinedMultiplicityImpl();
+        }
         if (ctx.identifier() != null)
         {
-            return new ConcreteMultiplicityImpl()
-                    ._multiplicityParameter(new meta.pure.protocol.grammar.type.generics.MultiplicityParameterImpl()._name(ctx.identifier().getText()));
+            return new UserDefinedMultiplicityParameterImpl()._name(ctx.identifier().getText());
         }
 
-        ConcreteMultiplicityImpl mult = new ConcreteMultiplicityImpl();
+        UserDefinedAdHocMultiplicityImpl mult = new UserDefinedAdHocMultiplicityImpl();
 
         // Parse toMultiplicity (required): INTEGER or STAR
         if (ctx.toMultiplicity() != null)

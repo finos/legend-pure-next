@@ -112,7 +112,7 @@ public class M3ProtocolGenerator
         this.packageProp = model.createProperty(M3_NS, "package");
         this.nameProp = model.createProperty(M3_NS, "name");
         this.genericTypeProp = model.createProperty(M3_NS, "genericType");
-        this.rawTypeProp = model.createProperty(M3_NS, "rawType");
+        this.rawTypeProp = model.createProperty(M3_NS, "type");
         this.generalizationsProp =
             model.createProperty(M3_NS, "generalizations");
         this.generalProp = model.createProperty(M3_NS, "general");
@@ -312,7 +312,7 @@ public class M3ProtocolGenerator
                     for (int i = 0; i < gens.size(); i++)
                     {
                         String sep = (i < gens.size() - 1) ? "," : " .";
-                        w.write("        [ :general [ :rawType :" + gens.get(i) + " ] ]" + sep + "\n");
+                        w.write("        [ :general [ :type :" + gens.get(i) + " ] ]" + sep + "\n");
                     }
                 }
                 else
@@ -399,7 +399,7 @@ public class M3ProtocolGenerator
             for (int i = 0; i < gens.size(); i++)
             {
                 String sep = (i < gens.size() - 1) ? "," : " .";
-                w.write("        [ :general [ :rawType :" + gens.get(i) + " ] ]" + sep + "\n");
+                w.write("        [ :general [ :type :" + gens.get(i) + " ] ]" + sep + "\n");
             }
         }
         else
@@ -455,7 +455,7 @@ public class M3ProtocolGenerator
             Statement rawStmt = model.getProperty(genTypeRes, rawTypeProp);
             if (rawStmt != null && rawStmt.getObject().isResource())
             {
-                w.write("    :genericType [ :rawType :" + getLocalName(rawStmt.getResource()) + " ] ;\n");
+                w.write("    :genericType [ :type :" + getLocalName(rawStmt.getResource()) + " ] ;\n");
             }
         }
 

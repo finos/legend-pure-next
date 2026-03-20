@@ -30,7 +30,8 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
@@ -42,6 +43,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -82,7 +84,8 @@
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
@@ -94,6 +97,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -154,7 +158,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Date",
             "sourceInformation" : {
@@ -166,6 +171,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -183,7 +189,8 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Date",
             "sourceInformation" : {
@@ -195,6 +202,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -211,7 +219,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
@@ -223,6 +232,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }

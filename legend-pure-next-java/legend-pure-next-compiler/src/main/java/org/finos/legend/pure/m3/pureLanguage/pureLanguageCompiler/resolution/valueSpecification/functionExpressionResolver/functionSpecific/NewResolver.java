@@ -4,9 +4,9 @@ import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
@@ -20,7 +20,7 @@ public class NewResolver
     {
         // Get the class being instantiated from the return type
         GenericType returnGT = fe._genericType();
-        if (returnGT == null || !(returnGT._rawType() instanceof meta.pure.metamodel.type.Class cls))
+        if (returnGT == null || !(_GenericType.type(returnGT) instanceof meta.pure.metamodel.type.Class cls))
         {
             return;
         }
@@ -63,7 +63,7 @@ public class NewResolver
             {
                 // Skip inferred/excluded system properties (e.g., classifierGenericType)
                 if (prop._stereotypes() != null && prop._stereotypes().anySatisfy(s ->
-                        "inferred".equals(s._value()) || "excluded".equals(s._value())))
+                        "inferred".equals(s._value()) || "excluded".equals(s._value()) || "pointer".equals(s._value())))
                 {
                     return;
                 }
@@ -84,9 +84,9 @@ public class NewResolver
         {
             type._generalizations().forEach(gen ->
             {
-                if (gen._general() != null && gen._general()._rawType() != null)
+                if (gen._general() != null && _GenericType.type(gen._general()) != null)
                 {
-                    checkMissingProperties(gen._general()._rawType(), providedNames, fe, context);
+                    checkMissingProperties(_GenericType.type(gen._general()), providedNames, fe, context);
                 }
             });
         }

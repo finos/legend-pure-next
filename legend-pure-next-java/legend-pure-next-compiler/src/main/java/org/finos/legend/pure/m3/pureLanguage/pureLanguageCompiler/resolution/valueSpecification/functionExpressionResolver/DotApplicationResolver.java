@@ -12,9 +12,9 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.impl.factory.Lists;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
@@ -58,128 +58,126 @@ public final class DotApplicationResolver
 
         // Resolve the receiver to get its genericType before property lookup
         ValueSpecification receiver = ValueSpecificationResolver.resolve(expr._parametersValues().getFirst(), model, context);
-        expr._parametersValues(Lists.mutable.<ValueSpecification>with(receiver).withAll(expr._parametersValues().subList(1, expr._parametersValues().size())));
+        expr._parametersValues().set(0, receiver);
 
-        if (receiver._genericType() != null)
+        if (receiver._genericType() == null)
         {
-            Type ownerType = receiver._genericType()._rawType();
-            context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
-                    functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
-
-            // Type parameter reference (e.g., Z from a PCT function) — can't resolve properties
-            if (ownerType == null)
-            {
-                context.addError(new CompilationError(
-                        "Can't resolve property '" + functionName + "' on unresolved type parameter '"
-                                + _GenericType.print(receiver._genericType()) + "'",
-                        expr._sourceInformation()));
-                return expr;
-            }
-
-            Function result = null;
-
-            // --- Enum value property on a specific Enumeration instance ---
-            // When the receiver IS an Enumeration (e.g., CC_GeographicEntityType),
-            // look for properties on that specific enumeration instance.
-            if (receiver instanceof AtomicValue av && av._value() instanceof Enumeration enumeration)
-            {
-                Property matchedProp = _Class.findProperty(enumeration, functionName);
-                if (matchedProp != null)
-                {
-                    result = matchedProp;
-                    context.debug("  enum property found: %s", matchedProp._name());
-                }
-                else
-                {
-                    String enumName = (receiver._genericType()._typeArguments() != null && receiver._genericType()._typeArguments().notEmpty())
-                            ? _GenericType.print(receiver._genericType()._typeArguments().getFirst())
-                            : _GenericType.print(receiver._genericType());
-                    context.addError(new CompilationError(
-                            "Can't find enum value '" + functionName + "' in enumeration '"
-                                    + enumName + "'",
-                            expr._sourceInformation()));
-                    return expr;
-                }
-            }
-
-            // --- Property access on a PropertyOwner (Class, Association, etc.) ---
-            if (result == null && ownerType instanceof meta.pure.metamodel.SimplePropertyOwner po)
-            {
-                Property matchedProp = _Class.findProperty(po, functionName);
-                if (matchedProp != null)
-                {
-                    result = _Property.resolveProperty(matchedProp, receiver._genericType(), model);
-                    Function resolved = result;
-                    context.debug("  property found: %s -> %s", matchedProp._name(), lazy(() -> CompilationContext.debugFunc(resolved)));
-                }
-                else if (po instanceof meta.pure.metamodel.type.Class cls)
-                {
-                    // Fall back to qualified properties (e.g., .res(), .res('z'))
-                    meta.pure.metamodel.function.property.QualifiedProperty matchedQP =
-                            _Class.findQualifiedProperty(cls, functionName);
-                    if (matchedQP != null)
-                    {
-                        result = matchedQP;
-                        context.debug("  qualified property found: %s", matchedQP._name());
-                    }
-                    else
-                    {
-                        context.addError(new CompilationError(
-                                "Can't find property '" + functionName + "' in class '"
-                                        + _GenericType.print(receiver._genericType()) + "'",
-                                expr._sourceInformation()));
-                        return expr;
-                    }
-                }
-                else
-                {
-                    context.addError(new CompilationError(
-                            "Can't find property '" + functionName + "' in class '"
-                                    + _GenericType.print(receiver._genericType()) + "'",
-                            expr._sourceInformation()));
-                    return expr;
-                }
-            }
-
-            // --- Column access on a RelationType directly ---
-            // e.g. lag returns T[0..1] where T resolves to a RelationType
-            else if (ownerType instanceof meta.pure.metamodel.relation.RelationType relationType)
-            {
-                result = relationType._columns().detect(c -> functionName.equals(c._name()));
-                Function colResult = result;
-                context.debug("  column lookup: %s %s", functionName, colResult != null ? "found" : "NOT FOUND");
-                if (colResult == null)
-                {
-                    context.addError(new CompilationError(
-                            "Can't find column '" + functionName + "' in relation type '"
-                                    + _GenericType.print(receiver._genericType()) + "'",
-                            expr._sourceInformation()));
-                    return expr;
-                }
-            }
-
-            Multiplicity receiverMul = receiver._multiplicity();
-            if (receiverMul != null
-                    && _Multiplicity.lowerBound(receiverMul) == 1
-                    && _Multiplicity.upperBound(receiverMul) == 1)
-            {
-                // Normal case: [1] receiver, direct access
-                context.debug("  direct access [1]");
-                expr._func(result);
-                if (result instanceof Property prop)
-                {
-                    expr._genericType(prop._genericType());
-                    expr._multiplicity(prop._multiplicity());
-                }
-                return expr;
-            }
-            else
-            {
-                context.debug("  AUTOMAP: receiverMul=%s", lazy(() -> _Multiplicity.print(receiverMul)));
-                return buildAutomap(expr, receiver, functionName, model, context);
-            }
+            return expr;
         }
-        return expr;
+
+        Type ownerType = _GenericType.type(receiver._genericType());
+        context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
+                functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
+
+        // Type parameter reference (e.g., Z from a PCT function) — can't resolve properties
+        if (ownerType == null)
+        {
+            context.addError(new CompilationError(
+                    "Can't resolve property '" + functionName + "' on unresolved type parameter '"
+                            + _GenericType.print(receiver._genericType()) + "'",
+                    expr._sourceInformation()));
+            return expr;
+        }
+
+        Function result = lookupFunction(functionName, receiver, ownerType, expr, model, context);
+        if (result == null)
+        {
+            return expr;  // error already recorded in lookupFunction
+        }
+
+        Multiplicity receiverMul = receiver._multiplicity();
+        if (receiverMul != null
+                && _Multiplicity.lowerBound(receiverMul) == 1
+                && _Multiplicity.upperBound(receiverMul) == 1)
+        {
+            // Normal case: [1] receiver, direct access
+            context.debug("  direct access [1]");
+            expr._func(result);
+            if (result instanceof Property prop)
+            {
+                expr._genericType(prop._genericType());
+                expr._multiplicity(prop._multiplicity());
+            }
+            return expr;
+        }
+        else
+        {
+            context.debug("  AUTOMAP: receiverMul=%s", lazy(() -> _Multiplicity.print(receiverMul)));
+            return buildAutomap(expr, receiver, functionName, model, context);
+        }
+    }
+
+    /**
+     * Look up the function/property/column for {@code functionName} on
+     * the receiver's type. Returns {@code null} and records an error if not found.
+     */
+    private static Function lookupFunction(
+            String functionName,
+            ValueSpecification receiver,
+            Type ownerType,
+            FunctionExpression expr,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        // Enum value property on a specific Enumeration instance
+        if (receiver instanceof AtomicValue av && av._value() instanceof Enumeration enumeration)
+        {
+            Property matchedProp = _Class.findProperty(enumeration, functionName);
+            if (matchedProp != null)
+            {
+                context.debug("  enum property found: %s", matchedProp._name());
+                return matchedProp;
+            }
+            String enumName = (_GenericType.typeArguments(receiver._genericType()) != null && _GenericType.typeArguments(receiver._genericType()).notEmpty())
+                    ? _GenericType.print(_GenericType.typeArguments(receiver._genericType()).getFirst())
+                    : _GenericType.print(receiver._genericType());
+            context.addError(new CompilationError(
+                    "Can't find enum value '" + functionName + "' in enumeration '" + enumName + "'",
+                    expr._sourceInformation()));
+            return null;
+        }
+
+        // Property/qualified-property access on a PropertyOwner (Class, Association, etc.)
+        if (ownerType instanceof meta.pure.metamodel.SimplePropertyOwner po)
+        {
+            Property matchedProp = _Class.findProperty(po, functionName);
+            if (matchedProp != null)
+            {
+                Function resolved = _Property.resolveProperty(matchedProp, receiver._genericType(), model);
+                context.debug("  property found: %s -> %s", matchedProp._name(), lazy(() -> CompilationContext.debugFunc(resolved)));
+                return resolved;
+            }
+            if (po instanceof meta.pure.metamodel.type.Class cls)
+            {
+                meta.pure.metamodel.function.property.QualifiedProperty matchedQP = _Class.findQualifiedProperty(cls, functionName);
+                if (matchedQP != null)
+                {
+                    context.debug("  qualified property found: %s", matchedQP._name());
+                    return matchedQP;
+                }
+            }
+            context.addError(new CompilationError(
+                    "Can't find property '" + functionName + "' in class '" + _GenericType.print(receiver._genericType()) + "'",
+                    expr._sourceInformation()));
+            return null;
+        }
+
+        // Column access on a RelationType
+        if (ownerType instanceof meta.pure.metamodel.relation.RelationType relationType)
+        {
+            Function col = relationType._columns().detect(c -> functionName.equals(c._name()));
+            context.debug("  column lookup: %s %s", functionName, col != null ? "found" : "NOT FOUND");
+            if (col != null)
+            {
+                return col;
+            }
+            context.addError(new CompilationError(
+                    "Can't find column '" + functionName + "' in relation type '" + _GenericType.print(receiver._genericType()) + "'",
+                    expr._sourceInformation()));
+            return null;
+        }
+
+        return null;
     }
 
     /**
@@ -254,13 +252,14 @@ public final class DotApplicationResolver
 
         return mapExpr;
     }
+
     /**
      * Check whether a FunctionExpression is an automap: a {@code map(...)} call
      * with a lambda whose parameter is named {@code v_automap}.
      */
     public static boolean isAutomap(FunctionExpression fe)
     {
-        if (fe._parametersValues() != null && fe._parametersValues().size() == 2)
+        if (fe._parametersValues().size() == 2)
         {
             ValueSpecification second = fe._parametersValues().get(1);
             if (second instanceof meta.pure.metamodel.valuespecification.AtomicValue av

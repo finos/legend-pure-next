@@ -1,8 +1,5 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.EnclosingOwnerParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.SimplePropertyOwner;
 import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.function.property.QualifiedProperty;
@@ -10,6 +7,8 @@ import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.impl.factory.Sets;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
 
 /**
  * Helpers for {@link Class} operations such as property lookup
@@ -39,7 +38,7 @@ public final class _Class
                 String paramName = ownerClass._typeParameters().get(i)._name();
                 bindings.typeBindings()
                         .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(receiverType._typeArguments().get(i));
+                        .add(_GenericType.typeArguments(receiverType).get(i));
             }
         }
         if (ownerClass._multiplicityParameters().notEmpty())
@@ -49,7 +48,7 @@ public final class _Class
                 String paramName = ownerClass._multiplicityParameters().get(i)._name();
                 bindings.multiplicityBindings()
                         .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(receiverType._multiplicityArguments().get(i));
+                        .add(_GenericType.multiplicityArguments(receiverType).get(i));
             }
         }
         return bindings;
@@ -84,7 +83,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
             {
-                if (gen._general() != null && gen._general()._rawType() instanceof SimplePropertyOwner superOwner)
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof SimplePropertyOwner superOwner)
                 {
                     Property match = findProperty(superOwner, name);
                     if (match != null)
@@ -117,7 +116,7 @@ public final class _Class
         {
             for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
             {
-                if (gen._general() != null && gen._general()._rawType() instanceof Class superClass)
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof Class superClass)
                 {
                     QualifiedProperty match = findQualifiedProperty(superClass, name);
                     if (match != null)

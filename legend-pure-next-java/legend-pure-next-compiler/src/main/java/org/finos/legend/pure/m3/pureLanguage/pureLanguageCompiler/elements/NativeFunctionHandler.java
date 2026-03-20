@@ -18,8 +18,8 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.NativeFunctionImpl;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PackageableFunctionCompiler;
 

@@ -17,7 +17,8 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -45,12 +46,14 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "FunctionType",
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
-                "rawType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
                   "sourceInformation" : {
@@ -62,6 +65,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -71,6 +75,7 @@
               }
             } ],
             "returnMultiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 1
               },
@@ -79,7 +84,8 @@
               }
             },
             "returnType" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
                 "sourceInformation" : {
@@ -93,6 +99,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -109,7 +116,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",
           "sourceInformation" : {
@@ -121,6 +129,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -148,7 +157,8 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String"
             }
@@ -163,7 +173,8 @@
         }, {
           "_type" : "AtomicValue",
           "genericType" : {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Integer"
             }
@@ -191,12 +202,14 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "FunctionType",
             "parameters" : [ {
               "_type" : "VariableExpression",
               "genericType" : {
-                "rawType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
                   "sourceInformation" : {
@@ -208,6 +221,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -218,7 +232,8 @@
             }, {
               "_type" : "VariableExpression",
               "genericType" : {
-                "rawType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer",
                   "sourceInformation" : {
@@ -230,6 +245,7 @@
                 }
               },
               "multiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -239,6 +255,7 @@
               }
             } ],
             "returnMultiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
                 "value" : 1
               },
@@ -247,7 +264,8 @@
               }
             },
             "returnType" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
                 "sourceInformation" : {
@@ -261,6 +279,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -277,7 +296,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",
           "sourceInformation" : {
@@ -289,6 +309,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }

@@ -23,7 +23,7 @@ function
         PCT.grammarDoc='~col',
         PCT.grammarCharacters='~'
     }
-    meta::pure::functions::relation::colSpec<T>(s:String[1], cl:T[1]):ColSpec<T>[1]
+    meta::pure::functions::relation::colSpec<T>(s:String[1], cl:GenericTypeAndMultiplicityHolder<T|1>[1]):ColSpec<T>[1]
 {
     ^ColSpec<T>
     (

@@ -11,7 +11,8 @@
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String"
               }
@@ -26,9 +27,14 @@
           }, {
             "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
             "genericType" : {
-              "typeParameter" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
                 "name" : "T"
               }
+            },
+            "multiplicity" : {
+              "_type" : "UndefinedMultiplicity"
             },
             "sourceInformation" : {
               "endColumn" : 16,
@@ -38,27 +44,29 @@
             }
           } ],
           "sourceInformation" : {
-            "endColumn" : 39,
+            "endColumn" : 38,
             "endLine" : 4,
             "startColumn" : 8,
             "startLine" : 4
           }
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UndefinedGenericType"
+          },
           "multiplicity" : {
-            "multiplicityParameter" : {
-              "name" : "m"
-            }
+            "_type" : "UserDefinedMultiplicityParameter",
+            "name" : "m"
           },
           "sourceInformation" : {
-            "endColumn" : 38,
+            "endColumn" : 37,
             "endLine" : 4,
             "startColumn" : 35,
             "startLine" : 4
           }
         } ],
         "sourceInformation" : {
-          "endColumn" : 39,
+          "endColumn" : 38,
           "endLine" : 4,
           "startColumn" : 8,
           "startLine" : 4
@@ -75,14 +83,15 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "typeParameter" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "TypeParameter",
             "name" : "T"
           }
         },
         "multiplicity" : {
-          "multiplicityParameter" : {
-            "name" : "m"
-          }
+          "_type" : "UserDefinedMultiplicityParameter",
+          "name" : "m"
         },
         "name" : "t",
         "sourceInformation" : {
@@ -93,14 +102,15 @@
         }
       } ],
       "returnGenericType" : {
-        "typeParameter" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "TypeParameter",
           "name" : "T"
         }
       },
       "returnMultiplicity" : {
-        "multiplicityParameter" : {
-          "name" : "m"
-        }
+        "_type" : "UserDefinedMultiplicityParameter",
+        "name" : "m"
       },
       "sourceInformation" : {
         "endColumn" : 1,
@@ -109,6 +119,7 @@
         "startLine" : 2
       },
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       } ]
     } ],

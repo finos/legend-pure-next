@@ -17,7 +17,7 @@ import meta::pure::functions::lang::tests::model::*;
 import meta::pure::functions::lang::tests::new::*;
 import meta::pure::functions::lang::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new<T>(generic:T[1]):T[1];
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1]):T[1];
 native function
     <<PCT.function, PCT.platformOnly>>
     {
@@ -25,13 +25,13 @@ native function
         PCT.grammarDoc='^AClass(prop=4)',
         PCT.grammarCharacters='^'
     }
-    meta::pure::functions::lang::new<T>(generic:T[1], keyExpressions:KeyExpression[*]):T[1];
+    meta::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1], keyExpressions:KeyExpression[*]):T[1];
 
 
 function <<test.Test>> meta::pure::functions::lang::tests::new::testDynamicInstance():Boolean[1]
 {
     let p = ^LA_Person(firstName='first', lastName='last');
-    assertIs(LA_Person, $p->genericType().rawType->toOne());
+    assertIs(LA_Person, $p->genericType()->cast(@GenericTypeValue).type->toOne());
     assertEquals('last', $p.lastName);
     assertEquals('first', $p.firstName);
     assertEquals('last, first', $p.fullName(true));
@@ -57,8 +57,8 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testWithToManyPr
 function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGeneric():Boolean[1]
 {
     let l = ^LA_List<String>(values=['a', 'b', 'c']);
-    assertIs(LA_List, $l->genericType().rawType->toOne());
-    assertIs(String, $l->genericType().typeArguments->at(0).rawType->toOne());
+    assertIs(LA_List, $l->genericType()->cast(@GenericTypeValue).type->toOne());
+    assertIs(String, $l->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
     assertEquals(['a', 'b', 'c'], $l.values);
 }
 
@@ -66,19 +66,26 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let l1 = ^LA_List<String>(values=['a', 'b', 'c']);
     assertIs(LA_List, $l1->type()->toOne());
-    assertIs(String, $l1->genericType().typeArguments->at(0).rawType->toOne());
+    assertIs(String, $l1->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l1->id()->startsWith('Anonymous_') || $l1->id()->startsWith('@_'));
     assertEquals(['a', 'b', 'c'], $l1.values);
 
-    let l2 = new($l1->genericType(), []);
+    let l2 = new($l1->genericTypeHolder(), []);
     assertIs(LA_List, $l2->type()->toOne());
-    assertIs(String, $l2->genericType().typeArguments->at(0).rawType->toOne());
+    assertIs(String, $l2->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l2->id()->startsWith('Anonymous_') || $l2->id()->startsWith('@_'));
     assertEmpty($l2->cast(@LA_List<String>).values);
 
-    let l3 = new(@LA_List<String>, [^KeyExpression(name = ^AtomicValue(value='values', genericType=^GenericType(rawType=String), multiplicity=PureOne), expression = ^Collection(values=[^AtomicValue(value='a', genericType=^GenericType(rawType=String)), ^AtomicValue(value='b', genericType=^GenericType(rawType=String)), ^AtomicValue(value='c', genericType=^GenericType(rawType=String))], genericType=^GenericType(rawType=String), multiplicity=ZeroMany))]);
+    let l3 = new(@LA_List<String>, [
+                                        ^KeyExpression
+                                        (
+                                            name = ^AtomicValue(value='values', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne),
+                                            expression = ^Collection(values=[^AtomicValue(value='a', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='b', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='c', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne)], genericType=^UserDefinedGenericType(type=String), multiplicity=ZeroMany)
+                                        )
+                                   ]
+            );
     assertIs(LA_List, $l3->type()->toOne());
-    assertIs(String, $l3->genericType().typeArguments->at(0).rawType->toOne());
+    assertIs(String, $l3->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l3->id()->startsWith('Anonymous_') || $l3->id()->startsWith('@_'));
     assertEquals(['a', 'b', 'c'], $l3->cast(@LA_List<String>).values);
     assertEquals($l1.values, $l3.values);

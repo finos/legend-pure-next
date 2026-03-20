@@ -151,4 +151,20 @@ public final class JavaGeneratorUtils
     {
         return JAVA_KEYWORDS.contains(name) ? name + "_" : name;
     }
+
+    /**
+     * Compute the FBS union type accessor name for a given Java accessor.
+     * For fields ending with {@code _} (FBS keyword escaping), flatc appends
+     * {@code type} (lowercase): e.g. {@code type_ → type_type()}.
+     * For normal fields, flatc appends {@code Type} (capitalized):
+     * e.g. {@code rawType → rawTypeType()}.
+     */
+    public static String unionTypeAccessor(String javaAccessorName)
+    {
+        if (javaAccessorName.endsWith("_"))
+        {
+            return javaAccessorName + "type";
+        }
+        return javaAccessorName + "Type";
+    }
 }

@@ -14,21 +14,22 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;
 import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 /**
  * Utility methods for {@link GenericTypeOperation}.
@@ -60,13 +61,13 @@ public final class _GenericTypeOperation
         GenericType resolvedRight = _GenericType.makeAsConcreteAsPossible(gto._right(), bindings, model);
 
         // If both sides are concrete RelationTypes, evaluate the operation
-        if (resolvedLeft._rawType() instanceof RelationType leftRT
-                && resolvedRight._rawType() instanceof RelationType rightRT)
+        if (resolvedLeft instanceof GenericTypeValue && _GenericType.type(resolvedLeft) instanceof RelationType leftRT
+                && resolvedRight instanceof GenericTypeValue && _GenericType.type(resolvedRight) instanceof RelationType rightRT)
         {
-            RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, gto._type(), model);
+            RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, gto._operationType(), model);
             if (resultRT != null)
             {
-                return new InferredGenericTypeImpl()._rawType(resultRT);
+                return new InferredGenericTypeImpl()._type(resultRT);
             }
         }
 
@@ -75,7 +76,7 @@ public final class _GenericTypeOperation
             return new GenericTypeOperationImpl()
                     ._left(resolvedLeft)
                     ._right(resolvedRight)
-                    ._type(gto._type());
+                    ._operationType(gto._operationType());
         }
         return gto;
     }
@@ -99,7 +100,7 @@ public final class _GenericTypeOperation
             case UNION ->
             {
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new ConcreteGenericTypeImpl()._rawType(result);
+                GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {
@@ -125,7 +126,7 @@ public final class _GenericTypeOperation
                     rightRT._columns().forEach(c -> rightNames.add(c._name()));
                 }
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new ConcreteGenericTypeImpl()._rawType(result);
+                GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {
@@ -156,11 +157,11 @@ public final class _GenericTypeOperation
      */
     public static void collectTypeParameterBindings(GenericTypeOperation gto, GenericType argGT, ParametersBinding bindings)
     {
-        if (gto._type() == GenericTypeOperationType.SUBSET)
+        if (gto._operationType() == GenericTypeOperationType.SUBSET)
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
         }
-        else if (gto._type() == GenericTypeOperationType.EQUAL)
+        else if (gto._operationType() == GenericTypeOperationType.EQUAL)
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
             _GenericType.collectTypeParameterBindings(gto._right(), argGT, bindings);
@@ -176,7 +177,7 @@ public final class _GenericTypeOperation
      */
     public static boolean isConcrete(GenericTypeOperation gto)
     {
-        if (gto._type() == GenericTypeOperationType.SUBSET || gto._type() == GenericTypeOperationType.EQUAL)
+        if (gto._operationType() == GenericTypeOperationType.SUBSET || gto._operationType() == GenericTypeOperationType.EQUAL)
         {
             return _GenericType.isConcrete(gto._right());
         }
@@ -189,7 +190,7 @@ public final class _GenericTypeOperation
     public static void printTo(GenericTypeOperation gto, boolean fullPath, StringBuilder sb)
     {
         _GenericType.printTo(gto._left(), fullPath, sb);
-        sb.append(switch (gto._type())
+        sb.append(switch (gto._operationType())
         {
             case UNION -> "+";
             case DIFFERENCE -> "-";
@@ -221,15 +222,11 @@ public final class _GenericTypeOperation
     public static boolean isCompatible(GenericTypeOperation gto, GenericType other, boolean contravariant, MetadataAccess model)
     {
         GenericType right = gto._right();
-        if (right == null || right._rawType() == null)
-        {
-            return true;
-        }
-        if (gto._type() == GenericTypeOperationType.EQUAL)
+        if (gto._operationType() == GenericTypeOperationType.EQUAL)
         {
             return _GenericType.isCompatible(right, other, contravariant, model);
         }
-        if (gto._type() == GenericTypeOperationType.SUBSET)
+        if (gto._operationType() == GenericTypeOperationType.SUBSET)
         {
             // Actual must be a subset of the superset T: every column in actual must be in T
             return _GenericType.isCompatible(other, right, contravariant, model);

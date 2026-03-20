@@ -10,7 +10,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
             "sourceInformation" : {
@@ -21,12 +22,15 @@
             }
           },
           "typeArguments" : [ {
-            "typeParameter" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "TypeParameter",
               "name" : "T"
             }
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -44,7 +48,8 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
@@ -55,18 +60,26 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
             "left" : {
+              "_type" : "GenericTypeOperation",
               "left" : {
-                "typeParameter" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "TypeParameter",
                   "name" : "Z"
                 }
               },
+              "operationType" : "EQUAL",
               "right" : {
-                "rawType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
                   "_type" : "RelationType",
                   "columns" : [ {
                     "genericType" : {
-                      "typeParameter" : {
+                      "_type" : "UserDefinedGenericType",
+                      "type" : {
+                        "_type" : "TypeParameter",
                         "name" : "K"
                       }
                     },
@@ -79,18 +92,20 @@
                     }
                   } ]
                 }
-              },
-              "type" : "EQUAL"
-            },
-            "right" : {
-              "typeParameter" : {
-                "name" : "T"
               }
             },
-            "type" : "SUBSET"
+            "operationType" : "SUBSET",
+            "right" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
+                "name" : "T"
+              }
+            }
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -108,7 +123,8 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
@@ -119,17 +135,24 @@
             }
           },
           "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
             "left" : {
-              "typeParameter" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
                 "name" : "V"
               }
             },
+            "operationType" : "EQUAL",
             "right" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "RelationType",
                 "columns" : [ {
                   "genericType" : {
-                    "typeParameter" : {
+                    "_type" : "UserDefinedGenericType",
+                    "type" : {
+                      "_type" : "TypeParameter",
                       "name" : "K"
                     }
                   },
@@ -142,11 +165,11 @@
                   }
                 } ]
               }
-            },
-            "type" : "EQUAL"
+            }
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -163,7 +186,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Relation",
           "sourceInformation" : {
@@ -174,28 +198,37 @@
           }
         },
         "typeArguments" : [ {
+          "_type" : "GenericTypeOperation",
           "left" : {
+            "_type" : "GenericTypeOperation",
             "left" : {
-              "typeParameter" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
                 "name" : "T"
               }
             },
+            "operationType" : "DIFFERENCE",
             "right" : {
-              "typeParameter" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
                 "name" : "Z"
               }
-            },
-            "type" : "DIFFERENCE"
-          },
-          "right" : {
-            "typeParameter" : {
-              "name" : "V"
             }
           },
-          "type" : "UNION"
+          "operationType" : "UNION",
+          "right" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "TypeParameter",
+              "name" : "V"
+            }
+          }
         } ]
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 1
         },
@@ -228,12 +261,16 @@
         }
       } ],
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       }, {
+        "_type" : "TypeParameter",
         "name" : "Z"
       }, {
+        "_type" : "TypeParameter",
         "name" : "K"
       }, {
+        "_type" : "TypeParameter",
         "name" : "V"
       } ]
     } ],

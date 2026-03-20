@@ -10,9 +10,9 @@ Class meta::pure::test::MyClassWithTypeVariables(x:Integer[1])
 }
 
 ###CompiledGraph
-class meta::pure::test::MyClassWithTypeVariables  ~Class<meta::pure::test::MyClassWithTypeVariables>  @1:1-10:1
+class meta::pure::test::MyClassWithTypeVariables extends Any  ~Class<meta::pure::test::MyClassWithTypeVariables>  @1:1-10:1
   typeVariable x :Integer[1]
-  property text :String[*]  ~Property<meta::pure::test::MyClassWithTypeVariables, String | *>
+  property text :String[*]  ~Property<meta::pure::test::MyClassWithTypeVariables, String|*>
   qualifiedProperty x() :Integer[1]
     Variable x :#Integer##[1]#  @6:8-6:9
   qualifiedProperty res() :String[1]

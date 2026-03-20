@@ -1,0 +1,11 @@
+###Pure
+function test():Any[*]
+{
+  @Integer;
+  @String;
+}
+
+###CompiledGraph
+function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  @4:3-4:10
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  @5:3-5:9

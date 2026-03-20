@@ -18,8 +18,8 @@ import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.ColumnImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -54,8 +54,8 @@ public final class _Column
                 ._genericType(genericType)
                 ._multiplicity(mul)
                 ._classifierGenericType(
-                        new ConcreteGenericTypeImpl()
-                                ._rawType((Type) model.getElement("meta::pure::metamodel::relation::Column"))
+                        new UserDefinedGenericTypeImpl()
+                                ._type((Type) model.getElement("meta::pure::metamodel::relation::Column"))
                                 ._typeArguments(Lists.mutable.with(owner, genericType))
                                 ._multiplicityArguments(Lists.mutable.with(mul)));
     }

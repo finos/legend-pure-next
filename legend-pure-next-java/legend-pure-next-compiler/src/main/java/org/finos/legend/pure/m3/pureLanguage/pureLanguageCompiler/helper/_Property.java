@@ -14,13 +14,13 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 public class _Property
 {
@@ -35,7 +35,7 @@ public class _Property
         Multiplicity resolvedMultiplicity = prop._multiplicity();
         GenericType resolvedClassifierGenericType = prop._classifierGenericType();
 
-        if (receiverType._rawType() instanceof Class ownerClass)
+        if (_GenericType.type(receiverType) instanceof Class ownerClass)
         {
             ParametersBinding bindings = _Class.buildBindingsFromGenericType(ownerClass, receiverType);
             if (!bindings.typeBindings().isEmpty() || !bindings.multiplicityBindings().isEmpty())

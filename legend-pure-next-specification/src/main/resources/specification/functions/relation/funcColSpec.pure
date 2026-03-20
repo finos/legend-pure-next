@@ -23,7 +23,7 @@ function
         PCT.grammarDoc='~col : x|$x.val+3',
         PCT.grammarCharacters='~:'
     }
-    meta::pure::functions::relation::funcColSpec<U,T>(f:Function<{U[1]->Any[*]}>[1], s:String[1], cl:T[1]):FuncColSpec<{U[1]->Any[1]}, T>[1]
+    meta::pure::functions::relation::funcColSpec<U,T>(f:Function<{U[1]->Any[*]}>[1], s:String[1], cl:CompilerGenericTypeAndMultiplicityHolder<T|1>[1]):FuncColSpec<{U[1]->Any[1]}, T>[1]
 {
     ^FuncColSpec<{U[1]->Any[1]}, T>
     (

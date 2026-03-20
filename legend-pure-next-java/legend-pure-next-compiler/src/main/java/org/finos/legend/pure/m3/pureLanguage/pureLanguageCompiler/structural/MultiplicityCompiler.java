@@ -14,9 +14,11 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
+import meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
@@ -29,7 +31,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
  * Well-known multiplicities ({@code [1]}, {@code [0..1]}, {@code [*]}, {@code [1..*]}) are resolved
  * to their canonical {@link meta.pure.metamodel.multiplicity.PackageableMultiplicity}
  * instances bootstrapped in the {@link PureModel}.
- * Non-standard multiplicities are represented as {@link ConcreteMultiplicityImpl}.
+ * Non-standard multiplicities are represented as {@link UserDefinedAdHocMultiplicityImpl}.
  */
 public final class MultiplicityCompiler
 {
@@ -48,14 +50,46 @@ public final class MultiplicityCompiler
     }
 
     /**
+     * Compile a Multiplicity_Protocol (union of pointer + inline) into a metamodel Multiplicity.
+     * Dispatches to the Multiplicity overload for inline ConcreteMultiplicity,
+     * and resolves Multiplicity_Pointer paths directly to canonical singletons.
+     */
+    public static Multiplicity compile(Multiplicity_Protocol grammarMultiplicity, MetadataAccess model)
+    {
+        return compile(grammarMultiplicity, model, null);
+    }
+
+    /**
+     * Compile a Multiplicity_Protocol with scope context.
+     */
+    public static Multiplicity compile(Multiplicity_Protocol grammarMultiplicity, MetadataAccess model, CompilationContext context)
+    {
+        if (grammarMultiplicity == null)
+        {
+            return (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + "PureOne");
+        }
+        if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
+        {
+            return new meta.pure.metamodel.multiplicity.UndefinedMultiplicityImpl();
+        }
+        if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.Multiplicity m)
+        {
+            return compile(m, model, context);
+        }
+        if (grammarMultiplicity instanceof Multiplicity_Pointer ptr)
+        {
+            return (Multiplicity) model.getElement(ptr._pointerValue());
+        }
+        return (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + "PureOne");
+    }
+
+    /**
      * Compile a grammar Multiplicity into a metamodel Multiplicity.
      * <p>
-     * If the multiplicity matches a well-known pattern, the canonical
+     * If the multiplicity is a MultiplicityParameter, resolve it from scope.
+     * If it matches a well-known pattern, the canonical
      * {@code PackageableMultiplicity} is looked up from the model.
-     * Otherwise a fresh {@code ConcreteMultiplicity} is created.
-     * <p>
-     * When a compilation context is provided, multiplicity parameter references
-     * are resolved from the scope to reuse the declared MultiplicityParameter objects.
+     * Otherwise a fresh {@code UserDefinedAdHocMultiplicity} is created.
      *
      * @param grammarMultiplicity the grammar-level multiplicity to compile
      * @param model               the PureModel containing bootstrapped multiplicities
@@ -64,10 +98,17 @@ public final class MultiplicityCompiler
      */
     public static Multiplicity compile(meta.pure.protocol.grammar.multiplicity.Multiplicity grammarMultiplicity, MetadataAccess model, CompilationContext context)
     {
-        // Try to resolve to a well-known PackageableMultiplicity
-        if (grammarMultiplicity._multiplicityParameter() == null)
+        // Handle multiplicity parameter (e.g. [m])
+        if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMulParam)
         {
-            String canonicalName = resolveCanonicalName(grammarMultiplicity);
+            return resolveOrCreateMultiplicityParameter(grammarMulParam, context);
+        }
+
+        // Handle concrete multiplicity with bounds
+        if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity grammarConcrete)
+        {
+            // Try to resolve to a well-known PackageableMultiplicity
+            String canonicalName = resolveCanonicalName(grammarConcrete);
             if (canonicalName != null)
             {
                 Multiplicity found = (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + canonicalName);
@@ -76,29 +117,29 @@ public final class MultiplicityCompiler
                     return found;
                 }
             }
+
+            // Fall back to an anonymous UserDefinedAdHocMultiplicity
+            UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl();
+            if (grammarConcrete._lowerBound() != null)
+            {
+                result._lowerBound(new MultiplicityValueImpl()._value(grammarConcrete._lowerBound()._value()));
+            }
+            if (grammarConcrete._upperBound() != null)
+            {
+                result._upperBound(new MultiplicityValueImpl()._value(grammarConcrete._upperBound()._value()));
+            }
+            return result;
         }
 
-        // Fall back to an anonymous ConcreteMultiplicity
-        meta.pure.metamodel.type.generics.MultiplicityParameter resolvedMulParam = resolveOrCreateMultiplicityParameter(
-                grammarMultiplicity._multiplicityParameter(), context);
-        ConcreteMultiplicityImpl result = new ConcreteMultiplicityImpl()
-                ._multiplicityParameter(resolvedMulParam);
-        if (grammarMultiplicity._lowerBound() != null)
-        {
-            result._lowerBound(new MultiplicityValueImpl()._value(grammarMultiplicity._lowerBound()._value()));
-        }
-        if (grammarMultiplicity._upperBound() != null)
-        {
-            result._upperBound(new MultiplicityValueImpl()._value(grammarMultiplicity._upperBound()._value()));
-        }
-        return result;
+        // Fallback: PureOne
+        return (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + "PureOne");
     }
 
     /**
      * Look up a declared MultiplicityParameter from scope, or create a fresh one.
      */
-    private static meta.pure.metamodel.type.generics.MultiplicityParameter resolveOrCreateMultiplicityParameter(
-            meta.pure.protocol.grammar.type.generics.MultiplicityParameter grammarMulParam, CompilationContext context)
+    private static Multiplicity resolveOrCreateMultiplicityParameter(
+            meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMulParam, CompilationContext context)
     {
         if (grammarMulParam == null)
         {
@@ -109,18 +150,18 @@ public final class MultiplicityCompiler
             PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
             if (plcc != null)
             {
-                meta.pure.metamodel.type.generics.MultiplicityParameter scoped = plcc.lookupMultiplicityParameter(grammarMulParam._name());
+                meta.pure.metamodel.multiplicity.MultiplicityParameter scoped = plcc.lookupMultiplicityParameter(grammarMulParam._name());
                 if (scoped != null)
                 {
                     return scoped;
                 }
             }
         }
-        return new meta.pure.metamodel.type.generics.MultiplicityParameterImpl()
+        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()
                 ._name(grammarMulParam._name());
     }
 
-    private static String resolveCanonicalName(meta.pure.protocol.grammar.multiplicity.Multiplicity m)
+    private static String resolveCanonicalName(meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity m)
     {
         long lower = m._lowerBound() != null ? m._lowerBound()._value() : -1;
         long upper = m._upperBound() != null ? m._upperBound()._value() : -1;
@@ -145,15 +186,15 @@ public final class MultiplicityCompiler
         return null;
     }
 
-    public static meta.pure.metamodel.type.generics.MultiplicityParameter compileMultiplicityParameter(
-            meta.pure.protocol.grammar.type.generics.MultiplicityParameter grammarMultiplicityParameter,
+    public static meta.pure.metamodel.multiplicity.MultiplicityParameter compileMultiplicityParameter(
+            meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMultiplicityParameter,
             meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         if (grammarMultiplicityParameter == null)
         {
             return null;
         }
-        return new meta.pure.metamodel.type.generics.MultiplicityParameterImpl()
+        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()
                 ._name(grammarMultiplicityParameter._name())
                 ._owner(owner);
     }

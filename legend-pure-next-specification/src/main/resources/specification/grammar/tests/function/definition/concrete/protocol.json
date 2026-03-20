@@ -5,6 +5,7 @@
       "expressionSequence" : [ {
         "_type" : "Collection",
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },
@@ -27,7 +28,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -39,6 +41,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -56,7 +59,8 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
@@ -68,6 +72,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           }
@@ -81,7 +86,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {
@@ -93,6 +99,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         },
@@ -111,6 +118,7 @@
       "expressionSequence" : [ {
         "_type" : "Collection",
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },
@@ -133,7 +141,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::relation::Relation",
             "sourceInformation" : {
@@ -144,11 +153,13 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "RelationType",
               "columns" : [ {
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -168,7 +179,8 @@
                 }
               }, {
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "Integer",
                     "sourceInformation" : {
@@ -191,6 +203,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -207,7 +220,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "protocol::support::Light",
           "sourceInformation" : {
@@ -219,6 +233,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -234,6 +249,7 @@
       "expressionSequence" : [ {
         "_type" : "Collection",
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },
@@ -256,7 +272,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::metamodel::function::Function",
             "sourceInformation" : {
@@ -267,12 +284,14 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "FunctionType",
               "parameters" : [ {
                 "_type" : "VariableExpression",
                 "genericType" : {
-                  "rawType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
                     "_type" : "Type_Pointer",
                     "pointerValue" : "String",
                     "sourceInformation" : {
@@ -284,6 +303,7 @@
                   }
                 },
                 "multiplicity" : {
+                  "_type" : "UserDefinedAdHocMultiplicity",
                   "lowerBound" : {
                     "value" : 1
                   },
@@ -293,6 +313,7 @@
                 }
               } ],
               "returnMultiplicity" : {
+                "_type" : "UserDefinedAdHocMultiplicity",
                 "lowerBound" : {
                   "value" : 1
                 },
@@ -301,7 +322,8 @@
                 }
               },
               "returnType" : {
-                "rawType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Boolean",
                   "sourceInformation" : {
@@ -316,6 +338,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -332,7 +355,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {
@@ -344,6 +368,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }
@@ -359,6 +384,7 @@
       "expressionSequence" : [ {
         "_type" : "Collection",
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 0
           },
@@ -381,7 +407,8 @@
       "parameters" : [ {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
@@ -393,6 +420,7 @@
           }
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -410,12 +438,14 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
+          "_type" : "UserDefinedGenericType",
           "multiplicityArguments" : [ {
+            "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
               "value" : 0
             }
           } ],
-          "rawType" : {
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Property",
             "sourceInformation" : {
@@ -426,7 +456,8 @@
             }
           },
           "typeArguments" : [ {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "Nil",
               "sourceInformation" : {
@@ -437,7 +468,8 @@
               }
             }
           }, {
-            "rawType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
               "sourceInformation" : {
@@ -450,6 +482,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           }
@@ -464,7 +497,8 @@
       }, {
         "_type" : "VariableExpression",
         "genericType" : {
-          "rawType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "meta::pure::precisePrimitives::Varchar",
             "sourceInformation" : {
@@ -477,7 +511,8 @@
           "typeVariableValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
-              "rawType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer"
               }
@@ -492,6 +527,7 @@
           } ]
         },
         "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
             "value" : 1
           },
@@ -508,7 +544,8 @@
         }
       } ],
       "returnGenericType" : {
-        "rawType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
           "sourceInformation" : {
@@ -520,6 +557,7 @@
         }
       },
       "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
           "value" : 0
         }

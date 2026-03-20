@@ -12,8 +12,8 @@ Class pack::MyClass
 }
 
 ###CompiledGraph
-class pack::Wrapper  ~Class<pack::Wrapper<T~pack::Wrapper>>  @4:1-7:1
-  property value :T~pack::Wrapper[1]  ~Property<pack::Wrapper<T~pack::Wrapper>, T~pack::Wrapper | 1>
+class pack::Wrapper extends Any  ~Class<pack::Wrapper<T~pack::Wrapper>>  @4:1-7:1
+  property value :T~pack::Wrapper[1]  ~Property<pack::Wrapper<T~pack::Wrapper>, T~pack::Wrapper|1>
 
-class pack::MyClass  ~Class<pack::MyClass>  @9:1-12:1
-  property items :pack::Wrapper<String>[*]  ~Property<pack::MyClass, pack::Wrapper<String> | *>
+class pack::MyClass extends Any  ~Class<pack::MyClass>  @9:1-12:1
+  property items :pack::Wrapper<String>[*]  ~Property<pack::MyClass, pack::Wrapper<String>|*>

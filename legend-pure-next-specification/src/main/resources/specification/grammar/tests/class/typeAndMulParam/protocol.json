@@ -11,14 +11,15 @@
       },
       "properties" : [ {
         "genericType" : {
-          "typeParameter" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "TypeParameter",
             "name" : "T"
           }
         },
         "multiplicity" : {
-          "multiplicityParameter" : {
-            "name" : "m"
-          }
+          "_type" : "UserDefinedMultiplicityParameter",
+          "name" : "m"
         },
         "name" : "val",
         "sourceInformation" : {
@@ -35,6 +36,7 @@
         "startLine" : 2
       },
       "typeParameters" : [ {
+        "_type" : "TypeParameter",
         "name" : "T"
       } ]
     } ],

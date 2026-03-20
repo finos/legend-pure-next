@@ -15,9 +15,14 @@
 package org.finos.legend.pure.next.parser.m3.helper;
 
 import meta.pure.protocol.grammar.function.PackageableFunction;
+import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
 import meta.pure.protocol.grammar.multiplicity.Multiplicity;
+import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Pointer;
+import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.generics.GenericType;
+import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import meta.pure.protocol.grammar.valuespecification.VariableExpression;
 
 /**
@@ -77,38 +82,80 @@ public class _G_PackageableFunction
         {
             return "UNKNOWN";
         }
-        if (gt._typeParameter() != null && gt._typeParameter()._name() != null)
+        return switch (gt)
         {
-            return gt._typeParameter()._name();
-        }
-        if (gt._rawType() instanceof Type_Pointer tp && tp._pointerValue() != null)
-        {
-            String fullPath = tp._pointerValue();
-            return fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
-        }
-        return "UNKNOWN";
+            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> "UNDEFINED";
+            case GenericTypeValue gtv ->
+            {
+                if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter tp && tp._name() != null)
+                {
+                    yield tp._name();
+                }
+                if (gtv._type() instanceof Type_Pointer tp && tp._pointerValue() != null)
+                {
+                    String fullPath = tp._pointerValue();
+                    yield fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
+                }
+                yield "UNKNOWN";
+            }
+            default -> "UNKNOWN";
+        };
     }
 
-    private static String getMultiplicitySignature(Multiplicity m)
+    private static String getMultiplicitySignature(Multiplicity_Protocol mp)
+    {
+        if (mp == null)
+        {
+            return "MANY";
+        }
+        if (mp instanceof Multiplicity m)
+        {
+            return getMultiplicitySignatureDirect(m);
+        }
+        if (mp instanceof Multiplicity_Pointer ptr)
+        {
+            String path = ptr._pointerValue();
+            String name = path != null && path.contains("::") ? path.substring(path.lastIndexOf("::") + 2) : path;
+            return switch (name != null ? name : "")
+            {
+                case "PureOne" -> "1";
+                case "ZeroOne" -> "$0_1$";
+                case "ZeroMany" -> "MANY";
+                case "OneMany" -> "$1_MANY$";
+                default -> "MANY";
+            };
+        }
+        return "MANY";
+    }
+
+    private static String getMultiplicitySignatureDirect(Multiplicity m)
     {
         if (m == null)
         {
             return "MANY";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
         {
-            return m._multiplicityParameter()._name();
+            return "UNDEFINED";
         }
-        long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
-        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
-        if (upper == null)
+        if (m instanceof MultiplicityParameter mp)
         {
-            return lower == 0 ? "MANY" : "$" + lower + "_MANY$";
+            return mp._name();
         }
-        if (lower == upper)
+        if (m instanceof ConcreteMultiplicity cm)
         {
-            return String.valueOf(lower);
+            long lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
+            Long upper = cm._upperBound() != null ? cm._upperBound()._value() : null;
+            if (upper == null)
+            {
+                return lower == 0 ? "MANY" : "$" + lower + "_MANY$";
+            }
+            if (lower == upper)
+            {
+                return String.valueOf(lower);
+            }
+            return "$" + lower + "_" + upper + "$";
         }
-        return "$" + lower + "_" + upper + "$";
+        return "MANY";
     }
 }

@@ -14,9 +14,6 @@
 
 package org.finos.legend.pure.specification.generation.model;
 
-import org.eclipse.collections.api.factory.Lists;
-import org.eclipse.collections.api.list.MutableList;
-
 /**
  * Represents a tagged value pair (tag name + literal value),
  * as found on classes, properties, and other metamodel elements.

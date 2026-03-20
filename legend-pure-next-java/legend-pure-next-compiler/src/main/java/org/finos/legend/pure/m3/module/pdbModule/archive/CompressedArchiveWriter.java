@@ -19,6 +19,7 @@ import meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;

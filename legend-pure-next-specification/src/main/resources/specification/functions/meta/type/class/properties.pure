@@ -18,9 +18,9 @@ import meta::pure::test::pct::*;
 function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::properties(genericType:GenericType[1]):Property<Nil,Any|*>[*]
 {
     // TODO use this once problems with compiled execution are fixed
-//    $genericType.rawType->toOne()->generalizations()->map(cls | $cls->cast(@Class<Any>).properties->concatenate($cls->cast(@Class<Any>).propertiesFromAssociations))
+//    $genericType.type->toOne()->generalizations()->map(cls | $cls->cast(@Class<Any>).properties->concatenate($cls->cast(@Class<Any>).propertiesFromAssociations))
 
-    let theClass = $genericType.rawType->toOne()->cast(@Class<Any>);
+    let theClass = $genericType->cast(@GenericTypeValue).type->toOne()->cast(@Class<Any>);
     let result = ^List<Property<Nil,Any|*>>(values = $theClass.properties);
     let resultWithAssoProps = ^$result(values += $theClass.propertiesFromAssociations);
     ^$resultWithAssoProps(values += $theClass.generalizations->map(generalization | properties($generalization.general))).values;
@@ -31,11 +31,11 @@ function <<test.Test>>  meta::pure::functions::meta::tests::properties::testProp
     let props = ^CC_Address(name='Hoboken', type=CC_GeographicEntityType.CITY)->genericType()->properties();
     assertEquals(CC_Address.properties->concatenate(CC_Address.propertiesFromAssociations)->concatenate(CC_GeographicEntity.properties)->concatenate(Any.properties), $props);
 
-    assertSize($props, 7);
-    assertIs(CC_Address.properties->filter(p|$p.name == 'name')->at(0), $props->at(0));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'street')->at(0), $props->at(1));
-    assertIs(CC_Address.properties->filter(p|$p.name == 'comments')->at(0), $props->at(2));
-    assertIs(CC_Address.propertiesFromAssociations->filter(p|$p.name == 'location')->at(0), $props->at(3));
-    assertIs(CC_GeographicEntity.properties->filter(p|$p.name == 'type')->at(0), $props->at(4));
-    assertIs(Any.properties->filter(p|$p.name == 'classifierGenericType')->at(0), $props->at(5));
+    assertSize($props, 8);
+    assertIs(CC_Address.properties->filter(p|$p.name == 'name')->at(0), $props->filter(p|$p.name == 'name')->at(0));
+    assertIs(CC_Address.properties->filter(p|$p.name == 'street')->at(0), $props->filter(p|$p.name == 'street')->at(0));
+    assertIs(CC_Address.properties->filter(p|$p.name == 'comments')->at(0), $props->filter(p|$p.name == 'comments')->at(0));
+    assertIs(CC_Address.propertiesFromAssociations->filter(p|$p.name == 'location')->at(0), $props->filter(p|$p.name == 'location')->at(0));
+    assertIs(CC_GeographicEntity.properties->filter(p|$p.name == 'type')->at(0), $props->filter(p|$p.name == 'type')->at(0));
+    assertIs(Any.properties->filter(p|$p.name == 'classifierGenericType')->at(0), $props->filter(p|$p.name == 'classifierGenericType')->at(0));
 }

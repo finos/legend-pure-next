@@ -16,12 +16,22 @@ public final class SourceInformationCompiler
      */
     public static SourceInformationImpl compile(meta.pure.protocol.grammar.SourceInformation src)
     {
+        return compile(src, null);
+    }
+
+    /**
+     * Convert grammar-level SourceInformation to metamodel-level SourceInformation,
+     * using the fallback sourceId if the grammar-level one is absent.
+     */
+    public static SourceInformationImpl compile(meta.pure.protocol.grammar.SourceInformation src, String fallbackSourceId)
+    {
         if (src == null)
         {
             return null;
         }
+        String sourceId = src._sourceId() != null ? src._sourceId() : fallbackSourceId;
         return new SourceInformationImpl()
-                ._sourceId(src._sourceId())
+                ._sourceId(sourceId)
                 ._startLine(src._startLine())
                 ._startColumn(src._startColumn())
                 ._endLine(src._endLine())

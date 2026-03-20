@@ -19,7 +19,6 @@ import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
-import org.finos.legend.pure.specification.generation.model.ClassInfo;
 import org.finos.legend.pure.specification.generation.model.M3MetamodelReader;
 import org.finos.legend.pure.specification.generation.model.M3Model;
 import org.finos.legend.pure.specification.generation.model.PropertyInfo;
@@ -152,7 +151,8 @@ public class RdfFbsSchemaGenerator
                 {
                     String fbsField = toFbsFieldName(prop.name);
                     String uName = unionTypeName(fbsField);
-                    sb.append("    ").append(fbsField).append(": ").append(uName).append(";\n");
+                    String fbsType = prop.isMany ? "[" + uName + "]" : uName;
+                    sb.append("    ").append(fbsField).append(": ").append(fbsType).append(";\n");
                 }
                 else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
                 {
@@ -230,10 +230,11 @@ public class RdfFbsSchemaGenerator
             return isMany ? "[string]" : "string";
         }
 
-        // For many-valued properties of mainTaxonomy types, use the union
-        if (isMany && mainTaxonomyUnions.containsKey(m3Type))
+        // For properties of mainTaxonomy types, use the union
+        if (mainTaxonomyUnions.containsKey(m3Type))
         {
-            return "[" + mainTaxonomyUnions.get(m3Type) + "]";
+            String unionName = mainTaxonomyUnions.get(m3Type);
+            return isMany ? "[" + unionName + "]" : unionName;
         }
 
         String baseType = switch (m3Type)

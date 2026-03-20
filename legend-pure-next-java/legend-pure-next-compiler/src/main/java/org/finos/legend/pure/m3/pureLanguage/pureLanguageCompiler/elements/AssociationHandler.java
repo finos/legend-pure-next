@@ -21,17 +21,18 @@ import meta.pure.metamodel.relationship.Association;
 import meta.pure.metamodel.relationship.AssociationImpl;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.Objects;
 
@@ -91,7 +92,7 @@ public final class AssociationHandler
             registerOnTargetClass(compiled.get(1), compiled.get(0)._genericType(), model);
 
             // Register qualified properties on the owner class
-            if (qpOwner != null && qpOwner._rawType() instanceof Class ownerCls)
+            if (qpOwner != null && _GenericType.type(qpOwner) instanceof Class ownerCls)
             {
                 ownerCls._qualifiedPropertiesFromAssociations().addAll(compiledQPs.toList());
             }
@@ -104,8 +105,8 @@ public final class AssociationHandler
     private static void setPropertyClassifierGenericType(PropertyImpl property, GenericType owner, Type propertyType)
     {
         property._classifierGenericType(
-                new ConcreteGenericTypeImpl()
-                        ._rawType(propertyType)
+                new UserDefinedGenericTypeImpl()
+                        ._type(propertyType)
                         ._typeArguments(Lists.mutable.with(owner, property._genericType()))
                         ._multiplicityArguments(Lists.mutable.with(property._multiplicity())));
     }
@@ -126,7 +127,7 @@ public final class AssociationHandler
      */
     private static void registerOnTargetClass(Property property, GenericType ownerGT, MetadataAccess model)
     {
-        if (ownerGT != null && ownerGT._rawType() instanceof Class targetCls)
+        if (ownerGT != null && _GenericType.type(ownerGT) instanceof Class targetCls)
         {
             targetCls._propertiesFromAssociations().add(property);
         }

@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -25,13 +23,17 @@ import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.type.generics.UndefinedGenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
 
 /**
  * Helper methods for {@link GenericType}.
@@ -41,6 +43,45 @@ public class _GenericType
     private _GenericType()
     {
         // static utility
+    }
+
+    /**
+     * Extract the raw {@link Type} from a {@link GenericType}, requiring it to be a {@link GenericTypeValue}.
+     */
+    public static Type type(GenericType genericType)
+    {
+        return switch (genericType)
+        {
+            case UndefinedGenericType undefined -> null;
+            case GenericTypeValue gtv -> gtv._type();
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
+        };
+    }
+
+    /**
+     * Extract the type arguments from a {@link GenericType}, requiring it to be a {@link GenericTypeValue}.
+     */
+    public static MutableList<GenericType> typeArguments(GenericType genericType)
+    {
+        return switch (genericType)
+        {
+            case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeValue gtv -> gtv._typeArguments();
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
+        };
+    }
+
+    /**
+     * Extract the multiplicity arguments from a {@link GenericType}, requiring it to be a {@link GenericTypeValue}.
+     */
+    public static MutableList<Multiplicity> multiplicityArguments(GenericType genericType)
+    {
+        return switch (genericType)
+        {
+            case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeValue gtv -> gtv._multiplicityArguments();
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
+        };
     }
 
     /**
@@ -79,26 +120,26 @@ public class _GenericType
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
             return new InferredGenericTypeImpl()
-                    ._rawType((Type) model.getElement("meta::pure::metamodel::type::Nil"));
+                    ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
-        // If all elements are the same type parameter reference (no rawType),
-        // return that type parameter directly. This preserves type arguments
-        // like <T, V, U> when unifying a Collection of identical generic types.
+        // If all elements are the same type parameter reference, return it directly.
         MutableList<GenericType> nonNull = genericTypes.select(gt -> gt != null);
-        if (nonNull.notEmpty() && nonNull.allSatisfy(gt -> gt._typeParameter() != null && gt._rawType() == null))
+        MutableList<GenericTypeValue> nonNullValues = nonNull.selectInstancesOf(GenericTypeValue.class);
+        if (nonNullValues.notEmpty())
         {
-            String firstName = nonNull.getFirst()._typeParameter()._name();
-            if (nonNull.allSatisfy(gt -> firstName.equals(gt._typeParameter()._name())))
+            String firstName = nonNullValues.getFirst()._type() instanceof TypeParameter tp ? tp._name() : null;
+            if (firstName != null && nonNullValues.allSatisfy(gt -> gt._type() instanceof TypeParameter tp2
+                    && firstName.equals(tp2._name())))
             {
-                return nonNull.getFirst();
+                return nonNullValues.getFirst();
             }
         }
 
-        // Collect raw types, skipping nulls
-        MutableList<Type> rawTypes = nonNull
-                .select(gt -> gt._rawType() != null)
-                .collect(GenericType::_rawType);
+        // Collect raw types, skipping nulls and TypeParameter references
+        MutableList<Type> rawTypes = nonNullValues
+                .select(gt -> gt._type() != null && !(gt._type() instanceof TypeParameter))
+                .collect(GenericTypeValue::_type);
 
         if (rawTypes.isEmpty())
         {
@@ -110,7 +151,7 @@ public class _GenericType
                 .selectInstancesOf(meta.pure.metamodel.relation.RelationType.class);
         if (rawRelationTypes.size() == rawTypes.size() && rawRelationTypes.notEmpty())
         {
-            return new InferredGenericTypeImpl()._rawType(
+            return new InferredGenericTypeImpl()._type(
                     _RelationType.findCommonRelationType(rawRelationTypes, contravariant, model));
         }
 
@@ -120,13 +161,13 @@ public class _GenericType
         if (rawFunctionTypes.size() == rawTypes.size() && rawFunctionTypes.notEmpty())
         {
             FunctionType common = _FunctionType.findCommonFunctionType(rawFunctionTypes, model);
-            return common != null ? new InferredGenericTypeImpl()._rawType(common) : null;
+            return common != null ? new InferredGenericTypeImpl()._type(common) : null;
         }
 
         Type commonType = _Type.findCommonType(rawTypes, contravariant, model);
 
         // Build a GenericType wrapping the common rawType.
-        InferredGenericTypeImpl result = new InferredGenericTypeImpl()._rawType(commonType);
+        InferredGenericTypeImpl result = new InferredGenericTypeImpl()._type(commonType);
 
         // Collect projected GenericTypes at the common-type level.
         // If all inputs already have the same raw type, use their type args directly.
@@ -134,17 +175,13 @@ public class _GenericType
         MutableList<GenericType> projected;
         if (rawTypes.allSatisfy(t -> t == commonType))
         {
-            projected = genericTypes.select(gt -> gt != null);
+            projected = nonNull;  // already filtered above
         }
         else
         {
             projected = Lists.mutable.empty();
-            for (GenericType gt : genericTypes)
+            for (GenericType gt : nonNull)
             {
-                if (gt == null)
-                {
-                    continue;
-                }
                 GenericType p = resolveForTarget(gt, commonType, model);
                 if (p != null)
                 {
@@ -154,12 +191,12 @@ public class _GenericType
         }
 
         // Unify type arguments from the projected GenericTypes
-        MutableList<GenericType> withArgs = projected.select(gt -> gt._typeArguments() != null && gt._typeArguments().notEmpty());
-        if (withArgs.size() == projected.size() && withArgs.notEmpty())
+        MutableList<GenericTypeValue> projectedValues = projected.selectInstancesOf(GenericTypeValue.class);
+        MutableList<GenericTypeValue> withArgs = projectedValues.select(gt -> gt._typeArguments() != null && gt._typeArguments().notEmpty());
+        if (withArgs.size() == projectedValues.size() && withArgs.notEmpty())
         {
             int argCount = withArgs.getFirst()._typeArguments().size();
-            boolean allSameArgCount = withArgs.allSatisfy(gt -> gt._typeArguments().size() == argCount);
-            if (allSameArgCount && argCount > 0)
+            if (withArgs.allSatisfy(gt -> gt._typeArguments().size() == argCount) && argCount > 0)
             {
                 // Get type parameters from the common type to determine variance
                 MutableList<TypeParameter> typeParams = (commonType instanceof Class cls && cls._typeParameters() != null)
@@ -177,38 +214,7 @@ public class _GenericType
                     boolean argContravariant = idx < typeParams.size()
                             && Boolean.TRUE.equals(typeParams.get(idx)._contravariant());
 
-                    GenericType commonArg;
-                    // Check if the type arguments wrap FunctionTypes
-                    MutableList<FunctionType> functionTypes = argsAtPosition
-                            .select(gt -> gt._rawType() instanceof FunctionType)
-                            .collect(gt -> (FunctionType) gt._rawType());
-                    if (functionTypes.size() == argsAtPosition.size() && functionTypes.notEmpty())
-                    {
-                        // Unify FunctionTypes with variance-aware logic
-                        FunctionType commonFT = _FunctionType.findCommonFunctionType(functionTypes, model);
-                        commonArg = commonFT != null
-                                ? new InferredGenericTypeImpl()._rawType(commonFT)
-                                : null;
-                    }
-                    // Check if the type arguments wrap RelationTypes
-                    else
-                    {
-                        MutableList<meta.pure.metamodel.relation.RelationType> relationTypes = argsAtPosition
-                                .select(gt -> gt._rawType() instanceof meta.pure.metamodel.relation.RelationType)
-                                .collect(gt -> (meta.pure.metamodel.relation.RelationType) gt._rawType());
-                        if (relationTypes.size() == argsAtPosition.size() && relationTypes.notEmpty())
-                        {
-                            Type commonRT = _RelationType.findCommonRelationType(relationTypes, argContravariant, model);
-                            commonArg = commonRT != null
-                                    ? new InferredGenericTypeImpl()._rawType(commonRT)
-                                    : null;
-                        }
-                        else
-                        {
-                            commonArg = findCommonGenericType(argsAtPosition, argContravariant, model);
-                        }
-                    }
-
+                    GenericType commonArg = findCommonGenericType(argsAtPosition, argContravariant, model);
                     if (commonArg != null)
                     {
                         commonArgs.add(commonArg);
@@ -258,25 +264,36 @@ public class _GenericType
             return;
         }
 
-        // Handle GenericTypeOperation (type algebra: T+R, T-R, T=R, T⊆R)
-        if (genericType instanceof GenericTypeOperation gto)
+        switch (genericType)
         {
-            _GenericTypeOperation.printTo(gto, fullPath, sb);
+            case UndefinedGenericType undefined ->
+            {
+                sb.append("?");
+                return;
+            }
+            case GenericTypeOperation gto ->
+            {
+                _GenericTypeOperation.printTo(gto, fullPath, sb);
+                return;
+            }
+            case GenericTypeValue gtv ->
+            {
+                printGenericTypeValue(gtv, fullPath, sb);
+                return;
+            }
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
+        }
+    }
+
+    private static void printGenericTypeValue(GenericTypeValue genericType, boolean fullPath, StringBuilder sb)
+    {
+        if (genericType._type() instanceof TypeParameter tp)
+        {
+            sb.append(tp._name());
             return;
         }
 
-        if (genericType._typeParameter() != null && genericType._typeParameter()._name() != null)
-        {
-            sb.append(genericType._typeParameter()._name());
-            return;
-        }
-
-        Type rawType = genericType._rawType();
-        if (rawType == null)
-        {
-            sb.append("Unknown");
-            return;
-        }
+        Type rawType = genericType._type();
 
         if (rawType instanceof meta.pure.metamodel.type.FunctionType ft)
         {
@@ -317,18 +334,31 @@ public class _GenericType
             sb.append(rawType.getClass().getSimpleName());
         }
 
-        if (genericType._typeArguments() != null && genericType._typeArguments().notEmpty())
+        boolean hasTypeArgs = genericType._typeArguments() != null && genericType._typeArguments().notEmpty();
+        boolean hasMulArgs = genericType._multiplicityArguments() != null && genericType._multiplicityArguments().notEmpty();
+        if (hasTypeArgs || hasMulArgs)
         {
             sb.append('<');
-            boolean first = true;
-            for (GenericType arg : genericType._typeArguments())
+            if (hasTypeArgs)
             {
-                if (!first)
+                boolean first = true;
+                for (GenericType arg : genericType._typeArguments())
                 {
-                    sb.append(", ");
+                    if (!first)
+                    {
+                        sb.append(", ");
+                    }
+                    first = false;
+                    printTo(arg, fullPath, sb);
                 }
-                first = false;
-                printTo(arg, fullPath, sb);
+            }
+            if (hasMulArgs)
+            {
+                for (meta.pure.metamodel.multiplicity.Multiplicity mul : genericType._multiplicityArguments())
+                {
+                    sb.append('|');
+                    sb.append(_Multiplicity.printBare(mul));
+                }
             }
             sb.append('>');
         }
@@ -351,7 +381,7 @@ public class _GenericType
     /**
      * Returns true iff the GenericType is fully concrete — i.e. it has no type-parameter
      * references anywhere in its structure (rawType, typeArguments, FunctionType params/return).
-     * A GenericType is non-concrete if {@code _typeParameter() != null} at any level.
+     * A GenericType is non-concrete if its {@code _type()} is a {@code TypeParameter}.
      */
     public static boolean isConcrete(GenericType genericType)
     {
@@ -359,49 +389,48 @@ public class _GenericType
         {
             return false;
         }
-        // GenericTypeOperation: delegate concreteness check
-        if (genericType instanceof GenericTypeOperation gto)
+        return switch (genericType)
         {
-            return _GenericTypeOperation.isConcrete(gto);
-        }
-        // Type-parameter reference: e.g. K, T
-        if (genericType._typeParameter() != null)
-        {
-            return false;
-        }
-        // No raw type at all — incomplete
-        if (genericType._rawType() == null)
-        {
-            return false;
-        }
-        // Recurse into FunctionType parameters and return type
-        if (genericType._rawType() instanceof FunctionType ft)
-        {
-            if (!_FunctionType.isConcrete(ft))
+            case UndefinedGenericType undefined -> true;
+            case GenericTypeOperation gto -> _GenericTypeOperation.isConcrete(gto);
+            case GenericTypeValue gtv ->
             {
-                return false;
-            }
-        }
-        // Recurse into RelationType column types
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
-        {
-            if (!_RelationType.isConcrete(rt))
-            {
-                return false;
-            }
-        }
-        // Recurse into type arguments (e.g. List<K>)
-        if (genericType._typeArguments() != null)
-        {
-            for (GenericType arg : genericType._typeArguments())
-            {
-                if (!isConcrete(arg))
+                // Type-parameter reference: e.g. K, T
+                if (gtv._type() instanceof TypeParameter)
                 {
-                    return false;
+                    yield false;
                 }
+                // Recurse into FunctionType parameters and return type
+                if (gtv._type() instanceof FunctionType ft)
+                {
+                    if (!_FunctionType.isConcrete(ft))
+                    {
+                        yield false;
+                    }
+                }
+                // Recurse into RelationType column types
+                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                {
+                    if (!_RelationType.isConcrete(rt))
+                    {
+                        yield false;
+                    }
+                }
+                // Recurse into type arguments (e.g. List<K>)
+                if (gtv._typeArguments() != null)
+                {
+                    for (GenericType arg : gtv._typeArguments())
+                    {
+                        if (!isConcrete(arg))
+                        {
+                            yield false;
+                        }
+                    }
+                }
+                yield true;
             }
-        }
-        return true;
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
+        };
     }
 
 
@@ -442,27 +471,30 @@ public class _GenericType
         {
             return;
         }
-        // GenericTypeOperation: recurse into left and right
-        if (genericType instanceof GenericTypeOperation gto)
+        switch (genericType)
         {
-            _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
-            return;
-        }
-        if (genericType._typeParameter() != null)
-        {
-            names.add(genericType._typeParameter()._name());
-        }
-        if (genericType._rawType() instanceof FunctionType ft)
-        {
-            names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
-        }
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
-        {
-            names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
-        }
-        if (genericType._typeArguments() != null)
-        {
-            genericType._typeArguments().forEach(arg -> collectReferencedTypeParameterNames(arg, names));
+            case UndefinedGenericType undefined -> { /* no-op */ }
+            case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
+            case GenericTypeValue gtv ->
+            {
+                if (gtv._type() instanceof TypeParameter tp)
+                {
+                    names.add(tp._name());
+                }
+                if (gtv._type() instanceof FunctionType ft)
+                {
+                    names.addAll(_FunctionType.collectReferencedTypeParameterNames(ft));
+                }
+                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                {
+                    names.addAll(_RelationType.collectReferencedTypeParameterNames(rt));
+                }
+                if (gtv._typeArguments() != null)
+                {
+                    gtv._typeArguments().forEach(arg -> collectReferencedTypeParameterNames(arg, names));
+                }
+            }
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
         }
     }
 
@@ -483,34 +515,40 @@ public class _GenericType
         {
             return;
         }
-        // GenericTypeOperation: recurse into left and right (e.g., T-Z+V, ⊆T)
-        if (genericType instanceof GenericTypeOperation gto)
+        switch (genericType)
         {
-            collectReferencedMultiplicityParameterNames(gto._left(), names);
-            collectReferencedMultiplicityParameterNames(gto._right(), names);
-            return;
-        }
-        if (genericType._rawType() instanceof FunctionType ft)
-        {
-            names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
-        }
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
-        {
-            names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
-        }
-        if (genericType._typeArguments() != null)
-        {
-            genericType._typeArguments().forEach(arg -> collectReferencedMultiplicityParameterNames(arg, names));
-        }
-        if (genericType._multiplicityArguments() != null)
-        {
-            genericType._multiplicityArguments().forEach(mul ->
+            case UndefinedGenericType undefined -> { /* no-op */ }
+            case GenericTypeOperation gto ->
             {
-                if (mul._multiplicityParameter() != null)
+                collectReferencedMultiplicityParameterNames(gto._left(), names);
+                collectReferencedMultiplicityParameterNames(gto._right(), names);
+            }
+            case GenericTypeValue gtv ->
+            {
+                if (gtv._type() instanceof FunctionType ft)
                 {
-                    names.add(mul._multiplicityParameter()._name());
+                    names.addAll(_FunctionType.collectReferencedMultiplicityParameterNames(ft));
                 }
-            });
+                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                {
+                    names.addAll(_RelationType.collectReferencedMultiplicityParameterNames(rt));
+                }
+                if (gtv._typeArguments() != null)
+                {
+                    gtv._typeArguments().forEach(arg -> collectReferencedMultiplicityParameterNames(arg, names));
+                }
+                if (gtv._multiplicityArguments() != null)
+                {
+                    gtv._multiplicityArguments().forEach(mul ->
+                    {
+                        if (mul instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
+                        {
+                            names.add(mp._name());
+                        }
+                    });
+                }
+            }
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
         }
     }
 
@@ -521,46 +559,67 @@ public class _GenericType
             return;
         }
 
-        // GenericTypeOperation: decompose SUBSET/EQUAL for type parameter binding
-        if (paramGT instanceof GenericTypeOperation gto)
+        switch (paramGT)
         {
-            _GenericTypeOperation.collectTypeParameterBindings(gto, argGT, bindings);
-            return;
-        }
-
-        // If the parameter side is a type parameter reference, bind it
-        if (paramGT._typeParameter() != null && paramGT._rawType() == null)
-        {
-            bindings.addTypeBinding(paramGT._typeParameter(), argGT);
-            return;
-        }
-
-        // If both sides have FunctionType as rawType, recurse into parameters and return type
-        if (paramGT._rawType() instanceof FunctionType paramFT && argGT._rawType() instanceof FunctionType argFT)
-        {
-            _FunctionType.collectTypeParameterBindings(paramFT, argFT, bindings);
-        }
-
-        // If both sides have RelationType as rawType, match columns (wildcard support for (?:K))
-        if (paramGT._rawType() instanceof meta.pure.metamodel.relation.RelationType paramRT
-                && argGT._rawType() instanceof meta.pure.metamodel.relation.RelationType argRT)
-        {
-            _RelationType.collectTypeParameterBindings(paramRT, argRT, bindings);
-        }
-
-        // Recurse into typeArguments positionally
-        MutableList<GenericType> paramTypeArgs = paramGT._typeArguments();
-        MutableList<GenericType> argTypeArgs = argGT._typeArguments();
-        if (paramTypeArgs != null && argTypeArgs != null)
-        {
-            int count = Math.min(paramTypeArgs.size(), argTypeArgs.size());
-            for (int i = 0; i < count; i++)
+            case UndefinedGenericType undefined -> { /* no-op: undefined wildcard doesn't bind */ }
+            case GenericTypeOperation gto ->
             {
-                if (paramTypeArgs.get(i) != null && argTypeArgs.get(i) != null)
+                _GenericTypeOperation.collectTypeParameterBindings(gto, argGT, bindings);
+            }
+            case GenericTypeValue paramV ->
+            {
+                // If the parameter side is a type parameter reference, bind it
+                if (paramV._type() instanceof TypeParameter tp)
                 {
-                    collectTypeParameterBindings(paramTypeArgs.get(i), argTypeArgs.get(i), bindings);
+                    bindings.addTypeBinding(tp, argGT);
+                    return;
+                }
+
+                // For structural type matching, argGT must also be a value
+                if (argGT instanceof GenericTypeValue argV)
+                {
+                    // If both sides have FunctionType as rawType, recurse into parameters and return type
+                    if (paramV._type() instanceof FunctionType paramFT && argV._type() instanceof FunctionType argFT)
+                    {
+                        _FunctionType.collectTypeParameterBindings(paramFT, argFT, bindings);
+                    }
+
+                    // If both sides have RelationType as rawType, match columns
+                    if (paramV._type() instanceof meta.pure.metamodel.relation.RelationType paramRT
+                            && argV._type() instanceof meta.pure.metamodel.relation.RelationType argRT)
+                    {
+                        _RelationType.collectTypeParameterBindings(paramRT, argRT, bindings);
+                    }
+
+                    // Recurse into typeArguments positionally
+                    MutableList<GenericType> paramTypeArgs = paramV._typeArguments();
+                    MutableList<GenericType> argTypeArgs = argV._typeArguments();
+                    if (paramTypeArgs != null && argTypeArgs != null)
+                    {
+                        int count = Math.min(paramTypeArgs.size(), argTypeArgs.size());
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (paramTypeArgs.get(i) != null && argTypeArgs.get(i) != null)
+                            {
+                                collectTypeParameterBindings(paramTypeArgs.get(i), argTypeArgs.get(i), bindings);
+                            }
+                        }
+                    }
+
+                    // Recurse into multiplicityArguments positionally
+                    MutableList<Multiplicity> paramMulArgs = paramV._multiplicityArguments();
+                    MutableList<Multiplicity> argMulArgs = argV._multiplicityArguments();
+                    if (paramMulArgs != null && argMulArgs != null)
+                    {
+                        int count = Math.min(paramMulArgs.size(), argMulArgs.size());
+                        for (int i = 0; i < count; i++)
+                        {
+                            _Multiplicity.collectMultiplicityParameterBindings(paramMulArgs.get(i), argMulArgs.get(i), bindings);
+                        }
+                    }
                 }
             }
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + paramGT.getClass());
         }
     }
 
@@ -578,82 +637,84 @@ public class _GenericType
      */
     public static GenericType makeAsConcreteAsPossible(GenericType genericType, ParametersBinding bindings, MetadataAccess model)
     {
-        // GenericTypeOperation: delegate resolution
-        if (genericType instanceof GenericTypeOperation gto)
+        return switch (genericType)
         {
-            return _GenericTypeOperation.makeAsConcreteAsPossible(gto, bindings, model);
-        }
-
-        // If this is a type parameter reference, substitute it
-        if (genericType._typeParameter() != null && genericType._rawType() == null)
-        {
-            String name = genericType._typeParameter()._name();
-            MutableSet<GenericType> boundTypes = bindings.typeBindings().get(name);
-            if (boundTypes != null && boundTypes.notEmpty())
+            case UndefinedGenericType undefined -> genericType;
+            case GenericTypeOperation gto -> _GenericTypeOperation.makeAsConcreteAsPossible(gto, bindings, model);
+            case GenericTypeValue gtv ->
             {
-                return boundTypes.size() == 1
-                        ? boundTypes.getFirst()
-                        : findCommonGenericType(Lists.mutable.withAll(boundTypes), model);
+                // If this is a type parameter reference, substitute it
+                if (gtv._type() instanceof TypeParameter tp)
+                {
+                    String name = tp._name();
+                    MutableSet<GenericType> boundTypes = bindings.typeBindings().get(name);
+                    if (boundTypes != null && boundTypes.notEmpty())
+                    {
+                        yield boundTypes.size() == 1
+                                ? boundTypes.getFirst()
+                                : findCommonGenericType(Lists.mutable.withAll(boundTypes), model);
+                    }
+                    yield genericType; // unresolved — return as-is
+                }
+
+                // If rawType is a FunctionType, resolve type and multiplicity parameters inside it
+                if (gtv._type() instanceof FunctionType ft)
+                {
+                    GenericType resolved = _FunctionType.makeAsConcreteAsPossible(genericType, ft, bindings, model);
+                    if (resolved != null)
+                    {
+                        yield resolved;
+                    }
+                }
+
+                // If rawType is a RelationType, resolve type parameters in column types
+                if (gtv._type() instanceof meta.pure.metamodel.relation.RelationType rt)
+                {
+                    GenericType resolved = _RelationType.makeAsConcreteAsPossible(rt, bindings, model);
+                    if (resolved != null)
+                    {
+                        yield resolved;
+                    }
+                }
+
+                // If there are type arguments or multiplicity arguments, resolve them
+                MutableList<GenericType> typeArgs = gtv._typeArguments();
+                MutableList<Multiplicity> mulArgs = gtv._multiplicityArguments();
+                MutableList<GenericType> resolvedTypeArgs = null;
+                MutableList<Multiplicity> resolvedMulArgs = null;
+                boolean changed = false;
+
+                if (typeArgs != null && typeArgs.notEmpty())
+                {
+                    resolvedTypeArgs = typeArgs.collect(arg -> makeAsConcreteAsPossible(arg, bindings, model));
+                    changed = !resolvedTypeArgs.equals(typeArgs);
+                }
+
+                if (mulArgs != null && mulArgs.notEmpty())
+                {
+                    resolvedMulArgs = mulArgs.collect(m -> _Multiplicity.makeAsConcreteAsPossible(m, bindings));
+                    changed = changed || !resolvedMulArgs.equals(mulArgs);
+                }
+
+                if (changed)
+                {
+                    InferredGenericTypeImpl result = new InferredGenericTypeImpl()
+                            ._type(gtv._type());
+                    if (resolvedTypeArgs != null)
+                    {
+                        result._typeArguments(resolvedTypeArgs);
+                    }
+                    if (resolvedMulArgs != null)
+                    {
+                        result._multiplicityArguments(resolvedMulArgs);
+                    }
+                    yield result;
+                }
+
+                yield genericType;
             }
-            return genericType; // unresolved — return as-is
-        }
-
-        // If rawType is a FunctionType, resolve type and multiplicity parameters inside it
-        if (genericType._rawType() instanceof FunctionType ft)
-        {
-            GenericType resolved = _FunctionType.makeAsConcreteAsPossible(genericType, ft, bindings, model);
-            if (resolved != null)
-            {
-                return resolved;
-            }
-        }
-
-        // If rawType is a RelationType, resolve type parameters in column types
-        if (genericType._rawType() instanceof meta.pure.metamodel.relation.RelationType rt)
-        {
-            GenericType resolved = _RelationType.makeAsConcreteAsPossible(rt, bindings, model);
-            if (resolved != null)
-            {
-                return resolved;
-            }
-        }
-
-
-        // If there are type arguments or multiplicity arguments, resolve them
-        MutableList<GenericType> typeArgs = genericType._typeArguments();
-        MutableList<Multiplicity> mulArgs = genericType._multiplicityArguments();
-        MutableList<GenericType> resolvedTypeArgs = null;
-        MutableList<Multiplicity> resolvedMulArgs = null;
-        boolean changed = false;
-
-        if (typeArgs != null && typeArgs.notEmpty())
-        {
-            resolvedTypeArgs = typeArgs.collect(arg -> makeAsConcreteAsPossible(arg, bindings, model));
-            changed = !resolvedTypeArgs.equals(typeArgs);
-        }
-
-        if (mulArgs != null && mulArgs.notEmpty())
-        {
-            resolvedMulArgs = mulArgs.collect(m -> _Multiplicity.makeAsConcreteAsPossible(m, bindings));
-            changed = changed || !resolvedMulArgs.equals(mulArgs);
-        }
-
-        if (changed)
-        {
-            InferredGenericTypeImpl result = new InferredGenericTypeImpl()
-                    ._rawType(genericType._rawType());
-            if (resolvedTypeArgs != null)
-            {
-                result._typeArguments(resolvedTypeArgs);
-            }
-            if (resolvedMulArgs != null)
-            {
-                result._multiplicityArguments(resolvedMulArgs);
-            }
-            return result;
-        }
-
-        return genericType;
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
+        };
     }
 
 
@@ -664,16 +725,20 @@ public class _GenericType
      */
     public static GenericType asInferred(GenericType gt)
     {
-        if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation)
+        if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation || gt instanceof UndefinedGenericType)
         {
             return gt;
         }
-        return copyInto(gt, new InferredGenericTypeImpl());
+        return switch (gt)
+        {
+            case GenericTypeValue gtv -> copyInto(gtv, new InferredGenericTypeImpl());
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
+        };
     }
 
-    private static GenericType copyInto(GenericType source, InferredGenericTypeImpl target)
+    private static GenericType copyInto(GenericTypeValue source, InferredGenericTypeImpl target)
     {
-        target._rawType(source._rawType());
+        target._type(source._type());
         if (source._typeArguments() != null)
         {
             target._typeArguments(source._typeArguments());
@@ -681,13 +746,6 @@ public class _GenericType
         if (source._multiplicityArguments() != null)
         {
             target._multiplicityArguments(source._multiplicityArguments());
-        }
-        // Only copy typeParameter when rawType is absent — a GenericType
-        // cannot be both a concrete type (rawType) and a type parameter
-        // reference (_typeParameter) at the same time.
-        if (source._typeParameter() != null && source._rawType() == null)
-        {
-            target._typeParameter(source._typeParameter());
         }
         return target;
     }
@@ -719,63 +777,71 @@ public class _GenericType
             return null;
         }
 
-        Type sourceType = sourceGenericType._rawType();
-        if (sourceType == null)
+        return switch (sourceGenericType)
         {
-            return null;
-        }
-
-        // Base case: already at the target type
-        if (sourceType == targetType)
-        {
-            return sourceGenericType;
-        }
-
-        // Build bindings from the source type's declared parameters to the
-        // source GenericType's concrete arguments
-        ParametersBinding bindings = PlainParametersBinding.empty();
-
-        if (sourceType instanceof Class cls)
-        {
-            // Type parameter bindings: T → concrete type arg
-            cls._typeParameters().zip(sourceGenericType._typeArguments())
-                    .forEach(pair -> bindings.typeBindings()
-                            .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
-                            .add(pair.getTwo()));
-
-            // Multiplicity parameter bindings: m → concrete multiplicity arg
-            if (sourceGenericType._multiplicityArguments() != null)
+            case GenericTypeValue src ->
             {
-                cls._multiplicityParameters().zip(sourceGenericType._multiplicityArguments())
-                        .forEach(pair -> bindings.multiplicityBindings()
-                                .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
-                                .add(pair.getTwo()));
-            }
-        }
-
-        // Walk generalizations looking for the path to targetType
-        if (sourceType._generalizations() != null)
-        {
-            for (Generalization gen : sourceType._generalizations())
-            {
-                GenericType generalGT = gen._general();
-                if (generalGT == null || generalGT._rawType() == null)
+                Type sourceType = src._type();
+                if (sourceType == null)
                 {
-                    continue;
+                    yield null;
                 }
 
-                // Check if this generalization's rawType leads to the target
-                if (_Type.linearize(generalGT._rawType(), model).contains(targetType))
+                // Base case: already at the target type
+                if (sourceType == targetType)
                 {
-                    // Substitute the current bindings into the generalization's GenericType
-                    GenericType resolvedGT = makeAsConcreteAsPossible(generalGT, bindings, model);
-                    // Recurse to continue up the hierarchy
-                    return resolveForTarget(resolvedGT, targetType, model);
+                    yield sourceGenericType;
                 }
-            }
-        }
 
-        return null;
+                // Build bindings from the source type's declared parameters to the
+                // source GenericType's concrete arguments
+                ParametersBinding bindings = PlainParametersBinding.empty();
+
+                if (sourceType instanceof Class cls)
+                {
+                    // Type parameter bindings: T → concrete type arg
+                    cls._typeParameters().zip(src._typeArguments())
+                            .forEach(pair -> bindings.typeBindings()
+                                    .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                                    .add(pair.getTwo()));
+
+                    // Multiplicity parameter bindings: m → concrete multiplicity arg
+                    if (src._multiplicityArguments() != null)
+                    {
+                        cls._multiplicityParameters().zip(src._multiplicityArguments())
+                                .forEach(pair -> bindings.multiplicityBindings()
+                                        .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                                        .add(pair.getTwo()));
+                    }
+                }
+
+                // Walk generalizations looking for the path to targetType
+                if (sourceType._generalizations() != null)
+                {
+                    for (Generalization gen : sourceType._generalizations())
+                    {
+                        GenericType generalGT = gen._general();
+                        if (!(generalGT instanceof GenericTypeValue generalV) || generalV._type() == null)
+                        {
+                            continue;
+                        }
+
+                        // Check if this generalization's rawType leads to the target
+                        if (_Type.linearize(generalV._type(), model).contains(targetType))
+                        {
+                            // Substitute the current bindings into the generalization's GenericType
+                            GenericType resolvedGT = makeAsConcreteAsPossible(generalGT, bindings, model);
+                            // Recurse to continue up the hierarchy
+                            yield resolveForTarget(resolvedGT, targetType, model);
+                        }
+                    }
+                }
+
+                yield null;
+            }
+            case UndefinedGenericType undefined -> null;
+            default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + sourceGenericType.getClass());
+        };
     }
 
     /**
@@ -809,7 +875,7 @@ public class _GenericType
         {
             return false;
         }
-        // GenericTypeOperation (SUBSET/EQUAL): if the right side is concrete, check compatibility against it
+        // GenericTypeOperation dispatch
         if (declared instanceof GenericTypeOperation declaredOp)
         {
             return _GenericTypeOperation.isCompatible(declaredOp, actual, contravariant, model);
@@ -819,47 +885,68 @@ public class _GenericType
             return _GenericTypeOperation.isCompatible(actualOp, declared, !contravariant, model);
         }
 
+        // UndefinedGenericType matches only other UndefinedGenericType
+        boolean declaredUndefined = declared instanceof UndefinedGenericType;
+        boolean actualUndefined = actual instanceof UndefinedGenericType;
+        if (declaredUndefined || actualUndefined)
+        {
+            return declaredUndefined == actualUndefined;
+        }
+
+        // Both must be GenericTypeValue at this point
+        if (!(declared instanceof GenericTypeValue declaredV) || !(actual instanceof GenericTypeValue actualV))
+        {
+            throw new IllegalArgumentException("Expected GenericTypeValue, got declared=" + declared.getClass() + ", actual=" + actual.getClass());
+        }
+
         // Unresolved type parameters — assume compatible
-        if (declared._rawType() == null || actual._rawType() == null)
+        if (declaredV._type() == null || actualV._type() == null)
         {
             return true;
         }
 
-        Type declaredType = declared._rawType();
-        Type actualType = actual._rawType();
+        Type declaredType = declaredV._type();
+        Type actualType = actualV._type();
 
-        // FunctionTypes are structural — compare param and return types
+        // TypeParameter compatibility: same name = compatible; one-sided TypeParameter = assume compatible
+        if (declaredType instanceof TypeParameter declaredTP)
+        {
+            if (actualType instanceof TypeParameter actualTP)
+            {
+                return declaredTP._name().equals(actualTP._name());
+            }
+            return true;
+        }
+        if (actualType instanceof TypeParameter)
+        {
+            return true;
+        }
+
+        // FunctionTypes are structural
         if (declaredType instanceof FunctionType declaredFT && actualType instanceof FunctionType actualFT)
         {
             return _FunctionType.isCompatible(declaredFT, actualFT, contravariant, model);
         }
 
-        // RelationTypes are structural — compare columns by name, type, and multiplicity
+        // RelationTypes are structural
         if (declaredType instanceof meta.pure.metamodel.relation.RelationType declaredRT
                 && actualType instanceof meta.pure.metamodel.relation.RelationType actualRT)
         {
             return _RelationType.isCompatible(declaredRT, actualRT, contravariant, model);
         }
 
-        // In contravariant position the subtype check is flipped: subtypeOf(declared, actual).
-        // When actual is Nil (bottom type), that check fails because nothing is below Nil.
-        // But Nil IS a subtype of every type, so the contravariant requirement is satisfied.
-        // Example: Property<Nil, Any> where the owner type param is contravariant.
         if (contravariant && _Type.isBottomType(actualType))
         {
             return true;
         }
 
-        // Check raw type subtyping, flipped in contravariant position
         boolean rawCompatible;
         if (!contravariant)
         {
-            // Covariant: actual must be a subtype of declared
             rawCompatible = _Type.subtypeOf(actualType, declaredType, model);
         }
         else
         {
-            // Contravariant: declared must be a subtype of actual
             rawCompatible = _Type.subtypeOf(declaredType, actualType, model);
         }
 
@@ -872,38 +959,58 @@ public class _GenericType
 
         if (resolvedActual == null)
         {
-            return true; // bottom type (Nil) is compatible with any type
+            return true;
         }
 
-        if (declared._typeArguments().notEmpty() && resolvedActual._typeArguments().notEmpty())
+        if (resolvedActual instanceof GenericTypeValue resolvedActualV
+                && declaredV._typeArguments().notEmpty() && resolvedActualV._typeArguments().notEmpty())
         {
-            if (declared._typeArguments().size() != resolvedActual._typeArguments().size())
+            if (declaredV._typeArguments().size() != resolvedActualV._typeArguments().size())
             {
                 return false;
             }
 
-            // Get the type parameters from the declared raw type to read variance
             MutableList<TypeParameter> typeParams = (declaredType instanceof Class cls && cls._typeParameters() != null)
                     ? cls._typeParameters()
                     : null;
 
-            for (int i = 0; i < declared._typeArguments().size(); i++)
+            for (int i = 0; i < declaredV._typeArguments().size(); i++)
             {
-                // Determine variance for this position from the type parameter declaration
                 boolean argContravariant = contravariant;
                 if (typeParams != null && i < typeParams.size())
                 {
                     Boolean isContra = typeParams.get(i)._contravariant();
                     if (Boolean.TRUE.equals(isContra))
                     {
-                        // Flip variance for contravariant type parameters
                         argContravariant = !argContravariant;
                     }
                 }
 
-                if (!isCompatible(declared._typeArguments().get(i), resolvedActual._typeArguments().get(i), argContravariant, model))
+                if (!isCompatible(declaredV._typeArguments().get(i), resolvedActualV._typeArguments().get(i), argContravariant, model))
                 {
                     return false;
+                }
+            }
+        }
+
+        // Check multiplicity arguments
+        if (declaredV._multiplicityArguments() != null && declaredV._multiplicityArguments().notEmpty())
+        {
+            MutableList<Multiplicity> actualMulArgs = resolvedActual instanceof GenericTypeValue resolvedActualV2
+                    ? resolvedActualV2._multiplicityArguments()
+                    : null;
+            if (actualMulArgs != null && actualMulArgs.notEmpty())
+            {
+                if (declaredV._multiplicityArguments().size() != actualMulArgs.size())
+                {
+                    return false;
+                }
+                for (int i = 0; i < declaredV._multiplicityArguments().size(); i++)
+                {
+                    if (!_Multiplicity.subsumes(declaredV._multiplicityArguments().get(i), actualMulArgs.get(i)))
+                    {
+                        return false;
+                    }
                 }
             }
         }
@@ -932,28 +1039,31 @@ public class _GenericType
             return;
         }
 
-        Type expectedType = expected._rawType();
-        Type actualType = actual._rawType();
+        if (expected instanceof GenericTypeValue expectedV && actual instanceof GenericTypeValue actualV)
+        {
+            Type expectedType = expectedV._type();
+            Type actualType = actualV._type();
 
-        // FunctionTypes: reconcile param and return types/multiplicities
-        if (expectedType instanceof FunctionType expectedFT && actualType instanceof FunctionType actualFT)
-        {
-            _FunctionType.reconcileInferred(expectedFT, actualFT, model);
-        }
-        // RelationTypes: reconcile column types/multiplicities by name
-        if (expectedType instanceof meta.pure.metamodel.relation.RelationType expectedRT
-                && actualType instanceof meta.pure.metamodel.relation.RelationType actualRT)
-        {
-            _RelationType.reconcileInferred(expectedRT, actualRT, model);
-        }
-
-        // Recurse into type arguments (e.g. Function<{FunctionType}>)
-        if (expected._typeArguments() != null && actual._typeArguments() != null)
-        {
-            int count = Math.min(expected._typeArguments().size(), actual._typeArguments().size());
-            for (int i = 0; i < count; i++)
+            // FunctionTypes: reconcile param and return types/multiplicities
+            if (expectedType instanceof FunctionType expectedFT && actualType instanceof FunctionType actualFT)
             {
-                reconcileInferred(expected._typeArguments().get(i), actual._typeArguments().get(i), model);
+                _FunctionType.reconcileInferred(expectedFT, actualFT, model);
+            }
+            // RelationTypes: reconcile column types/multiplicities by name
+            if (expectedType instanceof meta.pure.metamodel.relation.RelationType expectedRT
+                    && actualType instanceof meta.pure.metamodel.relation.RelationType actualRT)
+            {
+                _RelationType.reconcileInferred(expectedRT, actualRT, model);
+            }
+
+            // Recurse into type arguments (e.g. Function<{FunctionType}>)
+            if (expectedV._typeArguments() != null && actualV._typeArguments() != null)
+            {
+                int count = Math.min(expectedV._typeArguments().size(), actualV._typeArguments().size());
+                for (int i = 0; i < count; i++)
+                {
+                    reconcileInferred(expectedV._typeArguments().get(i), actualV._typeArguments().get(i), model);
+                }
             }
         }
     }

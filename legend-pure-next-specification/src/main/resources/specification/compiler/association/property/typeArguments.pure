@@ -22,14 +22,14 @@ Association pack::AnimalPairLink
 }
 
 ###CompiledGraph
-class pack::XPair  ~Class<pack::XPair<U~pack::XPair, V~pack::XPair>>  @4:1-8:1
-  property first :U~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, U~pack::XPair | 1>
-  property second :V~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, V~pack::XPair | 1>
+class pack::XPair extends Any  ~Class<pack::XPair<U~pack::XPair, V~pack::XPair>>  @4:1-8:1
+  property first :U~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, U~pack::XPair|1>
+  property second :V~pack::XPair[1]  ~Property<pack::XPair<U~pack::XPair, V~pack::XPair>, V~pack::XPair|1>
 
-class pack::Animal  ~Class<pack::Animal>  @10:1-12:1
+class pack::Animal extends Any  ~Class<pack::Animal>  @10:1-12:1
 
 class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @14:1-16:1
 
 association pack::AnimalPairLink  @18:1-22:1
-  property owner :pack::Animal[1]  ~Property<pack::XPair<pack::Dog, String>, pack::Animal | 1>
-  property pets :pack::XPair<pack::Dog, String>[*]  ~Property<pack::Animal, pack::XPair<pack::Dog, String> | *>
+  property owner :pack::Animal[1]  ~Property<pack::XPair<pack::Dog, String>, pack::Animal|1>
+  property pets :pack::XPair<pack::Dog, String>[*]  ~Property<pack::Animal, pack::XPair<pack::Dog, String>|*>

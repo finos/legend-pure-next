@@ -22,9 +22,9 @@ function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z
 }
 
 ###CompiledGraph
-class test::TPR_Person  ~Class<test::TPR_Person>  @4:1-8:1
-  property firstName :String[1]  ~Property<test::TPR_Person, String | 1>
-  property lastName :String[1]  ~Property<test::TPR_Person, String | 1>
+class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @4:1-8:1
+  property firstName :String[1]  ~Property<test::TPR_Person, String|1>
+  property lastName :String[1]  ~Property<test::TPR_Person, String|1>
 
 function test::myCheck_Any_MANY__Any_MANY__Boolean_1_(expected:Any[*], actual:Any[*]):Boolean[1]  ~UserDefinedFunction<{Any[*], Any[*]->Boolean[1]}>
   AtomicValue  true :Boolean[1]  @13:5-13:8
@@ -43,9 +43,9 @@ function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Functi
       Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  @20:24-20:73
         ArrowInvocation first_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  @20:65-20:73
           typeParam T -> #test::TPR_Person#
-          FunctionInvocation new_T_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  @20:25-20:64
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  @20:25-20:64
             typeParam T -> test::TPR_Person
-            TypeHolder :test::TPR_Person[1]  @20:25-20:64
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  @20:25-20:64
             Collection :#KeyExpression#[2]  @20:25-20:64
               FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @20:37-20:49
                 AtomicValue  'firstName' :String[1]  @20:37-20:49

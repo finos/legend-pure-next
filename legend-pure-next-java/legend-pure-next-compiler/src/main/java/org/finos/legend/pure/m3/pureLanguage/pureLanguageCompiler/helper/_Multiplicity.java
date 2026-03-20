@@ -1,15 +1,17 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
-import meta.pure.metamodel.multiplicity.ConcreteMultiplicityImpl;
-import meta.pure.metamodel.multiplicity.InferredMultiplicityImpl;
+import meta.pure.metamodel.multiplicity.ConcreteMultiplicity;
+import meta.pure.metamodel.multiplicity.InferredAdHocMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.multiplicity.MultiplicityValueImpl;
+import meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
+import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
 /**
  * Helper methods for {@link Multiplicity}.
@@ -42,9 +44,17 @@ public final class _Multiplicity
         }
 
         // If either has a multiplicity parameter, skip concrete checking
-        if (general._multiplicityParameter() != null || specific._multiplicityParameter() != null)
+        if (general instanceof MultiplicityParameter || specific instanceof MultiplicityParameter)
         {
             return true;
+        }
+
+        // Undefined multiplicities match only other undefined multiplicities
+        boolean generalUndefined = general instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        boolean specificUndefined = specific instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity;
+        if (generalUndefined || specificUndefined)
+        {
+            return generalUndefined == specificUndefined;
         }
 
         long generalLower = lowerBound(general);
@@ -92,15 +102,24 @@ public final class _Multiplicity
     }
 
     /**
+     * Returns true if the multiplicity is [*] (0..*) — the universal multiplicity
+     * that subsumes all others.
+     */
+    public static boolean isUniversal(Multiplicity m)
+    {
+        return m instanceof ConcreteMultiplicity && lowerBound(m) == 0 && upperBound(m) == -1;
+    }
+
+    /**
      * Return the lower bound of a multiplicity, defaulting to 0.
      */
     public static long lowerBound(Multiplicity m)
     {
-        if (m == null || m._lowerBound() == null)
+        if (m instanceof ConcreteMultiplicity cm && cm._lowerBound() != null)
         {
-            return 0;
+            return cm._lowerBound()._value();
         }
-        return m._lowerBound()._value();
+        return 0;
     }
 
     /**
@@ -109,11 +128,11 @@ public final class _Multiplicity
      */
     public static long upperBound(Multiplicity m)
     {
-        if (m == null || m._upperBound() == null)
+        if (m instanceof ConcreteMultiplicity cm && cm._upperBound() != null)
         {
-            return -1; // unbounded
+            return cm._upperBound()._value();
         }
-        return m._upperBound()._value();
+        return -1; // unbounded
     }
 
     /**
@@ -125,9 +144,13 @@ public final class _Multiplicity
         {
             return "[*]";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof MultiplicityParameter mp)
         {
-            return "[" + m._multiplicityParameter()._name() + "]";
+            return "[" + mp._name() + "]";
+        }
+        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        {
+            return "[?]";
         }
         long lower = lowerBound(m);
         long upper = upperBound(m);
@@ -143,13 +166,43 @@ public final class _Multiplicity
     }
 
     /**
+     * Format a multiplicity without brackets, for use in type argument notation (e.g. {@code <T|1>}).
+     */
+    public static String printBare(Multiplicity m)
+    {
+        if (m == null)
+        {
+            return "*";
+        }
+        if (m instanceof MultiplicityParameter mp)
+        {
+            return mp._name();
+        }
+        if (m instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
+        {
+            return "?";
+        }
+        long lower = lowerBound(m);
+        long upper = upperBound(m);
+        if (upper == -1)
+        {
+            return lower == 0 ? "*" : lower + "..*";
+        }
+        if (lower == upper)
+        {
+            return String.valueOf(lower);
+        }
+        return lower + ".." + upper;
+    }
+
+    /**
      * Returns true if the Multiplicity is concrete — i.e. it has no
      * multiplicity parameter reference (e.g. {@code [1]}, {@code [*]} are
      * concrete, but {@code [m]} is not).
      */
     public static boolean isConcrete(Multiplicity multiplicity)
     {
-        return multiplicity != null && multiplicity._multiplicityParameter() == null;
+        return multiplicity != null && !(multiplicity instanceof MultiplicityParameter);
     }
 
     /**
@@ -166,11 +219,11 @@ public final class _Multiplicity
         {
             return false;
         }
-        if (multiplicity._multiplicityParameter() == null)
+        if (!(multiplicity instanceof MultiplicityParameter mp))
         {
             return true;
         }
-        return scopeMulParams.contains(multiplicity._multiplicityParameter()._name());
+        return scopeMulParams.contains(mp._name());
     }
 
     /**
@@ -193,9 +246,9 @@ public final class _Multiplicity
         }
         // If the parameter side has a multiplicity parameter, bind it
         // (including binding to other multiplicity parameters for transitive resolution)
-        if (paramMul._multiplicityParameter() != null)
+        if (paramMul instanceof MultiplicityParameter mp)
         {
-            String name = paramMul._multiplicityParameter()._name();
+            String name = mp._name();
             bindings.multiplicityBindings().computeIfAbsent(name, k -> Sets.mutable.empty())
                     .add(argMul);
         }
@@ -219,9 +272,9 @@ public final class _Multiplicity
         {
             return multiplicity;
         }
-        if (multiplicity._multiplicityParameter() != null)
+        if (multiplicity instanceof MultiplicityParameter mp)
         {
-            String name = multiplicity._multiplicityParameter()._name();
+            String name = mp._name();
             MutableSet<Multiplicity> boundMuls = bindings.multiplicityBindings().get(name);
             if (boundMuls != null && boundMuls.notEmpty())
             {
@@ -234,15 +287,15 @@ public final class _Multiplicity
 
     /**
      * Create a concrete multiplicity with the given lower and upper bounds.
-     * Convenience factory to avoid verbose inline {@code ConcreteMultiplicityImpl} construction.
+     * Convenience factory to avoid verbose inline construction.
      *
      * @param lower the lower bound
      * @param upper the upper bound (use -1 for unbounded / {@code [*]})
-     * @return a new {@link ConcreteMultiplicityImpl}
+     * @return a new concrete Multiplicity
      */
     public static Multiplicity concreteMultiplicity(long lower, long upper)
     {
-        ConcreteMultiplicityImpl result = new ConcreteMultiplicityImpl()
+        UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl()
                 ._lowerBound(new MultiplicityValueImpl()._value(lower));
         if (upper >= 0)
         {
@@ -253,55 +306,65 @@ public final class _Multiplicity
 
     /**
      * Mark a Multiplicity as inferred (compiler-resolved).
-     * Returns the named PackageableInferredMultiplicity (InferredPureOne, etc.)
-     * for well-known patterns, otherwise creates an InferredMultiplicityImpl.
+     * Returns the named InferredPackageableMultiplicity (InferredPureOne, etc.)
+     * for well-known patterns, otherwise creates an InferredAdHocMultiplicityImpl.
+     * MultiplicityParameter instances are returned as-is since they have no bounds.
      */
     public static Multiplicity asInferred(Multiplicity multiplicity, MetadataAccess model)
     {
-        if (multiplicity == null || multiplicity instanceof meta.pure.metamodel.Inferred)
+        if (multiplicity == null || multiplicity instanceof meta.pure.metamodel.Inferred
+                || multiplicity instanceof meta.pure.metamodel.multiplicity.UndefinedMultiplicity)
         {
             return multiplicity;
         }
 
-        // Try to return a named packageable inferred multiplicity for well-known patterns
-        if (multiplicity._multiplicityParameter() == null)
+        // Convert multiplicity parameters to their inferred counterpart
+        if (multiplicity instanceof MultiplicityParameter mp)
         {
-            long lower = lowerBound(multiplicity);
-            long upper = upperBound(multiplicity);
-            if (lower == 1 && upper == 1)
+            if (multiplicity instanceof meta.pure.metamodel.Inferred)
             {
-                return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne");
+                return multiplicity;
             }
-            if (lower == 0 && upper == 1)
-            {
-                return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroOne");
-            }
-            if (lower == 0 && upper == -1)
-            {
-                return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroMany");
-            }
-            if (lower == 1 && upper == -1)
-            {
-                return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredOneMany");
-            }
+            return new meta.pure.metamodel.multiplicity.InferredMultiplicityParameterImpl()
+                    ._name(mp._name())
+                    ._owner(mp._owner());
         }
 
-        return copyBoundsInto(multiplicity, new meta.pure.metamodel.multiplicity.InferredMultiplicityImpl());
+        // Try to return a named packageable inferred multiplicity for well-known patterns
+        long lower = lowerBound(multiplicity);
+        long upper = upperBound(multiplicity);
+        if (lower == 1 && upper == 1)
+        {
+            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne");
+        }
+        if (lower == 0 && upper == 1)
+        {
+            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroOne");
+        }
+        if (lower == 0 && upper == -1)
+        {
+            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroMany");
+        }
+        if (lower == 1 && upper == -1)
+        {
+            return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredOneMany");
+        }
+
+        return copyBoundsInto(multiplicity, new InferredAdHocMultiplicityImpl());
     }
 
-    private static Multiplicity copyBoundsInto(Multiplicity source, meta.pure.metamodel.multiplicity.InferredMultiplicityImpl target)
+    private static Multiplicity copyBoundsInto(Multiplicity source, InferredAdHocMultiplicityImpl target)
     {
-        if (source._lowerBound() != null)
+        if (source instanceof ConcreteMultiplicity cm)
         {
-            target._lowerBound(new MultiplicityValueImpl()._value(source._lowerBound()._value()));
-        }
-        if (source._upperBound() != null)
-        {
-            target._upperBound(new MultiplicityValueImpl()._value(source._upperBound()._value()));
-        }
-        if (source._multiplicityParameter() != null)
-        {
-            target._multiplicityParameter(source._multiplicityParameter());
+            if (cm._lowerBound() != null)
+            {
+                target._lowerBound(new MultiplicityValueImpl()._value(cm._lowerBound()._value()));
+            }
+            if (cm._upperBound() != null)
+            {
+                target._upperBound(new MultiplicityValueImpl()._value(cm._upperBound()._value()));
+            }
         }
         return target;
     }
@@ -332,7 +395,7 @@ public final class _Multiplicity
             minLower = Math.min(minLower, lower);
             maxUpper = (upper == -1 || maxUpper == -1) ? -1 : Math.max(maxUpper, upper);
         }
-        InferredMultiplicityImpl result = new InferredMultiplicityImpl();
+        InferredAdHocMultiplicityImpl result = new InferredAdHocMultiplicityImpl();
         result._lowerBound(new MultiplicityValueImpl()._value(minLower));
         if (maxUpper >= 0)
         {
@@ -341,4 +404,3 @@ public final class _Multiplicity
         return result;
     }
 }
-

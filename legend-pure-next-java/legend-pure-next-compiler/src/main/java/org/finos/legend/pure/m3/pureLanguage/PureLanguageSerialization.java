@@ -9,18 +9,17 @@ import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.NativeFunctionFlatBufferWrapper;
 import meta.pure.metamodel.function.UserDefinedFunction;
 import meta.pure.metamodel.function.UserDefinedFunctionFlatBufferWrapper;
-import meta.pure.metamodel.multiplicity.ConcretePackageableMultiplicityFlatBufferWrapper;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
-import meta.pure.metamodel.multiplicity.PackageableInferredMultiplicityFlatBufferWrapper;
+import meta.pure.metamodel.multiplicity.InferredPackageableMultiplicityFlatBufferWrapper;
+import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityFlatBufferWrapper;
 import meta.pure.metamodel.relationship.AssociationFlatBufferWrapper;
 import meta.pure.metamodel.type.ClassFlatBufferWrapper;
 import meta.pure.metamodel.type.EnumerationFlatBufferWrapper;
 import meta.pure.metamodel.type.MeasureFlatBufferWrapper;
 import meta.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
+import meta.pure.metamodel.valuespecification.AtomicValue;
+import meta.pure.metamodel.valuespecification.Collection;
+import meta.pure.metamodel.valuespecification.FunctionExpression;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
@@ -29,18 +28,20 @@ import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBExtension;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.AssociationDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ClassDef;
-import org.finos.legend.pure.m3.module.pdbModule.fbs.ConcretePackageableMultiplicityDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.EnumerationDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.InferredPackageableMultiplicityDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.MeasureDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.NativeFunctionDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PackageDef;
-import org.finos.legend.pure.m3.module.pdbModule.fbs.PackageableInferredMultiplicityDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveTypeDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ProfileDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedFunctionDef;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedPackageableMultiplicityDef;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -65,8 +66,8 @@ public class PureLanguageSerialization implements PDBExtension
             case "UserDefinedFunction" -> new UserDefinedFunctionFlatBufferWrapper(UserDefinedFunctionDef.getRootAsUserDefinedFunctionDef(buffer), resolver);
             case "NativeFunction" -> new NativeFunctionFlatBufferWrapper(NativeFunctionDef.getRootAsNativeFunctionDef(buffer), resolver);
             case "PrimitiveType" -> new PrimitiveTypeFlatBufferWrapper(PrimitiveTypeDef.getRootAsPrimitiveTypeDef(buffer), resolver);
-            case "ConcretePackageableMultiplicity" -> new ConcretePackageableMultiplicityFlatBufferWrapper(ConcretePackageableMultiplicityDef.getRootAsConcretePackageableMultiplicityDef(buffer), resolver);
-            case "PackageableInferredMultiplicity" -> new PackageableInferredMultiplicityFlatBufferWrapper(PackageableInferredMultiplicityDef.getRootAsPackageableInferredMultiplicityDef(buffer), resolver);
+            case "UserDefinedPackageableMultiplicity" -> new UserDefinedPackageableMultiplicityFlatBufferWrapper(UserDefinedPackageableMultiplicityDef.getRootAsUserDefinedPackageableMultiplicityDef(buffer), resolver);
+            case "InferredPackageableMultiplicity" -> new InferredPackageableMultiplicityFlatBufferWrapper(InferredPackageableMultiplicityDef.getRootAsInferredPackageableMultiplicityDef(buffer), resolver);
             case "Package" -> new PackageFlatBufferWrapper(PackageDef.getRootAsPackageDef(buffer), resolver);
             default -> null;
         };
@@ -130,13 +131,13 @@ public class PureLanguageSerialization implements PDBExtension
         {
             return writer.writePrimitiveType(pt);
         }
-        else if (element instanceof meta.pure.metamodel.multiplicity.PackageableInferredMultiplicity pim)
+        else if (element instanceof meta.pure.metamodel.multiplicity.InferredPackageableMultiplicity pim)
         {
-            return writer.writePackageableInferredMultiplicity(pim);
+            return writer.writeInferredPackageableMultiplicity(pim);
         }
-        else if (element instanceof meta.pure.metamodel.multiplicity.ConcretePackageableMultiplicity cpm)
+        else if (element instanceof meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity cpm)
         {
-            return writer.writeConcretePackageableMultiplicity(cpm);
+            return writer.writeUserDefinedPackageableMultiplicity(cpm);
         }
         else if (element instanceof meta.pure.metamodel.Package pkg)
         {
@@ -155,8 +156,8 @@ public class PureLanguageSerialization implements PDBExtension
         if (element instanceof UserDefinedFunction) return "UserDefinedFunction";
         if (element instanceof NativeFunction) return "NativeFunction";
         if (element instanceof meta.pure.metamodel.type.PrimitiveType) return "PrimitiveType";
-        if (element instanceof meta.pure.metamodel.multiplicity.PackageableInferredMultiplicity) return "PackageableInferredMultiplicity";
-        if (element instanceof meta.pure.metamodel.multiplicity.ConcretePackageableMultiplicity) return "ConcretePackageableMultiplicity";
+        if (element instanceof meta.pure.metamodel.multiplicity.InferredPackageableMultiplicity) return "InferredPackageableMultiplicity";
+        if (element instanceof meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity) return "UserDefinedPackageableMultiplicity";
         if (element instanceof meta.pure.metamodel.Package) return "Package";
         return null;
     }
@@ -195,8 +196,9 @@ public class PureLanguageSerialization implements PDBExtension
             int fullPathOffset = builder.createString(entry.fullPath());
             int functionNameOffset = builder.createString(entry._functionName());
             int functionTypeOffset = writer.writeFunctionType(entry.functionType());
+            boolean isNative = entry instanceof NativeFunctionIndexEntry;
             entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
-                    .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset);
+                    .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset, isNative);
         }
 
         int entriesVectorOffset = FunctionIndex

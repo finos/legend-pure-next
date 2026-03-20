@@ -16,12 +16,12 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.SourceInformation;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
-import org.finos.legend.pure.m3.module.MetadataAccess;
-import meta.pure.metamodel.SourceInformation;
 import org.jspecify.annotations.Nullable;
 
 /**

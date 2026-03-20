@@ -17,8 +17,8 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.FunctionType}

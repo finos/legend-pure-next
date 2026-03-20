@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -26,7 +26,7 @@ import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.stack.MutableStack;
 import org.eclipse.collections.impl.factory.Stacks;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 
 /**

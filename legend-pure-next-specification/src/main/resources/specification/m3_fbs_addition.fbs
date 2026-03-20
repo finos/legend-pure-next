@@ -5,6 +5,7 @@ table FunctionIndexEntry {
     full_path: string;
     function_name: string;
     function_type: FunctionTypeDef;
+    is_native: bool;
 }
 
 table FunctionIndex {

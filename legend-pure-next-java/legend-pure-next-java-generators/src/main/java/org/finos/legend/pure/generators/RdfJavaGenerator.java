@@ -32,8 +32,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.finos.legend.pure.specification.generation.model.ModelUtils.*;
-import static org.finos.legend.pure.generators.JavaGeneratorUtils.*;
+import static org.finos.legend.pure.generators.JavaGeneratorUtils.escapeJavaKeyword;
+import static org.finos.legend.pure.generators.JavaGeneratorUtils.mapToJavaType;
+import static org.finos.legend.pure.specification.generation.model.ModelUtils.bareName;
+import static org.finos.legend.pure.specification.generation.model.ModelUtils.collectAllProperties;
 
 /**
  * Generates Java classes from the Pure M3 metamodel.

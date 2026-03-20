@@ -1,13 +1,12 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
@@ -23,20 +22,21 @@ import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.metadata.CompositePureLanguageMetadata;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.EnclosingOwnerParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
-import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.RelationColumnResolver;
-import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 
 import java.util.Comparator;
 
@@ -318,9 +318,9 @@ public class FunctionApplicationResolver
             // When the arg type is a subtype of the param type (e.g., Property vs Function),
             // resolve to the param's raw type level before collecting bindings to ensure
             // type arguments are positionally aligned.
-            if (paramGT._rawType() != null && paramGT._rawType() != argGT._rawType())
+            if (!(_GenericType.type(paramGT) instanceof TypeParameter) && _GenericType.type(paramGT) != _GenericType.type(argGT))
             {
-                argGT = _GenericType.resolveForTarget(argGT, paramGT._rawType(), model);
+                argGT = _GenericType.resolveForTarget(argGT, _GenericType.type(paramGT), model);
             }
             _GenericType.collectTypeParameterBindings(paramGT, argGT, bindings);
             _Multiplicity.collectMultiplicityParameterBindings(paramMul, processed._multiplicity(), bindings);
@@ -414,10 +414,10 @@ public class FunctionApplicationResolver
             // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
             // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
             GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-            if (concreteGT._typeArguments() != null && concreteGT._typeArguments().notEmpty())
+            if (_GenericType.typeArguments(concreteGT) != null && _GenericType.typeArguments(concreteGT).notEmpty())
             {
-                GenericType innerGT = concreteGT._typeArguments().getFirst();
-                if (innerGT._rawType() instanceof FunctionType ft)
+                GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
+                if (_GenericType.type(innerGT) instanceof FunctionType ft)
                 {
                     // Set (or update) lambda variable types from the resolved FunctionType parameters.
                     MutableList<VariableExpression> ftParams = ft._parameters();
@@ -585,7 +585,7 @@ public class FunctionApplicationResolver
     private static Type resolvedRawType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._rawType() : null;
+        return gt != null ? _GenericType.type(gt) : null;
     }
 
     private static boolean isSuccessfullyProcessed(ValueSpecification parameterValue, ValueSpecification reprocessed, MutableSet<String> scopeTypeParams, MutableSet<String> scopeMulParams)

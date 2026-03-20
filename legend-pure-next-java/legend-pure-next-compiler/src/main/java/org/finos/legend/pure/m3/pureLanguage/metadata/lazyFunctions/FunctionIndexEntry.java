@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.pureLanguage.metadata;
+package org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
@@ -22,15 +22,15 @@ import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.extension.TaggedValue;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
+import meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.ElementOverride;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
-import meta.pure.metamodel.type.generics.MultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -56,7 +56,7 @@ import java.util.Comparator;
  * execution time — never during compilation.
  * </p>
  */
-public class FunctionIndexEntry implements PackageableFunction
+public abstract class FunctionIndexEntry implements PackageableFunction
 {
     /**
      * When true, any call to {@link #resolve()} will throw an {@link AssertionError}.
@@ -84,7 +84,7 @@ public class FunctionIndexEntry implements PackageableFunction
 
     private volatile PackageableFunction resolved;
 
-    public FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType, MetadataAccess model)
+    protected FunctionIndexEntry(String fullPath, String functionName, FunctionType functionType, MetadataAccess model)
     {
         this.functionType = functionType;
         this.fullPath = fullPath;
@@ -99,7 +99,7 @@ public class FunctionIndexEntry implements PackageableFunction
         MutableSet<String> mulParamNames = _FunctionType.collectReferencedMultiplicityParameterNames(functionType);
         this.multiplicityParamCount = mulParamNames.size();
         this.multiplicityParameters = mulParamNames.collect(name ->
-                (MultiplicityParameter) new MultiplicityParameterImpl()._name(name)._owner(this)).toList();
+                (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(name)._owner(this)).toList();
     }
 
     // ========================================================================
@@ -188,17 +188,17 @@ public class FunctionIndexEntry implements PackageableFunction
     {
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
         Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
-        return new ConcreteGenericTypeImpl()
-                ._rawType(pfType)
+        return new UserDefinedGenericTypeImpl()
+                ._type(pfType)
                 ._typeArguments(Lists.mutable.with(
-                        new ConcreteGenericTypeImpl()._rawType(functionType)));
+                        new UserDefinedGenericTypeImpl()._type(functionType)));
     }
 
     // ========================================================================
     // Lazy-resolved properties (delegate to real PackageableFunction)
     // ========================================================================
 
-    private PackageableFunction resolve()
+    protected PackageableFunction resolve()
     {
         if (resolved == null)
         {
@@ -350,17 +350,20 @@ public class FunctionIndexEntry implements PackageableFunction
 
         for (int i = 0; i < count; i++)
         {
-            Type t1 = resolvedRawType(params1.get(i));
-            Type t2 = resolvedRawType(params2.get(i));
+            Type t1 = resolvedType(params1.get(i));
+            Type t2 = resolvedType(params2.get(i));
 
-            // Concrete types are more specific than type parameters
+            // Type parameter (e.g. T) vs concrete type:
+            // - T is MORE specific than Any (the top type), because T binds to
+            //   the exact type of the actual argument.
+            // - T is LESS specific than any other concrete type (e.g. String, Integer).
             if (t1 != null && t2 == null)
             {
-                return -1;
+                return _Type.isTopType(t1) ? 1 : -1;
             }
             if (t1 == null && t2 != null)
             {
-                return 1;
+                return _Type.isTopType(t2) ? -1 : 1;
             }
 
             if (t1 != null && t1 != t2)
@@ -389,17 +392,19 @@ public class FunctionIndexEntry implements PackageableFunction
             Multiplicity m1 = params1.get(i)._multiplicity();
             Multiplicity m2 = params2.get(i)._multiplicity();
 
-            // Multiplicity parameter (e.g. [m]) is less specific than any concrete multiplicity.
-            // Must handle explicitly before subsumption to maintain transitivity.
-            boolean m1IsParam = m1 != null && m1._multiplicityParameter() != null;
-            boolean m2IsParam = m2 != null && m2._multiplicityParameter() != null;
+            // Multiplicity parameter (e.g. [m]) vs concrete:
+            // - [m] is MORE specific than [*] (the universal wildcard), because
+            //   [m] binds to the exact multiplicity of the actual argument.
+            // - [m] is LESS specific than any other concrete multiplicity (e.g. [1], [0..1]).
+            boolean m1IsParam = m1 instanceof MultiplicityParameter;
+            boolean m2IsParam = m2 instanceof MultiplicityParameter;
             if (m1IsParam && !m2IsParam)
             {
-                return 1; // m2 concrete is more specific
+                return _Multiplicity.isUniversal(m2) ? -1 : 1;
             }
             if (!m1IsParam && m2IsParam)
             {
-                return -1; // m1 concrete is more specific
+                return _Multiplicity.isUniversal(m1) ? 1 : -1;
             }
 
             if (!m1IsParam && !m2IsParam)
@@ -420,10 +425,10 @@ public class FunctionIndexEntry implements PackageableFunction
         return 0;
     }
 
-    private static Type resolvedRawType(ValueSpecification vs)
+    private static Type resolvedType(ValueSpecification vs)
     {
         GenericType gt = vs._genericType();
-        return gt != null ? gt._rawType() : null;
+        return gt != null ? _GenericType.type(gt) : null;
     }
 
     // ========================================================================
@@ -478,12 +483,17 @@ public class FunctionIndexEntry implements PackageableFunction
         {
             return "[*]";
         }
-        if (m._multiplicityParameter() != null)
+        if (m instanceof MultiplicityParameter mp)
         {
-            return "[" + m._multiplicityParameter()._name() + "]";
+            return "[" + mp._name() + "]";
         }
-        long lower = m._lowerBound() != null ? m._lowerBound()._value() : 0;
-        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
+        long lower = 0;
+        Long upper = null;
+        if (m instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
+        {
+            lower = cm._lowerBound() != null ? cm._lowerBound()._value() : 0;
+            upper = cm._upperBound() != null ? cm._upperBound()._value() : null;
+        }
         if (upper == null)
         {
             return lower == 0 ? "[*]" : "[" + lower + "..*]";

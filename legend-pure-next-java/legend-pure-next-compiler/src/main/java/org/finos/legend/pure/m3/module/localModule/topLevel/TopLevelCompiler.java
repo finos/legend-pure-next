@@ -19,9 +19,8 @@ import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericType;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
@@ -320,7 +319,7 @@ public class TopLevelCompiler
                         ? entry.grammarElement()._package()._pointerValue()
                         : null;
                 Package parent = packagePath != null
-                        ? getOrCreatePackage(root, packagePath, new ConcreteGenericTypeImpl()._rawType((Type)model.getElement("meta::pure::metamodel::Package")))
+                        ? getOrCreatePackage(root, packagePath, new UserDefinedGenericTypeImpl()._type((Type)model.getElement("meta::pure::metamodel::Package")))
                         : root;
                 entry.element()._package(parent);
                 parent._children().add(entry.element());

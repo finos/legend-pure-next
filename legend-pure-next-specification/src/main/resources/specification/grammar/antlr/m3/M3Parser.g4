@@ -250,7 +250,7 @@ atomicExpression:
                  | unitInstance
                  | variable
                  | columnBuilders
-                 | (AT (type | multiplicity))
+                 | (AT (type? (PIPE multiplicityArgument)? | multiplicity))
                  | anyLambda
                  | instanceReference
 ;
@@ -462,10 +462,13 @@ typeParameterWithVariance: MINUS? identifier
 multiplicityArguments: multiplicityArgument (COMMA multiplicityArgument)*
 ;
 
-multiplicityArgument: identifier | ((fromMultiplicity DOTDOT)? toMultiplicity)
+multiplicityArgument: QUESTION | identifier | ((fromMultiplicity DOTDOT)? toMultiplicity)
 ;
 
-typeArguments: typeWithOperation (COMMA typeWithOperation)*
+typeArguments: typeOrUndefined (COMMA typeOrUndefined)*
+;
+
+typeOrUndefined: (QUESTION | typeWithOperation)
 ;
 
 typeWithOperation : type equalType? (typeAddSubOperation)* subsetType?

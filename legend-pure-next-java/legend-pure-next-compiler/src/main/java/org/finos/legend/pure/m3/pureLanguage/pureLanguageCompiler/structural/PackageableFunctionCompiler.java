@@ -18,11 +18,11 @@ import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
@@ -55,7 +55,7 @@ public final class PackageableFunctionCompiler
                         .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result))
                         .select(Objects::nonNull))
                 ._multiplicityParameters(grammar._multiplicityParameters()
-                        .collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result))
+                        .<meta.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result))
                         .select(Objects::nonNull));
 
         // Register declared type/multiplicity params in scope so GenericTypeCompiler
@@ -72,12 +72,12 @@ public final class PackageableFunctionCompiler
         result._returnGenericType(GenericTypeCompiler.compile(grammar._returnGenericType(), imports, model, context));
         result._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model));
         result._classifierGenericType(
-                new ConcreteGenericTypeImpl()
-                        ._rawType((Type) model.getElement(
+                new UserDefinedGenericTypeImpl()
+                        ._type((Type) model.getElement(
                                 result instanceof NativeFunction ? "meta::pure::metamodel::function::NativeFunction"
                                         : "meta::pure::metamodel::function::UserDefinedFunction"))
                         ._typeArguments(Lists.mutable.with(
-                                new ConcreteGenericTypeImpl()._rawType(
+                                new UserDefinedGenericTypeImpl()._type(
                                         new FunctionTypeImpl()
                                                 ._parameters(result._parameters())
                                                 ._returnType(result._returnGenericType())

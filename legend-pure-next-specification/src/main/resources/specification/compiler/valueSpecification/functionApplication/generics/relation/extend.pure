@@ -18,7 +18,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
     Variable x :#Relation<(legal:String[1], other:Integer[0..1])>##[1]#  @6:4-6:5
     FunctionInvocation over__Window_1_ :#Window<#(legal:String[1], other:Integer[0..1])#>##[1]#  @6:15-6:20
       typeParam T -> #(legal:String[1], other:Integer[0..1])#
-    FunctionInvocation funcColSpec2_Function_1__String_1__T_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->Any[1]}#, #(new:#String##[1]#)#>##[1]#  @6:24-6:67
+    FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>#[1], #(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->Any[1]}#, #(new:#String##[1]#)#>##[1]#  @6:24-6:67
       typeParam T -> #(new:#String##[1]#)#
       typeParam U -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
       Lambda(p:#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, w:#Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, r:#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#) :#LambdaFunction<#{#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #Window<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#, #(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#->#String##[1]#}#>#[1]  @6:28-6:67
@@ -37,7 +37,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#
           AtomicValue  'w' :String[1]  @6:64-6:66
       AtomicValue  'new' :String[1]  @6:24-6:26
-      TypeHolder :#(new:#String##[1]#)#[1]
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(new:#String##[1]#)#|1>[1]
 
 native function over__Window_1_():Window<T~over__Window_1_>[1]  ~NativeFunction<{->Window<T~over__Window_1_>[1]}>
 

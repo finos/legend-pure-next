@@ -1,14 +1,8 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
-
-import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ArrowInvocationImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.CollectionImpl;
@@ -17,8 +11,14 @@ import meta.pure.metamodel.valuespecification.FunctionInvocationImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 
 /**
  * Compiles grammar-level {@link meta.pure.protocol.grammar.valuespecification.ValueSpecification}
@@ -65,7 +65,7 @@ public final class ValueSpecificationCompiler
                         .collect(pv -> compile(pv, imports, model, context)));
         if (arrow._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(arrow._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(arrow._sourceInformation(), context.getSourceId()));
         }
         return result;
     }
@@ -80,7 +80,7 @@ public final class ValueSpecificationCompiler
                         .collect(pv -> compile(pv, imports, model, context)));
         if (fa._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(fa._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(fa._sourceInformation(), context.getSourceId()));
         }
         return result;
     }
@@ -95,7 +95,7 @@ public final class ValueSpecificationCompiler
                         .collect(pv -> compile(pv, imports, model, context)));
         if (dot._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(dot._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(dot._sourceInformation(), context.getSourceId()));
         }
         return result;
     }
@@ -110,10 +110,30 @@ public final class ValueSpecificationCompiler
         }
         else if (holder instanceof meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolder)
         {
+            meta.pure.metamodel.type.generics.GenericType heldGT = holder._genericType() != null
+                    ? GenericTypeCompiler.compile(holder._genericType(), imports, model, context)
+                    : null;
+            Multiplicity heldMul = holder._multiplicity() != null
+                    ? MultiplicityCompiler.compile(holder._multiplicity(), model)
+                    : null;
+
+            // Build classifier type: GenericType(type=UserDefinedGenericTypeAndMultiplicityHolder, typeArguments=[heldGT])
+            meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) model.getElement(
+                    "meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
+            UserDefinedGenericTypeImpl classifierGT = new UserDefinedGenericTypeImpl()._type(holderType);
+            if (heldGT != null)
+            {
+                classifierGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldGT));
+            }
+            if (heldMul != null)
+            {
+                classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
+            }
+
             return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                    ._genericType(holder._genericType() != null ? GenericTypeCompiler.compile(holder._genericType(), imports, model, context) : null)
-                    ._multiplicity(holder._multiplicity() != null ? MultiplicityCompiler.compile(holder._multiplicity(), model) : null)
-                    ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation()) : null);
+                    ._genericType(classifierGT)
+                    ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"))
+                    ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation(), context.getSourceId()) : null);
         }
         else
         {
@@ -141,7 +161,7 @@ public final class ValueSpecificationCompiler
         AtomicValueImpl result = new AtomicValueImpl();
         if (av._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation(), context.getSourceId()));
         }
         if (av._genericType() != null)
         {
@@ -213,8 +233,8 @@ public final class ValueSpecificationCompiler
             PackageableElement dateType = model.getElement(dateTypePath);
             if (dateType instanceof meta.pure.metamodel.type.Type)
             {
-                ConcreteGenericTypeImpl gt = new ConcreteGenericTypeImpl();
-                gt._rawType((meta.pure.metamodel.type.Type) dateType);
+                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
+                gt._type((meta.pure.metamodel.type.Type) dateType);
                 result._genericType(gt);
             }
         }
@@ -229,7 +249,7 @@ public final class ValueSpecificationCompiler
         CollectionImpl result = new CollectionImpl();
         if (col._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(col._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(col._sourceInformation(), context.getSourceId()));
         }
         if (col._multiplicity() != null)
         {

@@ -15,16 +15,16 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.Measure;
 import meta.pure.metamodel.type.MeasureImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.UnitImpl;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
-import meta.pure.metamodel.relationship.GeneralizationImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.LambdaCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
@@ -66,8 +66,8 @@ public final class MeasureHandler
     public static Measure secondPass(MeasureImpl result, meta.pure.protocol.grammar.type.Measure grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         result._classifierGenericType(
-                new ConcreteGenericTypeImpl()
-                        ._rawType((Type) model.getElement("meta::pure::metamodel::type::Measure")))
+                new UserDefinedGenericTypeImpl()
+                        ._type((Type) model.getElement("meta::pure::metamodel::type::Measure")))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
 
         // Wire each unit: measure backlink, classifierGenericType, generalizations, conversionFunction
@@ -92,10 +92,10 @@ public final class MeasureHandler
     private static UnitImpl wireUnit(UnitImpl unit, meta.pure.protocol.grammar.type.Unit grammarUnit, MeasureImpl measure, Type unitType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         unit._measure(measure)
-                ._classifierGenericType(new ConcreteGenericTypeImpl()._rawType(unitType))
+                ._classifierGenericType(new UserDefinedGenericTypeImpl()._type(unitType))
                 ._generalizations(Lists.mutable.with(
                         new GeneralizationImpl()
-                                ._general(new ConcreteGenericTypeImpl()._rawType(measure))));
+                                ._general(new UserDefinedGenericTypeImpl()._type(measure))));
 
         if (grammarUnit != null && grammarUnit._conversionFunction() != null)
         {
@@ -105,7 +105,7 @@ public final class MeasureHandler
             {
                 compiledLambda._parameters().forEach(p ->
                         ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) p)
-                                ._genericType(new ConcreteGenericTypeImpl()._rawType((Type) model.getElement("meta::pure::metamodel::type::primitives::Number")))
+                                ._genericType(new UserDefinedGenericTypeImpl()._type((Type) model.getElement("meta::pure::metamodel::type::primitives::Number")))
                                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")));
             }
             unit._conversionFunction(compiledLambda);

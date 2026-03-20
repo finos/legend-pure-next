@@ -2,6 +2,7 @@ package org.finos.legend.pure.m3.pureLanguage.metadata;
 
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 
 public interface PureLanguageMetadataAccess
 {

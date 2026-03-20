@@ -27,10 +27,10 @@ import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.PureParser;
 
 import java.io.IOException;
@@ -136,6 +136,24 @@ public class LocalModule implements Module
     public Set<String> elementPaths()
     {
         return state != null ? state.elementPaths() : Set.of();
+    }
+
+    @Override
+    public Set<String> sourceFiles()
+    {
+        if (state == null)
+        {
+            return Set.of();
+        }
+        Set<String> files = new java.util.LinkedHashSet<>();
+        state.elementIndex().forEachValue(entry ->
+        {
+            if (entry.sourceId() != null)
+            {
+                files.add(entry.sourceId());
+            }
+        });
+        return files;
     }
 
     /**

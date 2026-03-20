@@ -182,5 +182,5 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchWithEx
 function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchWithMixedReturnType<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     let z = $f->eval(|^LA_Location(place='Hoboken, NJ', type=LA_GeographicEntityType.CITY)->match([a:LA_Address[1] | 'address', l:LA_Location[1] | 1, a:Any[1] | 'Any1']));
-    assertIs(Any, $z->genericType().rawType->toOne());
+    assertIs(Any, $z->genericType()->cast(@GenericTypeValue).type->toOne());
 }

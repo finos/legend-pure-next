@@ -15,8 +15,9 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.MultiplicityParameter;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -24,7 +25,7 @@ import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.metadata.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
@@ -162,14 +163,14 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     GenericType gt = entry.getValue().getFirst();
-                    if (gt != null && gt._typeParameter() != null && gt._rawType() == null)
+                    if (gt instanceof GenericTypeValue && _GenericType.type(gt) instanceof TypeParameter tp)
                     {
-                        String targetName = gt._typeParameter()._name();
+                        String targetName = tp._name();
                         MutableSet<GenericType> targetBinding = typeBindings.get(targetName);
 
                         if ((targetBinding == null || targetBinding.isEmpty()) && enclosingOwner != null)
                         {
-                            Object targetOwner = gt._typeParameter()._owner();
+                            Object targetOwner = tp._owner();
                             if (targetOwner == enclosingOwner.owner())
                             {
                                 targetBinding = enclosingOwner.typeBindings().get(targetName);
@@ -179,7 +180,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             GenericType resolved = targetBinding.getFirst();
-                            if (resolved._rawType() != null)
+                            if (!(_GenericType.type(resolved) instanceof TypeParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);
@@ -201,14 +202,14 @@ public class FunctionCallParametersBinding extends ParametersBinding
                 if (entry.getValue().size() == 1)
                 {
                     Multiplicity mul = entry.getValue().getFirst();
-                    if (mul._multiplicityParameter() != null)
+                    if (mul instanceof MultiplicityParameter mulParam)
                     {
-                        String targetName = mul._multiplicityParameter()._name();
+                        String targetName = mulParam._name();
                         MutableSet<Multiplicity> targetBinding = multiplicityBindings.get(targetName);
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             Multiplicity resolved = targetBinding.getFirst();
-                            if (resolved._multiplicityParameter() == null)
+                            if (!(resolved instanceof MultiplicityParameter))
                             {
                                 entry.getValue().clear();
                                 entry.getValue().add(resolved);
@@ -233,15 +234,15 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     boolean anyResolved = false;
                     for (GenericType gt : entry.getValue())
                     {
-                        if (gt._typeParameter() != null && gt._rawType() == null
-                                && gt._typeParameter()._owner() == enclosingOwner.owner())
+                        if (_GenericType.type(gt) instanceof TypeParameter tp
+                                && tp._owner() == enclosingOwner.owner())
                         {
                             MutableSet<GenericType> ownerBinding = enclosingOwner.typeBindings()
-                                    .get(gt._typeParameter()._name());
+                                    .get(tp._name());
                             if (ownerBinding != null && ownerBinding.size() == 1)
                             {
                                 GenericType ownerResolved = ownerBinding.getFirst();
-                                if (ownerResolved._rawType() != null)
+                                if (!(_GenericType.type(ownerResolved) instanceof TypeParameter))
                                 {
                                     resolved.add(ownerResolved);
                                     anyResolved = true;

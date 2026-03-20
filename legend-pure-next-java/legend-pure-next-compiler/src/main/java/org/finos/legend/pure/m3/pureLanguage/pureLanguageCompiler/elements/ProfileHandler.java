@@ -20,9 +20,9 @@ import meta.pure.metamodel.extension.ProfileImpl;
 import meta.pure.metamodel.extension.StereotypeImpl;
 import meta.pure.metamodel.extension.TagImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.ConcreteGenericTypeImpl;
-import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 
 /**
  * Handler for Profile.
@@ -52,8 +52,8 @@ public final class ProfileHandler
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
         return result._classifierGenericType(
-                new ConcreteGenericTypeImpl()
-                        ._rawType((Type) model.getElement("meta::pure::metamodel::extension::Profile")));
+                new UserDefinedGenericTypeImpl()
+                        ._type((Type) model.getElement("meta::pure::metamodel::extension::Profile")));
     }
 
     public static PackageableElement thirdPass(Profile pr, MetadataAccess pureModel, CompilationContext context)

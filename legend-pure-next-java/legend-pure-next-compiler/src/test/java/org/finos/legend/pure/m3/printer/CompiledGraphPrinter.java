@@ -47,10 +47,10 @@ import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Measure;
 import meta.pure.metamodel.type.PrimitiveType;
 import meta.pure.metamodel.type.Unit;
-import meta.pure.metamodel.type.generics.ConcreteGenericType;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
+import meta.pure.metamodel.type.generics.UserDefinedGenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -62,6 +62,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 
 import java.util.List;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Produces the human-readable {@code ###CompiledGraph} text block for a list of
@@ -676,7 +677,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
         // Handle GenericTypeOperation (type algebra: T+R, T-R, T=R, T⊆R)
         if (gt instanceof GenericTypeOperation gto)
         {
-            String op = switch (gto._type())
+            String op = switch (gto._operationType())
             {
                 case UNION -> "+";
                 case DIFFERENCE -> "-";
@@ -685,28 +686,28 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
-        if (gt._typeParameter() != null)
+        if (_GenericType.type(gt) instanceof meta.pure.metamodel.type.generics.TypeParameter tp)
         {
-            String name = gt._typeParameter()._name();
-            if (gt._typeParameter()._owner() != null && gt._typeParameter()._owner() instanceof PackageableElement ownerElem)
+            String name = tp._name();
+            if (tp._owner() != null && tp._owner() instanceof PackageableElement ownerElem)
             {
                 name += "~" + shortPath(ownerElem);
             }
             return name;
         }
-        if (gt._rawType() == null)
+        if (_GenericType.type(gt) == null)
         {
             return "?";
         }
-        if (gt._rawType() instanceof FunctionType ft)
+        if (_GenericType.type(gt) instanceof FunctionType ft)
         {
             return printFunctionType(ft);
         }
-        if (gt._rawType() instanceof RelationType rt)
+        if (_GenericType.type(gt) instanceof RelationType rt)
         {
             return printRelationType(rt);
         }
-        if (gt._rawType() instanceof Unit unit)
+        if (_GenericType.type(gt) instanceof Unit unit)
         {
             // Unit is not PackageableElement — use measure path + ~unitName
             if (unit._measure() != null)
@@ -715,10 +716,10 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             }
             return String.valueOf(unit._name());
         }
-        String path = shortPath((PackageableElement) gt._rawType());
-        // Type arguments and multiplicity arguments (e.g. Property<Owner, String | [1]>)
-        MutableList<GenericType> typeArgs = gt._typeArguments();
-        MutableList<Multiplicity> mulArgs = gt._multiplicityArguments();
+        String path = shortPath((PackageableElement) _GenericType.type(gt));
+        // Type arguments and multiplicity arguments (e.g. Property<Owner, String|[1]>)
+        MutableList<GenericType> typeArgs = _GenericType.typeArguments(gt);
+        MutableList<Multiplicity> mulArgs = _GenericType.multiplicityArguments(gt);
         boolean hasTypeArgs = typeArgs != null && typeArgs.notEmpty();
         boolean hasMulArgs = mulArgs != null && mulArgs.notEmpty();
         if (hasTypeArgs || hasMulArgs)
@@ -732,7 +733,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             {
                 if (hasTypeArgs)
                 {
-                    path += " | ";
+                    path += "|";
                 }
                 path += mulArgs.collect(m -> {
                     String s = printMul(m);
@@ -743,7 +744,7 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             path += ">";
         }
         // Type variable values (e.g. Varchar(200))
-        if (gt instanceof ConcreteGenericType cgt && cgt._typeVariableValues() != null && cgt._typeVariableValues().notEmpty())
+        if (gt instanceof UserDefinedGenericType cgt && cgt._typeVariableValues() != null && cgt._typeVariableValues().notEmpty())
         {
             path += "(" + cgt._typeVariableValues().collect(CompiledGraphPrinter::printValueInline).makeString(", ") + ")";
         }
@@ -845,10 +846,10 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
 
     private static String printMulCore(Multiplicity multiplicity)
     {
-        if (multiplicity._multiplicityParameter() != null)
+        if (multiplicity instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mp)
         {
-            String name = multiplicity._multiplicityParameter()._name();
-            if (multiplicity._multiplicityParameter()._owner() != null && multiplicity._multiplicityParameter()._owner() instanceof PackageableElement ownerElem)
+            String name = mp._name();
+            if (mp._owner() != null && mp._owner() instanceof PackageableElement ownerElem)
             {
                 name += "~" + shortPath(ownerElem);
             }
@@ -876,17 +877,21 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
             };
         }
         // Concrete multiplicity
-        String lower = formatBound(multiplicity._lowerBound());
-        String upper = formatBound(multiplicity._upperBound());
-        if (upper.equals("*"))
+        if (multiplicity instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
         {
-            return lower.equals("0") ? "[*]" : "[" + lower + "..*]";
+            String lower = formatBound(cm._lowerBound());
+            String upper = formatBound(cm._upperBound());
+            if (upper.equals("*"))
+            {
+                return lower.equals("0") ? "[*]" : "[" + lower + "..*]";
+            }
+            if (lower.equals(upper))
+            {
+                return "[" + lower + "]";
+            }
+            return "[" + lower + ".." + upper + "]";
         }
-        if (lower.equals(upper))
-        {
-            return "[" + lower + "]";
-        }
-        return "[" + lower + ".." + upper + "]";
+        return "[?]";
     }
 
     private static String formatBound(MultiplicityValue mv)
