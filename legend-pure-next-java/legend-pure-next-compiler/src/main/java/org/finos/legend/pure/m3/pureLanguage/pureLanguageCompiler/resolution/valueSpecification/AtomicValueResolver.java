@@ -21,7 +21,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Functi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Unit;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.jspecify.annotations.Nullable;
 
@@ -43,31 +42,17 @@ public class AtomicValueResolver
         else if (value instanceof meta.pure.protocol.grammar.Package_Pointer pp)
         {
             String pointerValue = pp._pointerValue();
-            if (pointerValue.indexOf('~') >= 0)
+            int checkpoint = context.currentErrorCount();
+            PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
+            if (element != null)
             {
-                // Unit reference: MeasurePath~UnitName
-                meta.pure.metamodel.type.Unit unit = _Unit.findUnit(pointerValue, context.imports(), model, context, av._sourceInformation());
-                if (unit != null)
-                {
-                    ((AtomicValueImpl) av)
-                            ._value(unit)
-                            ._genericType(_GenericType.asInferred(unit._classifierGenericType()));
-                }
+                ((AtomicValueImpl) av)
+                        ._value(element)
+                        ._genericType(_GenericType.asInferred(element._classifierGenericType()));
             }
-            else
+            else if (context.currentErrorCount() == checkpoint)
             {
-                int checkpoint = context.currentErrorCount();
-                PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
-                if (element != null)
-                {
-                    ((AtomicValueImpl) av)
-                            ._value(element)
-                            ._genericType(_GenericType.asInferred(element._classifierGenericType()));
-                }
-                else if (context.currentErrorCount() == checkpoint)
-                {
-                    context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
-                }
+                context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
             }
         }
         return av;

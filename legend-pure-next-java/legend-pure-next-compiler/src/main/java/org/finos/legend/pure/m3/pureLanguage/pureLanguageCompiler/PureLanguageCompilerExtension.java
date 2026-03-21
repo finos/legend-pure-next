@@ -23,8 +23,8 @@ import meta.pure.metamodel.relationship.Association;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Measure;
 import meta.pure.metamodel.type.PrimitiveType;
+
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
@@ -41,7 +41,6 @@ import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.AssociationHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.ClassHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.EnumerationHandler;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.MeasureHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.NativeFunctionHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.PrimitiveTypeHandler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements.ProfileHandler;
@@ -53,7 +52,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Packag
  * Core compiler extension for the Pure language.
  *
  * <p>Handles all built-in M3 element types (Class, Enumeration,
- * Function, Profile, Association, Measure, PrimitiveType) across
+ * Function, Profile, Association, PrimitiveType) across
  * the three compilation passes. Also owns the function index.</p>
  */
 public final class PureLanguageCompilerExtension implements CompilerExtension
@@ -77,7 +76,6 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
             case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f);
             case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p);
             case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a);
-            case meta.pure.protocol.grammar.type.Measure m -> MeasureHandler.firstPass(m);
             case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p);
             default -> null;
         };
@@ -103,8 +101,6 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
                     ProfileHandler.secondPass((meta.pure.metamodel.extension.ProfileImpl) entry.element(), p, model);
             case meta.pure.protocol.grammar.relationship.Association a ->
                     AssociationHandler.secondPass((meta.pure.metamodel.relationship.AssociationImpl) entry.element(), a, imports, model, context);
-            case meta.pure.protocol.grammar.type.Measure m ->
-                    MeasureHandler.secondPass((meta.pure.metamodel.type.MeasureImpl) entry.element(), m, imports, model, context);
             case meta.pure.protocol.grammar.type.PrimitiveType p ->
                     PrimitiveTypeHandler.secondPass((meta.pure.metamodel.type.PrimitiveTypeImpl) entry.element(), p, imports, model, context);
             default -> null;
@@ -132,7 +128,6 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
             case Association assoc -> AssociationHandler.thirdPass(assoc, model, context);
             case NativeFunction nf -> NativeFunctionHandler.thirdPass(nf, model, context);
             case Profile pr -> ProfileHandler.thirdPass(pr, model, context);
-            case Measure me -> MeasureHandler.thirdPass(me, model, context);
             case Enumeration e -> EnumerationHandler.thirdPass(e, (meta.pure.protocol.grammar.type.Enumeration) entry.grammarElement(), context);
             case PrimitiveType pt -> PrimitiveTypeHandler.thirdPass(pt,
                     (meta.pure.protocol.grammar.type.PrimitiveType) entry.grammarElement(),

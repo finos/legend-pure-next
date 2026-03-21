@@ -6,7 +6,7 @@ options
 }
 
 
-identifier: VALID_STRING | CLASS | FUNCTION | PROFILE | ASSOCIATION | ENUM | MEASURE | STEREOTYPES | TAGS | IMPORT | LET | AGGREGATION_TYPE | PATH_SEPARATOR | AS | ALL | ENFORCEMENT_LEVEL
+identifier: VALID_STRING | CLASS | FUNCTION | PROFILE | ASSOCIATION | ENUM | STEREOTYPES | TAGS | IMPORT | LET | AGGREGATION_TYPE | PATH_SEPARATOR | AS | ALL | ENFORCEMENT_LEVEL
 ;
 
 qualifiedName: packagePath? identifier
@@ -24,7 +24,6 @@ definition:
                 | enumDefinition
                 | nativeFunction
                 | functionDefinition
-                | measureDefinition
             )*
             EOF
 ;
@@ -40,33 +39,6 @@ typeVariableParameters: GROUP_OPEN (functionVariableExpression (COMMA functionVa
 
 primitiveDefinition: PRIMITIVE stereotypes? taggedValues? qualifiedName typeVariableParameters? EXTENDS type
                      constraints?
-;
-
-measureDefinition: MEASURE stereotypes? taggedValues? qualifiedName
-                   measureBody
-;
-
-measureBody: CURLY_BRACKET_OPEN
-             (
-                (
-                    unitExpr* canonicalUnitExpr unitExpr*
-                )
-                |
-                nonConvertibleUnitExpr+
-             )
-             CURLY_BRACKET_CLOSE
-;
-
-canonicalUnitExpr: STAR unitExpr
-;
-
-unitExpr: identifier COLON unitConversionExpr
-;
-
-nonConvertibleUnitExpr : identifier END_LINE
-;
-
-unitConversionExpr: identifier ARROW codeBlock
 ;
 
 
@@ -164,11 +136,7 @@ simpleExpression:
         )
 ;
 
-unitInstance: unitInstanceLiteral unitName
-;
 
-unitName: qualifiedName TILDE identifier
-;
 
 propertyReturnType: type multiplicity
 ;
@@ -247,7 +215,6 @@ atomicExpression:
                  dsl
                  | instanceLiteralToken
                  | expressionInstance
-                 | unitInstance
                  | variable
                  | columnBuilders
                  | (AT (type? (PIPE multiplicityArgument)? | multiplicity))
@@ -262,7 +229,7 @@ oneColSpec: columnName (COLON (type multiplicity? | anyLambda) extraFunction?)?
 extraFunction: (COLON anyLambda)
 ;
 
-instanceReference: (PATH_SEPARATOR | qualifiedName | unitName) allOrFunction?
+instanceReference: (PATH_SEPARATOR | qualifiedName) allOrFunction?
 ;
 
 anyLambda : lambdaPipe | lambdaFunction | lambdaParam lambdaPipe
@@ -375,9 +342,6 @@ instanceLiteral: instanceLiteralToken | (MINUS INTEGER) | (MINUS FLOAT) | (MINUS
 instanceLiteralToken: STRING | INTEGER | FLOAT | DECIMAL | DATE | BOOLEAN | STRICTTIME
 ;
 
-unitInstanceLiteral: (MINUS? INTEGER) | (MINUS? FLOAT) | (MINUS? DECIMAL) | (PLUS INTEGER) | (PLUS FLOAT) | (PLUS DECIMAL)
-;
-
 arithmeticPart:   PLUS simpleExpression (PLUS simpleExpression)*
                 | (STAR simpleExpression (STAR simpleExpression)*)
                 | (MINUS simpleExpression (MINUS simpleExpression)*)
@@ -410,8 +374,6 @@ type: ( qualifiedName (LESSTHAN (typeArguments? (PIPE multiplicityArguments)?) G
             columnType (COMMA columnType)*
         GROUP_CLOSE
       )
-      |
-      unitName
 ;
 
 typeVariableValues: GROUP_OPEN (instanceLiteral (COMMA instanceLiteral)*)? GROUP_CLOSE

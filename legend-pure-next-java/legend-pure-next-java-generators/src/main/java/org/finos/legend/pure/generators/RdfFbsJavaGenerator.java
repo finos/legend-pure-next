@@ -847,7 +847,6 @@ public class RdfFbsJavaGenerator
         sb.append("    private static String pointerPath(Object obj)\n");
         sb.append("    {\n");
         sb.append("        if (obj instanceof PackageableElement pe) { return _PackageableElement.path(pe); }\n");
-        sb.append("        if (obj instanceof meta.pure.metamodel.type.Unit u && u._measure() != null) { return _PackageableElement.path(u._measure()) + \"~\" + u._name(); }\n");
         sb.append("        if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".\" + ap._name(); }\n");
         sb.append("        if (obj instanceof Stereotype s && s._profile() != null) { return _PackageableElement.path(s._profile()) + \".\" + s._value(); }\n");
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
@@ -1108,16 +1107,6 @@ public class RdfFbsJavaGenerator
                 sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
                 sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
                 sb.append("            valueUnionType = 1;\n");
-                sb.append("        }\n");
-                sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Unit unitVal && unitVal._measure() != null)\n");
-                sb.append("        {\n");
-                sb.append("            // Unit: write as PointerRef with measurePath~unitName\n");
-                sb.append("            String unitPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(unitVal._measure()) + \"~\" + unitVal._name();\n");
-                sb.append("            int pathOff = builder.createString(unitPath);\n");
-                sb.append("            PointerRef.startPointerRef(builder);\n");
-                sb.append("            PointerRef.addPath(builder, pathOff);\n");
-                sb.append("            valueUnionOffset = PointerRef.endPointerRef(builder);\n");
-                sb.append("            valueUnionType = 3;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() != null)\n");
                 sb.append("        {\n");

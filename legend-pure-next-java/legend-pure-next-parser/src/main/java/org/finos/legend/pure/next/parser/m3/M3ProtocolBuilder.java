@@ -48,10 +48,8 @@ import meta.pure.protocol.grammar.relationship.GeneralizationImpl;
 import meta.pure.protocol.grammar.type.ClassImpl;
 import meta.pure.protocol.grammar.type.EnumerationImpl;
 import meta.pure.protocol.grammar.type.FunctionTypeImpl;
-import meta.pure.protocol.grammar.type.MeasureImpl;
 import meta.pure.protocol.grammar.type.PrimitiveTypeImpl;
 import meta.pure.protocol.grammar.type.Type_PointerImpl;
-import meta.pure.protocol.grammar.type.UnitImpl;
 import meta.pure.protocol.grammar.type.generics.GenericType;
 import meta.pure.protocol.grammar.type.generics.TypeParameter;
 import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;
@@ -458,68 +456,6 @@ public class M3ProtocolBuilder
 
         elements.add(assoc);
         return assoc;
-    }
-
-    // ========================================================================
-    // Measure
-    // ========================================================================
-
-    @Override
-    public Object visitMeasureDefinition(final M3Parser.MeasureDefinitionContext ctx)
-    {
-        String fullName = ctx.qualifiedName().getText();
-        MeasureImpl measure = setNameAndPackage(new MeasureImpl(), fullName)
-                ._sourceInformation(buildSourceInfo(ctx));
-
-        // Stereotypes and tagged values
-        parseStereotypesAndTaggedValues(measure, ctx.stereotypes(), ctx.taggedValues());
-
-        M3Parser.MeasureBodyContext body = ctx.measureBody();
-
-        // Canonical unit
-        if (body.canonicalUnitExpr() != null)
-        {
-            measure._canonicalUnit(buildUnit(body.canonicalUnitExpr().unitExpr(), fullName));
-        }
-
-        if (body.unitExpr() != null)
-        {
-            MutableList nonCanonical = ListAdapter.adapt(body.unitExpr())
-                    .collect(uCtx -> buildUnit(uCtx, fullName));
-            if (body.nonConvertibleUnitExpr() != null)
-            {
-                nonCanonical.addAllIterable(
-                        ListAdapter.adapt(body.nonConvertibleUnitExpr()).collect(ncCtx ->
-                                new UnitImpl()
-                                        ._name(ncCtx.identifier().getText())
-                                        ._sourceInformation(buildSourceInfo(ncCtx))));
-            }
-            measure._nonCanonicalUnits(nonCanonical);
-        }
-        else if (body.nonConvertibleUnitExpr() != null)
-        {
-            measure._nonCanonicalUnits(
-                    ListAdapter.adapt(body.nonConvertibleUnitExpr()).collect(ncCtx ->
-                            new UnitImpl()
-                                    ._name(ncCtx.identifier().getText())
-                                    ._sourceInformation(buildSourceInfo(ncCtx))));
-        }
-
-        elements.add(measure);
-        return measure;
-    }
-
-    private UnitImpl buildUnit(final M3Parser.UnitExprContext ctx, final String measureFqn)
-    {
-        M3Parser.UnitConversionExprContext conv = ctx.unitConversionExpr();
-        return new UnitImpl()
-                ._name(ctx.identifier().getText())
-                ._sourceInformation(buildSourceInfo(ctx))
-                ._conversionFunction(new LambdaFunctionImpl()
-                        ._sourceInformation(buildSourceInfo(conv))
-                        ._parameters(Lists.mutable.with(new VariableExpressionImpl()
-                                ._name(conv.identifier().getText())))
-                        ._expressionSequence(visitCodeBlockExpressions(conv.codeBlock(), java.util.Collections.emptySet(), java.util.Collections.emptySet())));
     }
 
     @Override
@@ -942,23 +878,6 @@ public class M3ProtocolBuilder
                     ._sourceInformation(buildSourceInfo(ctx.dsl()))
                     ._genericType(buildPrimitiveGenericType("String"))
                     ._value(ctx.dsl().DSL_TEXT().getText());
-        }
-        else if (ctx.unitInstance() != null)
-        {
-            // Unit instance: 5 Measure~Unit
-            M3Parser.UnitInstanceContext uiCtx = ctx.unitInstance();
-            return new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(uiCtx))
-                    ._functionName("unitInstance")
-                    ._parametersValues(Lists.mutable.with(
-                            new AtomicValueImpl()
-                                    ._sourceInformation(buildSourceInfo(uiCtx.unitInstanceLiteral()))
-                                    ._genericType(buildPrimitiveGenericType("String"))
-                                    ._value(uiCtx.unitInstanceLiteral().getText()),
-                            new AtomicValueImpl()
-                                    ._sourceInformation(buildSourceInfo(uiCtx.unitName()))
-                                    ._genericType(buildPrimitiveGenericType("String"))
-                                    ._value(uiCtx.unitName().getText())));
         }
         else if (ctx.columnBuilders() != null)
         {
@@ -1473,7 +1392,7 @@ public class M3ProtocolBuilder
 
     private ValueSpecification visitInstanceRef(final M3Parser.InstanceReferenceContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
-        // instanceReference: (PATH_SEPARATOR | qualifiedName | unitName) allOrFunction?
+        // instanceReference: (PATH_SEPARATOR | qualifiedName) allOrFunction?
         String name = ctx.getText();
         if (ctx.allOrFunction() != null && ctx.allOrFunction().functionExpressionParameters() != null)
         {
@@ -2121,12 +2040,6 @@ public class M3ProtocolBuilder
                         ListAdapter.adapt(ctx.typeVariableValues().instanceLiteral())
                                 .collect(this::buildInstanceLiteralValue));
             }
-        }
-        else if (ctx.unitName() != null)
-        {
-            gt._type(new Type_PointerImpl()
-                    ._pointerValue(ctx.unitName().getText())
-                    ._sourceInformation(buildSourceInfo(ctx.unitName())));
         }
         else if (ctx.CURLY_BRACKET_OPEN() != null)
         {

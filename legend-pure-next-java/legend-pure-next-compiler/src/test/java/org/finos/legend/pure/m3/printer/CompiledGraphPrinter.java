@@ -44,9 +44,7 @@ import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Measure;
 import meta.pure.metamodel.type.PrimitiveType;
-import meta.pure.metamodel.type.Unit;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
@@ -132,7 +130,6 @@ public final class CompiledGraphPrinter
             case Enumeration e -> printEnumeration(e, sb);
             case Profile p -> printProfile(p, sb);
             case PrimitiveType p -> printPrimitiveType(p, sb);
-            case Measure m -> printMeasure(m, sb);
             default -> sb.append("// unsupported: ").append(element.getClass().getSimpleName())
                          .append(' ').append(fullPath(element)).append('\n');
         }
@@ -452,33 +449,6 @@ public final class CompiledGraphPrinter
         }
     }
 
-    private static void printMeasure(Measure m, StringBuilder sb)
-{
-    sb.append("measure ").append(fullPath(m));
-    appendClassifierGenericType(sb, m);
-    appendSourceInfo(sb, m._sourceInformation());
-    sb.append('\n');
-    printAnnotations(m, 1, sb);
-    if (m._canonicalUnit() != null)
-    {
-        printUnit(m._canonicalUnit(), "canonicalUnit", 1, sb);
-    }
-    if (m._nonCanonicalUnits() != null)
-    {
-        m._nonCanonicalUnits().forEach(u -> printUnit(u, "unit", 1, sb));
-    }
-}
-
-private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
-{
-    indent(sb, depth).append(label).append(' ').append(u._name());
-    appendSourceInfo(sb, u._sourceInformation());
-    sb.append('\n');
-    if (u._conversionFunction() != null)
-    {
-        printLambda((LambdaFunction) u._conversionFunction(), depth + 1, sb);
-    }
-}
 
     // -----------------------------------------------------------------------
     // ValueSpecification printing
@@ -706,15 +676,6 @@ private static void printUnit(Unit u, String label, int depth, StringBuilder sb)
         if (_GenericType.type(gt) instanceof RelationType rt)
         {
             return printRelationType(rt);
-        }
-        if (_GenericType.type(gt) instanceof Unit unit)
-        {
-            // Unit is not PackageableElement — use measure path + ~unitName
-            if (unit._measure() != null)
-            {
-                return shortPath(unit._measure()) + "~" + unit._name();
-            }
-            return String.valueOf(unit._name());
         }
         String path = shortPath((PackageableElement) _GenericType.type(gt));
         // Type arguments and multiplicity arguments (e.g. Property<Owner, String|[1]>)

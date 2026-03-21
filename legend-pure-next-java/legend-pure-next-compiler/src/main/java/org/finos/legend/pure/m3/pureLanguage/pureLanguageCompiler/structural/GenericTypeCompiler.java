@@ -34,7 +34,6 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Unit;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.generics.GenericType}
@@ -136,16 +135,7 @@ public final class GenericTypeCompiler
             return type;
         }
 
-        // Unit type reference: MeasurePath~UnitName
-        if (pointerValue.indexOf('~') >= 0)
-        {
-            meta.pure.metamodel.type.Unit unit = _Unit.findUnit(pointerValue, imports, model, context, sourceInfo);
-            if (unit != null)
-            {
-                return unit;
-            }
-        }
-        else if (context.currentErrorCount() == checkpoint)
+        if (context.currentErrorCount() == checkpoint)
         {
             context.addError(new CompilationError("The type '" + pointerValue + "' can't be found", sourceInfo));
         }
