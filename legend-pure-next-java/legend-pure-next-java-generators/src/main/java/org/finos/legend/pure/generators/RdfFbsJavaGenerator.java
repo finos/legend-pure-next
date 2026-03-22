@@ -316,9 +316,11 @@ public class RdfFbsJavaGenerator
                 sb.append("        if (cached_").append(prop.name).append(" != null) { return cached_").append(prop.name).append("; }\n");
             }
 
+            String cacheField = needsCache ? "cached_" + prop.name : null;
+
             if (isPointer)
             {
-                generatePointerGetter(sb, prop, javaType, javaAccessor);
+                generatePointerGetter(sb, prop, javaType, javaAccessor, cacheField);
             }
             else if (isEnumType)
             {
@@ -330,7 +332,7 @@ public class RdfFbsJavaGenerator
             }
             else if (isMainTaxonomyType(prop.typeName))
             {
-                generateMainTaxonomySingleGetter(sb, prop, javaType, javaAccessor);
+                generateMainTaxonomySingleGetter(sb, prop, javaType, javaAccessor, cacheField);
             }
             else if (isClassType && prop.isMany)
             {
@@ -435,7 +437,6 @@ public class RdfFbsJavaGenerator
                     // Single-valued getters use "return <expr>;" or "return new Wrapper(...);" patterns
                     // Replace all "return <expr>;" with "cached_X = <expr>; return cached_X;"
                     // but not "return null;" (null means absent, should not be cached)
-                    String cacheField = "cached_" + prop.name;
                     String search = "        return ";
                     int searchFrom = sb.lastIndexOf("    {\n") + 1; // start of getter body
                     int idx;
@@ -445,7 +446,7 @@ public class RdfFbsJavaGenerator
                         int lineEnd = sb.indexOf("\n", idx);
                         String returnLine = sb.substring(idx, lineEnd + 1);
                         String returnExpr = returnLine.substring(search.length(), returnLine.length() - 2); // strip "return " prefix and ";\n" suffix
-                        if (!"null".equals(returnExpr.trim()))
+                        if (!"null".equals(returnExpr.trim()) && !cacheField.equals(returnExpr.trim()))
                         {
                             String replacement = "        " + cacheField + " = " + returnExpr + ";\n        return " + cacheField + ";\n";
                             sb.replace(idx, lineEnd + 1, replacement);
@@ -469,7 +470,7 @@ public class RdfFbsJavaGenerator
         return sb.toString();
     }
 
-    private void generatePointerGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField)
+    private void generatePointerGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField, String cacheField)
     {
         MutableList<String> nps = getNonPointerSubtypes(m3Model, prop);
         if (nps.notEmpty() && !prop.isMany)
@@ -483,13 +484,29 @@ public class RdfFbsJavaGenerator
                 sb.append("        if (fb.").append(unionTypeAccessor(accessor)).append("() == ").append(unionIdx).append(")\n");
                 sb.append("        {\n");
                 sb.append("            ").append(subtype).append("Def def = (").append(subtype).append("Def) fb.").append(accessor).append("(new ").append(subtype).append("Def());\n");
-                sb.append("            return def != null ? new ").append(wrapperType).append("(def, resolver) : null;\n");
+                if (cacheField != null)
+                {
+                    sb.append("            ").append(cacheField).append(" = def != null ? new ").append(wrapperType).append("(def, resolver) : null;\n");
+                    sb.append("            return ").append(cacheField).append(";\n");
+                }
+                else
+                {
+                    sb.append("            return def != null ? new ").append(wrapperType).append("(def, resolver) : null;\n");
+                }
                 sb.append("        }\n");
             });
             sb.append("        if (fb.").append(unionTypeAccessor(accessor)).append("() == 1)\n");
             sb.append("        {\n");
             sb.append("            PointerRef ref = (PointerRef) fb.").append(accessor).append("(new PointerRef());\n");
-            sb.append("            return ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
+            if (cacheField != null)
+            {
+                sb.append("            ").append(cacheField).append(" = ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
+                sb.append("        return ").append(cacheField).append(";\n");
+            }
+            else
+            {
+                sb.append("            return ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
+            }
             sb.append("        }\n");
             sb.append("        return null;\n");
         }
@@ -635,7 +652,7 @@ public class RdfFbsJavaGenerator
      * Generate a getter for a single-valued property whose type is a mainTaxonomy class.
      * Reads the FlatBuffer union discriminator to create the correct wrapper.
      */
-    private void generateMainTaxonomySingleGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField)
+    private void generateMainTaxonomySingleGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField, String cacheField)
     {
         MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
 
@@ -651,14 +668,28 @@ public class RdfFbsJavaGenerator
             String wrapperType = subtype + "FlatBufferWrapper";
             sb.append("            case ").append(unionIdx).append(": { ");
             sb.append(defType).append(" d = (").append(defType).append(") fb.").append(fbField).append("(new ").append(defType).append("()); ");
-            sb.append("return d != null ? new ").append(wrapperType).append("(d, resolver) : null; }\n");
+            if (cacheField != null)
+            {
+                sb.append(cacheField).append(" = d != null ? new ").append(wrapperType).append("(d, resolver) : null; return ").append(cacheField).append("; }\n");
+            }
+            else
+            {
+                sb.append("return d != null ? new ").append(wrapperType).append("(d, resolver) : null; }\n");
+            }
         });
 
         // Base type fallback
         int baseIdx = subtypes.size() + 1;
         sb.append("            case ").append(baseIdx).append(": { ");
         sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def()); ");
-        sb.append("return d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver) : null; }\n");
+        if (cacheField != null)
+        {
+            sb.append(cacheField).append(" = d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver) : null; return ").append(cacheField).append("; }\n");
+        }
+        else
+        {
+            sb.append("return d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver) : null; }\n");
+        }
 
         sb.append("            default: return null;\n");
         sb.append("        }\n");
@@ -847,7 +878,6 @@ public class RdfFbsJavaGenerator
         sb.append("    private static String pointerPath(Object obj)\n");
         sb.append("    {\n");
         sb.append("        if (obj instanceof PackageableElement pe) { return _PackageableElement.path(pe); }\n");
-        sb.append("        if (obj instanceof meta.pure.metamodel.type.Unit u && u._measure() != null) { return _PackageableElement.path(u._measure()) + \"~\" + u._name(); }\n");
         sb.append("        if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".\" + ap._name(); }\n");
         sb.append("        if (obj instanceof Stereotype s && s._profile() != null) { return _PackageableElement.path(s._profile()) + \".\" + s._value(); }\n");
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
@@ -1108,16 +1138,6 @@ public class RdfFbsJavaGenerator
                 sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
                 sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
                 sb.append("            valueUnionType = 1;\n");
-                sb.append("        }\n");
-                sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Unit unitVal && unitVal._measure() != null)\n");
-                sb.append("        {\n");
-                sb.append("            // Unit: write as PointerRef with measurePath~unitName\n");
-                sb.append("            String unitPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(unitVal._measure()) + \"~\" + unitVal._name();\n");
-                sb.append("            int pathOff = builder.createString(unitPath);\n");
-                sb.append("            PointerRef.startPointerRef(builder);\n");
-                sb.append("            PointerRef.addPath(builder, pathOff);\n");
-                sb.append("            valueUnionOffset = PointerRef.endPointerRef(builder);\n");
-                sb.append("            valueUnionType = 3;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() != null)\n");
                 sb.append("        {\n");

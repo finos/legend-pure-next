@@ -31,5 +31,6 @@
         <module>legend-pure-next-java-generators</module>
         <module>legend-pure-next-compiler</module>
         <module>legend-pure-next-parser</module>
+        <module>legend-pure-next-execution</module>
     </modules>
 </project>

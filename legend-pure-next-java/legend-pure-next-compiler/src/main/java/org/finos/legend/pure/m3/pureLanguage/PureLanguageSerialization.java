@@ -14,7 +14,6 @@ import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityFlatBu
 import meta.pure.metamodel.relationship.AssociationFlatBufferWrapper;
 import meta.pure.metamodel.type.ClassFlatBufferWrapper;
 import meta.pure.metamodel.type.EnumerationFlatBufferWrapper;
-import meta.pure.metamodel.type.MeasureFlatBufferWrapper;
 import meta.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
@@ -31,7 +30,6 @@ import org.finos.legend.pure.m3.module.pdbModule.fbs.ClassDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.EnumerationDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.InferredPackageableMultiplicityDef;
-import org.finos.legend.pure.m3.module.pdbModule.fbs.MeasureDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.NativeFunctionDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PackageDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveTypeDef;
@@ -62,7 +60,6 @@ public class PureLanguageSerialization implements PDBExtension
             case "Enumeration" -> new EnumerationFlatBufferWrapper(EnumerationDef.getRootAsEnumerationDef(buffer), resolver);
             case "Association" -> new AssociationFlatBufferWrapper(AssociationDef.getRootAsAssociationDef(buffer), resolver);
             case "Profile" -> new ProfileFlatBufferWrapper(ProfileDef.getRootAsProfileDef(buffer), resolver);
-            case "Measure" -> new MeasureFlatBufferWrapper(MeasureDef.getRootAsMeasureDef(buffer), resolver);
             case "UserDefinedFunction" -> new UserDefinedFunctionFlatBufferWrapper(UserDefinedFunctionDef.getRootAsUserDefinedFunctionDef(buffer), resolver);
             case "NativeFunction" -> new NativeFunctionFlatBufferWrapper(NativeFunctionDef.getRootAsNativeFunctionDef(buffer), resolver);
             case "PrimitiveType" -> new PrimitiveTypeFlatBufferWrapper(PrimitiveTypeDef.getRootAsPrimitiveTypeDef(buffer), resolver);
@@ -114,10 +111,6 @@ public class PureLanguageSerialization implements PDBExtension
         {
             return writer.writeProfile(profile);
         }
-        else if (element instanceof meta.pure.metamodel.type.Measure measure)
-        {
-            return writer.writeMeasure(measure);
-        }
         else if (element instanceof UserDefinedFunction udf)
         {
             validateFunctionExpressions(udf);
@@ -152,7 +145,6 @@ public class PureLanguageSerialization implements PDBExtension
         if (element instanceof meta.pure.metamodel.type.Enumeration) return "Enumeration";
         if (element instanceof meta.pure.metamodel.relationship.Association) return "Association";
         if (element instanceof meta.pure.metamodel.extension.Profile) return "Profile";
-        if (element instanceof meta.pure.metamodel.type.Measure) return "Measure";
         if (element instanceof UserDefinedFunction) return "UserDefinedFunction";
         if (element instanceof NativeFunction) return "NativeFunction";
         if (element instanceof meta.pure.metamodel.type.PrimitiveType) return "PrimitiveType";

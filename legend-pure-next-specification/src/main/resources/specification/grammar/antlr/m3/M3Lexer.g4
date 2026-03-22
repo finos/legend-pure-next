@@ -55,7 +55,6 @@ CLASS: 'Class';
 ASSOCIATION: 'Association';
 PROFILE: 'Profile';
 ENUM: 'Enum';
-MEASURE: 'Measure';
 STEREOTYPES: 'stereotypes';
 TAGS: 'tags';
 LET: 'let';

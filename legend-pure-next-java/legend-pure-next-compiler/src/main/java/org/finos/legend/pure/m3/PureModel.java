@@ -16,6 +16,8 @@ package org.finos.legend.pure.m3;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
+import meta.pure.metamodel.PackageableElement;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -54,7 +56,7 @@ public class PureModel
     {
         this.modules = modules;
         this.extensions = extensions;
-        this.root = new PackageImpl()._name("Root");
+        this.root = new PackageImpl()._name("::");
     }
 
     public MutableList<LanguageExtension> extensions()
@@ -214,6 +216,10 @@ public class PureModel
                 }
             }
 
+            // Set classifierGenericType on Root package (and any in-memory packages)
+            // now that the Package type is available from PDB
+            setPackageClassifierGenericType();
+
             return new CompilationResult(List.of());
         }
         finally
@@ -241,5 +247,50 @@ public class PureModel
     public MutableList<Module> modules()
     {
         return this.modules;
+    }
+
+    /**
+     * After compilation, set classifierGenericType on the Root package
+     * and any intermediate PackageImpl instances that were created in-memory.
+     */
+    private void setPackageClassifierGenericType()
+    {
+        // Look up the Package type from any module
+        meta.pure.metamodel.type.Type packageType = null;
+        for (Module m : modules)
+        {
+            PackageableElement pe = m.getElement("meta::pure::metamodel::Package");
+            if (pe instanceof meta.pure.metamodel.type.Type t)
+            {
+                packageType = t;
+                break;
+            }
+        }
+        if (packageType != null)
+        {
+
+            setClassifierOnPackage(root, packageType);
+        }
+    }
+
+    private static void setClassifierOnPackage(Package pkg, meta.pure.metamodel.type.Type packageType)
+    {
+        if (pkg instanceof PackageImpl pi && pi._classifierGenericType() == null)
+        {
+            UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
+            gt._type(packageType);
+            pi._classifierGenericType(gt);
+        }
+        // Recurse into children
+        if (pkg._children() != null)
+        {
+            for (PackageableElement child : pkg._children())
+            {
+                if (child instanceof Package childPkg)
+                {
+                    setClassifierOnPackage(childPkg, packageType);
+                }
+            }
+        }
     }
 }

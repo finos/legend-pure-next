@@ -326,60 +326,6 @@
     :genericType [ :type :String ] ;
     :multiplicity :PureOne .
 
-# --- Measure ---
-
-:Measure a :Class ;
-    :name "Measure" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Measure ] ] ;
-    :package :meta_pure_metamodel_type ;
-    :generalizations 
-        [ :general [ :type :DataType ] ],
-        [ :general [ :type :PackageableElement ] ] .
-
-:canonicalUnit a :Property ;
-    :name "canonicalUnit" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Measure ] [ :type :Unit ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Measure ;
-    :genericType [ :type :Unit ] ;
-    :multiplicity :ZeroOne .
-
-:nonCanonicalUnits a :Property ;
-    :name "nonCanonicalUnits" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Measure ] [ :type :Unit ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :Measure ;
-    :genericType [ :type :Unit ] ;
-    :multiplicity :ZeroMany .
-
-# --- Unit ---
-
-:Unit a :Class ;
-    :name "Unit" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Unit ] ] ;
-    :package :meta_pure_metamodel_type ;
-    :generalizations [ :general [ :type :DataType ] ] .
-
-:unit_name a :Property ;
-    :name "name" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Unit ] [ :type :String ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Unit ;
-    :genericType [ :type :String ] ;
-    :multiplicity :ZeroOne .
-
-:measure a :Property ;
-    :name "measure" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Unit ] [ :type :Measure ] ) ; :multiplicityArguments :PureOne ] ;
-    :owner :Unit ;
-    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
-    :genericType [ :type :Measure ] ;
-    :multiplicity :PureOne .
-
-:conversionFunction a :Property ;
-    :name "conversionFunction" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Unit ] [ :type :LambdaFunction ; :typeArguments [ :type :Any ] ] ) ; :multiplicityArguments :ZeroOne ] ;
-    :owner :Unit ;
-    :genericType [ :type :LambdaFunction ; :typeArguments [ :type :Any ] ] ;
-    :multiplicity :ZeroOne .
-
 # --- FunctionType ---
 
 :FunctionType a :Class ;
@@ -1631,6 +1577,13 @@
 # =============================================================================
 # PACKAGES
 # =============================================================================
+:PureZero a :UserDefinedPackageableMultiplicity ;
+    :name "PureZero" ;
+    :lowerBound [ :value 0 ] ;
+    :upperBound [ :value 0 ] ;
+    :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
+    :package :meta_pure_metamodel_multiplicity .
+
 :PureOne a :UserDefinedPackageableMultiplicity ;
     :name "PureOne" ;
     :lowerBound [ :value 1 ] ;

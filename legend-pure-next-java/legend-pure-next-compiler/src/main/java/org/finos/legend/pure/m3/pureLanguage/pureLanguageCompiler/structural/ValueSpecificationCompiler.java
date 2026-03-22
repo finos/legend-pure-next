@@ -202,40 +202,43 @@ public final class ValueSpecificationCompiler
             }
         }
 
-        // Override genericType for date literals stored as %-prefixed strings
+        // Detect date literals by their genericType (set by parser: DateTime, StrictDate, StrictTime, Date)
+        // and normalize timezone offsets to UTC
         Object compiledValue = result._value();
-        if (compiledValue instanceof String s && s.length() > 1 && s.charAt(0) == '%' && Character.isDigit(s.charAt(1)))
+        if (compiledValue instanceof String dateBody)
         {
-            String dateTypePath;
-            String dateBody = s.substring(1);
+            String genericTypeName = getGenericTypeName(result);
+            if ("DateTime".equals(genericTypeName) || "StrictDate".equals(genericTypeName) || "Date".equals(genericTypeName) || "StrictTime".equals(genericTypeName))
+            {
+                // Normalize dates with timezone offsets to UTC
+                if (dateBody.contains("T") && hasTimezoneOffset(dateBody))
+                {
+                    dateBody = normalizeToUTC(dateBody);
+                    result._value(dateBody);
+                }
 
-            // Normalize dates with timezone offsets to UTC
-            if (dateBody.contains("T") && hasTimezoneOffset(dateBody))
-            {
-                dateBody = normalizeToUTC(dateBody);
-                result._value("%" + dateBody);
-            }
-
-            if (dateBody.contains("T"))
-            {
-                dateTypePath = "meta::pure::metamodel::type::primitives::DateTime";
-            }
-            else if (dateBody.length() <= 7)
-            {
-                // %YYYY or %YYYY-MM — Date
-                dateTypePath = "meta::pure::metamodel::type::primitives::Date";
-            }
-            else
-            {
-                // %YYYY-MM-DD — StrictDate
-                dateTypePath = "meta::pure::metamodel::type::primitives::StrictDate";
-            }
-            PackageableElement dateType = model.getElement(dateTypePath);
-            if (dateType instanceof meta.pure.metamodel.type.Type)
-            {
-                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
-                gt._type((meta.pure.metamodel.type.Type) dateType);
-                result._genericType(gt);
+                String dateTypePath;
+                if (dateBody.contains("T"))
+                {
+                    dateTypePath = "meta::pure::metamodel::type::primitives::DateTime";
+                }
+                else if (dateBody.length() <= 7)
+                {
+                    // YYYY or YYYY-MM — Date
+                    dateTypePath = "meta::pure::metamodel::type::primitives::Date";
+                }
+                else
+                {
+                    // YYYY-MM-DD — StrictDate
+                    dateTypePath = "meta::pure::metamodel::type::primitives::StrictDate";
+                }
+                PackageableElement dateType = model.getElement(dateTypePath);
+                if (dateType instanceof meta.pure.metamodel.type.Type)
+                {
+                    UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
+                    gt._type((meta.pure.metamodel.type.Type) dateType);
+                    result._genericType(gt);
+                }
             }
         }
 
@@ -309,7 +312,24 @@ public final class ValueSpecificationCompiler
     }
 
     /**
-     * Check whether a date body string (after the % prefix) contains a timezone offset.
+     * Extract the simple type name from an AtomicValue's genericType.
+     * Handles protocol-level pointer types and metamodel-level resolved types.
+     */
+    private static String getGenericTypeName(AtomicValueImpl av)
+    {
+        var gt = av._genericType();
+        if (gt == null) { return null; }
+        if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        {
+            var type = gtv._type();
+            if (type instanceof meta.pure.protocol.grammar.type.Type_Pointer ptr) { return ptr._pointerValue(); }
+            if (type instanceof PackageableElement pe) { return pe._name(); }
+        }
+        return null;
+    }
+
+    /**
+     * Check whether a date body string contains a timezone offset.
      * Pure timezone offsets are in the format +HHMM or -HHMM (no colon),
      * appearing after the time portion (after 'T').
      */

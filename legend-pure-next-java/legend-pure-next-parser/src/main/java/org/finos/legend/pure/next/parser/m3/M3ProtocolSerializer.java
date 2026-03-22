@@ -39,11 +39,9 @@ import meta.pure.protocol.grammar.relationship.Association;
 import meta.pure.protocol.grammar.relationship.Generalization;
 import meta.pure.protocol.grammar.type.Enumeration;
 import meta.pure.protocol.grammar.type.FunctionType;
-import meta.pure.protocol.grammar.type.Measure;
 import meta.pure.protocol.grammar.type.PrimitiveType;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.Type_Protocol;
-import meta.pure.protocol.grammar.type.Unit;
 import meta.pure.protocol.grammar.type.generics.GenericType;
 import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import meta.pure.protocol.grammar.type.generics.TypeParameter;
@@ -1184,16 +1182,6 @@ public class M3ProtocolSerializer
                 }
             }
             sb.append("]");
-            return;
-        }
-
-        // Handle unitInstance: 5 Measure~Unit
-        if ("unitInstance".equals(funcName) && params != null
-                && params.size() == 2)
-        {
-            String numericValue = extractStringValue(params.get(0));
-            String unitName = extractStringValue(params.get(1));
-            sb.append(numericValue).append(" ").append(unitName);
             return;
         }
 
@@ -2351,7 +2339,6 @@ private void serializeQualifiedProperty(
                 case Association assoc -> sb.append(serializeAssociation(assoc));
                 case Profile prof -> sb.append(serializeProfile(prof));
                 case PrimitiveType pt -> sb.append(serializePrimitiveType(pt));
-                case Measure m -> sb.append(serializeMeasure(m));
                 case NativeFunction nf -> sb.append(serializeNativeFunction(nf));
                 case UserDefinedFunction func -> sb.append(serializeFunction(func));
                 default -> { /* skip unknown element types */ }
@@ -2412,63 +2399,6 @@ private void serializeQualifiedProperty(
         serializeConstraints(sb, primType._constraints());
 
         return sb.toString();
-    }
-
-    /**
-     * Serialize a measure definition to Pure code.
-     */
-    public String serializeMeasure(final Measure measure)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("Measure ");
-
-        // Stereotypes
-        serializeStereotypes(sb, measure._stereotypes());
-
-        // Tagged values
-        serializeTaggedValues(sb, measure._taggedValues());
-
-        // Full qualified name
-        sb.append(getFullQualifiedName(measure));
-
-        sb.append("\n{\n");
-
-        // Canonical unit (prefixed with *)
-        if (measure._canonicalUnit() != null)
-        {
-            sb.append("*");
-            serializeUnit(sb, measure._canonicalUnit());
-        }
-
-        // Non-canonical units
-        for (Unit unit : measure._nonCanonicalUnits())
-        {
-            serializeUnit(sb, unit);
-        }
-
-        sb.append("}");
-
-        return sb.toString();
-    }
-
-    private void serializeUnit(final StringBuilder sb, final Unit unit)
-    {
-        sb.append(unit._name());
-        if (unit._conversionFunction() != null)
-        {
-            sb.append(": ");
-            // Conversion function: paramName -> body
-            FunctionDefinition_Protocol cf = unit._conversionFunction();
-            if (cf instanceof meta.pure.protocol.grammar.function.FunctionDefinition fd
-                    && fd._parameters() != null && !fd._parameters().isEmpty())
-            {
-                sb.append(fd._parameters().get(0)._name());
-            }
-            sb.append(" -> ");
-            serializeFunctionBody(sb, cf);
-        }
-        sb.append(";\n");
     }
 
     /**

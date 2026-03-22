@@ -26,7 +26,7 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       mulParam m -> [1]
       AtomicValue  '' :String[1]  @9:9-9:10
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:String[1])>|?>[1]  @9:18-9:42
-    FunctionInvocation aggColSpecArray2_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_ :#AggColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[0..1]}#, #{Nil[*]->Any[0..1]}#, #(name:#Integer##[1]#, other:#String##[1]#)#>##[1]#  @9:46-9:110
+    FunctionInvocation aggColSpecArray2_AggColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpecArray_1_ :#AggColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[0..1]}#, {Nil[*]->Any[0..1]}, #(name:#Integer##[1]#, other:#String##[1]#)#>##[1]#  @9:46-9:110
       typeParam K -> #Any#
       typeParam P -> #(name:#Integer##[1]#, other:#String##[1]#)#
       typeParam T -> #Any#

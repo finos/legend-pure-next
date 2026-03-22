@@ -36,7 +36,6 @@ function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testPa
     assertIs(CC_Person, pathToElement('meta.pure.functions.meta.tests.model.CC_Person', '.'));
     assertIs(CC_Person.package->toOne(), pathToElement('meta::pure::functions::meta::tests::model'));
     assertIs(CC_Person.package->toOne(), pathToElement('meta_pure_functions_meta_tests_model', '_'));
-    assertIs(RomanLength, pathToElement('meta::pure::functions::meta::tests::model::RomanLength'));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::pathToElement::testLenientPathToElement():Boolean[1]
