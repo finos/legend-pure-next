@@ -1271,12 +1271,16 @@ public class M3ProtocolBuilder
         }
         else if (ctx.DATE() != null)
         {
-            value = ctx.DATE().getText();
-            genericTypeName = ctx.DATE().getText().contains("T") ? "DateTime" : "StrictDate";
+            String dateText = ctx.DATE().getText();
+            // Strip % syntax prefix — it's Pure syntax, not part of the value
+            value = dateText.startsWith("%") ? dateText.substring(1) : dateText;
+            genericTypeName = dateText.contains("T") ? "DateTime" : "StrictDate";
         }
         else if (ctx.STRICTTIME() != null)
         {
-            value = ctx.STRICTTIME().getText();
+            String timeText = ctx.STRICTTIME().getText();
+            // Strip % syntax prefix — it's Pure syntax, not part of the value
+            value = timeText.startsWith("%") ? timeText.substring(1) : timeText;
             genericTypeName = "StrictTime";
         }
         else

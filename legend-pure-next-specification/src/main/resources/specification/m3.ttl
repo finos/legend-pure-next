@@ -1577,6 +1577,13 @@
 # =============================================================================
 # PACKAGES
 # =============================================================================
+:PureZero a :UserDefinedPackageableMultiplicity ;
+    :name "PureZero" ;
+    :lowerBound [ :value 0 ] ;
+    :upperBound [ :value 0 ] ;
+    :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
+    :package :meta_pure_metamodel_multiplicity .
+
 :PureOne a :UserDefinedPackageableMultiplicity ;
     :name "PureOne" ;
     :lowerBound [ :value 1 ] ;

@@ -36,17 +36,7 @@ function meta::pure::functions::meta::elementToPath(element:PackageableElement[1
     $element->elementToPath('::')
 }
 
-function meta::pure::functions::meta::elementToPath(element:PackageableElement[1], includeRoot:Boolean[1]):String[1]
-{
-    $element->elementToPath('::', $includeRoot)
-}
-
-function meta::pure::functions::meta::elementToPath(element:PackageableElement[1], separator:String[1]):String[1]
-{
-    $element->elementToPath($separator, false)
-}
-
-native function meta::pure::functions::meta::elementToPath(element:PackageableElement[1], separator:String[1], includeRoot:Boolean[1]):String[1];
+native function meta::pure::functions::meta::elementToPath(element:PackageableElement[1], separator:String[1]):String[1];
 
 native function meta::pure::functions::meta::elementPath(element:PackageableElement[1]):PackageableElement[1..*];
 
@@ -57,52 +47,51 @@ function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEl
 {
     assertEquals('meta::pure::functions::meta', elementToPath('meta::pure::functions::meta'->pathToElement()));
     assertEquals('meta::pure::functions::meta', elementToPath(meta::pure::functions::meta));
-    assertEquals('meta::pure::functions::meta', elementToPath(meta::pure::functions::meta, true));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testTopLevelElementToPath():Boolean[1]
 {
     assertEquals('meta::pure::metamodel::Package', elementToPath(Package));
-    assertEquals('meta::pure::metamodel::Package', elementToPath(Package, '::', true));
+    assertEquals('meta::pure::metamodel::Package', elementToPath(Package, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::Number', elementToPath(Number));
-    assertEquals('meta::pure::metamodel::type::primitives::Number', elementToPath(Number, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::Number', elementToPath(Number, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::Boolean', elementToPath(Boolean));
-    assertEquals('meta::pure::metamodel::type::primitives::Boolean', elementToPath(Boolean, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::Boolean', elementToPath(Boolean, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::Date', elementToPath(Date));
-    assertEquals('meta::pure::metamodel::type::primitives::Date', elementToPath(Date, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::Date', elementToPath(Date, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::Float', elementToPath(Float));
-    assertEquals('meta::pure::metamodel::type::primitives::Float', elementToPath(Float, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::Float', elementToPath(Float, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::Integer', elementToPath(Integer));
-    assertEquals('meta::pure::metamodel::type::primitives::Integer', elementToPath(Integer, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::Integer', elementToPath(Integer, '::'));
     assertEquals('meta::pure::metamodel::type::primitives::String', elementToPath(String));
-    assertEquals('meta::pure::metamodel::type::primitives::String', elementToPath(String, '::', true));
+    assertEquals('meta::pure::metamodel::type::primitives::String', elementToPath(String, '::'));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testRootElementToPath():Boolean[1]
 {
     assertEquals('', elementToPath(::));
     assertEquals('', elementToPath(::, '.'));
-    assertEquals('', elementToPath(::, '::', true));
+    assertEquals('', elementToPath(::, '::'));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testPackageablesToPath():Boolean[1]
 {
     assertEquals('meta::pure::functions::meta::tests::model::CC_Person', elementToPath(CC_Person));
     assertEquals('meta.pure.functions.meta.tests.model.CC_Person', elementToPath(CC_Person, '.'));
-    assertEquals('meta_pure_functions_meta_tests_model_CC_Person', elementToPath(CC_Person, '_', true));
+    assertEquals('meta_pure_functions_meta_tests_model_CC_Person', elementToPath(CC_Person, '_'));
     assertEquals('meta::pure::functions::meta::tests::model', elementToPath(CC_Person.package->at(0)));
     assertEquals('meta_pure_functions_meta_tests_model', elementToPath(CC_Person.package->at(0), '_'));
-    assertEquals('meta$pure$functions$meta$tests$model', elementToPath(CC_Person.package->at(0), '$', true));
+    assertEquals('meta$pure$functions$meta$tests$model', elementToPath(CC_Person.package->at(0), '$'));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEnumerationToPath():Boolean[1]
 {
     assertEquals('meta::pure::functions::meta::tests::model::CC_GeographicEntityType', elementToPath(CC_GeographicEntityType));
     assertEquals('meta_pure_functions_meta_tests_model_CC_GeographicEntityType', elementToPath(CC_GeographicEntityType, '_'));
-    assertEquals('meta.pure.functions.meta.tests.model.CC_GeographicEntityType', elementToPath(CC_GeographicEntityType, '.', true));
+    assertEquals('meta.pure.functions.meta.tests.model.CC_GeographicEntityType', elementToPath(CC_GeographicEntityType, '.'));
     assertEquals('meta::pure::functions::meta::tests::model', elementToPath(CC_GeographicEntityType->cast(@PackageableElement).package->at(0)));
     assertEquals('meta.pure.functions.meta.tests.model', elementToPath(CC_GeographicEntityType->cast(@PackageableElement).package->at(0), '.'));
-    assertEquals('meta&pure&functions&meta&tests&model', elementToPath(CC_GeographicEntityType->cast(@PackageableElement).package->at(0), '&', true));
+    assertEquals('meta&pure&functions&meta&tests&model', elementToPath(CC_GeographicEntityType->cast(@PackageableElement).package->at(0), '&'));
 }
 
 
@@ -110,12 +99,9 @@ function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEn
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements():Boolean[1]
 {
     assertEquals('Root::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Root')))->elementToPath());
-    assertEquals('Root::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Root')))->elementToPath(true));
     assertEquals('Other::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Other')))->elementToPath());
-    assertEquals('Other::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Other')))->elementToPath(true));
 
     assertEquals('', ^PackageableElement(name='')->elementToPath());
-    assertEquals('', ^PackageableElement(name='')->elementToPath(true));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementPath::testTopLevelElementPath():Boolean[1]

@@ -592,12 +592,22 @@ public class M3ProtocolGenerator
             {
                 w.write(":" + localName + " a :Package ;\n");
 
-                // Derive simple name from localName (last segment after last _)
-                String simpleName = localName;
+                // Read name from the source model's :name property;
+                // fall back to deriving from localName (last segment after last _)
                 int lastUnderscore = localName.lastIndexOf('_');
-                if (lastUnderscore >= 0)
+                Statement nameStmt = model.getProperty(pkgRes, nameProp);
+                String simpleName;
+                if (nameStmt != null && nameStmt.getObject().isLiteral())
                 {
-                    simpleName = localName.substring(lastUnderscore + 1);
+                    simpleName = nameStmt.getString();
+                }
+                else
+                {
+                    simpleName = localName;
+                    if (lastUnderscore >= 0)
+                    {
+                        simpleName = localName.substring(lastUnderscore + 1);
+                    }
                 }
                 w.write("    :name \"" + simpleName + "\" ;");
 
