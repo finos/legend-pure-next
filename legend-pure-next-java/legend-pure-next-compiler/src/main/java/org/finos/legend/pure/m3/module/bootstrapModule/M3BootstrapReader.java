@@ -699,6 +699,12 @@ public class M3BootstrapReader
             }
         }
 
+        Statement cgtStmt = getM3Statement(model, ftRes, "classifierGenericType");
+        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        {
+            ft._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+        }
+
         return ft;
     }
 
@@ -790,7 +796,11 @@ public class M3BootstrapReader
         Statement cgtStmt = getM3Statement(model, gtRes, "classifierGenericType");
         if (cgtStmt != null && cgtStmt.getObject().isResource())
         {
-            gt._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+            Resource cgtRes = cgtStmt.getObject().asResource();
+            if (!cgtRes.equals(gtRes))
+            {
+                gt._classifierGenericType(buildGenericType(model, cgtRes, index));
+            }
         }
 
         return gt;
