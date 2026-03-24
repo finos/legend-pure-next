@@ -657,6 +657,11 @@ public class RdfFbsJavaGenerator
         MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
 
         sb.append("        byte uType = fb.").append(unionTypeAccessor(fbField)).append("();\n");
+        sb.append("        if (uType == 0)\n");
+        sb.append("        {\n");
+        sb.append("            if (this instanceof ").append(prop.typeName).append(") { return (").append(prop.typeName).append(") (java.lang.Object) this; }\n");
+        sb.append("            return null;\n");
+        sb.append("        }\n");
         sb.append("        switch (uType)\n");
         sb.append("        {\n");
 
@@ -1094,7 +1099,7 @@ public class RdfFbsJavaGenerator
                     MutableList<String> subtypes = getMainTaxonomySubtypes(prop.typeName);
                     sb.append("        int ").append(fbField).append("Offset = 0;\n");
                     sb.append("        byte ").append(fbField).append("UnionType = 0;\n");
-                    sb.append("        if (obj._").append(prop.name).append("() != null)\n");
+                    sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("() != obj)\n");
                     sb.append("        {\n");
                     subtypes.forEachWithIndex((subtype, idx) ->
                     {
@@ -1118,7 +1123,7 @@ public class RdfFbsJavaGenerator
                 else if (isClassType)
                 {
                     sb.append("        int ").append(fbField).append("Offset = 0;\n");
-                    sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = write").append(prop.typeName).append("((").append(prop.typeName).append(") obj._").append(prop.name).append("()); }\n");
+                    sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("() != obj) { ").append(fbField).append("Offset = write").append(prop.typeName).append("((").append(prop.typeName).append(") obj._").append(prop.name).append("()); }\n");
                 }
             });
 

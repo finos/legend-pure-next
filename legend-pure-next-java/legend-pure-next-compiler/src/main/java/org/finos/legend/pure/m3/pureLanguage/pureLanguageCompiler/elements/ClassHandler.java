@@ -21,7 +21,6 @@ import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -30,6 +29,7 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
@@ -74,13 +74,12 @@ public final class ClassHandler
         plcc.setEnclosingOwner(result);
 
         // Build the owner GenericType: for Pair<U,V> this is Pair<U,V>, not just Pair
-        UserDefinedGenericTypeImpl ownerGenericType = new UserDefinedGenericTypeImpl()._type(result);
+        UserDefinedGenericTypeImpl ownerGenericType = _GenericType.buildUserDefinedGenericType(result, model);
         if (typeParameters.notEmpty())
         {
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
-                            (GenericType) new UserDefinedGenericTypeImpl()
-                                    ._type(tp)));
+                            _GenericType.buildUserDefinedGenericType(tp, model)));
         }
 
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()
@@ -97,7 +96,7 @@ public final class ClassHandler
                 ._qualifiedProperties(qualifiedProperties)
                 ._generalizations(grammar._generalizations().isEmpty()
                         ? Lists.mutable.with(new meta.pure.metamodel.relationship.GeneralizationImpl()
-                                ._general(new UserDefinedGenericTypeImpl()._type((Type) model.getElement("meta::pure::metamodel::type::Any")))
+                                ._general(_GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Any"), model))
                                 ._specific(result))
                         : grammar._generalizations()
                                 .collect(g -> GeneralizationCompiler.compile(g, result, imports, model, context))
@@ -109,8 +108,7 @@ public final class ClassHandler
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
                 ._classifierGenericType(
-                        new UserDefinedGenericTypeImpl()
-                                ._type((Type) model.getElement("meta::pure::metamodel::type::Class"))
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
 
@@ -182,7 +180,7 @@ public final class ClassHandler
                                 && _GenericType.typeArguments(cls._classifierGenericType()) != null
                                 && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
-                                : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(cls);
+                                : _GenericType.buildUserDefinedGenericType(cls, model);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
                                 _VariableExpression.newVariableExpression(model)
                                         ._name("this")
@@ -257,7 +255,7 @@ public final class ClassHandler
                 && _GenericType.typeArguments(cls._classifierGenericType()) != null
                 && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
-                : new UserDefinedGenericTypeImpl()._type(cls);
+                : _GenericType.buildUserDefinedGenericType(cls, model);
         VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
                 ._genericType(ownerGenericType)

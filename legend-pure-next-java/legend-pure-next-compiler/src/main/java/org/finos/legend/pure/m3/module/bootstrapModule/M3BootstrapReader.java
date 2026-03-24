@@ -930,7 +930,11 @@ public class M3BootstrapReader
         if (cgtStmt != null && cgtStmt.getObject().isResource())
         {
             Resource cgtRes = cgtStmt.getObject().asResource();
-            if (!cgtRes.equals(gtRes))
+            if (cgtRes.equals(gtRes))
+            {
+                gt._classifierGenericType(gt);
+            }
+            else
             {
                 gt._classifierGenericType(buildGenericType(model, cgtRes, index));
             }

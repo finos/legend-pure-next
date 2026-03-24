@@ -22,10 +22,9 @@ import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperation;
-import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import meta.pure.protocol.grammar.type.Type_Pointer;
+import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -73,8 +72,7 @@ public final class GenericTypeCompiler
                 // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
                 if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
                 {
-                    yield new UserDefinedGenericTypeImpl()
-                            ._type(resolveOrCompileTypeParameter(grammarTP, context));
+                    yield _GenericType.buildUserDefinedGenericType(resolveOrCompileTypeParameter(grammarTP, context), model);
                 }
 
                 Type rawType = resolveType(gtv._type(), imports, model, context);
@@ -83,8 +81,7 @@ public final class GenericTypeCompiler
                     yield null;
                 }
 
-                yield new UserDefinedGenericTypeImpl()
-                        ._type(rawType)
+                yield _GenericType.buildUserDefinedGenericType(rawType, model)
                         ._typeArguments(gtv._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                         ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                         ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));

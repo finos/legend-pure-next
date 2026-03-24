@@ -23,7 +23,6 @@ import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -100,7 +99,7 @@ public final class _GenericTypeOperation
             case UNION ->
             {
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
+                GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {
@@ -126,7 +125,7 @@ public final class _GenericTypeOperation
                     rightRT._columns().forEach(c -> rightNames.add(c._name()));
                 }
                 RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
+                GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
                 {

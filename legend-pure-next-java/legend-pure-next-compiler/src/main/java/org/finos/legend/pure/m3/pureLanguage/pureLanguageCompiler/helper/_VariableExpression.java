@@ -28,7 +28,6 @@ public final class _VariableExpression
     {
         return new VariableExpressionImpl()
                 ._classifierGenericType(
-                        new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()
-                                ._type((Type) model.getElement("meta::pure::metamodel::valuespecification::VariableExpression")));
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::valuespecification::VariableExpression"), model));
     }
 }

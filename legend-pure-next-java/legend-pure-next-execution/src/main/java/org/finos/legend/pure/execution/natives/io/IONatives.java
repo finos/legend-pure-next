@@ -14,8 +14,8 @@
 
 package org.finos.legend.pure.execution.natives.io;
 
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
+import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 

@@ -15,8 +15,8 @@
 package org.finos.legend.pure.execution.natives.math;
 
 import meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
+import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;

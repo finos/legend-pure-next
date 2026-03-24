@@ -18,11 +18,11 @@ import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.function.property.Property}
@@ -71,8 +71,7 @@ public final class PropertyCompiler
         if (owner != null)
         {
             result._classifierGenericType(
-                    new UserDefinedGenericTypeImpl()
-                            ._type((Type) model.getElement("meta::pure::metamodel::function::property::Property"))
+                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::function::property::Property"), model)
                             ._typeArguments(Lists.mutable.with(owner, genericType))
                             ._multiplicityArguments(Lists.mutable.with(result._multiplicity())));
         }

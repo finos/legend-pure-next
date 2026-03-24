@@ -109,7 +109,7 @@ public final class ValueSpecificationResolver
 
                     meta.pure.metamodel.valuespecification.DotApplicationImpl originalDot =
                             new meta.pure.metamodel.valuespecification.DotApplicationImpl();
-                    originalDot._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication")));
+                    originalDot._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
                     originalDot._functionName(dotBody._functionName());
                     originalDot._parametersValues(org.eclipse.collections.impl.factory.Lists.mutable.with(receiver));
                     originalDot._sourceInformation(fe._sourceInformation());
