@@ -23,7 +23,6 @@ import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -223,8 +222,7 @@ public final class RelationColumnResolver
         ValueSpecification typeHolder = paramValues.get(1);
         if (typeHolder instanceof meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl holder)
         {
-            holder._genericType(new UserDefinedGenericTypeImpl()
-                    ._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"))
+            holder._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                     ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                     ._typeArguments(Lists.mutable.with(enrichedGT)));
         }
@@ -294,8 +292,7 @@ public final class RelationColumnResolver
         ValueSpecification typeHolder = paramValues.get(1);
         if (typeHolder instanceof meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl holder)
         {
-            holder._genericType(new UserDefinedGenericTypeImpl()
-                    ._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"))
+            holder._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                     ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                     ._typeArguments(Lists.mutable.with(enrichedGT)));
         }
@@ -362,8 +359,7 @@ public final class RelationColumnResolver
         {
             meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl()._columns(mergedColumns);
             ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) paramValues.get(1))
-                    ._genericType(new UserDefinedGenericTypeImpl()
-                            ._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"))
+                    ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                             ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                             ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl()._type(mergedRT))));
         }
@@ -426,8 +422,7 @@ public final class RelationColumnResolver
                 Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
                 relationType._columns(Lists.mutable.with(col));
                 ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) typeHolderArg)
-                        ._genericType(new UserDefinedGenericTypeImpl()
-                                        ._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"))
+                        ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                                         ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                                         ._typeArguments(Lists.mutable.with(ownerGT)));
             }

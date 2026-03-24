@@ -103,7 +103,7 @@ public final class FunctionExpressionResolver
             {
                 NewResolver.validateNewRequiredProperties(resolved, model, context);
             }
-            registerLetVariable(resolved, context);
+            registerLetVariable(resolved, model, context);
         }
         else
         {

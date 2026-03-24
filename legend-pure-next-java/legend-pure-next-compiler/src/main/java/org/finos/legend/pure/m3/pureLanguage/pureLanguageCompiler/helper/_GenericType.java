@@ -58,6 +58,26 @@ public class _GenericType
         };
     }
 
+    public static meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl buildUserDefinedGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
+    {
+        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        if (rawType != null)
+        {
+            gt._type(rawType);
+        }
+
+        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        cgt._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::GenericType"));
+        // Break A->B->A cycle: Do NOT inject `gt` into `cgt`'s typeArguments.
+        cgt._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")));
+        
+        // Explicit cyclic pointer
+        cgt._classifierGenericType(cgt);
+        
+        gt._classifierGenericType(cgt);
+        return gt;
+    }
+
     /**
      * Extract the type arguments from a {@link GenericType}, requiring it to be a {@link GenericTypeValue}.
      */

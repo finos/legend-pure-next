@@ -27,7 +27,6 @@ import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Utility methods for {@link FunctionType}.
@@ -147,10 +146,9 @@ public final class _FunctionType
                         ? _Multiplicity.findCommonMultiplicity(paramMulsAtPosition)
                         : null;
 
-                VariableExpressionImpl param = new VariableExpressionImpl()
-                        ._name(functionTypes.getFirst()._parameters().get(idx) != null
-                                ? functionTypes.getFirst()._parameters().get(idx)._name()
-                                : "p" + idx);
+                String pName = functionTypes.getFirst()._parameters().get(idx) != null ? functionTypes.getFirst()._parameters().get(idx)._name() : null;
+                VariableExpressionImpl param = _VariableExpression.newVariableExpression(model)
+                        ._name((pName == null || pName.isEmpty()) ? "p" + idx : pName);
                 if (commonParamType != null)
                 {
                     param._genericType(commonParamType);
@@ -341,13 +339,14 @@ public final class _FunctionType
         MutableList<VariableExpression> resolvedParams = null;
         if (ft._parameters() != null)
         {
-            resolvedParams = ft._parameters().collect(p ->
+            resolvedParams = ft._parameters().collectWithIndex((p, index) ->
             {
                 GenericType resolvedGT = p._genericType() != null ? _GenericType.makeAsConcreteAsPossible(p._genericType(), bindings, model) : p._genericType();
                 Multiplicity resolvedMul = _Multiplicity.makeAsConcreteAsPossible(p._multiplicity(), bindings);
                 if (resolvedGT != p._genericType() || resolvedMul != p._multiplicity())
                 {
-                    return (VariableExpression) new VariableExpressionImpl()._name(p._name())._genericType(resolvedGT)._multiplicity(resolvedMul);
+                    String pName = p._name();
+                    return (VariableExpression) _VariableExpression.newVariableExpression(model)._name((pName == null || pName.isEmpty()) ? "p" + index : pName)._genericType(resolvedGT)._multiplicity(resolvedMul);
                 }
                 return p;
             });

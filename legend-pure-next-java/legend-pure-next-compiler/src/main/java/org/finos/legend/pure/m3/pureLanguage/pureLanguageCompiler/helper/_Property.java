@@ -47,6 +47,7 @@ public class _Property
         }
 
         return new PropertyImpl()
+                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)
                 ._multiplicity(resolvedMultiplicity)

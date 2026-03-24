@@ -11,6 +11,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GeneralizationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -79,7 +80,7 @@ public final class PrimitiveTypeHandler
             return pt;
         }
 
-        VariableExpressionImpl thisVar = new VariableExpressionImpl()
+        VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
                 ._genericType(new UserDefinedGenericTypeImpl()._type(pt))
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));

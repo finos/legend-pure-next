@@ -81,6 +81,7 @@ public final class EnumerationHandler
 
             // Create the Property: Property<Enumeration<E>, E | 1>
             return new PropertyImpl()
+                    ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                     ._name(grammarProp._name())
                     ._owner(result)
                     ._genericType(enumGT)

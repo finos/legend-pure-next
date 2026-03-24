@@ -15,10 +15,9 @@
 package org.finos.legend.pure.execution.natives.meta;
 
 import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
+import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;

@@ -18,13 +18,13 @@ import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
 
 import java.util.Objects;
@@ -72,16 +72,15 @@ public final class PackageableFunctionCompiler
         result._returnGenericType(GenericTypeCompiler.compile(grammar._returnGenericType(), imports, model, context));
         result._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model));
         result._classifierGenericType(
-                new UserDefinedGenericTypeImpl()
-                        ._type((Type) model.getElement(
+                _GenericType.buildUserDefinedGenericType((Type) model.getElement(
                                 result instanceof NativeFunction ? "meta::pure::metamodel::function::NativeFunction"
-                                        : "meta::pure::metamodel::function::UserDefinedFunction"))
+                                        : "meta::pure::metamodel::function::UserDefinedFunction"), model)
                         ._typeArguments(Lists.mutable.with(
-                                new UserDefinedGenericTypeImpl()._type(
+                                _GenericType.buildUserDefinedGenericType(
                                         new FunctionTypeImpl()
                                                 ._parameters(result._parameters())
                                                 ._returnType(result._returnGenericType())
-                                                ._returnMultiplicity(result._returnMultiplicity())))));
+                                                ._returnMultiplicity(result._returnMultiplicity()), model))));
     }
 
     /**

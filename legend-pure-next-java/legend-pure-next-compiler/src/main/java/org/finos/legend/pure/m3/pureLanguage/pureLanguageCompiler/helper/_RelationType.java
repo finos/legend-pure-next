@@ -21,7 +21,6 @@ import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -180,7 +179,7 @@ public class _RelationType
 
         // For each common column, find the common type and multiplicity
         RelationTypeImpl result = new RelationTypeImpl();
-        GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
+        GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
 
         MutableList<Column> commonColumns = Lists.mutable.empty();
         for (String colName : commonNames)
@@ -335,7 +334,7 @@ public class _RelationType
                                 ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L))
                                 ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L));
                 RelationTypeImpl tempRT = new RelationTypeImpl();
-                GenericType tempOwnerGT = new UserDefinedGenericTypeImpl()._type(tempRT);
+                GenericType tempOwnerGT = _GenericType.buildUserDefinedGenericType(tempRT, model);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,
                         col._nameWildCard() != null && col._nameWildCard(), model));
             }

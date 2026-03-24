@@ -10,30 +10,30 @@ function test():Any[1]
 native function test_Relation_1__FuncColSpecArray_1__Any_1_(x:Relation<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], z:FuncColSpecArray<{Relation<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], Window<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], U~test_Relation_1__FuncColSpecArray_1__Any_1_[1]->Any[*]}, Any>[1]):Any[1]  ~NativeFunction<{Relation<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], FuncColSpecArray<{Relation<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], Window<U~test_Relation_1__FuncColSpecArray_1__Any_1_>[1], U~test_Relation_1__FuncColSpecArray_1__Any_1_[1]->Any[*]}, Any>[1]->Any[1]}>
 
 function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
-  FunctionInvocation test_Relation_1__FuncColSpecArray_1__Any_1_ :#Any##[1]#  @6:4-6:83
+  FunctionInvocation test_Relation_1__FuncColSpecArray_1__Any_1_ :#Any##[1]#  ~FunctionInvocation  @6:4-6:83
     typeParam U -> #(ok:#String##[1]#)#
-    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:String[1])>##[1]#  @6:11-6:43
+    ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Relation<(ok:String[1])>##[1]#  ~ArrowInvocation  @6:11-6:43
       typeParam T -> Relation<(ok:String[1])>
       mulParam m -> [1]
-      AtomicValue  '' :String[1]  @6:9-6:10
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:String[1])>|?>[1]  @6:18-6:42
-    FunctionInvocation funcColSpecArray2_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[*]}#, #(name:String[1], other:Integer[1])#>##[1]#  @6:46-6:82
+      AtomicValue  '' :String[1]  ~AtomicValue  @6:9-6:10
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Relation<(ok:String[1])>|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @6:18-6:42
+    FunctionInvocation funcColSpecArray2_FuncColSpec_MANY__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpecArray_1_ :#FuncColSpecArray<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[*]}#, #(name:String[1], other:Integer[1])#>##[1]#  ~FunctionInvocation  @6:46-6:82
       typeParam P -> #(name:String[1], other:Integer[1])#
       typeParam T -> #Any#
       typeParam U -> #(ok:#String##[1]#)#
-      Collection :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[1]#}#, #Any#>#[2]
-        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(name:String[1])#>##[1]#  @6:48-6:64
+      Collection :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[1]#}#, #Any#>#[2]  ~Collection
+        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(name:String[1])#>##[1]#  ~FunctionInvocation  @6:48-6:64
           typeParam T -> #(name:String[1])#
           typeParam U -> #(ok:String[1])#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  @6:53-6:64
-            AtomicValue  'ok' :String[1]  @6:60-6:63
-          AtomicValue  'name' :String[1]  @6:48-6:51
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1])#|1>[1]
-        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(other:Integer[1])#>##[1]#  @6:67-6:81
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  ~AtomicValue  @6:53-6:64
+            AtomicValue  'ok' :String[1]  ~AtomicValue  @6:60-6:63
+          AtomicValue  'name' :String[1]  ~AtomicValue  @6:48-6:51
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(other:Integer[1])#>##[1]#  ~FunctionInvocation  @6:67-6:81
           typeParam T -> #(other:Integer[1])#
           typeParam U -> #(ok:String[1])#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  @6:73-6:81
-            AtomicValue  1 :Integer[1]  @6:80-6:80
-          AtomicValue  'other' :String[1]  @6:67-6:71
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:Integer[1])#|1>[1]
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1], other:Integer[1])#|1>[1]
+          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @6:73-6:81
+            AtomicValue  1 :Integer[1]  ~AtomicValue  @6:80-6:80
+          AtomicValue  'other' :String[1]  ~AtomicValue  @6:67-6:71
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:Integer[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1], other:Integer[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

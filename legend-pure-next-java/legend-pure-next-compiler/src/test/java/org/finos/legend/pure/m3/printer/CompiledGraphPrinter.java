@@ -58,9 +58,9 @@ import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.List;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Produces the human-readable {@code ###CompiledGraph} text block for a list of

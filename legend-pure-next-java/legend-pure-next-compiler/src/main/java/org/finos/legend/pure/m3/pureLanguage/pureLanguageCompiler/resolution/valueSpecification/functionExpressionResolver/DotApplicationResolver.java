@@ -10,7 +10,6 @@ import meta.pure.metamodel.valuespecification.DotApplication;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
@@ -19,6 +18,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Property;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 
 import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
@@ -201,35 +201,39 @@ public final class DotApplicationResolver
         Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         // Build lambda param: v_automap:ReceiverElementType[1]
-        VariableExpression lambdaParam = new VariableExpressionImpl()
+        VariableExpression lambdaParam = _VariableExpression.newVariableExpression(model)
                 ._name("v_automap")
                 ._genericType(receiver._genericType())
                 ._multiplicity(pureOne);
 
         // Build lambda body: $v_automap.name (an unresolved DotApplication)
-        VariableExpression varRef = new VariableExpressionImpl()
+        VariableExpression varRef = _VariableExpression.newVariableExpression(model)
                 ._name("v_automap");
 
         meta.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
                 new meta.pure.metamodel.valuespecification.DotApplicationImpl();
+        dotBody._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
         dotBody._functionName(accessName);
         dotBody._parametersValues(Lists.mutable.with(varRef));
         dotBody._sourceInformation(expr._sourceInformation());
 
         // Build the lambda (no genericType — Phase 2 will resolve it)
         meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
+        lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model));
         lambda._parameters(Lists.mutable.with(lambdaParam));
         lambda._expressionSequence(Lists.mutable.with(dotBody));
 
         // Wrap in an AtomicValue (no genericType — treated as unresolved lambda)
         meta.pure.metamodel.valuespecification.AtomicValueImpl lambdaAV =
                 new meta.pure.metamodel.valuespecification.AtomicValueImpl();
+        lambdaAV._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
         lambdaAV._value(lambda);
         lambdaAV._multiplicity(pureOne);
 
         // Create a new FunctionApplication for 'map' wrapping the DotApplication
         meta.pure.metamodel.valuespecification.FunctionInvocationImpl mapExpr =
                 new meta.pure.metamodel.valuespecification.FunctionInvocationImpl();
+        mapExpr._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::FunctionInvocation"), model));
         mapExpr._functionName("map");
         mapExpr._parametersValues(Lists.mutable.with(receiver, lambdaAV));
         mapExpr._sourceInformation(expr._sourceInformation());

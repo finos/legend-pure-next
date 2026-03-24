@@ -17,11 +17,11 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.relation.RelationType}
@@ -42,7 +42,7 @@ public final class RelationTypeCompiler
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         RelationTypeImpl result = new RelationTypeImpl();
-        GenericType ownerGT = new UserDefinedGenericTypeImpl()._type(result);
+        GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
         return result._columns(rt._columns().collect(col -> _Column.build(
                 col._name(),
                 ownerGT,

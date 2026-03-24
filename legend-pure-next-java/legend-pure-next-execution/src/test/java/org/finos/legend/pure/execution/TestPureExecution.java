@@ -19,14 +19,9 @@ import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
-import org.finos.legend.pure.m3.module.CompilationResult;
-import org.finos.legend.pure.m3.module.Module;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
 import java.io.IOException;
@@ -35,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests for the Pure execution engine.

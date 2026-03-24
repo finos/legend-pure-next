@@ -17,10 +17,10 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
+import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.UserDefinedFunctionIndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
 import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 

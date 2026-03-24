@@ -36,9 +36,9 @@ import org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveTypeDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ProfileDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedFunctionDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedPackageableMultiplicityDef;
+import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.NativeFunctionIndexEntry;
-import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.nio.ByteBuffer;

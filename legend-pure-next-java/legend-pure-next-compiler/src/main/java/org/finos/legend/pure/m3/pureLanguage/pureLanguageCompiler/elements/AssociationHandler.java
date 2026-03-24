@@ -22,17 +22,16 @@ import meta.pure.metamodel.relationship.AssociationImpl;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.Objects;
 
@@ -72,8 +71,8 @@ public final class AssociationHandler
         if (compiled.size() == 2)
         {
             Type propertyType = (Type) model.getElement("meta::pure::metamodel::function::property::Property");
-            setPropertyClassifierGenericType((PropertyImpl) compiled.get(0), compiled.get(1)._genericType(), propertyType);
-            setPropertyClassifierGenericType((PropertyImpl) compiled.get(1), compiled.get(0)._genericType(), propertyType);
+            setPropertyClassifierGenericType((PropertyImpl) compiled.get(0), compiled.get(1)._genericType(), propertyType, model);
+            setPropertyClassifierGenericType((PropertyImpl) compiled.get(1), compiled.get(0)._genericType(), propertyType, model);
         }
 
         // Compile qualified properties — the QP owner is the owner of the first property,
@@ -102,11 +101,10 @@ public final class AssociationHandler
         return result;
     }
 
-    private static void setPropertyClassifierGenericType(PropertyImpl property, GenericType owner, Type propertyType)
+    private static void setPropertyClassifierGenericType(PropertyImpl property, GenericType owner, Type propertyType, MetadataAccess model)
     {
         property._classifierGenericType(
-                new UserDefinedGenericTypeImpl()
-                        ._type(propertyType)
+                _GenericType.buildUserDefinedGenericType(propertyType, model)
                         ._typeArguments(Lists.mutable.with(owner, property._genericType()))
                         ._multiplicityArguments(Lists.mutable.with(property._multiplicity())));
     }
