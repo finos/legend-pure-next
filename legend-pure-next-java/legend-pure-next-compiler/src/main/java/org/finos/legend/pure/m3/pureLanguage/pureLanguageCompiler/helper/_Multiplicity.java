@@ -59,8 +59,8 @@ public final class _Multiplicity
 
         long generalLower = lowerBound(general);
         long specificLower = lowerBound(specific);
-        long generalUpper = upperBound(general);   // -1 means unbounded (*)
-        long specificUpper = upperBound(specific);  // -1 means unbounded (*)
+        Long generalUpper = upperBound(general);   // null means unbounded (*)
+        Long specificUpper = upperBound(specific);  // null means unbounded (*)
 
         // general.lower must be <= specific.lower
         if (generalLower > specificLower)
@@ -69,13 +69,13 @@ public final class _Multiplicity
         }
 
         // If general is unbounded, it subsumes everything
-        if (generalUpper == -1)
+        if (generalUpper == null)
         {
             return true;
         }
 
         // If specific is unbounded but general is not, fail
-        if (specificUpper == -1)
+        if (specificUpper == null)
         {
             return false;
         }
@@ -107,7 +107,7 @@ public final class _Multiplicity
      */
     public static boolean isUniversal(Multiplicity m)
     {
-        return m instanceof ConcreteMultiplicity && lowerBound(m) == 0 && upperBound(m) == -1;
+        return m instanceof ConcreteMultiplicity && lowerBound(m) == 0 && upperBound(m) == null;
     }
 
     /**
@@ -124,15 +124,15 @@ public final class _Multiplicity
 
     /**
      * Return the upper bound of a multiplicity.
-     * Returns -1 for unbounded (i.e. {@code [*]}).
+     * Returns {@code null} for unbounded (i.e. {@code [*]}).
      */
-    public static long upperBound(Multiplicity m)
+    public static Long upperBound(Multiplicity m)
     {
         if (m instanceof ConcreteMultiplicity cm && cm._upperBound() != null)
         {
             return cm._upperBound()._value();
         }
-        return -1; // unbounded
+        return null; // unbounded
     }
 
     /**
@@ -153,8 +153,8 @@ public final class _Multiplicity
             return "[?]";
         }
         long lower = lowerBound(m);
-        long upper = upperBound(m);
-        if (upper == -1)
+        Long upper = upperBound(m);
+        if (upper == null)
         {
             return lower == 0 ? "[*]" : "[" + lower + "..*]";
         }
@@ -183,12 +183,12 @@ public final class _Multiplicity
             return "?";
         }
         long lower = lowerBound(m);
-        long upper = upperBound(m);
-        if (upper == -1)
+        Long upper = upperBound(m);
+        if (upper == null)
         {
             return lower == 0 ? "*" : lower + "..*";
         }
-        if (lower == upper)
+        if (upper == lower)
         {
             return String.valueOf(lower);
         }
@@ -290,7 +290,7 @@ public final class _Multiplicity
      * Convenience factory to avoid verbose inline construction.
      *
      * @param lower the lower bound
-     * @param upper the upper bound (use -1 for unbounded / {@code [*]})
+     * @param upper the upper bound (use a negative value for unbounded / {@code [*]})
      * @return a new concrete Multiplicity
      */
     public static Multiplicity concreteMultiplicity(long lower, long upper)
@@ -332,20 +332,20 @@ public final class _Multiplicity
 
         // Try to return a named packageable inferred multiplicity for well-known patterns
         long lower = lowerBound(multiplicity);
-        long upper = upperBound(multiplicity);
-        if (lower == 1 && upper == 1)
+        Long upper = upperBound(multiplicity);
+        if (lower == 1 && upper != null && upper == 1)
         {
             return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredPureOne");
         }
-        if (lower == 0 && upper == 1)
+        if (lower == 0 && upper != null && upper == 1)
         {
             return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroOne");
         }
-        if (lower == 0 && upper == -1)
+        if (lower == 0 && upper == null)
         {
             return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredZeroMany");
         }
-        if (lower == 1 && upper == -1)
+        if (lower == 1 && upper == null)
         {
             return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredOneMany");
         }
@@ -387,17 +387,17 @@ public final class _Multiplicity
             return multiplicities.getFirst();
         }
         long minLower = Long.MAX_VALUE;
-        long maxUpper = 0;
+        Long maxUpper = 0L;
         for (Multiplicity m : multiplicities)
         {
             long lower = lowerBound(m);
-            long upper = upperBound(m);
+            Long upper = upperBound(m);
             minLower = Math.min(minLower, lower);
-            maxUpper = (upper == -1 || maxUpper == -1) ? -1 : Math.max(maxUpper, upper);
+            maxUpper = (upper == null || maxUpper == null) ? null : Math.max(maxUpper, upper);
         }
         InferredAdHocMultiplicityImpl result = new InferredAdHocMultiplicityImpl();
         result._lowerBound(new MultiplicityValueImpl()._value(minLower));
-        if (maxUpper >= 0)
+        if (maxUpper != null)
         {
             result._upperBound(new MultiplicityValueImpl()._value(maxUpper));
         }

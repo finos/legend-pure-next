@@ -63,13 +63,20 @@
     :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] [ :type :AggregationKind ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :Property ;
     :genericType [ :type :AggregationKind ] ;
-    :multiplicity :PureOne .
+    :multiplicity :PureOne ;
+    :prop_defaultValue [ a :LambdaFunction ;
+        :classifierGenericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :type :AggregationKind ] ; :returnMultiplicity :PureOne ] ] ] ;
+        :expressionSequence [ a :AtomicValue ;
+            :classifierGenericType [ :type :AtomicValue ] ;
+            :ValueSpecification_genericType [ :type :AggregationKind ] ;
+            :ValueSpecification_multiplicity :PureOne ;
+            :AtomicValue_value :AggregationKind_None ] ] .
 
 :prop_defaultValue a :Property ;
     :abstractProperty_name "defaultValue" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :Property ;
-    :genericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ;
+    :genericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ;
     :multiplicity :ZeroOne .
 
 # --- Any ---
@@ -892,7 +899,9 @@
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ :name "m" ] ;
     :generalizations [ :general [ :type :AbstractProperty ;
         :typeArguments [ :type [ a :FunctionType ;
+            :classifierGenericType [ :type :FunctionType ] ;
             :parameters [ a :VariableExpression ;
+                :classifierGenericType [ :type :VariableExpression ] ;
                 :VariableExpression_name "object" ;
                 :ValueSpecification_genericType [ :typeParameter [ :name "U" ] ] ;
                 :ValueSpecification_multiplicity :PureOne ] ;
@@ -937,10 +946,10 @@
 
 :upperBound a :Property ;
     :abstractProperty_name "upperBound" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :ConcreteMultiplicity ] [ :type :MultiplicityValue ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :ConcreteMultiplicity ] [ :type :MultiplicityValue ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :ConcreteMultiplicity ;
     :genericType [ :type :MultiplicityValue ] ;
-    :multiplicity :PureOne .
+    :multiplicity :ZeroOne .
 
 # --- AdHocMultiplicity ---
 
@@ -1449,7 +1458,9 @@
     :generalizations
         [ :general [ :type :Function ;
             :typeArguments [ :type [ a :FunctionType ;
+                :classifierGenericType [ :type :FunctionType ] ;
                 :parameters [ a :VariableExpression ;
+                    :classifierGenericType [ :type :VariableExpression ] ;
                     :VariableExpression_name "object" ;
                     :ValueSpecification_genericType [ :typeParameter [ :name "U" ] ] ;
                     :ValueSpecification_multiplicity :PureOne ] ;
@@ -1545,12 +1556,15 @@
 
 # AggregationKind enumeration values
 :AggregationKind_None a :AggregationKind ;
+    :classifierGenericType [ :type :AggregationKind ] ;
     :enumValue "None" .
 
 :AggregationKind_Shared a :AggregationKind ;
+    :classifierGenericType [ :type :AggregationKind ] ;
     :enumValue "Shared" .
 
 :AggregationKind_Composite a :AggregationKind ;
+    :classifierGenericType [ :type :AggregationKind ] ;
     :enumValue "Composite" .
 
 :GenericTypeOperationType a :Enumeration ;
@@ -1561,15 +1575,19 @@
 
 # GenericTypeOperationType enumeration values
 :GenericTypeOperationType_Union a :GenericTypeOperationType ;
+    :classifierGenericType [ :type :GenericTypeOperationType ] ;
     :enumValue "Union" .
 
 :GenericTypeOperationType_Difference a :GenericTypeOperationType ;
+    :classifierGenericType [ :type :GenericTypeOperationType ] ;
     :enumValue "Difference" .
 
 :GenericTypeOperationType_Subset a :GenericTypeOperationType ;
+    :classifierGenericType [ :type :GenericTypeOperationType ] ;
     :enumValue "Subset" .
 
 :GenericTypeOperationType_Equal a :GenericTypeOperationType ;
+    :classifierGenericType [ :type :GenericTypeOperationType ] ;
     :enumValue "Equal" .
 
 # =============================================================================
@@ -1737,23 +1755,28 @@
     :package :meta_pure_metamodel .
 
 :ProtocolInfo_inferred a :Stereotype ;
+    :classifierGenericType [ :type :Stereotype ] ;
     :stereotype_name "inferred" ;
     :profile :ProtocolInfo .
 
 :ProtocolInfo_excluded a :Stereotype ;
+    :classifierGenericType [ :type :Stereotype ] ;
     :stereotype_name "excluded" ;
     :profile :ProtocolInfo .
 
 :ProtocolInfo_pointer a :Stereotype ;
+    :classifierGenericType [ :type :Stereotype ] ;
     :stereotype_name "pointer" ;
     :profile :ProtocolInfo .
 
 
 
 :ProtocolInfo_mainTaxonomy a :Stereotype ;
+    :classifierGenericType [ :type :Stereotype ] ;
     :stereotype_name "mainTaxonomy" ;
     :profile :ProtocolInfo .
 
 :ProtocolInfo_nonPointerSubtypes a :Tag ;
+    :classifierGenericType [ :type :Tag ] ;
     :tag_value "nonPointerSubtypes" ;
     :tag_profile :ProtocolInfo .

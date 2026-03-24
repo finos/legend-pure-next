@@ -52,7 +52,7 @@ public class RdfMultiplicityValidationTest
     /**
      * Information about a property: its name, multiplicity lower bound, owner class, and whether it has a default value.
      */
-    private record PropertyInfo(String name, String ownerClassName, long lowerBound, long upperBound, boolean hasDefaultValue) {}
+    private record PropertyInfo(String name, String rdfPredicateName, String ownerClassName, long lowerBound, long upperBound, boolean hasDefaultValue) {}
 
     /**
      * Test that all named instances in m3.ttl comply with multiplicity constraints
@@ -121,7 +121,7 @@ public class RdfMultiplicityValidationTest
 
                 for (PropertyInfo prop : requiredProps)
                 {
-                    Property m3Prop = model.getProperty(M3_NS + prop.name());
+                    Property m3Prop = model.getProperty(M3_NS + prop.rdfPredicateName());
                     StmtIterator propStmts = instance.listProperties(m3Prop);
                     int count = 0;
                     while (propStmts.hasNext())
@@ -317,7 +317,7 @@ public class RdfMultiplicityValidationTest
         Resource propertyType = model.getResource(M3_NS + "Property");
         Property ownerProp = model.getProperty(M3_NS + "owner");
         Property multiplicityProp = model.getProperty(M3_NS + "multiplicity");
-        Property nameProp = model.getProperty(M3_NS + "name");
+        Property nameProp = model.getProperty(M3_NS + "abstractProperty_name");
         Property lowerBoundProp = model.getProperty(M3_NS + "lowerBound");
         Property upperBoundProp = model.getProperty(M3_NS + "upperBound");
         Property valueProp = model.getProperty(M3_NS + "value");
@@ -336,6 +336,13 @@ public class RdfMultiplicityValidationTest
                 continue;
             }
             String propName = nameStmt.getString();
+
+            // Get the RDF resource local name (the actual predicate used on instances)
+            String rdfPredicateName = prop.isURIResource() ? localName(prop.getURI()) : null;
+            if (rdfPredicateName == null)
+            {
+                continue;
+            }
 
             // Get owner class
             Statement ownerStmt = prop.getProperty(ownerProp);
@@ -361,7 +368,7 @@ public class RdfMultiplicityValidationTest
             boolean hasDefault = prop.getProperty(defaultValueProp) != null;
 
             result.computeIfAbsent(ownerClassName, k -> new ArrayList<>())
-                    .add(new PropertyInfo(propName, ownerClassName, lower, upper, hasDefault));
+                    .add(new PropertyInfo(propName, rdfPredicateName, ownerClassName, lower, upper, hasDefault));
         }
 
         return result;
