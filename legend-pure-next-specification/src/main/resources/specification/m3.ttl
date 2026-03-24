@@ -902,7 +902,7 @@
     :name "Property" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] ] ;
     :package :meta_pure_metamodel_function_property ;
-    :TypeAndMultiplicityParametersOwner_typeParameters ( [ :name "U" ; :contravariant true ] [ :name "V" ] ) ;
+    :TypeAndMultiplicityParametersOwner_typeParameters ( [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ) ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType [ :type :MultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ;
     :generalizations [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Property ; :general [ :type :AbstractProperty ;
         :typeArguments [ :type [ a :FunctionType ;
@@ -1460,8 +1460,8 @@
     :name "Column" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Column ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] ] ;
     :package :meta_pure_metamodel_relation ;
-    :TypeAndMultiplicityParametersOwner_typeParameters ( [ :name "U" ; :contravariant true ] [ :name "V" ] ) ;
-    :TypeAndMultiplicityParametersOwner_multiplicityParameters "m" ;
+    :TypeAndMultiplicityParametersOwner_typeParameters ( [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ) ;
+    :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType [ :type :MultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ;
     :generalizations
         [ :general [ :type :Function ;
             :typeArguments [ :type [ a :FunctionType ;
