@@ -21,6 +21,7 @@ import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -183,7 +184,7 @@ public final class ClassHandler
                                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                                 : new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type(cls);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
-                                new meta.pure.metamodel.valuespecification.VariableExpressionImpl()
+                                _VariableExpression.newVariableExpression(model)
                                         ._name("this")
                                         ._genericType(ownerGenericType)
                                         ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
@@ -257,7 +258,7 @@ public final class ClassHandler
                 && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                 : new UserDefinedGenericTypeImpl()._type(cls);
-        VariableExpressionImpl thisVar = new VariableExpressionImpl()
+        VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
                 ._genericType(ownerGenericType)
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));

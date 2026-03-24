@@ -16,7 +16,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
@@ -54,8 +54,8 @@ public final class VariableCompiler
             }
             return null;
         }
-        return new VariableExpressionImpl()
-                ._name(grammarParam._name())
+        return _VariableExpression.newVariableExpression(model)
+                ._name(grammarParam._name() != null ? grammarParam._name() : "")
                 ._genericType(genericType)
                 ._multiplicity(MultiplicityCompiler.compile(grammarParam._multiplicity(), model));
     }

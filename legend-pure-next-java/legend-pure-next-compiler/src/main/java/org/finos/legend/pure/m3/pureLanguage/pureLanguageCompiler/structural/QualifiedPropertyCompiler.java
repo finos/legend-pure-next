@@ -23,7 +23,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -80,7 +80,7 @@ public final class QualifiedPropertyCompiler
         // Prepend implicit 'this' parameter typed to the owner
         if (owner != null)
         {
-            VariableExpression thisParam = new VariableExpressionImpl()
+            VariableExpression thisParam = _VariableExpression.newVariableExpression(model)
                     ._name("this")
                     ._genericType(owner)
                     ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));

@@ -19,7 +19,7 @@ enumeration test::primitive::MyEnum extends Enum  ~Enumeration<test::primitive::
   property C  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='C')  @6:3-6:3
 
 function test::primitive::testEnumValue__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  DotApplication test::primitive::MyEnum.A :#test::primitive::MyEnum##[1]#  @11:26-11:27
-    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  @11:3-11:25
-  DotApplication test::primitive::MyEnum.B :#test::primitive::MyEnum##[1]#  @12:26-12:27
-    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  @12:3-12:25
+  DotApplication test::primitive::MyEnum.A :#test::primitive::MyEnum##[1]#  ~DotApplication  @11:26-11:27
+    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  ~AtomicValue  @11:3-11:25
+  DotApplication test::primitive::MyEnum.B :#test::primitive::MyEnum##[1]#  ~DotApplication  @12:26-12:27
+    AtomicValue  test::primitive::MyEnum :#Enumeration<test::primitive::MyEnum>#[1]  ~AtomicValue  @12:3-12:25

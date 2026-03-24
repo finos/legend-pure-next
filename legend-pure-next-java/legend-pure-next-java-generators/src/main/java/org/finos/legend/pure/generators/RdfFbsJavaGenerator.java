@@ -892,6 +892,24 @@ public class RdfFbsJavaGenerator
             sb.append("    public int write").append(classInfo.name).append("(").append(classInfo.name).append(" obj)\n");
             sb.append("    {\n");
 
+            // Semantic validation for required properties
+            allProps.forEach(prop ->
+            {
+                if (hasStereotype(prop.stereotypes, "excluded") || hasStereotype(prop.stereotypes, "inferred") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name)))
+                {
+                    return;
+                }
+
+                if ("PureOne".equals(prop.multiplicity))
+                {
+                    sb.append("        if (obj._").append(prop.name).append("() == null) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1] but is null: \" + pointerPath(obj)); }\n");
+                }
+                else if ("OneMany".equals(prop.multiplicity))
+                {
+                    sb.append("        if (obj._").append(prop.name).append("() == null || obj._").append(prop.name).append("().isEmpty()) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj)); }\n");
+                }
+            });
+
 
             // Pre-create string and nested offsets
             allProps.forEach(prop ->

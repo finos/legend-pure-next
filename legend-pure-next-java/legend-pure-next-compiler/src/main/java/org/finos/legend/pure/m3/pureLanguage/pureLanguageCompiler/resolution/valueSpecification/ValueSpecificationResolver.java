@@ -87,7 +87,7 @@ public final class ValueSpecificationResolver
      *
      * @return the same node, or the reverted DotApplication for automaps
      */
-    public static ValueSpecification resetResolution(ValueSpecification vs, CompilationContext context)
+    public static ValueSpecification resetResolution(ValueSpecification vs, MetadataAccess model, CompilationContext context)
     {
         return switch (vs)
         {
@@ -101,7 +101,7 @@ public final class ValueSpecificationResolver
                     // Revert to the original DotApplication:
                     // reconstruct from receiver (first param) + access name (from lambda body)
                     ValueSpecification receiver = fe._parametersValues().getFirst();
-                    resetResolution(receiver, context);
+                    resetResolution(receiver, model, context);
 
                     AtomicValue lambdaAV = (AtomicValue) fe._parametersValues().get(1);
                     LambdaFunction lambda = (LambdaFunction) lambdaAV._value();
@@ -109,13 +109,14 @@ public final class ValueSpecificationResolver
 
                     meta.pure.metamodel.valuespecification.DotApplicationImpl originalDot =
                             new meta.pure.metamodel.valuespecification.DotApplicationImpl();
+                    originalDot._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication")));
                     originalDot._functionName(dotBody._functionName());
                     originalDot._parametersValues(org.eclipse.collections.impl.factory.Lists.mutable.with(receiver));
                     originalDot._sourceInformation(fe._sourceInformation());
                     yield originalDot;
                 }
 
-                resetResolutionForFunctionExpression(fe, context);
+                resetResolutionForFunctionExpression(fe, model, context);
                 yield fe;
             }
             case AtomicValue av ->
@@ -143,7 +144,7 @@ public final class ValueSpecificationResolver
                                 (MutableList<ValueSpecification>) lambda._expressionSequence();
                         for (int i = 0; i < exprSeq.size(); i++)
                         {
-                            ValueSpecification replaced = resetResolution(exprSeq.get(i), context);
+                            ValueSpecification replaced = resetResolution(exprSeq.get(i), model, context);
                             if (replaced != exprSeq.get(i))
                             {
                                 exprSeq.set(i, replaced);
@@ -164,7 +165,7 @@ public final class ValueSpecificationResolver
                     MutableList<ValueSpecification> values = col._values();
                     for (int i = 0; i < values.size(); i++)
                     {
-                        ValueSpecification replaced = resetResolution(values.get(i), context);
+                        ValueSpecification replaced = resetResolution(values.get(i), model, context);
                         if (replaced != values.get(i))
                         {
                             values.set(i, replaced);

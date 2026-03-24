@@ -113,7 +113,8 @@ public class M3BootstrapReader
             bootstrapMultiplicities(model, m3UserDefinedPackageableMultiplicity, root, index, UserDefinedPackageableMultiplicityImpl::new);
             bootstrapMultiplicities(model, m3InferredPackageableMultiplicity, root, index, InferredPackageableMultiplicityImpl::new);
 
-            // Second pass: wire generalizations now that all types exist
+            // Second pass: wire parameters and generalizations now that all types exist
+            wireTypeParameters(model, m3Class, index);
             wireGeneralizations(model, m3Class, index);
             wireGeneralizations(model, m3PrimitiveType, index);
             wireGeneralizations(model, m3Enumeration, index);
@@ -122,6 +123,7 @@ public class M3BootstrapReader
             wireClassifierGenericType(model, m3Class, index);
             wireClassifierGenericType(model, m3PrimitiveType, index);
             wireClassifierGenericType(model, m3Enumeration, index);
+            wireClassifierGenericType(model, m3Profile, index);
             Resource m3Package = model.createResource(M3_NS + "Package");
             wireClassifierGenericType(model, m3Package, index);
             // Wire classifierGenericType on multiplicity instances
@@ -131,6 +133,11 @@ public class M3BootstrapReader
             // Wire stereotypes into their parent profiles
             Resource m3Stereotype = model.createResource(M3_NS + "Stereotype");
             wireStereotypesToProfiles(model, m3Stereotype, index);
+            wireClassifierGenericType(model, m3Stereotype, index);
+
+            // Wire tags into their parent profiles (assuming Tag also exists)
+            Resource m3Tag = model.createResource(M3_NS + "Tag");
+            wireClassifierGenericType(model, m3Tag, index);
 
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
@@ -162,23 +169,7 @@ public class M3BootstrapReader
             Package pkg = getOrCreatePackage(root, packagePath, index);
             PackageableElement element = switch (kind)
             {
-                case "Class" ->
-                {
-                    ClassImpl clazz = new ClassImpl()._name(name)._package(pkg);
-                    // Set type parameters
-                    MutableList<TypeParameter> typeParams = getTypeParameters(model, res, clazz);
-                    if (typeParams.notEmpty())
-                    {
-                        clazz._typeParameters(typeParams);
-                    }
-                    // Set multiplicity parameters
-                    MutableList<MultiplicityParameter> mulParams = getMultiplicityParameters(model, res, clazz);
-                    if (mulParams.notEmpty())
-                    {
-                        clazz._multiplicityParameters(mulParams);
-                    }
-                    yield clazz;
-                }
+                case "Class" -> new ClassImpl()._name(name)._package(pkg);
                 case "PrimitiveType" -> new PrimitiveTypeImpl()._name(name)._package(pkg);
                 case "Enumeration" -> new EnumerationImpl()._name(name)._package(pkg);
                 case "Profile" -> new ProfileImpl()._name(name)._package(pkg);
@@ -187,6 +178,34 @@ public class M3BootstrapReader
 
             pkg._children().add(element);
             index.put(packagePath + "::" + name, element);
+        }
+    }
+
+    private static void wireTypeParameters(Model model, Resource typeResource, MutableMap<String, PackageableElement> index)
+    {
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, typeResource); it.hasNext();)
+        {
+            Resource res = it.next();
+            String name = getName(model, res);
+            String packagePath = getPackagePath(model, res);
+            if (name == null || packagePath == null)
+            {
+                continue;
+            }
+            PackageableElement element = index.get(packagePath + "::" + name);
+            if (element instanceof meta.pure.metamodel.type.Class clazz)
+            {
+                MutableList<TypeParameter> typeParams = getTypeParameters(model, res, clazz, index);
+                if (typeParams.notEmpty())
+                {
+                    clazz._typeParameters(typeParams);
+                }
+                MutableList<MultiplicityParameter> mulParams = getMultiplicityParameters(model, res, clazz, index);
+                if (mulParams.notEmpty())
+                {
+                    clazz._multiplicityParameters(mulParams);
+                }
+            }
         }
     }
 
@@ -216,11 +235,17 @@ public class M3BootstrapReader
             Statement lowerStmt = getM3Statement(model, res, "lowerBound");
             if (lowerStmt != null && lowerStmt.getObject().isResource())
             {
-                Statement valueStmt = getM3Statement(model, lowerStmt.getObject().asResource(), "value");
+                Resource lowerRes = lowerStmt.getObject().asResource();
+                Statement valueStmt = getM3Statement(model, lowerRes, "value");
                 if (valueStmt != null && valueStmt.getObject().isLiteral())
                 {
-                    multiplicity._lowerBound(
-                            new MultiplicityValueImpl()._value(valueStmt.getLong()));
+                    MultiplicityValueImpl lowerBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    Statement cgtStmt = getM3Statement(model, lowerRes, "classifierGenericType");
+                    if (cgtStmt != null && cgtStmt.getObject().isResource())
+                    {
+                        lowerBound._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                    }
+                    multiplicity._lowerBound(lowerBound);
                 }
             }
 
@@ -228,11 +253,17 @@ public class M3BootstrapReader
             Statement upperStmt = getM3Statement(model, res, "upperBound");
             if (upperStmt != null && upperStmt.getObject().isResource())
             {
-                Statement valueStmt = getM3Statement(model, upperStmt.getObject().asResource(), "value");
+                Resource upperRes = upperStmt.getObject().asResource();
+                Statement valueStmt = getM3Statement(model, upperRes, "value");
                 if (valueStmt != null && valueStmt.getObject().isLiteral())
                 {
-                    multiplicity._upperBound(
-                            new MultiplicityValueImpl()._value(valueStmt.getLong()));
+                    MultiplicityValueImpl upperBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    Statement cgtStmt = getM3Statement(model, upperRes, "classifierGenericType");
+                    if (cgtStmt != null && cgtStmt.getObject().isResource())
+                    {
+                        upperBound._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                    }
+                    multiplicity._upperBound(upperBound);
                 }
             }
 
@@ -292,6 +323,13 @@ public class M3BootstrapReader
                 GeneralizationImpl generalization = new GeneralizationImpl()
                         ._general(generalGT)
                         ._specific(specificType);
+
+                Statement cgtStmt = getM3Statement(model, genRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    generalization._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+
                 generalizations.add(generalization);
             }
 
@@ -373,6 +411,11 @@ public class M3BootstrapReader
                 if (el instanceof meta.pure.metamodel.extension.Profile profile && profName.equals(el._name()))
                 {
                     StereotypeImpl st = new StereotypeImpl()._value(stName)._profile(profile);
+                    Statement cgtStmt = getM3Statement(model, stRes, "classifierGenericType");
+                    if (cgtStmt != null && cgtStmt.getObject().isResource())
+                    {
+                        st._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                    }
                     profile._p_stereotypes().add(st);
                     break;
                 }
@@ -441,6 +484,24 @@ public class M3BootstrapReader
                 {
                     prop._multiplicity(mul);
                 }
+            }
+
+            // Wire aggregation
+            Statement aggStmt = getM3Statement(model, res, "aggregation");
+            if (aggStmt != null && aggStmt.getObject().isResource())
+            {
+                String aggName = getName(model, aggStmt.getObject().asResource()); // typically "None", "Shared", "Composite"
+                if (aggName == null)
+                {
+                    // Fallback to extract from IRI if name property is missing on enum value
+                    String uri = aggStmt.getObject().asResource().getURI();
+                    aggName = uri.substring(uri.lastIndexOf('_') + 1);
+                }
+                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.valueOf(aggName.toUpperCase()));
+            }
+            else
+            {
+                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE);
             }
 
             // Wire stereotypes (e.g., ProtocolInfo.inferred, ProtocolInfo.excluded)
@@ -604,7 +665,7 @@ public class M3BootstrapReader
     }
 
     private static MutableList<TypeParameter> getTypeParameters(Model model, Resource res,
-            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
     {
         MutableList<TypeParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_typeParameters"))
@@ -612,14 +673,31 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                result.add(new TypeParameterImpl()._name(paramName)._owner(owner));
+                TypeParameterImpl tp = new TypeParameterImpl()._name(paramName)._owner(owner);
+                Statement cgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    tp._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+
+                Statement contravariantStmt = getM3Statement(model, paramRes, "contravariant");
+                if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                {
+                    tp._contravariant(contravariantStmt.getBoolean());
+                }
+                else
+                {
+                    tp._contravariant(false);
+                }
+
+                result.add(tp);
             }
         }
         return result;
     }
 
     private static MutableList<MultiplicityParameter> getMultiplicityParameters(Model model, Resource res,
-            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner, MutableMap<String, PackageableElement> index)
     {
         MutableList<MultiplicityParameter> result = Lists.mutable.empty();
         for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_multiplicityParameters"))
@@ -627,7 +705,13 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                result.add(new UserDefinedMultiplicityParameterImpl()._name(paramName)._owner(owner));
+                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(paramName)._owner(owner);
+                Statement cgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    mp._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+                result.add(mp);
             }
         }
         return result;
@@ -672,6 +756,14 @@ public class M3BootstrapReader
                 ve._multiplicity(lookupMultiplicity(mulStmt.getObject().asResource(), index));
             }
 
+            // classifierGenericType
+            Statement veCgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
+            if (veCgtStmt != null && veCgtStmt.getObject().isResource())
+            {
+                GenericType cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
+                ve._classifierGenericType(cgt);
+            }
+
             ft._parameters().add(ve);
         }
 
@@ -691,7 +783,13 @@ public class M3BootstrapReader
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
-                ft._returnMultiplicity(new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));
+                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                Statement cgtStmt = getM3Statement(model, mulRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    mp._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+                ft._returnMultiplicity(mp);
             }
             else
             {
@@ -734,35 +832,54 @@ public class M3BootstrapReader
                 }
                 else if ("TypeParameter".equals(rdfTypeName))
                 {
-                    String paramName = getName(model, rawTypeRes);
+                    String paramName = null;
+                    Statement tpNameStmt = getM3Statement(model, rawTypeRes, "typeParameter_name");
+                    if (tpNameStmt != null && tpNameStmt.getObject().isLiteral())
+                    {
+                        paramName = tpNameStmt.getString();
+                    }
+                    if (paramName == null)
+                    {
+                        paramName = getName(model, rawTypeRes);
+                    }
+                    
                     if (paramName != null)
                     {
-                        gt._type(new TypeParameterImpl()._name(paramName));
+                        TypeParameterImpl tp = new TypeParameterImpl()._name(paramName);
+                        Statement cgtStmt = getM3Statement(model, rawTypeRes, "classifierGenericType");
+                        if (cgtStmt != null && cgtStmt.getObject().isResource())
+                        {
+                            tp._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                        }
+
+                        Statement contravariantStmt = getM3Statement(model, rawTypeRes, "contravariant");
+                        if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                        {
+                            tp._contravariant(contravariantStmt.getBoolean());
+                        }
+                        else
+                        {
+                            tp._contravariant(false);
+                        }
+
+                        gt._type(tp);
                     }
                 }
                 else
                 {
-                    String typeName = getLocalName(rawTypeRes);
-                    if (typeName != null)
+                    Type type = findType(model, rawTypeRes, index);
+                    if (type != null)
                     {
-                        Type type = findType(typeName, index);
-                        if (type != null)
-                        {
-                            gt._type(type);
-                        }
+                        gt._type(type);
                     }
                 }
             }
             else
             {
-                String typeName = getLocalName(rawTypeRes);
-                if (typeName != null)
+                Type type = findType(model, rawTypeRes, index);
+                if (type != null)
                 {
-                    Type type = findType(typeName, index);
-                    if (type != null)
-                    {
-                        gt._type(type);
-                    }
+                    gt._type(type);
                 }
             }
         }
@@ -786,7 +903,13 @@ public class M3BootstrapReader
             Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
-                mulArgs.add(new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));
+                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                Statement cgtStmt = getM3Statement(model, mulArgRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    mp._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+                mulArgs.add(mp);
             }
             else
             {
@@ -835,13 +958,17 @@ public class M3BootstrapReader
         return null;
     }
 
-    private static Type findType(String typeName, MutableMap<String, PackageableElement> index)
+    private static Type findType(Model model, Resource typeRes, MutableMap<String, PackageableElement> index)
     {
-        for (PackageableElement element : index.valuesView())
+        String pkg = getPackagePath(model, typeRes);
+        String name = getName(model, typeRes);
+        if (pkg != null && name != null)
         {
-            if (element instanceof Type type && typeName.equals(element._name()))
+            String fullPath = pkg + "::" + name;
+            PackageableElement element = index.get(fullPath);
+            if (element instanceof Type)
             {
-                return type;
+                return (Type) element;
             }
         }
         return null;

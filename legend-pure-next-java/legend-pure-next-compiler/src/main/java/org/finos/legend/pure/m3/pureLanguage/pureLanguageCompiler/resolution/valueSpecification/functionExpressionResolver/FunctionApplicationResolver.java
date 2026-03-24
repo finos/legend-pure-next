@@ -107,7 +107,7 @@ public class FunctionApplicationResolver
                 {
                     bestCandidateErrors = candidateErrors;
                 }
-                resetResolutionForFunctionExpression(expr, context);
+                resetResolutionForFunctionExpression(expr, model, context);
             }
             // No candidate resolved cleanly — restore the best candidate's errors
             if (bestCandidateErrors != null)
@@ -186,7 +186,7 @@ public class FunctionApplicationResolver
                         {
                             parameterInfo.savedErrors = context.snapshotErrorsFrom(checkpoint);
                             context.rollbackErrorsTo(checkpoint);
-                            ValueSpecificationResolver.resetResolution(parameterValue, context);
+                            ValueSpecificationResolver.resetResolution(parameterValue, model, context);
                             context.debug("=> NOT RESOLVED");
                         }
                         context.debugDepthDec();
@@ -555,7 +555,7 @@ public class FunctionApplicationResolver
     /**
      * Reset all resolution state and re-resolve args for the next candidate attempt.
      */
-    public static void resetResolutionForFunctionExpression(FunctionExpression expr, CompilationContext context)
+    public static void resetResolutionForFunctionExpression(FunctionExpression expr, MetadataAccess model, CompilationContext context)
     {
         context.debug("resetResolution: %s func=%s gt=%s mul=%s", expr._functionName(), lazy(() -> CompilationContext.debugFunc(expr._func())), lazy(() -> _GenericType.print(expr._genericType())), lazy(() -> _Multiplicity.print(expr._multiplicity())));
         // Wipe matched function and resolved type/multiplicity parameters
@@ -569,7 +569,7 @@ public class FunctionApplicationResolver
             MutableList<ValueSpecification> params = expr._parametersValues();
             for (int i = 0; i < params.size(); i++)
             {
-                ValueSpecification replaced = ValueSpecificationResolver.resetResolution(params.get(i), context);
+                ValueSpecification replaced = ValueSpecificationResolver.resetResolution(params.get(i), model, context);
                 if (replaced != params.get(i))
                 {
                     params.set(i, replaced);

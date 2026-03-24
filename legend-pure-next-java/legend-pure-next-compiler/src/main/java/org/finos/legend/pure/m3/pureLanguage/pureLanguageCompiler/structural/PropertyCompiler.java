@@ -57,6 +57,7 @@ public final class PropertyCompiler
         }
         PropertyImpl result = new PropertyImpl()
                 ._name(grammarProperty._name())
+                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._genericType(genericType)
                 ._multiplicity(MultiplicityCompiler.compile(grammarProperty._multiplicity(), model))
                 ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._sourceInformation()));

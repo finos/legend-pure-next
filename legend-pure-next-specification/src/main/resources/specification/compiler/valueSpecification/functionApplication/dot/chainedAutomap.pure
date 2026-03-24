@@ -40,91 +40,91 @@ class test::CA_Address extends Any  ~Class<test::CA_Address>  @11:1-14:1
   property name :String[1]  ~Property<test::CA_Address, String|1>
 
 function test::myCheck_Any_MANY__Any_MANY__Boolean_1_(expected:Any[*], actual:Any[*]):Boolean[1]  ~UserDefinedFunction<{Any[*], Any[*]->Boolean[1]}>
-  AtomicValue  true :Boolean[1]  @19:5-19:8
+  AtomicValue  true :Boolean[1]  ~AtomicValue  @19:5-19:8
 
 function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]):Boolean[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Boolean[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Address##[1]#  @26:5-26:52
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Address##[1]#  ~FunctionInvocation  @26:5-26:52
     typeParam T -> #test::CA_Address#
     mulParam m -> #[1]#
-    AtomicValue  'addressParis' :String[1]  @26:9-26:20
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Address##[1]#  @26:24-26:52
+    AtomicValue  'addressParis' :String[1]  ~AtomicValue  @26:9-26:20
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Address##[1]#  ~FunctionInvocation  @26:24-26:52
       typeParam T -> test::CA_Address
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Address|1>[1]  @26:24-26:52
-      Collection :#KeyExpression#[1]  @26:24-26:52
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @26:36-26:51
-          AtomicValue  'name' :String[1]  @26:36-26:51
-          AtomicValue  'Paris, FR' :String[1]  @26:41-26:51
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Address##[1]#  @27:5-27:60
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Address|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @26:24-26:52
+      Collection :#KeyExpression#[1]  ~Collection  @26:24-26:52
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @26:36-26:51
+          AtomicValue  'name' :String[1]  ~AtomicValue  @26:36-26:51
+          AtomicValue  'Paris, FR' :String[1]  ~AtomicValue  @26:41-26:51
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Address##[1]#  ~FunctionInvocation  @27:5-27:60
     typeParam T -> #test::CA_Address#
     mulParam m -> #[1]#
-    AtomicValue  'addressHoboken' :String[1]  @27:9-27:22
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Address##[1]#  @27:26-27:60
+    AtomicValue  'addressHoboken' :String[1]  ~AtomicValue  @27:9-27:22
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Address##[1]#  ~FunctionInvocation  @27:26-27:60
       typeParam T -> test::CA_Address
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Address|1>[1]  @27:26-27:60
-      Collection :#KeyExpression#[1]  @27:26-27:60
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @27:38-27:59
-          AtomicValue  'name' :String[1]  @27:38-27:59
-          AtomicValue  'Hoboken, NJ, US' :String[1]  @27:43-27:59
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Person##[1]#  @28:5-28:88
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Address|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @27:26-27:60
+      Collection :#KeyExpression#[1]  ~Collection  @27:26-27:60
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @27:38-27:59
+          AtomicValue  'name' :String[1]  ~AtomicValue  @27:38-27:59
+          AtomicValue  'Hoboken, NJ, US' :String[1]  ~AtomicValue  @27:43-27:59
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Person##[1]#  ~FunctionInvocation  @28:5-28:88
     typeParam T -> #test::CA_Person#
     mulParam m -> #[1]#
-    AtomicValue  'smith' :String[1]  @28:9-28:13
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Person##[1]#  @28:17-28:88
+    AtomicValue  'smith' :String[1]  ~AtomicValue  @28:9-28:13
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Person##[1]#  ~FunctionInvocation  @28:17-28:88
       typeParam T -> test::CA_Person
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Person|1>[1]  @28:17-28:88
-      Collection :#KeyExpression#[3]  @28:17-28:88
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @28:28-28:46
-          AtomicValue  'firstName' :String[1]  @28:28-28:46
-          AtomicValue  'Fabrice' :String[1]  @28:38-28:46
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @28:49-28:64
-          AtomicValue  'lastName' :String[1]  @28:49-28:64
-          AtomicValue  'Smith' :String[1]  @28:58-28:64
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @28:67-28:87
-          AtomicValue  'address' :String[1]  @28:67-28:87
-          Variable addressParis :#test::CA_Address##[1]#  @28:75-28:87
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Person##[1]#  @29:5-29:84
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @28:17-28:88
+      Collection :#KeyExpression#[3]  ~Collection  @28:17-28:88
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @28:28-28:46
+          AtomicValue  'firstName' :String[1]  ~AtomicValue  @28:28-28:46
+          AtomicValue  'Fabrice' :String[1]  ~AtomicValue  @28:38-28:46
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @28:49-28:64
+          AtomicValue  'lastName' :String[1]  ~AtomicValue  @28:49-28:64
+          AtomicValue  'Smith' :String[1]  ~AtomicValue  @28:58-28:64
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @28:67-28:87
+          AtomicValue  'address' :String[1]  ~AtomicValue  @28:67-28:87
+          Variable addressParis :#test::CA_Address##[1]#  ~VariableExpression  @28:75-28:87
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::CA_Person##[1]#  ~FunctionInvocation  @29:5-29:84
     typeParam T -> #test::CA_Person#
     mulParam m -> #[1]#
-    AtomicValue  'roe' :String[1]  @29:9-29:11
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Person##[1]#  @29:15-29:84
+    AtomicValue  'roe' :String[1]  ~AtomicValue  @29:9-29:11
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::CA_Person##[1]#  ~FunctionInvocation  @29:15-29:84
       typeParam T -> test::CA_Person
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Person|1>[1]  @29:15-29:84
-      Collection :#KeyExpression#[3]  @29:15-29:84
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @29:26-29:42
-          AtomicValue  'firstName' :String[1]  @29:26-29:42
-          AtomicValue  'David' :String[1]  @29:36-29:42
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @29:45-29:58
-          AtomicValue  'lastName' :String[1]  @29:45-29:58
-          AtomicValue  'Roe' :String[1]  @29:54-29:58
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  @29:61-29:83
-          AtomicValue  'address' :String[1]  @29:61-29:83
-          Variable addressHoboken :#test::CA_Address##[1]#  @29:69-29:83
-  FunctionInvocation test::myCheck_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  @30:5-30:85
-    Collection :#String#[2]  @30:13-30:44
-      AtomicValue  'Paris, FR' :String[1]  @30:14-30:24
-      AtomicValue  'Hoboken, NJ, US' :String[1]  @30:27-30:43
-    ArrowInvocation eval_Function_1__T_n__V_m_ :#String##[*]#  @30:49-30:84
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::CA_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @29:15-29:84
+      Collection :#KeyExpression#[3]  ~Collection  @29:15-29:84
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @29:26-29:42
+          AtomicValue  'firstName' :String[1]  ~AtomicValue  @29:26-29:42
+          AtomicValue  'David' :String[1]  ~AtomicValue  @29:36-29:42
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @29:45-29:58
+          AtomicValue  'lastName' :String[1]  ~AtomicValue  @29:45-29:58
+          AtomicValue  'Roe' :String[1]  ~AtomicValue  @29:54-29:58
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @29:61-29:83
+          AtomicValue  'address' :String[1]  ~AtomicValue  @29:61-29:83
+          Variable addressHoboken :#test::CA_Address##[1]#  ~VariableExpression  @29:69-29:83
+  FunctionInvocation test::myCheck_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @30:5-30:85
+    Collection :#String#[2]  ~Collection  @30:13-30:44
+      AtomicValue  'Paris, FR' :String[1]  ~AtomicValue  @30:14-30:24
+      AtomicValue  'Hoboken, NJ, US' :String[1]  ~AtomicValue  @30:27-30:43
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#String##[*]#  ~ArrowInvocation  @30:49-30:84
       typeParam T -> #Function<#{->#String##[*]#}#>#
       typeParam V -> #String#
       mulParam n -> [1]
       mulParam m -> #[*]#
-      Variable f :#Function<{Function<{->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>##[1]#  @30:47-30:48
-      Lambda :#LambdaFunction<#{->#String##[*]#}#>#[1]  @30:56-30:83
+      Variable f :#Function<{Function<{->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>##[1]#  ~VariableExpression  @30:47-30:48
+      Lambda :#LambdaFunction<#{->#String##[*]#}#>#[1]  ~AtomicValue  @30:56-30:83
         openVar smith :#test::CA_Person##[1]#
         openVar roe :#test::CA_Person##[1]#
-        FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  @30:79-30:83
+        FunctionInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~FunctionInvocation  @30:79-30:83
           typeParam T -> #test::CA_Address#
           typeParam V -> #String#
           mulParam m -> #[*]#
-          FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::CA_Address##[*]#  @30:71-30:78
+          FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::CA_Address##[*]#  ~FunctionInvocation  @30:71-30:78
             typeParam T -> #test::CA_Person#
             typeParam V -> #test::CA_Address#
-            Collection :#test::CA_Person#[2]  @30:57-30:70
-              Variable smith :#test::CA_Person##[1]#  @30:58-30:63
-              Variable roe :#test::CA_Person##[1]#  @30:66-30:69
-            Lambda(v_automap:#test::CA_Person#[1]) :#LambdaFunction<#{#test::CA_Person#[1]->#test::CA_Address##[0..1]#}#>#[1]
-              DotApplication test::CA_Person.address :#test::CA_Address##[0..1]#  @30:71-30:78
-                Variable v_automap :#test::CA_Person##[1]#
-          Lambda(v_automap:#test::CA_Address#[1]) :#LambdaFunction<#{#test::CA_Address#[1]->#String##[1]#}#>#[1]
-            DotApplication test::CA_Address.name :#String##[1]#  @30:79-30:83
-              Variable v_automap :#test::CA_Address##[1]#
+            Collection :#test::CA_Person#[2]  ~Collection  @30:57-30:70
+              Variable smith :#test::CA_Person##[1]#  ~VariableExpression  @30:58-30:63
+              Variable roe :#test::CA_Person##[1]#  ~VariableExpression  @30:66-30:69
+            Lambda(v_automap:#test::CA_Person#[1]) :#LambdaFunction<#{#test::CA_Person#[1]->#test::CA_Address##[0..1]#}#>#[1]  ~AtomicValue
+              DotApplication test::CA_Person.address :#test::CA_Address##[0..1]#  ~DotApplication  @30:71-30:78
+                Variable v_automap :#test::CA_Person##[1]#  ~VariableExpression
+          Lambda(v_automap:#test::CA_Address#[1]) :#LambdaFunction<#{#test::CA_Address#[1]->#String##[1]#}#>#[1]  ~AtomicValue
+            DotApplication test::CA_Address.name :#String##[1]#  ~DotApplication  @30:79-30:83
+              Variable v_automap :#test::CA_Address##[1]#  ~VariableExpression

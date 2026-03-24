@@ -152,7 +152,7 @@ public final class GenericTypeCompiler
         }
         return new TypeParameterImpl()
                 ._name(grammarTypeParameter._name())
-                ._contravariant(grammarTypeParameter._contravariant())
+                ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false)
                 ._owner(owner);
     }
 
@@ -179,6 +179,6 @@ public final class GenericTypeCompiler
         }
         return new TypeParameterImpl()
                 ._name(grammarTypeParameter._name())
-                ._contravariant(grammarTypeParameter._contravariant());
+                ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false);
     }
 }

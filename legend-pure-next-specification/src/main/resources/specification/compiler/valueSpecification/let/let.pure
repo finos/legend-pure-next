@@ -9,26 +9,26 @@ function test::new::testNew(): Any[*]
 
 ###CompiledGraph
 function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  @4:3-4:11
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  ~FunctionInvocation  @4:3-4:11
     typeParam T -> Integer
     mulParam m -> [1]
-    AtomicValue  'x' :String[1]  @4:7-4:7
-    AtomicValue  1 :Integer[1]  @4:11-4:11
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#String##[1]#  @5:3-5:13
+    AtomicValue  'x' :String[1]  ~AtomicValue  @4:7-4:7
+    AtomicValue  1 :Integer[1]  ~AtomicValue  @4:11-4:11
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#String##[1]#  ~FunctionInvocation  @5:3-5:13
     typeParam T -> String
     mulParam m -> [1]
-    AtomicValue  'y' :String[1]  @5:7-5:7
-    AtomicValue  'a' :String[1]  @5:11-5:13
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Any##[2]#  @6:3-6:18
+    AtomicValue  'y' :String[1]  ~AtomicValue  @5:7-5:7
+    AtomicValue  'a' :String[1]  ~AtomicValue  @5:11-5:13
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Any##[2]#  ~FunctionInvocation  @6:3-6:18
     typeParam T -> #Any#
     mulParam m -> [2]
-    AtomicValue  'z' :String[1]  @6:7-6:7
-    Collection :#Any#[2]  @6:11-6:18
-      AtomicValue  1 :Integer[1]  @6:12-6:12
-      AtomicValue  'a' :String[1]  @6:15-6:17
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#LambdaFunction<#{String[1]->Integer[1]}#>##[1]#  @7:3-7:23
+    AtomicValue  'z' :String[1]  ~AtomicValue  @6:7-6:7
+    Collection :#Any#[2]  ~Collection  @6:11-6:18
+      AtomicValue  1 :Integer[1]  ~AtomicValue  @6:12-6:12
+      AtomicValue  'a' :String[1]  ~AtomicValue  @6:15-6:17
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#LambdaFunction<#{String[1]->Integer[1]}#>##[1]#  ~FunctionInvocation  @7:3-7:23
     typeParam T -> #LambdaFunction<#{String[1]->Integer[1]}#>#
     mulParam m -> [1]
-    AtomicValue  'k' :String[1]  @7:7-7:7
-    Lambda(r:String[1]) :#LambdaFunction<#{String[1]->Integer[1]}#>#[1]  @7:11-7:23
-      AtomicValue  2 :Integer[1]  @7:23-7:23
+    AtomicValue  'k' :String[1]  ~AtomicValue  @7:7-7:7
+    Lambda(r:String[1]) :#LambdaFunction<#{String[1]->Integer[1]}#>#[1]  ~AtomicValue  @7:11-7:23
+      AtomicValue  2 :Integer[1]  ~AtomicValue  @7:23-7:23
