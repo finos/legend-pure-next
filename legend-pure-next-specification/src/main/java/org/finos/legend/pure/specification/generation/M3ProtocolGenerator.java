@@ -128,7 +128,7 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
         this.tagProp = model.createProperty(M3_NS, "tag");
-        this.valueProp = model.createProperty(M3_NS, "value");
+        this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
         this.rdfType = model.createProperty(RDF_TYPE_NS, "type");
         this.m3PureOne = model.createResource(M3_NS + "PureOne");
         this.m3ZeroMany = model.createResource(M3_NS + "ZeroMany");

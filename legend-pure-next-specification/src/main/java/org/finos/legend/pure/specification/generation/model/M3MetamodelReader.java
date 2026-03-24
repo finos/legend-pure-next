@@ -289,7 +289,7 @@ public class M3MetamodelReader
             {
                 Resource tvRes = obj.asResource();
                 Statement tagStmt = getM3Statement(tvRes, "tag");
-                Statement valueStmt = getM3Statement(tvRes, "value");
+                Statement valueStmt = getM3Statement(tvRes, "taggedValue_value");
                 if (tagStmt != null && tagStmt.getObject().isResource()
                         && valueStmt != null)
                 {

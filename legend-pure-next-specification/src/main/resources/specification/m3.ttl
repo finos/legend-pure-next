@@ -173,7 +173,7 @@
 # --- Type ---
 
 :Type a :Class ;
-    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "FunctionType,RelationType,TypeParameter" ] ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType [ :type :TaggedValue ] ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "FunctionType,RelationType,TypeParameter" ] ;
     :name "Type" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Type ] ] ;
     :package :meta_pure_metamodel_type ;
@@ -803,7 +803,7 @@
 # --- FunctionDefinition ---
 
 :FunctionDefinition a :Class ;
-    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "LambdaFunction" ] ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType [ :type :TaggedValue ] ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "LambdaFunction" ] ;
     :name "FunctionDefinition" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
@@ -930,7 +930,7 @@
 # --- Multiplicity ---
 
 :Multiplicity a :Class ;
-    :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter,UndefinedMultiplicity" ] ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType [ :type :TaggedValue ] ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter,UndefinedMultiplicity" ] ;
     :name "Multiplicity" ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Multiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
