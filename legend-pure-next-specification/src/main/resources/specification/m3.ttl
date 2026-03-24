@@ -1606,60 +1606,60 @@
 # =============================================================================
 :PureZero a :UserDefinedPackageableMultiplicity ;
     :name "PureZero" ;
-    :lowerBound [ :value 0 ] ;
-    :upperBound [ :value 0 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
+    :upperBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
     :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :PureOne a :UserDefinedPackageableMultiplicity ;
     :name "PureOne" ;
-    :lowerBound [ :value 1 ] ;
-    :upperBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
+    :upperBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :ZeroOne a :UserDefinedPackageableMultiplicity ;
     :name "ZeroOne" ;
-    :lowerBound [ :value 0 ] ;
-    :upperBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
+    :upperBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :ZeroMany a :UserDefinedPackageableMultiplicity ;
     :name "ZeroMany" ;
-    :lowerBound [ :value 0 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
     :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :OneMany a :UserDefinedPackageableMultiplicity ;
     :name "OneMany" ;
-    :lowerBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :UserDefinedPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :InferredPureOne a :InferredPackageableMultiplicity ;
     :name "InferredPureOne" ;
-    :lowerBound [ :value 1 ] ;
-    :upperBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
+    :upperBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :InferredZeroOne a :InferredPackageableMultiplicity ;
     :name "InferredZeroOne" ;
-    :lowerBound [ :value 0 ] ;
-    :upperBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
+    :upperBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :InferredZeroMany a :InferredPackageableMultiplicity ;
     :name "InferredZeroMany" ;
-    :lowerBound [ :value 0 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 0 ] ;
     :classifierGenericType [ :type :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
 :InferredOneMany a :InferredPackageableMultiplicity ;
     :name "InferredOneMany" ;
-    :lowerBound [ :value 1 ] ;
+    :lowerBound [ a :MultiplicityValue ; :classifierGenericType [ :type :MultiplicityValue ] ; :value 1 ] ;
     :classifierGenericType [ :type :InferredPackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity .
 
