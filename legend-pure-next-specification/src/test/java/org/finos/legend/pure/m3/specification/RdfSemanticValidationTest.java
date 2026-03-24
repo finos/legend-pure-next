@@ -203,7 +203,7 @@ public class RdfSemanticValidationTest {
         return uri;
     }
 
-//    @Test
+    @Test
     public void testM3TtlAllBlankNodesAreTyped() {
         Model model = loadModel(M3_TTL);
         List<String> errors = checkUntypedBlankNodes(model);
@@ -233,9 +233,13 @@ public class RdfSemanticValidationTest {
         StmtIterator stmtIt = model.listStatements();
         while (stmtIt.hasNext()) {
             Statement stmt = stmtIt.next();
-            if (stmt.getSubject().isAnon()
-                    && stmt.getPredicate().getURI().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-                typedBlankNodes.add(stmt.getSubject().getId().toString());
+            if (stmt.getSubject().isAnon()) {
+                String predicateUri = stmt.getPredicate().getURI();
+                if (predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") ||
+                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#first") ||
+                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest")) {
+                    typedBlankNodes.add(stmt.getSubject().getId().toString());
+                }
             }
         }
 

@@ -715,19 +715,6 @@ public class M3BootstrapReader
     private static GenericType buildGenericType(
             Model model, Resource gtRes, MutableMap<String, PackageableElement> index)
     {
-        // Check for typeParameter reference
-        Statement typeParamStmt = getM3Statement(model, gtRes, "typeParameter");
-        if (typeParamStmt != null && typeParamStmt.getObject().isResource())
-        {
-            String paramName = getName(model, typeParamStmt.getObject().asResource());
-            if (paramName != null)
-            {
-                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl()
-                        ._type(new TypeParameterImpl()._name(paramName));
-                return gt;
-            }
-        }
-
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         // Concrete rawType reference
@@ -736,12 +723,35 @@ public class M3BootstrapReader
         {
             Resource rawTypeRes = rawTypeStmt.getObject().asResource();
 
-            // Check if the rawType is an anonymous FunctionType
+            // Check if the rawType is an anonymous FunctionType or a TypeParameter
             Statement rdfTypeStmt = rawTypeRes.getProperty(RDF.type);
-            if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource()
-                    && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
+            if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource())
             {
-                gt._type(buildFunctionType(model, rawTypeRes, index));
+                String rdfTypeName = getLocalName(rdfTypeStmt.getObject().asResource());
+                if ("FunctionType".equals(rdfTypeName))
+                {
+                    gt._type(buildFunctionType(model, rawTypeRes, index));
+                }
+                else if ("TypeParameter".equals(rdfTypeName))
+                {
+                    String paramName = getName(model, rawTypeRes);
+                    if (paramName != null)
+                    {
+                        gt._type(new TypeParameterImpl()._name(paramName));
+                    }
+                }
+                else
+                {
+                    String typeName = getLocalName(rawTypeRes);
+                    if (typeName != null)
+                    {
+                        Type type = findType(typeName, index);
+                        if (type != null)
+                        {
+                            gt._type(type);
+                        }
+                    }
+                }
             }
             else
             {
