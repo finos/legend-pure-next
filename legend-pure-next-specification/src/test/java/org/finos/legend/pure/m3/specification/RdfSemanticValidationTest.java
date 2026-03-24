@@ -202,4 +202,99 @@ public class RdfSemanticValidationTest {
         }
         return uri;
     }
+
+    @Test
+    public void testM3TtlAllBlankNodesAreTyped() {
+        Model model = loadModel(M3_TTL);
+        List<String> errors = checkUntypedBlankNodes(model);
+
+        if (!errors.isEmpty()) {
+            StringBuilder sb = new StringBuilder("Untyped blank node errors (blank nodes missing 'a :Type' declaration):\n");
+            for (String error : errors) {
+                sb.append("  - ").append(error).append("\n");
+            }
+            Assertions.fail(sb.toString());
+        }
+    }
+
+    /**
+     * Check that every blank node used as a subject has at least one rdf:type statement.
+     * Blank nodes without a type cannot be meaningfully validated for multiplicity constraints
+     * and often indicate a missing {@code a :ClassName} declaration in the TTL.
+     *
+     * @param model the RDF model to validate
+     * @return list of validation error messages
+     */
+    private List<String> checkUntypedBlankNodes(Model model) {
+        List<String> errors = new ArrayList<>();
+
+        // Collect all blank node subjects that have an rdf:type
+        Set<String> typedBlankNodes = new HashSet<>();
+        StmtIterator stmtIt = model.listStatements();
+        while (stmtIt.hasNext()) {
+            Statement stmt = stmtIt.next();
+            if (stmt.getSubject().isAnon()) {
+                String predicateUri = stmt.getPredicate().getURI();
+                if (predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") ||
+                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#first") ||
+                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest")) {
+                    typedBlankNodes.add(stmt.getSubject().getId().toString());
+                }
+            }
+        }
+
+        // Find all blank nodes used as subjects and check they are typed
+        // Track a reference (predicate + parent subject) to help locate them in the TTL
+        Map<String, String> blankNodeFirstRef = new HashMap<>();
+        stmtIt = model.listStatements();
+        while (stmtIt.hasNext()) {
+            Statement stmt = stmtIt.next();
+            if (stmt.getSubject().isAnon()) {
+                String blankId = stmt.getSubject().getId().toString();
+                if (!typedBlankNodes.contains(blankId) && !blankNodeFirstRef.containsKey(blankId)) {
+                    // Record the statement itself to help locate the blank node
+                    blankNodeFirstRef.put(blankId, stmt.getPredicate().getLocalName()
+                            + " = " + formatNode(stmt.getObject()));
+                }
+            }
+        }
+
+        // Also scan objects to find referenced blank nodes and record their parent context
+        Map<String, String> blankNodeParentContext = new HashMap<>();
+        stmtIt = model.listStatements();
+        while (stmtIt.hasNext()) {
+            Statement stmt = stmtIt.next();
+            RDFNode obj = stmt.getObject();
+            if (obj.isAnon()) {
+                String blankId = obj.asResource().getId().toString();
+                if (!typedBlankNodes.contains(blankId) && !blankNodeParentContext.containsKey(blankId)) {
+                    String parentSubject = stmt.getSubject().isAnon()
+                            ? "[blank]"
+                            : getLocalName(stmt.getSubject().getURI());
+                    blankNodeParentContext.put(blankId,
+                            "subject='" + parentSubject + "' predicate='" + stmt.getPredicate().getLocalName() + "'");
+                }
+            }
+        }
+
+        for (Map.Entry<String, String> entry : blankNodeFirstRef.entrySet()) {
+            String blankId = entry.getKey();
+            String context = blankNodeParentContext.getOrDefault(blankId, "unknown location");
+            errors.add("[blank:" + blankId + "] is missing 'a :Type' declaration "
+                    + "(referenced from " + context + ", first property: " + entry.getValue() + ")");
+        }
+
+        errors.sort(String::compareTo);
+        return errors;
+    }
+
+    private String formatNode(RDFNode node) {
+        if (node.isAnon()) {
+            return "[blank]";
+        }
+        if (node.isURIResource()) {
+            return getLocalName(node.asResource().getURI());
+        }
+        return node.toString();
+    }
 }

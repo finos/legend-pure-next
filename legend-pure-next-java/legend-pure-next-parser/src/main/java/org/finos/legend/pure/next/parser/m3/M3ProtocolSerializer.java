@@ -727,7 +727,7 @@ public class M3ProtocolSerializer
             return mp._name();
         }
         int lower = 0;
-        int upper = -1;
+        Integer upper = null;
         if (mult instanceof ConcreteMultiplicity cm)
         {
             if (cm._lowerBound() != null && cm._lowerBound()._value() != null)
@@ -739,7 +739,7 @@ public class M3ProtocolSerializer
                 upper = ((Number) cm._upperBound()._value()).intValue();
             }
         }
-        if (upper == -1)
+        if (upper == null)
         {
             return lower == 0 ? "*" : lower + "..*";
         }
@@ -2123,7 +2123,7 @@ private void serializeQualifiedProperty(
         }
 
         int lower = 0;
-        int upper = -1;
+        Integer upper = null;
 
         if (mult instanceof ConcreteMultiplicity cm)
         {
@@ -2139,7 +2139,7 @@ private void serializeQualifiedProperty(
             }
         }
 
-        if (upper == -1)
+        if (upper == null)
         {
             if (lower == 0)
             {

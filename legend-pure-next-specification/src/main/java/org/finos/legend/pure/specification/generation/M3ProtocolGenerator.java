@@ -128,7 +128,7 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
         this.tagProp = model.createProperty(M3_NS, "tag");
-        this.valueProp = model.createProperty(M3_NS, "value");
+        this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
         this.rdfType = model.createProperty(RDF_TYPE_NS, "type");
         this.m3PureOne = model.createResource(M3_NS + "PureOne");
         this.m3ZeroMany = model.createResource(M3_NS + "ZeroMany");
@@ -274,10 +274,10 @@ public class M3ProtocolGenerator
             try
             {
                 w.write(":" + name + " a :PrimitiveType ;\n");
-                Statement nameStmt = model.getProperty(r, nameProp);
-                if (nameStmt != null)
+                String nameValue = getNameValue(r);
+                if (nameValue != null)
                 {
-                    w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+                    w.write("    :name \"" + nameValue + "\" ;\n");
                 }
                 Statement pkgStmt = model.getProperty(r, packageProp);
                 if (pkgStmt != null && pkgStmt.getObject().isResource())
@@ -360,10 +360,10 @@ public class M3ProtocolGenerator
             }
         });
 
-        Statement nameStmt = model.getProperty(r, nameProp);
-        if (nameStmt != null)
+        String nameValue = getNameValue(r);
+        if (nameValue != null)
         {
-            w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+            w.write("    :name \"" + nameValue + "\" ;\n");
         }
 
         Statement pkgStmt = model.getProperty(r, packageProp);
@@ -436,10 +436,10 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write("\n:" + name + " a :Property ;\n");
 
-        Statement nameStmt = model.getProperty(r, nameProp);
-        if (nameStmt != null)
+        String nameValue = getNameValue(r);
+        if (nameValue != null)
         {
-            w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+            w.write("    :name \"" + nameValue + "\" ;\n");
         }
 
         Statement ownerStmt = model.getProperty(r, ownerProp);
@@ -505,10 +505,10 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Enumeration ;\n");
 
-        Statement nameStmt = model.getProperty(r, nameProp);
-        if (nameStmt != null)
+        String nameValue = getNameValue(r);
+        if (nameValue != null)
         {
-            w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+            w.write("    :name \"" + nameValue + "\" ;\n");
         }
 
         Statement pkgStmt = model.getProperty(r, packageProp);
@@ -530,10 +530,10 @@ public class M3ProtocolGenerator
         {
             Resource valRes = valIter.next();
             w.write("\n:" + getLocalName(valRes) + " a :" + enumName + " ;\n");
-            Statement nameStmt = model.getProperty(valRes, nameProp);
-            if (nameStmt != null)
+            String nameValue = getNameValue(valRes);
+            if (nameValue != null)
             {
-                w.write("    :name \"" + nameStmt.getString() + "\" .\n");
+                w.write("    :name \"" + nameValue + "\" .\n");
             }
             else
             {
@@ -553,10 +553,10 @@ public class M3ProtocolGenerator
             String name = getLocalName(r);
             w.write(":" + name + " a :Multiplicity ;\n");
 
-            Statement nameStmt = model.getProperty(r, nameProp);
-            if (nameStmt != null)
+            String nameValue = getNameValue(r);
+            if (nameValue != null)
             {
-                w.write("    :name \"" + nameStmt.getString() + "\" .\n\n");
+                w.write("    :name \"" + nameValue + "\" .\n\n");
             }
             else
             {
@@ -595,11 +595,11 @@ public class M3ProtocolGenerator
                 // Read name from the source model's :name property;
                 // fall back to deriving from localName (last segment after last _)
                 int lastUnderscore = localName.lastIndexOf('_');
-                Statement nameStmt = model.getProperty(pkgRes, nameProp);
+                String nameValue = getNameValue(pkgRes);
                 String simpleName;
-                if (nameStmt != null && nameStmt.getObject().isLiteral())
+                if (nameValue != null)
                 {
-                    simpleName = nameStmt.getString();
+                    simpleName = nameValue;
                 }
                 else
                 {
@@ -651,10 +651,10 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Profile ;\n");
 
-        Statement nameStmt = model.getProperty(r, nameProp);
-        if (nameStmt != null)
+        String nameValue = getNameValue(r);
+        if (nameValue != null)
         {
-            w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+            w.write("    :name \"" + nameValue + "\" ;\n");
         }
 
         Statement pkgStmt = model.getProperty(r, packageProp);
@@ -673,10 +673,10 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Stereotype ;\n");
 
-        Statement nameStmt = model.getProperty(r, nameProp);
-        if (nameStmt != null)
+        String nameValue = getNameValue(r);
+        if (nameValue != null)
         {
-            w.write("    :name \"" + nameStmt.getString() + "\" ;\n");
+            w.write("    :name \"" + nameValue + "\" ;\n");
         }
 
         Property profileProp = model.createProperty(M3_NS, "profile");
@@ -713,6 +713,40 @@ public class M3ProtocolGenerator
         int idx = uri.lastIndexOf('#');
         return idx >= 0 ? uri.substring(idx + 1) : uri;
     }
+
+    /**
+     * Get the "name" value of a resource by trying multiple name-like predicates.
+     * Different types use different property resource URIs for their name.
+     */
+    private String getNameValue(Resource res)
+    {
+        for (String predLocalName : NAME_PREDICATES)
+        {
+            Property pred = model.createProperty(M3_NS, predLocalName);
+            Statement stmt = model.getProperty(res, pred);
+            if (stmt != null && stmt.getObject().isLiteral())
+            {
+                return stmt.getString();
+            }
+        }
+        return null;
+    }
+
+    private static final String[] NAME_PREDICATES = {
+            "name",                          // PackageableElement, Class, Enumeration, Profile, etc.
+            "abstractProperty_name",         // AbstractProperty (Property instances)
+            "enumValue",                     // Enum values (AggregationKind_None, etc.)
+            "typeParameter_name",            // TypeParameter
+            "MultiplicityParameter_name",    // MultiplicityParameter
+            "ResolvedTypeParameter_name",    // ResolvedTypeParameter
+            "ResolvedMultiplicityParameter_name", // ResolvedMultiplicityParameter
+            "VariableExpression_name",       // VariableExpression
+            "constraint_name",              // Constraint
+            "Column_name",                  // Column values
+            "stereotype_name",              // Stereotype
+            "tag_value",                    // Tag
+            "PackageableFunction_functionName", // PackageableFunction
+    };
 
     private void identifyExcludedTypes()
     {

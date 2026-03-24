@@ -76,7 +76,7 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 //    assert($l2->id()->startsWith('Anonymous_') || $l2->id()->startsWith('@_'));
     assertEmpty($l2->cast(@LA_List<String>).values);
 
-    let l3 = new(@LA_List<String>, [
+    let l3 = new(@LA_List<String>|1, [
                                         ^KeyExpression
                                         (
                                             name = ^AtomicValue(value='values', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne),

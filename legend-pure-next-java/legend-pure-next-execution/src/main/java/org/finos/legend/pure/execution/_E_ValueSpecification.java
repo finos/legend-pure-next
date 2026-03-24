@@ -16,6 +16,7 @@ package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.Collection;
@@ -150,7 +151,13 @@ public class _E_ValueSpecification
         // All metamodel elements implement Any which has _classifierGenericType()
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
-            return _GenericType.type(any._classifierGenericType());
+            GenericType cgt = any._classifierGenericType();
+            if (cgt == null)
+            {
+                throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
+                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : ""));
+            }
+            return _GenericType.type(cgt);
         }
         // Java primitives (Long, Double, String, Boolean) — use the VS genericType
         if (vs != null && vs._genericType() != null)

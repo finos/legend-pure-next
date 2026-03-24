@@ -32,8 +32,8 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
                 typeParam T -> #(legal:#String##[1]#, other:#Integer##[0..1]#)#
                 Variable p :#Relation<#(legal:#String##[1]#, other:#Integer##[0..1]#)#>##[1]#  @6:35-6:36
                 Variable r :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  @6:43-6:44
-              Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[m]#}#>#[1]
-                DotApplication legal :#String##[m]#  @6:46-6:51
+              Lambda(v_automap:#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]) :#LambdaFunction<#{#(legal:#String##[1]#, other:#Integer##[0..1]#)#[1]->#String##[1]#}#>#[1]
+                DotApplication legal :#String##[1]#  @6:46-6:51
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#
           AtomicValue  'w' :String[1]  @6:64-6:66
       AtomicValue  'new' :String[1]  @6:24-6:26

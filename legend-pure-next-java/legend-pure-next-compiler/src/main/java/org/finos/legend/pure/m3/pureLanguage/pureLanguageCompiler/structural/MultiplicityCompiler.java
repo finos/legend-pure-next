@@ -164,7 +164,7 @@ public final class MultiplicityCompiler
     private static String resolveCanonicalName(meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity m)
     {
         long lower = m._lowerBound() != null ? m._lowerBound()._value() : -1;
-        long upper = m._upperBound() != null ? m._upperBound()._value() : -1;
+        Long upper = m._upperBound() != null ? m._upperBound()._value() : null;
         boolean hasUpper = m._upperBound() != null;
 
         if (lower == 1 && hasUpper && upper == 1)

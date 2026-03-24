@@ -286,84 +286,8 @@ public class M3BootstrapReader
                 }
                 Resource generalGTRes = generalStmt.getObject().asResource();
 
-                // Get :rawType from the GenericType
-                Statement rawTypeStmt = getM3Statement(model, generalGTRes, "type");
-                if (rawTypeStmt == null || !rawTypeStmt.getObject().isResource())
-                {
-                    continue;
-                }
-
-                String generalTypeName = getLocalName(rawTypeStmt.getObject().asResource());
-                if (generalTypeName == null)
-                {
-                    continue;
-                }
-                Type generalType = findType(generalTypeName, index);
-                if (generalType == null)
-                {
-                    continue;
-                }
-
-                // Build the GenericType for the generalization
-                UserDefinedGenericTypeImpl generalGT = new UserDefinedGenericTypeImpl()._type(generalType);
-
-                // Extract type arguments
-                MutableList<GenericType> typeArgs = Lists.mutable.empty();
-                for (Statement typeArgStmt : listM3Statements(model, generalGTRes, "typeArguments"))
-                {
-                    if (!typeArgStmt.getObject().isResource())
-                    {
-                        continue;
-                    }
-                    Resource typeArgRes = typeArgStmt.getObject().asResource();
-
-                    // Check if this type argument is a type parameter reference
-                    Statement typeParamStmt = getM3Statement(model, typeArgRes, "typeParameter");
-                    if (typeParamStmt != null && typeParamStmt.getObject().isResource())
-                    {
-                        String paramName = getName(model, typeParamStmt.getObject().asResource());
-                        if (paramName != null)
-                        {
-                            typeArgs.add(new UserDefinedGenericTypeImpl()
-                                    ._type(new TypeParameterImpl()._name(paramName)));
-                        }
-                    }
-                    else
-                    {
-                        // Concrete type argument (has :rawType)
-                        Statement argRawTypeStmt = getM3Statement(model, typeArgRes, "type");
-                        if (argRawTypeStmt != null && argRawTypeStmt.getObject().isResource())
-                        {
-                            Resource argRawTypeRes = argRawTypeStmt.getObject().asResource();
-
-                            // Check if the rawType is an anonymous FunctionType
-                            Statement rdfTypeStmt = argRawTypeRes.getProperty(RDF.type);
-                            if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource()
-                                    && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
-                            {
-                                typeArgs.add(new UserDefinedGenericTypeImpl()
-                                        ._type(buildFunctionType(model, argRawTypeRes, index)));
-                            }
-                            else
-                            {
-                                String argTypeName = getLocalName(argRawTypeRes);
-                                if (argTypeName != null)
-                                {
-                                    Type argType = findType(argTypeName, index);
-                                    if (argType != null)
-                                    {
-                                        typeArgs.add(new UserDefinedGenericTypeImpl()._type(argType));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (typeArgs.notEmpty())
-                {
-                    generalGT._typeArguments(typeArgs);
-                }
+                // Build the GenericType for the generalization from TTL
+                GenericType generalGT = buildGenericType(model, generalGTRes, index);
 
                 GeneralizationImpl generalization = new GeneralizationImpl()
                         ._general(generalGT)
@@ -583,10 +507,16 @@ public class M3BootstrapReader
 
     private static String getName(Model model, Resource res)
     {
-        Statement stmt = getM3Statement(model, res, "name");
-        return (stmt != null && stmt.getObject().isLiteral())
-                ? stmt.getLiteral().getString()
-                : null;
+        // Check both :name (used by Classes, Packages, etc.) and :abstractProperty_name (used by Properties)
+        for (String predicate : new String[]{"name", "typeParameter_name", "MultiplicityParameter_name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
+        {
+            Statement stmt = getM3Statement(model, res, predicate);
+            if (stmt != null && stmt.getObject().isLiteral())
+            {
+                return stmt.getLiteral().getString();
+            }
+        }
+        return null;
     }
 
     private static String getPackagePath(Model model, Resource res)
@@ -677,7 +607,7 @@ public class M3BootstrapReader
             meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         MutableList<TypeParameter> result = Lists.mutable.empty();
-        for (Resource paramRes : extractPropertyResources(model, res, "typeParameters"))
+        for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_typeParameters"))
         {
             String paramName = getName(model, paramRes);
             if (paramName != null)
@@ -692,7 +622,7 @@ public class M3BootstrapReader
             meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
     {
         MutableList<MultiplicityParameter> result = Lists.mutable.empty();
-        for (Resource paramRes : extractPropertyResources(model, res, "multiplicityParameters"))
+        for (Resource paramRes : extractPropertyResources(model, res, "TypeAndMultiplicityParametersOwner_multiplicityParameters"))
         {
             String paramName = getName(model, paramRes);
             if (paramName != null)
@@ -729,14 +659,14 @@ public class M3BootstrapReader
             }
 
             // GenericType (may be a typeParameter reference)
-            Statement gtStmt = getM3Statement(model, paramRes, "genericType");
+            Statement gtStmt = getM3Statement(model, paramRes, "ValueSpecification_genericType");
             if (gtStmt != null && gtStmt.getObject().isResource())
             {
                 ve._genericType(buildGenericType(model, gtStmt.getObject().asResource(), index));
             }
 
             // Multiplicity
-            Statement mulStmt = getM3Statement(model, paramRes, "multiplicity");
+            Statement mulStmt = getM3Statement(model, paramRes, "ValueSpecification_multiplicity");
             if (mulStmt != null && mulStmt.getObject().isResource())
             {
                 ve._multiplicity(lookupMultiplicity(mulStmt.getObject().asResource(), index));
@@ -757,7 +687,7 @@ public class M3BootstrapReader
         if (returnMulStmt != null && returnMulStmt.getObject().isResource())
         {
             Resource mulRes = returnMulStmt.getObject().asResource();
-            Statement mulParamStmt = getM3Statement(model, mulRes, "multiplicityParameter");
+            Statement mulParamStmt = getM3Statement(model, mulRes, "MultiplicityParameter_name");
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
@@ -767,6 +697,12 @@ public class M3BootstrapReader
             {
                 ft._returnMultiplicity(lookupMultiplicity(mulRes, index));
             }
+        }
+
+        Statement cgtStmt = getM3Statement(model, ftRes, "classifierGenericType");
+        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        {
+            ft._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
         }
 
         return ft;
@@ -779,19 +715,6 @@ public class M3BootstrapReader
     private static GenericType buildGenericType(
             Model model, Resource gtRes, MutableMap<String, PackageableElement> index)
     {
-        // Check for typeParameter reference
-        Statement typeParamStmt = getM3Statement(model, gtRes, "typeParameter");
-        if (typeParamStmt != null && typeParamStmt.getObject().isResource())
-        {
-            String paramName = getName(model, typeParamStmt.getObject().asResource());
-            if (paramName != null)
-            {
-                UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl()
-                        ._type(new TypeParameterImpl()._name(paramName));
-                return gt;
-            }
-        }
-
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         // Concrete rawType reference
@@ -800,12 +723,35 @@ public class M3BootstrapReader
         {
             Resource rawTypeRes = rawTypeStmt.getObject().asResource();
 
-            // Check if the rawType is an anonymous FunctionType
+            // Check if the rawType is an anonymous FunctionType or a TypeParameter
             Statement rdfTypeStmt = rawTypeRes.getProperty(RDF.type);
-            if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource()
-                    && "FunctionType".equals(getLocalName(rdfTypeStmt.getObject().asResource())))
+            if (rdfTypeStmt != null && rdfTypeStmt.getObject().isResource())
             {
-                gt._type(buildFunctionType(model, rawTypeRes, index));
+                String rdfTypeName = getLocalName(rdfTypeStmt.getObject().asResource());
+                if ("FunctionType".equals(rdfTypeName))
+                {
+                    gt._type(buildFunctionType(model, rawTypeRes, index));
+                }
+                else if ("TypeParameter".equals(rdfTypeName))
+                {
+                    String paramName = getName(model, rawTypeRes);
+                    if (paramName != null)
+                    {
+                        gt._type(new TypeParameterImpl()._name(paramName));
+                    }
+                }
+                else
+                {
+                    String typeName = getLocalName(rawTypeRes);
+                    if (typeName != null)
+                    {
+                        Type type = findType(typeName, index);
+                        if (type != null)
+                        {
+                            gt._type(type);
+                        }
+                    }
+                }
             }
             else
             {
@@ -837,7 +783,7 @@ public class M3BootstrapReader
         for (Resource mulArgRes : extractPropertyResources(model, gtRes, "multiplicityArguments"))
         {
             // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
-            Statement mulParamStmt = getM3Statement(model, mulArgRes, "multiplicityParameter");
+            Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 mulArgs.add(new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));
@@ -854,6 +800,17 @@ public class M3BootstrapReader
         if (mulArgs.notEmpty())
         {
             gt._multiplicityArguments(mulArgs);
+        }
+
+        // classifierGenericType
+        Statement cgtStmt = getM3Statement(model, gtRes, "classifierGenericType");
+        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        {
+            Resource cgtRes = cgtStmt.getObject().asResource();
+            if (!cgtRes.equals(gtRes))
+            {
+                gt._classifierGenericType(buildGenericType(model, cgtRes, index));
+            }
         }
 
         return gt;
