@@ -202,7 +202,8 @@ public class RdfSemanticValidationTest {
         }
         return uri;
     }
-    //@Test
+
+//    @Test
     public void testM3TtlAllBlankNodesAreTyped() {
         Model model = loadModel(M3_TTL);
         List<String> errors = checkUntypedBlankNodes(model);
