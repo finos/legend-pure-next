@@ -508,7 +508,7 @@ public class M3BootstrapReader
     private static String getName(Model model, Resource res)
     {
         // Check both :name (used by Classes, Packages, etc.) and :abstractProperty_name (used by Properties)
-        for (String predicate : new String[]{"name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
+        for (String predicate : new String[]{"name", "typeParameter_name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
         {
             Statement stmt = getM3Statement(model, res, predicate);
             if (stmt != null && stmt.getObject().isLiteral())

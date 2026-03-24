@@ -9,9 +9,9 @@
 
 :Class a :Class ;
     :name "Class" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Class ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_type ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations 
         [ :general [ :type :Type ] ],
         [ :general [ :type :PropertyOwner ] ],
@@ -29,22 +29,22 @@
 :propertiesFromAssociations a :Property ;
     :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
     :abstractProperty_name "propertiesFromAssociations" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Class ;
-    :genericType [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :genericType [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ;
     :multiplicity :ZeroMany .
 
 :qualifiedPropertiesFromAssociations a :Property ;
     :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
     :abstractProperty_name "qualifiedPropertiesFromAssociations" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :QualifiedProperty ; :typeArguments [ :type :Any ] ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :QualifiedProperty ; :typeArguments [ :type :Any ] ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Class ;
     :genericType [ :type :QualifiedProperty ; :typeArguments [ :type :Any ] ] ;
     :multiplicity :ZeroMany .
 
 :typeVariables a :Property ;
     :abstractProperty_name "typeVariables" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Class ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Class ;
     :genericType [ :type :VariableExpression ] ;
     :multiplicity :ZeroMany .
@@ -60,7 +60,7 @@
 
 :aggregation a :Property ;
     :abstractProperty_name "aggregation" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] [ :type :AggregationKind ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] [ :type :AggregationKind ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :Property ;
     :genericType [ :type :AggregationKind ] ;
     :multiplicity :PureOne ;
@@ -74,9 +74,9 @@
 
 :prop_defaultValue a :Property ;
     :abstractProperty_name "defaultValue" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :Property ;
-    :genericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ :name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ;
+    :genericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ; :returnMultiplicity :PureOne ] ] ] ;
     :multiplicity :ZeroOne .
 
 # --- Any ---
@@ -310,9 +310,9 @@
 
 :Enumeration a :Class ;
     :name "Enumeration" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Enumeration ; :typeArguments [ :typeParameter [ :name "E" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Enumeration ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "E" ] ] ] ] ;
     :package :meta_pure_metamodel_type ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "E" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "E" ] ;
     :generalizations 
         [ :general [ :type :DataType ] ],
         [ :general [ :type :PackageableElement ] ],
@@ -473,7 +473,14 @@
     :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :TypeParameter ] [ :type :Boolean ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :TypeParameter ;
     :genericType [ :type :Boolean ] ;
-    :multiplicity :PureOne .
+    :multiplicity :PureOne ;
+    :prop_defaultValue [ a :LambdaFunction ;
+        :classifierGenericType [ :type :LambdaFunction ; :typeArguments [ :type [ a :FunctionType ; :classifierGenericType [ :type :FunctionType ] ; :returnType [ :type :Boolean ] ; :returnMultiplicity :PureOne ] ] ] ;
+        :expressionSequence [ a :AtomicValue ;
+            :classifierGenericType [ :type :AtomicValue ] ;
+            :ValueSpecification_genericType [ :type :Boolean ] ;
+            :ValueSpecification_multiplicity :PureOne ;
+            :AtomicValue_value false ] ] .
 
 :typeParameter_name a :Property ;
     :abstractProperty_name "name" ;
@@ -722,23 +729,23 @@
 
 :Function a :Class ;
     :name "Function" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Function ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Function ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations [ :general [ :type :Any ] ] .
 
 # --- FunctionWithParameters ---
 
 :FunctionWithParameters a :Class ;
     :name "FunctionWithParameters" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
-    :generalizations [ :general [ :type :Function ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
+    :generalizations [ :general [ :type :Function ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 :FunctionWithParameters_parameters a :Property ;
     :abstractProperty_name "parameters" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :FunctionWithParameters ;
     :genericType [ :type :VariableExpression ] ;
     :multiplicity :ZeroMany .
@@ -747,24 +754,24 @@
 
 :PackageableFunction a :Class ;
     :name "PackageableFunction" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "K" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ;
     :generalizations 
-        [ :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ :name "K" ] ] ] ],
+        [ :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] ],
         [ :general [ :type :PackageableElement ] ],
         [ :general [ :type :TypeAndMultiplicityParametersOwner ] ] .
 
 :preConstraints a :Property ;
     :abstractProperty_name "preConstraints" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :type :Constraint ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] [ :type :Constraint ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :PackageableFunction ;
     :genericType [ :type :Constraint ] ;
     :multiplicity :ZeroMany .
 
 :postConstraints a :Property ;
     :abstractProperty_name "postConstraints" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :type :Constraint ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] [ :type :Constraint ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :PackageableFunction ;
     :genericType [ :type :Constraint ] ;
     :multiplicity :ZeroMany .
@@ -773,7 +780,7 @@
 
 :PackageableFunction_returnGenericType a :Property ;
     :abstractProperty_name "returnGenericType" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :type :GenericType ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] [ :type :GenericType ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :PackageableFunction ;
     :genericType [ :type :GenericType ] ;
     :multiplicity :PureOne .
@@ -781,14 +788,14 @@
 :PackageableFunction_returnMultiplicity a :Property ;
     :stereotypes :ProtocolInfo_pointer ;
     :abstractProperty_name "returnMultiplicity" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :type :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] [ :type :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :PackageableFunction ;
     :genericType [ :type :Multiplicity ] ;
     :multiplicity :PureOne .
 
 :PackageableFunction_functionName a :Property ;
     :abstractProperty_name "functionName" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "K" ] ] ] [ :type :String ] ) ; :multiplicityArguments :ZeroOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] [ :type :String ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :PackageableFunction ;
     :genericType [ :type :String ] ;
     :multiplicity :ZeroOne .
@@ -798,14 +805,14 @@
 :FunctionDefinition a :Class ;
     :taggedValues [ :tag :ProtocolInfo_nonPointerSubtypes ; :value "LambdaFunction" ] ;
     :name "FunctionDefinition" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
-    :generalizations [ :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
+    :generalizations [ :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 :expressionSequence a :Property ;
     :abstractProperty_name "expressionSequence" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :ValueSpecification ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :ValueSpecification ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :FunctionDefinition ;
     :genericType [ :type :ValueSpecification ] ;
     :multiplicity :ZeroMany .
@@ -814,35 +821,35 @@
 
 :NativeFunction a :Class ;
     :name "NativeFunction" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :NativeFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :NativeFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
-    :generalizations [ :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
+    :generalizations [ :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 # --- UserDefinedFunction ---
 
 :UserDefinedFunction a :Class ;
     :name "UserDefinedFunction" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations 
-        [ :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ],
-        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+        [ :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
+        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 # --- LambdaFunction ---
 
 :LambdaFunction a :Class ;
     :name "LambdaFunction" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :LambdaFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :LambdaFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
-    :generalizations [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
+    :generalizations [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 :LambdaFunction_openVariables a :Property ;
     :stereotypes :ProtocolInfo_inferred ;
     :abstractProperty_name "openVariables" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :LambdaFunction ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :LambdaFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :VariableExpression ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :LambdaFunction ;
     :genericType [ :type :VariableExpression ] ;
     :multiplicity :ZeroMany .
@@ -852,23 +859,23 @@
 
 :AbstractProperty a :Class ;
     :name "AbstractProperty" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function_property ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations
-        [ :general [ :type :Function ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ],
+        [ :general [ :type :Function ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
         [ :general [ :type :AnnotatedElement ] ] .
 
 :abstractProperty_name a :Property ;
     :abstractProperty_name "name" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :String ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :String ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
     :genericType [ :type :String ] ;
     :multiplicity :PureOne .
 
 :genericType a :Property ;
     :abstractProperty_name "genericType" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :GenericType ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :GenericType ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
     :genericType [ :type :GenericType ] ;
     :multiplicity :PureOne .
@@ -876,14 +883,14 @@
 :multiplicity a :Property ;
     :stereotypes :ProtocolInfo_pointer ;
     :abstractProperty_name "multiplicity" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :Multiplicity ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
     :genericType [ :type :Multiplicity ] ;
     :multiplicity :PureOne .
 
 :owner a :Property ;
     :abstractProperty_name "owner" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :SimplePropertyOwner ] ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :SimplePropertyOwner ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
     :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
     :genericType [ :type :SimplePropertyOwner ] ;
@@ -893,7 +900,7 @@
 
 :Property a :Class ;
     :name "Property" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Property ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Property ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] ] ;
     :package :meta_pure_metamodel_function_property ;
     :TypeAndMultiplicityParametersOwner_typeParameters ( [ :name "U" ; :contravariant true ] [ :name "V" ] ) ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ :name "m" ] ;
@@ -903,21 +910,21 @@
             :parameters [ a :VariableExpression ;
                 :classifierGenericType [ :type :VariableExpression ] ;
                 :VariableExpression_name "object" ;
-                :ValueSpecification_genericType [ :typeParameter [ :name "U" ] ] ;
+                :ValueSpecification_genericType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ] ] ;
                 :ValueSpecification_multiplicity :PureOne ] ;
-            :returnType [ :typeParameter [ :name "V" ] ] ;
+            :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ;
             :returnMultiplicity [ :multiplicityParameter "m" ] ] ] ] ] .
 
 # --- QualifiedProperty ---
 
 :QualifiedProperty a :Class ;
     :name "QualifiedProperty" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :QualifiedProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :QualifiedProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function_property ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations
-        [ :general [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ],
-        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+        [ :general [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
+        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 
 # --- Multiplicity ---
@@ -1079,9 +1086,9 @@
 
 :GenericTypeAndMultiplicityHolder a :Class ;
     :name "GenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ :name "m" ] ;
     :generalizations [ :general [ :type :ValueSpecification ] ] .
 
@@ -1091,11 +1098,11 @@
 
 :CompilerGenericTypeAndMultiplicityHolder a :Class ;
     :name "CompilerGenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :CompilerGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :CompilerGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ :name "m" ] ;
-    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
+    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
 
 # --- UserDefinedGenericTypeAndMultiplicityHolder ---
 # Marker subtype for TypeHolders whose genericType is provided by the user
@@ -1103,11 +1110,11 @@
 
 :UserDefinedGenericTypeAndMultiplicityHolder a :Class ;
     :name "UserDefinedGenericTypeAndMultiplicityHolder" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :UserDefinedGenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ :name "m" ] ;
-    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ :name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
+    :generalizations [ :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
 
 # --- VariableExpression ---
 
@@ -1435,23 +1442,23 @@
 
 :RelationType a :Class ;
     :name "RelationType" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :RelationType ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :RelationType ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_relation ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations [ :general [ :type :Type ] ] .
 
 :columns a :Property ;
     :abstractProperty_name "columns" ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :RelationType ; :typeArguments [ :typeParameter [ :name "T" ] ] ] [ :type :Column ; :typeArguments ( [ :typeParameter [ :name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :RelationType ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] [ :type :Column ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :RelationType ;
-    :genericType [ :type :Column ; :typeArguments ( [ :typeParameter [ :name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :genericType [ :type :Column ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] [ :type :Any ] ) ; :multiplicityArguments :ZeroMany ] ;
     :multiplicity :ZeroMany .
 
 # --- Column ---
 
 :Column a :Class ;
     :name "Column" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Column ; :typeArguments ( [ :typeParameter [ :name "U" ; :contravariant true ] ] [ :typeParameter [ :name "V" ] ] ) ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Column ; :typeArguments ( [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] ] [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ) ] ] ;
     :package :meta_pure_metamodel_relation ;
     :TypeAndMultiplicityParametersOwner_typeParameters ( [ :name "U" ; :contravariant true ] [ :name "V" ] ) ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters "m" ;
@@ -1462,9 +1469,9 @@
                 :parameters [ a :VariableExpression ;
                     :classifierGenericType [ :type :VariableExpression ] ;
                     :VariableExpression_name "object" ;
-                    :ValueSpecification_genericType [ :typeParameter [ :name "U" ] ] ;
+                    :ValueSpecification_genericType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ] ] ;
                     :ValueSpecification_multiplicity :PureOne ] ;
-                :returnType [ :typeParameter [ :name "V" ] ] ;
+                :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ;
                 :returnMultiplicity [ :multiplicityParameter "m" ] ] ] ] ],
         [ :general [ :type :AnnotatedElement ] ] .
 
@@ -1501,19 +1508,19 @@
 
 :Relation a :Class ;
     :name "Relation" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Relation ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Relation ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_relation ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations [ :general [ :type :Any ] ] .
 
 # --- RelationElementAccessor ---
 
 :RelationElementAccessor a :Class ;
     :name "RelationElementAccessor" ;
-    :classifierGenericType [ :type :Class ; :typeArguments [ :type :RelationElementAccessor ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :RelationElementAccessor ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_relation ;
-    :TypeAndMultiplicityParametersOwner_typeParameters [ :name "T" ] ;
-    :generalizations [ :general [ :type :Relation ; :typeArguments [ :typeParameter [ :name "T" ] ] ] ] .
+    :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
+    :generalizations [ :general [ :type :Relation ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 # --- GenericTypeOperation ---
 
