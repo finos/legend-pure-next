@@ -100,7 +100,7 @@ public class M3MetamodelReader
             for (ResIterator stIt = model.listSubjectsWithProperty(RDF.type, m3StereotypeType); stIt.hasNext();)
             {
                 Resource stRes = stIt.next();
-                Statement profStmt = getM3Statement(stRes, "profile");
+                Statement profStmt = getM3StatementMulti(stRes, "profile", "tag_profile");
                 if (profStmt != null
                         && profStmt.getObject().isResource()
                         && profStmt.getObject().asResource().equals(profileRes))
@@ -119,7 +119,7 @@ public class M3MetamodelReader
             for (ResIterator tIt = model.listSubjectsWithProperty(RDF.type, tagType); tIt.hasNext();)
             {
                 Resource tagRes = tIt.next();
-                Statement profStmt = getM3Statement(tagRes, "profile");
+                Statement profStmt = getM3StatementMulti(tagRes, "profile", "tag_profile");
                 if (profStmt != null
                         && profStmt.getObject().isResource()
                         && profStmt.getObject().asResource().equals(profileRes))
@@ -395,8 +395,8 @@ public class M3MetamodelReader
     // =========================================================================
 
     /**
-     * Extract a full generic type string (e.g., "Map<String, List<T>>").
-     * Recursively resolves type arguments.
+     * Extract a full generic type string (e.g., "Map<String, List<T>>" or "GenericTypeAndMultiplicityHolder<T|m>").
+     * Recursively resolves type arguments and multiplicity arguments.
      */
     private String extractGenericTypeString(RDFNode node)
     {
@@ -417,11 +417,42 @@ public class M3MetamodelReader
         }
 
         MutableList<String> typeArgs = extractTypeArguments(gtRes);
-        if (!typeArgs.isEmpty())
+        MutableList<String> mulArgs = extractMultiplicityArguments(gtRes);
+        if (!typeArgs.isEmpty() || !mulArgs.isEmpty())
         {
-            return rawName + "<" + typeArgs.makeString(", ") + ">";
+            StringBuilder sb = new StringBuilder(rawName).append("<");
+            sb.append(typeArgs.makeString(", "));
+            if (!mulArgs.isEmpty())
+            {
+                sb.append("|").append(mulArgs.makeString(", "));
+            }
+            sb.append(">");
+            return sb.toString();
         }
         return rawName;
+    }
+
+    /**
+     * Extract multiplicity arguments from a GenericType resource.
+     * These are referenced as :multiplicityArguments [ :multiplicityParameter "m" ].
+     */
+    private MutableList<String> extractMultiplicityArguments(Resource gtRes)
+    {
+        MutableList<String> result = Lists.mutable.empty();
+        listM3Statements(gtRes, "multiplicityArguments").forEach(maStmt ->
+        {
+            if (maStmt.getObject().isResource())
+            {
+                Resource maRes = maStmt.getObject().asResource();
+                // Check for multiplicityParameter reference: [ :multiplicityParameter "m" ]
+                Statement mpStmt = getM3Statement(maRes, "multiplicityParameter");
+                if (mpStmt != null && mpStmt.getObject().isLiteral())
+                {
+                    result.add(mpStmt.getString());
+                }
+            }
+        });
+        return result;
     }
 
     private MutableList<String> extractTypeArguments(Resource gtRes)
@@ -501,7 +532,7 @@ public class M3MetamodelReader
         if (paramStmt != null && paramStmt.getObject().isResource())
         {
             Resource paramRes = paramStmt.getObject().asResource();
-            Statement gtStmt = getM3Statement(paramRes, "genericType");
+            Statement gtStmt = getM3StatementMulti(paramRes, "genericType", "ValueSpecification_genericType");
             if (gtStmt != null && gtStmt.getObject().isResource())
             {
                 Resource gt = gtStmt.getObject().asResource();
@@ -511,7 +542,7 @@ public class M3MetamodelReader
                     sb.append(getName(tp.getObject().asResource()));
                 }
             }
-            Statement multStmt = getM3Statement(paramRes, "multiplicity");
+            Statement multStmt = getM3StatementMulti(paramRes, "multiplicity", "ValueSpecification_multiplicity");
             if (multStmt != null && multStmt.getObject().isResource())
             {
                 String multName = getLocalName(multStmt.getObject().asResource());
@@ -603,7 +634,7 @@ public class M3MetamodelReader
     private MutableList<String> extractTypeParameters(Resource classRes)
     {
         MutableList<String> result = Lists.mutable.empty();
-        listM3Statements(classRes, "typeParameters").forEach(tpStmt ->
+        listM3StatementsMulti(classRes, "typeParameters", "TypeAndMultiplicityParametersOwner_typeParameters").forEach(tpStmt ->
         {
             if (tpStmt.getObject().isResource())
             {
@@ -651,11 +682,21 @@ public class M3MetamodelReader
     private MutableList<String> extractMultiplicityParameters(Resource classRes)
     {
         MutableList<String> result = Lists.mutable.empty();
-        listM3Statements(classRes, "multiplicityParameters").forEach(mpStmt ->
+        listM3StatementsMulti(classRes, "multiplicityParameters", "TypeAndMultiplicityParametersOwner_multiplicityParameters").forEach(mpStmt ->
         {
             if (mpStmt.getObject().isLiteral())
             {
+                // Direct literal form: :multiplicityParameters "m"
                 result.add(mpStmt.getString());
+            }
+            else if (mpStmt.getObject().isResource())
+            {
+                // Blank node form: :multiplicityParameters [ :name "m" ]
+                String name = getName(mpStmt.getObject().asResource());
+                if (name != null)
+                {
+                    result.add(name);
+                }
             }
         });
         return result;
@@ -694,11 +735,63 @@ public class M3MetamodelReader
         return results;
     }
 
+    private Statement getM3StatementMulti(Resource res, String... localNames)
+    {
+        for (String localName : localNames)
+        {
+            Statement stmt = getM3Statement(res, localName);
+            if (stmt != null)
+            {
+                return stmt;
+            }
+        }
+        return null;
+    }
+
+    private MutableList<Statement> listM3StatementsMulti(Resource res, String... localNames)
+    {
+        MutableList<Statement> results = Lists.mutable.empty();
+        for (String localName : localNames)
+        {
+            results.addAll(listM3Statements(res, localName));
+        }
+        return results;
+    }
+
+    /**
+     * Get the "name" of a resource by trying all known name-like predicates.
+     * Different types use different property resource URIs for their name:
+     * PackageableElement uses :name, Property uses :abstractProperty_name,
+     * Enum values use :enumValue, TypeParameter uses :typeParameter_name, etc.
+     */
     private String getName(Resource res)
     {
-        Statement stmt = getM3Statement(res, "name");
-        return stmt != null ? stmt.getString() : null;
+        for (String predicate : NAME_PREDICATES)
+        {
+            Statement stmt = getM3Statement(res, predicate);
+            if (stmt != null && stmt.getObject().isLiteral())
+            {
+                return stmt.getString();
+            }
+        }
+        return null;
     }
+
+    private static final String[] NAME_PREDICATES = {
+            "name",                          // PackageableElement, Class, Enumeration, Profile, etc.
+            "abstractProperty_name",         // AbstractProperty (Property instances)
+            "enumValue",                     // Enum values (AggregationKind_None, etc.)
+            "typeParameter_name",            // TypeParameter
+            "MultiplicityParameter_name",    // MultiplicityParameter
+            "ResolvedTypeParameter_name",    // ResolvedTypeParameter
+            "ResolvedMultiplicityParameter_name", // ResolvedMultiplicityParameter
+            "VariableExpression_name",       // VariableExpression
+            "constraint_name",              // Constraint
+            "Column_name",                  // Column values
+            "stereotype_name",              // Stereotype
+            "tag_value",                    // Tag
+            "PackageableFunction_functionName", // PackageableFunction
+    };
 
     private String getPackagePath(Resource res)
     {

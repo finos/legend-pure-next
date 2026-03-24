@@ -306,6 +306,14 @@ public class ValueSpecificationEvaluator
                 default -> throw new RuntimeException("Unknown property '" + propertyName + "' on Multiplicity");
             };
         }
+        if (target instanceof meta.pure.metamodel.multiplicity.MultiplicityValue mv)
+        {
+            return switch (propertyName)
+            {
+                case "value" -> mv._value();
+                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on MultiplicityValue");
+            };
+        }
         // AbstractProperty meta-properties (before FunctionDefinition, since QualifiedProperty extends both)
         if (target instanceof meta.pure.metamodel.function.property.AbstractProperty ap)
         {
@@ -333,23 +341,7 @@ public class ValueSpecificationEvaluator
             };
         }
 
-        // Class meta-properties (for meta-reflection)
-        if (target instanceof meta.pure.metamodel.type.Class cls)
-        {
-            return switch (propertyName)
-            {
-                case "properties" -> cls._properties();
-                case "qualifiedProperties" -> cls._qualifiedProperties();
-                case "propertiesFromAssociations" -> cls._propertiesFromAssociations();
-                case "generalizations" -> cls._generalizations();
-                case "name" -> cls._name();
-                case "classifierGenericType" -> cls._classifierGenericType();
-                case "package" -> cls._package();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on Class");
-            };
-        }
-
-        // Enumeration meta-properties
+        // Enumeration meta-properties (must come before Type since Enumeration extends Type)
         if (target instanceof meta.pure.metamodel.type.Enumeration en)
         {
             return switch (propertyName)
@@ -357,6 +349,7 @@ public class ValueSpecificationEvaluator
                 case "name" -> en._name();
                 case "package" -> en._package();
                 case "classifierGenericType" -> en._classifierGenericType();
+                case "generalizations" -> en._generalizations();
                 default ->
                 {
                     // Look up enum value property by name and return its defaultValue
@@ -374,6 +367,22 @@ public class ValueSpecificationEvaluator
                     }
                     throw new RuntimeException("Unknown property '" + propertyName + "' on Enumeration");
                 }
+            };
+        }
+
+        // Type meta-properties (covers Class, PrimitiveType, and other Type subtypes)
+        if (target instanceof meta.pure.metamodel.type.Type type)
+        {
+            return switch (propertyName)
+            {
+                case "generalizations" -> type._generalizations();
+                case "name" -> (type instanceof PackageableElement pe3) ? pe3._name() : null;
+                case "classifierGenericType" -> (type instanceof PackageableElement pe3) ? pe3._classifierGenericType() : null;
+                case "package" -> (type instanceof PackageableElement pe3) ? pe3._package() : null;
+                case "properties" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._properties() : org.eclipse.collections.api.factory.Lists.mutable.empty();
+                case "qualifiedProperties" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._qualifiedProperties() : org.eclipse.collections.api.factory.Lists.mutable.empty();
+                case "propertiesFromAssociations" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._propertiesFromAssociations() : org.eclipse.collections.api.factory.Lists.mutable.empty();
+                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on " + type.getClass().getSimpleName());
             };
         }
 
