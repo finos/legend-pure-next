@@ -687,7 +687,7 @@ public class M3BootstrapReader
         if (returnMulStmt != null && returnMulStmt.getObject().isResource())
         {
             Resource mulRes = returnMulStmt.getObject().asResource();
-            Statement mulParamStmt = getM3Statement(model, mulRes, "multiplicityParameter");
+            Statement mulParamStmt = getM3Statement(model, mulRes, "MultiplicityParameter_name");
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
@@ -767,7 +767,7 @@ public class M3BootstrapReader
         for (Resource mulArgRes : extractPropertyResources(model, gtRes, "multiplicityArguments"))
         {
             // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
-            Statement mulParamStmt = getM3Statement(model, mulArgRes, "multiplicityParameter");
+            Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
             if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
             {
                 mulArgs.add(new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString()));

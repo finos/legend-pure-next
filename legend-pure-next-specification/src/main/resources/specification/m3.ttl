@@ -913,7 +913,7 @@
                 :ValueSpecification_genericType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ] ] ;
                 :ValueSpecification_multiplicity :PureOne ] ;
             :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ;
-            :returnMultiplicity [ :multiplicityParameter "m" ] ] ] ] ] .
+            :returnMultiplicity [ a :UserDefinedMultiplicityParameter ; :classifierGenericType [ :type :UserDefinedMultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ] ] ] ] .
 
 # --- QualifiedProperty ---
 
@@ -1102,7 +1102,7 @@
     :package :meta_pure_metamodel_valuespecification ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType [ :type :MultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ;
-    :generalizations [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :CompilerGenericTypeAndMultiplicityHolder ; :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
+    :generalizations [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :CompilerGenericTypeAndMultiplicityHolder ; :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ a :UserDefinedMultiplicityParameter ; :classifierGenericType [ :type :UserDefinedMultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ] ] .
 
 # --- UserDefinedGenericTypeAndMultiplicityHolder ---
 # Marker subtype for TypeHolders whose genericType is provided by the user
@@ -1114,7 +1114,7 @@
     :package :meta_pure_metamodel_valuespecification ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType [ :type :MultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ;
-    :generalizations [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :UserDefinedGenericTypeAndMultiplicityHolder ; :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ :multiplicityParameter "m" ] ] ] .
+    :generalizations [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :UserDefinedGenericTypeAndMultiplicityHolder ; :general [ :type :GenericTypeAndMultiplicityHolder ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ; :multiplicityArguments [ a :UserDefinedMultiplicityParameter ; :classifierGenericType [ :type :UserDefinedMultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ] ] .
 
 # --- VariableExpression ---
 
@@ -1472,7 +1472,7 @@
                     :ValueSpecification_genericType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ] ] ;
                     :ValueSpecification_multiplicity :PureOne ] ;
                 :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ;
-                :returnMultiplicity [ :multiplicityParameter "m" ] ] ] ] ],
+                :returnMultiplicity [ a :UserDefinedMultiplicityParameter ; :classifierGenericType [ :type :UserDefinedMultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ] ] ] ],
         [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Column ; :general [ :type :AnnotatedElement ] ] .
 
 :Column_name a :Property ;

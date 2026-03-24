@@ -444,8 +444,8 @@ public class M3MetamodelReader
             if (maStmt.getObject().isResource())
             {
                 Resource maRes = maStmt.getObject().asResource();
-                // Check for multiplicityParameter reference: [ :multiplicityParameter "m" ]
-                Statement mpStmt = getM3Statement(maRes, "multiplicityParameter");
+                // Check for multiplicityParameter reference: [ a :UserDefinedMultiplicityParameter ; :MultiplicityParameter_name "m" ]
+                Statement mpStmt = getM3Statement(maRes, "MultiplicityParameter_name");
                 if (mpStmt != null && mpStmt.getObject().isLiteral())
                 {
                     result.add(mpStmt.getString());
@@ -567,7 +567,7 @@ public class M3MetamodelReader
         if (retMultStmt != null && retMultStmt.getObject().isResource())
         {
             Resource retMultRes = retMultStmt.getObject().asResource();
-            Statement mpStmt = getM3Statement(retMultRes, "multiplicityParameter");
+            Statement mpStmt = getM3Statement(retMultRes, "MultiplicityParameter_name");
             if (mpStmt != null && mpStmt.getObject().isLiteral())
             {
                 sb.append("[").append(mpStmt.getString()).append("]");
