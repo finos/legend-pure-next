@@ -13,11 +13,11 @@
     :package :meta_pure_metamodel_type ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations 
-        [ :general [ :type :Type ] ],
-        [ :general [ :type :PropertyOwner ] ],
-        [ :general [ :type :ElementWithConstraints ] ],
-        [ :general [ :type :Testable ] ],
-        [ :general [ :type :TypeAndMultiplicityParametersOwner ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Class ; :general [ :type :Type ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Class ; :general [ :type :PropertyOwner ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Class ; :general [ :type :ElementWithConstraints ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Class ; :general [ :type :Testable ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Class ; :general [ :type :TypeAndMultiplicityParametersOwner ] ] .
 
 :qualifiedProperties a :Property ;
     :abstractProperty_name "qualifiedProperties" ;
@@ -201,9 +201,9 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :PrimitiveType ] ] ;
     :package :meta_pure_metamodel_type ;
     :generalizations 
-        [ :general [ :type :DataType ] ],
-        [ :general [ :type :PackageableElement ] ],
-        [ :general [ :type :ElementWithConstraints ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PrimitiveType ; :general [ :type :DataType ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PrimitiveType ; :general [ :type :PackageableElement ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PrimitiveType ; :general [ :type :ElementWithConstraints ] ] .
 
 :primitiveType_typeVariables a :Property ;
     :abstractProperty_name "typeVariables" ;
@@ -314,9 +314,9 @@
     :package :meta_pure_metamodel_type ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "E" ] ;
     :generalizations 
-        [ :general [ :type :DataType ] ],
-        [ :general [ :type :PackageableElement ] ],
-        [ :general [ :type :SimplePropertyOwner ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Enumeration ; :general [ :type :DataType ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Enumeration ; :general [ :type :PackageableElement ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Enumeration ; :general [ :type :SimplePropertyOwner ] ] .
 
 # --- Enum ---
 
@@ -425,8 +425,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :InferredGenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations
-        [ :general [ :type :GenericTypeValue ] ],
-        [ :general [ :type :Inferred ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredGenericType ; :general [ :type :GenericTypeValue ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredGenericType ; :general [ :type :Inferred ] ] .
 
 # --- UndefinedGenericType ---
 
@@ -535,8 +535,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :InferredMultiplicityParameter ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations
-        [ :general [ :type :MultiplicityParameter ] ],
-        [ :general [ :type :Inferred ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredMultiplicityParameter ; :general [ :type :MultiplicityParameter ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredMultiplicityParameter ; :general [ :type :Inferred ] ] .
 
 # --- UndefinedMultiplicity ---
 
@@ -626,8 +626,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :ConstraintsGetterOverride ] ] ;
     :package :meta_pure_metamodel_type ;
     :generalizations 
-        [ :general [ :type :GetterOverride ] ],
-        [ :general [ :type :ConstraintsOverride ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :ConstraintsGetterOverride ; :general [ :type :GetterOverride ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :ConstraintsGetterOverride ; :general [ :type :ConstraintsOverride ] ] .
 
 # --- PackageableElement ---
 
@@ -723,7 +723,7 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Association ] ] ;
     :package :meta_pure_metamodel_relationship ;
     :generalizations 
-        [ :general [ :type :PropertyOwner ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Association ; :general [ :type :PropertyOwner ] ] .
 
 # --- Function ---
 
@@ -758,9 +758,9 @@
     :package :meta_pure_metamodel_function ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ;
     :generalizations 
-        [ :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] ],
-        [ :general [ :type :PackageableElement ] ],
-        [ :general [ :type :TypeAndMultiplicityParametersOwner ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PackageableFunction ; :general [ :type :FunctionWithParameters ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "K" ] ] ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PackageableFunction ; :general [ :type :PackageableElement ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PackageableFunction ; :general [ :type :TypeAndMultiplicityParametersOwner ] ] .
 
 :preConstraints a :Property ;
     :abstractProperty_name "preConstraints" ;
@@ -834,8 +834,8 @@
     :package :meta_pure_metamodel_function ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations 
-        [ :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
-        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :UserDefinedFunction ; :general [ :type :PackageableFunction ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :UserDefinedFunction ; :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 # --- LambdaFunction ---
 
@@ -863,8 +863,8 @@
     :package :meta_pure_metamodel_function_property ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations
-        [ :general [ :type :Function ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
-        [ :general [ :type :AnnotatedElement ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :AbstractProperty ; :general [ :type :Function ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :AbstractProperty ; :general [ :type :AnnotatedElement ] ] .
 
 :abstractProperty_name a :Property ;
     :abstractProperty_name "name" ;
@@ -923,8 +923,8 @@
     :package :meta_pure_metamodel_function_property ;
     :TypeAndMultiplicityParametersOwner_typeParameters [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ;
     :generalizations
-        [ :general [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
-        [ :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :QualifiedProperty ; :general [ :type :AbstractProperty ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :QualifiedProperty ; :general [ :type :FunctionDefinition ; :typeArguments [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "T" ] ] ] ] .
 
 
 # --- Multiplicity ---
@@ -981,8 +981,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :InferredAdHocMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations
-        [ :general [ :type :AdHocMultiplicity ] ],
-        [ :general [ :type :Inferred ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredAdHocMultiplicity ; :general [ :type :AdHocMultiplicity ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredAdHocMultiplicity ; :general [ :type :Inferred ] ] .
 
 # --- InferredPackageableMultiplicity ---
 
@@ -991,8 +991,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :InferredPackageableMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations
-        [ :general [ :type :PackageableMultiplicity ] ],
-        [ :general [ :type :Inferred ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredPackageableMultiplicity ; :general [ :type :PackageableMultiplicity ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :InferredPackageableMultiplicity ; :general [ :type :Inferred ] ] .
 
 
 # --- MultiplicityValue ---
@@ -1017,8 +1017,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :PackageableMultiplicity ] ] ;
     :package :meta_pure_metamodel_multiplicity ;
     :generalizations 
-        [ :general [ :type :ConcreteMultiplicity ] ],
-        [ :general [ :type :PackageableElement ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PackageableMultiplicity ; :general [ :type :ConcreteMultiplicity ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :PackageableMultiplicity ; :general [ :type :PackageableElement ] ] .
 
 # --- UserDefinedPackageableMultiplicity ---
 
@@ -1219,8 +1219,8 @@
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :AnnotatedElement ] ] ;
     :package :meta_pure_metamodel_extension ;
     :generalizations 
-        [ :general [ :type :ElementWithStereotypes ] ],
-        [ :general [ :type :ElementWithTaggedValues ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :AnnotatedElement ; :general [ :type :ElementWithStereotypes ] ],
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :AnnotatedElement ; :general [ :type :ElementWithTaggedValues ] ] .
 
 # --- ElementWithStereotypes ---
 
@@ -1463,7 +1463,7 @@
     :TypeAndMultiplicityParametersOwner_typeParameters ( [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "U" ; :contravariant true ] [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ) ;
     :TypeAndMultiplicityParametersOwner_multiplicityParameters [ a :MultiplicityParameter ; :classifierGenericType [ :type :MultiplicityParameter ] ; :MultiplicityParameter_name "m" ] ;
     :generalizations
-        [ :general [ :type :Function ;
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Column ; :general [ :type :Function ;
             :typeArguments [ :type [ a :FunctionType ;
                 :classifierGenericType [ :type :FunctionType ] ;
                 :parameters [ a :VariableExpression ;
@@ -1473,7 +1473,7 @@
                     :ValueSpecification_multiplicity :PureOne ] ;
                 :returnType [ :typeParameter [ a :TypeParameter ; :classifierGenericType [ :type :TypeParameter ] ; :typeParameter_name "V" ] ] ;
                 :returnMultiplicity [ :multiplicityParameter "m" ] ] ] ] ],
-        [ :general [ :type :AnnotatedElement ] ] .
+        [ a :Generalization ; :classifierGenericType [ :type :Generalization ] ; :specific :Column ; :general [ :type :AnnotatedElement ] ] .
 
 :Column_name a :Property ;
     :abstractProperty_name "name" ;
