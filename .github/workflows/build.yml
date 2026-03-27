@@ -52,6 +52,11 @@ jobs:
           server-username: CI_DEPLOY_USERNAME
           server-password: CI_DEPLOY_PASSWORD
 
+      - name: Install flatc
+        uses: Nugine/setup-flatc@v1
+        with:
+          version: "25.2.10"
+
       - name: Configure git
         run: |
           git config --global committer.email "infra@finos.org"

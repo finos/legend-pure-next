@@ -146,7 +146,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <executable>${project.basedir}/../../flatbuffers_bin/flatc</executable>
+                            <executable>flatc</executable>
                             <arguments>
                                 <argument>--java</argument>
                                 <argument>-o</argument>
