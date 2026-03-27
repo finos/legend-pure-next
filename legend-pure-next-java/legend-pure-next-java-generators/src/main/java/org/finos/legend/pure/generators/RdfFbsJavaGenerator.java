@@ -153,6 +153,10 @@ public class RdfFbsJavaGenerator
         imports.add("org.eclipse.collections.api.list.MutableList");
         imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs." + classInfo.name + "Def");
         imports.add("org.finos.legend.pure.m3.module.MetadataAccess");
+        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef");
+        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef");
+        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef");
+        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef");
 
         allProps.forEach(prop ->
         {
@@ -344,17 +348,17 @@ public class RdfFbsJavaGenerator
             }
             else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
             {
-                // Union getter for AtomicValue.value (PrimitiveValueDef=1, LambdaFunctionDef=2, PointerRef=3)
+                // Union getter for AtomicValue.value (IntegerValueDef=1, FloatValueDef=2, BooleanValueDef=3, StringValueDef=4, LambdaFunctionDef=5, PointerRef=6)
                 // Cached because enum value resolution creates fresh EnumImpl instances
                 sb.append("        if (cached_value != null) { return cached_value; }\n");
                 sb.append("        byte vType = fb.valueType();\n");
-                sb.append("        if (vType == 2)\n");
+                sb.append("        if (vType == 5)\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef ld = (org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.LambdaFunctionDef());\n");
                 sb.append("            cached_value = ld != null ? new meta.pure.metamodel.function.LambdaFunctionFlatBufferWrapper(ld, resolver) : null;\n");
                 sb.append("            return cached_value;\n");
                 sb.append("        }\n");
-                sb.append("        if (vType == 3)\n");
+                sb.append("        if (vType == 6)\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef pr = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef());\n");
                 sb.append("            if (pr == null) { return null; }\n");
@@ -365,7 +369,28 @@ public class RdfFbsJavaGenerator
                 sb.append("        }\n");
                 sb.append("        if (vType == 1)\n");
                 sb.append("        {\n");
-                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveValueDef pv = (org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveValueDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveValueDef());\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef iv = (org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef());\n");
+                sb.append("            if (iv == null) { return null; }\n");
+                sb.append("            cached_value = iv.val();\n");
+                sb.append("            return cached_value;\n");
+                sb.append("        }\n");
+                sb.append("        if (vType == 2)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef fv = (org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef());\n");
+                sb.append("            if (fv == null) { return null; }\n");
+                sb.append("            cached_value = fv.val();\n");
+                sb.append("            return cached_value;\n");
+                sb.append("        }\n");
+                sb.append("        if (vType == 3)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef bv = (org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef());\n");
+                sb.append("            if (bv == null) { return null; }\n");
+                sb.append("            cached_value = bv.val();\n");
+                sb.append("            return cached_value;\n");
+                sb.append("        }\n");
+                sb.append("        if (vType == 4)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef pv = (org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef());\n");
                 sb.append("            if (pv == null) { return null; }\n");
                 sb.append("            String raw = pv.val();\n");
                 sb.append("            if (raw == null) { return null; }\n");
@@ -374,10 +399,15 @@ public class RdfFbsJavaGenerator
                 sb.append("            if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv && gtv._type() != null)\n");
                 sb.append("            {\n");
                 sb.append("                String typeName = (gtv._type() instanceof meta.pure.metamodel.PackageableElement pe) ? pe._name() : null;\n");
-                sb.append("                if (\"Integer\".equals(typeName)) { cached_value = Long.parseLong(raw); return cached_value; }\n");
-                sb.append("                if (\"Float\".equals(typeName)) { cached_value = Double.parseDouble(raw); return cached_value; }\n");
-                sb.append("                if (\"Boolean\".equals(typeName)) { cached_value = Boolean.parseBoolean(raw); return cached_value; }\n");
-                sb.append("                if (typeName != null && !\"String\".equals(typeName) && !\"Date\".equals(typeName) && !\"DateTime\".equals(typeName) && !\"StrictDate\".equals(typeName) && !\"StrictTime\".equals(typeName) && !\"Decimal\".equals(typeName) && !\"Number\".equals(typeName))\n");
+                sb.append("                if (typeName != null");
+                for (String pType : m3Model.primitiveTypes())
+                {
+                    if (!"Integer".equals(pType) && !"Float".equals(pType) && !"Boolean".equals(pType))
+                    {
+                        sb.append(" && !\"").append(pType).append("\".equals(typeName)");
+                    }
+                }
+                sb.append(")\n");
                 sb.append("                {\n");
                 sb.append("                    // Non-primitive type — resolve as element pointer\n");
                 sb.append("                    meta.pure.metamodel.PackageableElement resolved = resolver.getElement(raw);\n");
@@ -541,6 +571,24 @@ public class RdfFbsJavaGenerator
                 sb.append("                }\n");
                 sb.append("            }\n");
             }
+            else if ("Tag".equals(prop.typeName))
+            {
+                // Tags use composite paths: "profilePath#tagName"
+                sb.append("            if (path != null)\n");
+                sb.append("            {\n");
+                sb.append("                int hashIdx = path.lastIndexOf('#');\n");
+                sb.append("                if (hashIdx > 0)\n");
+                sb.append("                {\n");
+                sb.append("                    meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, hashIdx));\n");
+                sb.append("                    if (p != null)\n");
+                sb.append("                    {\n");
+                sb.append("                        String tName = path.substring(hashIdx + 1);\n");
+                sb.append("                        meta.pure.metamodel.extension.Tag t = p._p_tags().detect(s -> tName.equals(s._value()));\n");
+                sb.append("                        if (t != null) { result.add(t); }\n");
+                sb.append("                    }\n");
+                sb.append("                }\n");
+                sb.append("            }\n");
+            }
             else
             {
                 // Property pointers: "ownerPath.propertyName" — resolve through owner
@@ -574,20 +622,51 @@ public class RdfFbsJavaGenerator
         {
             sb.append("        String path = fb.").append(fbField).append("();\n");
             sb.append("        if (path == null) { return null; }\n");
-            sb.append("        int dotIdx = path.lastIndexOf('.');\n");
-            sb.append("        if (dotIdx > 0 && path.indexOf(\"::\") < dotIdx)\n");
-            sb.append("        {\n");
-            sb.append("            // Property pointer: ownerPath.propertyName\n");
-            sb.append("            String ownerPath = path.substring(0, dotIdx);\n");
-            sb.append("            String propName = path.substring(dotIdx + 1);\n");
-            sb.append("            meta.pure.metamodel.PackageableElement owner = resolver.getElement(ownerPath);\n");
-            sb.append("            if (owner instanceof meta.pure.metamodel.SimplePropertyOwner spo)\n");
-            sb.append("            {\n");
-            sb.append("                meta.pure.metamodel.function.property.AbstractProperty found = spo._properties().detect(p -> propName.equals(p._name()));\n");
-            sb.append("                if (found == null && owner instanceof meta.pure.metamodel.PropertyOwner po) { found = po._qualifiedProperties().detect(p -> propName.equals(p._name())); }\n");
-            sb.append("                if (found != null) { return (").append(javaType).append(") found; }\n");
-            sb.append("            }\n");
-            sb.append("        }\n");
+            if ("Stereotype".equals(prop.typeName))
+            {
+                sb.append("        int dotIdx = path.lastIndexOf('.');\n");
+                sb.append("        if (dotIdx > 0)\n");
+                sb.append("        {\n");
+                sb.append("            meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, dotIdx));\n");
+                sb.append("            if (p != null)\n");
+                sb.append("            {\n");
+                sb.append("                String stName = path.substring(dotIdx + 1);\n");
+                sb.append("                meta.pure.metamodel.extension.Stereotype st = p._p_stereotypes().detect(s -> stName.equals(s._value()));\n");
+                sb.append("                if (st != null) { return st; }\n");
+                sb.append("            }\n");
+                sb.append("        }\n");
+            }
+            else if ("Tag".equals(prop.typeName))
+            {
+                sb.append("        int hashIdx = path.lastIndexOf('#');\n");
+                sb.append("        if (hashIdx > 0)\n");
+                sb.append("        {\n");
+                sb.append("            meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, hashIdx));\n");
+                sb.append("            if (p != null)\n");
+                sb.append("            {\n");
+                sb.append("                String tName = path.substring(hashIdx + 1);\n");
+                sb.append("                meta.pure.metamodel.extension.Tag t = p._p_tags().detect(s -> tName.equals(s._value()));\n");
+                sb.append("                if (t != null) { return t; }\n");
+                sb.append("            }\n");
+                sb.append("        }\n");
+            }
+            else
+            {
+                sb.append("        int dotIdx = path.lastIndexOf('.');\n");
+                sb.append("        if (dotIdx > 0 && path.indexOf(\"::\") < dotIdx)\n");
+                sb.append("        {\n");
+                sb.append("            // Property pointer: ownerPath.propertyName\n");
+                sb.append("            String ownerPath = path.substring(0, dotIdx);\n");
+                sb.append("            String propName = path.substring(dotIdx + 1);\n");
+                sb.append("            meta.pure.metamodel.PackageableElement owner = resolver.getElement(ownerPath);\n");
+                sb.append("            if (owner instanceof meta.pure.metamodel.SimplePropertyOwner spo)\n");
+                sb.append("            {\n");
+                sb.append("                meta.pure.metamodel.function.property.AbstractProperty found = spo._properties().detect(p -> propName.equals(p._name()));\n");
+                sb.append("                if (found == null && owner instanceof meta.pure.metamodel.PropertyOwner po) { found = po._qualifiedProperties().detect(p -> propName.equals(p._name())); }\n");
+                sb.append("                if (found != null) { return (").append(javaType).append(") found; }\n");
+                sb.append("            }\n");
+                sb.append("        }\n");
+            }
             sb.append("        return (").append(javaType).append(") resolver.getElement(path);\n");
         }
     }
@@ -900,7 +979,7 @@ public class RdfFbsJavaGenerator
             // Semantic validation for required properties
             allProps.forEach(prop ->
             {
-                if (hasStereotype(prop.stereotypes, "excluded") || hasStereotype(prop.stereotypes, "inferred") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name)))
+                if (hasStereotype(prop.stereotypes, "excluded") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name)))
                 {
                     return;
                 }
@@ -934,6 +1013,7 @@ public class RdfFbsJavaGenerator
                 String builderAccessor = toJavaAccessorName(toFbsFieldName(prop.name));
                 boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
                 boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer && !"Any".equals(prop.typeName);
+                boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
 
                 if (prop.isMany)
                 {
@@ -1042,7 +1122,7 @@ public class RdfFbsJavaGenerator
                         sb.append("        }\n");
                     }
                 }
-                else if ("String".equals(prop.typeName) || isPointer || "Decimal".equals(prop.typeName))
+                else if ("String".equals(prop.typeName) || isPointer || "Decimal".equals(prop.typeName) || isEnumType)
                 {
                     MutableList<String> nps = getNonPointerSubtypes(m3Model, prop);
                     if (nps.notEmpty() && !prop.isMany)
@@ -1132,22 +1212,22 @@ public class RdfFbsJavaGenerator
             // Special case: AtomicValue value union (PrimitiveValueDef or LambdaFunctionDef)
             if ("AtomicValue".equals(classInfo.name))
             {
-                sb.append("        // AtomicValue.value is a union: PrimitiveValueDef (1) or LambdaFunctionDef (2)\n");
+                sb.append("        // AtomicValue.value is a union: IntegerValueDef (1) or FloatValueDef (2) or BooleanValueDef (3) or StringValueDef (4) or LambdaFunctionDef (5) or PointerRef (6)\n");
                 sb.append("        int valueUnionOffset = 0;\n");
                 sb.append("        byte valueUnionType = 0;\n");
-                sb.append("        if (obj._value() instanceof LambdaFunction lambdaVal)\n");
+                sb.append("        if (obj._value() instanceof meta.pure.metamodel.function.LambdaFunction lambdaVal)\n");
                 sb.append("        {\n");
                 sb.append("            valueUnionOffset = writeLambdaFunction(lambdaVal);\n");
-                sb.append("            valueUnionType = 2;\n");
+                sb.append("            valueUnionType = 5;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.PackageableElement pe)\n");
                 sb.append("        {\n");
-                sb.append("            // PackageableElement: write as PointerRef (type 3) so reader resolves without genericType\n");
+                sb.append("            // PackageableElement: write as PointerRef (type 6) so reader resolves without genericType\n");
                 sb.append("            int pathOff = builder.createString(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe));\n");
-                sb.append("            PointerRef.startPointerRef(builder);\n");
-                sb.append("            PointerRef.addPath(builder, pathOff);\n");
-                sb.append("            valueUnionOffset = PointerRef.endPointerRef(builder);\n");
-                sb.append("            valueUnionType = 3;\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.startPointerRef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.addPath(builder, pathOff);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.endPointerRef(builder);\n");
+                sb.append("            valueUnionType = 6;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");
                 sb.append("        {\n");
@@ -1157,18 +1237,39 @@ public class RdfFbsJavaGenerator
                 sb.append("                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(enumPe) + \".\" + ev._name()\n");
                 sb.append("                : ev._name();\n");
                 sb.append("            int primStrOff = builder.createString(enumPath);\n");
-                sb.append("            PrimitiveValueDef.startPrimitiveValueDef(builder);\n");
-                sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
-                sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.startStringValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.addVal(builder, primStrOff);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.endStringValueDef(builder);\n");
+                sb.append("            valueUnionType = 4;\n");
+                sb.append("        }\n");
+                sb.append("        else if (obj._value() instanceof Long v)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef.startIntegerValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef.addVal(builder, v);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.IntegerValueDef.endIntegerValueDef(builder);\n");
                 sb.append("            valueUnionType = 1;\n");
+                sb.append("        }\n");
+                sb.append("        else if (obj._value() instanceof Double v)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef.startFloatValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef.addVal(builder, v);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.FloatValueDef.endFloatValueDef(builder);\n");
+                sb.append("            valueUnionType = 2;\n");
+                sb.append("        }\n");
+                sb.append("        else if (obj._value() instanceof Boolean v)\n");
+                sb.append("        {\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef.startBooleanValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef.addVal(builder, v);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.BooleanValueDef.endBooleanValueDef(builder);\n");
+                sb.append("            valueUnionType = 3;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() != null)\n");
                 sb.append("        {\n");
-                sb.append("            int primStrOff = builder.createString(obj._value().toString());\n");
-                sb.append("            PrimitiveValueDef.startPrimitiveValueDef(builder);\n");
-                sb.append("            PrimitiveValueDef.addVal(builder, primStrOff);\n");
-                sb.append("            valueUnionOffset = PrimitiveValueDef.endPrimitiveValueDef(builder);\n");
-                sb.append("            valueUnionType = 1;\n");
+                sb.append("            int strOff = builder.createString(obj._value().toString());\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.startStringValueDef(builder);\n");
+                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.addVal(builder, strOff);\n");
+                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.endStringValueDef(builder);\n");
+                sb.append("            valueUnionType = 4;\n");
                 sb.append("        }\n");
             }
 
@@ -1230,6 +1331,7 @@ public class RdfFbsJavaGenerator
                 String builderAccessor = toJavaAccessorName(toFbsFieldName(prop.name));
                 boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
                 boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer && !"Any".equals(prop.typeName);
+                boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
 
                 if (prop.isMany)
                 {
@@ -1247,7 +1349,7 @@ public class RdfFbsJavaGenerator
                         sb.append("        if (").append(fbField).append("Vector != 0) { ").append(classInfo.name).append("Def.add").append(capitalize(builderAccessor)).append("(builder, ").append(fbField).append("Vector); }\n");
                     }
                 }
-                else if ("String".equals(prop.typeName) || isPointer || "Decimal".equals(prop.typeName) || isClassType)
+                else if ("String".equals(prop.typeName) || isPointer || "Decimal".equals(prop.typeName) || isClassType || isEnumType)
                 {
                     MutableList<String> nps2 = getNonPointerSubtypes(m3Model, prop);
                     if ((nps2.notEmpty() && !prop.isMany) || (isMainTaxonomyType(prop.typeName) && isClassType && !prop.isMany))

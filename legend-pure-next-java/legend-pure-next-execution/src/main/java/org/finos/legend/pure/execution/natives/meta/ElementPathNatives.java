@@ -33,7 +33,7 @@ public class ElementPathNatives
                                 MetadataAccess resolver)
     {
         // pathToElement(String[1], String[1]) : PackageableElement[1]
-        natives.put("pathToElement_String_1__String_1__PackageableElement_1_", (args, eval, fe) ->
+        natives.put("pathToElement_String_1__String_1__PackageableElement_1_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             String separator = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -52,7 +52,7 @@ public class ElementPathNatives
                     }
                     if (rootPkg != null)
                     {
-                        return _E_ValueSpecification.wrap(rootPkg, fe._genericType(), fe._multiplicity());
+                        return _E_ValueSpecification.wrap(rootPkg, genericType, multiplicity, resolver);
                     }
                 }
                 return "::";
@@ -66,11 +66,11 @@ public class ElementPathNatives
             {
                 throw new RuntimeException("Element not found: " + path);
             }
-            return _E_ValueSpecification.wrap(element, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(element, genericType, multiplicity, resolver);
         });
 
         // lenientPathToElement(String[1], String[1]) : PackageableElement[0..1]
-        natives.put("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_", (args, eval, fe) ->
+        natives.put("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
             String separator = (String) _E_ValueSpecification.unwrap(args.get(1));
@@ -86,7 +86,7 @@ public class ElementPathNatives
         });
 
         // elementToPath(PackageableElement[1], String[1], Boolean[1]) : String[1]
-        natives.put("elementToPath_PackageableElement_1__String_1__String_1_", (args, eval, fe) ->
+        natives.put("elementToPath_PackageableElement_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
@@ -104,11 +104,11 @@ public class ElementPathNatives
             {
                 return "";
             }
-            return _E_ValueSpecification.wrap(String.valueOf(element), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
         });
 
         // elementPath(PackageableElement[1]) : PackageableElement[1..*]
-        natives.put("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_", (args, eval, fe) ->
+        natives.put("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             List<Object> path = new ArrayList<>();
@@ -120,11 +120,11 @@ public class ElementPathNatives
             {
                 buildElementPath(pe, path);
             }
-            return _E_ValueSpecification.wrap(path, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
         });
 
         // elementToPath(PackageableElement[1]) : String[1]
-        NativeImpl elementToPath = (args, eval, fe) ->
+        NativeImpl elementToPath = (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             if (element instanceof PackageableElement pe)
@@ -139,13 +139,13 @@ public class ElementPathNatives
             {
                 return "";
             }
-            return _E_ValueSpecification.wrap(String.valueOf(element), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
         };
         natives.put("elementToPath_PackageableElement_1__String_1_", elementToPath);
         natives.put("elementToPath", elementToPath);
 
         // elementToPath(Type[1], String[1]) : String[1]
-        natives.put("elementToPath_Type_1__String_1__String_1_", (args, eval, fe) ->
+        natives.put("elementToPath_Type_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             Object separatorObj = _E_ValueSpecification.unwrap(args.get(1));
@@ -154,7 +154,7 @@ public class ElementPathNatives
             {
                 return elementToPathString(pe, separator);
             }
-            return _E_ValueSpecification.wrap("", fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
         });
     }
 

@@ -19,6 +19,7 @@ import meta.pure.metamodel.type.FunctionTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.type.FunctionType}
@@ -36,7 +37,7 @@ public final class FunctionTypeCompiler
      */
     public static FunctionType compile(meta.pure.protocol.grammar.type.FunctionType ft, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        FunctionTypeImpl result = new FunctionTypeImpl();
+        FunctionTypeImpl result = _FunctionType.newFunctionType(model);
         if (ft._returnType() != null)
         {
             result._returnType(GenericTypeCompiler.compile(ft._returnType(), imports, model, context));

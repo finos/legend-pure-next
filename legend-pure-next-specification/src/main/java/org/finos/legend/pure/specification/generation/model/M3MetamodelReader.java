@@ -46,6 +46,7 @@ public class M3MetamodelReader
     private final Resource m3ProfileType;
     private final Resource m3StereotypeType;
     private final Resource m3FunctionType;
+    private final Resource m3PrimitiveType;
 
     public M3MetamodelReader(String ttlPath)
     {
@@ -61,6 +62,7 @@ public class M3MetamodelReader
         this.m3ProfileType = model.createResource(M3_NS + "Profile");
         this.m3StereotypeType = model.createResource(M3_NS + "Stereotype");
         this.m3FunctionType = model.createResource(M3_NS + "FunctionType");
+        this.m3PrimitiveType = model.createResource(M3_NS + "PrimitiveType");
     }
 
     /**
@@ -72,6 +74,7 @@ public class M3MetamodelReader
         collectProfileInfo(m3Model);
         collectClassInfo(m3Model);
         collectEnumInfo(m3Model);
+        collectPrimitiveInfo(m3Model);
         collectPropertyInfo(m3Model);
         m3Model.computeClassesWithSubtypes();
         return m3Model;
@@ -211,6 +214,23 @@ public class M3MetamodelReader
             }
         }
         return values;
+    }
+
+    // =========================================================================
+    // Primitive Collection
+    // =========================================================================
+
+    private void collectPrimitiveInfo(M3Model m3Model)
+    {
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, m3PrimitiveType); it.hasNext();)
+        {
+            Resource res = it.next();
+            String name = getName(res);
+            if (name != null)
+            {
+                m3Model.primitiveTypes().add(name);
+            }
+        }
     }
 
     // =========================================================================

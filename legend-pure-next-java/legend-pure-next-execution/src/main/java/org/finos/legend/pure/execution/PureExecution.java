@@ -41,9 +41,11 @@ import java.util.List;
 public class PureExecution
 {
     private final ValueSpecificationEvaluator evaluator;
+    private final MetadataAccess resolver;
 
     public PureExecution(MetadataAccess resolver)
     {
+        this.resolver = resolver;
         this.evaluator = new ValueSpecificationEvaluator(new NativeRepository(resolver));
     }
 
@@ -71,7 +73,7 @@ public class PureExecution
         for (int i = 0; i < args.length; i++)
         {
             VariableExpression param = params.get(i);
-            wrappedArgs.add(_E_ValueSpecification.wrap(args[i], param._genericType(), param._multiplicity()));
+            wrappedArgs.add(_E_ValueSpecification.wrap(args[i], param._genericType(), param._multiplicity(), this.resolver));
         }
 
         ValueSpecification result = evaluator.evaluateFunctionDefinition(function, wrappedArgs);

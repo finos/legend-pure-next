@@ -25,9 +25,9 @@ public final class ConstraintCompiler
      * Create a constraint shell with metadata (name, owner, etc.) but no expression sequences.
      * Expression sequences are compiled in the third pass when all functions are available.
      */
-    public static Constraint compileShell(meta.pure.protocol.grammar.constraint.Constraint grammarConstraint)
+    public static Constraint compileShell(meta.pure.protocol.grammar.constraint.Constraint grammarConstraint, MetadataAccess model)
     {
-        ConstraintImpl c = new ConstraintImpl();
+        ConstraintImpl c = new ConstraintImpl(model);
         if (grammarConstraint._name() != null)
         {
             c._name(grammarConstraint._name());
@@ -46,7 +46,7 @@ public final class ConstraintCompiler
         }
         if (grammarConstraint._sourceInformation() != null)
         {
-            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._sourceInformation()));
+            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._sourceInformation(), model));
         }
         return c;
     }

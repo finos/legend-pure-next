@@ -108,7 +108,7 @@ public final class ValueSpecificationResolver
                     FunctionExpression dotBody = (FunctionExpression) lambda._expressionSequence().getFirst();
 
                     meta.pure.metamodel.valuespecification.DotApplicationImpl originalDot =
-                            new meta.pure.metamodel.valuespecification.DotApplicationImpl();
+                            new meta.pure.metamodel.valuespecification.DotApplicationImpl(model);
                     originalDot._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
                     originalDot._functionName(dotBody._functionName());
                     originalDot._parametersValues(org.eclipse.collections.impl.factory.Lists.mutable.with(receiver));

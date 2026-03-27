@@ -44,9 +44,9 @@ public final class AssociationHandler
     {
     }
 
-    public static Association firstPass(meta.pure.protocol.grammar.relationship.Association grammar)
+    public static Association firstPass(meta.pure.protocol.grammar.relationship.Association grammar, MetadataAccess model)
     {
-        return new AssociationImpl()
+        return new AssociationImpl(model)
                 ._name(grammar._name());
     }
 
@@ -54,11 +54,11 @@ public final class AssociationHandler
     {
         if (grammar._properties().size() != 2)
         {
-            context.addError(new CompilationError("Association '" + _G_PackageableElement.fullPath(grammar) + "' must have exactly 2 properties, found " + grammar._properties().size(), SourceInformationCompiler.compile(grammar._sourceInformation())));
+            context.addError(new CompilationError("Association '" + _G_PackageableElement.fullPath(grammar) + "' must have exactly 2 properties, found " + grammar._properties().size(), SourceInformationCompiler.compile(grammar._sourceInformation(), model)));
             return result;
         }
 
-        result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
+        result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
 
         // Compile both properties without classifierGenericType first
         MutableList<Property> compiled = grammar._properties()

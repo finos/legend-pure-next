@@ -30,7 +30,6 @@ import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
@@ -73,6 +72,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     {
         return failOnResolve;
     }
+
     private final FunctionType functionType;
     private final String fullPath;
     private final String functionName;
@@ -94,12 +94,16 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         MutableSet<String> typeParamNames = _FunctionType.collectReferencedTypeParameterNames(functionType);
         this.typeParamCount = typeParamNames.size();
         this.typeParameters = typeParamNames.collect(name ->
-                (TypeParameter) new TypeParameterImpl()._name(name)._owner(this)).toList();
+                                {
+                                    TypeParameterImpl tp = new TypeParameterImpl(model)._name(name)._owner(this);
+                                    tp._classifierGenericType(_GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model));
+                                    return (TypeParameter) tp;
+                                }).toList();
 
         MutableSet<String> mulParamNames = _FunctionType.collectReferencedMultiplicityParameterNames(functionType);
         this.multiplicityParamCount = mulParamNames.size();
         this.multiplicityParameters = mulParamNames.collect(name ->
-                (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl()._name(name)._owner(this)).toList();
+                (MultiplicityParameter) new UserDefinedMultiplicityParameterImpl(model)._name(name)._owner(this)).toList();
     }
 
     // ========================================================================
@@ -188,10 +192,8 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     {
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
         Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
-        return new UserDefinedGenericTypeImpl()
-                ._type(pfType)
-                ._typeArguments(Lists.mutable.with(
-                        new UserDefinedGenericTypeImpl()._type(functionType)));
+        return _GenericType.buildUserDefinedGenericType(pfType, model)
+                ._typeArguments(Lists.mutable.with(_GenericType.buildUserDefinedGenericType(functionType, model)));
     }
 
     // ========================================================================
@@ -265,49 +267,94 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     // ========================================================================
 
     @Override
-    public PackageableFunction _functionName(String value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _functionName(String value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _returnMultiplicity(Multiplicity value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _returnMultiplicity(Multiplicity value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _returnGenericType(GenericType value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _returnGenericType(GenericType value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _typeParameters(MutableList<TypeParameter> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _typeParameters(MutableList<TypeParameter> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _multiplicityParameters(MutableList<MultiplicityParameter> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _multiplicityParameters(MutableList<MultiplicityParameter> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _preConstraints(MutableList<Constraint> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _preConstraints(MutableList<Constraint> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableFunction _postConstraints(MutableList<Constraint> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableFunction _postConstraints(MutableList<Constraint> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.function.FunctionWithParameters _parameters(MutableList<VariableExpression> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.function.FunctionWithParameters _parameters(MutableList<VariableExpression> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableElement _package(Package value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableElement _package(Package value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public PackageableElement _name(String value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public PackageableElement _name(String value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.extension.ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.extension.ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.extension.ElementWithStereotypes _stereotypes(MutableList<Stereotype> value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.extension.ElementWithStereotypes _stereotypes(MutableList<Stereotype> value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.type.Any _elementOverride(ElementOverride value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.type.Any _elementOverride(ElementOverride value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.type.Any _classifierGenericType(GenericType value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.type.Any _classifierGenericType(GenericType value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     @Override
-    public meta.pure.metamodel.type.Any _sourceInformation(SourceInformation value) { throw new UnsupportedOperationException("FunctionIndexEntry is read-only"); }
+    public meta.pure.metamodel.type.Any _sourceInformation(SourceInformation value)
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
 
     // ========================================================================
     // Specificity comparator

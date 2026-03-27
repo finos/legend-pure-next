@@ -65,17 +65,17 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
     {
         PackageableElement element = switch (grammar)
         {
-            case meta.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c);
-            case meta.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e);
-            case meta.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f);
-            case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f);
-            case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p);
-            case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a);
-            case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p);
+            case meta.pure.protocol.grammar.type.Class c -> ClassHandler.firstPass(c, model);
+            case meta.pure.protocol.grammar.type.Enumeration e -> EnumerationHandler.firstPass(e, model);
+            case meta.pure.protocol.grammar.function.NativeFunction f -> NativeFunctionHandler.firstPass(f, model);
+            case meta.pure.protocol.grammar.function.UserDefinedFunction f -> UserDefinedFunctionHandler.firstPass(f, model);
+            case meta.pure.protocol.grammar.extension.Profile p -> ProfileHandler.firstPass(p, model);
+            case meta.pure.protocol.grammar.relationship.Association a -> AssociationHandler.firstPass(a, model);
+            case meta.pure.protocol.grammar.type.PrimitiveType p -> PrimitiveTypeHandler.firstPass(p, model);
             default -> null;
         };
         elements.add(element);

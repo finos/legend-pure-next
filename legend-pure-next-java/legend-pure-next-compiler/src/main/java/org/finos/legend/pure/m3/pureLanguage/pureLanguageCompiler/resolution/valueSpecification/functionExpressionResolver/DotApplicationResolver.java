@@ -211,28 +211,28 @@ public final class DotApplicationResolver
                 ._name("v_automap");
 
         meta.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
-                new meta.pure.metamodel.valuespecification.DotApplicationImpl();
+                new meta.pure.metamodel.valuespecification.DotApplicationImpl(model);
         dotBody._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
         dotBody._functionName(accessName);
         dotBody._parametersValues(Lists.mutable.with(varRef));
         dotBody._sourceInformation(expr._sourceInformation());
 
         // Build the lambda (no genericType — Phase 2 will resolve it)
-        meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
+        meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl(model);
         lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model));
         lambda._parameters(Lists.mutable.with(lambdaParam));
         lambda._expressionSequence(Lists.mutable.with(dotBody));
 
         // Wrap in an AtomicValue (no genericType — treated as unresolved lambda)
         meta.pure.metamodel.valuespecification.AtomicValueImpl lambdaAV =
-                new meta.pure.metamodel.valuespecification.AtomicValueImpl();
+                new meta.pure.metamodel.valuespecification.AtomicValueImpl(model);
         lambdaAV._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
         lambdaAV._value(lambda);
         lambdaAV._multiplicity(pureOne);
 
         // Create a new FunctionApplication for 'map' wrapping the DotApplication
         meta.pure.metamodel.valuespecification.FunctionInvocationImpl mapExpr =
-                new meta.pure.metamodel.valuespecification.FunctionInvocationImpl();
+                new meta.pure.metamodel.valuespecification.FunctionInvocationImpl(model);
         mapExpr._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::FunctionInvocation"), model));
         mapExpr._functionName("map");
         mapExpr._parametersValues(Lists.mutable.with(receiver, lambdaAV));

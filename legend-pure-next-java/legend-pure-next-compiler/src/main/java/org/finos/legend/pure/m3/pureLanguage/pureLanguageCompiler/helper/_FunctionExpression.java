@@ -140,7 +140,7 @@ public final class _FunctionExpression
                             : _GenericType.findCommonGenericType(Lists.mutable.withAll(boundTypes), model);
                     if (boundGT != null)
                     {
-                        resolvedTypes.add(new ResolvedTypeParameterImpl()
+                        resolvedTypes.add(new ResolvedTypeParameterImpl(model)
                                 ._name(entry.getKey())
                                 ._value(boundGT));
                     }
@@ -165,7 +165,7 @@ public final class _FunctionExpression
                 MutableSet<Multiplicity> boundMuls = entry.getValue();
                 if (boundMuls != null && boundMuls.notEmpty() && boundMuls.size() == 1)
                 {
-                    resolvedMuls.add(new ResolvedMultiplicityParameterImpl()
+                    resolvedMuls.add(new ResolvedMultiplicityParameterImpl(model)
                             ._name(entry.getKey())
                             ._value(boundMuls.getFirst()));
                 }

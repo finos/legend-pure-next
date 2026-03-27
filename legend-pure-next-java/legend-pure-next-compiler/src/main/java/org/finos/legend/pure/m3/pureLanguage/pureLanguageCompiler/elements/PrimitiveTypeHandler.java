@@ -9,6 +9,7 @@ import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
@@ -29,12 +30,12 @@ public final class PrimitiveTypeHandler
     {
     }
 
-    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar)
+    public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model)
     {
-        PrimitiveTypeImpl result = new PrimitiveTypeImpl()._name(grammar._name());
+        PrimitiveTypeImpl result = new PrimitiveTypeImpl(model)._name(grammar._name());
         if (grammar._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
         }
         return result;
     }
@@ -46,7 +47,7 @@ public final class PrimitiveTypeHandler
                 .select(Objects::nonNull));
 
         result._classifierGenericType(
-                new UserDefinedGenericTypeImpl()._type((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType")));
+                _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType"), model));
 
         // Compile type variables (e.g., Primitive Varchar(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -60,7 +61,7 @@ public final class PrimitiveTypeHandler
         // Expression sequences are compiled in thirdPass when all functions are available.
         if (grammar._constraints() != null && grammar._constraints().notEmpty())
         {
-            result._constraints(grammar._constraints().collect(ConstraintCompiler::compileShell));
+            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
         }
 
         context.enrichCurrentErrors("primitive type '" + _G_PackageableElement.fullPath(grammar) + "'");
@@ -82,7 +83,7 @@ public final class PrimitiveTypeHandler
 
         VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
                 ._name("this")
-                ._genericType(new UserDefinedGenericTypeImpl()._type(pt))
+                ._genericType(_GenericType.buildUserDefinedGenericType(pt, model))
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
 
         // Push $this and type variables into scope

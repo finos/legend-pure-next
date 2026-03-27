@@ -293,13 +293,13 @@ public final class _Multiplicity
      * @param upper the upper bound (use a negative value for unbounded / {@code [*]})
      * @return a new concrete Multiplicity
      */
-    public static Multiplicity concreteMultiplicity(long lower, long upper)
+    public static Multiplicity concreteMultiplicity(long lower, long upper, MetadataAccess model)
     {
-        UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl()
-                ._lowerBound(new MultiplicityValueImpl()._value(lower));
+        UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl(model)
+                ._lowerBound(new MultiplicityValueImpl(model)._value(lower));
         if (upper >= 0)
         {
-            result._upperBound(new MultiplicityValueImpl()._value(upper));
+            result._upperBound(new MultiplicityValueImpl(model)._value(upper));
         }
         return result;
     }
@@ -325,7 +325,7 @@ public final class _Multiplicity
             {
                 return multiplicity;
             }
-            return new meta.pure.metamodel.multiplicity.InferredMultiplicityParameterImpl()
+            return new meta.pure.metamodel.multiplicity.InferredMultiplicityParameterImpl(model)
                     ._name(mp._name())
                     ._owner(mp._owner());
         }
@@ -350,20 +350,20 @@ public final class _Multiplicity
             return (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::InferredOneMany");
         }
 
-        return copyBoundsInto(multiplicity, new InferredAdHocMultiplicityImpl());
+        return copyBoundsInto(multiplicity, new InferredAdHocMultiplicityImpl(model), model);
     }
 
-    private static Multiplicity copyBoundsInto(Multiplicity source, InferredAdHocMultiplicityImpl target)
+    private static Multiplicity copyBoundsInto(Multiplicity source, InferredAdHocMultiplicityImpl target, MetadataAccess model)
     {
         if (source instanceof ConcreteMultiplicity cm)
         {
             if (cm._lowerBound() != null)
             {
-                target._lowerBound(new MultiplicityValueImpl()._value(cm._lowerBound()._value()));
+                target._lowerBound(new MultiplicityValueImpl(model)._value(cm._lowerBound()._value()));
             }
             if (cm._upperBound() != null)
             {
-                target._upperBound(new MultiplicityValueImpl()._value(cm._upperBound()._value()));
+                target._upperBound(new MultiplicityValueImpl(model)._value(cm._upperBound()._value()));
             }
         }
         return target;
@@ -376,7 +376,7 @@ public final class _Multiplicity
      * @param multiplicities the multiplicities to unify
      * @return the common multiplicity
      */
-    public static Multiplicity findCommonMultiplicity(MutableList<Multiplicity> multiplicities)
+    public static Multiplicity findCommonMultiplicity(MutableList<Multiplicity> multiplicities, MetadataAccess model)
     {
         if (multiplicities == null || multiplicities.isEmpty())
         {
@@ -395,11 +395,11 @@ public final class _Multiplicity
             minLower = Math.min(minLower, lower);
             maxUpper = (upper == null || maxUpper == null) ? null : Math.max(maxUpper, upper);
         }
-        InferredAdHocMultiplicityImpl result = new InferredAdHocMultiplicityImpl();
-        result._lowerBound(new MultiplicityValueImpl()._value(minLower));
+        InferredAdHocMultiplicityImpl result = new InferredAdHocMultiplicityImpl(model);
+        result._lowerBound(new MultiplicityValueImpl(model)._value(minLower));
         if (maxUpper != null)
         {
-            result._upperBound(new MultiplicityValueImpl()._value(maxUpper));
+            result._upperBound(new MultiplicityValueImpl(model)._value(maxUpper));
         }
         return result;
     }

@@ -11,6 +11,6 @@ public class CollectionResolver
     public static Collection resolveCollection(Collection col, MetadataAccess model, CompilationContext context)
     {
         return (Collection) col._values(col._values().collect(x -> ValueSpecificationResolver.resolve(x, model, context)))
-                               ._genericType(_GenericType.asInferred(_GenericType.findCommonGenericType(col._values().collect(ValueSpecification::_genericType), model)));
+                               ._genericType(_GenericType.asInferred(_GenericType.findCommonGenericType(col._values().collect(ValueSpecification::_genericType), model), model));
     }
 }

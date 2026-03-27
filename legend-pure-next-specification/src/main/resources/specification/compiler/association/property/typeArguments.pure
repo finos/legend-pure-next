@@ -30,6 +30,6 @@ class pack::Animal extends Any  ~Class<pack::Animal>  @10:1-12:1
 
 class pack::Dog extends pack::Animal  ~Class<pack::Dog>  @14:1-16:1
 
-association pack::AnimalPairLink  @18:1-22:1
+association pack::AnimalPairLink  ~Association  @18:1-22:1
   property owner :pack::Animal[1]  ~Property<pack::XPair<pack::Dog, String>, pack::Animal|1>
   property pets :pack::XPair<pack::Dog, String>[*]  ~Property<pack::Animal, pack::XPair<pack::Dog, String>|*>

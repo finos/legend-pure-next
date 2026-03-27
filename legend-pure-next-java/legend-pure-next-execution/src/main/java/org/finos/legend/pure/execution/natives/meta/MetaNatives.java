@@ -16,6 +16,7 @@ package org.finos.legend.pure.execution.natives.meta;
 
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Any;
+import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
@@ -39,7 +40,7 @@ public class MetaNatives
                                 MetadataAccess resolver)
     {
         // instanceOf(Any[1], Type[1]) : Boolean[1]
-        natives.put("instanceOf_Any_1__Type_1__Boolean_1_", (args, eval, fe) ->
+        natives.put("instanceOf_Any_1__Type_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
             Object value = _E_ValueSpecification.unwrap(args.get(0));
             if (value == null)
@@ -72,43 +73,50 @@ public class MetaNatives
             {
                 return false;
             }
-            return _E_ValueSpecification.wrap(_Type.subtypeOf(valueType, targetType, resolver), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(_Type.subtypeOf(valueType, targetType, resolver), genericType, multiplicity, resolver);
         });
 
         // type(Any[*]) : Type[1] — returns the raw type of the value
-        natives.put("type_Any_MANY__Type_1_", (args, eval, fe) ->
+        natives.put("type_Any_MANY__Type_1_", (args, eval, genericType, multiplicity) ->
         {
-            return _E_ValueSpecification.wrap(_E_ValueSpecification.getValueOriginalType(args.getFirst()), fe._genericType(), fe._multiplicity());
+            Type type = _E_ValueSpecification.getValueOriginalType(args.getFirst());
+            // If the resolved type is itself a TypeParameter (unresolved generic like T),
+            // fall back to the VS's genericType which has the concrete binding from the compiler
+            if (type instanceof meta.pure.metamodel.type.generics.TypeParameter
+                    && args.getFirst()._genericType() != null)
+            {
+                type = _GenericType.type(args.getFirst()._genericType());
+            }
+            return _E_ValueSpecification.wrap(type, genericType, multiplicity, resolver);
         });
 
         // genericType(Any[*]) : GenericType[1]
-        natives.put("genericType_Any_MANY__GenericType_1_", (args, eval, fe) ->
+        natives.put("genericType_Any_MANY__GenericType_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
             Object val = _E_ValueSpecification.unwrap(vs);
             // DynamicInstance may carry its own classifierGenericType (set by new/copy)
             if (val instanceof DynamicInstance di && di.getClassifierGenericType() != null)
             {
-                return _E_ValueSpecification.wrap(di.getClassifierGenericType(), fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(di.getClassifierGenericType(), genericType, multiplicity, resolver);
             }
             // Fall back to the ValueSpecification's generic type
-            if (val instanceof meta.pure.metamodel.function.PackageableFunction pf && pf._classifierGenericType() != null)
+            if (val instanceof Any pe)
             {
-                return _E_ValueSpecification.wrap(pf._classifierGenericType(), fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(pe._classifierGenericType(), genericType, multiplicity, resolver);
             }
-            return _E_ValueSpecification.wrap(vs._genericType(), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(vs._genericType(), genericType, multiplicity, resolver);
         });
 
         // genericTypeHolder(Any[m]) : GenericTypeAndMultiplicityHolder<T|m>[1]
-        natives.put("genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_", (args, eval, fe) ->
+        natives.put("genericTypeHolder_T_m__GenericTypeAndMultiplicityHolder_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
             meta.pure.metamodel.type.generics.GenericType heldGT = vs._genericType();
             meta.pure.metamodel.multiplicity.Multiplicity heldMul = vs._multiplicity();
             // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
             meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder");
-            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()
-                    ._type(holderType);
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, resolver);
             if (heldGT != null)
             {
                 classifierGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldGT));
@@ -119,13 +127,14 @@ public class MetaNatives
             }
             meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
                     new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
+                            ._classifierGenericType(classifierGT)
                             ._genericType(classifierGT)
                             ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
-            return _E_ValueSpecification.wrap(holder, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(holder, genericType, multiplicity, resolver);
         });
 
         // new(GenericTypeAndMultiplicityHolder[1]) : T[1] — construct an object with no property assignments
-        natives.put("new_GenericTypeAndMultiplicityHolder_1__T_1_", (args, eval, fe) ->
+        natives.put("new_GenericTypeAndMultiplicityHolder_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             String classPath = "Unknown";
             if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh
@@ -166,17 +175,17 @@ public class MetaNatives
                     meta.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
                     if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
                     {
-                        validateConstraints(targetType, heldGT, instance, eval);
+                        validateConstraints(targetType, heldGT, instance, eval, resolver);
                     }
                 }
 
-                return _E_ValueSpecification.wrap(instance, fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
             }
             throw new RuntimeException("Not possible");
         });
 
         // new(GenericTypeAndMultiplicityHolder[1], KeyExpression[*]) : T[1] — construct from key expressions
-        natives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (args, eval, fe) ->
+        natives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
             String classPath = "Unknown";
             if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh
@@ -233,17 +242,17 @@ public class MetaNatives
                     meta.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
                     if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
                     {
-                        validateConstraints(targetType, heldGT, instance, eval);
+                        validateConstraints(targetType, heldGT, instance, eval, resolver);
                     }
                 }
 
-                return _E_ValueSpecification.wrap(instance, fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
             }
             throw new RuntimeException("Not possible");
         });
 
         // keyExpression — creates a key-value pair
-        NativeImpl keyExprFn = (args, eval, fe) ->
+        NativeImpl keyExprFn = (args, eval, genericType, multiplicity) ->
         {
             Object key = _E_ValueSpecification.unwrap(args.get(0));
             Object value = args.get(1);
@@ -262,13 +271,13 @@ public class MetaNatives
                     keyExpr.put("add", true);
                 }
             }
-            return _E_ValueSpecification.wrap(keyExpr, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(keyExpr, genericType, multiplicity, resolver);
         };
         natives.put("keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
         natives.put("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
 
         // copy(T[1]) : T[1] — simple copy with no overrides
-        natives.put("copy_T_1__T_1_", (args, eval, fe) ->
+        natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
             DynamicInstance copy;
@@ -289,11 +298,11 @@ public class MetaNatives
             {
                 copy = new DynamicInstance("Unknown");
             }
-            return _E_ValueSpecification.wrap(copy, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
         // copy(T[1], KeyExpression[*]) : T[1] — shallow copy with property overrides
-        natives.put("copy_T_1__KeyExpression_MANY__T_1_", (args, eval, fe) ->
+        natives.put("copy_T_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
             DynamicInstance copy;
@@ -389,11 +398,11 @@ public class MetaNatives
                 }
             }
 
-            return _E_ValueSpecification.wrap(copy, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
         // cast(Any[m], T[1]) : T[m]
-        natives.put("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, fe) ->
+        natives.put("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             Object value = _E_ValueSpecification.unwrap(args.get(0));
             if (value == null)
@@ -426,33 +435,25 @@ public class MetaNatives
 
                 if (!"meta::pure::metamodel::type::Any".equals(targetPath))
                 {
-                    meta.pure.metamodel.type.Type sourceType = _GenericType.type(args.get(0)._genericType());
-                    boolean sourceIsNil = sourceType instanceof PackageableElement spe
-                            && "meta::pure::metamodel::type::Nil".equals(
-                            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(spe));
-
-                    if (sourceType instanceof PackageableElement sourcePe && !sourceIsNil)
+                    meta.pure.metamodel.type.Type sourceType = _E_ValueSpecification.getValueOriginalType(args.get(0));
+                    // TypeParameter/MultiplicityParameter values are compiler-resolved generics;
+                    // skip runtime cast validation since the compiler already verified compatibility
+                    if (value instanceof meta.pure.metamodel.type.generics.TypeParameter
+                            || value instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter)
                     {
-                        boolean related = _Type.subtypeOf(sourceType, targetType, resolver)
-                                || _Type.subtypeOf(targetType, sourceType, resolver);
-                        if (!related)
+                        // pass through — compiler already validated
+                    }
+                    else if (sourceType instanceof PackageableElement sourcePe)
+                    {
+                        String sourcePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(sourcePe);
+                        if (!"meta::pure::metamodel::type::Nil".equals(sourcePath))
                         {
-                            Object rawValue = _E_ValueSpecification.unwrap(args.get(0));
-                            if (rawValue instanceof meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
+                            boolean related = _Type.subtypeOf(sourceType, targetType, resolver)
+                                    || _Type.subtypeOf(targetType, sourceType, resolver);
+                            if (!related)
                             {
-                                meta.pure.metamodel.type.Type runtimeType = _GenericType.type(any._classifierGenericType());
-                                if (runtimeType != null)
-                                {
-                                    related = _Type.subtypeOf(runtimeType, targetType, resolver)
-                                            || _Type.subtypeOf(targetType, runtimeType, resolver);
-                                }
+                                throw new RuntimeException("Cast exception: " + sourcePe._name() + " cannot be cast to " + targetPe._name());
                             }
-                        }
-                        if (!related)
-                        {
-                            String fromName = sourcePe._name();
-                            String toName = targetPe._name();
-                            throw new RuntimeException("Cast exception: " + fromName + " cannot be cast to " + toName);
                         }
                     }
                 }
@@ -469,14 +470,14 @@ public class MetaNatives
                 {
                     heldGT = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
                 }
-                validateConstraints(targetType, heldGT, value, eval);
+                validateConstraints(targetType, heldGT, value, eval, resolver);
             }
 
-            return _E_ValueSpecification.wrap(value, fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(value, genericType, multiplicity, resolver);
         });
 
         // evaluateAndDeactivate — passthrough
-        NativeImpl evalAndDeactivate = (args, eval, fe) -> _E_ValueSpecification.unwrap(args.get(0));
+        NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> _E_ValueSpecification.unwrap(args.get(0));
         natives.put("evaluateAndDeactivate_Any_m__Any_m_", evalAndDeactivate);
         natives.put("evaluateAndDeactivate", evalAndDeactivate);
     }
@@ -487,13 +488,14 @@ public class MetaNatives
 
     static void validateConstraints(meta.pure.metamodel.type.Type type,
                                     meta.pure.metamodel.type.generics.GenericType targetGT,
-                                    Object value, ValueSpecificationEvaluator eval)
+                                    Object value, ValueSpecificationEvaluator eval,
+                                     MetadataAccess resolver)
     {
         if (type == null)
         {
             return;
         }
-        validateConstraintsOnType(type, targetGT, value, eval);
+        validateConstraintsOnType(type, targetGT, value, eval, resolver);
         if (type._generalizations() != null)
         {
             for (var gen : type._generalizations())
@@ -501,7 +503,7 @@ public class MetaNatives
                 if (gen._general() != null && _GenericType.type(gen._general()) != null)
                 {
                     meta.pure.metamodel.type.Type superType = _GenericType.type(gen._general());
-                    validateConstraints(superType, gen._general(), value, eval);
+                    validateConstraints(superType, gen._general(), value, eval, resolver);
                 }
             }
         }
@@ -509,7 +511,8 @@ public class MetaNatives
 
     private static void validateConstraintsOnType(meta.pure.metamodel.type.Type type,
                                                   meta.pure.metamodel.type.generics.GenericType targetGT,
-                                                  Object value, ValueSpecificationEvaluator eval)
+                                                  Object value, ValueSpecificationEvaluator eval,
+                                                  MetadataAccess resolver)
     {
         if (!(type instanceof meta.pure.metamodel.extension.ElementWithConstraints ewc))
         {
@@ -547,7 +550,7 @@ public class MetaNatives
             }
         }
 
-        ValueSpecification wrappedValue = _E_ValueSpecification.wrap(value, targetGT, null);
+        ValueSpecification wrappedValue = _E_ValueSpecification.wrap(value, targetGT, null, resolver);
 
         eval.pushScope();
         eval.currentScope().putAll(typeVarBindings);
