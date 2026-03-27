@@ -53,7 +53,7 @@ public final class GeneralizationCompiler
             context.enrichCurrentErrorsFrom(errorsBefore, "super type");
             return null;
         }
-        return new GeneralizationImpl()
+        return new GeneralizationImpl(model)
                 ._general(general)
                 ._specific(specific);
     }

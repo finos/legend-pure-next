@@ -50,7 +50,7 @@ function <<PCT.test>> meta::pure::functions::math::tests::minus::testSimpleMinus
 function <<PCT.test>> meta::pure::functions::math::tests::minus::testComplexMinus<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assertEquals(0, $f->eval(|6 - (4 - 5) - 7));
-    assertEquals(-7, $f->eval(|minus(6, minus(4, 5))));
+    assertEquals(7, $f->eval(|minus(6, minus(4, 5))));
     assertEquals(-3, $f->eval(| 3 - (4 - 5) - 7));
     assertEquals(-3, $f->eval(|3-(4-5)-7));
     assertEquals(-9, $f->eval(|-3 - (4 - 5) - 7));

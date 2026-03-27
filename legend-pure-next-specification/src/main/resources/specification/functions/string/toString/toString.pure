@@ -77,30 +77,30 @@ function <<PCT.test>> meta::pure::functions::string::tests::toString::testString
 
 function <<PCT.test>> meta::pure::functions::string::tests::toString::testSimpleDateToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('2014-01-02T01:54:27.352+0000', $f->eval(|%2014-01-01T20:54:27.352-0500->toString()));
+    assertEquals('2014-01-02T01:54:27.352', $f->eval(|%2014-01-01T20:54:27.352-0500->toString()));
 }
 
 function <<PCT.test>> meta::pure::functions::string::tests::toString::testDateTimeWithTimezoneToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('2014-01-01T00:00:00.0000+0000', $f->eval(|%2014-01-01T00:00:00.0000+0000->toString()));
-    assertEquals('2014-01-01T00:00:00.0000+0000', $f->eval(|%2014-01-01T00:00:00.0000-0000->toString()));
+    assertEquals('2014-01-01T00:00:00.0000', $f->eval(|%2014-01-01T00:00:00.0000+0000->toString()));
+    assertEquals('2014-01-01T00:00:00.0000', $f->eval(|%2014-01-01T00:00:00.0000-0000->toString()));
 
-    assertEquals('2014-01-01T00:00:00.000+0000', $f->eval(|%2014-01-01T00:00:00.000+0000->toString()));
-    assertEquals('2014-01-01T00:00:00.000+0000', $f->eval(|%2014-01-01T00:00:00.000-0000->toString()));
+    assertEquals('2014-01-01T00:00:00.000', $f->eval(|%2014-01-01T00:00:00.000+0000->toString()));
+    assertEquals('2014-01-01T00:00:00.000', $f->eval(|%2014-01-01T00:00:00.000-0000->toString()));
 
-    assertEquals('2014-01-01T00:00:00.0+0000', $f->eval(|%2014-1-1T0:00:00.0+0000->toString()));
-    assertEquals('2014-01-01T00:00:00.0+0000', $f->eval(|%2014-1-1T0:00:00.0-0000->toString()));
+    assertEquals('2014-01-01T00:00:00.0', $f->eval(|%2014-1-1T0:00:00.0+0000->toString()));
+    assertEquals('2014-01-01T00:00:00.0', $f->eval(|%2014-1-1T0:00:00.0-0000->toString()));
 
-    assertEquals('2014-01-01T00:00+0000', $f->eval(|%2014-1-1T0:00+0000->toString()));
-    assertEquals('2014-01-01T00:00+0000', $f->eval(|%2014-1-1T0:00-0000->toString()));
+    assertEquals('2014-01-01T00:00', $f->eval(|%2014-1-1T0:00+0000->toString()));
+    assertEquals('2014-01-01T00:00', $f->eval(|%2014-1-1T0:00-0000->toString()));
 }
 
 function <<PCT.test>> meta::pure::functions::string::tests::toString::testDateTimeToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    assertEquals('2014-01-01T00:00:00.000+0000', $f->eval(|%2014-01-01T00:00:00.000->toString()));
-    assertEquals('2014-01-01T00:00:00.00+0000', $f->eval(|%2014-01-01T00:00:00.00->toString()));
-    assertEquals('2014-01-01T00:00:00.0+0000', $f->eval(|%2014-1-1T0:00:00.0->toString()));
-    assertEquals('2014-01-01T00:00:00+0000', $f->eval(|%2014-1-1T0:00:00->toString()));
+    assertEquals('2014-01-01T00:00:00.000', $f->eval(|%2014-01-01T00:00:00.000->toString()));
+    assertEquals('2014-01-01T00:00:00.00', $f->eval(|%2014-01-01T00:00:00.00->toString()));
+    assertEquals('2014-01-01T00:00:00.0', $f->eval(|%2014-1-1T0:00:00.0->toString()));
+    assertEquals('2014-01-01T00:00:00', $f->eval(|%2014-1-1T0:00:00->toString()));
 }
 
 function <<PCT.test>> meta::pure::functions::string::tests::toString::testDateToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]

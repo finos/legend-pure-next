@@ -19,7 +19,7 @@ public class VariableExpressionResolver
             if (match != null)
             {
                 ((VariableExpressionImpl) varExpr)
-                        ._genericType(_GenericType.asInferred(match._genericType()))
+                        ._genericType(_GenericType.asInferred(match._genericType(), model))
                         ._multiplicity(_Multiplicity.asInferred(match._multiplicity(), model));
             }
             else

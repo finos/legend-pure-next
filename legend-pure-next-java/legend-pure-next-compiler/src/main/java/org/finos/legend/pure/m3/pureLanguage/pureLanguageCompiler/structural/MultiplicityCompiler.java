@@ -70,7 +70,7 @@ public final class MultiplicityCompiler
         }
         if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicity)
         {
-            return new meta.pure.metamodel.multiplicity.UndefinedMultiplicityImpl();
+            return new meta.pure.metamodel.multiplicity.UndefinedMultiplicityImpl(model);
         }
         if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.Multiplicity m)
         {
@@ -101,7 +101,7 @@ public final class MultiplicityCompiler
         // Handle multiplicity parameter (e.g. [m])
         if (grammarMultiplicity instanceof meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMulParam)
         {
-            return resolveOrCreateMultiplicityParameter(grammarMulParam, context);
+            return resolveOrCreateMultiplicityParameter(grammarMulParam, model, context);
         }
 
         // Handle concrete multiplicity with bounds
@@ -119,14 +119,14 @@ public final class MultiplicityCompiler
             }
 
             // Fall back to an anonymous UserDefinedAdHocMultiplicity
-            UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl();
+            UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl(model);
             if (grammarConcrete._lowerBound() != null)
             {
-                result._lowerBound(new MultiplicityValueImpl()._value(grammarConcrete._lowerBound()._value()));
+                result._lowerBound(new MultiplicityValueImpl(model)._value(grammarConcrete._lowerBound()._value()));
             }
             if (grammarConcrete._upperBound() != null)
             {
-                result._upperBound(new MultiplicityValueImpl()._value(grammarConcrete._upperBound()._value()));
+                result._upperBound(new MultiplicityValueImpl(model)._value(grammarConcrete._upperBound()._value()));
             }
             return result;
         }
@@ -139,7 +139,7 @@ public final class MultiplicityCompiler
      * Look up a declared MultiplicityParameter from scope, or create a fresh one.
      */
     private static Multiplicity resolveOrCreateMultiplicityParameter(
-            meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMulParam, CompilationContext context)
+            meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMulParam, MetadataAccess model, CompilationContext context)
     {
         if (grammarMulParam == null)
         {
@@ -157,7 +157,7 @@ public final class MultiplicityCompiler
                 }
             }
         }
-        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()
+        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl(model)
                 ._name(grammarMulParam._name());
     }
 
@@ -188,13 +188,14 @@ public final class MultiplicityCompiler
 
     public static meta.pure.metamodel.multiplicity.MultiplicityParameter compileMultiplicityParameter(
             meta.pure.protocol.grammar.multiplicity.MultiplicityParameter grammarMultiplicityParameter,
-            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+            meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner,
+            MetadataAccess model)
     {
         if (grammarMultiplicityParameter == null)
         {
             return null;
         }
-        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()
+        return new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl(model)
                 ._name(grammarMultiplicityParameter._name())
                 ._owner(owner);
     }

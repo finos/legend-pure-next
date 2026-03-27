@@ -277,7 +277,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
             if (entry.getValue().size() > 1)
             {
                 Multiplicity common = _Multiplicity.findCommonMultiplicity(
-                        Lists.mutable.withAll(entry.getValue()));
+                        Lists.mutable.withAll(entry.getValue()), model);
                 entry.getValue().clear();
                 entry.getValue().add(common);
             }

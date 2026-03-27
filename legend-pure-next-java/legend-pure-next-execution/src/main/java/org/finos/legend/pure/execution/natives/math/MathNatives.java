@@ -31,81 +31,149 @@ public class MathNatives
                                 MetadataAccess resolver)
     {
         // plus
-        natives.put("plus_Integer_1__Integer_1__Integer_1_", (args, eval, fe) ->
+        natives.put("plus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) + (Long) _E_ValueSpecification.unwrap(args.get(1)),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("plus_Float_1__Float_1__Float_1_", (args, eval, fe) ->
+        natives.put("plus_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Double) _E_ValueSpecification.unwrap(args.get(0)) + (Double) _E_ValueSpecification.unwrap(args.get(1)),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("plus_Number_1__Number_1__Number_1_", (args, eval, fe) ->
+        natives.put("plus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 + ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
         // minus
-        natives.put("minus_Integer_1__Integer_1__Integer_1_", (args, eval, fe) ->
+        natives.put("minus_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) - (Long) _E_ValueSpecification.unwrap(args.get(1)),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("minus_Number_1__Number_1__Number_1_", (args, eval, fe) ->
+        natives.put("minus_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 - ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
         // times
-        natives.put("times_Integer_1__Integer_1__Integer_1_", (args, eval, fe) ->
+        natives.put("times_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap((Long) _E_ValueSpecification.unwrap(args.get(0)) * (Long) _E_ValueSpecification.unwrap(args.get(1)),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
         // lessThan, greaterThan, lessThanEqual, greaterThanEqual
-        natives.put("lessThan_Number_1__Number_1__Boolean_1_", (args, eval, fe) ->
+        natives.put("lessThan_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 < ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("greaterThan_Number_1__Number_1__Boolean_1_", (args, eval, fe) ->
+        natives.put("greaterThan_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 > ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("lessThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, fe) ->
+        natives.put("lessThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 <= ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
-        natives.put("greaterThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, fe) ->
+        natives.put("greaterThanEqual_Number_1__Number_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 >= ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
 
         // abs(Number[1]) : Number[1]
-        natives.put("abs_Number_1__Number_1_", (args, eval, fe) ->
+        natives.put("abs_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
             if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer"), resolver))
             {
-                return _E_ValueSpecification.wrap(Math.abs(n.longValue()), fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(Math.abs(n.longValue()), genericType, multiplicity, resolver);
             }
-            return _E_ValueSpecification.wrap(Math.abs(n.doubleValue()), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(Math.abs(n.doubleValue()), genericType, multiplicity, resolver);
         });
 
         // divide(Number[1], Number[1]) : Float[1]
-        natives.put("divide_Number_1__Number_1__Float_1_", (args, eval, fe) ->
+        natives.put("divide_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
                                 / ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
-                        fe._genericType(), fe._multiplicity()));
+                        genericType, multiplicity, resolver));
+
+        // minus(Decimal[1]) : Decimal[1] — single-arg negate
+        natives.put("minus_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(-((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue(), genericType, multiplicity, resolver));
 
         // minus(Number[1]) : Number[1] — single-arg negate
-        natives.put("minus_Number_1__Number_1_", (args, eval, fe) ->
+        natives.put("minus_Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
         {
             Number n = (Number) _E_ValueSpecification.unwrap(args.get(0));
             if (_Type.subtypeOf(_GenericType.type(args.get(0)._genericType()), (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer"), resolver))
             {
-                return _E_ValueSpecification.wrap(-n.longValue(), fe._genericType(), fe._multiplicity());
+                return _E_ValueSpecification.wrap(-n.longValue(), genericType, multiplicity, resolver);
             }
-            return _E_ValueSpecification.wrap(-n.doubleValue(), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(-n.doubleValue(), genericType, multiplicity, resolver);
         });
+
+        // abs(Integer[1]) : Integer[1]
+        natives.put("abs_Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.abs(((Long) _E_ValueSpecification.unwrap(args.get(0)))), genericType, multiplicity, resolver));
+
+        // abs(Float[1]) : Float[1]
+        natives.put("abs_Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.abs(((Double) _E_ValueSpecification.unwrap(args.get(0)))), genericType, multiplicity, resolver));
+
+        // abs(Decimal[1]) : Decimal[1] — Decimal represented as Double
+        natives.put("abs_Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.abs(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()), genericType, multiplicity, resolver));
+
+        // times(Float[1], Float[1]) : Float[1]
+        natives.put("times_Float_1__Float_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap((Double) _E_ValueSpecification.unwrap(args.get(0)) * (Double) _E_ValueSpecification.unwrap(args.get(1)),
+                        genericType, multiplicity, resolver));
+
+        // times(Number[1], Number[1]) : Number[1]
+        natives.put("times_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        {
+            Number a = (Number) _E_ValueSpecification.unwrap(args.get(0));
+            Number b = (Number) _E_ValueSpecification.unwrap(args.get(1));
+            if (a instanceof Long la && b instanceof Long lb)
+            {
+                return _E_ValueSpecification.wrap(la * lb, genericType, multiplicity, resolver);
+            }
+            double d = java.math.BigDecimal.valueOf(a.doubleValue())
+                    .multiply(java.math.BigDecimal.valueOf(b.doubleValue())).doubleValue();
+            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+        });
+
+        // times(Decimal[1], Decimal[1]) : Decimal[1]
+        natives.put("times_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double a = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            double b = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
+            double d = java.math.BigDecimal.valueOf(a).multiply(java.math.BigDecimal.valueOf(b)).doubleValue();
+            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+        });
+        // plus(Decimal[1], Decimal[1]) : Decimal[1]
+        natives.put("plus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
+                                + ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
+                        genericType, multiplicity, resolver));
+
+        // minus(Decimal[1], Decimal[1]) : Decimal[1]
+        natives.put("minus_Decimal_1__Decimal_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()
+                                - ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue(),
+                        genericType, multiplicity, resolver));
+
+        // divide(Decimal[1], Decimal[1], Integer[1]) : Decimal[1]
+        natives.put("divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double a = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            double b = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
+            int scale = ((Number) _E_ValueSpecification.unwrap(args.get(2))).intValue();
+            double d = java.math.BigDecimal.valueOf(a)
+                    .divide(java.math.BigDecimal.valueOf(b), scale, java.math.RoundingMode.HALF_UP)
+                    .doubleValue();
+            return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
+        });
+
     }
 }

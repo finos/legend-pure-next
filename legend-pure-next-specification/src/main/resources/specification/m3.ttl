@@ -373,7 +373,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Generalization ] ; :specific :GenericType ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Any ] ] .
 
 :GenericType_GenericType a :UserDefinedGenericType ;
-    :type :GenericType ;
+    :type :UserDefinedGenericType ;
     :classifierGenericType :GenericType_GenericType .
 
 # --- GenericTypeValue ---
@@ -1153,6 +1153,7 @@
     :multiplicity :ZeroMany .
 
 :resolvedTypeParameters a :Property ;
+    :aggregation :AggregationKind_None ;
     :stereotypes :ProtocolInfo_inferred ;
     :abstractProperty_name "resolvedTypeParameters" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :FunctionExpression ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :ResolvedTypeParameter ] ) ; :multiplicityArguments :ZeroMany ] ;
@@ -1161,6 +1162,7 @@
     :multiplicity :ZeroMany .
 
 :resolvedMultiplicityParameters a :Property ;
+    :aggregation :AggregationKind_None ;
     :stereotypes :ProtocolInfo_inferred ;
     :abstractProperty_name "resolvedMultiplicityParameters" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :FunctionExpression ] [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :ResolvedMultiplicityParameter ] ) ; :multiplicityArguments :ZeroMany ] ;

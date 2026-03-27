@@ -20,8 +20,9 @@ import meta.pure.metamodel.extension.ProfileImpl;
 import meta.pure.metamodel.extension.StereotypeImpl;
 import meta.pure.metamodel.extension.TagImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 
 /**
@@ -33,18 +34,18 @@ public final class ProfileHandler
     {
     }
 
-    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar)
+    public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
-        ProfileImpl result = new ProfileImpl()
+        ProfileImpl result = new ProfileImpl(model)
                 ._name(grammar._name());
 
         return result
                 ._p_stereotypes(grammar._p_stereotypes().collect(s ->
-                        new StereotypeImpl()
+                        new StereotypeImpl(model)
                                 ._value(s._value())
                                 ._profile(result)))
                 ._p_tags(grammar._p_tags().collect(t ->
-                        new TagImpl()
+                        new TagImpl(model)
                                 ._value(t._value())
                                 ._profile(result)));
     }
@@ -52,8 +53,7 @@ public final class ProfileHandler
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
         return result._classifierGenericType(
-                new UserDefinedGenericTypeImpl()
-                        ._type((Type) model.getElement("meta::pure::metamodel::extension::Profile")));
+                _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::extension::Profile"), model));
     }
 
     public static PackageableElement thirdPass(Profile pr, MetadataAccess pureModel, CompilationContext context)

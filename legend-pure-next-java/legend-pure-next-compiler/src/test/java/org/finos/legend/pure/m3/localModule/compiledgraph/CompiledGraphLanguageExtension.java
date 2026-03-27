@@ -55,7 +55,7 @@ public final class CompiledGraphLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
     {
         if (grammar instanceof CompiledGraph cg)
         {

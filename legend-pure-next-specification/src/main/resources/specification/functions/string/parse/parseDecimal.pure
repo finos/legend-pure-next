@@ -1,0 +1,52 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+native function <<PCT.function>>
+    {
+        doc.doc='Cast a String to decimal with database default precision and scale. Deprecated in preference of parseDecimal(precision, scale).'
+    }
+meta::pure::functions::string::parseDecimal(string:String[1]):Decimal[1];
+
+native function <<PCT.function>>
+    {
+        doc.doc='Cast a String to decimal with user defined precision and scale.'
+    }
+meta::pure::functions::string::parseDecimal(string:String[1], precision: Integer[1], scale: Integer[1]):Decimal[1];
+
+function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimal<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3.14159d, $f->eval(|parseDecimal('3.14159d')));
+    assertEquals(3.14159d, $f->eval(|parseDecimal('3.14159')));
+    assertEquals(-3.14159d, $f->eval(|parseDecimal('-3.14159d')));
+    assertEquals(3.1415900000d, $f->eval(|parseDecimal('+0000003.1415900000')));
+    assertEquals(-3.1415900000d, $f->eval(|parseDecimal('-0000003.1415900000')));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseZero<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(0.0d, $f->eval(|parseDecimal('0.0')));
+    assertEquals(0.000d, $f->eval(|parseDecimal('-000.000')));
+}
+
+function <<PCT.test>> meta::pure::functions::string::tests::parseDecimal::testParseDecimalWithPrecisionScale<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(123.13d, $f->eval(|parseDecimal('123.126', 5, 2)));
+    assertEquals(123.123d, $f->eval(|parseDecimal('123.123', 7, 3)));
+    assertEquals(-3.14d, $f->eval(|parseDecimal('-3.14159', 5, 2)));
+    assertEquals(123.12300d, $f->eval(|parseDecimal('123.123', 10, 5)));
+    assertEquals(3.1415900000d, $f->eval(|parseDecimal('+0000003.1415900000', 38, 10)));
+    assertEquals(-3.1415900000d, $f->eval(|parseDecimal('-0000003.1415900000', 38, 10)));
+}

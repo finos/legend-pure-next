@@ -37,7 +37,7 @@ public interface CompilerExtension
      * @return a new metamodel element, or {@code null} if this
      *         extension does not handle the given element type
      */
-    PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar);
+    PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model);
 
     /**
      * Second pass: resolve cross-references on a previously created element.

@@ -135,6 +135,7 @@
                                 <argument>${project.basedir}/../../legend-pure-next-specification/src/main/resources/specification/m3.ttl</argument>
                                 <argument>${project.build.directory}/generated-sources</argument>
                                 <argument>org.finos.legend.pure.m3.generated</argument>
+                                <argument>--metamodel</argument>
                             </arguments>
                         </configuration>
                     </execution>

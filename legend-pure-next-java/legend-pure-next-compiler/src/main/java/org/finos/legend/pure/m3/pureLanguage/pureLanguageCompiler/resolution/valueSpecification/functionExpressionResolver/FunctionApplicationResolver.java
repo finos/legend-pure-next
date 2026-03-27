@@ -383,7 +383,7 @@ public class FunctionApplicationResolver
         {
             childExpr._resolvedTypeParameters().forEach(rtp ->
                     ((meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl) rtp)
-                            ._value(_GenericType.asInferred(rtp._value())));
+                            ._value(_GenericType.asInferred(rtp._value(), model)));
         }
         if (vs instanceof FunctionExpression childExpr && childExpr._resolvedMultiplicityParameters() != null)
         {
@@ -429,7 +429,7 @@ public class FunctionApplicationResolver
                         GenericType resolvedType = _GenericType.makeAsConcreteAsPossible(ftParam._genericType(), bindings, model);
                         if (resolvedType != null && !_GenericType.isConcrete(lambdaParam._genericType()))
                         {
-                            ((VariableExpressionImpl) lambdaParam)._genericType(_GenericType.asInferred(resolvedType));
+                            ((VariableExpressionImpl) lambdaParam)._genericType(_GenericType.asInferred(resolvedType, model));
                         }
                         Multiplicity resolvedMul = _Multiplicity.makeAsConcreteAsPossible(ftParam._multiplicity(), bindings);
                         if (resolvedMul != null && !_Multiplicity.isConcrete(lambdaParam._multiplicity()))
@@ -466,7 +466,7 @@ public class FunctionApplicationResolver
                     lazy(() -> _GenericType.print(argGT)), lazy(() -> _GenericType.print(resolvedParamGT)), childBindings);
 
             childBindings.typeBindings().replaceAll((name, types) ->
-                    types.collect(gt -> _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(gt, bindings, model))));
+                    types.collect(gt -> _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(gt, bindings, model), model)));
             context.debug("reverseMatch: pushing %s into %s", childBindings, childExpr._functionName());
             _FunctionExpression.populateResolvedParameters(childExpr, childBindings, model);
         }

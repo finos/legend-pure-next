@@ -17,7 +17,8 @@ package org.finos.legend.pure.m3;
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -254,31 +255,30 @@ public class PureModel
      */
     private void setPackageClassifierGenericType()
     {
-        // Look up the Package type from any module
+        // Look up the Package type and a MetadataAccess from any module
         meta.pure.metamodel.type.Type packageType = null;
+        MetadataAccess model = null;
         for (Module m : modules)
         {
             PackageableElement pe = m.getElement("meta::pure::metamodel::Package");
             if (pe instanceof meta.pure.metamodel.type.Type t)
             {
                 packageType = t;
+                model = m;
                 break;
             }
         }
         if (packageType != null)
         {
-
-            setClassifierOnPackage(root, packageType);
+            setClassifierOnPackage(root, packageType, model);
         }
     }
 
-    private static void setClassifierOnPackage(Package pkg, meta.pure.metamodel.type.Type packageType)
+    private static void setClassifierOnPackage(Package pkg, meta.pure.metamodel.type.Type packageType, MetadataAccess model)
     {
         if (pkg instanceof PackageImpl pi && pi._classifierGenericType() == null)
         {
-            UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
-            gt._type(packageType);
-            pi._classifierGenericType(gt);
+            pi._classifierGenericType(_GenericType.buildUserDefinedGenericType(packageType, model));
         }
         // Recurse into children
         if (pkg._children() != null)
@@ -287,7 +287,7 @@ public class PureModel
             {
                 if (child instanceof Package childPkg)
                 {
-                    setClassifierOnPackage(childPkg, packageType);
+                    setClassifierOnPackage(childPkg, packageType, model);
                 }
             }
         }

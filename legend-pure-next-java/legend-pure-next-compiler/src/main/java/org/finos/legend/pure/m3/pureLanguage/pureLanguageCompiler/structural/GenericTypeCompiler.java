@@ -65,14 +65,14 @@ public final class GenericTypeCompiler
     {
         return switch (grammarGenericType)
         {
-            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl();
+            case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl(model);
             case GenericTypeOperation gto -> compileGenericTypeOperation(gto, imports, model, context);
             case GenericTypeValue gtv ->
             {
                 // Type parameter reference (e.g., T) — rawType is a protocol TypeParameter
                 if (gtv._type() instanceof meta.pure.protocol.grammar.type.generics.TypeParameter grammarTP)
                 {
-                    yield _GenericType.buildUserDefinedGenericType(resolveOrCompileTypeParameter(grammarTP, context), model);
+                    yield _GenericType.buildUserDefinedGenericType(resolveOrCompileTypeParameter(grammarTP, context, model), model);
                 }
 
                 Type rawType = resolveType(gtv._type(), imports, model, context);
@@ -101,7 +101,7 @@ public final class GenericTypeCompiler
             case SUBSET -> GenericTypeOperationType.SUBSET;
             case EQUAL -> GenericTypeOperationType.EQUAL;
         };
-        return new GenericTypeOperationImpl()
+        return new GenericTypeOperationImpl(model)
                 ._left(left)
                 ._right(right)
                 ._operationType(opType);
@@ -125,7 +125,7 @@ public final class GenericTypeCompiler
         String pointerValue = pointer._pointerValue();
 
         int checkpoint = context.currentErrorCount();
-        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._sourceInformation());
+        SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._sourceInformation(), model);
         PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, imports, model, context, sourceInfo);
         if (element instanceof Type type)
         {
@@ -141,16 +141,20 @@ public final class GenericTypeCompiler
 
 
     public static TypeParameter compileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
-                                                      meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                                      meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner,
+                                                      MetadataAccess model)
     {
         if (grammarTypeParameter == null)
         {
             return null;
         }
-        return new TypeParameterImpl()
+        TypeParameterImpl tp = new TypeParameterImpl(model)
                 ._name(grammarTypeParameter._name())
                 ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false)
                 ._owner(owner);
+        tp._classifierGenericType(_GenericType.buildUserDefinedGenericType(
+                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model));
+        return tp;
     }
 
     /**
@@ -159,7 +163,7 @@ public final class GenericTypeCompiler
      * (e.g. during bootstrap or when compiling type arguments in class definitions).
      */
     private static TypeParameter resolveOrCompileTypeParameter(meta.pure.protocol.grammar.type.generics.TypeParameter grammarTypeParameter,
-                                                                CompilationContext context)
+                                                                CompilationContext context, MetadataAccess model)
     {
         if (grammarTypeParameter == null)
         {
@@ -174,8 +178,12 @@ public final class GenericTypeCompiler
                 return scoped;
             }
         }
-        return new TypeParameterImpl()
-                ._name(grammarTypeParameter._name())
-                ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false);
+        return new TypeParameterImpl(model)
+                        ._name(grammarTypeParameter._name())
+                        ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false)
+                        ._classifierGenericType(_GenericType.buildUserDefinedGenericType(
+                                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model)
+                        );
+
     }
 }

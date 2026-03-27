@@ -29,6 +29,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -114,7 +115,7 @@ public class TopLevelCompiler
      */
     public boolean compile(LocalModule localModule, MutableList<PureFile> files, String packagePattern, MetadataAccess model, CompilationContext context)
     {
-        firstPass(files);
+        firstPass(files, model);
 
         validatePathForModulePattern(packagePattern, context);
         if (context.errors().notEmpty())
@@ -191,7 +192,7 @@ public class TopLevelCompiler
     // First pass
     // -----------------------------------------------------------------------
 
-    private void firstPass(MutableList<PureFile> files)
+    private void firstPass(MutableList<PureFile> files, MetadataAccess model)
     {
         files.forEach(file ->
         {
@@ -207,18 +208,18 @@ public class TopLevelCompiler
                                 ? packagePath + "::" + name
                                 : name;
 
-                        PackageableElement element = firstPassElement(grammarElement);
+                        PackageableElement element = firstPassElement(grammarElement, model);
                         elementIndex.put(fullPath, new IndexEntry(element, grammarElement, section, fileSourceId));
                     }));
         });
     }
 
     private PackageableElement firstPassElement(
-            meta.pure.protocol.grammar.PackageableElement grammar)
+            meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
     {
         for (CompilerExtension ext : this.extensions)
         {
-            PackageableElement result = ext.firstPass(grammar);
+            PackageableElement result = ext.firstPass(grammar, model);
             if (result != null)
             {
                 return result;
@@ -319,7 +320,7 @@ public class TopLevelCompiler
                         ? entry.grammarElement()._package()._pointerValue()
                         : null;
                 Package parent = packagePath != null
-                        ? getOrCreatePackage(root, packagePath, new UserDefinedGenericTypeImpl()._type((Type)model.getElement("meta::pure::metamodel::Package")))
+                        ? getOrCreatePackage(root, packagePath, _GenericType.buildUserDefinedGenericType((Type)model.getElement("meta::pure::metamodel::Package"), model), model)
                         : root;
                 entry.element()._package(parent);
                 parent._children().add(entry.element());
@@ -339,7 +340,7 @@ public class TopLevelCompiler
         return allImports;
     }
 
-    private Package getOrCreatePackage(Package root, String packagePath, GenericType packageGT)
+    private Package getOrCreatePackage(Package root, String packagePath, GenericType packageGT, MetadataAccess model)
     {
         Package current = root;
         StringBuilder currentPath = new StringBuilder();
@@ -355,7 +356,7 @@ public class TopLevelCompiler
                     .detect(c -> c instanceof Package && part.equals(c._name()));
             if (existing == null)
             {
-                PackageImpl newPkg = new PackageImpl()
+                PackageImpl newPkg = new PackageImpl(model)
                                             ._name(part)
                                             ._package(current)
                                             ._classifierGenericType(packageGT);
