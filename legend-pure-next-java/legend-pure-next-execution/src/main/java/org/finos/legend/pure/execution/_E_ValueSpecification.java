@@ -122,7 +122,12 @@ public class _E_ValueSpecification
             MutableList<ValueSpecification> wrapped = Lists.mutable.ofInitialCapacity(list.size());
             for (Object item : list)
             {
-                wrapped.add(wrap(item, genericType, multiplicity, resolver));
+                // DynamicInstances with a concrete classifierGenericType should carry that
+                // as their AtomicValue genericType — not the outer collection's genericType
+                GenericType itemGT = (item instanceof DynamicInstance di && di.getClassifierGenericType() != null)
+                        ? di.getClassifierGenericType()
+                        : genericType;
+                wrapped.add(wrap(item, itemGT, multiplicity, resolver));
             }
             return new CollectionImpl(resolver)
                     ._values(wrapped)

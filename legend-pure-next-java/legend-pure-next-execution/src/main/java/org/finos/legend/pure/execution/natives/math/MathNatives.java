@@ -175,5 +175,156 @@ public class MathNatives
             return _E_ValueSpecification.wrap(d, genericType, multiplicity, resolver);
         });
 
+        // ceiling(Number[1]) : Integer[1]
+        natives.put("ceiling_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            return _E_ValueSpecification.wrap((long) Math.ceil(v), genericType, multiplicity, resolver);
+        });
+
+        // floor(Number[1]) : Integer[1]
+        natives.put("floor_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            return _E_ValueSpecification.wrap((long) Math.floor(v), genericType, multiplicity, resolver);
+        });
+
+        // round(Number[1]) : Integer[1]
+        natives.put("round_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            long result = java.math.BigDecimal.valueOf(v)
+                    .setScale(0, java.math.RoundingMode.HALF_EVEN).longValue();
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // round(Float[1], Integer[1]) : Float[1]
+        natives.put("round_Float_1__Integer_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            int scale = ((Number) _E_ValueSpecification.unwrap(args.get(1))).intValue();
+            double result = java.math.BigDecimal.valueOf(v)
+                    .setScale(scale, java.math.RoundingMode.HALF_UP).doubleValue();
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // round(Decimal[1], Integer[1]) : Decimal[1]
+        natives.put("round_Decimal_1__Integer_1__Decimal_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            int scale = ((Number) _E_ValueSpecification.unwrap(args.get(1))).intValue();
+            double result = java.math.BigDecimal.valueOf(v)
+                    .setScale(scale, java.math.RoundingMode.HALF_UP).doubleValue();
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // sqrt(Number[1]) : Float[1]
+        natives.put("sqrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.sqrt(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        // cbrt(Number[1]) : Float[1]
+        natives.put("cbrt_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.cbrt(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        // pow(Number[1], Number[1]) : Number[1]
+        natives.put("pow_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double base = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            double exp = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
+            return _E_ValueSpecification.wrap(Math.pow(base, exp), genericType, multiplicity, resolver);
+        });
+
+        // mod(Integer[1], Integer[1]) : Integer[1]
+        natives.put("mod_Integer_1__Integer_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            long a = (Long) _E_ValueSpecification.unwrap(args.get(0));
+            long b = (Long) _E_ValueSpecification.unwrap(args.get(1));
+            long result = a % b;
+            if (result < 0) { result += Math.abs(b); }
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // rem(Number[1], Number[1]) : Number[1]
+        natives.put("rem_Number_1__Number_1__Number_1_", (args, eval, genericType, multiplicity) ->
+        {
+            Number a = (Number) _E_ValueSpecification.unwrap(args.get(0));
+            Number b = (Number) _E_ValueSpecification.unwrap(args.get(1));
+            if (a instanceof Long la && b instanceof Long lb)
+            {
+                return _E_ValueSpecification.wrap(la % lb, genericType, multiplicity, resolver);
+            }
+            // Use BigDecimal to avoid float precision errors (e.g. 3.14 % 1.5)
+            java.math.BigDecimal bdA = a instanceof java.math.BigDecimal bda ? bda : new java.math.BigDecimal(a.toString());
+            java.math.BigDecimal bdB = b instanceof java.math.BigDecimal bdb ? bdb : new java.math.BigDecimal(b.toString());
+            java.math.BigDecimal result = bdA.remainder(bdB);
+            // Return as double if neither operand was a BigDecimal (pure Decimal literal)
+            if (!(a instanceof java.math.BigDecimal) && !(b instanceof java.math.BigDecimal))
+            {
+                return _E_ValueSpecification.wrap(result.doubleValue(), genericType, multiplicity, resolver);
+            }
+            return _E_ValueSpecification.wrap(result.doubleValue(), genericType, multiplicity, resolver);
+        });
+
+        // sign(Number[1]) : Integer[1]
+        natives.put("sign_Number_1__Integer_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            long s = v > 0 ? 1L : (v < 0 ? -1L : 0L);
+            return _E_ValueSpecification.wrap(s, genericType, multiplicity, resolver);
+        });
+
+        // Trigonometric functions
+        natives.put("sin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.sin(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("cos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.cos(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("tan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.tan(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("cot_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double v = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            return _E_ValueSpecification.wrap(1.0 / Math.tan(v), genericType, multiplicity, resolver);
+        });
+
+        natives.put("asin_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.asin(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("acos_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.acos(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("atan_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.atan(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("atan2_Number_1__Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+        {
+            double y = ((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue();
+            double x = ((Number) _E_ValueSpecification.unwrap(args.get(1))).doubleValue();
+            return _E_ValueSpecification.wrap(Math.atan2(y, x), genericType, multiplicity, resolver);
+        });
+
+        // Exponential / logarithmic
+        natives.put("log_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.log(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("log10_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.log10(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
+        natives.put("exp_Number_1__Float_1_", (args, eval, genericType, multiplicity) ->
+                _E_ValueSpecification.wrap(Math.exp(((Number) _E_ValueSpecification.unwrap(args.get(0))).doubleValue()),
+                        genericType, multiplicity, resolver));
+
     }
 }

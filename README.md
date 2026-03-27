@@ -6,6 +6,8 @@ Legend-pure-next provides a slightly different implementation of the Pure langua
 
 ## Installation
 
+You need flatc [25.2.10](https://github.com/google/flatbuffers/releases/tag/v25.2.10) installed locally
+
 ## Usage example
 
 ## Development setup
