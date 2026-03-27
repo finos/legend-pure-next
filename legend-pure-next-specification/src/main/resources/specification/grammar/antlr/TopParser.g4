@@ -19,7 +19,7 @@ section
 
 // import path::to::package::*;
 importStatement
-    : IMPORT_STATEMENT SEMICOLON NEWLINE?
+    : IMPORT_STATEMENT SEMICOLON NEWLINE*
     ;
 
 // Section content is any sequence of non-header, non-import tokens.

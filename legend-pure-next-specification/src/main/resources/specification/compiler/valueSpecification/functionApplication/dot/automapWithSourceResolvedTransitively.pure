@@ -17,7 +17,7 @@ function test::myCheck(expected:Any[*], actual:Any[*]):Boolean[1]
 // Z should be resolved transitively through eval, making $res.lastName valid.
 function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
-    let res = $f->eval(|^TPR_Person(firstName='A', lastName='B')->first());
+    let res = $f->eval(|^TPR_Person(firstName='A', lastName='B')->head());
     myCheck('B', $res.lastName);
 }
 
@@ -30,18 +30,18 @@ function test::myCheck_Any_MANY__Any_MANY__Boolean_1_(expected:Any[*], actual:An
   AtomicValue  true :Boolean[1]  ~AtomicValue  @13:5-13:8
 
 function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]):Boolean[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Boolean[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::TPR_Person##[0..1]#  ~FunctionInvocation  @20:5-20:74
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::TPR_Person##[0..1]#  ~FunctionInvocation  @20:5-20:73
     typeParam T -> #test::TPR_Person#
     mulParam m -> #[0..1]#
     AtomicValue  'res' :String[1]  ~AtomicValue  @20:9-20:11
-    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:17-20:74
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:17-20:73
       typeParam T -> #Function<#{->#test::TPR_Person##[*]#}#>#
       typeParam V -> #test::TPR_Person#
       mulParam n -> [1]
       mulParam m -> #[0..1]#
       Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>##[1]#  ~VariableExpression  @20:15-20:16
-      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~AtomicValue  @20:24-20:73
-        ArrowInvocation first_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:65-20:73
+      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~AtomicValue  @20:24-20:72
+        ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:65-20:72
           typeParam T -> #test::TPR_Person#
           FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~FunctionInvocation  @20:25-20:64
             typeParam T -> test::TPR_Person

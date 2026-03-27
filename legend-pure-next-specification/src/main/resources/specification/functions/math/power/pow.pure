@@ -1,0 +1,38 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+native function <<PCT.function>> meta::pure::functions::math::pow(base:Number[1], exponent:Number[1]):Number[1];
+
+function <<PCT.test>> meta::pure::functions::math::tests::pow::testSimplePow<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(4.0, $f->eval(|pow(2,2)));
+    assertEquals(4.0, $f->eval(|2->pow(2)));
+    assertEquals(16.0, $f->eval(|2->pow(2)->pow(2)));
+    assertEquals(16.0, $f->eval(|4.0->pow(2.0)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::pow::testComplexPow<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(16.0, $f->eval(|2->pow(pow(2,2))));
+    assertEqWithinTolerance(182.88729271224377725957310758531093597412109375, $f->eval(|pow(3.33,4.33)), 0.0000000000001);
+}
+
+
+function <<PCT.test>> meta::pure::functions::math::tests::pow::testNumberPow<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let z = {a:Number[1], b:Number[1] | pow($a,$b)};
+    assertEquals(9.0, $f->eval(|$z->eval(3.0, 2)));
+}

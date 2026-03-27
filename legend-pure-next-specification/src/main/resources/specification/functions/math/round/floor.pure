@@ -1,0 +1,57 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+native function <<PCT.function>> meta::pure::functions::math::floor(number:Number[1]):Integer[1];
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testPositiveIntegerFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(17, $f->eval(|floor(17)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testNegativeIntegerFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(-17, $f->eval(|floor(-17)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testPositiveFloatFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(17, $f->eval(|floor(17.9)));
+    assertEquals(17, $f->eval(|floor(17.5)));
+    assertEquals(17, $f->eval(|floor(17.01)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testPositiveFloatWithZeroDecimalFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(17, $f->eval(|floor(17.0)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testNegativeFloatFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(-18, $f->eval(|floor(-17.9)));
+    assertEquals(-18, $f->eval(|floor(-17.5)));
+    assertEquals(-18, $f->eval(|floor(-17.01)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testNegativeFloatWithZeroDecimalFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(-17, $f->eval(|floor(-17.0)));
+}
+
+function <<PCT.test>> meta::pure::functions::math::tests::floor::testDecimalFloor<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals(3, $f->eval(|3.14d->floor()));
+    assertEquals(-4, $f->eval(|floor(-3.14d)));
+}

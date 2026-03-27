@@ -30,13 +30,13 @@ function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testTo
 {
     assertIs(InferredPureOne, {|toOne('a')}.expressionSequence->at(0).multiplicity);
     assertIs(InferredPureOne, {|toOne(['a'])}.expressionSequence->at(0).multiplicity);
-    assertIs(InferredPureOne, {|[1, 2, 3]->first()->toOne()}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredPureOne, {|[1, 2, 3]->head()->toOne()}.expressionSequence->at(0).multiplicity);
     assertIs(InferredPureOne, {|[1, 2, 3]->filter(x | $x == 1)->toOne()}.expressionSequence->at(0).multiplicity);
 }
 
 function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testToOne():Boolean[1]
 {
     assertEquals('a', 'a'->toOne());
-    assertEquals(1, [1, 2, 3]->first()->toOne());
+    assertEquals(1, [1, 2, 3]->head()->toOne());
     assertEquals(1, [1, 2, 3]->filter(x | $x == 1)->toOne());
 }

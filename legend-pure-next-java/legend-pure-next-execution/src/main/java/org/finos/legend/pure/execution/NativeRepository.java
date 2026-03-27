@@ -190,6 +190,14 @@ public class NativeRepository
         {
             return true;
         }
+        if (a == null && b instanceof List<?> listB && listB.isEmpty())
+        {
+            return true;
+        }
+        if (b == null && a instanceof List<?> listA && listA.isEmpty())
+        {
+            return true;
+        }
         if (a == null || b == null)
         {
             return false;
@@ -327,6 +335,12 @@ public class NativeRepository
             return true;
         }
 
+        // PureMap — delegate to PureMap.equals which uses structural equality
+        if (a instanceof PureMap && b instanceof PureMap)
+        {
+            return a.equals(b);
+        }
+
         // List — element-wise
         if (a instanceof List<?> listA && b instanceof List<?> listB)
         {
@@ -412,6 +426,10 @@ public class NativeRepository
         if (obj == null)
         {
             return "null";
+        }
+        if (obj instanceof PureMap pm)
+        {
+            return pm.toString();
         }
         if (obj instanceof PackageableElement pe)
         {

@@ -61,12 +61,12 @@ public class _E_ValueSpecification
                     new CollectionImpl(resolver)
                             ._values(Lists.mutable.empty())
                             ._genericType(vs._genericType())
-                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"))
+                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"))
                     :
                     new CollectionImpl(resolver)
                             ._values(Lists.mutable.with(vs))
                             ._genericType(vs._genericType())
-                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
+                            ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
         }
         else
         {
@@ -120,19 +120,58 @@ public class _E_ValueSpecification
         if (value instanceof List<?> list)
         {
             MutableList<ValueSpecification> wrapped = Lists.mutable.ofInitialCapacity(list.size());
+            MutableList<GenericType> itemGTs = Lists.mutable.ofInitialCapacity(list.size());
+            meta.pure.metamodel.multiplicity.Multiplicity pureOne = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
+
             for (Object item : list)
             {
-                wrapped.add(wrap(item, genericType, multiplicity, resolver));
+                GenericType itemGT = genericType;
+                if (item instanceof DynamicInstance di)
+                {
+                    itemGT = di.getClassifierGenericType();
+                }
+                else if (item instanceof meta.pure.metamodel.type.Any any)
+                {
+                    itemGT = any._classifierGenericType();
+                }
+                itemGTs.add(itemGT);
+                wrapped.add(wrap(item, itemGT, pureOne, resolver));
             }
+
+            GenericType collectionGT = genericType;
+            if (itemGTs.notEmpty())
+            {
+                GenericType common = _GenericType.findCommonGenericType(itemGTs, false, resolver);
+                if (common != null)
+                {
+                    collectionGT = common;
+                }
+            }
+
+            long size = list.size();
+            meta.pure.metamodel.multiplicity.Multiplicity exactMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.asInferred(
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver), resolver);
+
             return new CollectionImpl(resolver)
                     ._values(wrapped)
-                    ._genericType(genericType)
-                    ._multiplicity(multiplicity);
+                    ._genericType(collectionGT)
+                    ._multiplicity(exactMul);
         }
+        
+        GenericType itemGT = genericType;
+        if (value instanceof DynamicInstance di && di.getClassifierGenericType() != null)
+        {
+            itemGT = di.getClassifierGenericType();
+        }
+
+        long size = value == null ? 0 : 1;
+        meta.pure.metamodel.multiplicity.Multiplicity exactMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.asInferred(
+                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver), resolver);
+
         return new AtomicValueImpl(resolver)
                 ._value(value)
-                ._genericType(genericType)
-                ._multiplicity(multiplicity);
+                ._genericType(itemGT)
+                ._multiplicity(exactMul);
     }
 
     /**

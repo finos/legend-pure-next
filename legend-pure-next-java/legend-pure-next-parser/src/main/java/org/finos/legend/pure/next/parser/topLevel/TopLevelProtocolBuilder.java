@@ -102,7 +102,7 @@ public final class TopLevelProtocolBuilder
                     org.antlr.v4.runtime.RecognitionException e)
             {
                 throw new RuntimeException(
-                        "Top-level parse error at line " + line + ":"
+                        "Top-level parse error in file " + sourceId + " at line " + line + ":"
                                 + charPositionInLine + " - " + msg);
             }
         });

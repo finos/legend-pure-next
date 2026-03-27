@@ -11,5 +11,5 @@ Class test::TPR_Person
 
 function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Any[*]
 {
-    $f->eval(|^TPR_Person(firstName='A', lastName='B')->first()).lastName;
+    $f->eval(|^TPR_Person(firstName='A', lastName='B')->head()).lastName;
 }

@@ -15,8 +15,10 @@
 package org.finos.legend.pure.execution.natives.collection;
 
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -198,11 +200,13 @@ public class CollectionNatives
             return _E_ValueSpecification.wrap(results, genericType, multiplicity, resolver);
         });
 
-        // first(T[*]) : T[0..1]
-        natives.put("first_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
+        // head(T[*]) : T[0..1] — canonical native
+        natives.put("head_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return list.isEmpty() ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver) : _E_ValueSpecification.wrap(list.get(0), genericType, multiplicity, resolver);
+            return list.isEmpty()
+                    ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver)
+                    : _E_ValueSpecification.wrap(list.get(0), genericType, multiplicity, resolver);
         });
 
         // init(T[*]) : T[*] — all but the last element
@@ -356,5 +360,275 @@ public class CollectionNatives
             }
             return _E_ValueSpecification.wrap(-1L, genericType, multiplicity, resolver);
         });
+
+        // drop(T[*], Integer[1]) : T[*]
+        natives.put("drop_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
+            if (count <= 0)
+            {
+                return _E_ValueSpecification.wrap(new ArrayList<>(list), genericType, multiplicity, resolver);
+            }
+            int from = (int) Math.min(count, list.size());
+            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(from, list.size())), genericType, multiplicity, resolver);
+        });
+
+        // take(T[*], Integer[1]) : T[*]
+        natives.put("take_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
+            if (count <= 0)
+            {
+                return _E_ValueSpecification.wrap(new ArrayList<>(), genericType, multiplicity, resolver);
+            }
+            int to = (int) Math.min(count, list.size());
+            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(0, to)), genericType, multiplicity, resolver);
+        });
+
+        // slice(T[*], Integer[1], Integer[1]) : T[*]
+        natives.put("slice_T_MANY__Integer_1__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            int from = (int) Math.max(0, (Long) _E_ValueSpecification.unwrap(args.get(1)));
+            int to = (int) Math.min(list.size(), (Long) _E_ValueSpecification.unwrap(args.get(2)));
+            from = Math.min(from, list.size());
+            to = Math.max(from, to);
+            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(from, to)), genericType, multiplicity, resolver);
+        });
+
+        // reverse(T[m]) : T[m]
+        natives.put("reverse_T_m__T_m_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            List<Object> reversed = new ArrayList<>(list);
+            java.util.Collections.reverse(reversed);
+            return _E_ValueSpecification.wrap(reversed, genericType, multiplicity, resolver);
+        });
+
+        // zip(T[*], U[*]) : Pair<T,U>[*]
+        natives.put("zip_T_MANY__U_MANY__Pair_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> listA = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            List<?> listB = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
+            List<Object> result = new ArrayList<>();
+            int size = Math.min(listA.size(), listB.size());
+            for (int i = 0; i < size; i++)
+            {
+                result.add(makePair(listA.get(i), listB.get(i),
+                        args.get(0)._genericType(), args.get(1)._genericType(), resolver));
+            }
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // removeAll(T[*], T[*]) : T[*]
+        natives.put("removeAll_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> set = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            List<?> other = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
+            List<Object> result = new ArrayList<>();
+            for (Object item : set)
+            {
+                boolean found = false;
+                for (Object o : other)
+                {
+                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(item, o))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    result.add(item);
+                }
+            }
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
+        // ===== Map API =====
+        // newMap(Pair<U,V>[*]) : Map<U,V>[1]
+        natives.put("newMap_Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> pairs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            java.util.LinkedHashMap<Object, Object> map = new java.util.LinkedHashMap<>();
+            for (Object p : pairs)
+            {
+                DynamicInstance pair = (DynamicInstance) p;
+                map.put(pair.get("first"), pair.get("second"));
+            }
+            return _E_ValueSpecification.wrap(new PureMap(map), genericType, multiplicity, resolver);
+        });
+
+        // newMap(Pair<U,V>[*], Property<U,Any|1>[*]) : Map<U,V>[1]  — key-function overload (ignore property arg, use equality)
+        natives.put("newMap_Pair_MANY__Property_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+                natives.get("newMap_Pair_MANY__Map_1_").apply(args, eval, genericType, multiplicity));
+
+        // put(Map<U,V>[1], key:U[1], value:V[1]) : Map<U,V>[1]
+        natives.put("put_Map_1__U_1__V_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            Object key = _E_ValueSpecification.unwrap(args.get(1));
+            Object value = _E_ValueSpecification.unwrap(args.get(2));
+            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(original.getMap());
+            // remove existing equal key first (structural equality)
+            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key));
+            m.put(key, value);
+            return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
+        });
+
+        // get(Map<U,V>[1], key:U[1]) : V[0..1]
+        natives.put("get_Map_1__U_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            Object key = _E_ValueSpecification.unwrap(args.get(1));
+            for (Map.Entry<Object, Object> e : pureMap.getMap().entrySet())
+            {
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(e.getKey(), key))
+                {
+                    return _E_ValueSpecification.wrap(e.getValue(), genericType, multiplicity, resolver);
+                }
+            }
+            return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
+        });
+
+        // keys(Map<U,V>[1]) : U[*]
+        natives.put("keys_Map_1__U_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            return _E_ValueSpecification.wrap(new ArrayList<>(pureMap.getMap().keySet()), genericType, multiplicity, resolver);
+        });
+
+        // values(Map<U,V>[1]) : V[*]
+        natives.put("values_Map_1__V_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            return _E_ValueSpecification.wrap(new ArrayList<>(pureMap.getMap().values()), genericType, multiplicity, resolver);
+        });
+
+        // putAll(Map<U,V>[1], Pair<U,V>[*]) : Map<U,V>[1]
+        natives.put("putAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            List<?> pairs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
+            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(original.getMap());
+            for (Object p : pairs)
+            {
+                DynamicInstance pair = (DynamicInstance) p;
+                Object k = pair.get("first");
+                Object v = pair.get("second");
+                m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, k));
+                m.put(k, v);
+            }
+            return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
+        });
+
+        // putAll_Map_1__Map_1__Map_1_ — merge two maps
+        natives.put("putAll_Map_1__Map_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap m1 = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            PureMap m2 = (PureMap) _E_ValueSpecification.unwrap(args.get(1));
+            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(m1.getMap());
+            for (Map.Entry<Object, Object> e : m2.getMap().entrySet())
+            {
+                m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, e.getKey()));
+                m.put(e.getKey(), e.getValue());
+            }
+            return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
+        });
+
+        // exists(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
+        natives.put("exists_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            Object fn = _E_ValueSpecification.unwrap(args.get(1));
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            for (Object item : list)
+            {
+                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
+                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)))))
+                {
+                    return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
+                }
+            }
+            return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
+        });
+
+        // forAll(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
+        natives.put("forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            Object fn = _E_ValueSpecification.unwrap(args.get(1));
+            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            for (Object item : list)
+            {
+                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
+                if (!Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)))))
+                {
+                    return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
+                }
+            }
+            return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
+        });
+
+        // groupBy(X[*], Function<{X[1]->K[1]}>[1]) : Map<K,List<X>>[1]
+        // Pure's List<X> has a 'values' property that contains the grouped elements
+        natives.put("groupBy_X_MANY__Function_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            List<?> set = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            Object fn = _E_ValueSpecification.unwrap(args.get(1));
+            // LinkedHashMap preserves insertion order
+            java.util.LinkedHashMap<Object, List<Object>> grouped = new java.util.LinkedHashMap<>();
+            for (Object item : set)
+            {
+                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
+                Object key = _E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)));
+                // Find existing bucket by structural equality
+                Object canonicalKey = null;
+                for (Object k : grouped.keySet())
+                {
+                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key))
+                    {
+                        canonicalKey = k;
+                        break;
+                    }
+                }
+                if (canonicalKey == null)
+                {
+                    canonicalKey = key;
+                    grouped.put(canonicalKey, new ArrayList<>());
+                }
+                grouped.get(canonicalKey).add(item);
+            }
+            // Build the result map: Map<K, List<X>> where each value is a DynamicInstance with 'values' property
+            java.util.LinkedHashMap<Object, Object> resultMap = new java.util.LinkedHashMap<>();
+            for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
+            {
+                DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
+                listInstance.put("values", e.getValue());
+                resultMap.put(e.getKey(), listInstance);
+            }
+            return _E_ValueSpecification.wrap(new PureMap(resultMap), genericType, multiplicity, resolver);
+        });
+    }
+
+    /**
+     * Creates a DynamicInstance representing a Pure Pair with its classifierGenericType
+     * built from the actual element types of the two input collections.
+     */
+    private static DynamicInstance makePair(Object first, Object second,
+            meta.pure.metamodel.type.generics.GenericType firstGT,
+            meta.pure.metamodel.type.generics.GenericType secondGT,
+            org.finos.legend.pure.m3.module.MetadataAccess resolver)
+    {
+        DynamicInstance pair = new DynamicInstance("meta::pure::functions::collection::Pair");
+        pair.put("first", first);
+        pair.put("second", second);
+        meta.pure.metamodel.type.Type pairClass =
+                (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::functions::collection::Pair");
+        pair.setClassifierGenericType(
+                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()
+                        ._type(pairClass)
+                        ._typeArguments(org.eclipse.collections.api.factory.Lists.mutable.with(firstGT, secondGT)));
+        return pair;
     }
 }

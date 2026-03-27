@@ -30,7 +30,7 @@ function <<test.Test>> meta::pure::functions::multiplicity::tests::toOneMany::te
 {
     assertIs(InferredOneMany, {|toOneMany('a')}.expressionSequence->at(0).multiplicity);
     assertIs(InferredOneMany, {|toOneMany(['a', 'b', 'c'])}.expressionSequence->at(0).multiplicity);
-    assertIs(InferredOneMany, {|[1, 2, 3]->first()->toOneMany()}.expressionSequence->at(0).multiplicity);
+    assertIs(InferredOneMany, {|[1, 2, 3]->head()->toOneMany()}.expressionSequence->at(0).multiplicity);
     assertIs(InferredOneMany, {|[1, 2, 3]->filter(x | $x > 1)->toOneMany()}.expressionSequence->at(0).multiplicity);
 }
 
@@ -38,6 +38,6 @@ function <<test.Test>> meta::pure::functions::multiplicity::tests::toOneMany::te
 {
     assertEquals('a', 'a'->toOneMany());
     assertEquals(['a', 'b', 'c'], ['a', 'b', 'c']->toOneMany());
-    assertEquals(1, [1, 2, 3]->first()->toOneMany());
+    assertEquals(1, [1, 2, 3]->head()->toOneMany());
     assertEquals([2, 3], [1, 2, 3]->filter(x | $x > 1)->toOneMany());
 }
