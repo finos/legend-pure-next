@@ -36,9 +36,9 @@ public final class UserDefinedFunctionHandler
     {
     }
 
-    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar)
+    public static UserDefinedFunction firstPass(meta.pure.protocol.grammar.function.UserDefinedFunction grammar, MetadataAccess model)
     {
-        return new UserDefinedFunctionImpl()
+        return new UserDefinedFunctionImpl(model)
                 ._name(grammar._name())
                 ._functionName(grammar._functionName());
     }

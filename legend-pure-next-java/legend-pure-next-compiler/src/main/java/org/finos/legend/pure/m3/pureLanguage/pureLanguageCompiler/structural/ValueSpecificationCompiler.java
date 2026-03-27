@@ -61,14 +61,14 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl arrow,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        ArrowInvocationImpl result = new ArrowInvocationImpl()
+        ArrowInvocationImpl result = new ArrowInvocationImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::ArrowInvocation"), model))
                 ._functionName(arrow._functionName())
                 ._parametersValues(arrow._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
         if (arrow._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(arrow._sourceInformation(), context.getSourceId()));
+            result._sourceInformation(SourceInformationCompiler.compile(arrow._sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -77,14 +77,14 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        FunctionInvocationImpl result = new FunctionInvocationImpl()
+        FunctionInvocationImpl result = new FunctionInvocationImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::FunctionInvocation"), model))
                 ._functionName(fa._functionName())
                 ._parametersValues(fa._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
         if (fa._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(fa._sourceInformation(), context.getSourceId()));
+            result._sourceInformation(SourceInformationCompiler.compile(fa._sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -93,14 +93,14 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.DotApplicationImpl dot,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        DotApplicationImpl result = new DotApplicationImpl()
+        DotApplicationImpl result = new DotApplicationImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model))
                 ._functionName(dot._functionName())
                 ._parametersValues(dot._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
         if (dot._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(dot._sourceInformation(), context.getSourceId()));
+            result._sourceInformation(SourceInformationCompiler.compile(dot._sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -111,7 +111,7 @@ public final class ValueSpecificationCompiler
     {
         if (holder instanceof meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolder)
         {
-            return new meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl()
+            return new meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl(model)
                     ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model));
         }
         else if (holder instanceof meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolder)
@@ -136,11 +136,11 @@ public final class ValueSpecificationCompiler
                 classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
             }
 
-            return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
+            return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl(model)
                     ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder"), model))
                     ._genericType(classifierGT)
                     ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"))
-                    ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation(), context.getSourceId()) : null);
+                    ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation(), context.getSourceId(), model) : null);
         }
         else
         {
@@ -156,7 +156,7 @@ public final class ValueSpecificationCompiler
                 ._name(var._name() != null ? var._name() : "");
         if (var._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(var._sourceInformation()));
+            result._sourceInformation(SourceInformationCompiler.compile(var._sourceInformation(), model));
         }
         return result;
     }
@@ -165,11 +165,11 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.AtomicValueImpl av,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        AtomicValueImpl result = new AtomicValueImpl()
+        AtomicValueImpl result = new AtomicValueImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
         if (av._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation(), context.getSourceId()));
+            result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation(), context.getSourceId(), model));
         }
         if (av._genericType() != null)
         {
@@ -257,11 +257,11 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.CollectionImpl col,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        CollectionImpl result = new CollectionImpl()
+        CollectionImpl result = new CollectionImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::Collection"), model));
         if (col._sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(col._sourceInformation(), context.getSourceId()));
+            result._sourceInformation(SourceInformationCompiler.compile(col._sourceInformation(), context.getSourceId(), model));
         }
         if (col._multiplicity() != null)
         {

@@ -25,6 +25,7 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import org.apache.jena.base.Sys;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
@@ -144,7 +145,7 @@ public class ValueSpecificationEvaluator
                     {
                         yield natives.executeLazy(signature, this, fe);
                     }
-                    yield natives.execute(signature, evaluateArgs(fe), this, fe);
+                    yield natives.execute(signature, evaluateArgs(fe), this, fe._genericType(), fe._multiplicity());
                 }
 
                 case FunctionDefinition fd ->
@@ -164,6 +165,15 @@ public class ValueSpecificationEvaluator
                         + ((PackageableFunction) func)._name()
                         + " (type: " + func.getClass().getSimpleName() + ")");
             };
+        }
+        catch (RuntimeException e)
+        {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\nPure stack trace:"))
+            {
+                throw e;
+            }
+            throw new RuntimeException((msg == null ? "" : msg) + getCallStackTrace(), e);
         }
         finally
         {
@@ -272,7 +282,7 @@ public class ValueSpecificationEvaluator
 
         // Access the property on the target
         Object result = accessProperty(target, targetVs, propertyName);
-        return _E_ValueSpecification.wrap(result, fe._genericType(), fe._multiplicity());
+        return _E_ValueSpecification.wrap(result, fe._genericType(), fe._multiplicity(), this.natives.resolver());
     }
 
     /**
@@ -448,7 +458,7 @@ public class ValueSpecificationEvaluator
                         (arg._genericType() != null) ? arg._genericType() : param._genericType();
                 meta.pure.metamodel.multiplicity.Multiplicity mul =
                         (arg._multiplicity() != null) ? arg._multiplicity() : param._multiplicity();
-                childVars.put(paramName, _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(arg), gt, mul));
+                childVars.put(paramName, _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(arg), gt, mul, this.natives.resolver()));
             }
         }
 
@@ -482,6 +492,11 @@ public class ValueSpecificationEvaluator
         return switch (fnValue)
         {
             case FunctionDefinition fd -> evaluateFunctionDefinition(fd, args);
+            case NativeFunction nf ->
+            {
+                String signature = nf._name();
+                yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
+            }
             case meta.pure.metamodel.function.property.AbstractProperty prop ->
             {
                 if (args.isEmpty())
@@ -490,7 +505,7 @@ public class ValueSpecificationEvaluator
                 }
                 Object target = _E_ValueSpecification.unwrap(args.get(0));
                 Object result = accessProperty(target, args.get(0), prop._name());
-                yield _E_ValueSpecification.wrap(result, prop._genericType(), prop._multiplicity());
+                yield _E_ValueSpecification.wrap(result, prop._genericType(), prop._multiplicity(), this.natives.resolver());
             }
             case null -> throw new RuntimeException("Cannot execute null function");
             default -> throw new RuntimeException(

@@ -66,13 +66,13 @@ public final class _GenericTypeOperation
             RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, gto._operationType(), model);
             if (resultRT != null)
             {
-                return new InferredGenericTypeImpl()._type(resultRT);
+                return new InferredGenericTypeImpl(model)._type(resultRT);
             }
         }
 
         if (resolvedLeft != gto._left() || resolvedRight != gto._right())
         {
-            return new GenericTypeOperationImpl()
+            return new GenericTypeOperationImpl(model)
                     ._left(resolvedLeft)
                     ._right(resolvedRight)
                     ._operationType(gto._operationType());
@@ -98,7 +98,7 @@ public final class _GenericTypeOperation
         {
             case UNION ->
             {
-                RelationTypeImpl result = new RelationTypeImpl();
+                RelationTypeImpl result = new RelationTypeImpl(model);
                 GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
@@ -124,7 +124,7 @@ public final class _GenericTypeOperation
                 {
                     rightRT._columns().forEach(c -> rightNames.add(c._name()));
                 }
-                RelationTypeImpl result = new RelationTypeImpl();
+                RelationTypeImpl result = new RelationTypeImpl(model);
                 GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)

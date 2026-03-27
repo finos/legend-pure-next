@@ -34,9 +34,9 @@ public final class NativeFunctionHandler
     {
     }
 
-    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar)
+    public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model)
     {
-        return new NativeFunctionImpl()
+        return new NativeFunctionImpl(model)
                 ._name(grammar._name())
                 ._functionName(grammar._functionName());
     }

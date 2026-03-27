@@ -38,6 +38,18 @@ public final class _FunctionType
     }
 
     /**
+     * Create a new {@link FunctionTypeImpl} with its {@code classifierGenericType}
+     * properly set to {@code GenericType(rawType=FunctionType)}.
+     */
+    public static FunctionTypeImpl newFunctionType(MetadataAccess model)
+    {
+        FunctionTypeImpl ft = new FunctionTypeImpl();
+        ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(
+                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::FunctionType"), model));
+        return ft;
+    }
+
+    /**
      * Check whether {@code actual} FunctionType is compatible with {@code declared}.
      * Parameters are contravariant (input), return type is covariant (output).
      */
@@ -120,7 +132,7 @@ public final class _FunctionType
             return null;
         }
 
-        FunctionTypeImpl result = new FunctionTypeImpl();
+        FunctionTypeImpl result = newFunctionType(model);
 
         // Unify parameter types (contravariant: GLB)
         if (paramCount > 0)
@@ -143,7 +155,7 @@ public final class _FunctionType
                         .select(ft -> ft._parameters().get(idx) != null && ft._parameters().get(idx)._multiplicity() != null)
                         .collect(ft -> ft._parameters().get(idx)._multiplicity());
                 Multiplicity commonParamMul = paramMulsAtPosition.notEmpty()
-                        ? _Multiplicity.findCommonMultiplicity(paramMulsAtPosition)
+                        ? _Multiplicity.findCommonMultiplicity(paramMulsAtPosition, model)
                         : null;
 
                 String pName = functionTypes.getFirst()._parameters().get(idx) != null ? functionTypes.getFirst()._parameters().get(idx)._name() : null;
@@ -181,7 +193,7 @@ public final class _FunctionType
                 .collect(FunctionType::_returnMultiplicity);
         if (returnMuls.notEmpty())
         {
-            result._returnMultiplicity(_Multiplicity.findCommonMultiplicity(returnMuls));
+            result._returnMultiplicity(_Multiplicity.findCommonMultiplicity(returnMuls, model));
         }
 
         return result;
@@ -302,7 +314,7 @@ public final class _FunctionType
                         && _GenericType.isCompatible(ep._genericType(), ap._genericType(), model))
                 {
                     ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) ap)
-                            ._genericType(_GenericType.asInferred(ep._genericType()));
+                            ._genericType(_GenericType.asInferred(ep._genericType(), model));
                 }
                 // Widen Inferred multiplicities
                 if (ap._multiplicity() instanceof Inferred
@@ -360,14 +372,14 @@ public final class _FunctionType
 
         if (changed)
         {
-            FunctionTypeImpl newFT = new FunctionTypeImpl();
+            FunctionTypeImpl newFT = newFunctionType(model);
             if (resolvedParams != null)
             {
                 newFT._parameters(resolvedParams);
             }
             newFT._returnType(resolvedReturnType);
             newFT._returnMultiplicity(resolvedReturnMul);
-            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
+            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
         }
         return null;
     }

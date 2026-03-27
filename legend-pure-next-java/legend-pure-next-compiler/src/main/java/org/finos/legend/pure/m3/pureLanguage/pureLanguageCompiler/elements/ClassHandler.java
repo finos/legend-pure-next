@@ -52,9 +52,9 @@ public final class ClassHandler
     {
     }
 
-    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar)
+    public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model)
     {
-        return new ClassImpl()
+        return new ClassImpl(model)
                 ._name(grammar._name());
     }
 
@@ -62,7 +62,7 @@ public final class ClassHandler
     {
         // Compile and set type parameters (e.g., T, U for Class<T, U>)
         MutableList<TypeParameter> typeParameters = grammar._typeParameters()
-                .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result))
+                .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result, model))
                 .select(Objects::nonNull);
         if (typeParameters.notEmpty())
         {
@@ -95,7 +95,7 @@ public final class ClassHandler
         result._properties(properties)
                 ._qualifiedProperties(qualifiedProperties)
                 ._generalizations(grammar._generalizations().isEmpty()
-                        ? Lists.mutable.with(new meta.pure.metamodel.relationship.GeneralizationImpl()
+                        ? Lists.mutable.with(new meta.pure.metamodel.relationship.GeneralizationImpl(model)
                                 ._general(_GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Any"), model))
                                 ._specific(result))
                         : grammar._generalizations()
@@ -110,7 +110,7 @@ public final class ClassHandler
                 ._classifierGenericType(
                         _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation()));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
 
         // Compile type variables (e.g., Class Foo(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -123,7 +123,7 @@ public final class ClassHandler
         // Create constraint shells (name, owner, source info) without expression sequences
         if (grammar._constraints() != null && grammar._constraints().notEmpty())
         {
-            result._constraints(grammar._constraints().collect(ConstraintCompiler::compileShell));
+            result._constraints(grammar._constraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
         }
 
         context.enrichCurrentErrors("class '" + _G_PackageableElement.fullPath(grammar) + "'");

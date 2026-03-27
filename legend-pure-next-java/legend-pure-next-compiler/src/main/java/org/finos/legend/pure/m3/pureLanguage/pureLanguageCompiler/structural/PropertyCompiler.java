@@ -55,12 +55,18 @@ public final class PropertyCompiler
             context.enrichCurrentErrorsFrom(errorsBefore, "property '" + grammarProperty._name() + "'");
             return null;
         }
-        PropertyImpl result = new PropertyImpl()
+        PropertyImpl result = new PropertyImpl(model)
                 ._name(grammarProperty._name())
                 ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._genericType(genericType)
                 ._multiplicity(MultiplicityCompiler.compile(grammarProperty._multiplicity(), model))
-                ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._sourceInformation()));
+                ._stereotypes(grammarProperty._stereotypes()
+                        .collect(s -> AnnotationCompiler.resolveStereotype(s, imports, model, context))
+                        .select(java.util.Objects::nonNull))
+                ._taggedValues(grammarProperty._taggedValues()
+                        .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
+                        .select(java.util.Objects::nonNull))
+                ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._sourceInformation(), model));
         if (grammarProperty._defaultValue() != null)
         {
             meta.pure.metamodel.function.LambdaFunction compiledDefault =

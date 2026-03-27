@@ -67,11 +67,7 @@ public class _GenericType
         }
 
         meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        cgt._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::GenericType"));
-        // Break A->B->A cycle: Do NOT inject `gt` into `cgt`'s typeArguments.
-        cgt._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")));
-        
-        // Explicit cyclic pointer
+        cgt._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::UserDefinedGenericType"));
         cgt._classifierGenericType(cgt);
         
         gt._classifierGenericType(cgt);
@@ -139,7 +135,7 @@ public class _GenericType
         if (genericTypes == null || genericTypes.isEmpty())
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
-            return new InferredGenericTypeImpl()
+            return new InferredGenericTypeImpl(model)
                     ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
@@ -171,7 +167,7 @@ public class _GenericType
                 .selectInstancesOf(meta.pure.metamodel.relation.RelationType.class);
         if (rawRelationTypes.size() == rawTypes.size() && rawRelationTypes.notEmpty())
         {
-            return new InferredGenericTypeImpl()._type(
+            return new InferredGenericTypeImpl(model)._type(
                     _RelationType.findCommonRelationType(rawRelationTypes, contravariant, model));
         }
 
@@ -181,13 +177,13 @@ public class _GenericType
         if (rawFunctionTypes.size() == rawTypes.size() && rawFunctionTypes.notEmpty())
         {
             FunctionType common = _FunctionType.findCommonFunctionType(rawFunctionTypes, model);
-            return common != null ? new InferredGenericTypeImpl()._type(common) : null;
+            return common != null ? new InferredGenericTypeImpl(model)._type(common) : null;
         }
 
         Type commonType = _Type.findCommonType(rawTypes, contravariant, model);
 
         // Build a GenericType wrapping the common rawType.
-        InferredGenericTypeImpl result = new InferredGenericTypeImpl()._type(commonType);
+        InferredGenericTypeImpl result = new InferredGenericTypeImpl(model)._type(commonType);
 
         // Collect projected GenericTypes at the common-type level.
         // If all inputs already have the same raw type, use their type args directly.
@@ -718,7 +714,7 @@ public class _GenericType
 
                 if (changed)
                 {
-                    InferredGenericTypeImpl result = new InferredGenericTypeImpl()
+                    InferredGenericTypeImpl result = new InferredGenericTypeImpl(model)
                             ._type(gtv._type());
                     if (resolvedTypeArgs != null)
                     {
@@ -743,7 +739,7 @@ public class _GenericType
      * Mark a GenericType as inferred (compiler-resolved).
      * If it is already an {@code Inferred} instance, return as-is.
      */
-    public static GenericType asInferred(GenericType gt)
+    public static GenericType asInferred(GenericType gt, MetadataAccess model)
     {
         if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation || gt instanceof UndefinedGenericType)
         {
@@ -751,7 +747,7 @@ public class _GenericType
         }
         return switch (gt)
         {
-            case GenericTypeValue gtv -> copyInto(gtv, new InferredGenericTypeImpl());
+            case GenericTypeValue gtv -> copyInto(gtv, new InferredGenericTypeImpl(model));
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
         };
     }

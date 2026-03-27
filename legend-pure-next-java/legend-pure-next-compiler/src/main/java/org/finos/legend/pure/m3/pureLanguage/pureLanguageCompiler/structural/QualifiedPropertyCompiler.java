@@ -17,7 +17,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 import meta.pure.metamodel.function.property.QualifiedProperty;
 import meta.pure.metamodel.function.property.QualifiedPropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.FunctionTypeImpl;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
@@ -91,7 +91,7 @@ public final class QualifiedPropertyCompiler
         MutableList<ValueSpecification> expressionSequence = grammarQP._expressionSequence()
                         .collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context));
 
-        QualifiedPropertyImpl result = new QualifiedPropertyImpl()
+        QualifiedPropertyImpl result = new QualifiedPropertyImpl(model)
                 ._name(grammarQP._name())
                 ._genericType(genericType)
                 ._multiplicity(multiplicity)
@@ -110,7 +110,7 @@ public final class QualifiedPropertyCompiler
                     _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"), model)
                             ._typeArguments(Lists.mutable.with(
                                     _GenericType.buildUserDefinedGenericType(
-                                            new FunctionTypeImpl()
+                                            _FunctionType.newFunctionType(model)
                                                     ._parameters(parameters)
                                                     ._returnType(genericType)
                                                     ._returnMultiplicity(multiplicity), model))));

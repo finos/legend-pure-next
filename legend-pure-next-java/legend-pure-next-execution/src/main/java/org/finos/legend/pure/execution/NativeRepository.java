@@ -29,7 +29,9 @@ import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,17 +48,19 @@ public class NativeRepository
 {
     /**
      * A native function implementation.
-     * Each implementation receives the call-site {@link FunctionExpression} ({@code fe})
-     * and returns a raw value (or an explicit {@link ValueSpecification}).
-     * The {@link #execute} method wraps raw values using {@code fe._genericType()} and
-     * {@code fe._multiplicity()} — the compiler-declared Pure return type, not Java inference.
-     * Natives that need to control the exact return type can return a {@code ValueSpecification}
-     * directly; {@link _E_ValueSpecification#wrap} will pass it through unchanged.
+     * Each implementation receives the resolved return {@code genericType} and {@code multiplicity}
+     * from the caller. In the normal call path these come from the call-site
+     * {@link FunctionExpression}; when invoked as a first-class value they come from
+     * the {@link meta.pure.metamodel.function.NativeFunction}'s declared return type.
+     * The {@link #execute} method wraps raw values using these.
+     * Natives that return a {@code ValueSpecification} directly will be passed through unchanged.
      */
     @FunctionalInterface
     public interface NativeImpl
     {
-        Object apply(List<ValueSpecification> args, ValueSpecificationEvaluator eval, FunctionExpression fe);
+        Object apply(List<ValueSpecification> args, ValueSpecificationEvaluator eval,
+                     meta.pure.metamodel.type.generics.GenericType genericType,
+                     meta.pure.metamodel.multiplicity.Multiplicity multiplicity);
     }
 
     /**
@@ -92,6 +96,11 @@ public class NativeRepository
         registerDefaults();
     }
 
+    public MetadataAccess resolver()
+    {
+        return resolver;
+    }
+
     /**
      * Check if the given signature is registered as a lazy native.
      */
@@ -112,7 +121,7 @@ public class NativeRepository
         }
         try
         {
-            return _E_ValueSpecification.wrap(impl.apply(fe, evaluator), fe._genericType(), fe._multiplicity());
+            return _E_ValueSpecification.wrap(impl.apply(fe, evaluator), fe._genericType(), fe._multiplicity(), resolver);
         }
         catch (PureAssertionError e)
         {
@@ -126,12 +135,13 @@ public class NativeRepository
 
     /**
      * Execute a native function identified by its full mangled signature.
-     * Wraps the result into a {@link ValueSpecification} using the compiler-declared
-     * return type ({@code fe._genericType()}) and multiplicity ({@code fe._multiplicity()}).
-     * If the native already returns a {@link ValueSpecification}, it is passed through.
+     * Wraps the result into a {@link ValueSpecification} using the provided
+     * {@code genericType} and {@code multiplicity}.
      */
     public ValueSpecification execute(String signature, List<ValueSpecification> args,
-                                      ValueSpecificationEvaluator evaluator, FunctionExpression fe)
+                                      ValueSpecificationEvaluator evaluator,
+                                      meta.pure.metamodel.type.generics.GenericType genericType,
+                                      meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
         NativeImpl impl = natives.get(signature);
         if (impl == null)
@@ -140,11 +150,11 @@ public class NativeRepository
         }
         try
         {
-            return _E_ValueSpecification.wrap(impl.apply(args, evaluator, fe), fe._genericType(), fe._multiplicity());
+            Object result = impl.apply(args, evaluator, genericType, multiplicity);
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
         }
         catch (PureAssertionError e)
         {
-            // Append Pure call stack to assertion errors (only if not already present)
             if (!e.getMessage().contains("\nPure stack trace:"))
             {
                 throw new PureAssertionError(e.getMessage() + evaluator.getCallStackTrace());
@@ -183,6 +193,14 @@ public class NativeRepository
         if (a == null || b == null)
         {
             return false;
+        }
+
+        // Numeric equality: handles -0.0 vs 0.0 and cross-type precision (Long vs Decimal)
+        if (a instanceof Number na && b instanceof Number nb)
+        {
+            java.math.BigDecimal bdA = na instanceof java.math.BigDecimal ? (java.math.BigDecimal) na : new java.math.BigDecimal(na.toString());
+            java.math.BigDecimal bdB = nb instanceof java.math.BigDecimal ? (java.math.BigDecimal) nb : new java.math.BigDecimal(nb.toString());
+            return bdA.compareTo(bdB) == 0;
         }
 
         // Normalize single-element List to its element for comparison
@@ -266,11 +284,47 @@ public class NativeRepository
             return Objects.equals(pathA, pathB);
         }
 
-        // DynamicInstance — compare by class + values
+        // DynamicInstance — compare by class + equality key properties
         if (a instanceof DynamicInstance diA && b instanceof DynamicInstance diB)
         {
-            return Objects.equals(diA.getClassPath(), diB.getClassPath())
-                    && Objects.equals(diA.getValues(), diB.getValues());
+            if (!Objects.equals(diA.getClassPath(), diB.getClassPath()))
+            {
+                return false;
+            }
+            // Find equality key properties from the class's stereotypes
+            meta.pure.metamodel.type.generics.GenericType cgtA = diA.getClassifierGenericType();
+            if (cgtA != null)
+            {
+                meta.pure.metamodel.type.Type type = _GenericType.type(cgtA);
+                if (type instanceof meta.pure.metamodel.SimplePropertyOwner spo)
+                {
+                    java.util.List<String> keyProps = collectEqualityKeyProperties(spo);
+                    if (!keyProps.isEmpty())
+                    {
+                        // Compare only equality key properties
+                        for (String prop : keyProps)
+                        {
+                            if (!pureEquals(diA.get(prop), diB.get(prop)))
+                            {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
+            // Fallback: compare all values
+            Map<String, Object> valsA = diA.getValues();
+            Map<String, Object> valsB = diB.getValues();
+            if (valsA.size() != valsB.size()) return false;
+            for (Map.Entry<String, Object> e : valsA.entrySet())
+            {
+                if (!pureEquals(e.getValue(), valsB.get(e.getKey())))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         // List — element-wise
@@ -290,6 +344,64 @@ public class NativeRepository
             return true;
         }
         return false;
+    }
+
+    /**
+     * Collect property names with the {@code <<equality.Key>>} stereotype
+     * from the given type and its supertypes.
+     * <p>
+     * If a subclass redefines a property that a superclass marked with
+     * {@code <<equality.Key>>}, the subclass's definition takes precedence.
+     * This means a property overridden WITHOUT the stereotype will NOT
+     * be treated as an equality key.
+     */
+    private static java.util.List<String> collectEqualityKeyProperties(meta.pure.metamodel.SimplePropertyOwner owner)
+    {
+        java.util.List<String> keys = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        collectEqualityKeyPropertiesRecursive(owner, keys, seen);
+        return keys;
+    }
+
+    private static void collectEqualityKeyPropertiesRecursive(meta.pure.metamodel.SimplePropertyOwner owner, java.util.List<String> keys, java.util.Set<String> seen)
+    {
+        if (owner._properties() != null)
+        {
+            for (meta.pure.metamodel.function.property.Property p : owner._properties())
+            {
+                String propName = p._name();
+                if (seen.contains(propName))
+                {
+                    // Already defined by a subclass — subclass definition takes precedence
+                    continue;
+                }
+                seen.add(propName);
+                if (p._stereotypes() != null)
+                {
+                    for (meta.pure.metamodel.extension.Stereotype st : p._stereotypes())
+                    {
+                        if ("Key".equals(st._value())
+                                && st._profile() instanceof PackageableElement pe
+                                && "meta::pure::profiles::equality".equals(_PackageableElement.path(pe)))
+                        {
+                            keys.add(propName);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // Traverse supertypes
+        if (owner instanceof meta.pure.metamodel.type.Type type && type._generalizations() != null)
+        {
+            for (meta.pure.metamodel.relationship.Generalization gen : type._generalizations())
+            {
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.SimplePropertyOwner superOwner)
+                {
+                    collectEqualityKeyPropertiesRecursive(superOwner, keys, seen);
+                }
+            }
+        }
     }
 
     /**

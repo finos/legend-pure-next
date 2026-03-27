@@ -58,19 +58,19 @@ public class _E_ValueSpecification
         {
             Object value = ((AtomicValue) vs)._value();
             return value == null ?
-                    new CollectionImpl()
+                    new CollectionImpl(resolver)
                             ._values(Lists.mutable.empty())
                             ._genericType(vs._genericType())
                             ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"))
                     :
-                    new CollectionImpl()
+                    new CollectionImpl(resolver)
                             ._values(Lists.mutable.with(vs))
                             ._genericType(vs._genericType())
                             ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
         }
         else
         {
-            return new CollectionImpl()
+            return new CollectionImpl(resolver)
                     ._values(Lists.mutable.with(vs))
                     ._genericType(vs._genericType())
                     ._multiplicity((PackageableMultiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
@@ -110,7 +110,8 @@ public class _E_ValueSpecification
 
     public static ValueSpecification wrap(Object value,
                                    meta.pure.metamodel.type.generics.GenericType genericType,
-                                   meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+                                   meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
+                                   MetadataAccess resolver)
     {
         if (value instanceof ValueSpecification vs)
         {
@@ -121,14 +122,14 @@ public class _E_ValueSpecification
             MutableList<ValueSpecification> wrapped = Lists.mutable.ofInitialCapacity(list.size());
             for (Object item : list)
             {
-                wrapped.add(wrap(item, genericType, multiplicity));
+                wrapped.add(wrap(item, genericType, multiplicity, resolver));
             }
-            return new CollectionImpl()
+            return new CollectionImpl(resolver)
                     ._values(wrapped)
                     ._genericType(genericType)
                     ._multiplicity(multiplicity);
         }
-        return new AtomicValueImpl()
+        return new AtomicValueImpl(resolver)
                 ._value(value)
                 ._genericType(genericType)
                 ._multiplicity(multiplicity);
@@ -151,15 +152,27 @@ public class _E_ValueSpecification
         // All metamodel elements implement Any which has _classifierGenericType()
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
+            // GenericType objects' own CGT is the meta-meta type (GenericType itself),
+            // which isn't useful for getValueOriginalType. Use VS metadata instead.
+            if (value instanceof meta.pure.metamodel.type.generics.GenericType && vs != null && vs._genericType() != null)
+            {
+                return _GenericType.type(vs._genericType());
+            }
             GenericType cgt = any._classifierGenericType();
             if (cgt == null)
             {
-                throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
-                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : ""));
+                throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName());
             }
-            return _GenericType.type(cgt);
+            Type type = _GenericType.type(cgt);
+            // If the CGT resolves to a TypeParameter (unresolved generic like T),
+            // fall back to the VS's genericType which has the concrete binding
+            if (type instanceof meta.pure.metamodel.type.generics.TypeParameter && vs != null && vs._genericType() != null)
+            {
+                return _GenericType.type(vs._genericType());
+            }
+            return type;
         }
-        // Java primitives (Long, Double, String, Boolean) — use the VS genericType
+        // Fallback for Java primitives
         if (vs != null && vs._genericType() != null)
         {
             return _GenericType.type(vs._genericType());

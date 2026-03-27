@@ -26,7 +26,7 @@ public final class _VariableExpression
 
     public static VariableExpressionImpl newVariableExpression(MetadataAccess model)
     {
-        return new VariableExpressionImpl()
+        return new VariableExpressionImpl(model)
                 ._classifierGenericType(
                         _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::valuespecification::VariableExpression"), model));
     }

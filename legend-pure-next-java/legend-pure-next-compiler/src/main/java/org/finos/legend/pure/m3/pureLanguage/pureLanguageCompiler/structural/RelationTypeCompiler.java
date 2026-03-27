@@ -41,7 +41,7 @@ public final class RelationTypeCompiler
             meta.pure.protocol.grammar.relation.RelationType rt,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        RelationTypeImpl result = new RelationTypeImpl();
+        RelationTypeImpl result = new RelationTypeImpl(model);
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
         return result._columns(rt._columns().collect(col -> _Column.build(
                 col._name(),

@@ -18,6 +18,7 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
@@ -48,7 +49,7 @@ public class AtomicValueResolver
             {
                 ((AtomicValueImpl) av)
                         ._value(element)
-                        ._genericType(_GenericType.asInferred(element._classifierGenericType()));
+                        ._genericType(_GenericType.asInferred(element._classifierGenericType(), model));
             }
             else if (context.currentErrorCount() == checkpoint)
             {
@@ -103,16 +104,16 @@ public class AtomicValueResolver
             ValueSpecification lastExpr = lambda._expressionSequence().getLast();
             if (lastExpr._genericType() != null)
             {
-                meta.pure.metamodel.type.FunctionTypeImpl ft = new meta.pure.metamodel.type.FunctionTypeImpl();
+                meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
                 ft._parameters(params);
                 ft._returnType(lastExpr._genericType());
                 ft._returnMultiplicity(lastExpr._multiplicity());
 
                 meta.pure.metamodel.type.Type lambdaType = (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction");
-                GenericType lambdaGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()
+                GenericType lambdaGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
                         ._type(lambdaType)
                         ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()._type(ft)));
+                                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));
                 ((AtomicValueImpl) av)._genericType(lambdaGT);
                 context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
             }

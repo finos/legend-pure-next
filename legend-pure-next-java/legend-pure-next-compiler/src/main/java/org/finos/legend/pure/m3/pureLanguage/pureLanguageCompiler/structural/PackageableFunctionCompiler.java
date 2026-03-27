@@ -16,8 +16,8 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
 import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.PackageableFunction;
-import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -52,10 +52,10 @@ public final class PackageableFunctionCompiler
             CompilationContext context)
     {
         result._typeParameters(grammar._typeParameters()
-                        .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result))
+                        .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result, model))
                         .select(Objects::nonNull))
                 ._multiplicityParameters(grammar._multiplicityParameters()
-                        .<meta.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result))
+                        .<meta.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
                         .select(Objects::nonNull));
 
         // Register declared type/multiplicity params in scope so GenericTypeCompiler
@@ -67,7 +67,7 @@ public final class PackageableFunctionCompiler
                         .collect(p -> VariableCompiler.compileParameter(p, imports, model, context))
                         .select(Objects::nonNull));
 
-        _Function.validateFunctionParameters(result._parameters(), context, SourceInformationCompiler.compile(grammar._sourceInformation()));
+        _Function.validateFunctionParameters(result._parameters(), context, SourceInformationCompiler.compile(grammar._sourceInformation(), model));
 
         result._returnGenericType(GenericTypeCompiler.compile(grammar._returnGenericType(), imports, model, context));
         result._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model));
@@ -77,7 +77,7 @@ public final class PackageableFunctionCompiler
                                         : "meta::pure::metamodel::function::UserDefinedFunction"), model)
                         ._typeArguments(Lists.mutable.with(
                                 _GenericType.buildUserDefinedGenericType(
-                                        new FunctionTypeImpl()
+                                        _FunctionType.newFunctionType(model)
                                                 ._parameters(result._parameters())
                                                 ._returnType(result._returnGenericType())
                                                 ._returnMultiplicity(result._returnMultiplicity()), model))));

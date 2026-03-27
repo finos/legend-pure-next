@@ -18,6 +18,7 @@ import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 
 /**
  * Helper methods for {@link LambdaFunction}.
@@ -38,9 +39,9 @@ public final class _Lambda
      * @param lambda the lambda function
      * @return a new FunctionType representing the lambda's signature
      */
-    public static FunctionType buildFunctionType(LambdaFunction lambda)
+    public static FunctionType buildFunctionType(LambdaFunction lambda, MetadataAccess model)
     {
-        FunctionTypeImpl ft = new FunctionTypeImpl();
+        FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
         if (lambda._parameters() != null)
         {
             ft._parameters(lambda._parameters());

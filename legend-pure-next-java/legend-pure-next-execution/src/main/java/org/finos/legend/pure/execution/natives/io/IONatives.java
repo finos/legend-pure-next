@@ -28,7 +28,7 @@ public class IONatives
                                 MetadataAccess resolver)
     {
         // print(Any[*], Integer[1]) : Nil[0]
-        natives.put("print_Any_MANY__Integer_1__Nil_0_", (args, eval, fe) ->
+        natives.put("print_Any_MANY__Integer_1__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             System.out.print(val);
@@ -36,7 +36,7 @@ public class IONatives
         });
 
         // println(Any[*]) : Nil[0]
-        natives.put("println_Any_MANY__Nil_0_", (args, eval, fe) ->
+        natives.put("println_Any_MANY__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             System.out.println(val);

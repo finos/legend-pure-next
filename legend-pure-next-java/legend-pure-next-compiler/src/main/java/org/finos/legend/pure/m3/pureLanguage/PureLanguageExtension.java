@@ -121,9 +121,9 @@ public class PureLanguageExtension implements LanguageExtension
     }
 
     @Override
-    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar)
+    public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
     {
-        return pureLanguageCompilerExtension.firstPass(grammar);
+        return pureLanguageCompilerExtension.firstPass(grammar, model);
     }
 
     @Override

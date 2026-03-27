@@ -56,21 +56,23 @@ public class RdfJavaGenerator
 
     private final M3Model m3Model;
     private final String outputPackage;
+    private final boolean isMetamodel;
 
     public RdfJavaGenerator(String ttlPath)
     {
-        this(new M3MetamodelReader(ttlPath).read(), DEFAULT_OUTPUT_PACKAGE);
+        this(new M3MetamodelReader(ttlPath).read(), DEFAULT_OUTPUT_PACKAGE, false);
     }
 
     public RdfJavaGenerator(String ttlPath, String outputPackage)
     {
-        this(new M3MetamodelReader(ttlPath).read(), outputPackage);
+        this(new M3MetamodelReader(ttlPath).read(), outputPackage, false);
     }
 
-    public RdfJavaGenerator(M3Model m3Model, String outputPackage)
+    public RdfJavaGenerator(M3Model m3Model, String outputPackage, boolean isMetamodel)
     {
         this.m3Model = m3Model;
         this.outputPackage = outputPackage;
+        this.isMetamodel = isMetamodel;
     }
 
     /**
@@ -376,6 +378,31 @@ public class RdfJavaGenerator
             sb.append("\n");
         }
 
+        // Pure path for this class (e.g., "meta::pure::metamodel::type::Enumeration")
+        String purePath = classInfo.packagePath != null
+                ? classInfo.packagePath + "::" + classInfo.name
+                : classInfo.name;
+
+        if (isMetamodel)
+        {
+            // Deprecated no-arg constructor (for bootstrap/FlatBuffer internals)
+            sb.append("    @Deprecated\n");
+            sb.append("    public ").append(classInfo.name).append("Impl() {}\n\n");
+
+            // Factory constructor that auto-sets classifierGenericType
+            sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
+            sb.append("    {\n");
+            sb.append("        this._classifierGenericType(\n");
+            sb.append("            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType\n");
+            sb.append("                .buildUserDefinedGenericType(\n");
+            sb.append("                    (meta.pure.metamodel.type.Type) model.getElement(\"").append(purePath).append("\"), model));\n");
+            sb.append("    }\n\n");
+        }
+        else
+        {
+            sb.append("    public ").append(classInfo.name).append("Impl() {}\n\n");
+        }
+
         // Generate getters and fluent setters
         allProperties.forEach(prop ->
         {
@@ -672,22 +699,25 @@ public class RdfJavaGenerator
         {
             if (args.length < 2)
             {
-                System.out.println("Usage: RdfJavaGenerator <input.ttl> <output-dir> [package-name]");
+                System.out.println("Usage: RdfJavaGenerator <input.ttl> <output-dir> [package-name] [--metamodel]");
                 System.exit(1);
             }
 
             String inputPath = args[0];
             String outputDir = args[1];
-            String packageName = args.length > 2 ? args[2] : DEFAULT_OUTPUT_PACKAGE;
+            String packageName = args.length > 2 && !args[2].startsWith("--") ? args[2] : DEFAULT_OUTPUT_PACKAGE;
+            boolean metamodel = java.util.Arrays.asList(args).contains("--metamodel");
 
             System.out.println("M3 Java Class Generator");
             System.out.println("========================");
-            System.out.println("Input:   " + inputPath);
-            System.out.println("Output:  " + outputDir);
-            System.out.println("Package: " + packageName);
+            System.out.println("Input:      " + inputPath);
+            System.out.println("Output:     " + outputDir);
+            System.out.println("Package:    " + packageName);
+            System.out.println("Metamodel:  " + metamodel);
             System.out.println();
 
-            RdfJavaGenerator generator = new RdfJavaGenerator(inputPath, packageName);
+            RdfJavaGenerator generator = new RdfJavaGenerator(
+                    new M3MetamodelReader(inputPath).read(), packageName, metamodel);
             generator.generate(outputDir);
         }
         catch (Exception e)

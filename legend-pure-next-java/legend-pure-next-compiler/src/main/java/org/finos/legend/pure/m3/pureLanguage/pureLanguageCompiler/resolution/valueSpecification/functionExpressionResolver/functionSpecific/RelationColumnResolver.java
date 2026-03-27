@@ -195,8 +195,8 @@ public final class RelationColumnResolver
         }
 
         // Look up each column in the reference relation — this IS the SUBSET result
-        RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl()._type(enrichedRT);
+        RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
+        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
         MutableList<Column> enrichedColumns = Lists.mutable.empty();
 
         for (String colName : columnNames)
@@ -270,17 +270,17 @@ public final class RelationColumnResolver
         }
 
         // Build the enriched RelationType using the column name + resolved K type
-        RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl()._type(enrichedRT);
+        RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
+        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
         MutableList<Column> enrichedColumns = Lists.mutable.empty();
 
         for (String colName : columnNames)
         {
             meta.pure.metamodel.multiplicity.Multiplicity colMul = wildcardCol._multiplicity() != null
                     ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
-                    : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl()
-                            ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L))
-                            ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl()._value(1L));
+                    : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
+                            ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
+                            ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
             enrichedColumns.add(_Column.build(
                     colName, enrichedGT, resolvedColType, colMul, false, model));
         }
@@ -357,11 +357,11 @@ public final class RelationColumnResolver
         });
         if (mergedColumns.notEmpty())
         {
-            meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl()._columns(mergedColumns);
+            meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl(model)._columns(mergedColumns);
             ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) paramValues.get(1))
                     ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                             ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                            ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl()._type(mergedRT))));
+                            ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl(model)._type(mergedRT))));
         }
     }
 
@@ -417,8 +417,8 @@ public final class RelationColumnResolver
             }
             if (colName != null && lastExpr._genericType() != null)
             {
-                RelationTypeImpl relationType = new RelationTypeImpl();
-                GenericType ownerGT = new InferredGenericTypeImpl()._type(relationType);
+                RelationTypeImpl relationType = new RelationTypeImpl(model);
+                GenericType ownerGT = new InferredGenericTypeImpl(model)._type(relationType);
                 Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
                 relationType._columns(Lists.mutable.with(col));
                 ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) typeHolderArg)
