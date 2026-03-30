@@ -11,9 +11,12 @@ GenericType
 ├── GenericTypeOperation
 ├── UndefinedGenericType
 └── GenericTypeValue
-    ├── InferredGenericType
-    ├── PackageableGenericType
-    └── UserDefinedGenericType
+    ├── AdHocGenericTypeValue
+    │   ├── InferredGenericType
+    │   └── UserDefinedGenericType
+    └── PackageableGenericType
+        ├── InferredPackageableGenericType
+        └── UserDefinedPackageableGenericType
 ```
 
 ### PackageableElement
@@ -28,6 +31,9 @@ PackageableElement
 ├── PackageableFunction
 │   ├── NativeFunction
 │   └── UserDefinedFunction
+├── PackageableGenericType
+│   ├── InferredPackageableGenericType
+│   └── UserDefinedPackageableGenericType
 ├── PackageableMultiplicity
 │   ├── InferredPackageableMultiplicity
 │   └── UserDefinedPackageableMultiplicity

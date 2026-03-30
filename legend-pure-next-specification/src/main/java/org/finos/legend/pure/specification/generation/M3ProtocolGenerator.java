@@ -1282,7 +1282,7 @@ public class M3ProtocolGenerator
 
     /**
      * Replace the rawType (:type) of a property's genericType with a new target type.
-     * If the genericType resource is a named resource (shared PackageableGenericType),
+     * If the genericType resource is a named resource (shared UserDefinedPackageableGenericType),
      * a new blank node is created to avoid corrupting other references.
      * If it's a blank node, it's safe to modify in-place.
      */
