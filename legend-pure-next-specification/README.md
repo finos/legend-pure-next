@@ -12,6 +12,7 @@ GenericType
 ├── UndefinedGenericType
 └── GenericTypeValue
     ├── InferredGenericType
+    ├── PackageableGenericType
     └── UserDefinedGenericType
 ```
 

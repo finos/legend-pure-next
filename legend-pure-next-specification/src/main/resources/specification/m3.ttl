@@ -367,13 +367,16 @@
 
 :GenericType a :Class ;
     :stereotypes :ProtocolInfo_mainTaxonomy ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :TaggedValue ] ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "UserDefinedGenericType,InferredGenericType,UndefinedGenericType,GenericTypeOperation" ] ;
     :name "GenericType" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :GenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations [ a :Generalization ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Generalization ] ; :specific :GenericType ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Any ] ] .
 
-:GenericType_GenericType a :UserDefinedGenericType ;
-    :type :UserDefinedGenericType ;
+:GenericType_GenericType a :PackageableGenericType ;
+    :name "GenericType" ;
+    :package :meta_pure_metamodel_type_generics ;
+    :type :PackageableGenericType ;
     :classifierGenericType :GenericType_GenericType .
 
 # --- GenericTypeValue ---
@@ -421,6 +424,16 @@
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :UserDefinedGenericType ] ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations [ a :Generalization ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Generalization ] ; :specific :UserDefinedGenericType ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :GenericTypeValue ] ] .
+
+# --- PackageableGenericType ---
+
+:PackageableGenericType a :Class ;
+    :name "PackageableGenericType" ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :PackageableGenericType ] ] ;
+    :package :meta_pure_metamodel_type_generics ;
+    :generalizations 
+        [ a :Generalization ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Generalization ] ; :specific :PackageableGenericType ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :GenericTypeValue ] ],
+        [ a :Generalization ; :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Generalization ] ; :specific :PackageableGenericType ; :general [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :PackageableElement ] ] .
 
 # --- InferredGenericType ---
 
