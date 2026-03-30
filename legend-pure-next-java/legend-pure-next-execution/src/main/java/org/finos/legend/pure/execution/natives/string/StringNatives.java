@@ -17,6 +17,7 @@ package org.finos.legend.pure.execution.natives.string;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.execution.DynamicInstance;
+import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -38,8 +39,11 @@ public class StringNatives
                                 MetadataAccess resolver)
     {
         natives.put("plus_String_1__String_1__String_1_", (args, eval, genericType, multiplicity) ->
-                _E_ValueSpecification.wrap((String) _E_ValueSpecification.unwrap(args.get(0)) + (String) _E_ValueSpecification.unwrap(args.get(1)),
-                        genericType, multiplicity, resolver));
+                {
+                    return _E_ValueSpecification.wrap((String) _E_ValueSpecification.unwrap(args.get(0)) + (String) _E_ValueSpecification.unwrap(args.get(1)),
+                            genericType, multiplicity, resolver);
+                });
+
 
         natives.put("toString_Any_1__String_1_", (args, eval, genericType, multiplicity) ->
         {
@@ -58,14 +62,15 @@ public class StringNatives
             {
                 sb.append(prefix);
             }
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (int i = 0; i < list.size(); i++)
+            List<? extends ValueSpecification> items = _E_ValueSpecification.toCollection(args.get(0), resolver)._values();
+            for (int i = 0; i < items.size(); i++)
             {
                 if (i > 0 && separator != null)
                 {
                     sb.append(separator);
                 }
-                sb.append(list.get(i));
+                // pureToString auto-unwraps the VS
+                sb.append(NativeRepository.pureToString(items.get(i)));
             }
             if (suffix != null)
             {
@@ -272,12 +277,18 @@ public class StringNatives
             String s = (String) _E_ValueSpecification.unwrap(args.get(0));
             String delimiter = (String) _E_ValueSpecification.unwrap(args.get(1));
             String[] parts = s.split(Pattern.quote(delimiter), -1);
-            List<Object> result = new ArrayList<>();
+            List<ValueSpecification> result = new ArrayList<>();
             for (String part : parts)
             {
-                result.add(part);
+                result.add(_E_ValueSpecification.wrap(part, genericType, null, resolver));
             }
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            // String[*] — compute common type and size-based multiplicity
+            int size = parts.length;
+            meta.pure.metamodel.type.generics.GenericType gt = result.isEmpty() ? null : result.get(0)._genericType();
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(result))
+                    ._genericType(gt)
+                    ._multiplicity(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver));
         });
 
         // trim(String[1]) : String[1]
@@ -533,7 +544,8 @@ public class StringNatives
                             && qp._parameters().size() == 1)
                     {
                         ValueSpecification wrappedSelf = _E_ValueSpecification.wrap(val, di.getClassifierGenericType(), null, resolver);
-                        ValueSpecification result = eval.executeFunction(qp, List.of(wrappedSelf));
+                        ValueSpecification fnVS = _E_ValueSpecification.wrap(qp, qp._genericType(), qp._multiplicity(), resolver);
+                        ValueSpecification result = eval.executeFunction(fnVS, List.of(wrappedSelf));
                         return (String) _E_ValueSpecification.unwrap(result);
                     }
                 }

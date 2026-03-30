@@ -22,6 +22,9 @@ import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
+import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +58,7 @@ public class ElementPathNatives
                         return _E_ValueSpecification.wrap(rootPkg, genericType, multiplicity, resolver);
                     }
                 }
-                return "::";
+                return _E_ValueSpecification.wrap("::", genericType, multiplicity, resolver);
             }
             if (resolver == null)
             {
@@ -80,9 +83,9 @@ public class ElementPathNatives
             }
             if (resolver == null)
             {
-                return null;
+                return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
             }
-            return resolver.getElement(path);
+            return _E_ValueSpecification.wrap(resolver.getElement(path), genericType, multiplicity, resolver);
         });
 
         // elementToPath(PackageableElement[1], String[1], Boolean[1]) : String[1]
@@ -94,15 +97,15 @@ public class ElementPathNatives
 
             if (element instanceof PackageableElement pe)
             {
-                return elementToPathString(pe, separator);
+                return _E_ValueSpecification.wrap(elementToPathString(pe, separator), genericType, multiplicity, resolver);
             }
             if (element instanceof DynamicInstance di)
             {
-                return elementToPathDynamic(di, separator, eval);
+                return _E_ValueSpecification.wrap(elementToPathDynamic(di, separator, eval), genericType, multiplicity, resolver);
             }
             if ("::".equals(String.valueOf(element)))
             {
-                return "";
+                return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
             }
             return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
         });
@@ -120,7 +123,12 @@ public class ElementPathNatives
             {
                 buildElementPath(pe, path);
             }
-            return _E_ValueSpecification.wrap(path, genericType, multiplicity, resolver);
+            List<ValueSpecification> pathVSList = new ArrayList<>(path.size());
+            for (Object p : path)
+            {
+                pathVSList.add(_E_ValueSpecification.wrap(p, genericType, null, resolver));
+            }
+            return CollectionNatives.makeCollection(pathVSList, resolver);
         });
 
         // elementToPath(PackageableElement[1]) : String[1]
@@ -129,15 +137,15 @@ public class ElementPathNatives
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             if (element instanceof PackageableElement pe)
             {
-                return elementToPathString(pe, "::");
+                return _E_ValueSpecification.wrap(elementToPathString(pe, "::"), genericType, multiplicity, resolver);
             }
             if (element instanceof DynamicInstance di)
             {
-                return elementToPathDynamic(di, "::", eval);
+                return _E_ValueSpecification.wrap(elementToPathDynamic(di, "::", eval), genericType, multiplicity, resolver);
             }
             if ("::".equals(String.valueOf(element)))
             {
-                return "";
+                return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
             }
             return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
         };
@@ -152,7 +160,7 @@ public class ElementPathNatives
             String separator = separatorObj != null ? separatorObj.toString() : "::";
             if (element instanceof PackageableElement pe)
             {
-                return elementToPathString(pe, separator);
+                return _E_ValueSpecification.wrap(elementToPathString(pe, separator), genericType, multiplicity, resolver);
             }
             return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
         });
@@ -185,7 +193,7 @@ public class ElementPathNatives
 
     private static void buildDynamicPathSegments(DynamicInstance di, List<String> segments, ValueSpecificationEvaluator eval)
     {
-        Object pkg = di.get("package");
+        Object pkg = _E_ValueSpecification.unwrap(di.get("package"));
         if (pkg instanceof DynamicInstance parent)
         {
             buildDynamicPathSegments(parent, segments, eval);
@@ -194,7 +202,7 @@ public class ElementPathNatives
         {
             buildAllNamedPackageSegments(parent, segments);
         }
-        Object name = di.get("name");
+        Object name = _E_ValueSpecification.unwrap(di.get("name"));
         if (name instanceof String s && !s.isEmpty())
         {
             segments.add(s);
@@ -233,7 +241,7 @@ public class ElementPathNatives
 
     private static void buildDynamicElementPath(DynamicInstance di, List<Object> path, ValueSpecificationEvaluator eval)
     {
-        Object pkg = di.get("package");
+        Object pkg = _E_ValueSpecification.unwrap(di.get("package"));
         if (pkg instanceof DynamicInstance parent)
         {
             buildDynamicElementPath(parent, path, eval);

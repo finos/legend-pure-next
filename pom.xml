@@ -63,6 +63,7 @@
     <modules>
         <module>legend-pure-next-specification</module>
         <module>legend-pure-next-java</module>
+        <module>legend-pure-next-compiler-pure</module>
     </modules>
 
     <build>

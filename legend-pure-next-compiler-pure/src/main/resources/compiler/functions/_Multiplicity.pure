@@ -1,0 +1,187 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::*;
+
+
+// Multiplicity bounds
+
+function meta::pure::compiler::helper::multiplicityLowerBound(m:Multiplicity[1]):Integer[1]
+{
+    $m->match(
+        [
+            cm : ConcreteMultiplicity[1] | $cm.lowerBound.value->toOne(),
+            mp : MultiplicityParameter[1] | 0,
+            u  : Any[1] | 0
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::multiplicityUpperBound(m:Multiplicity[1]):Integer[1]
+{
+    $m->match(
+        [
+            cm : ConcreteMultiplicity[1] | if($cm.upperBound->isEmpty(), | -1, | $cm.upperBound.value->toOne()),
+            mp : MultiplicityParameter[1] | -1,
+            u  : Any[1] | -1
+        ]
+    )
+}
+
+
+// Multiplicity printing
+
+function meta::pure::compiler::helper::printMultiplicity(m:Multiplicity[1]):String[1]
+{
+    $m->match(
+        [
+            mp : MultiplicityParameter[1] | '[' + $mp.name + ']',
+            um : UndefinedMultiplicity[1]  | '[?]',
+            a  : Any[1] |
+                let lower = $m->multiplicityLowerBound();
+                let upper = $m->multiplicityUpperBound();
+                if($upper == -1,
+                    | if($lower == 0, | '[*]', | '[' + $lower->toString() + '..*]'),
+                    | if($lower == $upper,
+                        | '[' + $lower->toString() + ']',
+                        | '[' + $lower->toString() + '..' + $upper->toString() + ']'
+                      )
+                );
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::printMultiplicityBare(m:Multiplicity[1]):String[1]
+{
+    $m->match(
+        [
+            mp : MultiplicityParameter[1] | $mp.name,
+            um : UndefinedMultiplicity[1]  | '?',
+            a  : Any[1] |
+                let lower = $m->multiplicityLowerBound();
+                let upper = $m->multiplicityUpperBound();
+                if($upper == -1,
+                    | if($lower == 0, | '*', | $lower->toString() + '..*'),
+                    | if($lower == $upper,
+                        | $lower->toString(),
+                        | $lower->toString() + '..' + $upper->toString()
+                      )
+                );
+        ]
+    )
+}
+
+
+// Multiplicity checks
+
+function meta::pure::compiler::helper::isConcreteMultiplicity(m:Multiplicity[1]):Boolean[1]
+{
+    !$m->instanceOf(MultiplicityParameter)
+}
+
+function meta::pure::compiler::helper::isUniversalMultiplicity(m:Multiplicity[1]):Boolean[1]
+{
+    $m->instanceOf(ConcreteMultiplicity) && ($m->multiplicityLowerBound() == 0) && ($m->multiplicityUpperBound() == -1)
+}
+
+
+// Multiplicity subsumption
+
+function meta::pure::compiler::helper::multiplicitySubsumes(general:Multiplicity[1], specific:Multiplicity[1]):Boolean[1]
+{
+    if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter),
+        | true,
+        |
+        let generalUndefined = $general->instanceOf(UndefinedMultiplicity);
+        let specificUndefined = $specific->instanceOf(UndefinedMultiplicity);
+        if($generalUndefined || $specificUndefined,
+            | $generalUndefined == $specificUndefined,
+            |
+            let gLower = $general->multiplicityLowerBound();
+            let sLower = $specific->multiplicityLowerBound();
+            let gUpper = $general->multiplicityUpperBound();
+            let sUpper = $specific->multiplicityUpperBound();
+            if($gLower > $sLower,
+                | false,
+                |
+                if($gUpper == -1,
+                    | true,
+                    |
+                    if($sUpper == -1,
+                        | false,
+                        | $gUpper >= $sUpper
+                    )
+                )
+            );
+        );
+    )
+}
+
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityLowerBound():Boolean[1]
+{
+    assertEquals(1, PureOne->multiplicityLowerBound());
+    assertEquals(0, ZeroOne->multiplicityLowerBound());
+    assertEquals(0, ZeroMany->multiplicityLowerBound());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityUpperBound():Boolean[1]
+{
+    assertEquals(1, PureOne->multiplicityUpperBound());
+    assertEquals(1, ZeroOne->multiplicityUpperBound());
+    assertEquals(-1, ZeroMany->multiplicityUpperBound());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testPrintMultiplicity():Boolean[1]
+{
+    assertEquals('[1]', PureOne->printMultiplicity());
+    assertEquals('[0..1]', ZeroOne->printMultiplicity());
+    assertEquals('[*]', ZeroMany->printMultiplicity());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testPrintMultiplicityBare():Boolean[1]
+{
+    assertEquals('1', PureOne->printMultiplicityBare());
+    assertEquals('0..1', ZeroOne->printMultiplicityBare());
+    assertEquals('*', ZeroMany->printMultiplicityBare());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsConcreteMultiplicity():Boolean[1]
+{
+    assert(PureOne->isConcreteMultiplicity());
+    assert(ZeroOne->isConcreteMultiplicity());
+    assert(ZeroMany->isConcreteMultiplicity());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsUniversalMultiplicity():Boolean[1]
+{
+    assertFalse(PureOne->isUniversalMultiplicity());
+    assertFalse(ZeroOne->isUniversalMultiplicity());
+    assert(ZeroMany->isUniversalMultiplicity());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicitySubsumes():Boolean[1]
+{
+    assert(ZeroMany->multiplicitySubsumes(PureOne));
+    assert(ZeroMany->multiplicitySubsumes(ZeroOne));
+    assert(ZeroMany->multiplicitySubsumes(ZeroMany));
+    assert(ZeroOne->multiplicitySubsumes(PureOne));
+    assert(ZeroOne->multiplicitySubsumes(ZeroOne));
+    assertFalse(ZeroOne->multiplicitySubsumes(ZeroMany));
+    assert(PureOne->multiplicitySubsumes(PureOne));
+    assertFalse(PureOne->multiplicitySubsumes(ZeroOne));
+    assertFalse(PureOne->multiplicitySubsumes(ZeroMany));
+}

@@ -28,6 +28,12 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
+import meta.pure.metamodel.valuespecification.AtomicValueImpl;
+import meta.pure.metamodel.valuespecification.Collection;
+import meta.pure.metamodel.valuespecification.CollectionImpl;
+import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +51,7 @@ public class MetaNatives
             Object value = _E_ValueSpecification.unwrap(args.get(0));
             if (value == null)
             {
-                return false;
+                return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
             }
 
             // Get the target type from the second arg via its genericType
@@ -62,7 +68,7 @@ public class MetaNatives
             }
             if (targetType == null)
             {
-                return value != null;
+                return _E_ValueSpecification.wrap(value != null, genericType, multiplicity, resolver);
             }
 
             // Get the value's type from VS genericType
@@ -71,7 +77,7 @@ public class MetaNatives
             // Check type hierarchy
             if (valueType == null)
             {
-                return false;
+                return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
             }
             return _E_ValueSpecification.wrap(_Type.subtypeOf(valueType, targetType, resolver), genericType, multiplicity, resolver);
         });
@@ -215,7 +221,7 @@ public class MetaNatives
                 }
 
                 // Collect key/value pairs for reverse pointer processing
-                List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
+                List<Map.Entry<String, ValueSpecification>> keyValues = new ArrayList<>();
                 Object keyExprsRaw = _E_ValueSpecification.unwrap(args.get(1));
                 if (keyExprsRaw instanceof List<?> keyExprs)
                 {
@@ -254,22 +260,17 @@ public class MetaNatives
         // keyExpression — creates a key-value pair
         NativeImpl keyExprFn = (args, eval, genericType, multiplicity) ->
         {
-            Object key = _E_ValueSpecification.unwrap(args.get(0));
-            Object value = args.get(1);
-            if (value instanceof meta.pure.metamodel.valuespecification.AtomicValue av && !(av._value() instanceof ValueSpecification))
-            {
-                value = _E_ValueSpecification.unwrap((ValueSpecification) value);
-            }
+            // Store the key as an AtomicValue<String>
+            ValueSpecification keyVS = args.get(0); // already a VS from evaluateArgs
+            // Store the expression value as-is (already a VS)
+            ValueSpecification valueVS = args.get(1);
             DynamicInstance keyExpr = new DynamicInstance("meta::pure::functions::lang::KeyExpression");
-            keyExpr.put("name", key);
-            keyExpr.put("expression", value);
+            keyExpr.put("name", keyVS);
+            keyExpr.put("expression", valueVS);
             if (args.size() > 2)
             {
-                Object addFlag = _E_ValueSpecification.unwrap(args.get(2));
-                if (Boolean.TRUE.equals(addFlag))
-                {
-                    keyExpr.put("add", true);
-                }
+                // 'add' flag — wrap as a Boolean AtomicValue
+                keyExpr.put("add", args.get(2));
             }
             return _E_ValueSpecification.wrap(keyExpr, genericType, multiplicity, resolver);
         };
@@ -292,7 +293,7 @@ public class MetaNatives
                 String classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 copy = new DynamicInstance(classPath);
                 copy.setClassifierGenericType(pe._classifierGenericType());
-                copyPackageableElementProperties(pe, copy);
+                copyPackageableElementProperties(pe, copy, resolver);
             }
             else
             {
@@ -348,13 +349,13 @@ public class MetaNatives
             {
                 if (ke instanceof DynamicInstance diKe)
                 {
-                    applyCopyKeyExpressionWithDotPath(copy, diKe, deepCopied);
+                    applyCopyKeyExpressionWithDotPath(copy, diKe, deepCopied, resolver);
                 }
             }
 
             // Collect all properties on the copy for reverse pointer processing
-            List<Map.Entry<String, Object>> allProps = new ArrayList<>();
-            for (Map.Entry<String, Object> entry : copy.getValues().entrySet())
+            List<Map.Entry<String, ValueSpecification>> allProps = new ArrayList<>();
+            for (Map.Entry<String, ValueSpecification> entry : copy.getValues().entrySet())
             {
                 if (entry.getValue() != null)
                 {
@@ -374,19 +375,22 @@ public class MetaNatives
             {
                 DynamicInstance nestedCopy = dcEntry.getValue();
                 String nestedClassPath = nestedCopy.getClassPath();
-                List<Map.Entry<String, Object>> nestedProps = new ArrayList<>();
-                for (Map.Entry<String, Object> nestedEntry : nestedCopy.getValues().entrySet())
+                List<Map.Entry<String, ValueSpecification>> nestedProps = new ArrayList<>();
+                for (Map.Entry<String, ValueSpecification> nestedEntry : nestedCopy.getValues().entrySet())
                 {
-                    Object val = nestedEntry.getValue();
+                    ValueSpecification val = nestedEntry.getValue();
                     if (val == null)
                     {
                         continue;
                     }
-                    if (copySet.contains(val))
+                    // Skip back-pointers to members of the copy set
+                    Object rawVal = _E_ValueSpecification.unwrap(val);
+                    if (copySet.contains(rawVal))
                     {
                         continue;
                     }
-                    if (val instanceof List<?> listVal && listVal.stream().anyMatch(copySet::contains))
+                    // For Collection values: unwrap returns List<Object> (raw values); check each element
+                    if (rawVal instanceof List<?> listVal && listVal.stream().anyMatch(copySet::contains))
                     {
                         continue;
                     }
@@ -404,7 +408,15 @@ public class MetaNatives
         // cast(Any[m], T[1]) : T[m]
         natives.put("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            Object value = _E_ValueSpecification.unwrap(args.get(0));
+            // cast is purely a type assertion — never changes the value structure.
+            // Return the input VS directly if it's a Collection (unwrap would yield a raw List).
+            ValueSpecification inputVs = args.get(0);
+            if (inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
+            {
+                return inputVs;
+            }
+
+            Object value = _E_ValueSpecification.unwrap(inputVs);
             if (value == null)
             {
                 return null;
@@ -473,11 +485,12 @@ public class MetaNatives
                 validateConstraints(targetType, heldGT, value, eval, resolver);
             }
 
-            return _E_ValueSpecification.wrap(value, genericType, multiplicity, resolver);
+            // Return the original VS — cast is a type assertion, not a value transform.
+            return inputVs;
         });
 
         // evaluateAndDeactivate — passthrough
-        NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> _E_ValueSpecification.unwrap(args.get(0));
+        NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> args.get(0);
         natives.put("evaluateAndDeactivate_Any_m__Any_m_", evalAndDeactivate);
         natives.put("evaluateAndDeactivate", evalAndDeactivate);
     }
@@ -627,44 +640,56 @@ public class MetaNatives
         }
     }
 
-    private static void copyPackageableElementProperties(PackageableElement pe, DynamicInstance copy)
+    private static void copyPackageableElementProperties(PackageableElement pe, DynamicInstance copy,
+                                                         MetadataAccess resolver)
     {
         if (pe._name() != null)
         {
-            copy.put("name", pe._name());
+            copy.put("name", _E_ValueSpecification.wrap(pe._name(), null, null, resolver));
         }
         if (pe._package() != null)
         {
-            copy.put("package", pe._package());
+            copy.put("package", _E_ValueSpecification.wrap(pe._package(), null, null, resolver));
         }
         if (pe instanceof meta.pure.metamodel.function.FunctionDefinition fd)
         {
-            if (fd._expressionSequence() != null)
+            if (fd._expressionSequence() != null && !fd._expressionSequence().isEmpty())
             {
-                copy.put("expressionSequence", new ArrayList<>(fd._expressionSequence()));
+                List<ValueSpecification> seqVS = new ArrayList<>();
+                for (Object item : fd._expressionSequence())
+                {
+                    seqVS.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+                }
+                copy.put("expressionSequence", CollectionNatives.makeCollection(seqVS, resolver));
             }
-            if (fd._parameters() != null)
+            if (fd._parameters() != null && !fd._parameters().isEmpty())
             {
-                copy.put("parameters", new ArrayList<>(fd._parameters()));
+                List<ValueSpecification> paramsVS = new ArrayList<>();
+                for (Object item : fd._parameters())
+                {
+                    paramsVS.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+                }
+                copy.put("parameters", CollectionNatives.makeCollection(paramsVS, resolver));
             }
             if (fd._classifierGenericType() != null)
             {
-                copy.put("classifierGenericType", fd._classifierGenericType());
+                copy.put("classifierGenericType",
+                        _E_ValueSpecification.wrap(fd._classifierGenericType(), null, null, resolver));
             }
         }
     }
 
-    static void processKeyExpression(Object ke, Object instance, List<Map.Entry<String, Object>> keyValues)
+    static void processKeyExpression(Object ke, Object instance,
+                                     List<Map.Entry<String, ValueSpecification>> keyValues)
     {
         if (ke instanceof DynamicInstance di)
         {
-            Object nameObj = di.get("name");
-            if (nameObj instanceof ValueSpecification vs)
-            {
-                nameObj = _E_ValueSpecification.unwrap(vs);
-            }
+            // name is stored as a VS; unwrap to get the String key
+            ValueSpecification nameVS = di.get("name");
+            Object nameObj = _E_ValueSpecification.unwrap(nameVS);
             String key = nameObj != null ? nameObj.toString() : null;
-            Object value = di.get("expression");
+            // expression is a VS already
+            ValueSpecification value = di.get("expression");
 
             if (key != null)
             {
@@ -677,17 +702,16 @@ public class MetaNatives
         }
     }
 
-    @SuppressWarnings("unchecked")
     static void applyCopyKeyExpressionWithDotPath(DynamicInstance copy, DynamicInstance keyExpr,
-                                                  Map<String, DynamicInstance> deepCopied)
+                                                  Map<String, DynamicInstance> deepCopied,
+                                                  MetadataAccess resolver)
     {
-        Object nameObj = keyExpr.get("name");
-        if (nameObj instanceof ValueSpecification vs)
-        {
-            nameObj = _E_ValueSpecification.unwrap(vs);
-        }
+        // name is stored as a VS; unwrap to get the String key
+        ValueSpecification nameVS = keyExpr.get("name");
+        Object nameObj = _E_ValueSpecification.unwrap(nameVS);
         String fullKey = nameObj != null ? nameObj.toString() : null;
-        Object value = keyExpr.get("expression");
+        // expression and add are VS already
+        ValueSpecification value = keyExpr.get("expression");
         if (fullKey == null)
         {
             return;
@@ -696,9 +720,10 @@ public class MetaNatives
         int dotIdx = fullKey.indexOf('.');
         if (dotIdx < 0)
         {
-            if (Boolean.TRUE.equals(keyExpr.get("add")))
+            ValueSpecification addVS = keyExpr.get("add");
+            if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
             {
-                appendToProperty(copy, fullKey, value);
+                appendToProperty(copy, fullKey, value, resolver);
             }
             else
             {
@@ -713,7 +738,8 @@ public class MetaNatives
             DynamicInstance nestedCopy = deepCopied.get(topProp);
             if (nestedCopy == null)
             {
-                Object existing = copy.get(topProp);
+                ValueSpecification existingVS = copy.get(topProp);
+                Object existing = _E_ValueSpecification.unwrap(existingVS);
                 if (existing instanceof DynamicInstance existingDi)
                 {
                     nestedCopy = new DynamicInstance(existingDi.getClassPath());
@@ -728,32 +754,34 @@ public class MetaNatives
                     nestedCopy = new DynamicInstance("Unknown");
                 }
                 deepCopied.put(topProp, nestedCopy);
-                copy.put(topProp, nestedCopy);
+                // Store the deep-copied nested object at the top property
+                copy.put(topProp, _E_ValueSpecification.wrap(nestedCopy,
+                        existingVS != null ? existingVS._genericType() : null,
+                        existingVS != null ? existingVS._multiplicity() : null,
+                        resolver));
             }
 
             DynamicInstance syntheticKe = new DynamicInstance("KeyExpression");
-            syntheticKe.put("name", restKey);
+            // create a new string VS for the rest key
+            syntheticKe.put("name", _E_ValueSpecification.wrap(restKey, nameVS != null ? nameVS._genericType() : null, null, resolver));
             syntheticKe.put("expression", value);
-            if (keyExpr.get("add") != null)
+            ValueSpecification addVS2 = keyExpr.get("add");
+            if (addVS2 != null)
             {
-                syntheticKe.put("add", keyExpr.get("add"));
+                syntheticKe.put("add", addVS2);
             }
-            applyCopyKeyExpressionWithDotPath(nestedCopy, syntheticKe, deepCopied);
+            applyCopyKeyExpressionWithDotPath(nestedCopy, syntheticKe, deepCopied, resolver);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    static void appendToProperty(DynamicInstance di, String key, Object value)
+    static void appendToProperty(DynamicInstance di, String key, ValueSpecification value,
+                                  MetadataAccess resolver)
     {
-        if (value instanceof ValueSpecification vs)
+        ValueSpecification existing = di.get(key);
+        List<ValueSpecification> list;
+        if (existing instanceof Collection col)
         {
-            value = _E_ValueSpecification.unwrap(vs);
-        }
-        Object existing = di.get(key);
-        List<Object> list;
-        if (existing instanceof List)
-        {
-            list = new ArrayList<>((List<Object>) existing);
+            list = new ArrayList<>(col._values());
         }
         else if (existing != null)
         {
@@ -764,20 +792,20 @@ public class MetaNatives
         {
             list = new ArrayList<>();
         }
-        if (value instanceof List)
+        if (value instanceof Collection col)
         {
-            list.addAll((List<Object>) value);
+            list.addAll(col._values());
         }
-        else
+        else if (value != null)
         {
             list.add(value);
         }
-        di.put(key, list);
+        // Build a Collection VS to store the multi-valued result
+        di.put(key, CollectionNatives.makeCollection(list, resolver));
     }
 
-    @SuppressWarnings("unchecked")
     public static void setReverseAssociationPointers(Object instance, String classPath,
-                                                     List<Map.Entry<String, Object>> keyValues,
+                                                     List<Map.Entry<String, ValueSpecification>> keyValues,
                                                      MetadataAccess resolver)
     {
         if (resolver == null || keyValues.isEmpty())
@@ -798,10 +826,15 @@ public class MetaNatives
             return;
         }
 
-        for (Map.Entry<String, Object> kv : keyValues)
+        for (Map.Entry<String, ValueSpecification> kv : keyValues)
         {
             String propName = kv.getKey();
-            Object propValue = kv.getValue();
+            ValueSpecification propVS = kv.getValue();
+            if (propVS == null)
+            {
+                continue;
+            }
+            Object propValue = _E_ValueSpecification.unwrap(propVS);
             if (propValue == null)
             {
                 continue;
@@ -819,7 +852,9 @@ public class MetaNatives
                             if (otherProp != null && !propName.equals(otherProp._name()))
                             {
                                 String reversePropName = otherProp._name();
-                                setReversePointerOnTarget(propValue, reversePropName, instance);
+                                setReversePointerOnTarget(propValue, reversePropName,
+                                        _E_ValueSpecification.wrap(instance, null, null, resolver),
+                                        resolver);
                             }
                         }
                     }
@@ -884,35 +919,19 @@ public class MetaNatives
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static void setReversePointerOnTarget(Object target, String reversePropName, Object instance)
+    private static void setReversePointerOnTarget(Object target, String reversePropName,
+                                                   ValueSpecification instanceVS,
+                                                   MetadataAccess resolver)
     {
         if (target instanceof DynamicInstance di)
         {
-            Object existing = di.get(reversePropName);
-            if (existing instanceof List<?> existingList)
-            {
-                List<Object> newList = new ArrayList<>((List<Object>) existingList);
-                newList.add(instance);
-                di.put(reversePropName, newList);
-            }
-            else if (existing != null)
-            {
-                List<Object> newList = new ArrayList<>();
-                newList.add(existing);
-                newList.add(instance);
-                di.put(reversePropName, newList);
-            }
-            else
-            {
-                di.put(reversePropName, instance);
-            }
+            appendToProperty(di, reversePropName, instanceVS, resolver);
         }
         else if (target instanceof List<?> targets)
         {
             for (Object t : targets)
             {
-                setReversePointerOnTarget(t, reversePropName, instance);
+                setReversePointerOnTarget(t, reversePropName, instanceVS, resolver);
             }
         }
     }
@@ -950,25 +969,27 @@ public class MetaNatives
         }
     }
 
-    static void setInstanceProperty(Object instance, String key, Object value)
+    static void setInstanceProperty(Object instance, String key, ValueSpecification value)
     {
         if (instance instanceof DynamicInstance di)
         {
-            if (value instanceof ValueSpecification vs)
-            {
-                value = _E_ValueSpecification.unwrap(vs);
-            }
             di.put(key, value);
             return;
         }
 
+        // For FlatBuffer-generated (Any-implementing) types: unwrap and invoke setter via reflection
+        Object rawValue;
         if (value instanceof meta.pure.metamodel.valuespecification.Collection col)
         {
-            value = col._values();
+            rawValue = col._values();
         }
-        else if (value instanceof ValueSpecification vs)
+        else if (value != null)
         {
-            value = _E_ValueSpecification.unwrap(vs);
+            rawValue = _E_ValueSpecification.unwrap(value);
+        }
+        else
+        {
+            rawValue = null;
         }
 
         String setterName = "_" + key;
@@ -978,12 +999,12 @@ public class MetaNatives
             {
                 try
                 {
-                    method.invoke(instance, value);
+                    method.invoke(instance, rawValue);
                     return;
                 }
                 catch (Exception e)
                 {
-                    if (value instanceof List<?> list
+                    if (rawValue instanceof List<?> list
                             && org.eclipse.collections.api.list.MutableList.class.isAssignableFrom(method.getParameterTypes()[0]))
                     {
                         try

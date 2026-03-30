@@ -1,0 +1,30 @@
+import meta::pure::compiler::helper::*;
+
+// FunctionType printing
+
+function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1]):String[1]
+{
+    $ft->printFunctionType(true)
+}
+
+function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1], fullPath:Boolean[1]):String[1]
+{
+    let params = $ft.parameters;
+    let paramStr = $params->map(p |
+        let gt = $p.genericType;
+        let mul = $p.multiplicity;
+        if($gt->isEmpty(),
+            | 'Unknown',
+            | $gt->toOne()->printGenericType($fullPath) + $mul->toOne()->printMultiplicity()
+        );
+    )->joinStrings(', ');
+    let returnStr = if($ft.returnType->isEmpty(),
+        | '',
+        | $ft.returnType->toOne()->printGenericType($fullPath)
+    );
+    let returnMul = if($ft.returnMultiplicity->isEmpty(),
+        | '',
+        | $ft.returnMultiplicity->toOne()->printMultiplicity()
+    );
+    '{' + $paramStr + '->' + $returnStr + $returnMul + '}';
+}

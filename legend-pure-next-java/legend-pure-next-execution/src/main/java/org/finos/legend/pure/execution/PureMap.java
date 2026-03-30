@@ -15,6 +15,7 @@
 package org.finos.legend.pure.execution;
 
 import java.util.LinkedHashMap;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
 
 /**
  * Runtime representation of a Pure {@code Map<K,V>} value.
@@ -27,14 +28,14 @@ import java.util.LinkedHashMap;
  */
 public class PureMap
 {
-    private final LinkedHashMap<Object, Object> map;
+    private final LinkedHashMap<ValueSpecification, ValueSpecification> map;
 
-    public PureMap(LinkedHashMap<Object, Object> map)
+    public PureMap(LinkedHashMap<ValueSpecification, ValueSpecification> map)
     {
         this.map = map;
     }
 
-    public LinkedHashMap<Object, Object> getMap()
+    public LinkedHashMap<ValueSpecification, ValueSpecification> getMap()
     {
         return map;
     }

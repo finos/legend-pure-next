@@ -58,9 +58,9 @@ public class NativeRepository
     @FunctionalInterface
     public interface NativeImpl
     {
-        Object apply(List<ValueSpecification> args, ValueSpecificationEvaluator eval,
-                     meta.pure.metamodel.type.generics.GenericType genericType,
-                     meta.pure.metamodel.multiplicity.Multiplicity multiplicity);
+        ValueSpecification apply(List<ValueSpecification> args, ValueSpecificationEvaluator eval,
+                                 meta.pure.metamodel.type.generics.GenericType genericType,
+                                 meta.pure.metamodel.multiplicity.Multiplicity multiplicity);
     }
 
     /**
@@ -71,7 +71,7 @@ public class NativeRepository
     @FunctionalInterface
     public interface LazyNativeImpl
     {
-        Object apply(FunctionExpression fe, ValueSpecificationEvaluator eval);
+        ValueSpecification apply(FunctionExpression fe, ValueSpecificationEvaluator eval);
     }
 
     /**
@@ -121,7 +121,7 @@ public class NativeRepository
         }
         try
         {
-            return _E_ValueSpecification.wrap(impl.apply(fe, evaluator), fe._genericType(), fe._multiplicity(), resolver);
+            return impl.apply(fe, evaluator);
         }
         catch (PureAssertionError e)
         {
@@ -150,8 +150,7 @@ public class NativeRepository
         }
         try
         {
-            Object result = impl.apply(args, evaluator, genericType, multiplicity);
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return impl.apply(args, evaluator, genericType, multiplicity);
         }
         catch (PureAssertionError e)
         {
@@ -186,6 +185,16 @@ public class NativeRepository
      */
     public static boolean pureEquals(Object a, Object b)
     {
+        // Unwrap ValueSpecification wrappers before comparison
+        if (a instanceof meta.pure.metamodel.valuespecification.ValueSpecification vsA)
+        {
+            a = _E_ValueSpecification.unwrap(vsA);
+        }
+        if (b instanceof meta.pure.metamodel.valuespecification.ValueSpecification vsB)
+        {
+            b = _E_ValueSpecification.unwrap(vsB);
+        }
+
         if (Objects.equals(a, b))
         {
             return true;
@@ -322,12 +331,13 @@ public class NativeRepository
                 }
             }
             // Fallback: compare all values
-            Map<String, Object> valsA = diA.getValues();
-            Map<String, Object> valsB = diB.getValues();
+            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsA = diA.getValues();
+            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsB = diB.getValues();
             if (valsA.size() != valsB.size()) return false;
-            for (Map.Entry<String, Object> e : valsA.entrySet())
+            for (Map.Entry<String, meta.pure.metamodel.valuespecification.ValueSpecification> e : valsA.entrySet())
             {
-                if (!pureEquals(e.getValue(), valsB.get(e.getKey())))
+                if (!pureEquals(_E_ValueSpecification.unwrap(e.getValue()),
+                                _E_ValueSpecification.unwrap(valsB.get(e.getKey()))))
                 {
                     return false;
                 }
@@ -423,6 +433,11 @@ public class NativeRepository
      */
     public static String pureToString(Object obj)
     {
+        // Unwrap ValueSpecification wrappers before rendering — symmetric with pureEquals
+        if (obj instanceof meta.pure.metamodel.valuespecification.ValueSpecification vs)
+        {
+            obj = _E_ValueSpecification.unwrap(vs);
+        }
         if (obj == null)
         {
             return "null";
@@ -441,7 +456,20 @@ public class NativeRepository
         }
         if (obj instanceof DynamicInstance di && di.getClassifierGenericType() != null)
         {
-            return di.getClassPath() + di.getValues();
+            // Render as classPath{prop=value,...}
+            StringBuilder sb = new StringBuilder(di.getClassPath());
+            sb.append('{');
+            di.getValues().forEach((k, vs) ->
+                    sb.append(k).append('=').append(pureToString(_E_ValueSpecification.unwrap(vs))).append(','));
+            if (sb.charAt(sb.length() - 1) == ',')
+            {
+                sb.setCharAt(sb.length() - 1, '}');
+            }
+            else
+            {
+                sb.append('}');
+            }
+            return sb.toString();
         }
         if (obj instanceof List<?> list)
         {
