@@ -380,457 +380,457 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :GenericType ; :general :GenericType_Any ] .
 
 :GenericType_GenericType a :UserDefinedPackageableGenericType ;
-    :name "GenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_GenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_PackageableGenericType a :UserDefinedPackageableGenericType ;
-    :name "PackageableGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_PackageableGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :PackageableGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 :GenericType_AdHocGenericTypeValue a :UserDefinedPackageableGenericType ;
-    :name "AdHocGenericTypeValue" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_AdHocGenericTypeValue" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :AdHocGenericTypeValue ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_AdHocMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "AdHocMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_AdHocMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :AdHocMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_AggregationKind a :UserDefinedPackageableGenericType ;
-    :name "AggregationKind" ;
-    :package :meta_pure_metamodel_function_property ;
+    :name "GenericType_AggregationKind" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :AggregationKind ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_AnnotatedElement a :UserDefinedPackageableGenericType ;
-    :name "AnnotatedElement" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_AnnotatedElement" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :AnnotatedElement ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Annotation a :UserDefinedPackageableGenericType ;
-    :name "Annotation" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_Annotation" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Annotation ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Any a :UserDefinedPackageableGenericType ;
-    :name "Any" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_Any" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Any ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ArrowInvocation a :UserDefinedPackageableGenericType ;
-    :name "ArrowInvocation" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_ArrowInvocation" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ArrowInvocation ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Association a :UserDefinedPackageableGenericType ;
-    :name "Association" ;
-    :package :meta_pure_metamodel_relationship ;
+    :name "GenericType_Association" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Association ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_AtomicValue a :UserDefinedPackageableGenericType ;
-    :name "AtomicValue" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_AtomicValue" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :AtomicValue ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Collection a :UserDefinedPackageableGenericType ;
-    :name "Collection" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_Collection" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Collection ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Column a :UserDefinedPackageableGenericType ;
-    :name "Column" ;
-    :package :meta_pure_metamodel_relation ;
+    :name "GenericType_Column" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Column ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ConcreteMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "ConcreteMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_ConcreteMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ConcreteMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Constraint a :UserDefinedPackageableGenericType ;
-    :name "Constraint" ;
-    :package :meta_pure_metamodel_constraint ;
+    :name "GenericType_Constraint" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Constraint ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ConstraintsGetterOverride a :UserDefinedPackageableGenericType ;
-    :name "ConstraintsGetterOverride" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_ConstraintsGetterOverride" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ConstraintsGetterOverride ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ConstraintsOverride a :UserDefinedPackageableGenericType ;
-    :name "ConstraintsOverride" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_ConstraintsOverride" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ConstraintsOverride ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_DataType a :UserDefinedPackageableGenericType ;
-    :name "DataType" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_DataType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :DataType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_DotApplication a :UserDefinedPackageableGenericType ;
-    :name "DotApplication" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_DotApplication" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :DotApplication ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ElementOverride a :UserDefinedPackageableGenericType ;
-    :name "ElementOverride" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_ElementOverride" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ElementOverride ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ElementWithConstraints a :UserDefinedPackageableGenericType ;
-    :name "ElementWithConstraints" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_ElementWithConstraints" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ElementWithConstraints ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ElementWithStereotypes a :UserDefinedPackageableGenericType ;
-    :name "ElementWithStereotypes" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_ElementWithStereotypes" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ElementWithStereotypes ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ElementWithTaggedValues a :UserDefinedPackageableGenericType ;
-    :name "ElementWithTaggedValues" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_ElementWithTaggedValues" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ElementWithTaggedValues ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Enum a :UserDefinedPackageableGenericType ;
-    :name "Enum" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_Enum" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Enum ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_FunctionApplication a :UserDefinedPackageableGenericType ;
-    :name "FunctionApplication" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_FunctionApplication" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :FunctionApplication ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_FunctionExpression a :UserDefinedPackageableGenericType ;
-    :name "FunctionExpression" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_FunctionExpression" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :FunctionExpression ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_FunctionInvocation a :UserDefinedPackageableGenericType ;
-    :name "FunctionInvocation" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_FunctionInvocation" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :FunctionInvocation ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_FunctionType a :UserDefinedPackageableGenericType ;
-    :name "FunctionType" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_FunctionType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :FunctionType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Generalization a :UserDefinedPackageableGenericType ;
-    :name "Generalization" ;
-    :package :meta_pure_metamodel_relationship ;
+    :name "GenericType_Generalization" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Generalization ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Boolean a :UserDefinedPackageableGenericType ;
-    :name "Boolean" ;
-    :package :meta_pure_metamodel_type_primitives ;
+    :name "GenericType_Boolean" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Boolean ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Date a :UserDefinedPackageableGenericType ;
-    :name "Date" ;
-    :package :meta_pure_metamodel_type_primitives ;
+    :name "GenericType_Date" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Date ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Integer a :UserDefinedPackageableGenericType ;
-    :name "Integer" ;
-    :package :meta_pure_metamodel_type_primitives ;
+    :name "GenericType_Integer" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Integer ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Number a :UserDefinedPackageableGenericType ;
-    :name "Number" ;
-    :package :meta_pure_metamodel_type_primitives ;
+    :name "GenericType_Number" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Number ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_String a :UserDefinedPackageableGenericType ;
-    :name "String" ;
-    :package :meta_pure_metamodel_type_primitives ;
+    :name "GenericType_String" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :String ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_GenericTypeBase a :UserDefinedPackageableGenericType ;
-    :name "GenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_GenericTypeBase" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_GenericTypeOperation a :UserDefinedPackageableGenericType ;
-    :name "GenericTypeOperation" ;
-    :package :meta_pure_metamodel_relation ;
+    :name "GenericType_GenericTypeOperation" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GenericTypeOperation ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_GenericTypeOperationType a :UserDefinedPackageableGenericType ;
-    :name "GenericTypeOperationType" ;
-    :package :meta_pure_metamodel_relation ;
+    :name "GenericType_GenericTypeOperationType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GenericTypeOperationType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_GenericTypeValue a :UserDefinedPackageableGenericType ;
-    :name "GenericTypeValue" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_GenericTypeValue" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GenericTypeValue ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_GetterOverride a :UserDefinedPackageableGenericType ;
-    :name "GetterOverride" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_GetterOverride" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :GetterOverride ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Inferred a :UserDefinedPackageableGenericType ;
-    :name "Inferred" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_Inferred" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Inferred ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_InferredAdHocMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "InferredAdHocMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_InferredAdHocMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :InferredAdHocMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_InferredGenericType a :UserDefinedPackageableGenericType ;
-    :name "InferredGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_InferredGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :InferredGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_InferredMultiplicityParameter a :UserDefinedPackageableGenericType ;
-    :name "InferredMultiplicityParameter" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_InferredMultiplicityParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :InferredMultiplicityParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_InferredPackageableGenericType a :UserDefinedPackageableGenericType ;
-    :name "InferredPackageableGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_InferredPackageableGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :InferredPackageableGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_InferredPackageableMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "InferredPackageableMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_InferredPackageableMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :InferredPackageableMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Multiplicity a :UserDefinedPackageableGenericType ;
-    :name "Multiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_Multiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Multiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_MultiplicityParameter a :UserDefinedPackageableGenericType ;
-    :name "MultiplicityParameter" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_MultiplicityParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :MultiplicityParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_MultiplicityValue a :UserDefinedPackageableGenericType ;
-    :name "MultiplicityValue" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_MultiplicityValue" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :MultiplicityValue ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Nil a :UserDefinedPackageableGenericType ;
-    :name "Nil" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_Nil" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Nil ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Package a :UserDefinedPackageableGenericType ;
-    :name "Package" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_Package" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Package ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_PackageableElement a :UserDefinedPackageableGenericType ;
-    :name "PackageableElement" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_PackageableElement" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :PackageableElement ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_PackageableMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "PackageableMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_PackageableMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :PackageableMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_PrimitiveType a :UserDefinedPackageableGenericType ;
-    :name "PrimitiveType" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_PrimitiveType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :PrimitiveType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Profile a :UserDefinedPackageableGenericType ;
-    :name "Profile" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_Profile" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Profile ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_PropertyOwner a :UserDefinedPackageableGenericType ;
-    :name "PropertyOwner" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_PropertyOwner" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :PropertyOwner ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ResolvedMultiplicityParameter a :UserDefinedPackageableGenericType ;
-    :name "ResolvedMultiplicityParameter" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_ResolvedMultiplicityParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ResolvedMultiplicityParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ResolvedTypeParameter a :UserDefinedPackageableGenericType ;
-    :name "ResolvedTypeParameter" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_ResolvedTypeParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ResolvedTypeParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_SimplePropertyOwner a :UserDefinedPackageableGenericType ;
-    :name "SimplePropertyOwner" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_SimplePropertyOwner" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :SimplePropertyOwner ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_SourceInformation a :UserDefinedPackageableGenericType ;
-    :name "SourceInformation" ;
-    :package :meta_pure_metamodel ;
+    :name "GenericType_SourceInformation" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :SourceInformation ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Stereotype a :UserDefinedPackageableGenericType ;
-    :name "Stereotype" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_Stereotype" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Stereotype ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Tag a :UserDefinedPackageableGenericType ;
-    :name "Tag" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_Tag" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Tag ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_TaggedValue a :UserDefinedPackageableGenericType ;
-    :name "TaggedValue" ;
-    :package :meta_pure_metamodel_extension ;
+    :name "GenericType_TaggedValue" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :TaggedValue ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Test a :UserDefinedPackageableGenericType ;
-    :name "Test" ;
-    :package :meta_pure_metamodel_testable ;
+    :name "GenericType_Test" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Test ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Testable a :UserDefinedPackageableGenericType ;
-    :name "Testable" ;
-    :package :meta_pure_metamodel_testable ;
+    :name "GenericType_Testable" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Testable ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_Type a :UserDefinedPackageableGenericType ;
-    :name "Type" ;
-    :package :meta_pure_metamodel_type ;
+    :name "GenericType_Type" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :Type ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_TypeAndMultiplicityParametersOwner a :UserDefinedPackageableGenericType ;
-    :name "TypeAndMultiplicityParametersOwner" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_TypeAndMultiplicityParametersOwner" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :TypeAndMultiplicityParametersOwner ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_TypeParameter a :UserDefinedPackageableGenericType ;
-    :name "TypeParameter" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_TypeParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :TypeParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UndefinedGenericType a :UserDefinedPackageableGenericType ;
-    :name "UndefinedGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_UndefinedGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UndefinedGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UndefinedMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "UndefinedMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_UndefinedMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UndefinedMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UserDefinedAdHocMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "UserDefinedAdHocMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_UserDefinedAdHocMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UserDefinedAdHocMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UserDefinedGenericType a :UserDefinedPackageableGenericType ;
-    :name "UserDefinedGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_UserDefinedGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UserDefinedGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UserDefinedMultiplicityParameter a :UserDefinedPackageableGenericType ;
-    :name "UserDefinedMultiplicityParameter" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_UserDefinedMultiplicityParameter" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UserDefinedMultiplicityParameter ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UserDefinedPackageableGenericType a :UserDefinedPackageableGenericType ;
-    :name "UserDefinedPackageableGenericType" ;
-    :package :meta_pure_metamodel_type_generics ;
+    :name "GenericType_UserDefinedPackageableGenericType" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UserDefinedPackageableGenericType ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_UserDefinedPackageableMultiplicity a :UserDefinedPackageableGenericType ;
-    :name "UserDefinedPackageableMultiplicity" ;
-    :package :meta_pure_metamodel_multiplicity ;
+    :name "GenericType_UserDefinedPackageableMultiplicity" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :UserDefinedPackageableMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_ValueSpecification a :UserDefinedPackageableGenericType ;
-    :name "ValueSpecification" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_ValueSpecification" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :ValueSpecification ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
 :GenericType_VariableExpression a :UserDefinedPackageableGenericType ;
-    :name "VariableExpression" ;
-    :package :meta_pure_metamodel_valuespecification ;
+    :name "GenericType_VariableExpression" ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
     :type :VariableExpression ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
@@ -2200,6 +2200,11 @@
 :meta_pure_metamodel_type_generics a :Package ;
     :name "generics" ;
     :package :meta_pure_metamodel_type ;
+    :classifierGenericType :GenericType_Package .
+
+:meta_pure_metamodel_type_generics_optimization a :Package ;
+    :name "optimization" ;
+    :package :meta_pure_metamodel_type_generics ;
     :classifierGenericType :GenericType_Package .
 
 :meta_pure_metamodel_type_primitives a :Package ;

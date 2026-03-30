@@ -43,7 +43,7 @@ public final class _FunctionType
      */
     public static FunctionTypeImpl newFunctionType(MetadataAccess model)
     {
-        FunctionTypeImpl ft = new FunctionTypeImpl();
+        FunctionTypeImpl ft = new FunctionTypeImpl(model);
         ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(
                 (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::FunctionType"), model));
         return ft;
