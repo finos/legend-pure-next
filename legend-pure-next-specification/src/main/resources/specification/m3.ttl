@@ -855,7 +855,7 @@
 
 :PackageableGenericType a :Class ;
     :name "PackageableGenericType" ;
-    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :PackageableGenericType ] ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_GenericType ; :type :Class ; :typeArguments :GenericType_GenericType ] ;
     :package :meta_pure_metamodel_type_generics ;
     :generalizations 
         [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :PackageableGenericType ; :general :GenericType_GenericTypeValue ],
