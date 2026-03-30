@@ -41,6 +41,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -112,6 +113,8 @@ public class M3BootstrapReader
             bootstrapType(model, m3Profile, root, index, "Profile");
             bootstrapMultiplicities(model, m3UserDefinedPackageableMultiplicity, root, index, UserDefinedPackageableMultiplicityImpl::new);
             bootstrapMultiplicities(model, m3InferredPackageableMultiplicity, root, index, InferredPackageableMultiplicityImpl::new);
+            Resource m3UserDefinedPackageableGenericType = model.createResource(M3_NS + "UserDefinedPackageableGenericType");
+            bootstrapPackageableGenericTypes(model, m3UserDefinedPackageableGenericType, root, index);
 
             // Second pass: wire parameters and generalizations now that all types exist
             wireTypeParameters(model, m3Class, index);
@@ -129,6 +132,7 @@ public class M3BootstrapReader
             // Wire classifierGenericType on multiplicity instances
             wireClassifierGenericType(model, m3UserDefinedPackageableMultiplicity, index);
             wireClassifierGenericType(model, m3InferredPackageableMultiplicity, index);
+            wireClassifierGenericType(model, m3UserDefinedPackageableGenericType, index);
 
             // Wire stereotypes into their parent profiles
             Resource m3Stereotype = model.createResource(M3_NS + "Stereotype");
@@ -269,6 +273,48 @@ public class M3BootstrapReader
 
             pkg._children().add(multiplicity);
             index.put(packagePath + "::" + name, multiplicity);
+        }
+    }
+
+    /**
+     * Bootstrap {@code UserDefinedPackageableGenericType} instances from the TTL.
+     * These are pre-built GenericType wrappers for M3 types, registered at paths
+     * like {@code meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation}.
+     */
+    private static void bootstrapPackageableGenericTypes(
+            Model model,
+            Resource typeResource,
+            Package root,
+            MutableMap<String, PackageableElement> index)
+    {
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, typeResource); it.hasNext();)
+        {
+            Resource res = it.next();
+            String name = getName(model, res);
+            String packagePath = getPackagePath(model, res);
+            if (name == null || packagePath == null)
+            {
+                continue;
+            }
+
+            Package pkg = getOrCreatePackage(root, packagePath, index);
+            UserDefinedPackageableGenericTypeImpl pgt = new UserDefinedPackageableGenericTypeImpl();
+            pgt._name(name);
+            pgt._package(pkg);
+
+            // Wire the :type reference to the actual M3 type
+            Statement typeStmt = getM3Statement(model, res, "type");
+            if (typeStmt != null && typeStmt.getObject().isResource())
+            {
+                Type type = findType(model, typeStmt.getObject().asResource(), index);
+                if (type != null)
+                {
+                    pgt._type(type);
+                }
+            }
+
+            pkg._children().add(pgt);
+            index.put(packagePath + "::" + name, pgt);
         }
     }
 
