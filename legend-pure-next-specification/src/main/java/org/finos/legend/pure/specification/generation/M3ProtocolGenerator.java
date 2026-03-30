@@ -1024,12 +1024,7 @@ public class M3ProtocolGenerator
                     Resource propRes = props.get(i);
                     Statement genTypeStmt = model.getProperty(propRes, genericTypeProp);
                     Resource genTypeRes = genTypeStmt.getObject().asResource();
-                    Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-                    if (oldRawStmt != null)
-                    {
-                        model.remove(oldRawStmt);
-                    }
-                    model.add(genTypeRes, rawTypeProp, protocolType);
+                    replaceRawType(propRes, genTypeRes, protocolType);
                     model.remove(propRes, stereotypesProp, protocolInfoPointer);
                     removeTaggedValues(propRes);
                 }
@@ -1053,12 +1048,7 @@ public class M3ProtocolGenerator
                     Resource propRes = props.get(i);
                     Statement genTypeStmt = model.getProperty(propRes, genericTypeProp);
                     Resource genTypeRes = genTypeStmt.getObject().asResource();
-                    Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-                    if (oldRawStmt != null)
-                    {
-                        model.remove(oldRawStmt);
-                    }
-                    model.add(genTypeRes, rawTypeProp, ptrType);
+                    replaceRawType(propRes, genTypeRes, ptrType);
                     model.remove(propRes, stereotypesProp, protocolInfoPointer);
                 }
             }
@@ -1161,12 +1151,7 @@ public class M3ProtocolGenerator
         });
 
         // Update rawType to point to Type_Protocol
-        Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-        if (oldRawStmt != null)
-        {
-            model.remove(oldRawStmt);
-        }
-        model.add(genTypeRes, rawTypeProp, protocolType);
+        replaceRawType(propRes, genTypeRes, protocolType);
 
         // Remove pointer stereotype and tagged values
         model.remove(propRes, stereotypesProp, protocolInfoPointer);
@@ -1216,13 +1201,7 @@ public class M3ProtocolGenerator
         // Create "extraPointerValues" property on Pointer
         addExtraPointerValuesProperty(pointerType, pointerTypeName);
 
-        // Replace rawType with pointer type
-        Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-        if (oldRawStmt != null)
-        {
-            model.remove(oldRawStmt);
-        }
-        model.add(genTypeRes, rawTypeProp, pointerType);
+        replaceRawType(propRes, genTypeRes, pointerType);
 
         // Remove the pointer stereotype
         model.remove(propRes, stereotypesProp, protocolInfoPointer);
@@ -1299,6 +1278,34 @@ public class M3ProtocolGenerator
         model.add(generalization, generalProp, generalGenType);
 
         model.add(subtype, generalizationsProp, generalization);
+    }
+
+    /**
+     * Replace the rawType (:type) of a property's genericType with a new target type.
+     * If the genericType resource is a named resource (shared PackageableGenericType),
+     * a new blank node is created to avoid corrupting other references.
+     * If it's a blank node, it's safe to modify in-place.
+     */
+    private void replaceRawType(Resource propRes, Resource genTypeRes, Resource newType)
+    {
+        if (genTypeRes.isAnon())
+        {
+            // Blank node: safe to modify in-place
+            Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
+            if (oldRawStmt != null)
+            {
+                model.remove(oldRawStmt);
+            }
+            model.add(genTypeRes, rawTypeProp, newType);
+        }
+        else
+        {
+            // Named resource: create a new blank node to avoid corrupting the shared resource
+            Resource newGenType = model.createResource();
+            model.add(newGenType, rawTypeProp, newType);
+            model.remove(propRes, genericTypeProp, genTypeRes);
+            model.add(propRes, genericTypeProp, newGenType);
+        }
     }
 
     /**
