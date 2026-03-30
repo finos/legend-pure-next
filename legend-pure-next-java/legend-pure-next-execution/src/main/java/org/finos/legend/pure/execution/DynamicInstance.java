@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.execution;
 
+import meta.pure.metamodel.valuespecification.ValueSpecification;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -27,6 +29,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Since user-defined Pure classes are not generated as Java classes,
  * this serves as a generic runtime representation that holds property
  * values in a map and supports property access by name.</p>
+ *
+ * <p>All property values are stored as {@link ValueSpecification} instances,
+ * preserving Pure type metadata throughout evaluation. Multi-valued properties
+ * are stored as {@code CollectionImpl}; single-valued as {@code AtomicValueImpl}.</p>
  */
 public class DynamicInstance
 {
@@ -36,7 +42,7 @@ public class DynamicInstance
     private static final AtomicLong ID_COUNTER = new AtomicLong(0);
 
     private final String classPath;
-    private final Map<String, Object> values;
+    private final Map<String, ValueSpecification> values;
     private final String id;
 
     public DynamicInstance(String classPath)
@@ -61,12 +67,12 @@ public class DynamicInstance
         return classPath;
     }
 
-    public void put(String propertyName, Object value)
+    public void put(String propertyName, ValueSpecification value)
     {
         values.put(propertyName, value);
     }
 
-    public Object get(String propertyName)
+    public ValueSpecification get(String propertyName)
     {
         return values.get(propertyName);
     }
@@ -81,7 +87,7 @@ public class DynamicInstance
         return id;
     }
 
-    public Map<String, Object> getValues()
+    public Map<String, ValueSpecification> getValues()
     {
         return values;
     }

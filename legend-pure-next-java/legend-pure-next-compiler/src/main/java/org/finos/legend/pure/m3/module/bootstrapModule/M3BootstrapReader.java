@@ -925,16 +925,14 @@ public class M3BootstrapReader
             gt._multiplicityArguments(mulArgs);
         }
 
-        // classifierGenericType
+        // classifierGenericType — self-referential by default (UserDefinedGenericType's classifier is itself),
+        // overridden if the RDF explicitly provides a different one
+        gt._classifierGenericType(gt);
         Statement cgtStmt = getM3Statement(model, gtRes, "classifierGenericType");
         if (cgtStmt != null && cgtStmt.getObject().isResource())
         {
             Resource cgtRes = cgtStmt.getObject().asResource();
-            if (cgtRes.equals(gtRes))
-            {
-                gt._classifierGenericType(gt);
-            }
-            else
+            if (!cgtRes.equals(gtRes))
             {
                 gt._classifierGenericType(buildGenericType(model, cgtRes, index));
             }

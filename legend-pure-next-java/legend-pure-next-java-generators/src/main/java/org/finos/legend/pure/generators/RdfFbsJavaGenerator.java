@@ -429,7 +429,7 @@ public class RdfFbsJavaGenerator
                 sb.append("                                    // Create and cache EnumImpl with correct type\n");
                 sb.append("                                    cached_value = new meta.pure.metamodel.type.EnumImpl()\n");
                 sb.append("                                            ._name(enumValueName)\n");
-                sb.append("                                            ._classifierGenericType(new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl()._type((meta.pure.metamodel.type.Type) enumeration));\n");
+                sb.append("                                            ._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) enumeration, resolver));\n");
                 sb.append("                                    return cached_value;\n");
                 sb.append("                                }\n");
                 sb.append("                            }\n");

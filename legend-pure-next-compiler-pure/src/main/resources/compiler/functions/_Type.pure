@@ -1,0 +1,170 @@
+import meta::pure::compiler::helper::*;
+import meta::pure::functions::meta::tests::model::*;
+
+function meta::pure::compiler::helper::isTopType(t:Type[1]):Boolean[1]
+{
+    $t->match(
+        [
+            pe : PackageableElement[1] | $pe.name == 'Any',
+            a  : Any[1] | false
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::isBottomType(t:Type[1]):Boolean[1]
+{
+    $t->match(
+        [
+            pe : PackageableElement[1] | $pe.name == 'Nil',
+            a  : Any[1] | false
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::directSupertypes(t:Type[1]):Type[*]
+{
+    $t.generalizations->map(g | $g.general->genericTypeRawType())
+}
+
+function meta::pure::compiler::helper::genericTypeRawType(gt:GenericType[1]):Type[0..1]
+{
+    $gt->match(
+        [
+            gtv : GenericTypeValue[1] | $gtv.type,
+            a   : Any[1]              | []
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::linearize(t:Type[1]):Type[*]
+{
+    let parents = $t->directSupertypes();
+    if($parents->isEmpty(),
+        | $t,
+        | let parentLins = $parents->map(p | $p->linearize()->list());
+          let listsToMerge = $parentLins->concatenate($parents->list());
+          $t->concatenate($listsToMerge->c3merge());
+    );
+}
+
+function meta::pure::compiler::helper::c3merge(lists:List<Any>[*]):Type[*]
+{
+    let nonEmpty = $lists->filter(l | $l.values->isNotEmpty());
+    if($nonEmpty->isEmpty(),
+        | [],
+        | let heads = $nonEmpty->map(l | $l.values->at(0));
+          let goodHead = $heads->filter(h | $nonEmpty->filter(l | if($l.values->size() <= 1, | true, | $l.values->tail()->filter(v | $v == $h)->isEmpty()))->size() == $nonEmpty->size());
+          if($goodHead->isEmpty(),
+              | [],
+              | let c = $goodHead->at(0);
+                let reduced = $nonEmpty->map(l | if($l.values->at(0) == $c, | $l.values->tail()->list(), | $l));
+                $c->match([t : Type[1] | $t])->concatenate($reduced->c3merge());
+          );
+    );
+}
+
+function meta::pure::compiler::helper::subtypeOf(sub:Type[1], super:Type[1]):Boolean[1]
+{
+    if($sub == $super,
+        | true,
+        | if($sub->isBottomType() || $super->isTopType(),
+              | true,
+              | $sub->linearize()->filter(t | $t == $super)->isNotEmpty();
+          );
+    );
+}
+
+function meta::pure::compiler::helper::findCommonType(types:Type[*]):Type[0..1]
+{
+    if($types->isEmpty(),
+        | [],
+        | if($types->size() == 1,
+              | $types->at(0),
+              | let first = $types->at(0);
+                if($types->filter(t | $t != $first)->isEmpty(),
+                    | $first,
+                    | let nonNil = $types->filter(t | !$t->isBottomType());
+                      if($nonNil->isEmpty(),
+                          | $first,
+                          | if($nonNil->size() < $types->size(),
+                                | $nonNil->findCommonType(),
+                                | let linearizations = $types->map(t | $t->linearize()->list());
+                                  let firstLin = $linearizations->at(0).values;
+                                  $firstLin->filter(candidate | $linearizations->filter(lin | $lin.values->filter(v | $v == $candidate)->isEmpty())->isEmpty())
+                                           ->head()
+                                           ->match([t : Type[1] | $t, a : Any[1] | []]);
+                            );
+                      );
+                );
+          );
+    );
+}
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsTopType():Boolean[1]
+{
+    assert(Any->isTopType());
+    assertFalse(String->isTopType());
+    assertFalse(Integer->isTopType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsBottomType():Boolean[1]
+{
+    assert(Nil->isBottomType());
+    assertFalse(Any->isBottomType());
+    assertFalse(String->isBottomType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testLinearize():Boolean[1]
+{
+    // Any linearizes to just itself (no parents)
+    let anyLin = Any->linearize();
+    println('Any linearize: ' + $anyLin->size()->toString());
+    assertEquals(1, $anyLin->size());
+    assertEquals(Any, $anyLin->at(0));
+
+    // Integer -> Number -> Any
+    let intLin = Integer->linearize();
+    println('Integer generalizations: ' + Integer.generalizations->size()->toString());
+    println('Integer linearize: ' + $intLin->size()->toString());
+    assertEquals(3, $intLin->size());
+    assertEquals(Integer, $intLin->at(0));
+    assertEquals(Number, $intLin->at(1));
+    assertEquals(Any, $intLin->at(2));
+
+    // String -> Any
+    let strLin = String->linearize();
+    assertEquals(2, $strLin->size());
+    assertEquals(String, $strLin->at(0));
+    assertEquals(Any, $strLin->at(1));
+
+    // Float -> Number -> Any
+    let floatLin = Float->linearize();
+    assertEquals(3, $floatLin->size());
+    assertEquals(Float, $floatLin->at(0));
+    assertEquals(Number, $floatLin->at(1));
+    assertEquals(Any, $floatLin->at(2));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testSubtypeOf():Boolean[1]
+{
+    assert(Integer->subtypeOf(Integer));
+    assert(Integer->subtypeOf(Number));
+    assert(Integer->subtypeOf(Any));
+    assertFalse(Any->subtypeOf(Integer));
+    assert(Nil->subtypeOf(Integer));
+    assert(Nil->subtypeOf(String));
+    assert(Nil->subtypeOf(Any));
+    assert(String->subtypeOf(Any));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testFindCommonType():Boolean[1]
+{
+    let sameTypes = [Integer, Integer];
+    assertEquals(Integer, $sameTypes->findCommonType());
+    let numTypes = [Integer, Float];
+    assertEquals(Number, $numTypes->findCommonType());
+    let mixedTypes = [Integer, String];
+    assertEquals(Any, $mixedTypes->findCommonType());
+}

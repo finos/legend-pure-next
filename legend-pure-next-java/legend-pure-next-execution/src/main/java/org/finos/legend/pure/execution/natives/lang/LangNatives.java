@@ -1,5 +1,6 @@
 package org.finos.legend.pure.execution.natives.lang;
 
+import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
@@ -32,106 +33,94 @@ public class LangNatives
         natives.put("if_Boolean_1__Function_1__Function_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
             boolean condition = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
-            Object branch = _E_ValueSpecification.unwrap(condition ? args.get(1) : args.get(2));
+            ValueSpecification branch = condition ? args.get(1) : args.get(2);
             return eval.executeFunction(branch, List.of());
         });
 
         // eval natives — return VS directly from the evaluator
         natives.put("eval_Function_1__V_m_", (args, eval, genericType, multiplicity) ->
-        {
-            Object fn = _E_ValueSpecification.unwrap(args.get(0));
-            return eval.executeFunction(fn, List.of());
-        });
+            eval.executeFunction(args.get(0), List.of())
+        );
 
         natives.put("eval_Function_1__T_n__U_p__V_m_", (args, eval, genericType, multiplicity) ->
-        {
-            Object fn = _E_ValueSpecification.unwrap(args.get(0));
-            return eval.executeFunction(fn, args.subList(1, args.size()));
-        });
+            eval.executeFunction(args.get(0), args.subList(1, args.size()))
+        );
 
         natives.put("eval_Function_1__T_n__V_m_", (args, eval, genericType, multiplicity) ->
-        {
-            Object fn = _E_ValueSpecification.unwrap(args.get(0));
-            return eval.executeFunction(fn, args.subList(1, args.size()));
-        });
+            eval.executeFunction(args.get(0), args.subList(1, args.size()))
+        );
 
         // evaluate(Function[1], List[*]) : Any[*]
         natives.put("evaluate_Function_1__List_MANY__Any_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(0));
             List<ValueSpecification> fnArgs = new ArrayList<>();
-            List<?> lists = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            for (Object item : lists)
+            for (ValueSpecification item : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
             {
                 // Each item is a Pure List DynamicInstance — extract its 'values' property
-                if (item instanceof DynamicInstance di)
+                if (item instanceof AtomicValue av && av._value() instanceof DynamicInstance di)
                 {
-                    Object values = di.get("values");
-                    if (values instanceof List<?> valList)
+                    ValueSpecification valuesVS = di.get("values");
+
+                    if (valuesVS instanceof meta.pure.metamodel.valuespecification.Collection col)
                     {
-                        // Multi-valued: wrap as collection
-                        fnArgs.add(_E_ValueSpecification.wrap(valList, args.get(1)._genericType(), args.get(1)._multiplicity(), resolver));
+                        // Multi-valued: the Collection VS already has the right type metadata
+                        fnArgs.add(col);
                     }
-                    else if (values != null)
+                    else if (valuesVS != null)
                     {
-                        fnArgs.add(_E_ValueSpecification.wrap(values, args.get(1)._genericType(), args.get(1)._multiplicity(), resolver));
+                        // Single-valued: pass the scalar VS directly
+                        fnArgs.add(valuesVS);
                     }
-                }
-                else if (item instanceof ValueSpecification vs)
-                {
-                    fnArgs.add(vs);
                 }
                 else
                 {
-                    fnArgs.add(_E_ValueSpecification.wrap(item, args.get(1)._genericType(), args.get(1)._multiplicity(), resolver));
+                    fnArgs.add(item);
                 }
             }
-            return eval.executeFunction(fn, fnArgs);
+            return eval.executeFunction(args.get(0), fnArgs);
         });
 
         // match — type- and multiplicity-based dispatch
         natives.put("match_Any_MANY__Function_$1_MANY$__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            Object value = _E_ValueSpecification.unwrap(args.get(0));
-            List<?> matchFuncs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0));
-            int valueCount = getValueCount(value);
+            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
+            int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));
+            meta.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
 
-            for (Object mf : matchFuncs)
+            for (ValueSpecification mfVS : matchFuncCol._values())
             {
+                Object mf = _E_ValueSpecification.unwrap(mfVS);
                 if (!matchesBranch(mf, valueType, valueCount, resolver))
                 {
                     continue;
                 }
-                ValueSpecification wrappedValue = _E_ValueSpecification.wrap(value, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                return eval.executeFunction(mf, List.of(wrappedValue));
+                return eval.executeFunction(mfVS, List.of(args.get(0)));
             }
-            throw new RuntimeException("No match function matched the value: " + value);
+            throw new RuntimeException("No match function matched the value: " + _E_ValueSpecification.unwrap(args.get(0)));
         });
 
         // match with extra parameter — match(Any[*], Function[1..*], P[o]) : T[m]
         natives.put("match_Any_MANY__Function_$1_MANY$__P_o__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            Object value = _E_ValueSpecification.unwrap(args.get(0));
-            List<?> matchFuncs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0));
-            int valueCount = getValueCount(value);
+            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
+            int valueCount = getValueCount(_E_ValueSpecification.unwrap(args.get(0)));
+            meta.pure.metamodel.valuespecification.Collection matchFuncCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
 
-            for (Object mf : matchFuncs)
+            for (ValueSpecification mfVS : matchFuncCol._values())
             {
+                Object mf = _E_ValueSpecification.unwrap(mfVS);
                 if (!matchesBranch(mf, valueType, valueCount, resolver))
                 {
                     continue;
                 }
-                ValueSpecification wrappedValue = _E_ValueSpecification.wrap(value, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
                 if (mf instanceof meta.pure.metamodel.function.FunctionDefinition fd2
                         && fd2._parameters() != null && fd2._parameters().size() >= 2)
                 {
-                    return eval.executeFunction(mf, List.of(wrappedValue, args.get(2)));
+                    return eval.executeFunction(mfVS, List.of(args.get(0), args.get(2)));
                 }
-                return eval.executeFunction(mf, List.of(wrappedValue));
+                return eval.executeFunction(mfVS, List.of(args.get(0)));
             }
-            throw new RuntimeException("No match function matched the value: " + value);
+            throw new RuntimeException("No match function matched the value: " + _E_ValueSpecification.unwrap(args.get(0)));
         });
     }
 

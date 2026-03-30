@@ -19,14 +19,15 @@ import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.FunctionDefinition;
 import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.PackageableFunction;
+import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import org.apache.jena.base.Sys;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.ArrayDeque;
@@ -278,18 +279,35 @@ public class ValueSpecificationEvaluator
 
         // Evaluate the target object (first parameter)
         ValueSpecification targetVs = evaluate(paramSpecs.get(0));
-        Object target = _E_ValueSpecification.unwrap(targetVs);
 
         // Access the property on the target
-        Object result = accessProperty(target, targetVs, propertyName);
+        Object result = accessProperty(targetVs, propertyName);
+
+        // DynamicInstance.get() now returns a ValueSpecification directly — identity return.
+        if (result instanceof ValueSpecification vs)
+        {
+            return vs;
+        }
+        // Property may return a raw MutableList (e.g. _typeArguments(), _expressionSequence(), etc.)
+        // When that happens, build a Collection of individually-wrapped VSes instead of calling wrap(List).
+        if (result instanceof java.util.List<?> resultList)
+        {
+            List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
+            for (Object item : resultList)
+            {
+                vsItems.add(_E_ValueSpecification.wrap(item, fe._genericType(), null, this.natives.resolver()));
+            }
+            return CollectionNatives.makeCollection(vsItems, this.natives.resolver());
+        }
         return _E_ValueSpecification.wrap(result, fe._genericType(), fe._multiplicity(), this.natives.resolver());
     }
 
     /**
      * Access a property on a target object by name.
      */
-    private Object accessProperty(Object target, ValueSpecification targetVs, String propertyName)
+    private Object accessProperty(ValueSpecification targetVs, String propertyName)
     {
+        Object target = _E_ValueSpecification.unwrap(targetVs);
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
@@ -458,7 +476,23 @@ public class ValueSpecificationEvaluator
                         (arg._genericType() != null) ? arg._genericType() : param._genericType();
                 meta.pure.metamodel.multiplicity.Multiplicity mul =
                         (arg._multiplicity() != null) ? arg._multiplicity() : param._multiplicity();
-                childVars.put(paramName, _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(arg), gt, mul, this.natives.resolver()));
+                // Bind the parameter: preserve the arg's own type info where available.
+                // For Collection args, use them directly (their per-element VS types are already correct).
+                // For AtomicValue args, restamp with the resolved gt/mul without unwrapping.
+                ValueSpecification boundArg;
+                if (arg instanceof meta.pure.metamodel.valuespecification.Collection)
+                {
+                    boundArg = arg;
+                }
+                else if (arg._genericType() == gt && arg._multiplicity() == mul)
+                {
+                    boundArg = arg;
+                }
+                else
+                {
+                    boundArg = _E_ValueSpecification.wrap(_E_ValueSpecification.unwrap(arg), gt, mul, this.natives.resolver());
+                }
+                childVars.put(paramName, boundArg);
             }
         }
 
@@ -480,16 +514,18 @@ public class ValueSpecificationEvaluator
     }
 
     /**
-     * Execute a function value (obtained at runtime) with the given arguments.
-     * Dispatches on the runtime type of the function:
+     * Execute a function value passed as a {@link ValueSpecification} with the given arguments.
+     * The function VS is unwrapped once, here, and dispatched on its concrete type.
+     * Callers never need to unwrap the function themselves.
      * <ul>
      *   <li>{@link FunctionDefinition} — evaluates expression sequence with bound parameters</li>
+     *   <li>{@link NativeFunction} — delegates to the native registry</li>
      *   <li>{@link meta.pure.metamodel.function.property.AbstractProperty} — accesses property on first arg</li>
      * </ul>
      */
-    public ValueSpecification executeFunction(Object fnValue, List<ValueSpecification> args)
+    public ValueSpecification executeFunction(ValueSpecification fnVS, List<ValueSpecification> args)
     {
-        return switch (fnValue)
+        return switch (_E_ValueSpecification.unwrap(fnVS))
         {
             case FunctionDefinition fd -> evaluateFunctionDefinition(fd, args);
             case NativeFunction nf ->
@@ -503,13 +539,26 @@ public class ValueSpecificationEvaluator
                 {
                     throw new RuntimeException("Property '" + prop._name() + "' requires a target object");
                 }
-                Object target = _E_ValueSpecification.unwrap(args.get(0));
-                Object result = accessProperty(target, args.get(0), prop._name());
+                Object result = accessProperty(args.get(0), prop._name());
+                // DynamicInstance.get() returns ValueSpecification directly — identity return.
+                if (result instanceof ValueSpecification vsResult)
+                {
+                    yield vsResult;
+                }
+                if (result instanceof java.util.List<?> resultList)
+                {
+                    List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
+                    for (Object item : resultList)
+                    {
+                        vsItems.add(_E_ValueSpecification.wrap(item, prop._genericType(), null, this.natives.resolver()));
+                    }
+                    yield CollectionNatives.makeCollection(vsItems, this.natives.resolver());
+                }
                 yield _E_ValueSpecification.wrap(result, prop._genericType(), prop._multiplicity(), this.natives.resolver());
             }
             case null -> throw new RuntimeException("Cannot execute null function");
             default -> throw new RuntimeException(
-                    "Cannot execute function of type: " + fnValue.getClass().getSimpleName());
+                    "Cannot execute function of type: " + _E_ValueSpecification.unwrap(fnVS).getClass().getSimpleName());
         };
     }
 

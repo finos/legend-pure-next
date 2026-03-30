@@ -15,6 +15,7 @@
 package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
+import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
@@ -26,6 +27,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,9 +107,9 @@ public class _E_ValueSpecification
     }
 
     /**
-     * Wrap a raw Java value in an AtomicValueImpl with the given type info.
+     * Wrap a single raw Java scalar value in an AtomicValueImpl with the given type info.
+     * Do NOT pass a List here — build a CollectionImpl directly instead.
      */
-
     public static ValueSpecification wrap(Object value,
                                    meta.pure.metamodel.type.generics.GenericType genericType,
                                    meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
@@ -117,61 +119,16 @@ public class _E_ValueSpecification
         {
             return vs;
         }
-        if (value instanceof List<?> list)
+        if (value instanceof List<?>)
         {
-            MutableList<ValueSpecification> wrapped = Lists.mutable.ofInitialCapacity(list.size());
-            MutableList<GenericType> itemGTs = Lists.mutable.ofInitialCapacity(list.size());
-            meta.pure.metamodel.multiplicity.Multiplicity pureOne = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
-
-            for (Object item : list)
-            {
-                GenericType itemGT = genericType;
-                if (item instanceof DynamicInstance di)
-                {
-                    itemGT = di.getClassifierGenericType();
-                }
-                else if (item instanceof meta.pure.metamodel.type.Any any)
-                {
-                    itemGT = any._classifierGenericType();
-                }
-                itemGTs.add(itemGT);
-                wrapped.add(wrap(item, itemGT, pureOne, resolver));
-            }
-
-            GenericType collectionGT = genericType;
-            if (itemGTs.notEmpty())
-            {
-                GenericType common = _GenericType.findCommonGenericType(itemGTs, false, resolver);
-                if (common != null)
-                {
-                    collectionGT = common;
-                }
-            }
-
-            long size = list.size();
-            meta.pure.metamodel.multiplicity.Multiplicity exactMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.asInferred(
-                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver), resolver);
-
-            return new CollectionImpl(resolver)
-                    ._values(wrapped)
-                    ._genericType(collectionGT)
-                    ._multiplicity(exactMul);
+            throw new IllegalArgumentException(
+                "wrap() does not accept raw List values — use makeCollection() or CollectionImpl directly "
+                + "to preserve per-element ValueSpecification types.");
         }
-        
-        GenericType itemGT = genericType;
-        if (value instanceof DynamicInstance di && di.getClassifierGenericType() != null)
-        {
-            itemGT = di.getClassifierGenericType();
-        }
-
-        long size = value == null ? 0 : 1;
-        meta.pure.metamodel.multiplicity.Multiplicity exactMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.asInferred(
-                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.concreteMultiplicity(size, size, resolver), resolver);
-
         return new AtomicValueImpl(resolver)
                 ._value(value)
-                ._genericType(itemGT)
-                ._multiplicity(exactMul);
+                ._genericType(genericType)
+                ._multiplicity(multiplicity);
     }
 
     /**
@@ -182,6 +139,15 @@ public class _E_ValueSpecification
      */
     public static Type getValueOriginalType(ValueSpecification vs)
     {
+        return getValueOriginalType(vs, null);
+    }
+
+    /**
+     * Determine the Type of a runtime value, with optional resolver for
+     * self-referential classifierGenericType fallback.
+     */
+    public static Type getValueOriginalType(ValueSpecification vs, MetadataAccess resolver)
+    {
         Object value = unwrap(vs);
         // DynamicInstance — use classifierGenericType
         if (value instanceof DynamicInstance di)
@@ -191,31 +157,68 @@ public class _E_ValueSpecification
         // All metamodel elements implement Any which has _classifierGenericType()
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
-            // GenericType objects' own CGT is the meta-meta type (GenericType itself),
-            // which isn't useful for getValueOriginalType. Use VS metadata instead.
-            if (value instanceof meta.pure.metamodel.type.generics.GenericType && vs != null && vs._genericType() != null)
-            {
-                return _GenericType.type(vs._genericType());
-            }
             GenericType cgt = any._classifierGenericType();
             if (cgt == null)
             {
-                throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName());
+                throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
+                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : ""));
             }
-            Type type = _GenericType.type(cgt);
-            // If the CGT resolves to a TypeParameter (unresolved generic like T),
-            // fall back to the VS's genericType which has the concrete binding
-            if (type instanceof meta.pure.metamodel.type.generics.TypeParameter && vs != null && vs._genericType() != null)
+            // FlatBuffer GenericTypeValue wrappers return 'this' from _classifierGenericType()
+            // when the classifier pointer is unset (uType==0 self-referential).
+            // In that case cgt._type() returns the *inner* wrapped type (e.g., Number)
+            // rather than the meta-class (UserDefinedGenericType). Detect and resolve properly.
+            // IMPORTANT: Do NOT use vs._genericType() here — that gives the declared static type
+            // (e.g., GenericType) which is too broad. We need the actual runtime type
+            // (e.g., UserDefinedGenericType) resolved via the Java interface name.
+            if (cgt == value
+                    || (cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue cgtv
+                            && cgtv._type() == value))
             {
-                return _GenericType.type(vs._genericType());
+                // Resolve the M3 type by Java interface name → Pure path
+                if (resolver != null)
+                {
+                    return resolveTypeByJavaInterfaceName(value.getClass(), resolver);
+                }
+                return null;
             }
-            return type;
+            return _GenericType.type(cgt);
         }
-        // Fallback for Java primitives
+        // Java primitives (Long, Double, String, Boolean) — use the VS genericType
         if (vs != null && vs._genericType() != null)
         {
             return _GenericType.type(vs._genericType());
         }
         throw new RuntimeException("Cannot determine type of value: " + value.getClass().getName());
+    }
+
+    /**
+     * Walk the value's Java interface hierarchy and find the first interface
+     * whose canonical name maps to a known Pure M3 path via the resolver.
+     * Java package {@code meta.pure.metamodel.X.Y} → Pure path
+     * {@code meta::pure::metamodel::X::Y}.
+     */
+    private static Type resolveTypeByJavaInterfaceName(Class<?> javaClass, MetadataAccess resolver)
+    {
+        // Check direct interfaces of the concrete class and its supertypes
+        for (Class<?> cls = javaClass; cls != null; cls = cls.getSuperclass())
+        {
+            for (Class<?> iface : cls.getInterfaces())
+            {
+                String javaName = iface.getCanonicalName();
+                if (javaName != null && javaName.startsWith("meta.pure.metamodel"))
+                {
+                    // Java package uses single '.' so replace all '.' with '::'
+                    // e.g. "meta.pure.metamodel.type.generics.UserDefinedGenericType"
+                    //    → "meta::pure::metamodel::type::generics::UserDefinedGenericType"
+                    String purePathFixed = javaName.replace(".", "::");
+                    meta.pure.metamodel.PackageableElement element = resolver.getElement(purePathFixed);
+                    if (element instanceof Type t)
+                    {
+                        return t;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

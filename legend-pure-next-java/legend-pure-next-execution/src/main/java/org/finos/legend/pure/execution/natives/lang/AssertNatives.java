@@ -37,8 +37,7 @@ public class AssertNatives
             boolean condition = (Boolean) _E_ValueSpecification.unwrap(args.get(0));
             if (!condition)
             {
-                Object messageFn = _E_ValueSpecification.unwrap(args.get(1));
-                ValueSpecification msgResult = eval.executeFunction(messageFn, List.of());
+                ValueSpecification msgResult = eval.executeFunction(args.get(1), List.of());
                 String message = (String) _E_ValueSpecification.unwrap(msgResult);
                 throw new PureAssertionError(message);
             }
@@ -59,11 +58,10 @@ public class AssertNatives
         // assertError(Function<{->Any[*]}>[1], String[1], Integer[0..1], Integer[0..1]) : Boolean[1]
         natives.put("assertError_Function_1__String_1__Integer_$0_1$__Integer_$0_1$__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(0));
             String expectedMessage = (String) _E_ValueSpecification.unwrap(args.get(1));
             try
             {
-                eval.executeFunction(fn, List.of());
+                eval.executeFunction(args.get(0), List.of());
                 throw new PureAssertionError("Expected error with message containing: '" + expectedMessage + "' but no error was thrown");
             }
             catch (PureAssertionError pae)
@@ -79,15 +77,15 @@ public class AssertNatives
                             "Expected error message containing: '" + expectedMessage
                                     + "' but got: '" + actualMessage + "'");
                 }
-                return true;
+                return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
             }
         });
 
         // assertEqual(Any[*], Any[*]) : Boolean[1]
         natives.put("assertEqual_Any_MANY__Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            Object expected = _E_ValueSpecification.unwrap(args.get(0));
-            Object actual = _E_ValueSpecification.unwrap(args.get(1));
+            ValueSpecification expected = args.get(0);
+            ValueSpecification actual = args.get(1);
             if (!NativeRepository.pureEquals(expected, actual))
             {
                 throw new PureAssertionError("assertEqual failed:\nexpected: " + NativeRepository.pureToString(expected) + "\nactual:   " + NativeRepository.pureToString(actual));

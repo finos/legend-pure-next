@@ -32,7 +32,7 @@ public class IONatives
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             System.out.print(val);
-            return null;
+            return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
 
         // println(Any[*]) : Nil[0]
@@ -40,7 +40,7 @@ public class IONatives
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
             System.out.println(val);
-            return null;
+            return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
     }
 }

@@ -1,0 +1,64 @@
+import meta::pure::compiler::helper::*;
+
+// GenericType helpers
+
+function meta::pure::compiler::helper::printGenericType(genericType:GenericType[1]):String[1]
+{
+    $genericType->printGenericType(true)
+}
+
+function meta::pure::compiler::helper::printGenericType(genericType:GenericType[1], fullPath:Boolean[1]):String[1]
+{
+    $genericType->match(
+        [
+            ugt : UndefinedGenericType[1] | '?',
+            gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
+            a   : Any[1]                  | 'Unknown'
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::printGenericTypeValue(gtv:GenericTypeValue[1], fullPath:Boolean[1]):String[1]
+{
+    let rawType = $gtv.type;
+    if($rawType->isEmpty(),
+        | 'Unknown',
+        | let t = $rawType->toOne();
+          let typeName = $t->match(
+              [
+                  ft : FunctionType[1]      | $ft->printFunctionType($fullPath),
+                  pe : PackageableElement[1] |
+                      if($fullPath,
+                          | $pe->meta::pure::compiler::helper::fullPath(),
+                          | $pe.name->toOne()
+                      ),
+                  a  : Any[1]               | 'Unknown'
+              ]
+          );
+          let typeArgs = $gtv.typeArguments;
+          let mulArgs = $gtv.multiplicityArguments;
+          if($typeArgs->isEmpty() && $mulArgs->isEmpty(),
+              | $typeName,
+              | let typeArgStr = $typeArgs->map(a | $a->printGenericType($fullPath))->joinStrings(', ');
+                let mulArgStr = $mulArgs->map(m | '|' + $m->printMultiplicityBare())->joinStrings('');
+                $typeName + '<' + $typeArgStr + $mulArgStr + '>';
+          );
+    );
+}
+
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeSimple():Boolean[1]
+{
+    let intGT = ^GenericTypeValue(type = Integer);
+    // Full path should match the elementToPath
+    assertEquals(Integer->elementToPath(), $intGT->printGenericType(true));
+    assertEquals('Integer', $intGT->printGenericType(false));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeString():Boolean[1]
+{
+    let strGT = ^GenericTypeValue(type = String);
+    assertEquals('String', $strGT->printGenericType(false));
+}

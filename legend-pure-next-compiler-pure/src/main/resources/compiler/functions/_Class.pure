@@ -1,0 +1,64 @@
+import meta::pure::compiler::helper::*;
+
+// Class helpers — property lookup across inheritance hierarchy
+
+function meta::pure::compiler::helper::findProperty(owner:Any[1], name:String[1]):Property<Nil, Any|*>[0..1]
+{
+    $owner->match(
+        [
+            cls : Class<Any>[1] |
+                // Direct properties
+                let directMatch = $cls.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | // Association properties
+                      let assocMatch = $cls.propertiesFromAssociations->filter(p | $p.name == $name);
+                      if($assocMatch->isNotEmpty(),
+                          | $assocMatch->head(),
+                          | // Inherited properties via generalizations
+                            let inherited = $cls.generalizations
+                                ->map(g | $g.general->genericTypeRawType())
+                                ->map(superType | $superType->findProperty($name))
+                                ->filter(p | $p->isNotEmpty())
+                                ->head();
+                            $inherited;
+                      );
+                );,
+            a : Any[1] | []
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::findQualifiedProperty(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[0..1]
+{
+    // Direct qualified properties
+    let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
+    if($directMatch->isNotEmpty(),
+        | $directMatch->head(),
+        | // Inherited qualified properties via generalizations
+          let inherited = $cls.generalizations
+              ->map(g | $g.general->genericTypeRawType())
+              ->filter(t | $t->instanceOf(Class))
+              ->map(t | $t->cast(@Class<Any>)->findQualifiedProperty($name))
+              ->filter(qp | $qp->isNotEmpty())
+              ->head();
+          $inherited;
+    );
+}
+
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::tests::class::testFindPropertyDirect():Boolean[1]
+{
+    // Class type has 'name' property directly
+    let prop = Class->findProperty('name');
+    assert($prop->isNotEmpty());
+    assertEquals('name', $prop->toOne().name);
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::class::testFindPropertyNotFound():Boolean[1]
+{
+    let prop = Class->findProperty('nonExistentProperty12345');
+    assert($prop->isEmpty());
+}

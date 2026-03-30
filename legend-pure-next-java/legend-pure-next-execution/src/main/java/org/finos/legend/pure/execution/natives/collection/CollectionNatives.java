@@ -14,13 +14,19 @@
 
 package org.finos.legend.pure.execution.natives.collection;
 
+import meta.pure.metamodel.valuespecification.AtomicValueImpl;
+import meta.pure.metamodel.valuespecification.CollectionImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,59 +41,56 @@ public class CollectionNatives
     {
         // size(Any[*]) : Integer[1]
         natives.put("size_Any_MANY__Integer_1_", (args, eval, genericType, multiplicity) ->
-        {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return _E_ValueSpecification.wrap((long) list.size(), genericType, multiplicity, resolver);
-        });
+            _E_ValueSpecification.wrap((long) _E_ValueSpecification.toCollection(args.get(0), resolver)._values().size(), genericType, multiplicity, resolver)
+        );
 
         // isEmpty(Any[*]) : Boolean[1]
         natives.put("isEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
-        {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return _E_ValueSpecification.wrap(list.isEmpty(), genericType, multiplicity, resolver);
-        });
+             _E_ValueSpecification.wrap(_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty(), genericType, multiplicity, resolver)
+        );
 
         // toOne(T[*]) : T[1]
         natives.put("toOne_T_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            if (list.size() != 1)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            if (col._values().size() != 1)
             {
-                throw new RuntimeException("toOne expected exactly 1 element, got " + list.size());
+                throw new RuntimeException("toOne expected exactly 1 element, got " + col._values().size());
             }
-            return _E_ValueSpecification.wrap(list.get(0), genericType, multiplicity, resolver);
+            return col._values().get(0);
         });
 
         // toOneMany(T[*]) : T[1..*]
         natives.put("toOneMany_T_MANY__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            if (list.isEmpty())
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            if (col._values().isEmpty())
             {
                 throw new RuntimeException("toOneMany expected at least 1 element, got 0");
             }
-            return _E_ValueSpecification.wrap(list.size() == 1 ? list.get(0) : new ArrayList<>(list), genericType, multiplicity, resolver);
+            return col._values().size() == 1 ? col._values().get(0) : col;
         });
 
         // concatenate(T[*], T[*]) : T[*]
         natives.put("concatenate_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<Object> result = new ArrayList<>();
-            result.addAll((List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver)));
-            result.addAll((List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver)));
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            meta.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            meta.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            List<ValueSpecification> result = new ArrayList<>(colA._values());
+            result.addAll(colB._values());
+            return makeCollection(result, resolver);
         });
 
         // at(T[*], Integer[1]) : T[1]
         natives.put("at_T_MANY__Integer_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             long index = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            if (index < 0 || index >= list.size())
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            if (index < 0 || index >= col._values().size())
             {
-                throw new RuntimeException("The system is trying to get an element at offset " + index + " where the collection is of size " + list.size());
+                throw new RuntimeException("The system is trying to get an element at offset " + index + " where the collection is of size " + col._values().size());
             }
-            return list.get((int) index);
+            return col._values().get((int) index);
         });
         // short-name alias for null-func fallback
         natives.put("at", natives.get("at_T_MANY__Integer_1__T_1_"));
@@ -96,74 +99,72 @@ public class CollectionNatives
         // arg[0]=col, arg[1]=key extractor, arg[2]=comparator on keys
         natives.put("sort_T_m__Function_$0_1$__Function_$0_1$__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            List<Object> sorted = new ArrayList<>(list);
-            Object keyFn = args.size() > 1 ? _E_ValueSpecification.unwrap(args.get(1)) : null;
-            Object compFn = args.size() > 2 ? _E_ValueSpecification.unwrap(args.get(2)) : null;
-            sorted.sort((a, b) ->
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            List<ValueSpecification> sorted = new ArrayList<>(col._values());
+            ValueSpecification keyFnVS = args.size() > 1 ? args.get(1) : null;
+            ValueSpecification compFnVS = args.size() > 2 ? args.get(2) : null;
+            boolean hasKeyFn = keyFnVS != null
+                    && !_E_ValueSpecification.toCollection(keyFnVS, resolver)._values().isEmpty();
+            boolean hasCompFn = compFnVS != null
+                    && !_E_ValueSpecification.toCollection(compFnVS, resolver)._values().isEmpty();
+            sorted.sort((aVS, bVS) ->
             {
-                // Extract keys if key function provided
-                Object kA = a;
-                Object kB = b;
-                if (keyFn instanceof meta.pure.metamodel.function.FunctionDefinition)
+                ValueSpecification kA = aVS;
+                ValueSpecification kB = bVS;
+                if (hasKeyFn)
                 {
-                    ValueSpecification wA = _E_ValueSpecification.wrap(a, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                    ValueSpecification wB = _E_ValueSpecification.wrap(b, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                    kA = _E_ValueSpecification.unwrap(eval.executeFunction(keyFn, List.of(wA)));
-                    kB = _E_ValueSpecification.unwrap(eval.executeFunction(keyFn, List.of(wB)));
+                    kA = eval.executeFunction(keyFnVS, List.of(aVS));
+                    kB = eval.executeFunction(keyFnVS, List.of(bVS));
                 }
-                // Use comparator on keys if provided
-                if (compFn instanceof meta.pure.metamodel.function.FunctionDefinition)
+                if (hasCompFn)
                 {
-                    ValueSpecification wkA = _E_ValueSpecification.wrap(kA, null, null, resolver);
-                    ValueSpecification wkB = _E_ValueSpecification.wrap(kB, null, null, resolver);
-                    ValueSpecification cmpResult = eval.executeFunction(compFn, List.of(wkA, wkB));
+                    ValueSpecification cmpResult = eval.executeFunction(compFnVS, List.of(kA, kB));
                     return ((Number) _E_ValueSpecification.unwrap(cmpResult)).intValue();
                 }
-                // Default: natural order
-                // Handle mixed numeric types (e.g., Integer and Float)
-                if (kA instanceof Number nA && kB instanceof Number nB)
+                // Default: natural order on raw values
+                Object rawA = _E_ValueSpecification.unwrap(kA);
+                Object rawB = _E_ValueSpecification.unwrap(kB);
+                if (rawA instanceof Number nA && rawB instanceof Number nB)
                 {
                     return Double.compare(nA.doubleValue(), nB.doubleValue());
                 }
-                if (kA instanceof Comparable c && kA.getClass().isInstance(kB))
+                if (rawA instanceof Comparable c && rawA.getClass().isInstance(rawB))
                 {
-                    return c.compareTo(kB);
+                    return c.compareTo(rawB);
                 }
-                // Different types: sort by type name first (e.g., Integer before String),
-                // then by string value within the same type
-                int typeCmp = kA.getClass().getSimpleName().compareTo(kB.getClass().getSimpleName());
+                int typeCmp = rawA.getClass().getSimpleName().compareTo(rawB.getClass().getSimpleName());
                 if (typeCmp != 0)
                 {
                     return typeCmp;
                 }
-                return String.valueOf(kA).compareTo(String.valueOf(kB));
+                return String.valueOf(rawA).compareTo(String.valueOf(rawB));
             });
-            return _E_ValueSpecification.wrap(sorted, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
+            // Return a collection of the already-typed VS items
+            return new CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.withAll(sorted))
+                    ._genericType(col._genericType())
+                    ._multiplicity(col._multiplicity());
         });
 
         // map(T[*], Function<{T[1]->V[*]}>[1]) : V[*]
         natives.put("map_T_MANY__Function_1__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            List<Object> results = new ArrayList<>();
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            List<ValueSpecification> results = new ArrayList<>();
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                ValueSpecification result = eval.executeFunction(fn, List.of(wrappedItem));
-                Object unwrapped = _E_ValueSpecification.unwrap(result);
-                // Pure map is flatMap — flatten list results
-                if (unwrapped instanceof List<?> innerList)
+                ValueSpecification result = eval.executeFunction(args.get(1), List.of(itemVS));
+                // Pure map is flatMap — if result is a Collection, splice in its VS items
+                if (result instanceof meta.pure.metamodel.valuespecification.Collection resultCol)
                 {
-                    results.addAll(innerList);
+                    results.addAll(resultCol._values());
                 }
-                else if (unwrapped != null)
+                else if (!_E_ValueSpecification.toCollection(result, resolver)._values().isEmpty())
                 {
-                    results.add(unwrapped);
+                    results.add(result);
                 }
             }
-            return _E_ValueSpecification.wrap(results, genericType, multiplicity, resolver);
+            return makeCollection(results, resolver);
         });
 
         // map(T[m], Function<{T[1]->V[m]}>[1]) : V[m]  — generic multiplicity overload
@@ -172,12 +173,10 @@ public class CollectionNatives
         // map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]
         natives.put("map_T_$0_1$__Function_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            Object val = _E_ValueSpecification.unwrap(args.get(0));
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            if (val != null)
+            // For 0..1: pass the arg VS directly if non-empty; function returns the new VS
+            if (!_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(val, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                return eval.executeFunction(fn, List.of(wrappedItem));
+                return eval.executeFunction(args.get(1), List.of(args.get(0)));
             }
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
@@ -185,49 +184,50 @@ public class CollectionNatives
         // filter(T[*], Function<{T[1]->Boolean[1]}>[1]) : T[*]
         natives.put("filter_T_MANY__Function_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            List<Object> results = new ArrayList<>();
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            List<ValueSpecification> results = new ArrayList<>();
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                ValueSpecification result = eval.executeFunction(fn, List.of(wrappedItem));
-                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(result)))
+                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
                 {
-                    results.add(item);
+                    results.add(itemVS);
                 }
             }
-            return _E_ValueSpecification.wrap(results, genericType, multiplicity, resolver);
+            return makeCollection(results, resolver);
         });
 
         // head(T[*]) : T[0..1] — canonical native
         natives.put("head_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return list.isEmpty()
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            return col._values().isEmpty()
                     ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver)
-                    : _E_ValueSpecification.wrap(list.get(0), genericType, multiplicity, resolver);
+                    : col._values().get(0);
         });
 
         // init(T[*]) : T[*] — all but the last element
         natives.put("init_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return _E_ValueSpecification.wrap(list.size() <= 1 ? new ArrayList<>() : new ArrayList<>(list.subList(0, list.size() - 1)), genericType, multiplicity, resolver);
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            int sz = col._values().size();
+            return makeCollection(sz <= 1 ? new ArrayList<>() : new ArrayList<>(col._values().subList(0, sz - 1)), resolver);
         });
 
         // tail(T[*]) : T[*] — all but the first element
         natives.put("tail_T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return _E_ValueSpecification.wrap(list.size() <= 1 ? new ArrayList<>() : new ArrayList<>(list.subList(1, list.size())), genericType, multiplicity, resolver);
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            int sz = col._values().size();
+            return makeCollection(sz <= 1 ? new ArrayList<>() : new ArrayList<>(col._values().subList(1, sz)), resolver);
         });
 
         // last(T[*]) : T[0..1]
         natives.put("last_T_MANY__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            return list.isEmpty() ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver) : _E_ValueSpecification.wrap(list.get(list.size() - 1), genericType, multiplicity, resolver);
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            return col._values().isEmpty()
+                    ? _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver)
+                    : col._values().get(col._values().size() - 1);
         });
 
         // range(Integer[1], Integer[1], Integer[1]) : Integer[*]
@@ -236,43 +236,42 @@ public class CollectionNatives
             long start = (Long) _E_ValueSpecification.unwrap(args.get(0));
             long stop = (Long) _E_ValueSpecification.unwrap(args.get(1));
             long step = (Long) _E_ValueSpecification.unwrap(args.get(2));
-            List<Long> result = new ArrayList<>();
+            List<ValueSpecification> result = new ArrayList<>();
             for (long i = start; step > 0 ? i < stop : i > stop; i += step)
             {
-                result.add(i);
+                result.add(_E_ValueSpecification.wrap(i, genericType, null, resolver));
             }
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return makeCollection(result, resolver);
         });
 
         // add(T[*], T[1]) : T[1..*]
         natives.put("add_T_MANY__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            List<Object> result = new ArrayList<>((List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver)));
-            result.add(_E_ValueSpecification.unwrap(args.get(1)));
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            List<ValueSpecification> result = new ArrayList<>(col._values());
+            result.add(args.get(1));
+            return makeCollection(result, resolver);
         });
 
         // add(T[*], Integer[1], T[1]) : T[1..*]
         natives.put("add_T_MANY__Integer_1__T_1__T_$1_MANY$_", (args, eval, genericType, multiplicity) ->
         {
-            List<Object> result = new ArrayList<>((List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver)));
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int index = ((Long) _E_ValueSpecification.unwrap(args.get(1))).intValue();
-            result.add(index, _E_ValueSpecification.unwrap(args.get(2)));
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            List<ValueSpecification> result = new ArrayList<>(col._values());
+            result.add(index, args.get(2));
+            return makeCollection(result, resolver);
         });
 
         // find(T[*], Function<{T[1]->Boolean[1]}>[1]) : T[0..1]
         natives.put("find_T_MANY__Function_1__T_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                ValueSpecification result = eval.executeFunction(fn, List.of(wrappedItem));
-                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(result)))
+                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
                 {
-                    return _E_ValueSpecification.wrap(item, genericType, multiplicity, resolver);
+                    return itemVS;
                 }
             }
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
@@ -281,13 +280,11 @@ public class CollectionNatives
         // fold(T[*], Function<{T[1],V[m]->V[m]}>[1], V[m]) : V[m]
         natives.put("fold_T_MANY__Function_1__V_m__V_m_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
             ValueSpecification accumulator = args.get(2);
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                accumulator = eval.executeFunction(fn, List.of(wrappedItem, accumulator));
+                accumulator = eval.executeFunction(args.get(1), List.of(itemVS, accumulator));
             }
             return accumulator;
         });
@@ -295,29 +292,30 @@ public class CollectionNatives
         // removeDuplicates(T[*], Function[0..1], Function[0..1]) : T[*]
         natives.put("removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            Object keyFn = args.size() > 1 ? _E_ValueSpecification.unwrap(args.get(1)) : null;
-            Object eqlFn = args.size() > 2 ? _E_ValueSpecification.unwrap(args.get(2)) : null;
-            List<Object> result = new ArrayList<>();
-            List<Object> resultKeys = new ArrayList<>(); // parallel list of keys for key-based dedup
-            for (Object item : list)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            ValueSpecification keyFnVS = args.size() > 1 ? args.get(1) : null;
+            ValueSpecification eqlFnVS = args.size() > 2 ? args.get(2) : null;
+            boolean hasKeyFn = keyFnVS != null
+                    && !_E_ValueSpecification.toCollection(keyFnVS, resolver)._values().isEmpty();
+            boolean hasEqlFn = eqlFnVS != null
+                    && !_E_ValueSpecification.toCollection(eqlFnVS, resolver)._values().isEmpty();
+            List<ValueSpecification> result = new ArrayList<>();
+            // Keys kept as ValueSpecification — no unwrap/wrap cycle needed
+            List<ValueSpecification> resultKeys = new ArrayList<>();
+            for (ValueSpecification itemVS : col._values())
             {
-                // Extract key if key function provided
-                Object itemKey = item;
-                if (keyFn instanceof meta.pure.metamodel.function.FunctionDefinition)
-                {
-                    ValueSpecification wItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                    itemKey = _E_ValueSpecification.unwrap(eval.executeFunction(keyFn, List.of(wItem)));
-                }
+                // Key is either the result of the key function or the item VS itself
+                ValueSpecification itemKey = hasKeyFn
+                        ? eval.executeFunction(keyFnVS, List.of(itemVS))
+                        : itemVS;
                 boolean found = false;
-                for (Object existingKey : resultKeys)
+                for (ValueSpecification existingKey : resultKeys)
                 {
-                    if (eqlFn instanceof meta.pure.metamodel.function.FunctionDefinition)
+                    if (hasEqlFn)
                     {
-                        // Use custom equality function: eql(existing, new)
-                        ValueSpecification wA = _E_ValueSpecification.wrap(existingKey, null, null, resolver);
-                        ValueSpecification wB = _E_ValueSpecification.wrap(itemKey, null, null, resolver);
-                        Object eqlResult = _E_ValueSpecification.unwrap(eval.executeFunction(eqlFn, List.of(wA, wB)));
+                        // Pass key VSes directly to the equality function — no re-wrap needed
+                        Object eqlResult = _E_ValueSpecification.unwrap(
+                                eval.executeFunction(eqlFnVS, List.of(existingKey, itemKey)));
                         if (Boolean.TRUE.equals(eqlResult))
                         {
                             found = true;
@@ -326,7 +324,8 @@ public class CollectionNatives
                     }
                     else
                     {
-                        if (org.finos.legend.pure.execution.NativeRepository.pureEquals(itemKey, existingKey))
+                        // pureEquals auto-unwraps ValueSpecification arguments
+                        if (org.finos.legend.pure.execution.NativeRepository.pureEquals(existingKey, itemKey))
                         {
                             found = true;
                             break;
@@ -335,11 +334,11 @@ public class CollectionNatives
                 }
                 if (!found)
                 {
-                    result.add(item);
+                    result.add(itemVS);
                     resultKeys.add(itemKey);
                 }
             }
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return makeCollection(result, resolver);
         });
 
         // indexOf(T[*], T[1]) : Integer[1]
@@ -347,93 +346,94 @@ public class CollectionNatives
         {
             Object rawList = _E_ValueSpecification.unwrap(args.get(0));
             Object target = _E_ValueSpecification.unwrap(args.get(1));
-            if (rawList instanceof String && target instanceof String) {
+            if (rawList instanceof String && target instanceof String)
+            {
                 return _E_ValueSpecification.wrap((long) ((String) rawList).indexOf((String) target), genericType, multiplicity, resolver);
             }
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (int i = 0; i < list.size(); i++)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (int i = 0; i < col._values().size(); i++)
             {
-                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(list.get(i), target))
+                // pureEquals auto-unwraps both VS arguments
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(col._values().get(i), args.get(1)))
                 {
                     return _E_ValueSpecification.wrap((long) i, genericType, multiplicity, resolver);
                 }
             }
             return _E_ValueSpecification.wrap(-1L, genericType, multiplicity, resolver);
         });
-
         // drop(T[*], Integer[1]) : T[*]
         natives.put("drop_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            if (count <= 0)
-            {
-                return _E_ValueSpecification.wrap(new ArrayList<>(list), genericType, multiplicity, resolver);
-            }
-            int from = (int) Math.min(count, list.size());
-            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(from, list.size())), genericType, multiplicity, resolver);
+            int from = (int) Math.min(Math.max(count, 0), col._values().size());
+            return makeCollection(new ArrayList<>(col._values().subList(from, col._values().size())), resolver);
         });
 
         // take(T[*], Integer[1]) : T[*]
         natives.put("take_T_MANY__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             long count = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            if (count <= 0)
-            {
-                return _E_ValueSpecification.wrap(new ArrayList<>(), genericType, multiplicity, resolver);
-            }
-            int to = (int) Math.min(count, list.size());
-            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(0, to)), genericType, multiplicity, resolver);
+            int to = (int) Math.min(Math.max(count, 0), col._values().size());
+            return makeCollection(new ArrayList<>(col._values().subList(0, to)), resolver);
         });
 
         // slice(T[*], Integer[1], Integer[1]) : T[*]
         natives.put("slice_T_MANY__Integer_1__Integer_1__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
             int from = (int) Math.max(0, (Long) _E_ValueSpecification.unwrap(args.get(1)));
-            int to = (int) Math.min(list.size(), (Long) _E_ValueSpecification.unwrap(args.get(2)));
-            from = Math.min(from, list.size());
+            int to = (int) Math.min(col._values().size(), (Long) _E_ValueSpecification.unwrap(args.get(2)));
+            from = Math.min(from, col._values().size());
             to = Math.max(from, to);
-            return _E_ValueSpecification.wrap(new ArrayList<>(list.subList(from, to)), genericType, multiplicity, resolver);
+            return makeCollection(new ArrayList<>(col._values().subList(from, to)), resolver);
         });
 
         // reverse(T[m]) : T[m]
         natives.put("reverse_T_m__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            List<Object> reversed = new ArrayList<>(list);
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            List<ValueSpecification> reversed = new ArrayList<>(col._values());
             java.util.Collections.reverse(reversed);
-            return _E_ValueSpecification.wrap(reversed, genericType, multiplicity, resolver);
+            return makeCollection(reversed, resolver);
         });
 
         // zip(T[*], U[*]) : Pair<T,U>[*]
         natives.put("zip_T_MANY__U_MANY__Pair_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> listA = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            List<?> listB = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            List<Object> result = new ArrayList<>();
-            int size = Math.min(listA.size(), listB.size());
+            meta.pure.metamodel.valuespecification.Collection colA = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            meta.pure.metamodel.valuespecification.Collection colB = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            int size = Math.min(colA._values().size(), colB._values().size());
+            List<ValueSpecification> result = new ArrayList<>();
             for (int i = 0; i < size; i++)
             {
-                result.add(makePair(listA.get(i), listB.get(i),
-                        args.get(0)._genericType(), args.get(1)._genericType(), resolver));
+                ValueSpecification aVS = colA._values().get(i);
+                ValueSpecification bVS = colB._values().get(i);
+                DynamicInstance pair = makePair(
+                        aVS, bVS,
+                        aVS._genericType(), bVS._genericType(), resolver);
+                result.add(new AtomicValueImpl(resolver)
+                        ._value(pair)
+                        ._genericType(pair.getClassifierGenericType())
+                        ._multiplicity(_Multiplicity.concreteMultiplicity(1, 1, resolver)));
             }
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return makeCollection(result, resolver);
         });
 
         // removeAll(T[*], T[*]) : T[*]
         natives.put("removeAll_T_MANY__T_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> set = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            List<?> other = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            List<Object> result = new ArrayList<>();
-            for (Object item : set)
+            meta.pure.metamodel.valuespecification.Collection setCol = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            meta.pure.metamodel.valuespecification.Collection otherCol = _E_ValueSpecification.toCollection(args.get(1), resolver);
+            List<ValueSpecification> result = new ArrayList<>();
+            for (ValueSpecification vs : setCol._values())
             {
                 boolean found = false;
-                for (Object o : other)
+                for (ValueSpecification other : otherCol._values())
                 {
-                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(item, o))
+                    // pureEquals auto-unwraps both VS arguments
+                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(vs, other))
                     {
                         found = true;
                         break;
@@ -441,21 +441,20 @@ public class CollectionNatives
                 }
                 if (!found)
                 {
-                    result.add(item);
+                    result.add(vs);
                 }
             }
-            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+            return makeCollection(result, resolver);
         });
 
         // ===== Map API =====
         // newMap(Pair<U,V>[*]) : Map<U,V>[1]
         natives.put("newMap_Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> pairs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            java.util.LinkedHashMap<Object, Object> map = new java.util.LinkedHashMap<>();
-            for (Object p : pairs)
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> map = new java.util.LinkedHashMap<>();
+            for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(0), resolver)._values())
             {
-                DynamicInstance pair = (DynamicInstance) p;
+                DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
                 map.put(pair.get("first"), pair.get("second"));
             }
             return _E_ValueSpecification.wrap(new PureMap(map), genericType, multiplicity, resolver);
@@ -469,12 +468,12 @@ public class CollectionNatives
         natives.put("put_Map_1__U_1__V_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
-            Object key = _E_ValueSpecification.unwrap(args.get(1));
-            Object value = _E_ValueSpecification.unwrap(args.get(2));
-            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(original.getMap());
-            // remove existing equal key first (structural equality)
-            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key));
-            m.put(key, value);
+            ValueSpecification keyVS = args.get(1);
+            ValueSpecification valueVS = args.get(2);
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
+            // remove existing structurally-equal key first
+            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, keyVS));
+            m.put(keyVS, valueVS);
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
@@ -482,12 +481,13 @@ public class CollectionNatives
         natives.put("get_Map_1__U_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
-            Object key = _E_ValueSpecification.unwrap(args.get(1));
-            for (Map.Entry<Object, Object> e : pureMap.getMap().entrySet())
+            ValueSpecification keyVS = args.get(1);
+            for (Map.Entry<ValueSpecification, ValueSpecification> e : pureMap.getMap().entrySet())
             {
-                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(e.getKey(), key))
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(e.getKey(), keyVS))
                 {
-                    return _E_ValueSpecification.wrap(e.getValue(), genericType, multiplicity, resolver);
+                    // Return the stored VS directly — type info is already embedded
+                    return e.getValue();
                 }
             }
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
@@ -497,29 +497,30 @@ public class CollectionNatives
         natives.put("keys_Map_1__U_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
-            return _E_ValueSpecification.wrap(new ArrayList<>(pureMap.getMap().keySet()), genericType, multiplicity, resolver);
+            // Keys are already stored as ValueSpecification — return them directly
+            return makeCollection(new ArrayList<>(pureMap.getMap().keySet()), resolver);
         });
 
         // values(Map<U,V>[1]) : V[*]
         natives.put("values_Map_1__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
-            return _E_ValueSpecification.wrap(new ArrayList<>(pureMap.getMap().values()), genericType, multiplicity, resolver);
+            // Values are already stored as ValueSpecification — return them directly
+            return makeCollection(new ArrayList<>(pureMap.getMap().values()), resolver);
         });
 
         // putAll(Map<U,V>[1], Pair<U,V>[*]) : Map<U,V>[1]
         natives.put("putAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
         {
             PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
-            List<?> pairs = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(1), resolver));
-            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(original.getMap());
-            for (Object p : pairs)
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
+            for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
             {
-                DynamicInstance pair = (DynamicInstance) p;
-                Object k = pair.get("first");
-                Object v = pair.get("second");
-                m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, k));
-                m.put(k, v);
+                DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
+                ValueSpecification kVS = pair.get("first");
+                ValueSpecification vVS = pair.get("second");
+                m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, kVS));
+                m.put(kVS, vVS);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
@@ -529,8 +530,8 @@ public class CollectionNatives
         {
             PureMap m1 = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
             PureMap m2 = (PureMap) _E_ValueSpecification.unwrap(args.get(1));
-            java.util.LinkedHashMap<Object, Object> m = new java.util.LinkedHashMap<>(m1.getMap());
-            for (Map.Entry<Object, Object> e : m2.getMap().entrySet())
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(m1.getMap());
+            for (Map.Entry<ValueSpecification, ValueSpecification> e : m2.getMap().entrySet())
             {
                 m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, e.getKey()));
                 m.put(e.getKey(), e.getValue());
@@ -541,12 +542,10 @@ public class CollectionNatives
         // exists(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
         natives.put("exists_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)))))
+                if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
                 {
                     return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
                 }
@@ -557,12 +556,10 @@ public class CollectionNatives
         // forAll(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
         natives.put("forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            List<?> list = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            for (Object item : list)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                if (!Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)))))
+                if (!Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
                 {
                     return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
                 }
@@ -574,17 +571,13 @@ public class CollectionNatives
         // Pure's List<X> has a 'values' property that contains the grouped elements
         natives.put("groupBy_X_MANY__Function_1__Map_1_", (args, eval, genericType, multiplicity) ->
         {
-            List<?> set = (List<?>) _E_ValueSpecification.unwrap(_E_ValueSpecification.toCollection(args.get(0), resolver));
-            Object fn = _E_ValueSpecification.unwrap(args.get(1));
-            // LinkedHashMap preserves insertion order
-            java.util.LinkedHashMap<Object, List<Object>> grouped = new java.util.LinkedHashMap<>();
-            for (Object item : set)
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            java.util.LinkedHashMap<ValueSpecification, List<ValueSpecification>> grouped = new java.util.LinkedHashMap<>();
+            for (ValueSpecification itemVS : col._values())
             {
-                ValueSpecification wrappedItem = _E_ValueSpecification.wrap(item, args.get(0)._genericType(), args.get(0)._multiplicity(), resolver);
-                Object key = _E_ValueSpecification.unwrap(eval.executeFunction(fn, List.of(wrappedItem)));
-                // Find existing bucket by structural equality
-                Object canonicalKey = null;
-                for (Object k : grouped.keySet())
+                ValueSpecification key = eval.executeFunction(args.get(1), List.of(itemVS));
+                ValueSpecification canonicalKey = null;
+                for (ValueSpecification k : grouped.keySet())
                 {
                     if (org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key))
                     {
@@ -597,25 +590,44 @@ public class CollectionNatives
                     canonicalKey = key;
                     grouped.put(canonicalKey, new ArrayList<>());
                 }
-                grouped.get(canonicalKey).add(item);
+                grouped.get(canonicalKey).add(itemVS);
             }
-            // Build the result map: Map<K, List<X>> where each value is a DynamicInstance with 'values' property
-            java.util.LinkedHashMap<Object, Object> resultMap = new java.util.LinkedHashMap<>();
-            for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new java.util.LinkedHashMap<>();
+            for (Map.Entry<ValueSpecification, List<ValueSpecification>> e : grouped.entrySet())
             {
                 DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
-                listInstance.put("values", e.getValue());
-                resultMap.put(e.getKey(), listInstance);
+                listInstance.put("values", makeCollection(e.getValue(), resolver));
+                resultMap.put(e.getKey(), _E_ValueSpecification.wrap(listInstance, null, null, resolver));
             }
             return _E_ValueSpecification.wrap(new PureMap(resultMap), genericType, multiplicity, resolver);
         });
     }
 
     /**
+     * Build a CollectionImpl from a list of already-typed ValueSpecification items.
+     * Computes _genericType as the most common type of the elements (via findCommonGenericType)
+     * and _multiplicity from the actual size — never uses a call-site type annotation.
+     */
+    public static CollectionImpl makeCollection(List<ValueSpecification> items, MetadataAccess resolver)
+    {
+        MutableList<ValueSpecification> vs = Lists.mutable.withAll(items);
+        MutableList<meta.pure.metamodel.type.generics.GenericType> elementTypes =
+                vs.collect(ValueSpecification::_genericType).select(gt -> gt != null);
+        meta.pure.metamodel.type.generics.GenericType gt = elementTypes.notEmpty()
+                ? _GenericType.findCommonGenericType(elementTypes, resolver)
+                : null;
+        int size = vs.size();
+        return new CollectionImpl(resolver)
+                ._values(vs)
+                ._genericType(gt)
+                ._multiplicity(_Multiplicity.concreteMultiplicity(size, size, resolver));
+    }
+
+    /**
      * Creates a DynamicInstance representing a Pure Pair with its classifierGenericType
      * built from the actual element types of the two input collections.
      */
-    private static DynamicInstance makePair(Object first, Object second,
+    private static DynamicInstance makePair(ValueSpecification first, ValueSpecification second,
             meta.pure.metamodel.type.generics.GenericType firstGT,
             meta.pure.metamodel.type.generics.GenericType secondGT,
             org.finos.legend.pure.m3.module.MetadataAccess resolver)
@@ -626,7 +638,7 @@ public class CollectionNatives
         meta.pure.metamodel.type.Type pairClass =
                 (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::functions::collection::Pair");
         pair.setClassifierGenericType(
-                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl()
+                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)
                         ._type(pairClass)
                         ._typeArguments(org.eclipse.collections.api.factory.Lists.mutable.with(firstGT, secondGT)));
         return pair;
