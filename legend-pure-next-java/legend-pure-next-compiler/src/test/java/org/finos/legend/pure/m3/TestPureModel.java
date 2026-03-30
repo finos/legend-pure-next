@@ -118,6 +118,19 @@ class TestPureModel
                 "Bootstrap should contain an Integer type");
         assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.endsWith("::Any")),
                 "Bootstrap should contain an Any type");
+
+        // Verify PackageableGenericType entries are bootstrapped
+        assertTrue(bootstrap.elementPaths().stream().anyMatch(p -> p.endsWith("::GenericType_SourceInformation")),
+                "Bootstrap should contain GenericType_SourceInformation");
+        assertNotNull(bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation"),
+                "GenericType_SourceInformation should be resolvable by full path");
+        assertInstanceOf(meta.pure.metamodel.type.generics.PackageableGenericType.class,
+                bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation"),
+                "GenericType_SourceInformation should be a PackageableGenericType");
+        meta.pure.metamodel.type.generics.PackageableGenericType sourceInfoGT =
+                (meta.pure.metamodel.type.generics.PackageableGenericType) bootstrap.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_SourceInformation");
+        assertNotNull(sourceInfoGT._type(), "GenericType_SourceInformation should have its type wired");
+        assertEquals("SourceInformation", ((meta.pure.metamodel.PackageableElement) sourceInfoGT._type())._name(), "GenericType_SourceInformation should point to SourceInformation type");
     }
 
     @Test

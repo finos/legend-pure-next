@@ -170,55 +170,14 @@ public class _E_ValueSpecification
             // IMPORTANT: Do NOT use vs._genericType() here — that gives the declared static type
             // (e.g., GenericType) which is too broad. We need the actual runtime type
             // (e.g., UserDefinedGenericType) resolved via the Java interface name.
-            if (cgt == value
-                    || (cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue cgtv
-                            && cgtv._type() == value))
-            {
-                // Resolve the M3 type by Java interface name → Pure path
-                if (resolver != null)
-                {
-                    return resolveTypeByJavaInterfaceName(value.getClass(), resolver);
-                }
-                return null;
-            }
             return _GenericType.type(cgt);
         }
-        // Java primitives (Long, Double, String, Boolean) — use the VS genericType
+        // Java primitives and collections — use the VS genericType
         if (vs != null && vs._genericType() != null)
         {
             return _GenericType.type(vs._genericType());
         }
         throw new RuntimeException("Cannot determine type of value: " + value.getClass().getName());
     }
-
-    /**
-     * Walk the value's Java interface hierarchy and find the first interface
-     * whose canonical name maps to a known Pure M3 path via the resolver.
-     * Java package {@code meta.pure.metamodel.X.Y} → Pure path
-     * {@code meta::pure::metamodel::X::Y}.
-     */
-    private static Type resolveTypeByJavaInterfaceName(Class<?> javaClass, MetadataAccess resolver)
-    {
-        // Check direct interfaces of the concrete class and its supertypes
-        for (Class<?> cls = javaClass; cls != null; cls = cls.getSuperclass())
-        {
-            for (Class<?> iface : cls.getInterfaces())
-            {
-                String javaName = iface.getCanonicalName();
-                if (javaName != null && javaName.startsWith("meta.pure.metamodel"))
-                {
-                    // Java package uses single '.' so replace all '.' with '::'
-                    // e.g. "meta.pure.metamodel.type.generics.UserDefinedGenericType"
-                    //    → "meta::pure::metamodel::type::generics::UserDefinedGenericType"
-                    String purePathFixed = javaName.replace(".", "::");
-                    meta.pure.metamodel.PackageableElement element = resolver.getElement(purePathFixed);
-                    if (element instanceof Type t)
-                    {
-                        return t;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 }
+

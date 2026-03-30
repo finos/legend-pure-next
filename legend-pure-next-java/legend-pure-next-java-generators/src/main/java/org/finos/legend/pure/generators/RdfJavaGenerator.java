@@ -149,16 +149,11 @@ public class RdfJavaGenerator
         MutableSortedSet<String> imports = SortedSets.mutable.empty();
         imports.add("org.eclipse.collections.api.list.MutableList");
 
-        // Add Pure annotation imports if needed
-        classInfo.stereotypes.forEach(stereo -> imports.add("pure.annotations." + toAnnotationClassName(bareName(stereo))));
-        classInfo.taggedValues.forEach(tv -> imports.add("pure.annotations." + toAnnotationClassName(bareName(tv.tag))));
-
+        // Add Pure stereotype/tagged value annotations (no imports needed, using FQN)
         // Check if any own properties have stereotypes or tagged values
         MutableList<PropertyInfo> properties = m3Model.propertiesByOwner().getIfAbsentValue(classInfo.name, Lists.mutable.empty());
         properties.forEach(prop ->
         {
-            prop.stereotypes.forEach(stereo -> imports.add("pure.annotations." + toAnnotationClassName(bareName(stereo))));
-            prop.taggedValues.forEach(tv -> imports.add("pure.annotations." + toAnnotationClassName(bareName(tv.tag))));
         });
 
         // Check if this class has subtypes (is a taxonomy interface)
@@ -272,8 +267,9 @@ public class RdfJavaGenerator
     {
         for (ClassInfo classInfo : m3Model.classInfoMap().valuesView())
         {
-            // Skip non-leaf types - only leaf classes are instantiable
-            if (m3Model.classesWithSubtypes().contains(classInfo.name))
+            // Skip abstract types
+            boolean isAbstract = classInfo.stereotypes.anySatisfy(stereo -> bareName(stereo).equals("abstract"));
+            if (isAbstract)
             {
                 continue;
             }
@@ -315,13 +311,9 @@ public class RdfJavaGenerator
         imports.add("org.eclipse.collections.api.factory.Lists");
         imports.add("org.eclipse.collections.api.list.MutableList");
 
-        // Add Pure annotation imports if needed
-        classInfo.stereotypes.forEach(stereo -> imports.add("pure.annotations." + toAnnotationClassName(bareName(stereo))));
-        classInfo.taggedValues.forEach(tv -> imports.add("pure.annotations." + toAnnotationClassName(bareName(tv.tag))));
+        // Add Pure stereotype/tagged value annotations (no imports needed, using FQN)
         allProperties.forEach(prop ->
         {
-            prop.stereotypes.forEach(stereo -> imports.add("pure.annotations." + toAnnotationClassName(bareName(stereo))));
-            prop.taggedValues.forEach(tv -> imports.add("pure.annotations." + toAnnotationClassName(bareName(tv.tag))));
         });
 
         // Add imports for property types in different packages
@@ -378,10 +370,6 @@ public class RdfJavaGenerator
             sb.append("\n");
         }
 
-        // Pure path for this class (e.g., "meta::pure::metamodel::type::Enumeration")
-        String purePath = classInfo.packagePath != null
-                ? classInfo.packagePath + "::" + classInfo.name
-                : classInfo.name;
 
         if (isMetamodel)
         {
@@ -390,12 +378,25 @@ public class RdfJavaGenerator
             sb.append("    public ").append(classInfo.name).append("Impl() {}\n\n");
 
             // Factory constructor that auto-sets classifierGenericType
+            String purePath = classInfo.packagePath != null
+                    ? classInfo.packagePath + "::" + classInfo.name
+                    : classInfo.name;
             sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
             sb.append("    {\n");
-            sb.append("        this._classifierGenericType(\n");
-            sb.append("            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType\n");
-            sb.append("                .buildUserDefinedGenericType(\n");
-            sb.append("                    (meta.pure.metamodel.type.Type) model.getElement(\"").append(purePath).append("\"), model));\n");
+            if (classInfo.typeParameters.isEmpty())
+            {
+                // Non-parameterized types: use pre-built PackageableGenericType from bootstrap
+                sb.append("        this._classifierGenericType(\n");
+                sb.append("            (meta.pure.metamodel.type.generics.GenericType) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
+            }
+            else
+            {
+                // Parameterized types: typeArguments are instance-specific, so build fresh
+                sb.append("        this._classifierGenericType(\n");
+                sb.append("            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType\n");
+                sb.append("                .buildUserDefinedGenericType(\n");
+                sb.append("                    (meta.pure.metamodel.type.Type) model.getElement(\"").append(purePath).append("\"), model));\n");
+            }
             sb.append("    }\n\n");
         }
         else
@@ -505,8 +506,8 @@ public class RdfJavaGenerator
      */
     private void appendPureAnnotations(StringBuilder sb, MutableList<String> stereotypes, MutableList<TaggedValueEntry> taggedValues, String indent)
     {
-        stereotypes.forEach(stereo -> sb.append(indent).append("@").append(toAnnotationClassName(bareName(stereo))).append("\n"));
-        taggedValues.forEach(tv -> sb.append(indent).append("@").append(toAnnotationClassName(bareName(tv.tag)))
+        stereotypes.forEach(stereo -> sb.append(indent).append("@pure.annotations.").append(toAnnotationClassName(bareName(stereo))).append("\n"));
+        taggedValues.forEach(tv -> sb.append(indent).append("@pure.annotations.").append(toAnnotationClassName(bareName(tv.tag)))
                 .append("(\"")
                 .append(tv.value.replace("\"", "\\\""))
                 .append("\")\n"));

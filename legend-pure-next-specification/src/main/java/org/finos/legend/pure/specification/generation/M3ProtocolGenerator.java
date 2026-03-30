@@ -79,6 +79,7 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoInferred;
     private final Resource protocolInfoPointer;
     private final Resource protocolInfoMainTaxonomy;
+    private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
     private final Property valueProp;
@@ -126,6 +127,8 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_pointer");
         this.protocolInfoMainTaxonomy =
             model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
+        this.protocolInfoAbstract =
+            model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
         this.tagProp = model.createProperty(M3_NS, "tag");
         this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
@@ -333,7 +336,7 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Class ;\n");
 
-        // Write stereotypes (only mainTaxonomy for protocol)
+        // Write stereotypes (only mainTaxonomy and abstract for protocol)
         MutableList<String> stereos = Lists.mutable.empty();
         StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
         while (stereoIter.hasNext())
@@ -342,7 +345,7 @@ public class M3ProtocolGenerator
             if (stereoStmt.getObject().isResource())
             {
                 Resource stereoRes = stereoStmt.getObject().asResource();
-                if (stereoRes.equals(protocolInfoMainTaxonomy))
+                if (stereoRes.equals(protocolInfoMainTaxonomy) || stereoRes.equals(protocolInfoAbstract))
                 {
                     stereos.add(getLocalName(stereoRes));
                 }
@@ -1024,12 +1027,7 @@ public class M3ProtocolGenerator
                     Resource propRes = props.get(i);
                     Statement genTypeStmt = model.getProperty(propRes, genericTypeProp);
                     Resource genTypeRes = genTypeStmt.getObject().asResource();
-                    Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-                    if (oldRawStmt != null)
-                    {
-                        model.remove(oldRawStmt);
-                    }
-                    model.add(genTypeRes, rawTypeProp, protocolType);
+                    replaceRawType(propRes, genTypeRes, protocolType);
                     model.remove(propRes, stereotypesProp, protocolInfoPointer);
                     removeTaggedValues(propRes);
                 }
@@ -1053,12 +1051,7 @@ public class M3ProtocolGenerator
                     Resource propRes = props.get(i);
                     Statement genTypeStmt = model.getProperty(propRes, genericTypeProp);
                     Resource genTypeRes = genTypeStmt.getObject().asResource();
-                    Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-                    if (oldRawStmt != null)
-                    {
-                        model.remove(oldRawStmt);
-                    }
-                    model.add(genTypeRes, rawTypeProp, ptrType);
+                    replaceRawType(propRes, genTypeRes, ptrType);
                     model.remove(propRes, stereotypesProp, protocolInfoPointer);
                 }
             }
@@ -1161,12 +1154,7 @@ public class M3ProtocolGenerator
         });
 
         // Update rawType to point to Type_Protocol
-        Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-        if (oldRawStmt != null)
-        {
-            model.remove(oldRawStmt);
-        }
-        model.add(genTypeRes, rawTypeProp, protocolType);
+        replaceRawType(propRes, genTypeRes, protocolType);
 
         // Remove pointer stereotype and tagged values
         model.remove(propRes, stereotypesProp, protocolInfoPointer);
@@ -1216,13 +1204,7 @@ public class M3ProtocolGenerator
         // Create "extraPointerValues" property on Pointer
         addExtraPointerValuesProperty(pointerType, pointerTypeName);
 
-        // Replace rawType with pointer type
-        Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
-        if (oldRawStmt != null)
-        {
-            model.remove(oldRawStmt);
-        }
-        model.add(genTypeRes, rawTypeProp, pointerType);
+        replaceRawType(propRes, genTypeRes, pointerType);
 
         // Remove the pointer stereotype
         model.remove(propRes, stereotypesProp, protocolInfoPointer);
@@ -1299,6 +1281,34 @@ public class M3ProtocolGenerator
         model.add(generalization, generalProp, generalGenType);
 
         model.add(subtype, generalizationsProp, generalization);
+    }
+
+    /**
+     * Replace the rawType (:type) of a property's genericType with a new target type.
+     * If the genericType resource is a named resource (shared UserDefinedPackageableGenericType),
+     * a new blank node is created to avoid corrupting other references.
+     * If it's a blank node, it's safe to modify in-place.
+     */
+    private void replaceRawType(Resource propRes, Resource genTypeRes, Resource newType)
+    {
+        if (genTypeRes.isAnon())
+        {
+            // Blank node: safe to modify in-place
+            Statement oldRawStmt = model.getProperty(genTypeRes, rawTypeProp);
+            if (oldRawStmt != null)
+            {
+                model.remove(oldRawStmt);
+            }
+            model.add(genTypeRes, rawTypeProp, newType);
+        }
+        else
+        {
+            // Named resource: create a new blank node to avoid corrupting the shared resource
+            Resource newGenType = model.createResource();
+            model.add(newGenType, rawTypeProp, newType);
+            model.remove(propRes, genericTypeProp, genTypeRes);
+            model.add(propRes, genericTypeProp, newGenType);
+        }
     }
 
     /**

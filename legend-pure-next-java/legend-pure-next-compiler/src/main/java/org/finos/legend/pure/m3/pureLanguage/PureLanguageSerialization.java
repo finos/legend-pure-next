@@ -15,6 +15,7 @@ import meta.pure.metamodel.relationship.AssociationFlatBufferWrapper;
 import meta.pure.metamodel.type.ClassFlatBufferWrapper;
 import meta.pure.metamodel.type.EnumerationFlatBufferWrapper;
 import meta.pure.metamodel.type.PrimitiveTypeFlatBufferWrapper;
+import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeFlatBufferWrapper;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -35,6 +36,7 @@ import org.finos.legend.pure.m3.module.pdbModule.fbs.PackageDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PrimitiveTypeDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ProfileDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedFunctionDef;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedPackageableGenericTypeDef;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.UserDefinedPackageableMultiplicityDef;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
@@ -65,6 +67,7 @@ public class PureLanguageSerialization implements PDBExtension
             case "PrimitiveType" -> new PrimitiveTypeFlatBufferWrapper(PrimitiveTypeDef.getRootAsPrimitiveTypeDef(buffer), resolver);
             case "UserDefinedPackageableMultiplicity" -> new UserDefinedPackageableMultiplicityFlatBufferWrapper(UserDefinedPackageableMultiplicityDef.getRootAsUserDefinedPackageableMultiplicityDef(buffer), resolver);
             case "InferredPackageableMultiplicity" -> new InferredPackageableMultiplicityFlatBufferWrapper(InferredPackageableMultiplicityDef.getRootAsInferredPackageableMultiplicityDef(buffer), resolver);
+            case "UserDefinedPackageableGenericType" -> new UserDefinedPackageableGenericTypeFlatBufferWrapper(UserDefinedPackageableGenericTypeDef.getRootAsUserDefinedPackageableGenericTypeDef(buffer), resolver);
             case "Package" -> new PackageFlatBufferWrapper(PackageDef.getRootAsPackageDef(buffer), resolver);
             default -> null;
         };
@@ -132,6 +135,10 @@ public class PureLanguageSerialization implements PDBExtension
         {
             return writer.writeUserDefinedPackageableMultiplicity(cpm);
         }
+        else if (element instanceof meta.pure.metamodel.type.generics.UserDefinedPackageableGenericType pgt)
+        {
+            return writer.writeUserDefinedPackageableGenericType(pgt);
+        }
         else if (element instanceof meta.pure.metamodel.Package pkg)
         {
             return writer.writePackage(pkg);
@@ -150,6 +157,7 @@ public class PureLanguageSerialization implements PDBExtension
         if (element instanceof meta.pure.metamodel.type.PrimitiveType) return "PrimitiveType";
         if (element instanceof meta.pure.metamodel.multiplicity.InferredPackageableMultiplicity) return "InferredPackageableMultiplicity";
         if (element instanceof meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicity) return "UserDefinedPackageableMultiplicity";
+        if (element instanceof meta.pure.metamodel.type.generics.UserDefinedPackageableGenericType) return "UserDefinedPackageableGenericType";
         if (element instanceof meta.pure.metamodel.Package) return "Package";
         return null;
     }
