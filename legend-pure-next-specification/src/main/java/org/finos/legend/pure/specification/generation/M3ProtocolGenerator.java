@@ -79,6 +79,7 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoInferred;
     private final Resource protocolInfoPointer;
     private final Resource protocolInfoMainTaxonomy;
+    private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
     private final Property valueProp;
@@ -126,6 +127,8 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_pointer");
         this.protocolInfoMainTaxonomy =
             model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
+        this.protocolInfoAbstract =
+            model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
         this.tagProp = model.createProperty(M3_NS, "tag");
         this.valueProp = model.createProperty(M3_NS, "taggedValue_value");
@@ -333,7 +336,7 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Class ;\n");
 
-        // Write stereotypes (only mainTaxonomy for protocol)
+        // Write stereotypes (only mainTaxonomy and abstract for protocol)
         MutableList<String> stereos = Lists.mutable.empty();
         StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
         while (stereoIter.hasNext())
@@ -342,7 +345,7 @@ public class M3ProtocolGenerator
             if (stereoStmt.getObject().isResource())
             {
                 Resource stereoRes = stereoStmt.getObject().asResource();
-                if (stereoRes.equals(protocolInfoMainTaxonomy))
+                if (stereoRes.equals(protocolInfoMainTaxonomy) || stereoRes.equals(protocolInfoAbstract))
                 {
                     stereos.add(getLocalName(stereoRes));
                 }

@@ -82,6 +82,7 @@
 # --- Any ---
 
 :Any a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "Any" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Any ] ;
     :package :meta_pure_metamodel_type .
@@ -120,6 +121,7 @@
 # --- Inferred (marker type for all compiler-inferred values) ---
 
 :Inferred a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "Inferred" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Inferred ] ;
     :package :meta_pure_metamodel ;
@@ -173,6 +175,7 @@
 # --- Type ---
 
 :Type a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "FunctionType,RelationType,TypeParameter" ] ;
     :name "Type" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Type ] ;
@@ -189,6 +192,7 @@
 # --- DataType ---
 
 :DataType a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "DataType" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_DataType ] ;
     :package :meta_pure_metamodel_type ;
@@ -229,6 +233,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :Boolean ; :general :GenericType_Any ] .
 
 :Number a :PrimitiveType ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
 
     :name "Number" ;
     :classifierGenericType :GenericType_PrimitiveType ;
@@ -257,6 +262,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :Decimal ; :general :GenericType_Number ] .
 
 :Date a :PrimitiveType ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
 
     :name "Date" ;
     :classifierGenericType :GenericType_PrimitiveType ;
@@ -366,7 +372,7 @@
 # --- GenericType ---
 
 :GenericType a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy ;
+    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
     :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "AdHocGenericTypeValue,UndefinedGenericType,GenericTypeOperation" ] ;
     :name "GenericType" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GenericTypeBase ] ;
@@ -831,6 +837,7 @@
 # --- GenericTypeValue ---
 
 :GenericTypeValue a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "GenericTypeValue" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GenericTypeValue ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -869,6 +876,7 @@
 # --- AdHocGenericTypeValue ---
 
 :AdHocGenericTypeValue a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "AdHocGenericTypeValue" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_AdHocGenericTypeValue ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -885,6 +893,7 @@
 # --- PackageableGenericType ---
 
 :PackageableGenericType a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "PackageableGenericType" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GenericType ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -933,6 +942,7 @@
 # --- TypeAndMultiplicityParametersOwner ---
 
 :TypeAndMultiplicityParametersOwner a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "TypeAndMultiplicityParametersOwner" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_TypeAndMultiplicityParametersOwner ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -992,6 +1002,7 @@
 # --- MultiplicityParameter ---
 
 :MultiplicityParameter a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "MultiplicityParameter" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_MultiplicityParameter ] ;
     :package :meta_pure_metamodel_multiplicity ;
@@ -1086,7 +1097,7 @@
 # --- ElementOverride ---
 
 :ElementOverride a :Class ;
-    :stereotypes :ProtocolInfo_excluded ;
+    :stereotypes :ProtocolInfo_excluded , :meta_pure_profiles_typemodifiers_abstract ;
     :name "ElementOverride" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ElementOverride ] ;
     :package :meta_pure_metamodel_type ;
@@ -1095,7 +1106,7 @@
 # --- GetterOverride ---
 
 :GetterOverride a :Class ;
-    :stereotypes :ProtocolInfo_excluded ;
+    :stereotypes :ProtocolInfo_excluded , :meta_pure_profiles_typemodifiers_abstract ;
     :name "GetterOverride" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GetterOverride ] ;
     :package :meta_pure_metamodel_type ;
@@ -1104,7 +1115,7 @@
 # --- ConstraintsOverride ---
 
 :ConstraintsOverride a :Class ;
-    :stereotypes :ProtocolInfo_excluded ;
+    :stereotypes :ProtocolInfo_excluded , :meta_pure_profiles_typemodifiers_abstract ;
     :name "ConstraintsOverride" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ConstraintsOverride ] ;
     :package :meta_pure_metamodel_type ;
@@ -1124,7 +1135,7 @@
 # --- PackageableElement ---
 
 :PackageableElement a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy ;
+    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
     :name "PackageableElement" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_PackageableElement ] ;
     :package :meta_pure_metamodel ;
@@ -1149,6 +1160,7 @@
 # --- SimplePropertyOwner ---
 
 :SimplePropertyOwner a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "SimplePropertyOwner" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_SimplePropertyOwner ] ;
     :package :meta_pure_metamodel ;
@@ -1164,6 +1176,7 @@
 # --- PropertyOwner ---
 
 :PropertyOwner a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "PropertyOwner" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_PropertyOwner ] ;
     :package :meta_pure_metamodel ;
@@ -1413,6 +1426,7 @@
 # --- Multiplicity ---
 
 :Multiplicity a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "UserDefinedAdHocMultiplicity,InferredAdHocMultiplicity,UserDefinedMultiplicityParameter,InferredMultiplicityParameter,UndefinedMultiplicity" ] ;
     :name "Multiplicity" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Multiplicity ] ;
@@ -1422,6 +1436,7 @@
 # --- ConcreteMultiplicity ---
 
 :ConcreteMultiplicity a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "ConcreteMultiplicity" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ConcreteMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity ;
@@ -1444,6 +1459,7 @@
 # --- AdHocMultiplicity ---
 
 :AdHocMultiplicity a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "AdHocMultiplicity" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_AdHocMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity ;
@@ -1496,6 +1512,7 @@
 # --- PackageableMultiplicity ---
 
 :PackageableMultiplicity a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "PackageableMultiplicity" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_PackageableMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity ;
@@ -1514,7 +1531,7 @@
 # --- ValueSpecification ---
 
 :ValueSpecification a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy ;
+    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
     :name "ValueSpecification" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ValueSpecification ] ;
     :package :meta_pure_metamodel_valuespecification ;
@@ -1620,6 +1637,7 @@
 # --- FunctionExpression ---
 
 :FunctionExpression a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "FunctionExpression" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_FunctionExpression ] ;
     :package :meta_pure_metamodel_valuespecification ;
@@ -1676,6 +1694,7 @@
 # --- FunctionApplication ---
 
 :FunctionApplication a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "FunctionApplication" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_FunctionApplication ] ;
     :package :meta_pure_metamodel_valuespecification ;
@@ -1700,6 +1719,7 @@
 # --- AnnotatedElement ---
 
 :AnnotatedElement a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "AnnotatedElement" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_AnnotatedElement ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1710,6 +1730,7 @@
 # --- ElementWithStereotypes ---
 
 :ElementWithStereotypes a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "ElementWithStereotypes" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ElementWithStereotypes ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1726,6 +1747,7 @@
 # --- ElementWithTaggedValues ---
 
 :ElementWithTaggedValues a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "ElementWithTaggedValues" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ElementWithTaggedValues ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1743,6 +1765,7 @@
 # --- ElementWithConstraints ---
 
 :ElementWithConstraints a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "ElementWithConstraints" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ElementWithConstraints ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1910,6 +1933,7 @@
 # --- Testable ---
 
 :Testable a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "Testable" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Testable ] ;
     :package :meta_pure_metamodel_testable ;
@@ -2158,6 +2182,11 @@
     :package :meta ;
     :classifierGenericType :GenericType_Package .
 
+:meta_pure_profiles a :Package ;
+    :name "profiles" ;
+    :package :meta_pure ;
+    :classifierGenericType :GenericType_Package .
+
 :meta_pure_metamodel a :Package ;
     :name "metamodel" ;
     :package :meta_pure ;
@@ -2263,3 +2292,13 @@
     :classifierGenericType :GenericType_Tag ;
     :tag_value "nonPointerSubtypes" ;
     :tag_profile :ProtocolInfo .
+
+:meta_pure_profiles_typemodifiers a :Profile ;
+    :name "typemodifiers" ;
+    :classifierGenericType :GenericType_Profile ;
+    :package :meta_pure_profiles .
+
+:meta_pure_profiles_typemodifiers_abstract a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name "abstract" ;
+    :profile :meta_pure_profiles_typemodifiers .
