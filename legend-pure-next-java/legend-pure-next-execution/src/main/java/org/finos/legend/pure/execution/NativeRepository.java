@@ -173,6 +173,7 @@ public class NativeRepository
         MetaNatives.register(natives, lazyNatives, resolver);
         ElementPathNatives.register(natives, lazyNatives, resolver);
         IONatives.register(natives, lazyNatives, resolver);
+        org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
     }
 
     // =========================================================================

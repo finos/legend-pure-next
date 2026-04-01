@@ -75,8 +75,7 @@ Type
 ├── DataType
 │   ├── Enumeration                    [pointer]
 │   ├── Measure                        [pointer]
-│   ├── PrimitiveType                  [pointer]
-│   └── Unit                           [pointer]
+│   └── PrimitiveType                  [pointer]
 ├── FunctionType                       [inline]
 ├── RelationType                       [inline]
 └── TypeParameter                      [inline]
@@ -107,3 +106,25 @@ Multiplicity
 │   └── UserDefinedMultiplicityParameter        [inline]
 └── UndefinedMultiplicity
 ```
+
+## Other Taxonomies
+
+### PrimitiveType
+
+```
+PrimitiveType
+├── Binary
+├── Boolean
+├── Byte
+├── Date
+│   ├── DateTime
+│   ├── LatestDate
+│   └── StrictDate
+├── Number
+│   ├── Decimal
+│   ├── Float
+│   └── Integer
+├── StrictTime
+└── String
+```
+
