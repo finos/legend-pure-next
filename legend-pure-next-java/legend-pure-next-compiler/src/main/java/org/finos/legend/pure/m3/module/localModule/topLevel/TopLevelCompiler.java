@@ -20,7 +20,6 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
@@ -207,7 +206,11 @@ public class TopLevelCompiler
                         String fullPath = packagePath != null
                                 ? packagePath + "::" + name
                                 : name;
-
+                        if (elementIndex.containsKey(fullPath))
+                        {
+                            meta.pure.protocol.grammar.SourceInformation si = grammarElement._sourceInformation();
+                            throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + " " + si._startLine() + ":" + si._startColumn());
+                        }
                         PackageableElement element = firstPassElement(grammarElement, model);
                         elementIndex.put(fullPath, new IndexEntry(element, grammarElement, section, fileSourceId));
                     }));

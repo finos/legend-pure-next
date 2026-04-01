@@ -46,6 +46,10 @@ public class LangNatives
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
 
+        natives.put("eval_Function_1__T_n__U_p__W_q__V_m_", (args, eval, genericType, multiplicity) ->
+            eval.executeFunction(args.get(0), args.subList(1, args.size()))
+        );
+
         natives.put("eval_Function_1__T_n__V_m_", (args, eval, genericType, multiplicity) ->
             eval.executeFunction(args.get(0), args.subList(1, args.size()))
         );
