@@ -76,6 +76,11 @@ function meta::pure::compiler::helper::subtypeOf(sub:Type[1], super:Type[1]):Boo
 
 function meta::pure::compiler::helper::findCommonType(types:Type[*]):Type[0..1]
 {
+    $types->findCommonType(false)
+}
+
+function meta::pure::compiler::helper::findCommonType(types:Type[*], contravariant:Boolean[1]):Type[0..1]
+{
     if($types->isEmpty(),
         | [],
         | if($types->size() == 1,
@@ -83,22 +88,33 @@ function meta::pure::compiler::helper::findCommonType(types:Type[*]):Type[0..1]
               | let first = $types->at(0);
                 if($types->filter(t | $t != $first)->isEmpty(),
                     | $first,
-                    | let nonNil = $types->filter(t | !$t->isBottomType());
-                      if($nonNil->isEmpty(),
-                          | $first,
-                          | if($nonNil->size() < $types->size(),
-                                | $nonNil->findCommonType(),
-                                | let linearizations = $types->map(t | $t->linearize()->list());
-                                  let firstLin = $linearizations->at(0).values;
-                                  $firstLin->filter(candidate | $linearizations->filter(lin | $lin.values->filter(v | $v == $candidate)->isEmpty())->isEmpty())
-                                           ->head()
-                                           ->match([t : Type[1] | $t, a : Any[1] | []]);
-                            );
+                    | // Handle Nil (bottom type)
+                      let nonNil = $types->filter(t | !$t->isBottomType());
+                      if($contravariant,
+                          | // GLB: if any input is Nil, result is Nil
+                            if($nonNil->size() < $types->size(),
+                                | Nil,
+                                | // Without Nil in nominal hierarchy, GLB defaults to Nil
+                                  Nil
+                            ),
+                          | // LCA: Nil is subtype of everything, so ignore it
+                            if($nonNil->isEmpty(),
+                                | $first,
+                                | if($nonNil->size() < $types->size(),
+                                      | $nonNil->findCommonType(false),
+                                      | let linearizations = $types->map(t | $t->linearize()->list());
+                                        let firstLin = $linearizations->at(0).values;
+                                        $firstLin->filter(candidate | $linearizations->filter(lin | $lin.values->filter(v | $v == $candidate)->isEmpty())->isEmpty())
+                                                 ->head()
+                                                 ->match([t : Type[1] | $t, a : Any[1] | []]);
+                                  )
+                            )
                       );
                 );
           );
     );
 }
+
 
 function meta::pure::compiler::helper::isFunctionType(t:Type[1]):Boolean[1]
 {
@@ -177,7 +193,19 @@ function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testF
     assertEquals(Number, $numTypes->findCommonType());
     let mixedTypes = [Integer, String];
     assertEquals(Any, $mixedTypes->findCommonType());
+
+    // Covariant with Nil: Nil is ignored (LCA of {X, Nil} = X)
+    let withNil = [Integer, Nil]->cast(@Type);
+    assertEquals(Integer, $withNil->findCommonType(false));
+
+    // Contravariant (GLB): result is always Nil for nominal types
+    assertEquals(Nil, [Integer, Float]->cast(@Type)->findCommonType(true));
+    assertEquals(Nil, [Integer, String]->cast(@Type)->findCommonType(true));
+
+    // Contravariant with Nil input: result is Nil
+    assertEquals(Nil, [Integer, Nil]->cast(@Type)->findCommonType(true));
 }
+
 
 function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsFunctionType():Boolean[1]
 {

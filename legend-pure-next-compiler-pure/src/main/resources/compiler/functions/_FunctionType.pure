@@ -43,3 +43,49 @@ function meta::pure::compiler::helper::isConcreteFunctionType(ft:FunctionType[1]
           )
     );
 }
+
+
+// FunctionType referenced parameter names
+
+function meta::pure::compiler::helper::collectFunctionTypeReferencedTypeParameterNames(ft:FunctionType[1]):String[*]
+{
+    let paramNames = $ft.parameters
+        ->filter(p | $p.genericType->isNotEmpty())
+        ->map(p | $p.genericType->toOne()->collectReferencedTypeParameterNames());
+    let returnNames = if($ft.returnType->isEmpty(),
+        | [],
+        | $ft.returnType->toOne()->collectReferencedTypeParameterNames()
+    );
+    $paramNames->concatenate($returnNames)->removeDuplicates();
+}
+
+function meta::pure::compiler::helper::collectFunctionTypeReferencedMultiplicityParameterNames(ft:FunctionType[1]):String[*]
+{
+    let paramNames = $ft.parameters->map(p |
+        let mulNames = $p.multiplicity->match(
+            [
+                mp : MultiplicityParameter[1] | $mp.name,
+                a  : Any[1]                   | []->cast(@String)
+            ]
+        );
+        let gtNames = if($p.genericType->isEmpty(),
+            | [],
+            | $p.genericType->toOne()->collectReferencedMultiplicityParameterNames()
+        );
+        $mulNames->concatenate($gtNames);
+    );
+    let returnMulNames = if($ft.returnMultiplicity->isEmpty(),
+        | [],
+        | $ft.returnMultiplicity->toOne()->match(
+            [
+                mp : MultiplicityParameter[1] | $mp.name,
+                a  : Any[1]                   | []->cast(@String)
+            ]
+          )
+    );
+    let returnGtNames = if($ft.returnType->isEmpty(),
+        | [],
+        | $ft.returnType->toOne()->collectReferencedMultiplicityParameterNames()
+    );
+    $paramNames->concatenate($returnMulNames)->concatenate($returnGtNames)->removeDuplicates();
+}

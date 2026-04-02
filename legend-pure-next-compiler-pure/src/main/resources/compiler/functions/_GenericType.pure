@@ -133,6 +133,85 @@ function meta::pure::compiler::helper::isConcreteGenericTypeOperation(gto:Generi
 }
 
 
+// GenericType concreteness in context
+
+function meta::pure::compiler::helper::isConcreteGenericTypeInContext(genericType:GenericType[1], scopeTypeParams:String[*]):Boolean[1]
+{
+    if($genericType->isConcreteGenericType(),
+        | true,
+        | let referencedParams = $genericType->collectReferencedTypeParameterNames();
+          if($referencedParams->isEmpty(),
+              | false,
+              | $referencedParams->filter(n | $scopeTypeParams->filter(s | $s == $n)->isEmpty())->isEmpty()
+          );
+    )
+}
+
+
+// GenericType referenced parameter names
+
+function meta::pure::compiler::helper::collectReferencedTypeParameterNames(genericType:GenericType[1]):String[*]
+{
+    $genericType->match(
+        [
+            ugt : UndefinedGenericType[1] | [],
+            gto : GenericTypeOperation[1] |
+                $gto.left->collectReferencedTypeParameterNames()
+                    ->concatenate($gto.right->collectReferencedTypeParameterNames()),
+            gtv : GenericTypeValue[1]     |
+                let rawType = $gtv.type;
+                let tpNames = if($rawType->isEmpty(),
+                    | [],
+                    | $rawType->toOne()->match(
+                        [
+                            tp : TypeParameter[1]  | $tp.name,
+                            ft : FunctionType[1]   | $ft->collectFunctionTypeReferencedTypeParameterNames(),
+                            a  : Any[1]            | []->cast(@String)
+                        ]
+                      )
+                );
+                let argNames = $gtv.typeArguments->map(a | $a->collectReferencedTypeParameterNames());
+                $tpNames->concatenate($argNames)->removeDuplicates();,
+            a   : Any[1] | []
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::collectReferencedMultiplicityParameterNames(genericType:GenericType[1]):String[*]
+{
+    $genericType->match(
+        [
+            ugt : UndefinedGenericType[1] | [],
+            gto : GenericTypeOperation[1] |
+                $gto.left->collectReferencedMultiplicityParameterNames()
+                    ->concatenate($gto.right->collectReferencedMultiplicityParameterNames()),
+            gtv : GenericTypeValue[1]     |
+                let rawType = $gtv.type;
+                let ftNames = if($rawType->isEmpty(),
+                    | [],
+                    | $rawType->toOne()->match(
+                        [
+                            ft : FunctionType[1] | $ft->collectFunctionTypeReferencedMultiplicityParameterNames(),
+                            a  : Any[1]          | []->cast(@String)
+                        ]
+                      )
+                );
+                let argNames = $gtv.typeArguments->map(a | $a->collectReferencedMultiplicityParameterNames());
+                let mulArgNames = $gtv.multiplicityArguments->map(m |
+                    $m->match(
+                        [
+                            mp : MultiplicityParameter[1] | $mp.name,
+                            a  : Any[1]                   | []->cast(@String)
+                        ]
+                    )
+                );
+                $ftNames->concatenate($argNames)->concatenate($mulArgNames)->removeDuplicates();,
+            a   : Any[1] | []
+        ]
+    )
+}
+
+
 // Tests
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeSimple():Boolean[1]
@@ -205,4 +284,58 @@ function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsC
     let tpGT = ^GenericTypeValue(type = $tp);
     let classGT2 = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
     assertFalse($classGT2->isConcreteGenericType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testCollectReferencedTypeParameterNames():Boolean[1]
+{
+    // Concrete type has no type parameter references
+    let intGT = ^GenericTypeValue(type = Integer);
+    assertEquals(0, $intGT->collectReferencedTypeParameterNames()->size());
+
+    // TypeParameter reference returns its name
+    let tp = ^TypeParameter(name = 'T', contravariant = false);
+    let tpGT = ^GenericTypeValue(type = $tp);
+    let names = $tpGT->collectReferencedTypeParameterNames();
+    assertEquals(1, $names->size());
+    assertEquals('T', $names->at(0));
+
+    // Nested in type arguments
+    let classGT = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
+    let nestedNames = $classGT->collectReferencedTypeParameterNames();
+    assertEquals(1, $nestedNames->size());
+    assertEquals('T', $nestedNames->at(0));
+
+    // UndefinedGenericType returns empty
+    let ugt = ^UndefinedGenericType();
+    assertEquals(0, $ugt->collectReferencedTypeParameterNames()->size());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testCollectReferencedMultiplicityParameterNames():Boolean[1]
+{
+    // Concrete type has no multiplicity parameter references
+    let intGT = ^GenericTypeValue(type = Integer);
+    assertEquals(0, $intGT->collectReferencedMultiplicityParameterNames()->size());
+
+    // UndefinedGenericType returns empty
+    let ugt = ^UndefinedGenericType();
+    assertEquals(0, $ugt->collectReferencedMultiplicityParameterNames()->size());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericTypeInContext():Boolean[1]
+{
+    // Concrete type is concrete in any context
+    let intGT = ^GenericTypeValue(type = Integer);
+    assert($intGT->isConcreteGenericTypeInContext([]));
+
+    // TypeParameter reference is concrete if it's in scope
+    let tp = ^TypeParameter(name = 'T', contravariant = false);
+    let tpGT = ^GenericTypeValue(type = $tp);
+    assert($tpGT->isConcreteGenericTypeInContext(['T']));
+    assertFalse($tpGT->isConcreteGenericTypeInContext([]));
+    assertFalse($tpGT->isConcreteGenericTypeInContext(['V']));
+
+    // Nested type parameter: Class<T> is concrete if T is in scope
+    let classGT = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
+    assert($classGT->isConcreteGenericTypeInContext(['T']));
+    assertFalse($classGT->isConcreteGenericTypeInContext([]));
 }

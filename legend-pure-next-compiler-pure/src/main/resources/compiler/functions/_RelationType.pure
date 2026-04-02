@@ -26,3 +26,31 @@ function meta::pure::compiler::helper::isConcreteRelationType(rt:RelationType<An
 {
     $rt.columns->cast(@Column<Any,Any|*>)->filter(col | if($col.genericType->isEmpty(), | false, | !$col.genericType->toOne()->isConcreteGenericType()))->isEmpty()
 }
+
+
+// RelationType referenced parameter names
+
+function meta::pure::compiler::helper::collectRelationTypeReferencedTypeParameterNames(rt:RelationType<Any>[1]):String[*]
+{
+    $rt.columns->cast(@Column<Any,Any|*>)
+        ->filter(col | $col.genericType->isNotEmpty())
+        ->map(col | $col.genericType->toOne()->collectReferencedTypeParameterNames())
+        ->removeDuplicates()
+}
+
+function meta::pure::compiler::helper::collectRelationTypeReferencedMultiplicityParameterNames(rt:RelationType<Any>[1]):String[*]
+{
+    $rt.columns->cast(@Column<Any,Any|*>)->map(col |
+        let gtNames = if($col.genericType->isEmpty(),
+            | [],
+            | $col.genericType->toOne()->collectReferencedMultiplicityParameterNames()
+        );
+        let mulNames = $col.multiplicity->match(
+            [
+                mp : MultiplicityParameter[1] | $mp.name,
+                a  : Any[1]                   | []->cast(@String)
+            ]
+        );
+        $gtNames->concatenate($mulNames);
+    )->removeDuplicates()
+}
