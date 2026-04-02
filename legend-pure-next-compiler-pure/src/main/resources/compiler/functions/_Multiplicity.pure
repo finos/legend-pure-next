@@ -129,6 +129,17 @@ function meta::pure::compiler::helper::multiplicitySubsumes(general:Multiplicity
 }
 
 
+// Multiplicity compatibility (variance-aware)
+
+function meta::pure::compiler::helper::isCompatibleMultiplicity(declared:Multiplicity[1], actual:Multiplicity[1], contravariant:Boolean[1]):Boolean[1]
+{
+    if($contravariant,
+        | $actual->multiplicitySubsumes($declared),
+        | $declared->multiplicitySubsumes($actual)
+    )
+}
+
+
 // Tests
 
 function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityLowerBound():Boolean[1]
@@ -184,4 +195,16 @@ function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMu
     assert(PureOne->multiplicitySubsumes(PureOne));
     assertFalse(PureOne->multiplicitySubsumes(ZeroOne));
     assertFalse(PureOne->multiplicitySubsumes(ZeroMany));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsCompatibleMultiplicity():Boolean[1]
+{
+    // Covariant (default): declared subsumes actual
+    assert(ZeroMany->isCompatibleMultiplicity(PureOne, false));
+    assert(ZeroMany->isCompatibleMultiplicity(ZeroOne, false));
+    assertFalse(PureOne->isCompatibleMultiplicity(ZeroMany, false));
+
+    // Contravariant: actual subsumes declared
+    assert(PureOne->isCompatibleMultiplicity(ZeroMany, true));
+    assertFalse(ZeroMany->isCompatibleMultiplicity(PureOne, true));
 }

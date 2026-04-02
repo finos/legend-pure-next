@@ -28,3 +28,18 @@ function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1], ful
     );
     '{' + $paramStr + '->' + $returnStr + $returnMul + '}';
 }
+
+
+// FunctionType concreteness
+
+function meta::pure::compiler::helper::isConcreteFunctionType(ft:FunctionType[1]):Boolean[1]
+{
+    let paramsOk = $ft.parameters->filter(p | !$p.genericType->toOne()->isConcreteGenericType())->isEmpty();
+    if(!$paramsOk,
+        | false,
+        | if($ft.returnType->isEmpty(),
+              | true,
+              | $ft.returnType->toOne()->isConcreteGenericType()
+          )
+    );
+}

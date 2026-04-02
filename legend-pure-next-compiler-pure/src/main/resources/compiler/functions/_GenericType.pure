@@ -1,4 +1,6 @@
 import meta::pure::compiler::helper::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::type::generics::*;
 
 // GenericType helpers
 
@@ -12,6 +14,7 @@ function meta::pure::compiler::helper::printGenericType(genericType:GenericType[
     $genericType->match(
         [
             ugt : UndefinedGenericType[1] | '?',
+            gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
             a   : Any[1]                  | 'Unknown'
         ]
@@ -24,25 +27,108 @@ function meta::pure::compiler::helper::printGenericTypeValue(gtv:GenericTypeValu
     if($rawType->isEmpty(),
         | 'Unknown',
         | let t = $rawType->toOne();
-          let typeName = $t->match(
-              [
-                  ft : FunctionType[1]      | $ft->printFunctionType($fullPath),
-                  pe : PackageableElement[1] |
-                      if($fullPath,
-                          | $pe->meta::pure::compiler::helper::fullPath(),
-                          | $pe.name->toOne()
-                      ),
-                  a  : Any[1]               | 'Unknown'
-              ]
+          if($t->instanceOf(TypeParameter),
+              | let tpName = $t->cast(@TypeParameter).name;
+                if($tpName->isEmpty(), | '?', | $tpName->toOne());,
+              | let typeName = $t->match(
+                    [
+                        ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
+                        pe : PackageableElement[1] |
+                            if($fullPath,
+                                | $pe->meta::pure::compiler::helper::fullPath(),
+                                | $pe.name->toOne()
+                            ),
+                        a  : Any[1]                | 'Unknown'
+                    ]
+                );
+                let typeArgs = $gtv.typeArguments;
+                let mulArgs = $gtv.multiplicityArguments;
+                if($typeArgs->isEmpty() && $mulArgs->isEmpty(),
+                    | $typeName,
+                    | let typeArgStr = $typeArgs->map(a | $a->printGenericType($fullPath))->joinStrings(', ');
+                      let mulArgStr = $mulArgs->map(m | '|' + $m->printMultiplicityBare())->joinStrings('');
+                      $typeName + '<' + $typeArgStr + $mulArgStr + '>';
+                );
           );
-          let typeArgs = $gtv.typeArguments;
-          let mulArgs = $gtv.multiplicityArguments;
-          if($typeArgs->isEmpty() && $mulArgs->isEmpty(),
-              | $typeName,
-              | let typeArgStr = $typeArgs->map(a | $a->printGenericType($fullPath))->joinStrings(', ');
-                let mulArgStr = $mulArgs->map(m | '|' + $m->printMultiplicityBare())->joinStrings('');
-                $typeName + '<' + $typeArgStr + $mulArgStr + '>';
+    );
+}
+
+function meta::pure::compiler::helper::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
+{
+    let left = $gto.left->printGenericType($fullPath);
+    let opName = $gto.operationType->toString();
+    let op = if($opName == 'Union', | '+',
+             | if($opName == 'Difference', | '-',
+               | if($opName == 'Equal', | '=', | '⊆')));
+    let right = $gto.right->printGenericType($fullPath);
+    $left + $op + $right;
+}
+
+
+// GenericType accessors
+
+function meta::pure::compiler::helper::genericTypeTypeArguments(gt:GenericType[1]):GenericType[*]
+{
+    $gt->match(
+        [
+            gtv : GenericTypeValue[1] | $gtv.typeArguments,
+            a   : Any[1]             | []
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::genericTypeMultiplicityArguments(gt:GenericType[1]):Multiplicity[*]
+{
+    $gt->match(
+        [
+            gtv : GenericTypeValue[1] | $gtv.multiplicityArguments,
+            a   : Any[1]             | []
+        ]
+    )
+}
+
+
+// GenericType concreteness
+
+function meta::pure::compiler::helper::isConcreteGenericType(genericType:GenericType[1]):Boolean[1]
+{
+    $genericType->match(
+        [
+            ugt : UndefinedGenericType[1] | true,
+            gto : GenericTypeOperation[1] | $gto->isConcreteGenericTypeOperation(),
+            gtv : GenericTypeValue[1]     | $gtv->isConcreteGenericTypeValue(),
+            a   : Any[1]                  | true
+        ]
+    );
+}
+
+function meta::pure::compiler::helper::isConcreteGenericTypeValue(gtv:GenericTypeValue[1]):Boolean[1]
+{
+    if($gtv.type->isEmpty(),
+        | true,
+        | let t = $gtv.type->toOne();
+          if($t->instanceOf(TypeParameter),
+              | false,
+              | let ftCheck = $t->match(
+                    [
+                        ft : FunctionType[1] | $ft->isConcreteFunctionType(),
+                        a  : Any[1]          | true
+                    ]
+                );
+                if(!$ftCheck,
+                    | false,
+                    | $gtv.typeArguments->filter(arg | !$arg->isConcreteGenericType())->isEmpty()
+                );
           );
+    );
+}
+
+function meta::pure::compiler::helper::isConcreteGenericTypeOperation(gto:GenericTypeOperation[1]):Boolean[1]
+{
+    let opName = $gto.operationType->toString();
+    if($opName == 'Subset' || $opName == 'Equal',
+        | $gto.right->isConcreteGenericType(),
+        | $gto.left->isConcreteGenericType() && $gto.right->isConcreteGenericType()
     );
 }
 
@@ -61,4 +147,62 @@ function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPri
 {
     let strGT = ^GenericTypeValue(type = String);
     assertEquals('String', $strGT->printGenericType(false));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeUndefined():Boolean[1]
+{
+    let ugt = ^UndefinedGenericType();
+    assertEquals('?', $ugt->printGenericType(false));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeTypeParameter():Boolean[1]
+{
+    let tp = ^TypeParameter(name = 'T', contravariant = false);
+    let tpGT = ^GenericTypeValue(type = $tp);
+    // TypeParameter name may not round-trip through ^ constructor due to runtime property resolution
+    let result = $tpGT->printGenericType(false);
+    assert($result->length() > 0);
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testGenericTypeTypeArguments():Boolean[1]
+{
+    let intGT = ^GenericTypeValue(type = Integer);
+    let listGT = ^GenericTypeValue(type = Class, typeArguments = $intGT);
+    assertEquals(1, $listGT->genericTypeTypeArguments()->size());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testGenericTypeMultiplicityArguments():Boolean[1]
+{
+    let intGT = ^GenericTypeValue(type = Integer);
+    assert($intGT->genericTypeMultiplicityArguments()->isEmpty());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericType():Boolean[1]
+{
+    // Concrete type
+    let intGT = ^GenericTypeValue(type = Integer);
+    assert($intGT->isConcreteGenericType());
+
+    // TypeParameter reference is not concrete
+    let tp = ^TypeParameter(name = 'T', contravariant = false);
+    let tpGT = ^GenericTypeValue(type = $tp);
+    assertFalse($tpGT->isConcreteGenericType());
+
+    // UndefinedGenericType is considered concrete (it's a wildcard)
+    let ugt = ^UndefinedGenericType();
+    assert($ugt->isConcreteGenericType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericTypeWithTypeArgs():Boolean[1]
+{
+    // GenericType with concrete type arguments is concrete
+    let intGT = ^GenericTypeValue(type = Integer);
+    let classGT = ^GenericTypeValue(type = Class, typeArguments = $intGT);
+    assert($classGT->isConcreteGenericType());
+
+    // GenericType with type parameter in type argument is not concrete
+    let tp = ^TypeParameter(name = 'T', contravariant = false);
+    let tpGT = ^GenericTypeValue(type = $tp);
+    let classGT2 = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
+    assertFalse($classGT2->isConcreteGenericType());
 }

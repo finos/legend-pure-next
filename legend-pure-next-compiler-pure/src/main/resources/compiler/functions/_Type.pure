@@ -100,6 +100,16 @@ function meta::pure::compiler::helper::findCommonType(types:Type[*]):Type[0..1]
     );
 }
 
+function meta::pure::compiler::helper::isFunctionType(t:Type[1]):Boolean[1]
+{
+    $t->linearize()->filter(x | $x->match(
+        [
+            pe : PackageableElement[1] | $pe.name == 'Function',
+            a  : Any[1]               | false
+        ]
+    ))->isNotEmpty()
+}
+
 // Tests
 
 function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsTopType():Boolean[1]
@@ -167,4 +177,12 @@ function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testF
     assertEquals(Number, $numTypes->findCommonType());
     let mixedTypes = [Integer, String];
     assertEquals(Any, $mixedTypes->findCommonType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsFunctionType():Boolean[1]
+{
+    assertFalse(Integer->isFunctionType());
+    assertFalse(String->isFunctionType());
+    assertFalse(Class->isFunctionType());
+    assertFalse(Any->isFunctionType());
 }

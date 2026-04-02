@@ -1,0 +1,28 @@
+import meta::pure::compiler::helper::*;
+import meta::pure::metamodel::relation::*;
+
+// RelationType printing
+
+function meta::pure::compiler::helper::printRelationType(rt:RelationType<Any>[1]):String[1]
+{
+    $rt->printRelationType(true)
+}
+
+function meta::pure::compiler::helper::printRelationType(rt:RelationType<Any>[1], fullPath:Boolean[1]):String[1]
+{
+    let cols = $rt.columns->cast(@Column<Any,Any|*>)->map(col |
+        let name = if($col.nameWildCard == true, | '?', | $col.name->toOne());
+        let typeStr = if($col.genericType->isEmpty(), | '', | $col.genericType->toOne()->printGenericType($fullPath));
+        let mulStr = if($col.multiplicity->isEmpty(), | '', | $col.multiplicity->toOne()->printMultiplicity());
+        $name + ':' + $typeStr + $mulStr;
+    )->joinStrings(', ');
+    '(' + $cols + ')';
+}
+
+
+// RelationType concreteness
+
+function meta::pure::compiler::helper::isConcreteRelationType(rt:RelationType<Any>[1]):Boolean[1]
+{
+    $rt.columns->cast(@Column<Any,Any|*>)->filter(col | if($col.genericType->isEmpty(), | false, | !$col.genericType->toOne()->isConcreteGenericType()))->isEmpty()
+}
