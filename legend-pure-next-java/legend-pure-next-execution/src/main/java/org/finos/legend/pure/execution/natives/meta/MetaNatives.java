@@ -281,24 +281,33 @@ public class MetaNatives
         natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
-            DynamicInstance copy;
+            String classPath;
+            meta.pure.metamodel.type.generics.GenericType cgt;
             if (original instanceof DynamicInstance di)
             {
-                copy = new DynamicInstance(di.getClassPath());
-                copy.getValues().putAll(di.getValues());
-                copy.setClassifierGenericType(di.getClassifierGenericType());
+                classPath = di.getClassPath();
+                cgt = di.getClassifierGenericType();
             }
             else if (original instanceof PackageableElement pe)
             {
-                String classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
-                copy = new DynamicInstance(classPath);
-                copy.setClassifierGenericType(pe._classifierGenericType());
-                copyPackageableElementProperties(pe, copy, resolver);
+                classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+                cgt = pe._classifierGenericType();
             }
             else
             {
-                copy = new DynamicInstance("Unknown");
+                throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
             }
+
+            Object copy = createInstanceByPath(classPath);
+            if (copy instanceof Any anyC && cgt != null)
+            {
+                anyC._classifierGenericType(cgt);
+            }
+            else if (copy instanceof DynamicInstance diC && cgt != null)
+            {
+                diC.setClassifierGenericType(cgt);
+            }
+            shallowCopyProperties(original, copy, cgt, resolver);
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
@@ -306,25 +315,33 @@ public class MetaNatives
         natives.put("copy_T_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
-            DynamicInstance copy;
             String classPath;
+            meta.pure.metamodel.type.generics.GenericType cgt;
             if (original instanceof DynamicInstance di)
             {
                 classPath = di.getClassPath();
-                copy = new DynamicInstance(classPath);
-                copy.getValues().putAll(di.getValues());
-                copy.setClassifierGenericType(di.getClassifierGenericType());
+                cgt = di.getClassifierGenericType();
             }
             else if (original instanceof PackageableElement pe)
             {
                 classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
-                copy = new DynamicInstance(classPath);
-                copy.setClassifierGenericType(pe._classifierGenericType());
+                cgt = pe._classifierGenericType();
             }
             else
             {
-                throw new RuntimeException("W");
+                throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
             }
+
+            Object copy = createInstanceByPath(classPath);
+            if (copy instanceof Any anyC && cgt != null)
+            {
+                anyC._classifierGenericType(cgt);
+            }
+            else if (copy instanceof DynamicInstance diC && cgt != null)
+            {
+                diC.setClassifierGenericType(cgt);
+            }
+            shallowCopyProperties(original, copy, cgt, resolver);
 
             // Track deep-copied nested objects
             Map<String, DynamicInstance> deepCopied = new HashMap<>();
@@ -353,15 +370,8 @@ public class MetaNatives
                 }
             }
 
-            // Collect all properties on the copy for reverse pointer processing
-            List<Map.Entry<String, ValueSpecification>> allProps = new ArrayList<>();
-            for (Map.Entry<String, ValueSpecification> entry : copy.getValues().entrySet())
-            {
-                if (entry.getValue() != null)
-                {
-                    allProps.add(Map.entry(entry.getKey(), entry.getValue()));
-                }
-            }
+            // Collect key/value pairs for reverse pointer processing
+            List<Map.Entry<String, ValueSpecification>> allProps = getAllPropertyEntries(copy, cgt, resolver);
 
             // Set reverse association pointers for ALL properties on the copy
             setReverseAssociationPointers(copy, classPath, allProps, resolver);
@@ -383,13 +393,11 @@ public class MetaNatives
                     {
                         continue;
                     }
-                    // Skip back-pointers to members of the copy set
                     Object rawVal = _E_ValueSpecification.unwrap(val);
                     if (copySet.contains(rawVal))
                     {
                         continue;
                     }
-                    // For Collection values: unwrap returns List<Object> (raw values); check each element
                     if (rawVal instanceof List<?> listVal && listVal.stream().anyMatch(copySet::contains))
                     {
                         continue;
@@ -640,43 +648,236 @@ public class MetaNatives
         }
     }
 
-    private static void copyPackageableElementProperties(PackageableElement pe, DynamicInstance copy,
-                                                         MetadataAccess resolver)
+    /**
+     * Create a new instance of the given class by path, using the same strategy as {@code new}.
+     * Tries the direct Impl class, then UserDefined prefix, then falls back to DynamicInstance.
+     */
+    static Object createInstanceByPath(String classPath)
     {
-        if (pe._name() != null)
+        String javaClassName = classPath.replace("::", ".") + "Impl";
+        try
         {
-            copy.put("name", _E_ValueSpecification.wrap(pe._name(), null, null, resolver));
+            Class<?> implClass = Class.forName(javaClassName);
+            return implClass.getDeclaredConstructor().newInstance();
         }
-        if (pe._package() != null)
+        catch (ClassNotFoundException e)
         {
-            copy.put("package", _E_ValueSpecification.wrap(pe._package(), null, null, resolver));
-        }
-        if (pe instanceof meta.pure.metamodel.function.FunctionDefinition fd)
-        {
-            if (fd._expressionSequence() != null && !fd._expressionSequence().isEmpty())
+            String baseName = classPath.replace("::", ".");
+            int lastDot = baseName.lastIndexOf('.');
+            String userDefinedClassName = lastDot >= 0
+                    ? baseName.substring(0, lastDot + 1) + "UserDefined" + baseName.substring(lastDot + 1) + "Impl"
+                    : "UserDefined" + baseName + "Impl";
+            try
             {
-                List<ValueSpecification> seqVS = new ArrayList<>();
-                for (Object item : fd._expressionSequence())
+                return Class.forName(userDefinedClassName).getDeclaredConstructor().newInstance();
+            }
+            catch (ReflectiveOperationException ignored)
+            {
+                return new DynamicInstance(classPath);
+            }
+        }
+        catch (ReflectiveOperationException e)
+        {
+            return new DynamicInstance(classPath);
+        }
+    }
+
+    /**
+     * Shallow-copy all properties from source to target.
+     * For DynamicInstance sources, copies from the value map.
+     * For Java class sources, uses metamodel-driven reflection.
+     */
+    static void shallowCopyProperties(Object source, Object target,
+                                      meta.pure.metamodel.type.generics.GenericType cgt,
+                                      MetadataAccess resolver)
+    {
+        if (source instanceof DynamicInstance diSource)
+        {
+            for (Map.Entry<String, ValueSpecification> entry : diSource.getValues().entrySet())
+            {
+                if (entry.getValue() != null)
                 {
-                    seqVS.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+                    setInstanceProperty(target, entry.getKey(), entry.getValue());
                 }
-                copy.put("expressionSequence", CollectionNatives.makeCollection(seqVS, resolver));
-            }
-            if (fd._parameters() != null && !fd._parameters().isEmpty())
-            {
-                List<ValueSpecification> paramsVS = new ArrayList<>();
-                for (Object item : fd._parameters())
-                {
-                    paramsVS.add(_E_ValueSpecification.wrap(item, null, null, resolver));
-                }
-                copy.put("parameters", CollectionNatives.makeCollection(paramsVS, resolver));
-            }
-            if (fd._classifierGenericType() != null)
-            {
-                copy.put("classifierGenericType",
-                        _E_ValueSpecification.wrap(fd._classifierGenericType(), null, null, resolver));
             }
         }
+        else
+        {
+            meta.pure.metamodel.type.Type sourceType = cgt != null ? _GenericType.type(cgt) : null;
+            if (sourceType == null)
+            {
+                return;
+            }
+            List<String> propNames = collectAllPropertyNames(sourceType);
+            for (String propName : propNames)
+            {
+                copyPropertyDirect(source, target, propName, resolver);
+            }
+        }
+    }
+
+    /**
+     * Copy a single property value from source to target via reflection.
+     */
+    private static void copyPropertyDirect(Object source, Object target, String propName, MetadataAccess resolver)
+    {
+        String methodName = "_" + propName;
+        try
+        {
+            java.lang.reflect.Method getter = source.getClass().getMethod(methodName);
+            Object value = getter.invoke(source);
+            if (value == null)
+            {
+                return;
+            }
+            if (target instanceof DynamicInstance di)
+            {
+                if (value instanceof org.eclipse.collections.api.list.MutableList<?> mlist)
+                {
+                    List<ValueSpecification> vsItems = new ArrayList<>();
+                    for (Object item : mlist)
+                    {
+                        vsItems.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+                    }
+                    di.put(propName, CollectionNatives.makeCollection(vsItems, resolver));
+                }
+                else
+                {
+                    di.put(propName, _E_ValueSpecification.wrap(value, null, null, resolver));
+                }
+            }
+            else
+            {
+                for (java.lang.reflect.Method setter : target.getClass().getMethods())
+                {
+                    if (setter.getName().equals(methodName) && setter.getParameterCount() == 1)
+                    {
+                        try
+                        {
+                            setter.invoke(target, value);
+                            break;
+                        }
+                        catch (IllegalArgumentException ignored)
+                        {
+                        }
+                    }
+                }
+            }
+        }
+        catch (ReflectiveOperationException ignored)
+        {
+        }
+    }
+
+    /**
+     * Collect all property names from a type and its supertypes.
+     */
+    private static List<String> collectAllPropertyNames(meta.pure.metamodel.type.Type type)
+    {
+        List<String> names = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        collectPropertyNamesRecursive(type, names, seen, visited);
+        return names;
+    }
+
+    private static void collectPropertyNamesRecursive(meta.pure.metamodel.type.Type type,
+                                                      List<String> names,
+                                                      java.util.Set<String> seen,
+                                                      java.util.Set<String> visited)
+    {
+        String typeId = (type instanceof PackageableElement pe)
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe)
+                : String.valueOf(System.identityHashCode(type));
+        if (!visited.add(typeId))
+        {
+            return;
+        }
+        if (type instanceof meta.pure.metamodel.type.Class cls && cls._properties() != null)
+        {
+            for (var prop : cls._properties())
+            {
+                if (prop._name() != null && seen.add(prop._name()))
+                {
+                    names.add(prop._name());
+                }
+            }
+        }
+        if (type._generalizations() != null)
+        {
+            for (var gen : type._generalizations())
+            {
+                if (gen._general() != null && _GenericType.type(gen._general()) != null)
+                {
+                    collectPropertyNamesRecursive(_GenericType.type(gen._general()), names, seen, visited);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get a property value from any instance type (DynamicInstance or Java class).
+     */
+    static ValueSpecification getInstanceProperty(Object instance, String propName, MetadataAccess resolver)
+    {
+        if (instance instanceof DynamicInstance di)
+        {
+            return di.get(propName);
+        }
+        String methodName = "_" + propName;
+        try
+        {
+            java.lang.reflect.Method getter = instance.getClass().getMethod(methodName);
+            Object value = getter.invoke(instance);
+            if (value == null)
+            {
+                return null;
+            }
+            if (value instanceof ValueSpecification vs)
+            {
+                return vs;
+            }
+            return _E_ValueSpecification.wrap(value, null, null, resolver);
+        }
+        catch (ReflectiveOperationException e)
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Get all property entries from any instance type.
+     */
+    private static List<Map.Entry<String, ValueSpecification>> getAllPropertyEntries(
+            Object instance, meta.pure.metamodel.type.generics.GenericType cgt, MetadataAccess resolver)
+    {
+        List<Map.Entry<String, ValueSpecification>> entries = new ArrayList<>();
+        if (instance instanceof DynamicInstance di)
+        {
+            for (Map.Entry<String, ValueSpecification> entry : di.getValues().entrySet())
+            {
+                if (entry.getValue() != null)
+                {
+                    entries.add(entry);
+                }
+            }
+        }
+        else
+        {
+            meta.pure.metamodel.type.Type type = cgt != null ? _GenericType.type(cgt) : null;
+            if (type != null)
+            {
+                for (String propName : collectAllPropertyNames(type))
+                {
+                    ValueSpecification vs = getInstanceProperty(instance, propName, resolver);
+                    if (vs != null)
+                    {
+                        entries.add(Map.entry(propName, vs));
+                    }
+                }
+            }
+        }
+        return entries;
     }
 
     static void processKeyExpression(Object ke, Object instance,
@@ -702,15 +903,13 @@ public class MetaNatives
         }
     }
 
-    static void applyCopyKeyExpressionWithDotPath(DynamicInstance copy, DynamicInstance keyExpr,
+    static void applyCopyKeyExpressionWithDotPath(Object copy, DynamicInstance keyExpr,
                                                   Map<String, DynamicInstance> deepCopied,
                                                   MetadataAccess resolver)
     {
-        // name is stored as a VS; unwrap to get the String key
         ValueSpecification nameVS = keyExpr.get("name");
         Object nameObj = _E_ValueSpecification.unwrap(nameVS);
         String fullKey = nameObj != null ? nameObj.toString() : null;
-        // expression and add are VS already
         ValueSpecification value = keyExpr.get("expression");
         if (fullKey == null)
         {
@@ -738,7 +937,7 @@ public class MetaNatives
             DynamicInstance nestedCopy = deepCopied.get(topProp);
             if (nestedCopy == null)
             {
-                ValueSpecification existingVS = copy.get(topProp);
+                ValueSpecification existingVS = getInstanceProperty(copy, topProp, resolver);
                 Object existing = _E_ValueSpecification.unwrap(existingVS);
                 if (existing instanceof DynamicInstance existingDi)
                 {
@@ -754,15 +953,13 @@ public class MetaNatives
                     nestedCopy = new DynamicInstance("Unknown");
                 }
                 deepCopied.put(topProp, nestedCopy);
-                // Store the deep-copied nested object at the top property
-                copy.put(topProp, _E_ValueSpecification.wrap(nestedCopy,
+                setInstanceProperty(copy, topProp, _E_ValueSpecification.wrap(nestedCopy,
                         existingVS != null ? existingVS._genericType() : null,
                         existingVS != null ? existingVS._multiplicity() : null,
                         resolver));
             }
 
             DynamicInstance syntheticKe = new DynamicInstance("KeyExpression");
-            // create a new string VS for the rest key
             syntheticKe.put("name", _E_ValueSpecification.wrap(restKey, nameVS != null ? nameVS._genericType() : null, null, resolver));
             syntheticKe.put("expression", value);
             ValueSpecification addVS2 = keyExpr.get("add");
@@ -774,10 +971,10 @@ public class MetaNatives
         }
     }
 
-    static void appendToProperty(DynamicInstance di, String key, ValueSpecification value,
+    static void appendToProperty(Object instance, String key, ValueSpecification value,
                                   MetadataAccess resolver)
     {
-        ValueSpecification existing = di.get(key);
+        ValueSpecification existing = getInstanceProperty(instance, key, resolver);
         List<ValueSpecification> list;
         if (existing instanceof Collection col)
         {
@@ -800,8 +997,7 @@ public class MetaNatives
         {
             list.add(value);
         }
-        // Build a Collection VS to store the multi-valued result
-        di.put(key, CollectionNatives.makeCollection(list, resolver));
+        setInstanceProperty(instance, key, CollectionNatives.makeCollection(list, resolver));
     }
 
     public static void setReverseAssociationPointers(Object instance, String classPath,
@@ -923,16 +1119,16 @@ public class MetaNatives
                                                    ValueSpecification instanceVS,
                                                    MetadataAccess resolver)
     {
-        if (target instanceof DynamicInstance di)
-        {
-            appendToProperty(di, reversePropName, instanceVS, resolver);
-        }
-        else if (target instanceof List<?> targets)
+        if (target instanceof List<?> targets)
         {
             for (Object t : targets)
             {
                 setReversePointerOnTarget(t, reversePropName, instanceVS, resolver);
             }
+        }
+        else
+        {
+            appendToProperty(target, reversePropName, instanceVS, resolver);
         }
     }
 

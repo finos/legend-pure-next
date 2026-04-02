@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.FunctionDefinition;
 import meta.pure.metamodel.function.NativeFunction;
@@ -30,6 +29,8 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -280,172 +281,117 @@ public class ValueSpecificationEvaluator
         // Evaluate the target object (first parameter)
         ValueSpecification targetVs = evaluate(paramSpecs.get(0));
 
-        // Access the property on the target
-        Object result = accessProperty(targetVs, propertyName);
+        return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity());
+    }
 
-        // DynamicInstance.get() now returns a ValueSpecification directly — identity return.
+    private static final Object PROPERTY_NOT_FOUND = new Object();
+
+    /**
+     * Access a property on a target object by name.
+     * Returns the result as a {@link ValueSpecification}, wrapping raw values as needed.
+     */
+    private ValueSpecification accessProperty(ValueSpecification targetVs, String propertyName,
+                                              GenericType genericType,
+                                              meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+    {
+        Object target = _E_ValueSpecification.unwrap(targetVs);
+
+        // DynamicInstance (from 'new' function) — property access via map
+        if (target instanceof DynamicInstance di)
+        {
+            ValueSpecification result = di.get(propertyName);
+            return result != null ? result : wrapPropertyResult(null, genericType, multiplicity);
+        }
+
+        // For metamodel objects, use reflection to find _<propertyName>() accessor
+        Object effectiveTarget = target != null ? target : targetVs;
+        Object result = reflectivePropertyGet(effectiveTarget, propertyName);
+
+        // Fallback: try the ValueSpecification wrapper itself (for genericType, multiplicity)
+        if (result == PROPERTY_NOT_FOUND && effectiveTarget != targetVs)
+        {
+            result = reflectivePropertyGet(targetVs, propertyName);
+        }
+
+        // Special fallback for Enumeration — look up enum value by property defaultValue
+        if (result == PROPERTY_NOT_FOUND && effectiveTarget instanceof meta.pure.metamodel.type.Enumeration en)
+        {
+            if (en._properties() != null)
+            {
+                var prop = en._properties().detect(p -> propertyName.equals(p._name()));
+                if (prop != null && prop._defaultValue() != null && prop._defaultValue()._expressionSequence() != null)
+                {
+                    ValueSpecification vs = prop._defaultValue()._expressionSequence().getFirst();
+                    if (vs instanceof AtomicValue av)
+                    {
+                        result = av._value();
+                    }
+                }
+            }
+        }
+
+        if (result == PROPERTY_NOT_FOUND)
+        {
+            throw new RuntimeException("Unknown property '" + propertyName + "' on "
+                    + (effectiveTarget == null ? "null" : effectiveTarget.getClass().getSimpleName()));
+        }
+
+        return wrapPropertyResult(result, genericType, multiplicity);
+    }
+
+    /**
+     * Use reflection to invoke {@code _<propertyName>()} on the target.
+     * Returns {@link #PROPERTY_NOT_FOUND} if no such method exists.
+     */
+    private static Object reflectivePropertyGet(Object target, String propertyName)
+    {
+        String methodName = "_" + propertyName;
+        try
+        {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        }
+        catch (NoSuchMethodException e)
+        {
+            return PROPERTY_NOT_FOUND;
+        }
+        catch (InvocationTargetException e)
+        {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re)
+            {
+                throw re;
+            }
+            throw new RuntimeException("Error accessing property '" + propertyName + "'", cause);
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new RuntimeException("Cannot access property '" + propertyName + "'", e);
+        }
+    }
+
+    /**
+     * Wrap a raw property result into a {@link ValueSpecification}.
+     * Handles null, {@link ValueSpecification}, {@link java.util.List}, and scalar values.
+     */
+    private ValueSpecification wrapPropertyResult(Object result,
+                                                  GenericType genericType,
+                                                  meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+    {
         if (result instanceof ValueSpecification vs)
         {
             return vs;
         }
-        // Property may return a raw MutableList (e.g. _typeArguments(), _expressionSequence(), etc.)
-        // When that happens, build a Collection of individually-wrapped VSes instead of calling wrap(List).
         if (result instanceof java.util.List<?> resultList)
         {
             List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
             for (Object item : resultList)
             {
-                vsItems.add(_E_ValueSpecification.wrap(item, fe._genericType(), null, this.natives.resolver()));
+                vsItems.add(_E_ValueSpecification.wrap(item, genericType, null, this.natives.resolver()));
             }
             return CollectionNatives.makeCollection(vsItems, this.natives.resolver());
         }
-        return _E_ValueSpecification.wrap(result, fe._genericType(), fe._multiplicity(), this.natives.resolver());
-    }
-
-    /**
-     * Access a property on a target object by name.
-     */
-    private Object accessProperty(ValueSpecification targetVs, String propertyName)
-    {
-        Object target = _E_ValueSpecification.unwrap(targetVs);
-        // DynamicInstance (from 'new' function) — property access via map
-        if (target instanceof DynamicInstance di)
-        {
-            return di.get(propertyName);
-        }
-
-        // If the target is a ValueSpecification, try to access its properties
-        if (target instanceof meta.pure.metamodel.type.generics.GenericTypeValue gt)
-        {
-            return switch (propertyName)
-            {
-                case "type" -> gt._type();
-                case "typeArguments" -> gt._typeArguments();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on GenericType");
-            };
-        }
-        if (target instanceof meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm)
-        {
-            return switch (propertyName)
-            {
-                case "lowerBound" -> cm._lowerBound();
-                case "upperBound" -> cm._upperBound();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on Multiplicity");
-            };
-        }
-        if (target instanceof meta.pure.metamodel.multiplicity.MultiplicityValue mv)
-        {
-            return switch (propertyName)
-            {
-                case "value" -> mv._value();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on MultiplicityValue");
-            };
-        }
-        // AbstractProperty meta-properties (before FunctionDefinition, since QualifiedProperty extends both)
-        if (target instanceof meta.pure.metamodel.function.property.AbstractProperty ap)
-        {
-            return switch (propertyName)
-            {
-                case "name" -> ap._name();
-                case "genericType" -> ap._genericType();
-                case "multiplicity" -> ap._multiplicity();
-                case "owner" -> ap._owner();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on AbstractProperty");
-            };
-        }
-
-        if (target instanceof meta.pure.metamodel.function.FunctionDefinition fd)
-        {
-            return switch (propertyName)
-            {
-                case "expressionSequence" -> fd._expressionSequence();
-                case "parameters" -> fd._parameters();
-                case "name" -> (fd instanceof meta.pure.metamodel.function.PackageableFunction pf) ? pf._name() : null;
-                case "classifierGenericType" -> fd._classifierGenericType();
-                case "package" -> (fd instanceof meta.pure.metamodel.PackageableElement pe2) ? pe2._package() : null;
-                case "elementOverride" -> null; // Not commonly used at runtime
-                default -> null; // Return null for unresolved meta-level properties
-            };
-        }
-
-        // Enumeration meta-properties (must come before Type since Enumeration extends Type)
-        if (target instanceof meta.pure.metamodel.type.Enumeration en)
-        {
-            return switch (propertyName)
-            {
-                case "name" -> en._name();
-                case "package" -> en._package();
-                case "classifierGenericType" -> en._classifierGenericType();
-                case "generalizations" -> en._generalizations();
-                default ->
-                {
-                    // Look up enum value property by name and return its defaultValue
-                    if (en._properties() != null)
-                    {
-                        var prop = en._properties().detect(p -> propertyName.equals(p._name()));
-                        if (prop != null && prop._defaultValue() != null && prop._defaultValue()._expressionSequence() != null)
-                        {
-                            meta.pure.metamodel.valuespecification.ValueSpecification vs = prop._defaultValue()._expressionSequence().getFirst();
-                            if (vs instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
-                            {
-                                yield av._value();
-                            }
-                        }
-                    }
-                    throw new RuntimeException("Unknown property '" + propertyName + "' on Enumeration");
-                }
-            };
-        }
-
-        // Type meta-properties (covers Class, PrimitiveType, and other Type subtypes)
-        if (target instanceof meta.pure.metamodel.type.Type type)
-        {
-            return switch (propertyName)
-            {
-                case "generalizations" -> type._generalizations();
-                case "name" -> (type instanceof PackageableElement pe3) ? pe3._name() : null;
-                case "classifierGenericType" -> (type instanceof PackageableElement pe3) ? pe3._classifierGenericType() : null;
-                case "package" -> (type instanceof PackageableElement pe3) ? pe3._package() : null;
-                case "properties" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._properties() : org.eclipse.collections.api.factory.Lists.mutable.empty();
-                case "qualifiedProperties" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._qualifiedProperties() : org.eclipse.collections.api.factory.Lists.mutable.empty();
-                case "propertiesFromAssociations" -> (type instanceof meta.pure.metamodel.type.Class cls) ? cls._propertiesFromAssociations() : org.eclipse.collections.api.factory.Lists.mutable.empty();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on " + type.getClass().getSimpleName());
-            };
-        }
-
-        // Generalization meta-properties
-        if (target instanceof meta.pure.metamodel.relationship.Generalization gen)
-        {
-            return switch (propertyName)
-            {
-                case "general" -> gen._general();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on " + target.getClass().getSimpleName());
-            };
-        }
-
-        // PackageableElement generic properties
-        if (target instanceof PackageableElement pe)
-        {
-            return switch (propertyName)
-            {
-                case "name" -> pe._name();
-                case "package" -> pe._package();
-                case "classifierGenericType" -> pe._classifierGenericType();
-                default -> throw new RuntimeException("Unknown property '" + propertyName + "' on " + pe.getClass().getSimpleName());
-            };
-        }
-
-        // Generic property access on the ValueSpecification itself
-        return switch (propertyName)
-        {
-            case "genericType" -> targetVs._genericType();
-            case "multiplicity" -> targetVs._multiplicity();
-            case "name" ->
-            {
-                throw new RuntimeException("Cannot access 'name' on " + (target == null ? "null" : target.getClass().getSimpleName()));
-            }
-            default -> throw new RuntimeException("Unknown property '" + propertyName + "' on " + (target == null ? "null" : target.getClass().getSimpleName()));
-        };
+        return _E_ValueSpecification.wrap(result, genericType, multiplicity, this.natives.resolver());
     }
 
     /**
@@ -539,22 +485,7 @@ public class ValueSpecificationEvaluator
                 {
                     throw new RuntimeException("Property '" + prop._name() + "' requires a target object");
                 }
-                Object result = accessProperty(args.get(0), prop._name());
-                // DynamicInstance.get() returns ValueSpecification directly — identity return.
-                if (result instanceof ValueSpecification vsResult)
-                {
-                    yield vsResult;
-                }
-                if (result instanceof java.util.List<?> resultList)
-                {
-                    List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
-                    for (Object item : resultList)
-                    {
-                        vsItems.add(_E_ValueSpecification.wrap(item, prop._genericType(), null, this.natives.resolver()));
-                    }
-                    yield CollectionNatives.makeCollection(vsItems, this.natives.resolver());
-                }
-                yield _E_ValueSpecification.wrap(result, prop._genericType(), prop._multiplicity(), this.natives.resolver());
+                yield accessProperty(args.get(0), prop._name(), prop._genericType(), prop._multiplicity());
             }
             case null -> throw new RuntimeException("Cannot execute null function");
             default -> throw new RuntimeException(
