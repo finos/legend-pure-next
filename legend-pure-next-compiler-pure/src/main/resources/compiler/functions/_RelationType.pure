@@ -54,3 +54,57 @@ function meta::pure::compiler::helper::collectRelationTypeReferencedMultiplicity
         $gtNames->concatenate($mulNames);
     )->removeDuplicates()
 }
+
+function meta::pure::compiler::helper::findCommonRelationType(relationTypes:RelationType<Any>[*]):Type[0..1]
+{
+    meta::pure::compiler::helper::findCommonRelationType($relationTypes, false);
+}
+
+function meta::pure::compiler::helper::findCommonRelationType(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
+{
+    if($relationTypes->isEmpty(),
+        | [],
+        | if($relationTypes->size() == 1,
+              | $relationTypes->at(0),
+              | meta::pure::compiler::helper::findCommonRelationType_build($relationTypes, $contravariant)
+          )
+    );
+}
+
+function meta::pure::compiler::helper::findCommonRelationType_build(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
+{
+    // Find common column names (intersection)
+    let firstNames = $relationTypes->at(0).columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
+    let commonNames = $relationTypes->tail()->fold({rt, names |
+        let rtNames = $rt.columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
+        $names->filter(n | $rtNames->contains($n));
+    }, $firstNames);
+
+    if($commonNames->isEmpty(),
+        | if($contravariant, | Nil, | Any),
+        | // For each common column, find the common type and multiplicity
+          let commonColumns = $commonNames->map({colName |
+              let colTypes = $relationTypes->map(rt |
+                  $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $colName)->map(c | $c.genericType)
+              )->filter(gt | $gt->isNotEmpty())->map(gt | $gt->toOne());
+              let commonType = if($colTypes->isNotEmpty(),
+                  | meta::pure::compiler::helper::findCommonGenericType($colTypes, false),
+                  | []
+              );
+              let colMuls = $relationTypes->map(rt |
+                  $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $colName)->map(c | $c.multiplicity)
+              );
+              let commonMul = if($colMuls->isNotEmpty(),
+                  | meta::pure::compiler::helper::findCommonMultiplicity($colMuls),
+                  | []
+              );
+              ^Column<Any,Any|*>(
+                  name = $colName,
+                  nameWildCard = false,
+                  genericType = $commonType,
+                  multiplicity = if($commonMul->isEmpty(), | PureOne, | $commonMul->toOne())
+              );
+          });
+          ^RelationType<Any>(columns = $commonColumns);
+    );
+}
