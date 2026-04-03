@@ -157,3 +157,59 @@ function meta::pure::compiler::helper::evaluateRelationTypeOperation(leftRT:Rela
             )
     ]);
 }
+
+// Collect type and multiplicity parameter bindings from matching two RelationTypes.
+// Matches wildcard columns (?:K[m]) in the parameter side against concrete columns in the argument side.
+function meta::pure::compiler::helper::collectRelationTypeParameterBindings(paramRT:RelationType<Any>[1], argRT:RelationType<Any>[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+{
+    let paramCols = $paramRT.columns->cast(@Column<Any,Any|*>);
+    let argCols = $argRT.columns->cast(@Column<Any,Any|*>);
+    $paramCols->fold({paramCol, b |
+        if($paramCol.nameWildCard->isNotEmpty() && $paramCol.nameWildCard->toOne() == true && $argCols->size() > 0,
+            | // Wildcard column (?:K[m]): bind K and m from the first arg column
+              let argCol = $argCols->at(0);
+              let b1 = if($paramCol.genericType->isNotEmpty() && $argCol.genericType->isNotEmpty(),
+                    | meta::pure::compiler::helper::collectTypeParameterBindings($paramCol.genericType->toOne(), $argCol.genericType->toOne(), $b),
+                    | $b
+                );
+              meta::pure::compiler::helper::collectMultiplicityParameterBindings($paramCol.multiplicity->toOne(), $argCol.multiplicity->toOne(), $b1);,
+            | $b
+        )
+    }, $bindings);
+}
+
+// Resolve type parameter references in RelationType column types.
+// Returns a new GenericType wrapping the resolved RelationType if anything changed, or empty if unchanged.
+function meta::pure::compiler::helper::makeRelationTypeAsConcreteAsPossible(rt:RelationType<Any>[1], bindings:ParametersBinding[1]):GenericType[0..1]
+{
+    let cols = $rt.columns->cast(@Column<Any,Any|*>);
+    if($cols->isEmpty(),
+        | [],
+        | let resolvedPairs = $cols->map(col |
+              let colGT = $col.genericType;
+              let resolvedColGT = if($colGT->isNotEmpty(),
+                  | meta::pure::compiler::helper::makeAsConcreteAsPossible($colGT->toOne(), $bindings),
+                  | []
+              );
+              let colMul = $col.multiplicity;
+              let resolvedColMul = if($colMul->isNotEmpty(),
+                  | meta::pure::compiler::helper::makeAsConcreteAsPossible($colMul->toOne(), $bindings),
+                  | []
+              );
+              let changed = ($resolvedColGT->isNotEmpty() && $resolvedColGT->toOne() != $colGT->toOne()) || ($resolvedColMul->isNotEmpty() && $resolvedColMul->toOne() != $colMul->toOne());
+              ^List<Any>(values = [$col, $changed, if($changed, | $resolvedColGT, | $colGT), if($changed, | $resolvedColMul, | $colMul)]);
+          );
+          let anyChanged = $resolvedPairs->exists(p | $p.values->at(1)->cast(@Boolean) == true);
+          if($anyChanged,
+              | let newCols = $resolvedPairs->map(p |
+                    let origCol = $p.values->at(0)->cast(@Column<Any,Any|*>);
+                    let gt = $p.values->at(2)->cast(@GenericType);
+                    let mul = $p.values->at(3)->cast(@Multiplicity);
+                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | []), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | []));
+                );
+                let newRT = ^RelationType<Any>(columns = $newCols);
+                ^GenericTypeValue(type = $newRT);,
+              | []
+          );
+    );
+}

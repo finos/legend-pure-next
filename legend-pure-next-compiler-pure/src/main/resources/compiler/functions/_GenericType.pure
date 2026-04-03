@@ -356,12 +356,16 @@ function meta::pure::compiler::helper::collectTypeParameterBindings(paramGT:Gene
                                       | meta::pure::compiler::helper::collectTypeParameterBindings($paramV.type->toOne()->cast(@FunctionType), $argV.type->toOne()->cast(@FunctionType), $bindings),
                                       | $bindings
                                   );
-                                  // relation type would go here
+                                  // Recurse into RelationType columns for wildcard binding
+                                  let b1rt = if($otherParamType->instanceOf(RelationType) && $argV.type->isNotEmpty() && $argV.type->toOne()->instanceOf(RelationType),
+                                      | meta::pure::compiler::helper::collectRelationTypeParameterBindings($otherParamType->cast(@RelationType<Any>), $argV.type->toOne()->cast(@RelationType<Any>), $b1),
+                                      | $b1
+                                  );
                                   
                                   // Recurse into type arguments positionally
                                   let b2 = if($paramV.typeArguments->isNotEmpty() && $argV.typeArguments->isNotEmpty(),
-                                      | $paramV.typeArguments->zip($argV.typeArguments)->fold({pair, bb | collectTypeParameterBindings($pair.first, $pair.second, $bb)}, $b1),
-                                      | $b1
+                                      | $paramV.typeArguments->zip($argV.typeArguments)->fold({pair, bb | collectTypeParameterBindings($pair.first, $pair.second, $bb)}, $b1rt),
+                                      | $b1rt
                                   );
                                   
                                   // Recurse into multiplicity arguments positionally
@@ -372,6 +376,15 @@ function meta::pure::compiler::helper::collectTypeParameterBindings(paramGT:Gene
                               otherArgGT: GenericType[1] | $bindings
                           ])
                   ])
+            ),
+        gto : GenericTypeOperation[1] |
+            if($gto.operationType == GenericTypeOperationType.Subset,
+                | meta::pure::compiler::helper::collectTypeParameterBindings($gto.left, $argGT, $bindings),
+                | if($gto.operationType == GenericTypeOperationType.Equal,
+                      | let b1 = meta::pure::compiler::helper::collectTypeParameterBindings($gto.left, $argGT, $bindings);
+                        meta::pure::compiler::helper::collectTypeParameterBindings($gto.right, $argGT, $b1);,
+                      | $bindings
+                  )
             ),
         otherParamGT : GenericType[1] | $bindings
     ])
@@ -517,16 +530,43 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
                       | meta::pure::compiler::helper::makeAsConcreteAsPossible($genericType, $gtv.type->toOne()->cast(@FunctionType), $bindings),
                       | []
                   );
-                  // relation type inference logic goes here
+                  // RelationType inference: resolve column types/multiplicities
+                  let rtResolved = if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(RelationType),
+                      | meta::pure::compiler::helper::makeRelationTypeAsConcreteAsPossible($gtv.type->toOne()->cast(@RelationType<Any>), $bindings),
+                      | []
+                  );
                   if($ftResolved->isNotEmpty(),
                       | $ftResolved->toOne(),
-                      | let typeArgsResolved = $gtv.typeArguments->map(a | meta::pure::compiler::helper::makeAsConcreteAsPossible($a, $bindings));
-                        let mulArgsResolved = $gtv.multiplicityArguments->map(m | meta::pure::compiler::helper::makeAsConcreteAsPossible($m, $bindings));
-                        if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
-                            | $genericType,
-                            | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
-                        );
+                      | if($rtResolved->isNotEmpty(),
+                            | $rtResolved->toOne(),
+                            | let typeArgsResolved = $gtv.typeArguments->map(a | meta::pure::compiler::helper::makeAsConcreteAsPossible($a, $bindings));
+                              let mulArgsResolved = $gtv.multiplicityArguments->map(m | meta::pure::compiler::helper::makeAsConcreteAsPossible($m, $bindings));
+                              if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
+                                  | $genericType,
+                                  | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
+                              );
+                        )
                   );
+            );,
+        gto : GenericTypeOperation[1] |
+            let resolvedLeft = meta::pure::compiler::helper::makeAsConcreteAsPossible($gto.left, $bindings);
+            let resolvedRight = meta::pure::compiler::helper::makeAsConcreteAsPossible($gto.right, $bindings);
+            // If both sides are concrete RelationTypes, evaluate the operation
+            if($resolvedLeft->instanceOf(GenericTypeValue) && $resolvedLeft->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedLeft->cast(@GenericTypeValue).type->toOne()->instanceOf(RelationType)
+               && $resolvedRight->instanceOf(GenericTypeValue) && $resolvedRight->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedRight->cast(@GenericTypeValue).type->toOne()->instanceOf(RelationType),
+                | let resultRT = meta::pure::compiler::helper::evaluateRelationTypeOperation(
+                      $resolvedLeft->cast(@GenericTypeValue).type->toOne()->cast(@RelationType<Any>),
+                      $resolvedRight->cast(@GenericTypeValue).type->toOne()->cast(@RelationType<Any>),
+                      $gto.operationType
+                  );
+                  if($resultRT->isEmpty(),
+                      | $genericType,
+                      | ^GenericTypeValue(type = $resultRT->toOne())
+                  );,
+                | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
+                      | ^$gto(left = $resolvedLeft, right = $resolvedRight),
+                      | $genericType
+                  )
             );,
         other : GenericType[1] | $genericType
     ])
