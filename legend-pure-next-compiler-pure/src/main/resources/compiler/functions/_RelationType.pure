@@ -138,7 +138,7 @@ function meta::pure::compiler::helper::evaluateRelationTypeOperation(leftRT:Rela
 {
     $opType->match([
         op : GenericTypeOperationType[1] |
-            if($op.name == 'Union',
+            if($op == GenericTypeOperationType.Union,
                 | let leftCols = $leftRT.columns->cast(@Column<Any,Any|*>)->map(c | 
                       ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
                   );
@@ -146,7 +146,7 @@ function meta::pure::compiler::helper::evaluateRelationTypeOperation(leftRT:Rela
                       ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
                   );
                   ^RelationType<Any>(columns = $leftCols->concatenate($rightCols));,
-                | if($op.name == 'Difference',
+                | if($op == GenericTypeOperationType.Difference,
                       | let rightNames = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
                         let kept = $leftRT.columns->cast(@Column<Any,Any|*>)->filter(c | !$rightNames->contains($c.name->toOne()))->map(c |
                             ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)

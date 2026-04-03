@@ -639,9 +639,9 @@ function meta::pure::compiler::helper::isCompatibleGenericTypeValue_args(declare
 function meta::pure::compiler::helper::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
 {
     let right = $gto.right;
-    if($gto.operationType.name == 'Equal',
+    if($gto.operationType == GenericTypeOperationType.Equal,
         | meta::pure::compiler::helper::isCompatibleGenericType($right, $other, $contravariant),
-        | if($gto.operationType.name == 'Subset',
+        | if($gto.operationType == GenericTypeOperationType.Subset,
               | meta::pure::compiler::helper::isCompatibleGenericType($other, $right, $contravariant),
               | true
           )
