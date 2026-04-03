@@ -531,3 +531,119 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
         other : GenericType[1] | $genericType
     ])
 }
+
+function meta::pure::compiler::helper::isCompatibleGenericType(declared:GenericType[1], actual:GenericType[1]):Boolean[1]
+{
+    meta::pure::compiler::helper::isCompatibleGenericType($declared, $actual, false);
+}
+
+function meta::pure::compiler::helper::isCompatibleGenericType(declared:GenericType[1], actual:GenericType[1], contravariant:Boolean[1]):Boolean[1]
+{
+    // GenericTypeOperation dispatch
+    if($declared->instanceOf(GenericTypeOperation),
+        | meta::pure::compiler::helper::isCompatibleGenericTypeOperation($declared->cast(@GenericTypeOperation), $actual, $contravariant),
+        | if($actual->instanceOf(GenericTypeOperation),
+              | meta::pure::compiler::helper::isCompatibleGenericTypeOperation($actual->cast(@GenericTypeOperation), $declared, !$contravariant),
+              | // UndefinedGenericType matches only other UndefinedGenericType
+                if($declared->instanceOf(UndefinedGenericType) || $actual->instanceOf(UndefinedGenericType),
+                    | $declared->instanceOf(UndefinedGenericType) && $actual->instanceOf(UndefinedGenericType),
+                    | meta::pure::compiler::helper::isCompatibleGenericTypeValue($declared->cast(@GenericTypeValue), $actual->cast(@GenericTypeValue), $contravariant)
+                )
+          )
+    );
+}
+
+function meta::pure::compiler::helper::isCompatibleGenericTypeValue(declared:GenericTypeValue[1], actual:GenericTypeValue[1], contravariant:Boolean[1]):Boolean[1]
+{
+    // Unresolved type parameters — assume compatible
+    if($declared.type->isEmpty() || $actual.type->isEmpty(),
+        | true,
+        | let declaredType = $declared.type->toOne();
+          let actualType = $actual.type->toOne();
+          
+          // TypeParameter compatibility
+          if($declaredType->instanceOf(TypeParameter),
+              | if($actualType->instanceOf(TypeParameter),
+                    | $declaredType->cast(@TypeParameter).name == $actualType->cast(@TypeParameter).name,
+                    | true
+                ),
+              | if($actualType->instanceOf(TypeParameter),
+                    | true,
+                    | // FunctionTypes are structural
+                      if($declaredType->instanceOf(FunctionType) && $actualType->instanceOf(FunctionType),
+                          | meta::pure::compiler::helper::isCompatibleFunctionType($declaredType->cast(@FunctionType), $actualType->cast(@FunctionType), $contravariant),
+                          | // RelationTypes are structural
+                            if($declaredType->instanceOf(RelationType) && $actualType->instanceOf(RelationType),
+                                | meta::pure::compiler::helper::isCompatibleRelationType($declaredType->cast(@RelationType<Any>), $actualType->cast(@RelationType<Any>), $contravariant),
+                                | meta::pure::compiler::helper::isCompatibleGenericTypeValue_rawCheck($declared, $actual, $declaredType, $actualType, $contravariant)
+                            )
+                      )
+                )
+          );
+    );
+}
+
+function meta::pure::compiler::helper::isCompatibleGenericTypeValue_rawCheck(declared:GenericTypeValue[1], actual:GenericTypeValue[1], declaredType:Type[1], actualType:Type[1], contravariant:Boolean[1]):Boolean[1]
+{
+    if($contravariant && $actualType->isBottomType(),
+        | true,
+        | let rawCompatible = if(!$contravariant,
+              | $actualType->subtypeOf($declaredType),
+              | $declaredType->subtypeOf($actualType)
+          );
+          if(!$rawCompatible,
+              | false,
+              | let resolvedActual = if($declaredType != $actualType,
+                    | meta::pure::compiler::helper::resolveForTarget($actual, $declaredType),
+                    | $actual
+                );
+                if($resolvedActual->isEmpty(),
+                    | true,
+                    | meta::pure::compiler::helper::isCompatibleGenericTypeValue_args($declared, $resolvedActual->toOne(), $declaredType, $contravariant)
+                );
+          );
+    );
+}
+
+function meta::pure::compiler::helper::isCompatibleGenericTypeValue_args(declared:GenericTypeValue[1], resolvedActual:GenericType[1], declaredType:Type[1], contravariant:Boolean[1]):Boolean[1]
+{
+    let typeArgsOk = if($resolvedActual->instanceOf(GenericTypeValue) && $declared.typeArguments->isNotEmpty() && $resolvedActual->cast(@GenericTypeValue).typeArguments->isNotEmpty(),
+        | let resolvedActualV = $resolvedActual->cast(@GenericTypeValue);
+          if($declared.typeArguments->size() != $resolvedActualV.typeArguments->size(),
+              | false,
+              | let typeParams = if($declaredType->instanceOf(Class), | $declaredType->cast(@Class<Any>).typeParameters, | []);
+                meta::pure::compiler::helper::range($declared.typeArguments->size())->forAll({i |
+                    let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
+                    meta::pure::compiler::helper::isCompatibleGenericType($declared.typeArguments->at($i), $resolvedActualV.typeArguments->at($i), $argContravariant);
+                });
+          );,
+        | true
+    );
+    
+    if(!$typeArgsOk,
+        | false,
+        | // Check multiplicity arguments
+          if($declared.multiplicityArguments->isNotEmpty() && $resolvedActual->instanceOf(GenericTypeValue) && $resolvedActual->cast(@GenericTypeValue).multiplicityArguments->isNotEmpty(),
+              | let actualMulArgs = $resolvedActual->cast(@GenericTypeValue).multiplicityArguments;
+                if($declared.multiplicityArguments->size() != $actualMulArgs->size(),
+                    | false,
+                    | $declared.multiplicityArguments->zip($actualMulArgs)->forAll({pair |
+                          meta::pure::compiler::helper::multiplicitySubsumes($pair.first, $pair.second);
+                      })
+                );,
+              | true
+          )
+    );
+}
+
+function meta::pure::compiler::helper::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
+{
+    let right = $gto.right;
+    if($gto.operationType.name == 'Equal',
+        | meta::pure::compiler::helper::isCompatibleGenericType($right, $other, $contravariant),
+        | if($gto.operationType.name == 'Subset',
+              | meta::pure::compiler::helper::isCompatibleGenericType($other, $right, $contravariant),
+              | true
+          )
+    );
+}

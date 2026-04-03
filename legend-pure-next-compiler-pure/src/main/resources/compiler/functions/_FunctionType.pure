@@ -197,3 +197,37 @@ function meta::pure::compiler::helper::findCommonFunctionType_build(functionType
         returnMultiplicity = if($commonReturnMul->isEmpty(), | PureOne, | $commonReturnMul->toOne())
     );
 }
+
+function meta::pure::compiler::helper::isCompatibleFunctionType(declared:FunctionType[1], actual:FunctionType[1], contravariant:Boolean[1]):Boolean[1]
+{
+    let declaredParamCount = $declared.parameters->size();
+    let actualParamCount = $actual.parameters->size();
+    if($declaredParamCount != $actualParamCount,
+        | false,
+        | let paramsOk = if($declaredParamCount > 0,
+              | meta::pure::compiler::helper::range($declaredParamCount)->forAll({i |
+                    let dp = $declared.parameters->at($i);
+                    let ap = $actual.parameters->at($i);
+                    let typeOk = if($dp.genericType->isNotEmpty() && $ap.genericType->isNotEmpty(),
+                        | meta::pure::compiler::helper::isCompatibleGenericType($dp.genericType->toOne(), $ap.genericType->toOne(), !$contravariant),
+                        | true
+                    );
+                    let mulOk = meta::pure::compiler::helper::isCompatibleMultiplicity($dp.multiplicity, $ap.multiplicity, !$contravariant);
+                    $typeOk && $mulOk;
+                }),
+              | true
+          );
+          if(!$paramsOk,
+              | false,
+              | let returnTypeOk = if($declared.returnType->isNotEmpty() && $actual.returnType->isNotEmpty(),
+                    | meta::pure::compiler::helper::isCompatibleGenericType($declared.returnType->toOne(), $actual.returnType->toOne(), $contravariant),
+                    | true
+                );
+                let returnMulOk = if($declared.returnMultiplicity->isNotEmpty() && $actual.returnMultiplicity->isNotEmpty(),
+                    | meta::pure::compiler::helper::isCompatibleMultiplicity($declared.returnMultiplicity->toOne(), $actual.returnMultiplicity->toOne(), $contravariant),
+                    | true
+                );
+                $returnTypeOk && $returnMulOk;
+          );
+    );
+}
