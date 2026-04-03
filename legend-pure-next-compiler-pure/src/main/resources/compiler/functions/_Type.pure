@@ -86,29 +86,32 @@ function meta::pure::compiler::helper::findCommonType(types:Type[*], contravaria
         | if($types->size() == 1,
               | $types->at(0),
               | let first = $types->at(0);
-                if($types->filter(t | $t != $first)->isEmpty(),
+                if($types->forAll(t | $t == $first),
                     | $first,
-                    | // Handle Nil (bottom type)
-                      let nonNil = $types->filter(t | !$t->isBottomType());
-                      if($contravariant,
-                          | // GLB: if any input is Nil, result is Nil
-                            if($nonNil->size() < $types->size(),
+                    | let nonNil = $types->filter(t | !$t->isBottomType());
+                      if($nonNil->size() < $types->size(),
+                          | // Nil is present
+                            if($contravariant,
                                 | Nil,
-                                | // Without Nil in nominal hierarchy, GLB defaults to Nil
-                                  Nil
-                            ),
-                          | // LCA: Nil is subtype of everything, so ignore it
-                            if($nonNil->isEmpty(),
-                                | $first,
-                                | if($nonNil->size() < $types->size(),
-                                      | $nonNil->findCommonType(false),
-                                      | let linearizations = $types->map(t | $t->linearize()->list());
-                                        let firstLin = $linearizations->at(0).values;
-                                        $firstLin->filter(candidate | $linearizations->filter(lin | $lin.values->filter(v | $v == $candidate)->isEmpty())->isEmpty())
-                                                 ->head()
-                                                 ->match([t : Type[1] | $t, a : Any[1] | []]);
+                                | if($nonNil->isEmpty(),
+                                      | Nil,
+                                      | $nonNil->findCommonType(false)
                                   )
-                            )
+                            ),
+                          | // RelationType logic blocked here since it is Tier 3
+                            let linearizations = $types->map(t | $t->linearize()->list());
+                            let firstLin = $linearizations->at(0).values;
+                            
+                            if($contravariant,
+                                | Nil, // GLB of unrelated types defaults to Nil
+                                | let commonList = $firstLin->filter(candidate | 
+                                      $linearizations->forAll(lin | $lin.values->contains($candidate))
+                                  );
+                                  if($commonList->isEmpty(),
+                                      | Any,
+                                      | $commonList->at(0)
+                                  );
+                            );
                       );
                 );
           );

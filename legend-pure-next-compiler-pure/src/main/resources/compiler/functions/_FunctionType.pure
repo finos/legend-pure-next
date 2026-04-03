@@ -89,3 +89,49 @@ function meta::pure::compiler::helper::collectFunctionTypeReferencedMultiplicity
     );
     $paramNames->concatenate($returnMulNames)->concatenate($returnGtNames)->removeDuplicates();
 }
+
+function meta::pure::compiler::helper::collectTypeParameterBindings(paramFT:FunctionType[1], argFT:FunctionType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+{
+    // Match parameters positionally
+    let b1 = if($paramFT.parameters->isNotEmpty() && $argFT.parameters->isNotEmpty(),
+        | $paramFT.parameters->zip($argFT.parameters)->fold({pair, bb | 
+              let p1 = collectTypeParameterBindings($pair.first.genericType, $pair.second.genericType, $bb);
+              collectMultiplicityParameterBindings($pair.first.multiplicity, $pair.second.multiplicity, $p1);
+          }, $bindings),
+        | $bindings
+    );
+    // Match return types
+    let b2 = if($paramFT.returnType->isNotEmpty() && $argFT.returnType->isNotEmpty(),
+        | collectTypeParameterBindings($paramFT.returnType->toOne(), $argFT.returnType->toOne(), $b1),
+        | $b1
+    );
+    
+    // Match return multiplicities
+    if($paramFT.returnMultiplicity->isNotEmpty() && $argFT.returnMultiplicity->isNotEmpty(),
+        | collectMultiplicityParameterBindings($paramFT.returnMultiplicity->toOne(), $argFT.returnMultiplicity->toOne(), $b2),
+        | $b2
+    );
+}
+
+function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:GenericType[1], ft:FunctionType[1], bindings:ParametersBinding[1]):GenericType[0..1]
+{
+    let newParams = $ft.parameters->map(p | 
+        let rGT = meta::pure::compiler::helper::makeAsConcreteAsPossible($p.genericType, $bindings);
+        let rMul = meta::pure::compiler::helper::makeAsConcreteAsPossible($p.multiplicity, $bindings);
+        if($rGT == $p.genericType && $rMul == $p.multiplicity,
+            | $p,
+            | ^$p(genericType = $rGT, multiplicity = $rMul)
+        );
+    );
+    let rRetGT = if($ft.returnType->isEmpty(), | [], | meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings));
+    let rRetMul = if($ft.returnMultiplicity->isEmpty(), | [], | meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings));
+    
+    if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
+        | [],
+        | ^GenericTypeValue(
+              type = ^$ft(parameters = $newParams, returnType = $rRetGT, returnMultiplicity = $rRetMul),
+              typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
+              multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])
+          )
+    );
+}

@@ -52,15 +52,6 @@ public final class _FunctionType
     /**
      * Check whether {@code actual} FunctionType is compatible with {@code declared}.
      * Parameters are contravariant (input), return type is covariant (output).
-     */
-    public static boolean isCompatible(FunctionType declared, FunctionType actual, MetadataAccess model)
-    {
-        return isCompatible(declared, actual, false, model);
-    }
-
-    /**
-     * Check whether {@code actual} FunctionType is compatible with {@code declared}.
-     * Parameters are contravariant (input), return type is covariant (output).
      *
      * @param contravariant if true, the check is in a contravariant position (directions are flipped)
      */

@@ -69,36 +69,6 @@ public final class _FunctionExpression
     }
 
     /**
-     * Collect type and multiplicity parameter bindings by comparing a
-     * function signature against the argument types and multiplicities.
-     */
-    public static ParametersBinding resolveParameterBindings(
-            FunctionExpression expr,
-            PackageableFunction function)
-    {
-        ParametersBinding bindings = PlainParametersBinding.empty();
-        ListIterable<? extends ValueSpecification> args = expr._parametersValues();
-        MutableList<VariableExpression> params = function._parameters();
-        int count = Math.min(params.size(), args.size());
-        for (int i = 0; i < count; i++)
-        {
-            GenericType paramGT = params.get(i)._genericType();
-            GenericType argGT = args.get(i)._genericType();
-            if (paramGT != null && argGT != null)
-            {
-                _GenericType.collectTypeParameterBindings(paramGT, argGT, bindings);
-            }
-            Multiplicity paramMul = params.get(i)._multiplicity();
-            Multiplicity argMul = args.get(i)._multiplicity();
-            if (paramMul != null && argMul != null)
-            {
-                _Multiplicity.collectMultiplicityParameterBindings(paramMul, argMul, bindings);
-            }
-        }
-        return bindings;
-    }
-
-    /**
      * Build and set resolved type and multiplicity parameters on the expression.
      * Overload that writes ALL bindings (no scope filtering).
      */
