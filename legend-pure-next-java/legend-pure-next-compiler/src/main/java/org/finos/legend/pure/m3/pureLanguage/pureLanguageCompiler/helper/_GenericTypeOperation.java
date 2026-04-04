@@ -52,7 +52,7 @@ public final class _GenericTypeOperation
      * and evaluating the operation if both sides become concrete RelationTypes.
      *
      * @return the resolved GenericType, which may be a concrete RelationType,
-     *         a partially-resolved GenericTypeOperation, or the original if unchanged
+     * a partially-resolved GenericTypeOperation, or the original if unchanged
      */
     public static GenericType makeAsConcreteAsPossible(GenericTypeOperation gto, ParametersBinding bindings, MetadataAccess model)
     {
@@ -235,11 +235,15 @@ public final class _GenericTypeOperation
 
     /**
      * Reconcile inferred types in matching GenericTypeOperations.
-     * Recurses into left and right sides.
+     * Returns a new GenericTypeOperation if either side changed,
+     * or the same {@code actual} reference if nothing changed.
+     * Pure functional — no in-place mutation.
      */
-    public static void reconcileInferred(GenericTypeOperation expected, GenericTypeOperation actual, MetadataAccess model)
+    public static GenericTypeOperation reconcileInferred(GenericTypeOperation expected, GenericTypeOperation actual, MetadataAccess model)
     {
-        _GenericType.reconcileInferred(expected._left(), actual._left(), model);
-        _GenericType.reconcileInferred(expected._right(), actual._right(), model);
+        return new GenericTypeOperationImpl(model)
+                ._left(_GenericType.reconcileInferred(expected._left(), actual._left(), model))
+                ._right(_GenericType.reconcileInferred(expected._right(), actual._right(), model))
+                ._operationType(actual._operationType());
     }
 }

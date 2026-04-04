@@ -264,29 +264,91 @@ public class FunctionApplicationResolver
 
     private static void validateParameterValuesToFunctionType(FunctionExpression expr, FunctionType functionType, ParametersBinding bindings, MetadataAccess model, CompilationContext context)
     {
-        ListIterable<? extends ValueSpecification> paramValues = expr._parametersValues();
-        for (int i = 0; i < paramValues.size(); i++)
+        boolean[] errorReported = {false};
+        expr._parametersValues(functionType._parameters().zip(expr._parametersValues()).collect(pair ->
         {
-            GenericType argGT = paramValues.get(i)._genericType();
-            Multiplicity argMul = paramValues.get(i)._multiplicity();
-            if (argGT != null && argMul != null)
+            VariableExpression declaredParam = pair.getOne();
+            ValueSpecification argVS = pair.getTwo();
+            GenericType argGT = argVS._genericType();
+            Multiplicity argMul = argVS._multiplicity();
+            if (argGT == null || argMul == null)
             {
-                GenericType expectedGT = _GenericType.makeAsConcreteAsPossible(functionType._parameters().get(i)._genericType(), bindings, model);
-                Multiplicity expectedMul = _Multiplicity.makeAsConcreteAsPossible(functionType._parameters().get(i)._multiplicity(), bindings);
-                // Reconcile stale Inferred types/multiplicities in the arg's type to match
-                // the expected type from unified bindings (e.g. m=[2] -> m=[*])
-                _GenericType.reconcileInferred(expectedGT, argGT, model);
-                if (!_GenericType.isCompatible(expectedGT, argGT, model) || !_Multiplicity.subsumes(expectedMul, argMul))
+                return argVS;
+            }
+            GenericType expectedGT = _GenericType.makeAsConcreteAsPossible(declaredParam._genericType(), bindings, model);
+            Multiplicity expectedMul = _Multiplicity.makeAsConcreteAsPossible(declaredParam._multiplicity(), bindings);
+            GenericType reconciledArgGT = _GenericType.reconcileInferred(expectedGT, argGT, model);
+            ValueSpecification reconciled = rebuildWithReconciledType(argVS, reconciledArgGT, model);
+            if (!errorReported[0] && (!_GenericType.isCompatible(expectedGT, reconciledArgGT, model) || !_Multiplicity.subsumes(expectedMul, argMul)))
+            {
+                context.addError(new CompilationError("No matching function '" + expr._functionName() + "' found for argument types (" +
+                        expr._parametersValues().collect(vs ->
+                                _GenericType.print(vs._genericType()) + _Multiplicity.print(vs._multiplicity())).makeString(", ") +
+                        ")", expr._sourceInformation()));
+                errorReported[0] = true;
+            }
+            return reconciled;
+        }));
+    }
+
+    /**
+     * Rebuild a ValueSpecification with a reconciled GenericType.
+     * If the VS wraps a lambda, rebuilds the lambda with the new FunctionType's parameters.
+     * Mirrors the Pure pattern: {@code ^$av(value = ^$lambda(parameters = reconciledFT.parameters), genericType = reconciledGT)}
+     */
+    private static ValueSpecification rebuildWithReconciledType(ValueSpecification vs, GenericType reconciledGT, MetadataAccess model)
+    {
+        if (vs instanceof AtomicValue av && av._value() instanceof LambdaFunction lambda)
+        {
+            // Extract the reconciled FunctionType from the GenericType chain:
+            // reconciledGT = LambdaFunction<{FunctionType}> → typeArguments[0] → rawType
+            FunctionType reconciledFT = extractReconciledFunctionType(reconciledGT);
+            if (reconciledFT != null && reconciledFT._parameters() != null)
+            {
+                // ^$lambda(parameters = reconciledFT._parameters())
+                meta.pure.metamodel.function.LambdaFunctionImpl newLambda = new meta.pure.metamodel.function.LambdaFunctionImpl(model)
+                        ._parameters(reconciledFT._parameters())
+                        ._expressionSequence(lambda._expressionSequence())
+                        ._openVariables(lambda._openVariables());
+                // ^$av(value = newLambda, genericType = reconciledGT)
+                return new meta.pure.metamodel.valuespecification.AtomicValueImpl(model)
+                        ._value(newLambda)
+                        ._genericType(reconciledGT)
+                        ._multiplicity(av._multiplicity())
+                        ._sourceInformation(av._sourceInformation());
+            }
+        }
+        // Non-lambda case: just update the genericType
+        vs._genericType(reconciledGT);
+        return vs;
+    }
+
+    /**
+     * Extract the FunctionType from a reconciled GenericType.
+     * Handles both direct FunctionType rawType and the common
+     * {@code Function<{FunctionType}>} / {@code LambdaFunction<{FunctionType}>} pattern.
+     */
+    private static FunctionType extractReconciledFunctionType(GenericType gt)
+    {
+        if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        {
+            if (gtv._type() instanceof FunctionType ft)
+            {
+                return ft;
+            }
+            if (gtv._typeArguments() != null && !gtv._typeArguments().isEmpty())
+            {
+                GenericType firstArg = gtv._typeArguments().get(0);
+                if (firstArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argGTV
+                        && argGTV._type() instanceof FunctionType ft)
                 {
-                    context.addError(new CompilationError("No matching function '" + expr._functionName() + "' found for argument types (" +
-                            paramValues.collect(vs ->
-                                    _GenericType.print(vs._genericType()) + _Multiplicity.print(vs._multiplicity())).makeString(", ") +
-                            ")", expr._sourceInformation()));
-                    break;
+                    return ft;
                 }
             }
         }
+        return null;
     }
+
 
     // ========================================================================
     // Resolution actions

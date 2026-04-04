@@ -6,10 +6,9 @@ function test::tst():Any[*]
 
 ###CompiledGraph
 function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  ArrowInvocation fold_T_MANY__Function_1__V_m__V_m_ :#Integer##[*]#  ~ArrowInvocation  @4:17-4:118
+  ArrowInvocation fold_T_MANY__Function_1__V_MANY__V_MANY_ :#Integer##[*]#  ~ArrowInvocation  @4:17-4:118
     typeParam T -> #Integer#
     typeParam V -> #Integer#
-    mulParam m -> #[*]#
     Collection :#Integer#[4]  ~Collection  @4:5-4:16
       AtomicValue  1 :Integer[1]  ~AtomicValue  @4:6-4:6
       AtomicValue  2 :Integer[1]  ~AtomicValue  @4:9-4:9

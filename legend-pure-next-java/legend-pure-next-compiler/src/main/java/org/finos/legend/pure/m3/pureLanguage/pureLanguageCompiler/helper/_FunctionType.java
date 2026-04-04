@@ -288,39 +288,31 @@ public final class _FunctionType
 
     /**
      * Reconcile inferred types in FunctionType parameters and return type.
-     * Widens inferred generic types and multiplicities where the expected type subsumes the actual.
+     * Returns a new FunctionType if any parameter or return type was widened,
+     * or the same {@code actualFT} reference if nothing changed.
+     * <p>
+     * Pure functional — no in-place mutation.
+     * The caller is responsible for integrating the returned copy into the tree.
      */
-    public static void reconcileInferred(FunctionType expectedFT, FunctionType actualFT, MetadataAccess model)
+    public static FunctionType reconcileInferred(FunctionType expectedFT, FunctionType actualFT, MetadataAccess model)
     {
-        if (expectedFT._parameters() != null && actualFT._parameters() != null)
-        {
-            int count = Math.min(expectedFT._parameters().size(), actualFT._parameters().size());
-            for (int i = 0; i < count; i++)
-            {
-                var ep = expectedFT._parameters().get(i);
-                var ap = actualFT._parameters().get(i);
-                // Widen Inferred generic types
-                if (ap._genericType() instanceof Inferred
-                        && ep._genericType() != null
-                        && _GenericType.isCompatible(ep._genericType(), ap._genericType(), model))
-                {
-                    ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) ap)
-                            ._genericType(_GenericType.asInferred(ep._genericType(), model));
-                }
-                // Widen Inferred multiplicities
-                if (ap._multiplicity() instanceof Inferred
-                        && ep._multiplicity() != null
-                        && _Multiplicity.subsumes(ep._multiplicity(), ap._multiplicity()))
-                {
-                    ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) ap)
-                            ._multiplicity(_Multiplicity.asInferred(ep._multiplicity(), model));
-                }
-                // Recurse into param generic types
-                _GenericType.reconcileInferred(ep._genericType(), ap._genericType(), model);
-            }
-        }
-        // Reconcile return type
-        _GenericType.reconcileInferred(expectedFT._returnType(), actualFT._returnType(), model);
+        return new FunctionTypeImpl(model)._classifierGenericType(actualFT._classifierGenericType()).
+                _parameters(expectedFT._parameters().zip(actualFT._parameters())
+                        .collect(pair -> {
+                            VariableExpression ep = pair.getOne();
+                            VariableExpression ap = pair.getTwo();
+                            return new VariableExpressionImpl(model)
+                                    ._classifierGenericType(ap._classifierGenericType())
+                                    ._name(ap._name())
+                                    ._genericType(ap._genericType() instanceof Inferred
+                                            && ep._genericType() != null
+                                            && _GenericType.isCompatible(ep._genericType(), ap._genericType(), model) ? _GenericType.asInferred(ep._genericType(), model) : ap._genericType())
+                                    ._multiplicity(ap._multiplicity() instanceof Inferred
+                                            && ep._multiplicity() != null
+                                            && _Multiplicity.subsumes(ep._multiplicity(), ap._multiplicity()) ? _Multiplicity.asInferred(ep._multiplicity(), model) : ap._multiplicity());
+                        })).
+                _returnType(_GenericType.reconcileInferred(expectedFT._returnType(), actualFT._returnType(), model)).
+                _returnMultiplicity(actualFT._returnMultiplicity());
     }
 
     /**

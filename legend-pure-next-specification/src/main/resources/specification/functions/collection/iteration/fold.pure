@@ -20,7 +20,9 @@ native function
     {
         doc.doc=''
     }
-    meta::pure::functions::collection::fold<T,V|m>(value:T[*], func:Function<{T[1],V[m]->V[m]}>[1], accumulator:V[m]):V[m];
+    meta::pure::functions::collection::fold<T,V>(value:T[*], func:Function<{T[1],V[1]->V[1]}>[1], accumulator:V[1]):V[1];
+
+native function meta::pure::functions::collection::fold<T,V>(value:T[*], func:Function<{T[1],V[*]->V[*]}>[1], accumulator:V[*]):V[*];
 
 function <<PCT.test>> meta::pure::functions::collection::tests::fold::testIntegerSum<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

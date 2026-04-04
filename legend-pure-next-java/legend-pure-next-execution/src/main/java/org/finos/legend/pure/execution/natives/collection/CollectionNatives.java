@@ -277,8 +277,8 @@ public class CollectionNatives
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
 
-        // fold(T[*], Function<{T[1],V[m]->V[m]}>[1], V[m]) : V[m]
-        natives.put("fold_T_MANY__Function_1__V_m__V_m_", (args, eval, genericType, multiplicity) ->
+        // fold(T[*], Function<{T[1],V[*]->V[*]}>[1], V[*]) : V[*]
+        natives.put("fold_T_MANY__Function_1__V_MANY__V_MANY_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification accumulator = args.get(2);
             meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
@@ -288,6 +288,9 @@ public class CollectionNatives
             }
             return accumulator;
         });
+
+        // fold(T[*], Function<{T[1],V[1]->V[1]}>[1], V[1]) : V[1]
+        natives.put("fold_T_MANY__Function_1__V_1__V_1_", natives.get("fold_T_MANY__Function_1__V_MANY__V_MANY_"));
 
         // removeDuplicates(T[*], Function[0..1], Function[0..1]) : T[*]
         natives.put("removeDuplicates_T_MANY__Function_$0_1$__Function_$0_1$__T_MANY_", (args, eval, genericType, multiplicity) ->
