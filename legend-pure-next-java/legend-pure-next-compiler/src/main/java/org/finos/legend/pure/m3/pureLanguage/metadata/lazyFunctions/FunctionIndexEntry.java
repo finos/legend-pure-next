@@ -356,6 +356,12 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }
 
+    @Override
+    public FunctionIndexEntry _copy()
+    {
+        throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
+    }
+
     // ========================================================================
     // Specificity comparator
     // ========================================================================

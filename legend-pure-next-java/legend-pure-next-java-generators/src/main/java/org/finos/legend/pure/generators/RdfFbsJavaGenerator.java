@@ -496,6 +496,28 @@ public class RdfFbsJavaGenerator
             generateReadOnlySetter(sb, classInfo.name, prop, javaType);
         });
 
+        // Generate _copy() that materializes into a mutable Impl
+        boolean isAbstract = classInfo.stereotypes.anySatisfy(stereo -> bareName(stereo).equals("abstract"));
+        if (!isAbstract)
+        {
+            sb.append("    @Override\n");
+            sb.append("    public ").append(classInfo.name).append("Impl _copy()\n");
+            sb.append("    {\n");
+            sb.append("        ").append(classInfo.name).append("Impl copy = new ").append(classInfo.name).append("Impl();\n");
+            allProps.forEach(prop ->
+                sb.append("        copy._").append(prop.name).append("(this._").append(prop.name).append("());\n"));
+            sb.append("        return copy;\n");
+            sb.append("    }\n\n");
+        }
+        else
+        {
+            sb.append("    @Override\n");
+            sb.append("    public ").append(classInfo.name).append(" _copy()\n");
+            sb.append("    {\n");
+            sb.append("        throw new UnsupportedOperationException(\"Cannot copy abstract FlatBuffer wrapper\");\n");
+            sb.append("    }\n\n");
+        }
+
         sb.append("}\n");
         return sb.toString();
     }

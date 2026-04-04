@@ -127,4 +127,10 @@ public class ErrorImpl implements PackageableElement
     {
         return this;
     }
+
+    @Override
+    public ErrorImpl _copy()
+    {
+        throw new UnsupportedOperationException();
+    }
 }
