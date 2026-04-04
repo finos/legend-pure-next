@@ -99,8 +99,7 @@ public final class ValueSpecificationResolver
                 {
                     // Revert to the original DotApplication:
                     // reconstruct from receiver (first param) + access name (from lambda body)
-                    ValueSpecification receiver = fe._parametersValues().getFirst();
-                    resetResolution(receiver, model, context);
+                    ValueSpecification receiver = resetResolution(fe._parametersValues().getFirst(), model, context);
 
                     AtomicValue lambdaAV = (AtomicValue) fe._parametersValues().get(1);
                     LambdaFunction lambda = (LambdaFunction) lambdaAV._value();

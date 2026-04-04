@@ -9,6 +9,7 @@ import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
@@ -42,19 +43,29 @@ public class AtomicValueResolver
         }
         else if (value instanceof meta.pure.protocol.grammar.Package_Pointer pp)
         {
-            String pointerValue = pp._pointerValue();
-            int checkpoint = context.currentErrorCount();
-            PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
-            if (element != null)
-            {
-                ((AtomicValueImpl) av)
-                        ._value(element)
-                        ._genericType(_GenericType.asInferred(element._classifierGenericType(), model));
-            }
-            else if (context.currentErrorCount() == checkpoint)
-            {
-                context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
-            }
+            return processPackagePointer(av, model, context, pp);
+        }
+        else if (av._genericType() == null)
+        {
+            throw new RuntimeException("Not supported yet " + value.getClass());
+        }
+        return av;
+    }
+
+    private static AtomicValue processPackagePointer(AtomicValue av, MetadataAccess model, CompilationContext context, Package_Pointer pp)
+    {
+        String pointerValue = pp._pointerValue();
+        int checkpoint = context.currentErrorCount();
+        PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
+        if (element != null)
+        {
+            return ((AtomicValueImpl) av)
+                    ._value(element)
+                    ._genericType(_GenericType.asInferred(element._classifierGenericType(), model));
+        }
+        else if (context.currentErrorCount() == checkpoint)
+        {
+            context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
         }
         return av;
     }

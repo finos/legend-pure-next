@@ -439,7 +439,7 @@ public class FunctionApplicationResolver
     private static ValueSpecification finishProcessing(GenericType paramGT, Multiplicity paramMul, ParametersBinding bindings, MetadataAccess model, CompilationContext context, ValueSpecification vs)
     {
         context.debugDepthInc();
-        ValueSpecificationResolver.resolve(vs, model, context);
+        vs = ValueSpecificationResolver.resolve(vs, model, context);
         context.debugDepthDec();
 
         // Mark all resolved parameters as inferred — create new instances, no in-place mutation.

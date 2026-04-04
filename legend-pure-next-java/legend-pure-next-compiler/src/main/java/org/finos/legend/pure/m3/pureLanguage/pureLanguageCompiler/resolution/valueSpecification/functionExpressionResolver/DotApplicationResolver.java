@@ -241,12 +241,12 @@ public final class DotApplicationResolver
         // Resolve the map function through the standard path
         context.debug("  automap: resolving map() expression");
         context.debugDepthInc();
-        ValueSpecificationResolver.resolve(mapExpr, model, context);
+        ValueSpecification resolved = ValueSpecificationResolver.resolve(mapExpr, model, context);
         context.debugDepthDec();
         context.debug("  automap: map() resolved gt=%s mul=%s",
-                lazy(() -> _GenericType.print(mapExpr._genericType())), lazy(() -> _Multiplicity.print(mapExpr._multiplicity())));
+                lazy(() -> _GenericType.print(resolved._genericType())), lazy(() -> _Multiplicity.print(resolved._multiplicity())));
 
-        if (mapExpr._func() == null)
+        if (!(resolved instanceof FunctionExpression fe) || fe._func() == null)
         {
             context.addError(new CompilationError(
                     "Can't resolve automap for property '" + accessName + "' on '"
@@ -254,7 +254,7 @@ public final class DotApplicationResolver
                     expr._sourceInformation()));
         }
 
-        return mapExpr;
+        return (FunctionExpression) resolved;
     }
 
     /**
