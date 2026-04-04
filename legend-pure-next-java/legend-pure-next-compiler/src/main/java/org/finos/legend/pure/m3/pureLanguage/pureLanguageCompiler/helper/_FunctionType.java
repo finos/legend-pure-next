@@ -67,22 +67,19 @@ public final class _FunctionType
         // Parameters are contravariant: flip direction
         if (declared._parameters() != null && actual._parameters() != null)
         {
-            for (int i = 0; i < declaredParamCount; i++)
+            if (!declared._parameters().zip(actual._parameters()).allSatisfy(pair ->
             {
-                VariableExpression declaredParam = declared._parameters().get(i);
-                VariableExpression actualParam = actual._parameters().get(i);
+                VariableExpression declaredParam = pair.getOne();
+                VariableExpression actualParam = pair.getTwo();
                 if (declaredParam == null || actualParam == null)
                 {
-                    continue;
+                    return true;
                 }
-                GenericType declaredParamGT = declaredParam._genericType();
-                GenericType actualParamGT = actualParam._genericType();
-                // Parameter type and multiplicity: contravariant
-                if (!_GenericType.isCompatible(declaredParamGT, actualParamGT, !contravariant, model)
-                        || !_Multiplicity.isCompatible(declaredParam._multiplicity(), actualParam._multiplicity(), !contravariant))
-                {
-                    return false;
-                }
+                return _GenericType.isCompatible(declaredParam._genericType(), actualParam._genericType(), !contravariant, model)
+                        && _Multiplicity.isCompatible(declaredParam._multiplicity(), actualParam._multiplicity(), !contravariant);
+            }))
+            {
+                return false;
             }
         }
 
@@ -265,17 +262,16 @@ public final class _FunctionType
         // Match parameters positionally
         if (paramFT._parameters() != null && argFT._parameters() != null)
         {
-            int count = Math.min(paramFT._parameters().size(), argFT._parameters().size());
-            for (int i = 0; i < count; i++)
+            paramFT._parameters().zip(argFT._parameters()).forEach(pair ->
             {
-                GenericType pGT = paramFT._parameters().get(i)._genericType();
-                GenericType aGT = argFT._parameters().get(i)._genericType();
+                GenericType pGT = pair.getOne()._genericType();
+                GenericType aGT = pair.getTwo()._genericType();
                 if (pGT != null && aGT != null)
                 {
                     _GenericType.collectTypeParameterBindings(pGT, aGT, bindings);
                 }
-                _Multiplicity.collectMultiplicityParameterBindings(paramFT._parameters().get(i)._multiplicity(), argFT._parameters().get(i)._multiplicity(), bindings);
-            }
+                _Multiplicity.collectMultiplicityParameterBindings(pair.getOne()._multiplicity(), pair.getTwo()._multiplicity(), bindings);
+            });
         }
         // Match return types
         if (paramFT._returnType() != null && argFT._returnType() != null)

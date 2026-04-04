@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
@@ -22,9 +21,6 @@ import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -72,12 +68,12 @@ public final class _FunctionExpression
      * Build and set resolved type and multiplicity parameters on the expression.
      * Overload that writes ALL bindings (no scope filtering).
      */
-    public static void populateResolvedParameters(
+    public static FunctionExpression populateResolvedParameters(
             FunctionExpression expr,
             ParametersBinding bindings,
             MetadataAccess model)
     {
-        populateResolvedParameters(expr, bindings, null, null, model);
+        return populateResolvedParameters(expr, bindings, null, null, model);
     }
 
     /**
@@ -85,7 +81,7 @@ public final class _FunctionExpression
      * Only writes bindings for the function's own params (ownTypeParams/ownMulParams),
      * filtering out bindings from outer scopes (e.g., Z, y from enclosing function).
      */
-    public static void populateResolvedParameters(
+    public static FunctionExpression populateResolvedParameters(
             FunctionExpression expr,
             ParametersBinding bindings,
             MutableSet<String> ownTypeParams,
@@ -145,5 +141,6 @@ public final class _FunctionExpression
                 expr._resolvedMultiplicityParameters(resolvedMuls);
             }
         }
+        return expr;
     }
 }

@@ -67,7 +67,7 @@ public final class FunctionExpressionResolver
                 // Enum value resolution returns an AtomicValue, not a FunctionExpression
                 if (dotResult instanceof FunctionExpression fe)
                 {
-                    finalizeFunctionExpression(fe, checkpoint, model, context);
+                    return finalizeFunctionExpression(fe, checkpoint, model, context);
                 }
                 return dotResult;
             }
@@ -75,8 +75,7 @@ public final class FunctionExpressionResolver
             {
                 int checkpoint = context.currentErrorCount();
                 FunctionExpression expression = expr._func(FunctionApplicationResolver.resolveFunctionApplication((FunctionApplication) expr, model, context));
-                finalizeFunctionExpression(expression, checkpoint, model, context);
-                return expression;
+                return finalizeFunctionExpression(expression, checkpoint, model, context);
             }
         }
         finally
@@ -85,7 +84,7 @@ public final class FunctionExpressionResolver
         }
     }
 
-    public static void finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)
+    public static FunctionExpression finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)
     {
         if (resolved._func() != null)
         {
@@ -118,5 +117,6 @@ public final class FunctionExpressionResolver
                         resolved._sourceInformation()));
             }
         }
+        return resolved;
     }
 }

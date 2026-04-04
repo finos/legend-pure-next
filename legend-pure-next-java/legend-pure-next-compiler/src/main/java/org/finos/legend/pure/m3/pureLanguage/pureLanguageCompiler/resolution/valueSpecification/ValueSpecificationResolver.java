@@ -11,7 +11,6 @@ import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
@@ -140,16 +139,7 @@ public final class ValueSpecificationResolver
                     }
                     if (lambda._expressionSequence() != null)
                     {
-                        MutableList<ValueSpecification> exprSeq =
-                                (MutableList<ValueSpecification>) lambda._expressionSequence();
-                        for (int i = 0; i < exprSeq.size(); i++)
-                        {
-                            ValueSpecification replaced = resetResolution(exprSeq.get(i), model, context);
-                            if (replaced != exprSeq.get(i))
-                            {
-                                exprSeq.set(i, replaced);
-                            }
-                        }
+                        lambda._expressionSequence(lambda._expressionSequence().collect(e -> resetResolution(e, model, context)));
                     }
                 }
                 yield av;
@@ -162,15 +152,7 @@ public final class ValueSpecificationResolver
                 }
                 if (col._values() != null)
                 {
-                    MutableList<ValueSpecification> values = col._values();
-                    for (int i = 0; i < values.size(); i++)
-                    {
-                        ValueSpecification replaced = resetResolution(values.get(i), model, context);
-                        if (replaced != values.get(i))
-                        {
-                            values.set(i, replaced);
-                        }
-                    }
+                    col._values(col._values().collect(v -> resetResolution(v, model, context)));
                 }
                 yield col;
             }

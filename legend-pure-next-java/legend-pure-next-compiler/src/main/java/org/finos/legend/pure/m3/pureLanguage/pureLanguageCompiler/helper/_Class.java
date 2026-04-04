@@ -33,23 +33,17 @@ public final class _Class
         ParametersBinding bindings = PlainParametersBinding.empty();
         if (ownerClass._typeParameters().notEmpty())
         {
-            for (int i = 0; i < ownerClass._typeParameters().size(); i++)
-            {
-                String paramName = ownerClass._typeParameters().get(i)._name();
-                bindings.typeBindings()
-                        .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(_GenericType.typeArguments(receiverType).get(i));
-            }
+            ownerClass._typeParameters().zip(_GenericType.typeArguments(receiverType)).forEach(pair ->
+                    bindings.typeBindings()
+                            .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                            .add(pair.getTwo()));
         }
         if (ownerClass._multiplicityParameters().notEmpty())
         {
-            for (int i = 0; i < ownerClass._multiplicityParameters().size(); i++)
-            {
-                String paramName = ownerClass._multiplicityParameters().get(i)._name();
-                bindings.multiplicityBindings()
-                        .computeIfAbsent(paramName, k -> Sets.mutable.empty())
-                        .add(_GenericType.multiplicityArguments(receiverType).get(i));
-            }
+            ownerClass._multiplicityParameters().zip(_GenericType.multiplicityArguments(receiverType)).forEach(pair ->
+                    bindings.multiplicityBindings()
+                            .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                            .add(pair.getTwo()));
         }
         return bindings;
     }

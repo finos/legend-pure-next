@@ -615,14 +615,13 @@ public class _GenericType
                     MutableList<GenericType> argTypeArgs = argV._typeArguments();
                     if (paramTypeArgs != null && argTypeArgs != null)
                     {
-                        int count = Math.min(paramTypeArgs.size(), argTypeArgs.size());
-                        for (int i = 0; i < count; i++)
+                        paramTypeArgs.zip(argTypeArgs).forEach(pair ->
                         {
-                            if (paramTypeArgs.get(i) != null && argTypeArgs.get(i) != null)
+                            if (pair.getOne() != null && pair.getTwo() != null)
                             {
-                                collectTypeParameterBindings(paramTypeArgs.get(i), argTypeArgs.get(i), bindings);
+                                collectTypeParameterBindings(pair.getOne(), pair.getTwo(), bindings);
                             }
-                        }
+                        });
                     }
 
                     // Recurse into multiplicityArguments positionally
@@ -630,11 +629,8 @@ public class _GenericType
                     MutableList<Multiplicity> argMulArgs = argV._multiplicityArguments();
                     if (paramMulArgs != null && argMulArgs != null)
                     {
-                        int count = Math.min(paramMulArgs.size(), argMulArgs.size());
-                        for (int i = 0; i < count; i++)
-                        {
-                            _Multiplicity.collectMultiplicityParameterBindings(paramMulArgs.get(i), argMulArgs.get(i), bindings);
-                        }
+                        paramMulArgs.zip(argMulArgs).forEach(pair ->
+                                _Multiplicity.collectMultiplicityParameterBindings(pair.getOne(), pair.getTwo(), bindings));
                     }
                 }
             }
@@ -898,14 +894,8 @@ public class _GenericType
                                 && resolvedV._multiplicityArguments() != null
                                 && src._multiplicityArguments() != null)
                         {
-                            int mulCount = Math.min(resolvedV._multiplicityArguments().size(), src._multiplicityArguments().size());
-                            for (int i = 0; i < mulCount; i++)
-                            {
-                                _Multiplicity.collectMultiplicityParameterBindings(
-                                        resolvedV._multiplicityArguments().get(i),
-                                        src._multiplicityArguments().get(i),
-                                        downBindings);
-                            }
+                            resolvedV._multiplicityArguments().zip(src._multiplicityArguments()).forEach(pair ->
+                                    _Multiplicity.collectMultiplicityParameterBindings(pair.getOne(), pair.getTwo(), downBindings));
                         }
                         // Apply bindings to produce the concrete GenericType at the target level
                         yield makeAsConcreteAsPossible(templateGT, downBindings, model);
@@ -1080,13 +1070,8 @@ public class _GenericType
                 {
                     return false;
                 }
-                for (int i = 0; i < declaredV._multiplicityArguments().size(); i++)
-                {
-                    if (!_Multiplicity.subsumes(declaredV._multiplicityArguments().get(i), actualMulArgs.get(i)))
-                    {
-                        return false;
-                    }
-                }
+                return declaredV._multiplicityArguments().zip(actualMulArgs).allSatisfy(pair ->
+                        _Multiplicity.subsumes(pair.getOne(), pair.getTwo()));
             }
         }
 

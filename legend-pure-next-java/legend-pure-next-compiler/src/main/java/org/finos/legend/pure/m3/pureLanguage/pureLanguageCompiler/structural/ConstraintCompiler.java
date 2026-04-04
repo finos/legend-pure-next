@@ -62,11 +62,10 @@ public final class ConstraintCompiler
             MutableList<VariableExpression> extraParams,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        int size = Math.min(compiledConstraints.size(), grammarConstraints.size());
-        for (int i = 0; i < size; i++)
+        compiledConstraints.zip(grammarConstraints).forEach(pair ->
         {
-            Constraint compiled = compiledConstraints.get(i);
-            meta.pure.protocol.grammar.constraint.Constraint grammarC = grammarConstraints.get(i);
+            Constraint compiled = pair.getOne();
+            meta.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
 
             if (grammarC._functionDefinition() instanceof LambdaFunction lambdaFunc)
             {
@@ -101,6 +100,6 @@ public final class ConstraintCompiler
                 msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
                 compiled._messageFunction(msgLambda);
             }
-        }
+        });
     }
 }
