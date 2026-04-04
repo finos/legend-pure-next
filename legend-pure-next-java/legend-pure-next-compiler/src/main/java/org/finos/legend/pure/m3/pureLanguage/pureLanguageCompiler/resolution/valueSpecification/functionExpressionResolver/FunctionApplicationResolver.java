@@ -210,12 +210,14 @@ public class FunctionApplicationResolver
                     }
                 }
             }
+            // Always write back resolved parameters (even if some are unresolved).
+            // With _copy()-based resolution, this is required to propagate the resolved copies.
+            expr._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam));
             if (hasUnresolved)
             {
                 return expr;
             }
-            expr._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
-                    ._func(entry);
+            expr._func(entry);
 
             // Validate bindings, check arg types, and populate resolved parameters
             return validateAndPopulate(expr, entry, node, model, context);
