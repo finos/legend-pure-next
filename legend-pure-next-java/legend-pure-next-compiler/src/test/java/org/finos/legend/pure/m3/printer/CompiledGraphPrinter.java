@@ -481,6 +481,34 @@ public final class CompiledGraphPrinter
         {
             sb.append(shortPath(fn));
         }
+        else if (fe._func() instanceof QualifiedProperty qp)
+        {
+            if (qp._owner() != null)
+            {
+                sb.append(fullPath(qp._owner())).append('.').append(qp._name());
+            }
+            else
+            {
+                sb.append(qp._name());
+            }
+            // Print parameter signature (excluding implicit 'this')
+            sb.append('(');
+            boolean firstParam = true;
+            for (VariableExpression param : qp._parameters())
+            {
+                if ("this".equals(param._name()))
+                {
+                    continue;
+                }
+                if (!firstParam)
+                {
+                    sb.append(", ");
+                }
+                firstParam = false;
+                sb.append(printType(param._genericType())).append(printMul(param._multiplicity()));
+            }
+            sb.append(')');
+        }
         else if (fe._func() instanceof AbstractProperty prop)
         {
             if (prop._owner() != null)

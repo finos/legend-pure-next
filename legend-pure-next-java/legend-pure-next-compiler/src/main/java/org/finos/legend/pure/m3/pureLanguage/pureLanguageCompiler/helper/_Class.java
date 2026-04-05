@@ -6,6 +6,8 @@ import meta.pure.metamodel.function.property.QualifiedProperty;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
@@ -88,6 +90,37 @@ public final class _Class
             }
         }
         return null;
+    }
+
+    /**
+     * Find all qualified properties by name on a Class, searching own qualified properties,
+     * then traversing up the class hierarchy.
+     */
+    public static MutableList<QualifiedProperty> findQualifiedProperties(Class cls, String name)
+    {
+        MutableList<QualifiedProperty> results = Lists.mutable.empty();
+        collectQualifiedProperties(cls, name, results);
+        return results;
+    }
+
+    private static void collectQualifiedProperties(Class cls, String name, MutableList<QualifiedProperty> results)
+    {
+        // Direct qualified properties
+        if (cls._qualifiedProperties() != null)
+        {
+            cls._qualifiedProperties().select(qp -> name.equals(qp._name()), results);
+        }
+        // Inherited qualified properties via generalizations
+        if (cls._generalizations() != null)
+        {
+            for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+            {
+                if (gen._general() != null && _GenericType.type(gen._general()) instanceof Class superClass)
+                {
+                    collectQualifiedProperties(superClass, name, results);
+                }
+            }
+        }
     }
 
     /**

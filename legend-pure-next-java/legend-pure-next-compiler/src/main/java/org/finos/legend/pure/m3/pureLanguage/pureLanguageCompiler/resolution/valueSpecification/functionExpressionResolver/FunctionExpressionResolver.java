@@ -74,7 +74,7 @@ public final class FunctionExpressionResolver
             else
             {
                 int checkpoint = context.currentErrorCount();
-                FunctionExpression expression = expr._func(FunctionApplicationResolver.resolveFunctionApplication((FunctionApplication) expr, model, context));
+                FunctionExpression expression = FunctionApplicationResolver.resolveFunctionApplication((FunctionApplication) expr, model, context);
                 return finalizeFunctionExpression(expression, checkpoint, model, context);
             }
         }

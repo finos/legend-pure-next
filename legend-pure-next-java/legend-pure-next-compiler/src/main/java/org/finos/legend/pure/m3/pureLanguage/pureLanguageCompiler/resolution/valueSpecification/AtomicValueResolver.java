@@ -59,9 +59,9 @@ public class AtomicValueResolver
         PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
         if (element != null)
         {
-           return ((AtomicValueImpl) av._copy())
+            return ((AtomicValueImpl) av._copy())
                     ._value(element)
-                    ._genericType(_GenericType.asInferred(element._classifierGenericType(), model));
+                    ._genericType(_GenericType.asInferred(_GenericType.withUndefinedTypeParams(element._classifierGenericType(), model), model));
         }
         else if (context.currentErrorCount() == checkpoint)
         {

@@ -28,6 +28,7 @@ import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.UndefinedGenericType;
+import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
@@ -449,6 +450,33 @@ public class _GenericType
             }
             default -> throw new IllegalArgumentException("Unexpected GenericType: " + genericType.getClass());
         };
+    }
+
+    /**
+     * Replace all TypeParameter references in a GenericType tree with UndefinedGenericType.
+     * Used when a PackageableElement is referenced as a value (e.g., {@code instanceOf(List)}) —
+     * the element's classifierGenericType has intrinsic type params (e.g., {@code Class<List<T>>})
+     * that are not bound by the call site and should be treated as wildcards.
+     */
+    public static GenericType withUndefinedTypeParams(GenericType genericType, MetadataAccess model)
+    {
+        if (genericType == null)
+        {
+            return null;
+        }
+        if (genericType instanceof GenericTypeValue gtv)
+        {
+            if (gtv._type() instanceof TypeParameter)
+            {
+                return new UndefinedGenericTypeImpl(model);
+            }
+            if (gtv._typeArguments() != null && gtv._typeArguments().anySatisfy(arg -> !isConcrete(arg)))
+            {
+                MutableList<GenericType> newArgs = gtv._typeArguments().collect(arg -> withUndefinedTypeParams(arg, model));
+                return ((InferredGenericTypeImpl) asInferred(genericType, model))._typeArguments(newArgs);
+            }
+        }
+        return genericType;
     }
 
 

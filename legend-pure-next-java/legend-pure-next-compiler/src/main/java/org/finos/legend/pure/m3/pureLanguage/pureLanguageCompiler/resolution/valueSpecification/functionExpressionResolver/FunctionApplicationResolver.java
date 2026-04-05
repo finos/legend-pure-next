@@ -1,7 +1,6 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
 import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
@@ -51,7 +50,7 @@ public class FunctionApplicationResolver
      * function candidates by name and arity, then resolving args, collecting
      * bindings, resolving lambdas, and picking the best match.
      */
-    public static Function resolveFunctionApplication(
+    public static FunctionApplication resolveFunctionApplication(
             FunctionApplication expr,
             MetadataAccess model,
             CompilationContext context)
@@ -67,15 +66,13 @@ public class FunctionApplicationResolver
             String message = "The function '" + functionName + "' with " + paramCount + " parameter(s) can't be found";
             message += buildFunctionSuggestions(functionName, paramCount, model, context);
             context.addError(new CompilationError(message, expr._sourceInformation()));
-            return null;
+            return (FunctionApplication) expr._func(null);
         }
         else if (candidates.size() == 1)
         {
             // Single candidate — resolve directly, errors are legitimate
             FunctionIndexEntry entry = candidates.getFirst();
-            resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
-            Function func = expr._func();
-            return func != null ? func : entry;
+            return (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
         }
         else
         {
@@ -85,7 +82,7 @@ public class FunctionApplicationResolver
             {
                 int errorCheckpoint = context.currentErrorCount();
 
-                resolveFunctionApplicationUsingTemplateFunctionForInference(expr, candidateEntry, model, context);
+                FunctionApplication resolved = (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, candidateEntry, model, context);
 
                 if (context.currentErrorCount() == errorCheckpoint)
                 {
@@ -95,11 +92,11 @@ public class FunctionApplicationResolver
                     if (tied.size() > 1)
                     {
                         String signatures = tied.collect(FunctionIndexEntry::signature).sortThis().makeString(", ");
-                        SourceInformation srcInfo = expr._sourceInformation();
+                        SourceInformation srcInfo = resolved._sourceInformation();
                         context.addError(new CompilationError("Ambiguous function call: multiple equally-specific matches found [" + signatures + "]", srcInfo));
-                        return null;
+                        return (FunctionApplication) resolved._func(null);
                     }
-                    return expr._func();
+                    return resolved;
                 }
 
                 // Resolution produced errors — snapshot and roll back for next candidate
@@ -116,7 +113,7 @@ public class FunctionApplicationResolver
             {
                 context.addErrors(bestCandidateErrors);
             }
-            return null;
+            return (FunctionApplication) expr._func(null);
         }
     }
 
@@ -210,17 +207,16 @@ public class FunctionApplicationResolver
                     }
                 }
             }
-            // Always write back resolved parameters (even if some are unresolved).
-            // With _copy()-based resolution, this is required to propagate the resolved copies.
             expr._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam));
-            if (hasUnresolved)
-            {
-                return expr;
-            }
+            // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
             expr._func(entry);
 
-            // Validate bindings, check arg types, and populate resolved parameters
-            return validateAndPopulate(expr, entry, node, model, context);
+            if (!hasUnresolved)
+            {
+                // Validate bindings, check arg types, and populate resolved parameters
+                return validateAndPopulate(expr, entry, node, model, context);
+            }
+            return expr;
         }
         finally
         {

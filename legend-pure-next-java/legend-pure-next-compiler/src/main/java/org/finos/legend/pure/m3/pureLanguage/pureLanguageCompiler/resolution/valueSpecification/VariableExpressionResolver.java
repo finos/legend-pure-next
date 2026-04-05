@@ -18,7 +18,7 @@ public class VariableExpressionResolver
             VariableExpression match = context.compilerContextExtensions(PureLanguageCompilerContext.class).resolveVariable(varExpr._name());
             if (match != null)
             {
-                ((VariableExpressionImpl) varExpr)
+                return ((VariableExpressionImpl) varExpr._copy())
                         ._genericType(_GenericType.asInferred(match._genericType(), model))
                         ._multiplicity(_Multiplicity.asInferred(match._multiplicity(), model));
             }
