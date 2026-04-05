@@ -2,6 +2,7 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.va
 
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.LambdaFunction;
+import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
@@ -36,6 +37,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.RelationColumnResolver;
 
@@ -214,7 +216,7 @@ public class FunctionApplicationResolver
                 }
             }
             // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
-            FunctionExpression newFunctionExpression = ((FunctionExpression)expr._copy())
+            FunctionExpression newFunctionExpression = ((FunctionExpression) expr._copy())
                     ._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
                     ._func(entry);
 
@@ -400,8 +402,9 @@ public class FunctionApplicationResolver
         {
             context.rollbackErrorsTo(checkpoint);
             context.debug("resolveArg: LAMBDA");
-            setMissingLambdaParameterInformation(lambda, paramGT, bindings, model);
-            return finishProcessing(paramGT, paramMul, bindings, model, context, processed);
+            LambdaFunction reprocessedLambda = setMissingLambdaParameterInformation(lambda, paramGT, bindings, model);
+            AtomicValue withReprocessedLambda = ((AtomicValue) processed._copy())._value(reprocessedLambda);
+            return finishProcessing(paramGT, paramMul, bindings, model, context, withReprocessedLambda);
         }
         else if (processed instanceof FunctionApplication childExpr && childExpr._func() != null)
         {
@@ -421,21 +424,23 @@ public class FunctionApplicationResolver
             enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterNames(resolvedParamGT));
             context.debug("resolveArg: COLLECTION (%d elements) resolvedParamGT=%s", col._values().size(), lazy(() -> _GenericType.print(resolvedParamGT)));
             context.debugDepthInc();
-            for (ValueSpecification element : col._values())
-            {
-                context.debug("element: class=%s%s gt=%s",
-                        element.getClass().getSimpleName(),
-                        element instanceof FunctionExpression fe ? " fname=" + fe._functionName() : "",
-                        lazy(() -> _GenericType.print(element._genericType())));
-                // Each element resolves with isolated bindings so that inner function
-                // type params (e.g., L from agg<K,L,M>) don't leak between elements.
-                ParametersBinding elementBindings = bindings.copy();
-                resolveParameterValue(element, resolvedParamGT, resolvedParamMul, elementBindings, enrichedScopeTypeParams, scopeMulParams, model, context);
-                context.debug("element after: gt=%s", lazy(() -> _GenericType.print(element._genericType())));
-            }
+            Collection newCollection = ((Collection)col._copy())._values(
+                    col._values().collect(element ->
+                    {
+                        context.debug("element: class=%s%s gt=%s",
+                                element.getClass().getSimpleName(),
+                                element instanceof FunctionExpression fe ? " fname=" + fe._functionName() : "",
+                                lazy(() -> _GenericType.print(element._genericType())));
+                        // Each element resolves with isolated bindings so that inner function
+                        // type params (e.g., L from agg<K,L,M>) don't leak between elements.
+                        ParametersBinding elementBindings = bindings.copy();
+                        ValueSpecification newValue = resolveParameterValue(element, resolvedParamGT, resolvedParamMul, elementBindings, enrichedScopeTypeParams, scopeMulParams, model, context);
+                        context.debug("element after: gt=%s", lazy(() -> _GenericType.print(element._genericType())));
+                        return newValue;
+                    })
+            );
             context.debugDepthDec();
-
-            return finishProcessing(paramGT, paramMul, bindings, model, context, processed);
+            return finishProcessing(paramGT, paramMul, bindings, model, context, newCollection);
         }
         context.debug("resolveArg: NO_MATCH class=%s gt=%s", arg.getClass().getSimpleName(), lazy(() -> _GenericType.print(arg._genericType())));
         return processed;
@@ -474,40 +479,39 @@ public class FunctionApplicationResolver
      * Resolve a single lambda's parameter types and body using the function parameter's
      * expected type and the current type/multiplicity bindings.
      */
-    private static void setMissingLambdaParameterInformation(
+    private static LambdaFunction setMissingLambdaParameterInformation(
             LambdaFunction lambda,
             GenericType paramGT,
             ParametersBinding bindings,
             MetadataAccess model)
     {
-        if (paramGT != null)
+        // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
+        // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
+        GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
+        GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
+        if (_GenericType.type(innerGT) instanceof FunctionType ft)
         {
-            // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
-            // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
-            GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-            if (_GenericType.typeArguments(concreteGT) != null && _GenericType.typeArguments(concreteGT).notEmpty())
-            {
-                GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
-                if (_GenericType.type(innerGT) instanceof FunctionType ft)
-                {
-                    ft._parameters().zip(lambda._parameters()).forEach(pair ->
+            lambda =  ((LambdaFunctionImpl) lambda._copy())
+                    ._parameters(ft._parameters().zip(lambda._parameters()).collect(pair ->
                     {
                         VariableExpression ftParam = pair.getOne();
                         VariableExpression lambdaParam = pair.getTwo();
                         GenericType resolvedType = _GenericType.makeAsConcreteAsPossible(ftParam._genericType(), bindings, model);
+                        VariableExpression ve = (VariableExpression) lambdaParam._copy();
                         if (resolvedType != null && !_GenericType.isConcrete(lambdaParam._genericType()))
                         {
-                            ((VariableExpressionImpl) lambdaParam)._genericType(_GenericType.asInferred(resolvedType, model));
+                            ve._genericType(_GenericType.asInferred(resolvedType, model));
                         }
                         Multiplicity resolvedMul = _Multiplicity.makeAsConcreteAsPossible(ftParam._multiplicity(), bindings);
                         if (resolvedMul != null && !_Multiplicity.isConcrete(lambdaParam._multiplicity()))
                         {
-                            ((VariableExpressionImpl) lambdaParam)._multiplicity(_Multiplicity.asInferred(resolvedMul, model));
+                            ve._multiplicity(_Multiplicity.asInferred(resolvedMul, model));
                         }
-                    });
-                }
-            }
+                        return ve;
+                    })
+            );
         }
+        return lambda;
     }
 
     /**

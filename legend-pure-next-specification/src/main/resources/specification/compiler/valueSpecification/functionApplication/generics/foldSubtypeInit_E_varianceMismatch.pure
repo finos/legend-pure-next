@@ -1,5 +1,5 @@
 ###Error
-No matching function 'fold' found for argument types (String[3], LambdaFunction<{String[1], test::Child[1]->test::Parent[1]}>[1], test::Child[1]) (at valueSpecification/functionApplication/generics/foldSubtypeInit_E_varianceMismatch 14:5-14:107)
+No matching function 'fold' found for argument types (String[3], LambdaFunction<{String[1], test::Child[1]->test::Parent[1]}>[1], test::Child[1]) (at valueSpecification/functionApplication/generics/foldSubtypeInit_E_varianceMismatch 16:20-16:113)
 
 ###Pure
 // fold<T,V> uses V in both covariant (return) and contravariant (param)
