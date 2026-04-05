@@ -245,7 +245,7 @@ public class FunctionApplicationResolver
         // Compiler-tracked enrichment: for relation column functions, the
         // TypeHolder's RelationType can't be inferred from bindings alone -
         // the column types come from the lambda return types.
-        RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions(expr, functionType, paramValues, functionCallParametersBinding, model, context);
+        FunctionExpression newExpression = RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions(expr, functionType, functionCallParametersBinding, model, context);
 
         // Cross-match, transitive resolution, and common-type reduction.
         // Owner-aware routing is handled inside FunctionCallNode.unify().
@@ -254,7 +254,7 @@ public class FunctionApplicationResolver
         int checkpoint = context.currentErrorCount();
         // Validate arg types and multiplicities against param expectations.
         // functionCallParametersBinding IS a ParametersBinding -- pass it directly.
-        FunctionExpression validated = validateParameterValuesToFunctionType(expr, functionType, functionCallParametersBinding, model, context);
+        FunctionExpression validated = validateParameterValuesToFunctionType(newExpression, functionType, functionCallParametersBinding, model, context);
 
         if (context.currentErrorCount() == checkpoint)
         {
