@@ -144,10 +144,11 @@ public class FunctionApplicationResolver
 
         // Clear stale resolved params — they've been seeded into the node.
         // Prevents finalize from using stale bindings from a previous reverseMatch round.
-        expr._resolvedTypeParameters(null);
-        expr._resolvedMultiplicityParameters(null);
+        FunctionExpression newFunctionExpression = ((FunctionExpression) expr._copy())
+                                                        ._resolvedTypeParameters(null)
+                                                        ._resolvedMultiplicityParameters(null);
 
-        MutableList<ValueSpecification> paramValues = expr._parametersValues();
+        MutableList<ValueSpecification> paramValues = newFunctionExpression._parametersValues();
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
         MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamNames();
         MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamNames();
@@ -171,7 +172,7 @@ public class FunctionApplicationResolver
                     ParameterInfo parameterInfo = parameterInfos[i] == null ? parameterInfos[i] = new ParameterInfo() : parameterInfos[i];
                     if (!parameterInfo.resolved)
                     {
-                        ValueSpecification parameterValue = expr._parametersValues().get(i);
+                        ValueSpecification parameterValue = newFunctionExpression._parametersValues().get(i);
                         GenericType paramGT = funcParams.get(i)._genericType();
                         Multiplicity paramMul = funcParams.get(i)._multiplicity();
                         context.debug("parameterValue[%d] class=%s paramGT=%s bindings=%s parentBindings=%s", i, parameterValue.getClass().getSimpleName(), lazy(() -> _GenericType.print(paramGT)), node, lazy(node::printParentBindings));
@@ -216,16 +217,16 @@ public class FunctionApplicationResolver
                 }
             }
             // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
-            FunctionExpression newFunctionExpression = ((FunctionExpression) expr._copy())
+            FunctionExpression resultFunctionExpression = newFunctionExpression
                     ._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
                     ._func(entry);
 
             if (!hasUnresolved)
             {
                 // Validate bindings, check arg types, and populate resolved parameters
-                return validateAndPopulate(newFunctionExpression, entry, node, model, context);
+                return validateAndPopulate(resultFunctionExpression, entry, node, model, context);
             }
-            return newFunctionExpression;
+            return resultFunctionExpression;
         }
         finally
         {
@@ -316,7 +317,7 @@ public class FunctionApplicationResolver
             if (reconciledFT != null && reconciledFT._parameters() != null)
             {
                 // ^$lambda(parameters = reconciledFT._parameters())
-                meta.pure.metamodel.function.LambdaFunctionImpl newLambda = new meta.pure.metamodel.function.LambdaFunctionImpl(model)
+                LambdaFunctionImpl newLambda = new LambdaFunctionImpl(model)
                         ._parameters(reconciledFT._parameters())
                         ._expressionSequence(lambda._expressionSequence())
                         ._openVariables(lambda._openVariables());
@@ -329,8 +330,7 @@ public class FunctionApplicationResolver
             }
         }
         // Non-lambda case: just update the genericType
-        vs._genericType(reconciledGT);
-        return vs;
+        return ((ValueSpecification)vs._copy())._genericType(reconciledGT);
     }
 
     /**
