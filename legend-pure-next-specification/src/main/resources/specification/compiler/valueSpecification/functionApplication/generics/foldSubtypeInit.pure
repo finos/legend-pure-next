@@ -1,0 +1,9 @@
+###Pure
+// Reproduces fold where init type (Child) is a subtype of the lambda
+// return type (Parent). V should unify to Parent via the V[1] overload.
+Class test::Parent { name : String[1]; }
+Class test::Child extends test::Parent { extra : String[1]; }
+function test::tst():Any[*]
+{
+    [1, 2, 3]->fold({val, acc| ^test::Parent(name = $acc.name + toString($val))}, ^test::Child(name = 'init:', extra = 'x'))
+}

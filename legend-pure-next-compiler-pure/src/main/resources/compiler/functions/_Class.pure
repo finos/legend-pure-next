@@ -56,11 +56,11 @@ function meta::pure::compiler::helper::buildBindingsFromGenericType(ownerClass:C
 
     let withTypes = $ownerClass.typeParameters->zip($typeArgs)->fold({pair, b |
         $b->addTypeBinding($pair.first, $pair.second);
-    }, newPlainParametersBinding());
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
 
     $ownerClass.multiplicityParameters->zip($mulArgs)->fold({pair, b |
         $b->addMultiplicityBinding($pair.first, $pair.second);
-    }, $withTypes);
+    }, $withTypes->cast(@ParametersBinding));
 }
 
 

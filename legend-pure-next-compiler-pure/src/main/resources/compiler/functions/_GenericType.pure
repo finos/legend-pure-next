@@ -411,11 +411,11 @@ function meta::pure::compiler::helper::resolveForTarget_GenericTypeValue(src:Gen
               | $src,
               | let initialBindings = newPlainParametersBinding();
                 let typeB = if($sourceType->instanceOf(Class),
-                    | $sourceType->cast(@Class<Any>).typeParameters->zip($src.typeArguments)->fold({pair, bb | $bb->addTypeBinding($pair.first, $pair.second)}, $initialBindings),
+                    | $sourceType->cast(@Class<Any>).typeParameters->zip($src.typeArguments)->fold({pair, bb | $bb->addTypeBinding($pair.first, $pair.second)}, $initialBindings->cast(@ParametersBinding)),
                     | $initialBindings
                 );
                 let mulB = if($sourceType->instanceOf(Class) && $src.multiplicityArguments->isNotEmpty(),
-                    | $sourceType->cast(@Class<Any>).multiplicityParameters->zip($src.multiplicityArguments)->fold({pair, bb | $bb->addMultiplicityBinding($pair.first, $pair.second)}, $typeB),
+                    | $sourceType->cast(@Class<Any>).multiplicityParameters->zip($src.multiplicityArguments)->fold({pair, bb | $bb->addMultiplicityBinding($pair.first, $pair.second)}, $typeB->cast(@ParametersBinding)),
                     | $typeB
                 );
                 

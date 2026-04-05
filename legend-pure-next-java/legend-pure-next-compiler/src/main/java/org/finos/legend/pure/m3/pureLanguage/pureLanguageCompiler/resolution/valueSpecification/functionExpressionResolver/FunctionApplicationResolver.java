@@ -78,6 +78,7 @@ public class FunctionApplicationResolver
         {
             // Multiple candidates (most-specific-first) — try each with rollback.
             MutableList<CompilationError> bestCandidateErrors = null;
+            FunctionExpression lastResolved = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {
                 int errorCheckpoint = context.currentErrorCount();
@@ -106,14 +107,14 @@ public class FunctionApplicationResolver
                 {
                     bestCandidateErrors = candidateErrors;
                 }
-                resetResolutionForFunctionExpression(expr, model, context);
+                lastResolved = resetResolutionForFunctionExpression(resolved, model, context);
             }
             // No candidate resolved cleanly — restore the best candidate's errors
             if (bestCandidateErrors != null)
             {
                 context.addErrors(bestCandidateErrors);
             }
-            return (FunctionApplication) expr._func(null);
+            return (FunctionApplication) lastResolved._func(null);
         }
     }
 
@@ -138,6 +139,11 @@ public class FunctionApplicationResolver
         // Push binding node for this function resolution (seeds pre-resolved bindings automatically)
         PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
         FunctionCallParametersBinding node = plcc.pushBindingNode(expr, entry);
+
+        // Clear stale resolved params — they've been seeded into the node.
+        // Prevents finalize from using stale bindings from a previous reverseMatch round.
+        expr._resolvedTypeParameters(null);
+        expr._resolvedMultiplicityParameters(null);
 
         MutableList<ValueSpecification> paramValues = expr._parametersValues();
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
@@ -207,16 +213,17 @@ public class FunctionApplicationResolver
                     }
                 }
             }
-            expr._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam));
             // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
-            expr._func(entry);
+            FunctionExpression newFunctionExpression = ((FunctionExpression)expr._copy())
+                    ._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
+                    ._func(entry);
 
             if (!hasUnresolved)
             {
                 // Validate bindings, check arg types, and populate resolved parameters
-                return validateAndPopulate(expr, entry, node, model, context);
+                return validateAndPopulate(newFunctionExpression, entry, node, model, context);
             }
-            return expr;
+            return newFunctionExpression;
         }
         finally
         {

@@ -93,7 +93,7 @@ function meta::pure::compiler::helper::unify_step1_pairwiseBind(fcpb:FunctionCal
               }, $b);,
             | $b
         )
-    }, $fcpb)->match([
+    }, $fcpb->cast(@ParametersBinding))->match([
         f: FunctionCallParametersBinding[1] | $f,
         other: ParametersBinding[1] | $fcpb
     ]);

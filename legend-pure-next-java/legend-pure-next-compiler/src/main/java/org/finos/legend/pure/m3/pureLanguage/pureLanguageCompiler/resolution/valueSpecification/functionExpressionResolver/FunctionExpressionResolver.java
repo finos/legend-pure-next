@@ -94,19 +94,22 @@ public final class FunctionExpressionResolver
             Multiplicity returnMul = _Multiplicity.asInferred(_Multiplicity.makeAsConcreteAsPossible(ft._returnMultiplicity(), bindings), model);
             FunctionCallParametersBinding currentNode = context.compilerContextExtensions(PureLanguageCompilerContext.class).currentFunctionCallNode();
             context.debug("finalize: %s func=%s gt=%s mul=%s bindings=%s parentBindings=%s", resolved._functionName(), lazy(() -> CompilationContext.debugFunc(resolved._func())), lazy(() -> _GenericType.print(returnGT)), lazy(() -> _Multiplicity.print(returnMul)), bindings, lazy(() -> currentNode != null ? currentNode.printParentBindings() : "[]"));
-            resolved._genericType(returnGT)
+            FunctionExpression updated = (FunctionExpression) ((FunctionExpression)resolved._copy())
+                    ._genericType(returnGT)
                     ._multiplicity(returnMul);
 
             // Validate required properties for new expressions
-            if (resolved._functionName() != null && resolved._functionName().equals("new"))
+            if (updated._functionName() != null && updated._functionName().equals("new"))
             {
-                NewResolver.validateNewRequiredProperties(resolved, model, context);
+                NewResolver.validateNewRequiredProperties(updated, model, context);
             }
-            registerLetVariable(resolved, model, context);
+            registerLetVariable(updated, model, context);
+            return updated;
         }
         else
         {
-            resolved._genericType(null)
+            FunctionExpression updated = (FunctionExpression) ((FunctionExpression) resolved._copy())
+                    ._genericType(null)
                     ._multiplicity(null);
             // Only report if no specific error was already added by resolveFunctionApplication.
             // This avoids duplicate errors when e.g. "No matching function 'X' found" was already reported.
@@ -116,7 +119,7 @@ public final class FunctionExpressionResolver
                         "Can't resolve the function '" + resolved._functionName() + "'",
                         resolved._sourceInformation()));
             }
+            return updated;
         }
-        return resolved;
     }
 }
