@@ -116,14 +116,6 @@ public class FunctionApplicationResolver
         }
     }
 
-
-    static class ParameterInfo
-    {
-        boolean resolved = false;
-        MutableList<CompilationError> savedErrors;
-        ValueSpecification newParam;
-    }
-
     /**
      * Resolve args, collect type/multiplicity bindings, apply bindings to
      * lambdas, validate, and populate resolved parameters on the expression.
@@ -139,94 +131,122 @@ public class FunctionApplicationResolver
         FunctionCallParametersBinding node = plcc.pushBindingNode(expr, entry);
 
         // Clear stale resolved params — they've been seeded into the node.
-        // Prevents finalize from using stale bindings from a previous reverseMatch round.
-        FunctionExpression newFunctionExpression = ((FunctionExpression) expr._copy())
-                                                        ._resolvedTypeParameters(null)
-                                                        ._resolvedMultiplicityParameters(null);
+        FunctionExpression cleanExpr = ((FunctionExpression) expr._copy())
+                ._resolvedTypeParameters(null)
+                ._resolvedMultiplicityParameters(null);
 
-        MutableList<ValueSpecification> paramValues = newFunctionExpression._parametersValues();
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
         MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamNames();
         MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamNames();
 
         try
         {
-            // Fixpoint loop: resolve parameters iteratively until no more progress
-            context.debug("resolveFunctionApplicationUsingTemplateFunction: %s (%d args)", entry.fullPath(), paramValues.size());
+            context.debug("resolveFunctionApplicationUsingTemplateFunction: %s (%d args)", entry.fullPath(), cleanExpr._parametersValues().size());
             context.debugDepthInc();
 
-            ParameterInfo[] parameterInfos = new ParameterInfo[paramValues.size()];
-            boolean progress = true;
-            int iteration = 0;
-            while (progress)
-            {
-                iteration++;
-                context.debug("--- fixpoint iteration %d ---", iteration);
-                progress = false;
-                for (int i = 0; i < paramValues.size(); i++)
-                {
-                    ParameterInfo parameterInfo = parameterInfos[i] == null ? parameterInfos[i] = new ParameterInfo() : parameterInfos[i];
-                    if (!parameterInfo.resolved)
-                    {
-                        ValueSpecification parameterValue = newFunctionExpression._parametersValues().get(i);
-                        GenericType paramGT = funcParams.get(i)._genericType();
-                        Multiplicity paramMul = funcParams.get(i)._multiplicity();
-                        context.debug("parameterValue[%d] class=%s paramGT=%s bindings=%s parentBindings=%s", i, parameterValue.getClass().getSimpleName(), lazy(() -> _GenericType.print(paramGT)), node, lazy(node::printParentBindings));
-                        int checkpoint = context.currentErrorCount();
-                        context.debugDepthInc();
-                        ValueSpecification reprocessed = resolveParameterValue(parameterValue, paramGT, paramMul, node, scopeTypeParams, scopeMulParams, model, context);
-                        parameterInfo.newParam = reprocessed;
-                        if (isSuccessfullyProcessed(parameterValue, reprocessed, scopeTypeParams, scopeMulParams))
-                        {
-                            progress = true;
-                            parameterInfo.resolved = true;
-                            parameterInfo.savedErrors = null;
-                            context.debug(parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder ?
-                                    "=> RESOLVED (TypeHolder = compiler-managed, enriched later)" :
-                                    "=> RESOLVED gt=%s mul=%s", lazy(() -> _GenericType.print(parameterValue._genericType())), lazy(() -> _Multiplicity.print(parameterValue._multiplicity()))
-                            );
-                        }
-                        else
-                        {
-                            parameterInfo.savedErrors = context.snapshotErrorsFrom(checkpoint);
-                            context.rollbackErrorsTo(checkpoint);
-                            context.debug("=> NOT RESOLVED");
-                        }
-                        context.debugDepthDec();
-                    }
-                }
-            }
+            // Initialize: all params start unresolved
+            MutableList<ParameterInfo> infos = cleanExpr._parametersValues().collect(pv -> new ParameterInfo());
+            // Fixpoint: resolve params iteratively until no more progress
+            MutableList<ParameterInfo> resolved = fixpointResolveParams(infos, cleanExpr, funcParams, node, scopeTypeParams, scopeMulParams, model, context, 1);
+
             context.debugDepthDec();
 
-            // Push back saved errors from ALL unresolved args.
-            boolean hasUnresolved = false;
-            for (int i = 0; i < paramValues.size(); i++)
-            {
-                if (!parameterInfos[i].resolved)
-                {
-                    hasUnresolved = true;
-                    if (parameterInfos[i].savedErrors != null && parameterInfos[i].savedErrors.notEmpty())
-                    {
-                        context.addErrors(parameterInfos[i].savedErrors);
-                    }
-                }
-            }
+            // Push back saved errors from all unresolved args
+            MutableList<ParameterInfo> unresolvedInfos = resolved.select(info -> !info.resolved);
+            unresolvedInfos.flatCollect(info -> info.savedErrors != null ? info.savedErrors : Lists.mutable.empty())
+                    .forEach(context::addError);
 
-            // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
-            FunctionExpression resultFunctionExpression = newFunctionExpression
-                    ._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
+            // Assemble result: set func even if some params unresolved (enables reverse-match)
+            FunctionExpression result = cleanExpr
+                    ._parametersValues(resolved.collect(info -> info.newParam))
                     ._func(entry);
 
-            if (!hasUnresolved)
+            if (unresolvedInfos.isEmpty())
             {
-                // Validate bindings, check arg types, and populate resolved parameters
-                return validateAndPopulate(resultFunctionExpression, entry, node, model, context);
+                return validateAndPopulate(result, entry, node, model, context);
             }
-            return resultFunctionExpression;
+            return result;
         }
         finally
         {
             plcc.popBindingNode();
+        }
+    }
+
+    /**
+     * One fixpoint pass: try to resolve each unresolved parameter, collecting bindings
+     * as each resolves. Recurse until no more progress is made.
+     */
+    private static MutableList<ParameterInfo> fixpointResolveParams(
+            MutableList<ParameterInfo> infos,
+            FunctionExpression expr,
+            MutableList<VariableExpression> funcParams,
+            FunctionCallParametersBinding node,
+            MutableSet<String> scopeTypeParams,
+            MutableSet<String> scopeMulParams,
+            MetadataAccess model,
+            CompilationContext context,
+            int iteration)
+    {
+        context.debug("--- fixpoint iteration %d ---", iteration);
+
+        // One pass: try to resolve each unresolved param (sequential — binding accumulation is order-dependent)
+        MutableList<ParameterInfo> updated = infos.collectWithIndex((info, i) ->
+                info.resolved?
+                        info :
+                        resolveOneParam(i, expr, funcParams, node, scopeTypeParams, scopeMulParams, model, context)
+        );
+
+        // Derive progress: did any param transition from unresolved to resolved?
+        boolean madeProgress = infos.zip(updated).anySatisfy(pair -> !pair.getOne().resolved && pair.getTwo().resolved);
+
+        return madeProgress
+                ? fixpointResolveParams(updated, expr, funcParams, node, scopeTypeParams, scopeMulParams, model, context, iteration + 1)
+                : updated;
+    }
+
+    /**
+     * Try to resolve a single parameter at the given index.
+     * Returns a new ParameterInfo (resolved or unresolved with saved errors).
+     */
+    private static ParameterInfo resolveOneParam(
+            int index,
+            FunctionExpression expr,
+            MutableList<VariableExpression> funcParams,
+            FunctionCallParametersBinding node,
+            MutableSet<String> scopeTypeParams,
+            MutableSet<String> scopeMulParams,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        ValueSpecification parameterValue = expr._parametersValues().get(index);
+        GenericType paramGT = funcParams.get(index)._genericType();
+        Multiplicity paramMul = funcParams.get(index)._multiplicity();
+
+        context.debug("parameterValue[%d] class=%s paramGT=%s bindings=%s parentBindings=%s",
+                index, parameterValue.getClass().getSimpleName(),
+                lazy(() -> _GenericType.print(paramGT)), node, lazy(node::printParentBindings));
+
+        int checkpoint = context.currentErrorCount();
+        context.debugDepthInc();
+        ValueSpecification reprocessed = resolveParameterValue(parameterValue, paramGT, paramMul, node, scopeTypeParams, scopeMulParams, model, context);
+        context.debugDepthDec();
+
+        if (isSuccessfullyProcessed(parameterValue, reprocessed, scopeTypeParams, scopeMulParams))
+        {
+            context.debug(parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder
+                    ? "=> RESOLVED (TypeHolder = compiler-managed, enriched later)"
+                    : "=> RESOLVED gt=%s mul=%s",
+                    lazy(() -> _GenericType.print(reprocessed._genericType())),
+                    lazy(() -> _Multiplicity.print(reprocessed._multiplicity())));
+            return ParameterInfo.resolved(reprocessed);
+        }
+        else
+        {
+            MutableList<CompilationError> errors = context.snapshotErrorsFrom(checkpoint);
+            context.rollbackErrorsTo(checkpoint);
+            context.debug("=> NOT RESOLVED");
+            return ParameterInfo.unresolved(reprocessed, errors);
         }
     }
 
@@ -621,12 +641,6 @@ public class FunctionApplicationResolver
     // Internal helpers
     // ========================================================================
 
-    private static Type resolvedRawType(ValueSpecification vs)
-    {
-        GenericType gt = vs._genericType();
-        return gt != null ? _GenericType.type(gt) : null;
-    }
-
     private static boolean isSuccessfullyProcessed(ValueSpecification parameterValue, ValueSpecification reprocessed, MutableSet<String> scopeTypeParams, MutableSet<String> scopeMulParams)
     {
         return parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder || isConcreteInContext(reprocessed._genericType(), reprocessed._multiplicity(), scopeTypeParams, scopeMulParams);
@@ -640,5 +654,34 @@ public class FunctionApplicationResolver
     {
         return paramGT != null && _GenericType.isConcreteInContext(paramGT, scopeTypeParams)
                 && paramMul != null && _Multiplicity.isConcreteInContext(paramMul, scopeMulParams);
+    }
+
+    static class ParameterInfo
+    {
+        final boolean resolved;
+        final MutableList<CompilationError> savedErrors;
+        final ValueSpecification newParam;
+
+        ParameterInfo()
+        {
+            this(false, null, null);
+        }
+
+        ParameterInfo(boolean resolved, ValueSpecification newParam, MutableList<CompilationError> savedErrors)
+        {
+            this.resolved = resolved;
+            this.newParam = newParam;
+            this.savedErrors = savedErrors;
+        }
+
+        static ParameterInfo resolved(ValueSpecification vs)
+        {
+            return new ParameterInfo(true, vs, null);
+        }
+
+        static ParameterInfo unresolved(ValueSpecification vs, MutableList<CompilationError> errors)
+        {
+            return new ParameterInfo(false, vs, errors);
+        }
     }
 }
