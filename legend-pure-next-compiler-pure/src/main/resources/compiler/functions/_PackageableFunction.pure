@@ -1,0 +1,14 @@
+import meta::pure::compiler::helper::*;
+
+// PackageableFunction signature
+
+function meta::pure::compiler::helper::functionSignature(fn:PackageableFunction<Any>[1]):String[1]
+{
+    let pkgPath = if($fn.package->isEmpty(), | '', | $fn.package->toOne()->packagePath());
+    let displayName = if($pkgPath == '', | $fn.functionName->toOne(), | $pkgPath + '::' + $fn.functionName->toOne());
+
+    let paramStr = $fn.parameters->map(p | $p.name + ': ' + $p.genericType->toOne()->printGenericType(false) + $p.multiplicity->toOne()->printMultiplicity())->joinStrings(', ');
+    let returnStr = $fn.returnGenericType->toOne()->printGenericType(false) + $fn.returnMultiplicity->toOne()->printMultiplicity();
+
+    $displayName + '(' + $paramStr + '): ' + $returnStr;
+}

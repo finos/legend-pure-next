@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameter;
@@ -22,9 +21,6 @@ import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameter;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
-import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -69,45 +65,15 @@ public final class _FunctionExpression
     }
 
     /**
-     * Collect type and multiplicity parameter bindings by comparing a
-     * function signature against the argument types and multiplicities.
-     */
-    public static ParametersBinding resolveParameterBindings(
-            FunctionExpression expr,
-            PackageableFunction function)
-    {
-        ParametersBinding bindings = PlainParametersBinding.empty();
-        ListIterable<? extends ValueSpecification> args = expr._parametersValues();
-        MutableList<VariableExpression> params = function._parameters();
-        int count = Math.min(params.size(), args.size());
-        for (int i = 0; i < count; i++)
-        {
-            GenericType paramGT = params.get(i)._genericType();
-            GenericType argGT = args.get(i)._genericType();
-            if (paramGT != null && argGT != null)
-            {
-                _GenericType.collectTypeParameterBindings(paramGT, argGT, bindings);
-            }
-            Multiplicity paramMul = params.get(i)._multiplicity();
-            Multiplicity argMul = args.get(i)._multiplicity();
-            if (paramMul != null && argMul != null)
-            {
-                _Multiplicity.collectMultiplicityParameterBindings(paramMul, argMul, bindings);
-            }
-        }
-        return bindings;
-    }
-
-    /**
      * Build and set resolved type and multiplicity parameters on the expression.
      * Overload that writes ALL bindings (no scope filtering).
      */
-    public static void populateResolvedParameters(
+    public static FunctionExpression populateResolvedParameters(
             FunctionExpression expr,
             ParametersBinding bindings,
             MetadataAccess model)
     {
-        populateResolvedParameters(expr, bindings, null, null, model);
+        return populateResolvedParameters(expr, bindings, null, null, model);
     }
 
     /**
@@ -115,7 +81,7 @@ public final class _FunctionExpression
      * Only writes bindings for the function's own params (ownTypeParams/ownMulParams),
      * filtering out bindings from outer scopes (e.g., Z, y from enclosing function).
      */
-    public static void populateResolvedParameters(
+    public static FunctionExpression populateResolvedParameters(
             FunctionExpression expr,
             ParametersBinding bindings,
             MutableSet<String> ownTypeParams,
@@ -175,5 +141,6 @@ public final class _FunctionExpression
                 expr._resolvedMultiplicityParameters(resolvedMuls);
             }
         }
+        return expr;
     }
 }

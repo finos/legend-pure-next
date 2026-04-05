@@ -129,6 +129,55 @@ function meta::pure::compiler::helper::multiplicitySubsumes(general:Multiplicity
 }
 
 
+// Multiplicity compatibility (variance-aware)
+
+function meta::pure::compiler::helper::isCompatibleMultiplicity(declared:Multiplicity[1], actual:Multiplicity[1], contravariant:Boolean[1]):Boolean[1]
+{
+    if($contravariant,
+        | $actual->multiplicitySubsumes($declared),
+        | $declared->multiplicitySubsumes($actual)
+    )
+}
+
+
+// Multiplicity concreteness in context
+
+function meta::pure::compiler::helper::isConcreteMultiplicityInContext(m:Multiplicity[1], scopeMulParams:String[*]):Boolean[1]
+{
+    $m->match(
+        [
+            mp : MultiplicityParameter[1] | $scopeMulParams->filter(n | $n == $mp.name)->isNotEmpty(),
+            a  : Any[1]                   | true
+        ]
+    )
+}
+
+
+// Find common (widest) multiplicity
+
+function meta::pure::compiler::helper::findCommonMultiplicity(multiplicities:Multiplicity[*]):Multiplicity[0..1]
+{
+    if($multiplicities->isEmpty(),
+        | [],
+        | if($multiplicities->size() == 1,
+              | $multiplicities->at(0),
+              | let bounds = $multiplicities->map(m | pair($m->multiplicityLowerBound(), $m->multiplicityUpperBound()));
+                let minLower = $bounds->map(p | $p.first)->sort()->at(0);
+                let uppers = $bounds->map(p | $p.second);
+                let maxUpper = if($uppers->filter(u | $u == -1)->isNotEmpty(),
+                    | -1,
+                    | $uppers->sort()->reverse()->at(0)
+                );
+                // Build a concrete multiplicity using ^ConcreteMultiplicity
+                if($maxUpper == -1,
+                    | ^ConcreteMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower)),
+                    | ^ConcreteMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower), upperBound = ^MultiplicityValue(value = $maxUpper))
+                );
+          )
+    )
+}
+
+
 // Tests
 
 function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityLowerBound():Boolean[1]
@@ -184,4 +233,69 @@ function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMu
     assert(PureOne->multiplicitySubsumes(PureOne));
     assertFalse(PureOne->multiplicitySubsumes(ZeroOne));
     assertFalse(PureOne->multiplicitySubsumes(ZeroMany));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsCompatibleMultiplicity():Boolean[1]
+{
+    // Covariant (default): declared subsumes actual
+    assert(ZeroMany->isCompatibleMultiplicity(PureOne, false));
+    assert(ZeroMany->isCompatibleMultiplicity(ZeroOne, false));
+    assertFalse(PureOne->isCompatibleMultiplicity(ZeroMany, false));
+
+    // Contravariant: actual subsumes declared
+    assert(PureOne->isCompatibleMultiplicity(ZeroMany, true));
+    assertFalse(ZeroMany->isCompatibleMultiplicity(PureOne, true));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsConcreteMultiplicityInContext():Boolean[1]
+{
+    // Concrete multiplicities are always concrete in any context
+    assert(PureOne->isConcreteMultiplicityInContext([]));
+    assert(ZeroMany->isConcreteMultiplicityInContext([]));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testFindCommonMultiplicity():Boolean[1]
+{
+    // Single multiplicity returns itself
+    let single = [PureOne]->findCommonMultiplicity();
+    assert($single->isNotEmpty());
+    assertEquals(1, $single->toOne()->multiplicityLowerBound());
+    assertEquals(1, $single->toOne()->multiplicityUpperBound());
+
+    // PureOne + ZeroOne -> [0..1]
+    let m1 = [PureOne, ZeroOne]->findCommonMultiplicity();
+    assert($m1->isNotEmpty());
+    assertEquals(0, $m1->toOne()->multiplicityLowerBound());
+    assertEquals(1, $m1->toOne()->multiplicityUpperBound());
+
+    // PureOne + ZeroMany -> [0..*]
+    let m2 = [PureOne, ZeroMany]->findCommonMultiplicity();
+    assert($m2->isNotEmpty());
+    assertEquals(0, $m2->toOne()->multiplicityLowerBound());
+    assertEquals(-1, $m2->toOne()->multiplicityUpperBound());
+
+    // Empty returns empty
+    let empty = []->cast(@Multiplicity)->findCommonMultiplicity();
+    assert($empty->isEmpty());
+}
+
+function meta::pure::compiler::helper::collectMultiplicityParameterBindings(paramMul:Multiplicity[1], argMul:Multiplicity[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+{
+    $paramMul->match([
+        mp : MultiplicityParameter[1] | $bindings->addMultiplicityBinding($mp, $argMul),
+        other : Multiplicity[1] | $bindings
+    ])
+}
+
+function meta::pure::compiler::helper::makeAsConcreteAsPossible(multiplicity:Multiplicity[1], bindings:ParametersBinding[1]):Multiplicity[1]
+{
+    $multiplicity->match([
+        mp : MultiplicityParameter[1] |
+            let boundMuls = $bindings.multiplicityBindings->get($mp.name);
+            if($boundMuls->isEmpty(),
+                | $multiplicity,
+                | $boundMuls->toOne().values->at(0)
+            );,
+        other : Multiplicity[1] | $multiplicity
+    ])
 }

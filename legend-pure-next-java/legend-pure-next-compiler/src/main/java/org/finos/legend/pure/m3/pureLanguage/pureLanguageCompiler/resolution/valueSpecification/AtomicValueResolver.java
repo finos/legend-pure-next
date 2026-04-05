@@ -9,6 +9,7 @@ import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
@@ -42,25 +43,36 @@ public class AtomicValueResolver
         }
         else if (value instanceof meta.pure.protocol.grammar.Package_Pointer pp)
         {
-            String pointerValue = pp._pointerValue();
-            int checkpoint = context.currentErrorCount();
-            PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
-            if (element != null)
-            {
-                ((AtomicValueImpl) av)
-                        ._value(element)
-                        ._genericType(_GenericType.asInferred(element._classifierGenericType(), model));
-            }
-            else if (context.currentErrorCount() == checkpoint)
-            {
-                context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
-            }
+            return processPackagePointer(av, model, context, pp);
+        }
+        else if (av._genericType() == null)
+        {
+            throw new RuntimeException("Not supported yet " + value.getClass());
         }
         return av;
     }
 
-    private static @Nullable AtomicValue processLambda(AtomicValue av, MetadataAccess model, CompilationContext context, LambdaFunction lambda)
+    private static AtomicValue processPackagePointer(AtomicValue av, MetadataAccess model, CompilationContext context, Package_Pointer pp)
     {
+        String pointerValue = pp._pointerValue();
+        int checkpoint = context.currentErrorCount();
+        PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
+        if (element != null)
+        {
+            return ((AtomicValueImpl) av._copy())
+                    ._value(element)
+                    ._genericType(_GenericType.asInferred(_GenericType.withUndefinedTypeParams(element._classifierGenericType(), model), model));
+        }
+        else if (context.currentErrorCount() == checkpoint)
+        {
+            context.addError(new CompilationError("The element '" + pointerValue + "' can't be found", av._sourceInformation()));
+        }
+        return av;
+    }
+
+    private static @Nullable AtomicValue processLambda(AtomicValue av, MetadataAccess model, CompilationContext context, LambdaFunction _lambda)
+    {
+        LambdaFunction lambda = (LambdaFunction) _lambda._copy();
         MutableList<VariableExpression> params = lambda._parameters();
 
         // Skip body resolution if lambda params don't have concrete types.
@@ -114,8 +126,11 @@ public class AtomicValueResolver
                         ._type(lambdaType)
                         ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
                                 new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));
-                ((AtomicValueImpl) av)._genericType(lambdaGT);
+
                 context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
+                return (AtomicValue)((AtomicValue) av._copy())
+                        ._value(lambda)
+                        ._genericType(lambdaGT);
             }
         }
         return av;

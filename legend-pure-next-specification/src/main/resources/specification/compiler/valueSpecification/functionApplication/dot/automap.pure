@@ -27,7 +27,7 @@ function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
     typeParam V -> #String#
     DotApplication test::MyClass.maybeValue :#test::Other##[0..1]#  ~DotApplication  @6:15-6:25
       FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::MyClass##[1]#  ~FunctionInvocation  @6:5-6:14
-        typeParam T -> test::MyClass
+        typeParam T -> #test::MyClass#
         TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @6:5-6:14
     Lambda(v_automap:#test::Other#[1]) :#LambdaFunction<#{#test::Other#[1]->#String##[0..1]#}#>#[1]  ~AtomicValue
       DotApplication test::Other.name :#String##[0..1]#  ~DotApplication  @6:26-6:30
@@ -42,7 +42,7 @@ function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
     typeParam V -> #String#
     DotApplication test::MyClass.values :#test::Other##[*]#  ~DotApplication  @8:15-8:21
       FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__T_1_ :#test::MyClass##[1]#  ~FunctionInvocation  @8:5-8:14
-        typeParam T -> test::MyClass
+        typeParam T -> #test::MyClass#
         TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @8:5-8:14
     Lambda(v_automap:#test::Other#[1]) :#LambdaFunction<#{#test::Other#[1]->#String##[0..1]#}#>#[1]  ~AtomicValue
       DotApplication test::Other.name :#String##[0..1]#  ~DotApplication  @8:22-8:26

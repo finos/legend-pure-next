@@ -254,6 +254,17 @@ public class RdfJavaGenerator
             sb.append(" value);\n\n");
         });
 
+        // Generate _copy() declaration — only on the root Any interface
+        // to avoid incompatible return types in diamond hierarchies
+        if ("Any".equals(classInfo.name))
+        {
+            sb.append("    /**\n");
+            sb.append("     * Create a shallow copy of this instance.\n");
+            sb.append("     * @return a new instance with the same field values\n");
+            sb.append("     */\n");
+            sb.append("    ").append(classInfo.name).append(" _copy();\n\n");
+        }
+
         sb.append("}\n");
 
         return sb.toString();
@@ -431,6 +442,18 @@ public class RdfJavaGenerator
             sb.append("        return this;\n");
             sb.append("    }\n\n");
         });
+        // Generate _copy() method
+        sb.append("    @Override\n");
+        sb.append("    public ").append(classInfo.name).append("Impl _copy()\n");
+        sb.append("    {\n");
+        sb.append("        ").append(classInfo.name).append("Impl copy = new ").append(classInfo.name).append("Impl();\n");
+        allProperties.forEach(prop ->
+        {
+            String fieldName = escapeFieldName(prop.name);
+            sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";\n");
+        });
+        sb.append("        return copy;\n");
+        sb.append("    }\n\n");
 
         sb.append("}\n");
 
@@ -688,6 +711,7 @@ public class RdfJavaGenerator
     // =========================================================================
     // Main Entry Point
     // =========================================================================
+
 
     /**
      * Main method to run the Java generator from command line.

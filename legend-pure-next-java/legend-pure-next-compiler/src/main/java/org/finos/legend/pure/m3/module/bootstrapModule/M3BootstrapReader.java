@@ -21,6 +21,7 @@ import meta.pure.metamodel.SimplePropertyOwner;
 import meta.pure.metamodel.extension.ProfileImpl;
 import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.extension.StereotypeImpl;
+import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.multiplicity.InferredPackageableMultiplicityImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -32,6 +33,8 @@ import meta.pure.metamodel.multiplicity.UserDefinedPackageableMultiplicityImpl;
 import meta.pure.metamodel.relationship.Generalization;
 import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.ClassImpl;
+import meta.pure.metamodel.type.EnumImpl;
+import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
@@ -42,6 +45,7 @@ import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeImpl;
+import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -146,6 +150,9 @@ public class M3BootstrapReader
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
             bootstrapProperties(model, m3Property, index);
+
+            // Fourth pass: wire enum values as properties on their Enumeration
+            bootstrapEnumValues(model, m3Enumeration, index);
         }
         catch (IOException e)
         {
@@ -606,6 +613,113 @@ public class M3BootstrapReader
             }
         }
         return null;
+    }
+
+    /**
+     * Bootstrap enum values as Properties on their Enumeration.
+     * For each Enumeration found in the index, find all RDF subjects whose
+     * rdf:type is that Enumeration and create a Property on the Enumeration
+     * for each enum value, mirroring what EnumerationHandler.secondPass does.
+     */
+    private static void bootstrapEnumValues(
+            Model model,
+            Resource enumerationTypeResource,
+            MutableMap<String, PackageableElement> index)
+    {
+        // Find all Enumeration instances in the index
+        for (ResIterator it = model.listSubjectsWithProperty(RDF.type, enumerationTypeResource); it.hasNext();)
+        {
+            Resource enumRes = it.next();
+            String enumName = getName(model, enumRes);
+            String enumPkg = getPackagePath(model, enumRes);
+            if (enumName == null || enumPkg == null)
+            {
+                continue;
+            }
+
+            String enumFullPath = enumPkg + "::" + enumName;
+            PackageableElement enumElement = index.get(enumFullPath);
+            if (!(enumElement instanceof Enumeration enumeration))
+            {
+                continue;
+            }
+
+            // GenericType for this enumeration's values (e.g., GenericType pointing to GenericTypeOperationType)
+            GenericType enumGT = new UserDefinedGenericTypeImpl()
+                    ._type((Type) enumeration);
+            enumGT._classifierGenericType(enumGT);
+
+            // GenericType for Enumeration<E> parameterized with this enum type
+            Type enumerationType = (Type) index.get("meta::pure::metamodel::type::Enumeration");
+            GenericType enumerationOfE = new UserDefinedGenericTypeImpl()
+                    ._type(enumerationType)
+                    ._typeArguments(Lists.mutable.with(enumGT));
+            enumerationOfE._classifierGenericType(enumerationOfE);
+
+            Type propertyType = (Type) index.get("meta::pure::metamodel::function::property::Property");
+            Multiplicity pureOne = (Multiplicity) index.get("meta::pure::metamodel::multiplicity::PureOne");
+
+            // Find all instances of this Enumeration in the RDF (e.g., :GenericTypeOperationType_Union a :GenericTypeOperationType)
+            for (ResIterator valIt = model.listSubjectsWithProperty(RDF.type, enumRes); valIt.hasNext();)
+            {
+                Resource valRes = valIt.next();
+                String valName = getName(model, valRes);
+                if (valName == null)
+                {
+                    continue;
+                }
+
+                // Create an Enum instance
+                EnumImpl enumInstance = new EnumImpl()
+                        ._name(valName);
+                Statement cgtStmt = getM3Statement(model, valRes, "classifierGenericType");
+                if (cgtStmt != null && cgtStmt.getObject().isResource())
+                {
+                    enumInstance._classifierGenericType(buildGenericType(model, cgtStmt.getObject().asResource(), index));
+                }
+
+                // Build classifierGenericTypes for the wrapper objects
+                Type lambdaType = (Type) index.get("meta::pure::metamodel::function::LambdaFunction");
+                GenericType lambdaCGT = new UserDefinedGenericTypeImpl()
+                        ._type(lambdaType)
+                        ._typeArguments(Lists.mutable.with(enumGT));
+                lambdaCGT._classifierGenericType(lambdaCGT);
+
+                Type atomicValueType = (Type) index.get("meta::pure::metamodel::valuespecification::AtomicValue");
+                GenericType avCGT = new UserDefinedGenericTypeImpl()
+                        ._type(atomicValueType);
+                avCGT._classifierGenericType(avCGT);
+
+                // Create a lambda whose body is the AtomicValue wrapping the Enum
+                LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
+                defaultValueLambda._classifierGenericType(lambdaCGT);
+                defaultValueLambda._expressionSequence(Lists.mutable.with(
+                        new AtomicValueImpl()
+                                ._classifierGenericType(avCGT)
+                                ._value(enumInstance)
+                                ._genericType(enumGT)
+                                ._multiplicity(pureOne)
+                ));
+
+                // Create the Property: Property<Enumeration<E>, E | 1>
+                GenericType propCGT = new UserDefinedGenericTypeImpl()
+                        ._type(propertyType)
+                        ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
+                        ._multiplicityArguments(Lists.mutable.with(pureOne));
+                propCGT._classifierGenericType(propCGT);
+
+                PropertyImpl prop = new PropertyImpl()
+                        ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                        ._name(valName)
+                        ._owner(enumeration)
+                        ._genericType(enumGT)
+                        ._multiplicity(pureOne)
+                        ._classifierGenericType(propCGT)
+                        ._defaultValue(defaultValueLambda);
+
+                enumeration._properties().add(prop);
+            }
+        }
     }
 
     // =========================================================================

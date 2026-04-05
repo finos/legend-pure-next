@@ -47,6 +47,23 @@ function meta::pure::compiler::helper::findQualifiedProperty(cls:Class<Any>[1], 
 }
 
 
+// buildBindingsFromGenericType — zips class type/multiplicity params with receiver type args
+
+function meta::pure::compiler::helper::buildBindingsFromGenericType(ownerClass:Class<Any>[1], receiverType:GenericType[1]):ParametersBinding[1]
+{
+    let typeArgs = $receiverType->genericTypeTypeArguments();
+    let mulArgs = $receiverType->genericTypeMultiplicityArguments();
+
+    let withTypes = $ownerClass.typeParameters->zip($typeArgs)->fold({pair, b |
+        $b->addTypeBinding($pair.first, $pair.second);
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+
+    $ownerClass.multiplicityParameters->zip($mulArgs)->fold({pair, b |
+        $b->addMultiplicityBinding($pair.first, $pair.second);
+    }, $withTypes->cast(@ParametersBinding));
+}
+
+
 // Tests
 
 function <<test.Test>> meta::pure::compiler::helper::tests::class::testFindPropertyDirect():Boolean[1]

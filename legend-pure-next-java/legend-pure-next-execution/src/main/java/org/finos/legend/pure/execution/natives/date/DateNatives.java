@@ -4,7 +4,6 @@ import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.execution.natives.string.StringNatives;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

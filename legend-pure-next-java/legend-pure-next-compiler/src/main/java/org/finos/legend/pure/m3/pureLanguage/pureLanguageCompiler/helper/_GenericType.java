@@ -18,6 +18,7 @@ import meta.pure.metamodel.Inferred;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relation.GenericTypeOperation;
+import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relationship.Generalization;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.FunctionType;
@@ -27,6 +28,8 @@ import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.UndefinedGenericType;
+import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -115,7 +118,7 @@ public class _GenericType
      *
      * @param genericTypes the list of generic types to unify
      * @return the closest common GenericType, or {@code null} if the list is empty
-     *         or any element has a null rawType
+     * or any element has a null rawType
      */
     public static GenericType findCommonGenericType(MutableList<GenericType> genericTypes, MetadataAccess model)
     {
@@ -449,13 +452,40 @@ public class _GenericType
         };
     }
 
+    /**
+     * Replace all TypeParameter references in a GenericType tree with UndefinedGenericType.
+     * Used when a PackageableElement is referenced as a value (e.g., {@code instanceOf(List)}) —
+     * the element's classifierGenericType has intrinsic type params (e.g., {@code Class<List<T>>})
+     * that are not bound by the call site and should be treated as wildcards.
+     */
+    public static GenericType withUndefinedTypeParams(GenericType genericType, MetadataAccess model)
+    {
+        if (genericType == null)
+        {
+            return null;
+        }
+        if (genericType instanceof GenericTypeValue gtv)
+        {
+            if (gtv._type() instanceof TypeParameter)
+            {
+                return new UndefinedGenericTypeImpl(model);
+            }
+            if (gtv._typeArguments() != null && gtv._typeArguments().anySatisfy(arg -> !isConcrete(arg)))
+            {
+                MutableList<GenericType> newArgs = gtv._typeArguments().collect(arg -> withUndefinedTypeParams(arg, model));
+                return ((InferredGenericTypeImpl) asInferred(genericType, model))._typeArguments(newArgs);
+            }
+        }
+        return genericType;
+    }
+
 
     /**
      * Returns true if the GenericType is concrete in the given context —
      * i.e. it is fully concrete, or any type parameter references it contains
      * are in-scope enclosing parameters (which is valid).
      *
-     * @param genericType    the generic type to check
+     * @param genericType     the generic type to check
      * @param scopeTypeParams the set of type parameter names that are in scope
      */
     public static boolean isConcreteInContext(GenericType genericType, MutableSet<String> scopeTypeParams)
@@ -489,7 +519,8 @@ public class _GenericType
         }
         switch (genericType)
         {
-            case UndefinedGenericType undefined -> { /* no-op */ }
+            case UndefinedGenericType undefined ->
+            { /* no-op */ }
             case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
             case GenericTypeValue gtv ->
             {
@@ -612,14 +643,13 @@ public class _GenericType
                     MutableList<GenericType> argTypeArgs = argV._typeArguments();
                     if (paramTypeArgs != null && argTypeArgs != null)
                     {
-                        int count = Math.min(paramTypeArgs.size(), argTypeArgs.size());
-                        for (int i = 0; i < count; i++)
+                        paramTypeArgs.zip(argTypeArgs).forEach(pair ->
                         {
-                            if (paramTypeArgs.get(i) != null && argTypeArgs.get(i) != null)
+                            if (pair.getOne() != null && pair.getTwo() != null)
                             {
-                                collectTypeParameterBindings(paramTypeArgs.get(i), argTypeArgs.get(i), bindings);
+                                collectTypeParameterBindings(pair.getOne(), pair.getTwo(), bindings);
                             }
-                        }
+                        });
                     }
 
                     // Recurse into multiplicityArguments positionally
@@ -627,11 +657,8 @@ public class _GenericType
                     MutableList<Multiplicity> argMulArgs = argV._multiplicityArguments();
                     if (paramMulArgs != null && argMulArgs != null)
                     {
-                        int count = Math.min(paramMulArgs.size(), argMulArgs.size());
-                        for (int i = 0; i < count; i++)
-                        {
-                            _Multiplicity.collectMultiplicityParameterBindings(paramMulArgs.get(i), argMulArgs.get(i), bindings);
-                        }
+                        paramMulArgs.zip(argMulArgs).forEach(pair ->
+                                _Multiplicity.collectMultiplicityParameterBindings(pair.getOne(), pair.getTwo(), bindings));
                     }
                 }
             }
@@ -765,24 +792,26 @@ public class _GenericType
         }
         return target;
     }
+
     /**
-     * Resolve a source {@link GenericType} for a target supertype by walking
-     * up the generalization hierarchy, substituting type and multiplicity
-     * parameters at each step.
+     * Resolve a source {@link GenericType} for a target type by walking
+     * the generalization hierarchy. Supports both directions:
+     * <ul>
+     *   <li><b>Upward</b> (target is a supertype): walks up from source,
+     *       substituting type and multiplicity parameters at each step.</li>
+     *   <li><b>Downward</b> (target is a subtype): builds a template for the
+     *       target's type parameters, resolves it UP to the source's level,
+     *       collects bindings by unification, and applies them.</li>
+     * </ul>
      *
-     * <p>For example, given {@code Property<Person, String|*>} and target
-     * type {@code Function}, this walks:
-     * <ol>
-     *   <li>{@code Property<Person, String|*>} → generalizes to
-     *       {@code AbstractProperty<FunctionType{Person[1]->String[*]}>}
-     *       (substituting U→Person, V→String, m→*)</li>
-     *   <li>{@code AbstractProperty<...>} → generalizes to
-     *       {@code Function<FunctionType{Person[1]->String[*]}>}
-     *       (substituting T→FunctionType{...})</li>
-     * </ol>
+     * <p>Upward example: given {@code Property<Person, String|*>} and target
+     * {@code Function}, resolves to {@code Function<{Person[1]->String[*]}>}.
+     *
+     * <p>Downward example: given {@code Function<{Person[1]->String[*]}>} and target
+     * {@code Property}, resolves to {@code Property<Person, String|*>}.
      *
      * @param sourceGenericType the concrete generic type to resolve from
-     * @param targetType        the target supertype to resolve to
+     * @param targetType        the target type to resolve to (super or sub)
      * @return the resolved GenericType for the target type, or {@code null}
      *         if the target is not in the source's hierarchy
      */
@@ -831,25 +860,73 @@ public class _GenericType
                     }
                 }
 
-                // Walk generalizations looking for the path to targetType
-                if (sourceType._generalizations() != null)
+                // Determine direction by comparing source and target in the hierarchy
+                if (_Type.linearize(sourceType, model).contains(targetType))
                 {
-                    for (Generalization gen : sourceType._generalizations())
+                    // Upward: target is a supertype of source — walk generalizations
+                    if (sourceType._generalizations() != null)
                     {
-                        GenericType generalGT = gen._general();
-                        if (!(generalGT instanceof GenericTypeValue generalV) || generalV._type() == null)
+                        for (Generalization gen : sourceType._generalizations())
                         {
-                            continue;
-                        }
+                            GenericType generalGT = gen._general();
+                            if (!(generalGT instanceof GenericTypeValue generalV) || generalV._type() == null)
+                            {
+                                continue;
+                            }
 
-                        // Check if this generalization's rawType leads to the target
-                        if (_Type.linearize(generalV._type(), model).contains(targetType))
-                        {
-                            // Substitute the current bindings into the generalization's GenericType
-                            GenericType resolvedGT = makeAsConcreteAsPossible(generalGT, bindings, model);
-                            // Recurse to continue up the hierarchy
-                            yield resolveForTarget(resolvedGT, targetType, model);
+                            // Pick the generalization branch that leads to the target
+                            if (_Type.linearize(generalV._type(), model).contains(targetType))
+                            {
+                                // Substitute the current bindings into the generalization's GenericType
+                                GenericType resolvedGT = makeAsConcreteAsPossible(generalGT, bindings, model);
+                                // Recurse to continue up the hierarchy
+                                yield resolveForTarget(resolvedGT, targetType, model);
+                            }
                         }
+                    }
+                }
+                // Downward: target is a subtype of source
+                // Build a template for targetType with its type params as placeholders,
+                // resolve it UP to sourceType, unify with source, apply bindings.
+                else if (targetType instanceof Class targetCls
+                        && _Type.linearize(targetType, model).contains(sourceType))
+                {
+                    MutableList<GenericType> templateTypeArgs = targetCls._typeParameters() != null
+                            ? targetCls._typeParameters().collect(tp -> buildUserDefinedGenericType(tp, model))
+                            : null;
+                    MutableList<Multiplicity> templateMulArgs = targetCls._multiplicityParameters() != null
+                            ? targetCls._multiplicityParameters().collect(mp ->
+                            {
+                                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mul =
+                                        new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl(model);
+                                mul._name(mp._name());
+                                return (Multiplicity) mul;
+                            })
+                            : null;
+
+                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl templateGT =
+                            new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl(model);
+                    templateGT._type(targetType);
+                    templateGT._typeArguments(templateTypeArgs);
+                    templateGT._multiplicityArguments(templateMulArgs);
+
+                    // Resolve the template UP to the source's raw type
+                    GenericType resolvedTemplate = resolveForTarget(templateGT, sourceType, model);
+                    if (resolvedTemplate != null)
+                    {
+                        // Collect bindings: unify the resolved template with the source
+                        ParametersBinding downBindings = PlainParametersBinding.empty();
+                        collectTypeParameterBindings(resolvedTemplate, sourceGenericType, downBindings);
+                        // Collect multiplicity bindings from multiplicityArguments
+                        if (resolvedTemplate instanceof GenericTypeValue resolvedV
+                                && resolvedV._multiplicityArguments() != null
+                                && src._multiplicityArguments() != null)
+                        {
+                            resolvedV._multiplicityArguments().zip(src._multiplicityArguments()).forEach(pair ->
+                                    _Multiplicity.collectMultiplicityParameterBindings(pair.getOne(), pair.getTwo(), downBindings));
+                        }
+                        // Apply bindings to produce the concrete GenericType at the target level
+                        yield makeAsConcreteAsPossible(templateGT, downBindings, model);
                     }
                 }
 
@@ -1021,13 +1098,8 @@ public class _GenericType
                 {
                     return false;
                 }
-                for (int i = 0; i < declaredV._multiplicityArguments().size(); i++)
-                {
-                    if (!_Multiplicity.subsumes(declaredV._multiplicityArguments().get(i), actualMulArgs.get(i)))
-                    {
-                        return false;
-                    }
-                }
+                return declaredV._multiplicityArguments().zip(actualMulArgs).allSatisfy(pair ->
+                        _Multiplicity.subsumes(pair.getOne(), pair.getTwo()));
             }
         }
 
@@ -1039,20 +1111,24 @@ public class _GenericType
      * Walk two GenericTypes in parallel and widen any {@link Inferred} types and multiplicities
      * in {@code actual} to match {@code expected}. This reconciles stale compiler-computed
      * values (e.g. from pre-unification lambda resolution) with the expected values
-     * from unified bindings. Only widens — never narrows, and never touches non-Inferred
-     * (user-declared) values.
+     * /**
+     * Reconcile inferred types by walking expected and actual generic types in parallel.
+     * Returns a new GenericType if any nested FunctionType, RelationType, GenericTypeOperation,
+     * or typeArgument was widened, or the same {@code actual} reference if nothing changed.
+     * <p>
+     * When expected and actual have different raw types (e.g. {@code Function<{FT}>} vs
+     * {@code Property<Nil, Any|*>}), the expected is resolved down to the actual's raw type
+     * level using {@link #resolveForTarget} so that type arguments align correctly.
+     * <p>
+     * Pure functional — no in-place mutation.
+     * The caller is responsible for integrating the returned copy into the tree.
      */
-    public static void reconcileInferred(GenericType expected, GenericType actual, MetadataAccess model)
+    public static GenericType reconcileInferred(GenericType expected, GenericType actual, MetadataAccess model)
     {
-        if (expected == null || actual == null)
-        {
-            return;
-        }
         // GenericTypeOperations: recurse into left and right
         if (expected instanceof GenericTypeOperation expectedOp && actual instanceof GenericTypeOperation actualOp)
         {
-            _GenericTypeOperation.reconcileInferred(expectedOp, actualOp, model);
-            return;
+            return _GenericTypeOperation.reconcileInferred(expectedOp, actualOp, model);
         }
 
         if (expected instanceof GenericTypeValue expectedV && actual instanceof GenericTypeValue actualV)
@@ -1060,28 +1136,41 @@ public class _GenericType
             Type expectedType = expectedV._type();
             Type actualType = actualV._type();
 
+            // When raw types differ (e.g. Function vs Property), resolve expected
+            // to the actual's raw type level so type arguments align.
+            if (expectedType != actualType)
+            {
+                GenericType resolvedExpected = resolveForTarget(expected, actualType, model);
+                if (resolvedExpected != null)
+                {
+                    return reconcileInferred(resolvedExpected, actual, model);
+                }
+                // Can't resolve — return actual unchanged
+                return actual;
+            }
+
+            Type newType = actualType;
+
             // FunctionTypes: reconcile param and return types/multiplicities
             if (expectedType instanceof FunctionType expectedFT && actualType instanceof FunctionType actualFT)
             {
-                _FunctionType.reconcileInferred(expectedFT, actualFT, model);
-            }
-            // RelationTypes: reconcile column types/multiplicities by name
-            if (expectedType instanceof meta.pure.metamodel.relation.RelationType expectedRT
-                    && actualType instanceof meta.pure.metamodel.relation.RelationType actualRT)
-            {
-                _RelationType.reconcileInferred(expectedRT, actualRT, model);
+                newType = _FunctionType.reconcileInferred(expectedFT, actualFT, model);
             }
 
-            // Recurse into type arguments (e.g. Function<{FunctionType}>)
-            if (expectedV._typeArguments() != null && actualV._typeArguments() != null)
+            // RelationTypes: reconcile column types/multiplicities
+            if (expectedType instanceof RelationType expectedRT && actualType instanceof RelationType actualRT)
             {
-                int count = Math.min(expectedV._typeArguments().size(), actualV._typeArguments().size());
-                for (int i = 0; i < count; i++)
-                {
-                    reconcileInferred(expectedV._typeArguments().get(i), actualV._typeArguments().get(i), model);
-                }
+                newType = _RelationType.reconcileInferred(expectedRT, actualRT, model);
             }
+
+            return (actual instanceof Inferred ? new InferredGenericTypeImpl(model) : new UserDefinedGenericTypeImpl(model))
+                    ._type(newType)
+                    ._typeArguments(expectedV._typeArguments().zip(actualV._typeArguments())
+                            .collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model)))
+                    ._multiplicityArguments(actualV._multiplicityArguments())
+                    ._typeVariableValues(actualV._typeVariableValues());
         }
+        return actual;
     }
 
 }

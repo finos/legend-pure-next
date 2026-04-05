@@ -1,12 +1,14 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
 import meta.pure.metamodel.SourceInformation;
-import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.function.LambdaFunction;
+import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
+import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
@@ -15,7 +17,6 @@ import meta.pure.metamodel.valuespecification.FunctionApplication;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
@@ -49,7 +50,7 @@ public class FunctionApplicationResolver
      * function candidates by name and arity, then resolving args, collecting
      * bindings, resolving lambdas, and picking the best match.
      */
-    public static Function resolveFunctionApplication(
+    public static FunctionApplication resolveFunctionApplication(
             FunctionApplication expr,
             MetadataAccess model,
             CompilationContext context)
@@ -65,15 +66,13 @@ public class FunctionApplicationResolver
             String message = "The function '" + functionName + "' with " + paramCount + " parameter(s) can't be found";
             message += buildFunctionSuggestions(functionName, paramCount, model, context);
             context.addError(new CompilationError(message, expr._sourceInformation()));
-            return null;
+            return (FunctionApplication) expr._func(null);
         }
         else if (candidates.size() == 1)
         {
             // Single candidate — resolve directly, errors are legitimate
             FunctionIndexEntry entry = candidates.getFirst();
-            resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
-            Function func = expr._func();
-            return func != null ? func : entry;
+            return (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
         }
         else
         {
@@ -83,7 +82,7 @@ public class FunctionApplicationResolver
             {
                 int errorCheckpoint = context.currentErrorCount();
 
-                resolveFunctionApplicationUsingTemplateFunctionForInference(expr, candidateEntry, model, context);
+                FunctionApplication resolved = (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, candidateEntry, model, context);
 
                 if (context.currentErrorCount() == errorCheckpoint)
                 {
@@ -93,11 +92,11 @@ public class FunctionApplicationResolver
                     if (tied.size() > 1)
                     {
                         String signatures = tied.collect(FunctionIndexEntry::signature).sortThis().makeString(", ");
-                        SourceInformation srcInfo = expr._sourceInformation();
+                        SourceInformation srcInfo = resolved._sourceInformation();
                         context.addError(new CompilationError("Ambiguous function call: multiple equally-specific matches found [" + signatures + "]", srcInfo));
-                        return null;
+                        return (FunctionApplication) resolved._func(null);
                     }
-                    return expr._func();
+                    return resolved;
                 }
 
                 // Resolution produced errors — snapshot and roll back for next candidate
@@ -107,30 +106,21 @@ public class FunctionApplicationResolver
                 {
                     bestCandidateErrors = candidateErrors;
                 }
-                resetResolutionForFunctionExpression(expr, model, context);
             }
             // No candidate resolved cleanly — restore the best candidate's errors
             if (bestCandidateErrors != null)
             {
                 context.addErrors(bestCandidateErrors);
             }
-            return null;
+            return (FunctionApplication) ((FunctionApplication) expr._copy())._func(null);
         }
-    }
-
-
-    static class ParameterInfo
-    {
-        boolean resolved = false;
-        MutableList<CompilationError> savedErrors;
-        ValueSpecification newParam;
     }
 
     /**
      * Resolve args, collect type/multiplicity bindings, apply bindings to
      * lambdas, validate, and populate resolved parameters on the expression.
      */
-    private static void resolveFunctionApplicationUsingTemplateFunctionForInference(
+    private static FunctionExpression resolveFunctionApplicationUsingTemplateFunctionForInference(
             FunctionExpression expr,
             FunctionIndexEntry entry,
             MetadataAccess model,
@@ -140,87 +130,123 @@ public class FunctionApplicationResolver
         PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
         FunctionCallParametersBinding node = plcc.pushBindingNode(expr, entry);
 
-        MutableList<ValueSpecification> paramValues = expr._parametersValues();
+        // Clear stale resolved params — they've been seeded into the node.
+        FunctionExpression cleanExpr = ((FunctionExpression) expr._copy())
+                ._resolvedTypeParameters(null)
+                ._resolvedMultiplicityParameters(null);
+
         MutableList<VariableExpression> funcParams = entry.functionType()._parameters();
         MutableSet<String> scopeTypeParams = plcc.inScopeTypeParamNames();
         MutableSet<String> scopeMulParams = plcc.inScopeMultiplicityParamNames();
 
         try
         {
-            // Fixpoint loop: resolve parameters iteratively until no more progress
-            context.debug("resolveFunctionApplicationUsingTemplateFunction: %s (%d args)", entry.fullPath(), paramValues.size());
+            context.debug("resolveFunctionApplicationUsingTemplateFunction: %s (%d args)", entry.fullPath(), cleanExpr._parametersValues().size());
             context.debugDepthInc();
 
-            ParameterInfo[] parameterInfos = new ParameterInfo[paramValues.size()];
-            boolean progress = true;
-            int iteration = 0;
-            while (progress)
-            {
-                iteration++;
-                context.debug("--- fixpoint iteration %d ---", iteration);
-                progress = false;
-                for (int i = 0; i < paramValues.size(); i++)
-                {
-                    ParameterInfo parameterInfo = parameterInfos[i] == null ? parameterInfos[i] = new ParameterInfo() : parameterInfos[i];
-                    if (!parameterInfo.resolved)
-                    {
-                        ValueSpecification parameterValue = expr._parametersValues().get(i);
-                        GenericType paramGT = funcParams.get(i)._genericType();
-                        Multiplicity paramMul = funcParams.get(i)._multiplicity();
-                        context.debug("parameterValue[%d] class=%s paramGT=%s bindings=%s parentBindings=%s", i, parameterValue.getClass().getSimpleName(), lazy(() -> _GenericType.print(paramGT)), node, lazy(node::printParentBindings));
-                        int checkpoint = context.currentErrorCount();
-                        context.debugDepthInc();
-                        ValueSpecification reprocessed = resolveParameterValue(parameterValue, paramGT, paramMul, node, scopeTypeParams, scopeMulParams, model, context);
-                        parameterInfo.newParam = reprocessed;
-                        if (isSuccessfullyProcessed(parameterValue, reprocessed, scopeTypeParams, scopeMulParams))
-                        {
-                            progress = true;
-                            parameterInfo.resolved = true;
-                            parameterInfo.savedErrors = null;
-                            context.debug(parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder ?
-                                    "=> RESOLVED (TypeHolder = compiler-managed, enriched later)" :
-                                    "=> RESOLVED gt=%s mul=%s", lazy(() -> _GenericType.print(parameterValue._genericType())), lazy(() -> _Multiplicity.print(parameterValue._multiplicity()))
-                            );
-                        }
-                        else
-                        {
-                            parameterInfo.savedErrors = context.snapshotErrorsFrom(checkpoint);
-                            context.rollbackErrorsTo(checkpoint);
-                            ValueSpecificationResolver.resetResolution(parameterValue, model, context);
-                            context.debug("=> NOT RESOLVED");
-                        }
-                        context.debugDepthDec();
-                    }
-                }
-            }
+            // Initialize: all params start unresolved
+            MutableList<ParameterInfo> infos = cleanExpr._parametersValues().collect(pv -> new ParameterInfo());
+            // Fixpoint: resolve params iteratively until no more progress
+            MutableList<ParameterInfo> resolved = fixpointResolveParams(infos, cleanExpr, funcParams, node, scopeTypeParams, scopeMulParams, model, context, 1);
+
             context.debugDepthDec();
 
-            // Push back saved errors from ALL unresolved args.
-            boolean hasUnresolved = false;
-            for (int i = 0; i < paramValues.size(); i++)
-            {
-                if (!parameterInfos[i].resolved)
-                {
-                    hasUnresolved = true;
-                    if (parameterInfos[i].savedErrors != null && parameterInfos[i].savedErrors.notEmpty())
-                    {
-                        context.addErrors(parameterInfos[i].savedErrors);
-                    }
-                }
-            }
-            if (hasUnresolved)
-            {
-                return;
-            }
-            expr._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
+            // Push back saved errors from all unresolved args
+            MutableList<ParameterInfo> unresolvedInfos = resolved.select(info -> !info.resolved);
+            unresolvedInfos.flatCollect(info -> info.savedErrors != null ? info.savedErrors : Lists.mutable.empty())
+                    .forEach(context::addError);
+
+            // Assemble result: set func even if some params unresolved (enables reverse-match)
+            FunctionExpression result = cleanExpr
+                    ._parametersValues(resolved.collect(info -> info.newParam))
                     ._func(entry);
 
-            // Validate bindings, check arg types, and populate resolved parameters
-            validateAndPopulate(expr, entry, node, model, context);
+            if (unresolvedInfos.isEmpty())
+            {
+                return validateAndPopulate(result, entry, node, model, context);
+            }
+            return result;
         }
         finally
         {
             plcc.popBindingNode();
+        }
+    }
+
+    /**
+     * One fixpoint pass: try to resolve each unresolved parameter, collecting bindings
+     * as each resolves. Recurse until no more progress is made.
+     */
+    private static MutableList<ParameterInfo> fixpointResolveParams(
+            MutableList<ParameterInfo> infos,
+            FunctionExpression expr,
+            MutableList<VariableExpression> funcParams,
+            FunctionCallParametersBinding node,
+            MutableSet<String> scopeTypeParams,
+            MutableSet<String> scopeMulParams,
+            MetadataAccess model,
+            CompilationContext context,
+            int iteration)
+    {
+        context.debug("--- fixpoint iteration %d ---", iteration);
+
+        // One pass: try to resolve each unresolved param (sequential — binding accumulation is order-dependent)
+        MutableList<ParameterInfo> updated = infos.collectWithIndex((info, i) ->
+                info.resolved?
+                        info :
+                        resolveOneParam(i, expr, funcParams, node, scopeTypeParams, scopeMulParams, model, context)
+        );
+
+        // Derive progress: did any param transition from unresolved to resolved?
+        boolean madeProgress = infos.zip(updated).anySatisfy(pair -> !pair.getOne().resolved && pair.getTwo().resolved);
+
+        return madeProgress
+                ? fixpointResolveParams(updated, expr, funcParams, node, scopeTypeParams, scopeMulParams, model, context, iteration + 1)
+                : updated;
+    }
+
+    /**
+     * Try to resolve a single parameter at the given index.
+     * Returns a new ParameterInfo (resolved or unresolved with saved errors).
+     */
+    private static ParameterInfo resolveOneParam(
+            int index,
+            FunctionExpression expr,
+            MutableList<VariableExpression> funcParams,
+            FunctionCallParametersBinding node,
+            MutableSet<String> scopeTypeParams,
+            MutableSet<String> scopeMulParams,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        ValueSpecification parameterValue = expr._parametersValues().get(index);
+        GenericType paramGT = funcParams.get(index)._genericType();
+        Multiplicity paramMul = funcParams.get(index)._multiplicity();
+
+        context.debug("parameterValue[%d] class=%s paramGT=%s bindings=%s parentBindings=%s",
+                index, parameterValue.getClass().getSimpleName(),
+                lazy(() -> _GenericType.print(paramGT)), node, lazy(node::printParentBindings));
+
+        int checkpoint = context.currentErrorCount();
+        context.debugDepthInc();
+        ValueSpecification reprocessed = resolveParameterValue(parameterValue, paramGT, paramMul, node, scopeTypeParams, scopeMulParams, model, context);
+        context.debugDepthDec();
+
+        if (isSuccessfullyProcessed(parameterValue, reprocessed, scopeTypeParams, scopeMulParams))
+        {
+            context.debug(parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder
+                    ? "=> RESOLVED (TypeHolder = compiler-managed, enriched later)"
+                    : "=> RESOLVED gt=%s mul=%s",
+                    lazy(() -> _GenericType.print(reprocessed._genericType())),
+                    lazy(() -> _Multiplicity.print(reprocessed._multiplicity())));
+            return ParameterInfo.resolved(reprocessed);
+        }
+        else
+        {
+            MutableList<CompilationError> errors = context.snapshotErrorsFrom(checkpoint);
+            context.rollbackErrorsTo(checkpoint);
+            context.debug("=> NOT RESOLVED");
+            return ParameterInfo.unresolved(reprocessed, errors);
         }
     }
 
@@ -232,7 +258,7 @@ public class FunctionApplicationResolver
      * Validate binding consistency, check arg types against params,
      * and populate resolved parameters on the expression.
      */
-    private static void validateAndPopulate(
+    private static FunctionExpression validateAndPopulate(
             FunctionExpression expr,
             FunctionIndexEntry entry,
             FunctionCallParametersBinding functionCallParametersBinding,
@@ -245,7 +271,7 @@ public class FunctionApplicationResolver
         // Compiler-tracked enrichment: for relation column functions, the
         // TypeHolder's RelationType can't be inferred from bindings alone -
         // the column types come from the lambda return types.
-        RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions(expr, functionType, paramValues, functionCallParametersBinding, model, context);
+        FunctionExpression newExpression = RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions(expr, functionType, functionCallParametersBinding, model, context);
 
         // Cross-match, transitive resolution, and common-type reduction.
         // Owner-aware routing is handled inside FunctionCallNode.unify().
@@ -254,39 +280,101 @@ public class FunctionApplicationResolver
         int checkpoint = context.currentErrorCount();
         // Validate arg types and multiplicities against param expectations.
         // functionCallParametersBinding IS a ParametersBinding -- pass it directly.
-        validateParameterValuesToFunctionType(expr, functionType, functionCallParametersBinding, model, context);
+        FunctionExpression validated = validateParameterValuesToFunctionType(newExpression, functionType, functionCallParametersBinding, model, context);
 
         if (context.currentErrorCount() == checkpoint)
         {
-            _FunctionExpression.populateResolvedParameters(expr, functionCallParametersBinding, functionCallParametersBinding.ownTypeParamNames(), functionCallParametersBinding.ownMulParamNames(), model);
+            return _FunctionExpression.populateResolvedParameters(validated, functionCallParametersBinding, functionCallParametersBinding.ownTypeParamNames(), functionCallParametersBinding.ownMulParamNames(), model);
         }
+        return validated;
     }
 
-    private static void validateParameterValuesToFunctionType(FunctionExpression expr, FunctionType functionType, ParametersBinding bindings, MetadataAccess model, CompilationContext context)
+    private static FunctionExpression validateParameterValuesToFunctionType(FunctionExpression expr, FunctionType functionType, ParametersBinding bindings, MetadataAccess model, CompilationContext context)
     {
-        ListIterable<? extends ValueSpecification> paramValues = expr._parametersValues();
-        for (int i = 0; i < paramValues.size(); i++)
+        boolean[] errorReported = {false};
+        return expr._parametersValues(functionType._parameters().zip(expr._parametersValues()).collect(pair ->
         {
-            GenericType argGT = paramValues.get(i)._genericType();
-            Multiplicity argMul = paramValues.get(i)._multiplicity();
-            if (argGT != null && argMul != null)
+            VariableExpression declaredParam = pair.getOne();
+            ValueSpecification argVS = pair.getTwo();
+            GenericType argGT = argVS._genericType();
+            Multiplicity argMul = argVS._multiplicity();
+            if (argGT == null || argMul == null)
             {
-                GenericType expectedGT = _GenericType.makeAsConcreteAsPossible(functionType._parameters().get(i)._genericType(), bindings, model);
-                Multiplicity expectedMul = _Multiplicity.makeAsConcreteAsPossible(functionType._parameters().get(i)._multiplicity(), bindings);
-                // Reconcile stale Inferred types/multiplicities in the arg's type to match
-                // the expected type from unified bindings (e.g. m=[2] -> m=[*])
-                _GenericType.reconcileInferred(expectedGT, argGT, model);
-                if (!_GenericType.isCompatible(expectedGT, argGT, model) || !_Multiplicity.subsumes(expectedMul, argMul))
+                return argVS;
+            }
+            GenericType expectedGT = _GenericType.makeAsConcreteAsPossible(declaredParam._genericType(), bindings, model);
+            Multiplicity expectedMul = _Multiplicity.makeAsConcreteAsPossible(declaredParam._multiplicity(), bindings);
+            GenericType reconciledArgGT = _GenericType.reconcileInferred(expectedGT, argGT, model);
+            ValueSpecification reconciled = rebuildWithReconciledType(argVS, reconciledArgGT, model);
+            if (!errorReported[0] && (!_GenericType.isCompatible(expectedGT, reconciledArgGT, model) || !_Multiplicity.subsumes(expectedMul, argMul)))
+            {
+                context.addError(new CompilationError("No matching function '" + expr._functionName() + "' found for argument types (" +
+                        expr._parametersValues().collect(vs ->
+                                _GenericType.print(vs._genericType()) + _Multiplicity.print(vs._multiplicity())).makeString(", ") +
+                        ")", expr._sourceInformation()));
+                errorReported[0] = true;
+            }
+            return reconciled;
+        }));
+    }
+
+    /**
+     * Rebuild a ValueSpecification with a reconciled GenericType.
+     * If the VS wraps a lambda, rebuilds the lambda with the new FunctionType's parameters.
+     * Mirrors the Pure pattern: {@code ^$av(value = ^$lambda(parameters = reconciledFT.parameters), genericType = reconciledGT)}
+     */
+    private static ValueSpecification rebuildWithReconciledType(ValueSpecification vs, GenericType reconciledGT, MetadataAccess model)
+    {
+        if (vs instanceof AtomicValue av && av._value() instanceof LambdaFunction lambda)
+        {
+            // Extract the reconciled FunctionType from the GenericType chain:
+            // reconciledGT = LambdaFunction<{FunctionType}> → typeArguments[0] → rawType
+            FunctionType reconciledFT = extractReconciledFunctionType(reconciledGT);
+            if (reconciledFT != null && reconciledFT._parameters() != null)
+            {
+                // ^$lambda(parameters = reconciledFT._parameters())
+                LambdaFunctionImpl newLambda = new LambdaFunctionImpl(model)
+                        ._parameters(reconciledFT._parameters())
+                        ._expressionSequence(lambda._expressionSequence())
+                        ._openVariables(lambda._openVariables());
+                // ^$av(value = newLambda, genericType = reconciledGT)
+                return new meta.pure.metamodel.valuespecification.AtomicValueImpl(model)
+                        ._value(newLambda)
+                        ._genericType(reconciledGT)
+                        ._multiplicity(av._multiplicity())
+                        ._sourceInformation(av._sourceInformation());
+            }
+        }
+        // Non-lambda case: just update the genericType
+        return ((ValueSpecification)vs._copy())._genericType(reconciledGT);
+    }
+
+    /**
+     * Extract the FunctionType from a reconciled GenericType.
+     * Handles both direct FunctionType rawType and the common
+     * {@code Function<{FunctionType}>} / {@code LambdaFunction<{FunctionType}>} pattern.
+     */
+    private static FunctionType extractReconciledFunctionType(GenericType gt)
+    {
+        if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+        {
+            if (gtv._type() instanceof FunctionType ft)
+            {
+                return ft;
+            }
+            if (gtv._typeArguments() != null && !gtv._typeArguments().isEmpty())
+            {
+                GenericType firstArg = gtv._typeArguments().get(0);
+                if (firstArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argGTV
+                        && argGTV._type() instanceof FunctionType ft)
                 {
-                    context.addError(new CompilationError("No matching function '" + expr._functionName() + "' found for argument types (" +
-                            paramValues.collect(vs ->
-                                    _GenericType.print(vs._genericType()) + _Multiplicity.print(vs._multiplicity())).makeString(", ") +
-                            ")", expr._sourceInformation()));
-                    break;
+                    return ft;
                 }
             }
         }
+        return null;
     }
+
 
     // ========================================================================
     // Resolution actions
@@ -330,15 +418,15 @@ public class FunctionApplicationResolver
         {
             context.rollbackErrorsTo(checkpoint);
             context.debug("resolveArg: LAMBDA");
-            setMissingLambdaParameterInformation(lambda, paramGT, bindings, model);
-            return finishProcessing(paramGT, paramMul, bindings, model, context, processed);
+            LambdaFunction reprocessedLambda = setMissingLambdaParameterInformation(lambda, paramGT, bindings, model);
+            AtomicValue withReprocessedLambda = ((AtomicValue) processed._copy())._value(reprocessedLambda);
+            return finishProcessing(paramGT, paramMul, bindings, model, context, withReprocessedLambda);
         }
         else if (processed instanceof FunctionApplication childExpr && childExpr._func() != null)
         {
             context.rollbackErrorsTo(checkpoint);
             context.debug("resolveArg: REVERSE_MATCH func=%s childGT=%s", childExpr._functionName(), lazy(() -> _GenericType.print(childExpr._genericType())));
-            reverseMatch(childExpr, paramGT, paramMul, bindings, model, context);
-            return finishProcessing(paramGT, paramMul, bindings, model, context, childExpr);
+            return finishProcessing(paramGT, paramMul, bindings, model, context, reverseMatch(childExpr, paramGT, paramMul, bindings, model, context));
         }
         else if (processed instanceof Collection col && col._values() != null)
         {
@@ -352,21 +440,23 @@ public class FunctionApplicationResolver
             enrichedScopeTypeParams.addAll(_GenericType.collectReferencedTypeParameterNames(resolvedParamGT));
             context.debug("resolveArg: COLLECTION (%d elements) resolvedParamGT=%s", col._values().size(), lazy(() -> _GenericType.print(resolvedParamGT)));
             context.debugDepthInc();
-            for (ValueSpecification element : col._values())
-            {
-                context.debug("element: class=%s%s gt=%s",
-                        element.getClass().getSimpleName(),
-                        element instanceof FunctionExpression fe ? " fname=" + fe._functionName() : "",
-                        lazy(() -> _GenericType.print(element._genericType())));
-                // Each element resolves with isolated bindings so that inner function
-                // type params (e.g., L from agg<K,L,M>) don't leak between elements.
-                ParametersBinding elementBindings = bindings.copy();
-                resolveParameterValue(element, resolvedParamGT, resolvedParamMul, elementBindings, enrichedScopeTypeParams, scopeMulParams, model, context);
-                context.debug("element after: gt=%s", lazy(() -> _GenericType.print(element._genericType())));
-            }
+            Collection newCollection = ((Collection)col._copy())._values(
+                    col._values().collect(element ->
+                    {
+                        context.debug("element: class=%s%s gt=%s",
+                                element.getClass().getSimpleName(),
+                                element instanceof FunctionExpression fe ? " fname=" + fe._functionName() : "",
+                                lazy(() -> _GenericType.print(element._genericType())));
+                        // Each element resolves with isolated bindings so that inner function
+                        // type params (e.g., L from agg<K,L,M>) don't leak between elements.
+                        ParametersBinding elementBindings = bindings.copy();
+                        ValueSpecification newValue = resolveParameterValue(element, resolvedParamGT, resolvedParamMul, elementBindings, enrichedScopeTypeParams, scopeMulParams, model, context);
+                        context.debug("element after: gt=%s", lazy(() -> _GenericType.print(element._genericType())));
+                        return newValue;
+                    })
+            );
             context.debugDepthDec();
-
-            return finishProcessing(paramGT, paramMul, bindings, model, context, processed);
+            return finishProcessing(paramGT, paramMul, bindings, model, context, newCollection);
         }
         context.debug("resolveArg: NO_MATCH class=%s gt=%s", arg.getClass().getSimpleName(), lazy(() -> _GenericType.print(arg._genericType())));
         return processed;
@@ -375,21 +465,23 @@ public class FunctionApplicationResolver
     private static ValueSpecification finishProcessing(GenericType paramGT, Multiplicity paramMul, ParametersBinding bindings, MetadataAccess model, CompilationContext context, ValueSpecification vs)
     {
         context.debugDepthInc();
-        ValueSpecificationResolver.resolve(vs, model, context);
+        vs = ValueSpecificationResolver.resolve(vs, model, context);
         context.debugDepthDec();
 
-        // Mark all resolved parameters as inferred.
+        // Mark all resolved parameters as inferred — create new instances, no in-place mutation.
         if (vs instanceof FunctionExpression childExpr && childExpr._resolvedTypeParameters() != null)
         {
-            childExpr._resolvedTypeParameters().forEach(rtp ->
-                    ((meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl) rtp)
-                            ._value(_GenericType.asInferred(rtp._value(), model)));
+            childExpr._resolvedTypeParameters(childExpr._resolvedTypeParameters().collect(rtp ->
+                    new ResolvedTypeParameterImpl(model)
+                            ._name(rtp._name())
+                            ._value(_GenericType.asInferred(rtp._value(), model))));
         }
         if (vs instanceof FunctionExpression childExpr && childExpr._resolvedMultiplicityParameters() != null)
         {
-            childExpr._resolvedMultiplicityParameters().forEach(rmp ->
-                    ((meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl) rmp)
-                            ._value(_Multiplicity.asInferred(rmp._value(), model)));
+            childExpr._resolvedMultiplicityParameters(childExpr._resolvedMultiplicityParameters().collect(rmp ->
+                    new ResolvedMultiplicityParameterImpl(model)
+                            ._name(rmp._name())
+                            ._value(_Multiplicity.asInferred(rmp._value(), model))));
         }
 
         // Collect bindings from the re-resolved child type, mapped to the
@@ -403,50 +495,46 @@ public class FunctionApplicationResolver
      * Resolve a single lambda's parameter types and body using the function parameter's
      * expected type and the current type/multiplicity bindings.
      */
-    private static void setMissingLambdaParameterInformation(
+    private static LambdaFunction setMissingLambdaParameterInformation(
             LambdaFunction lambda,
             GenericType paramGT,
             ParametersBinding bindings,
             MetadataAccess model)
     {
-        if (paramGT != null)
+        // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
+        // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
+        GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
+        GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
+        if (_GenericType.type(innerGT) instanceof FunctionType ft)
         {
-            // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
-            // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
-            GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-            if (_GenericType.typeArguments(concreteGT) != null && _GenericType.typeArguments(concreteGT).notEmpty())
-            {
-                GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
-                if (_GenericType.type(innerGT) instanceof FunctionType ft)
-                {
-                    // Set (or update) lambda variable types from the resolved FunctionType parameters.
-                    MutableList<VariableExpression> ftParams = ft._parameters();
-                    MutableList<VariableExpression> lambdaParams = lambda._parameters();
-                    for (int j = 0; j < lambdaParams.size() && j < ftParams.size(); j++)
+            lambda =  ((LambdaFunctionImpl) lambda._copy())
+                    ._parameters(ft._parameters().zip(lambda._parameters()).collect(pair ->
                     {
-                        VariableExpression lambdaParam = lambdaParams.get(j);
-                        VariableExpression ftParam = ftParams.get(j);
+                        VariableExpression ftParam = pair.getOne();
+                        VariableExpression lambdaParam = pair.getTwo();
                         GenericType resolvedType = _GenericType.makeAsConcreteAsPossible(ftParam._genericType(), bindings, model);
+                        VariableExpression ve = (VariableExpression) lambdaParam._copy();
                         if (resolvedType != null && !_GenericType.isConcrete(lambdaParam._genericType()))
                         {
-                            ((VariableExpressionImpl) lambdaParam)._genericType(_GenericType.asInferred(resolvedType, model));
+                            ve._genericType(_GenericType.asInferred(resolvedType, model));
                         }
                         Multiplicity resolvedMul = _Multiplicity.makeAsConcreteAsPossible(ftParam._multiplicity(), bindings);
                         if (resolvedMul != null && !_Multiplicity.isConcrete(lambdaParam._multiplicity()))
                         {
-                            ((VariableExpressionImpl) lambdaParam)._multiplicity(_Multiplicity.asInferred(resolvedMul, model));
+                            ve._multiplicity(_Multiplicity.asInferred(resolvedMul, model));
                         }
-                    }
-                }
-            }
+                        return ve;
+                    })
+            );
         }
+        return lambda;
     }
 
     /**
      * Reverse match: push parent bindings into a child FE's resolved
      * slots and re-resolve the child function application.
      */
-    private static void reverseMatch(
+    private static FunctionApplication reverseMatch(
             FunctionApplication childExpr,
             GenericType paramGT,
             Multiplicity paramMul,
@@ -455,21 +543,18 @@ public class FunctionApplicationResolver
             CompilationContext context)
     {
         GenericType argGT = childExpr._genericType();
-        if (argGT != null)
-        {
-            ParametersBinding childBindings = PlainParametersBinding.empty();
-            GenericType resolvedParamGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-            _GenericType.collectTypeParameterBindings(argGT, resolvedParamGT, childBindings);
-            Multiplicity resolvedParamMul = _Multiplicity.makeAsConcreteAsPossible(paramMul, bindings);
-            _Multiplicity.collectMultiplicityParameterBindings(childExpr._multiplicity(), resolvedParamMul, childBindings);
-            context.debug("reverseMatch: argGT=%s resolvedParamGT=%s childBindings=%s",
-                    lazy(() -> _GenericType.print(argGT)), lazy(() -> _GenericType.print(resolvedParamGT)), childBindings);
+        ParametersBinding childBindings = PlainParametersBinding.empty();
+        GenericType resolvedParamGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
+        _GenericType.collectTypeParameterBindings(argGT, resolvedParamGT, childBindings);
+        Multiplicity resolvedParamMul = _Multiplicity.makeAsConcreteAsPossible(paramMul, bindings);
+        _Multiplicity.collectMultiplicityParameterBindings(childExpr._multiplicity(), resolvedParamMul, childBindings);
+        context.debug("reverseMatch: argGT=%s resolvedParamGT=%s childBindings=%s",
+                lazy(() -> _GenericType.print(argGT)), lazy(() -> _GenericType.print(resolvedParamGT)), childBindings);
 
-            childBindings.typeBindings().replaceAll((name, types) ->
-                    types.collect(gt -> _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(gt, bindings, model), model)));
-            context.debug("reverseMatch: pushing %s into %s", childBindings, childExpr._functionName());
-            _FunctionExpression.populateResolvedParameters(childExpr, childBindings, model);
-        }
+        childBindings.typeBindings().replaceAll((name, types) ->
+                types.collect(gt -> _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(gt, bindings, model), model)));
+        context.debug("reverseMatch: pushing %s into %s", childBindings, childExpr._functionName());
+        return (FunctionApplication) _FunctionExpression.populateResolvedParameters(childExpr, childBindings, model);
     }
 
     /**
@@ -552,41 +637,9 @@ public class FunctionApplicationResolver
     }
 
 
-    /**
-     * Reset all resolution state and re-resolve args for the next candidate attempt.
-     */
-    public static void resetResolutionForFunctionExpression(FunctionExpression expr, MetadataAccess model, CompilationContext context)
-    {
-        context.debug("resetResolution: %s func=%s gt=%s mul=%s", expr._functionName(), lazy(() -> CompilationContext.debugFunc(expr._func())), lazy(() -> _GenericType.print(expr._genericType())), lazy(() -> _Multiplicity.print(expr._multiplicity())));
-        // Wipe matched function and resolved type/multiplicity parameters
-        expr._func(null);
-        expr._resolvedTypeParameters(null);
-        expr._resolvedMultiplicityParameters(null);
-
-        // Full reset on all parameter values, handling automap revert
-        if (expr._parametersValues() != null)
-        {
-            MutableList<ValueSpecification> params = expr._parametersValues();
-            for (int i = 0; i < params.size(); i++)
-            {
-                ValueSpecification replaced = ValueSpecificationResolver.resetResolution(params.get(i), model, context);
-                if (replaced != params.get(i))
-                {
-                    params.set(i, replaced);
-                }
-            }
-        }
-    }
-
     // ========================================================================
     // Internal helpers
     // ========================================================================
-
-    private static Type resolvedRawType(ValueSpecification vs)
-    {
-        GenericType gt = vs._genericType();
-        return gt != null ? _GenericType.type(gt) : null;
-    }
 
     private static boolean isSuccessfullyProcessed(ValueSpecification parameterValue, ValueSpecification reprocessed, MutableSet<String> scopeTypeParams, MutableSet<String> scopeMulParams)
     {
@@ -601,5 +654,34 @@ public class FunctionApplicationResolver
     {
         return paramGT != null && _GenericType.isConcreteInContext(paramGT, scopeTypeParams)
                 && paramMul != null && _Multiplicity.isConcreteInContext(paramMul, scopeMulParams);
+    }
+
+    static class ParameterInfo
+    {
+        final boolean resolved;
+        final MutableList<CompilationError> savedErrors;
+        final ValueSpecification newParam;
+
+        ParameterInfo()
+        {
+            this(false, null, null);
+        }
+
+        ParameterInfo(boolean resolved, ValueSpecification newParam, MutableList<CompilationError> savedErrors)
+        {
+            this.resolved = resolved;
+            this.newParam = newParam;
+            this.savedErrors = savedErrors;
+        }
+
+        static ParameterInfo resolved(ValueSpecification vs)
+        {
+            return new ParameterInfo(true, vs, null);
+        }
+
+        static ParameterInfo unresolved(ValueSpecification vs, MutableList<CompilationError> errors)
+        {
+            return new ParameterInfo(false, vs, errors);
+        }
     }
 }

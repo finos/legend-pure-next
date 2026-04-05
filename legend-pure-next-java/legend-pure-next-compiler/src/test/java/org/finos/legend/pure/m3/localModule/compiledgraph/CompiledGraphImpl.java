@@ -127,4 +127,10 @@ public class CompiledGraphImpl implements PackageableElement
     {
         return this;
     }
+
+    @Override
+    public CompiledGraphImpl _copy()
+    {
+        throw new UnsupportedOperationException();
+    }
 }

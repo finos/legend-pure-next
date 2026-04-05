@@ -17,15 +17,15 @@ package org.finos.legend.pure.m3;
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

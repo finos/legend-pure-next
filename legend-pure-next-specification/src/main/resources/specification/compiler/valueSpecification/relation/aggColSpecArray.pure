@@ -32,7 +32,7 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       typeParam T -> #Any#
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Any#
-      Collection :#AggColSpec<#{#(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Any##[*]#->#Any##[0..1]#}#, #Any#>#[2]  ~Collection
+      Collection :#AggColSpec<#{#(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Nil##[*]#->#Any##[0..1]#}#, #Any#>#[2]  ~Collection
         FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:String[1])#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~FunctionInvocation  @9:48-9:68
           typeParam K -> #Integer#
           typeParam T -> #(name:#Integer##[1]#)#

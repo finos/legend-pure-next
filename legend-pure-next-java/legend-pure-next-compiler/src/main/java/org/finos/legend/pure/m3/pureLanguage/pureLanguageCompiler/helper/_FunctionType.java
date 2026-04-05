@@ -52,15 +52,6 @@ public final class _FunctionType
     /**
      * Check whether {@code actual} FunctionType is compatible with {@code declared}.
      * Parameters are contravariant (input), return type is covariant (output).
-     */
-    public static boolean isCompatible(FunctionType declared, FunctionType actual, MetadataAccess model)
-    {
-        return isCompatible(declared, actual, false, model);
-    }
-
-    /**
-     * Check whether {@code actual} FunctionType is compatible with {@code declared}.
-     * Parameters are contravariant (input), return type is covariant (output).
      *
      * @param contravariant if true, the check is in a contravariant position (directions are flipped)
      */
@@ -76,22 +67,19 @@ public final class _FunctionType
         // Parameters are contravariant: flip direction
         if (declared._parameters() != null && actual._parameters() != null)
         {
-            for (int i = 0; i < declaredParamCount; i++)
+            if (!declared._parameters().zip(actual._parameters()).allSatisfy(pair ->
             {
-                VariableExpression declaredParam = declared._parameters().get(i);
-                VariableExpression actualParam = actual._parameters().get(i);
+                VariableExpression declaredParam = pair.getOne();
+                VariableExpression actualParam = pair.getTwo();
                 if (declaredParam == null || actualParam == null)
                 {
-                    continue;
+                    return true;
                 }
-                GenericType declaredParamGT = declaredParam._genericType();
-                GenericType actualParamGT = actualParam._genericType();
-                // Parameter type and multiplicity: contravariant
-                if (!_GenericType.isCompatible(declaredParamGT, actualParamGT, !contravariant, model)
-                        || !_Multiplicity.isCompatible(declaredParam._multiplicity(), actualParam._multiplicity(), !contravariant))
-                {
-                    return false;
-                }
+                return _GenericType.isCompatible(declaredParam._genericType(), actualParam._genericType(), !contravariant, model)
+                        && _Multiplicity.isCompatible(declaredParam._multiplicity(), actualParam._multiplicity(), !contravariant);
+            }))
+            {
+                return false;
             }
         }
 
@@ -274,17 +262,16 @@ public final class _FunctionType
         // Match parameters positionally
         if (paramFT._parameters() != null && argFT._parameters() != null)
         {
-            int count = Math.min(paramFT._parameters().size(), argFT._parameters().size());
-            for (int i = 0; i < count; i++)
+            paramFT._parameters().zip(argFT._parameters()).forEach(pair ->
             {
-                GenericType pGT = paramFT._parameters().get(i)._genericType();
-                GenericType aGT = argFT._parameters().get(i)._genericType();
+                GenericType pGT = pair.getOne()._genericType();
+                GenericType aGT = pair.getTwo()._genericType();
                 if (pGT != null && aGT != null)
                 {
                     _GenericType.collectTypeParameterBindings(pGT, aGT, bindings);
                 }
-                _Multiplicity.collectMultiplicityParameterBindings(paramFT._parameters().get(i)._multiplicity(), argFT._parameters().get(i)._multiplicity(), bindings);
-            }
+                _Multiplicity.collectMultiplicityParameterBindings(pair.getOne()._multiplicity(), pair.getTwo()._multiplicity(), bindings);
+            });
         }
         // Match return types
         if (paramFT._returnType() != null && argFT._returnType() != null)
@@ -297,39 +284,31 @@ public final class _FunctionType
 
     /**
      * Reconcile inferred types in FunctionType parameters and return type.
-     * Widens inferred generic types and multiplicities where the expected type subsumes the actual.
+     * Returns a new FunctionType if any parameter or return type was widened,
+     * or the same {@code actualFT} reference if nothing changed.
+     * <p>
+     * Pure functional — no in-place mutation.
+     * The caller is responsible for integrating the returned copy into the tree.
      */
-    public static void reconcileInferred(FunctionType expectedFT, FunctionType actualFT, MetadataAccess model)
+    public static FunctionType reconcileInferred(FunctionType expectedFT, FunctionType actualFT, MetadataAccess model)
     {
-        if (expectedFT._parameters() != null && actualFT._parameters() != null)
-        {
-            int count = Math.min(expectedFT._parameters().size(), actualFT._parameters().size());
-            for (int i = 0; i < count; i++)
-            {
-                var ep = expectedFT._parameters().get(i);
-                var ap = actualFT._parameters().get(i);
-                // Widen Inferred generic types
-                if (ap._genericType() instanceof Inferred
-                        && ep._genericType() != null
-                        && _GenericType.isCompatible(ep._genericType(), ap._genericType(), model))
-                {
-                    ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) ap)
-                            ._genericType(_GenericType.asInferred(ep._genericType(), model));
-                }
-                // Widen Inferred multiplicities
-                if (ap._multiplicity() instanceof Inferred
-                        && ep._multiplicity() != null
-                        && _Multiplicity.subsumes(ep._multiplicity(), ap._multiplicity()))
-                {
-                    ((meta.pure.metamodel.valuespecification.VariableExpressionImpl) ap)
-                            ._multiplicity(_Multiplicity.asInferred(ep._multiplicity(), model));
-                }
-                // Recurse into param generic types
-                _GenericType.reconcileInferred(ep._genericType(), ap._genericType(), model);
-            }
-        }
-        // Reconcile return type
-        _GenericType.reconcileInferred(expectedFT._returnType(), actualFT._returnType(), model);
+        return new FunctionTypeImpl(model)._classifierGenericType(actualFT._classifierGenericType()).
+                _parameters(expectedFT._parameters().zip(actualFT._parameters())
+                        .collect(pair -> {
+                            VariableExpression ep = pair.getOne();
+                            VariableExpression ap = pair.getTwo();
+                            return new VariableExpressionImpl(model)
+                                    ._classifierGenericType(ap._classifierGenericType())
+                                    ._name(ap._name())
+                                    ._genericType(ap._genericType() instanceof Inferred
+                                            && ep._genericType() != null
+                                            && _GenericType.isCompatible(ep._genericType(), ap._genericType(), model) ? _GenericType.asInferred(ep._genericType(), model) : ap._genericType())
+                                    ._multiplicity(ap._multiplicity() instanceof Inferred
+                                            && ep._multiplicity() != null
+                                            && _Multiplicity.subsumes(ep._multiplicity(), ap._multiplicity()) ? _Multiplicity.asInferred(ep._multiplicity(), model) : ap._multiplicity());
+                        })).
+                _returnType(_GenericType.reconcileInferred(expectedFT._returnType(), actualFT._returnType(), model)).
+                _returnMultiplicity(actualFT._returnMultiplicity());
     }
 
     /**

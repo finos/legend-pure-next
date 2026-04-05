@@ -28,9 +28,9 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
 import java.util.List;
@@ -276,8 +276,12 @@ public class TopLevelCompiler
         {
             ext.preThirdPass(localModule, model);
         }
-        this.elementIndex.forEachValue(entry ->
+        // Snapshot to avoid ConcurrentModificationException when swapping
+        var snapshot = Lists.mutable.withAll(elementIndex.keyValuesView());
+        snapshot.forEach(pair ->
         {
+            String fullPath = pair.getOne();
+            IndexEntry entry = pair.getTwo();
             if (entry.grammarElement() == null)
             {
                 return;
@@ -287,7 +291,8 @@ public class TopLevelCompiler
             {
                 context.setImports(resolveImports(entry.section()));
             }
-            thirdPassEntry(entry, model, context);
+            PackageableElement updated = thirdPassEntry(entry, model, context);
+            elementIndex.put(fullPath, new IndexEntry(updated, entry.grammarElement(), entry.section(), entry.sourceId()));
             context.flushCurrentErrors();
         });
     }

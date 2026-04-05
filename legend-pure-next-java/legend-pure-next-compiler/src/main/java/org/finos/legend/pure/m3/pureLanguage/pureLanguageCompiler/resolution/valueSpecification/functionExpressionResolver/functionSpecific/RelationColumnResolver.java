@@ -19,10 +19,12 @@ import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
 import meta.pure.metamodel.relation.GenericTypeOperationType;
+import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -42,6 +44,8 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._RelationType;
+
+import java.util.Objects;
 
 import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
 
@@ -70,10 +74,9 @@ public final class RelationColumnResolver
      * For {@code funcColSpecArray}: enriches each inner funcColSpec TypeHolder
      * first, then merges their columns into the array's TypeHolder.
      */
-    public static void enrichRelationTypeHolderForMagicalFunctions(
+    public static FunctionExpression enrichRelationTypeHolderForMagicalFunctions(
             FunctionExpression expr,
             FunctionType functionType,
-            ListIterable<? extends ValueSpecification> paramValues,
             ParametersBinding bindings,
             MetadataAccess model,
             CompilationContext context)
@@ -81,40 +84,47 @@ public final class RelationColumnResolver
         String funcName = expr._functionName();
         if (funcName == null)
         {
-            return;
+            return expr;
         }
+        ListIterable<? extends ValueSpecification> paramValues = expr._parametersValues();
         FunctionCallParametersBinding currentNode = context.compilerContextExtensions(PureLanguageCompilerContext.class).currentFunctionCallNode();
         context.debug("enrichRelationTypeHolder: %s bindings=%s parentBindings=%s", funcName, bindings, lazy(() -> currentNode != null ? currentNode.printParentBindings() : "[]"));
         if ((funcName.equals("funcColSpec") || funcName.equals("funcColSpec2")) && paramValues.size() == 3)
         {
             context.debug("enrichRelationTypeHolder: funcColSpec branch");
-            enrichColumnTypeHolder(paramValues, 0, 1, 2, model);
-            updateTypeHolderBinding(functionType, paramValues, 2, bindings);
+            FunctionExpression modifiedExpression = enrichColumnTypeHolder(expr, paramValues, 0, 1, 2, model);
+            updateTypeHolderBinding(functionType, modifiedExpression._parametersValues(), 2, bindings);
+            return modifiedExpression;
         }
         else if ((funcName.equals("funcColSpecArray") || funcName.equals("funcColSpecArray2")) && paramValues.size() == 2)
         {
             context.debug("enrichRelationTypeHolder: funcColSpecArray branch");
-            mergeColSpecArrayTypeHolder(paramValues, model);
-            updateTypeHolderBinding(functionType, paramValues, 1, bindings);
+            FunctionExpression modifiedExpression = mergeColSpecArrayTypeHolder(expr, paramValues, model);
+            updateTypeHolderBinding(functionType, modifiedExpression._parametersValues(), 1, bindings);
+            return modifiedExpression;
         }
         else if ((funcName.equals("aggColSpec") || funcName.equals("aggColSpec2")) && paramValues.size() == 4)
         {
             context.debug("enrichRelationTypeHolder: aggColSpec branch");
-            enrichColumnTypeHolder(paramValues, 1, 2, 3, model);
-            updateTypeHolderBinding(functionType, paramValues, 3, bindings);
+            FunctionExpression modifiedExpression = enrichColumnTypeHolder(expr, paramValues, 1, 2, 3, model);
+            updateTypeHolderBinding(functionType, modifiedExpression._parametersValues(), 3, bindings);
+            return modifiedExpression;
         }
         else if ((funcName.equals("aggColSpecArray") || funcName.equals("aggColSpecArray2")) && paramValues.size() == 2)
         {
             context.debug("enrichRelationTypeHolder: aggColSpecArray branch");
-            mergeColSpecArrayTypeHolder(paramValues, model);
-            updateTypeHolderBinding(functionType, paramValues, 1, bindings);
+            FunctionExpression modifiedExpression = mergeColSpecArrayTypeHolder(expr, paramValues, model);
+            updateTypeHolderBinding(functionType, modifiedExpression._parametersValues(), 1, bindings);
+            return modifiedExpression;
         }
         else if ((funcName.equals("colSpecArray") || funcName.equals("colSpec")))
         {
             context.debug("enrichRelationTypeHolder: colSpecArray/colSpec branch");
-            tryResolveSubsetForTypeHolder(expr, functionType, paramValues, bindings, model, context);
-            updateTypeHolderBinding(functionType, paramValues, 1, bindings);
+            FunctionExpression modifiedExpression = tryResolveSubsetForTypeHolder(expr, functionType, paramValues, bindings, model, context);
+            updateTypeHolderBinding(functionType, modifiedExpression._parametersValues(), 1, bindings);
+            return modifiedExpression;
         }
+        return expr;
     }
 
     /**
@@ -128,7 +138,7 @@ public final class RelationColumnResolver
      *     and build a column using the string argument's name and K's type</li>
      * </ul>
      */
-    private static void tryResolveSubsetForTypeHolder(
+    private static FunctionExpression tryResolveSubsetForTypeHolder(
             FunctionExpression expr,
             FunctionType functionType,
             ListIterable<? extends ValueSpecification> paramValues,
@@ -137,42 +147,37 @@ public final class RelationColumnResolver
             CompilationContext context)
     {
         // Get the TypeHolder's type parameter name (T)
-        GenericType typeHolderParamGT = functionType._parameters().get(1)._genericType();
-        // The type parameter T is now inside the holder's typeArguments[0]
-        // e.g. CompilerGenericTypeAndMultiplicityHolder<T|1> → typeArguments[0] = GenericType(type=TypeParameter("T"))
-        if (!(_GenericType.type(_GenericType.typeArguments(typeHolderParamGT).getFirst()) instanceof meta.pure.metamodel.type.generics.TypeParameter typeHolderTP))
-        {
-            return;
-        }
-        String typeParamName = typeHolderTP._name();
+        String typeParamName = ((TypeParameter) _GenericType.type(_GenericType.typeArguments(functionType._parameters().get(1)._genericType()).getFirst()))._name();
 
         // Check if bindings have T bound
         MutableSet<GenericType> boundTypes = bindings.typeBindings().get(typeParamName);
         if (boundTypes == null || boundTypes.isEmpty())
         {
-            return;
+            return expr;
         }
+
         GenericType boundGT = boundTypes.getAny();
 
         // Case 1: T bound to SUBSET operation (Z=(?:K)⊆referenceRelation) — look up columns
         if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.SUBSET)
         {
-            resolveFromSubset(expr, gto, paramValues, bindings, model, context);
-            return;
+            return resolveFromSubset(expr, gto, paramValues, bindings, model, context);
         }
 
         // Case 2: T bound to EQUAL with wildcard (V=(?:K)) — resolve K from bindings
         if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.EQUAL)
         {
-            resolveFromEqualWithWildcard(expr, gto, paramValues, bindings, model, context);
+            return resolveFromEqualWithWildcard(expr, gto, paramValues, bindings, model, context);
         }
+
+        return expr;
     }
 
     /**
      * SUBSET case: look up column names from the colSpec arguments in the
      * reference relation (right side of SUBSET) and build the enriched type.
      */
-    private static void resolveFromSubset(
+    private static FunctionExpression resolveFromSubset(
             FunctionExpression expr,
             GenericTypeOperation subsetOp,
             ListIterable<? extends ValueSpecification> paramValues,
@@ -181,51 +186,46 @@ public final class RelationColumnResolver
             CompilationContext context)
     {
         // Resolve the right side (reference relation) of the SUBSET
-        GenericType resolvedRight = _GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model);
-        if (!(_GenericType.type(resolvedRight) instanceof meta.pure.metamodel.relation.RelationType referenceRT))
-        {
-            return;
-        }
+        RelationType referenceRT = (RelationType) (_GenericType.type(_GenericType.makeAsConcreteAsPossible(subsetOp._right(), bindings, model)));
 
         // Extract column names from the string arguments
         MutableList<String> columnNames = extractColumnNames(expr);
-        if (columnNames == null || columnNames.isEmpty())
-        {
-            return;
-        }
 
         // Look up each column in the reference relation — this IS the SUBSET result
         RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
         GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
-        MutableList<Column> enrichedColumns = Lists.mutable.empty();
-
-        for (String colName : columnNames)
-        {
-            Column foundColumn = referenceRT._columns().detect(c -> c._name().equals(colName));
-            if (foundColumn == null)
-            {
-                context.addError(new CompilationError(
-                        "The column '" + colName + "' can't be found in the relation "
-                                + _RelationType.print(referenceRT, false),
-                        expr._sourceInformation()));
-                return;
-            }
-            enrichedColumns.add(_Column.build(
-                    colName, enrichedGT, foundColumn._genericType(),
-                    foundColumn._multiplicity(), false, model));
-        }
+        MutableList<Column> enrichedColumns = columnNames.collect(colName ->
+                {
+                    Column foundColumn = referenceRT._columns().detect(c -> c._name().equals(colName));
+                    if (foundColumn == null)
+                    {
+                        context.addError(new CompilationError(
+                                "The column '" + colName + "' can't be found in the relation "
+                                        + _RelationType.print(referenceRT, false),
+                                expr._sourceInformation()));
+                        return null;
+                    }
+                    return _Column.build(
+                            colName, enrichedGT, foundColumn._genericType(),
+                            foundColumn._multiplicity(), false, model);
+                }
+        ).select(Objects::nonNull);
         enrichedRT._columns(enrichedColumns);
 
         context.debug("tryResolveSubsetForTypeHolder: resolved Z=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
         // Set the TypeHolder's GT to the resolved Z
-        ValueSpecification typeHolder = paramValues.get(1);
-        if (typeHolder instanceof meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl holder)
-        {
-            holder._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                    ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                    ._typeArguments(Lists.mutable.with(enrichedGT)));
-        }
+        return expr._parametersValues(
+                Lists.mutable.with(
+                        paramValues.get(0),
+                        paramValues.get(1)
+                                ._genericType(
+                                        _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                                                ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                                                ._typeArguments(Lists.mutable.with(enrichedGT))
+                                )
+                )
+        );
     }
 
     /**
@@ -233,7 +233,7 @@ public final class RelationColumnResolver
      * bindings, and build a column using the string argument's name and K's type.
      * E.g., V=(?:K) with K=String and colName="newLegal" → (newLegal:String[1])
      */
-    private static void resolveFromEqualWithWildcard(
+    private static FunctionExpression resolveFromEqualWithWildcard(
             FunctionExpression expr,
             GenericTypeOperation equalOp,
             ListIterable<? extends ValueSpecification> paramValues,
@@ -242,60 +242,44 @@ public final class RelationColumnResolver
             CompilationContext context)
     {
         // The right side of EQUAL should be a RelationType with a wildcard column: (?:K)
-        GenericType right = _GenericType.makeAsConcreteAsPossible(equalOp._right(), bindings, model);
-        if (!(_GenericType.type(right) instanceof meta.pure.metamodel.relation.RelationType wildcardRT)
-                || wildcardRT._columns() == null || wildcardRT._columns().isEmpty())
-        {
-            return;
-        }
+        Column wildcardCol = ((RelationType) _GenericType.type(_GenericType.makeAsConcreteAsPossible(equalOp._right(), bindings, model)))._columns().getFirst();
 
-        Column wildcardCol = wildcardRT._columns().getFirst();
-        if (wildcardCol._nameWildCard() == null || !wildcardCol._nameWildCard())
-        {
-            return;
-        }
-
-        // Resolve the wildcard column's type (K) from bindings
         GenericType resolvedColType = _GenericType.makeAsConcreteAsPossible(wildcardCol._genericType(), bindings, model);
-        if (resolvedColType == null || _GenericType.type(resolvedColType) == null)
-        {
-            return;
-        }
 
         // Extract column names from the string arguments
         MutableList<String> columnNames = extractColumnNames(expr);
-        if (columnNames == null || columnNames.isEmpty())
-        {
-            return;
-        }
 
         // Build the enriched RelationType using the column name + resolved K type
         RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
         GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
-        MutableList<Column> enrichedColumns = Lists.mutable.empty();
-
-        for (String colName : columnNames)
-        {
-            meta.pure.metamodel.multiplicity.Multiplicity colMul = wildcardCol._multiplicity() != null
-                    ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
-                    : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
-                            ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
-                            ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
-            enrichedColumns.add(_Column.build(
-                    colName, enrichedGT, resolvedColType, colMul, false, model));
-        }
-        enrichedRT._columns(enrichedColumns);
+        enrichedRT._columns(columnNames.collect(colName ->
+                        _Column.build(
+                                colName,
+                                enrichedGT,
+                                resolvedColType,
+                                wildcardCol._multiplicity() != null
+                                        ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
+                                        : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
+                                          ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
+                                          ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L)),
+                                false,
+                                model
+                        )
+                )
+        );
 
         context.debug("resolveFromEqualWithWildcard: resolved V=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
-        // Set the TypeHolder's GT to the resolved V
-        ValueSpecification typeHolder = paramValues.get(1);
-        if (typeHolder instanceof meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl holder)
-        {
-            holder._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                    ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                    ._typeArguments(Lists.mutable.with(enrichedGT)));
-        }
+        return expr._parametersValues(
+                Lists.mutable.with(
+                        paramValues.get(0),
+                        paramValues.get(1)
+                                ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                                                ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                                                ._typeArguments(Lists.mutable.with(enrichedGT))
+                                )
+                )
+        );
     }
 
 
@@ -339,30 +323,26 @@ public final class RelationColumnResolver
      * Merge inner colSpec TypeHolder columns into the array TypeHolder.
      * Shared by funcColSpecArray and aggColSpecArray branches.
      **/
-    private static void mergeColSpecArrayTypeHolder(
-            ListIterable<? extends ValueSpecification> paramValues, MetadataAccess model)
+    private static FunctionExpression mergeColSpecArrayTypeHolder(
+            FunctionExpression expr,
+            ListIterable<? extends ValueSpecification> paramValues,
+            MetadataAccess model)
     {
-        MutableList<Column> mergedColumns = Lists.mutable.empty();
-        ((Collection) paramValues.get(0))._values().forEach(v ->
-        {
-            // Anything buy colspec
-            if (v instanceof FunctionExpression k)
-            {
-                GenericType typeHolderGT = _GenericType.typeArguments(k._parametersValues().getLast()._genericType()).getFirst();
-                if (typeHolderGT != null && _GenericType.type(typeHolderGT) instanceof meta.pure.metamodel.relation.RelationType rt)
-                {
-                    mergedColumns.addAllIterable(rt._columns());
-                }
-            }
-        });
-        if (mergedColumns.notEmpty())
-        {
-            meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl(model)._columns(mergedColumns);
-            ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) paramValues.get(1))
-                    ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                            ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                            ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl(model)._type(mergedRT))));
-        }
+        MutableList<Column> mergedColumns = ((Collection) paramValues.get(0))._values().flatCollect(v ->
+                ((RelationType) _GenericType.type(_GenericType.typeArguments(((FunctionExpression) v)._parametersValues().getLast()._genericType()).getFirst()))._columns()
+        );
+
+        meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl(model)._columns(mergedColumns);
+
+        return expr._parametersValues(
+                Lists.mutable.with(
+                        paramValues.get(0),
+                        paramValues.get(1)
+                                ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                                        ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                                        ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl(model)._type(mergedRT))))
+                )
+        );
     }
 
     /**
@@ -396,36 +376,27 @@ public final class RelationColumnResolver
      * @param nameIdx       index of the column name String arg (1 for funcColSpec, 0 for aggColSpec)
      * @param typeHolderIdx index of the TypeHolder arg (last parameter)
      */
-    private static void enrichColumnTypeHolder(
+    private static FunctionExpression enrichColumnTypeHolder(
+            FunctionExpression expr,
             ListIterable<? extends ValueSpecification> paramValues,
             int lambdaIdx, int nameIdx, int typeHolderIdx,
             MetadataAccess model)
     {
-        ValueSpecification typeHolderArg = paramValues.get(typeHolderIdx);
-        if (typeHolderArg instanceof meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolder
-                && paramValues.get(lambdaIdx) instanceof AtomicValue av
-                && av._value() instanceof LambdaFunction lambda
-                && lambda._expressionSequence() != null
-                && lambda._expressionSequence().notEmpty())
-        {
-            ValueSpecification lastExpr = lambda._expressionSequence().getLast();
-            // Extract column name from the String parameter
-            String colName = null;
-            if (paramValues.get(nameIdx) instanceof AtomicValue nameAv && nameAv._value() instanceof String name)
-            {
-                colName = name;
-            }
-            if (colName != null && lastExpr._genericType() != null)
-            {
-                RelationTypeImpl relationType = new RelationTypeImpl(model);
-                GenericType ownerGT = new InferredGenericTypeImpl(model)._type(relationType);
-                Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
-                relationType._columns(Lists.mutable.with(col));
-                ((meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl) typeHolderArg)
-                        ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                                        ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                                        ._typeArguments(Lists.mutable.with(ownerGT)));
-            }
-        }
+        LambdaFunction lambda = (LambdaFunction) ((AtomicValue) paramValues.get(lambdaIdx))._value();
+        ValueSpecification lastExpr = lambda._expressionSequence().getLast();
+        String colName = (String) ((AtomicValue) paramValues.get(nameIdx))._value();
+
+        RelationTypeImpl relationType = new RelationTypeImpl(model);
+        GenericType ownerGT = new InferredGenericTypeImpl(model)._type(relationType);
+        Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
+        relationType._columns(Lists.mutable.with(col));
+
+        return expr._parametersValues(paramValues.collectWithIndex((x, y) ->
+                        y == typeHolderIdx ? x._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                                                            ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                                                            ._typeArguments(Lists.mutable.with(ownerGT)))
+                                : x
+                ).toList()
+        );
     }
 }

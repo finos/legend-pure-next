@@ -1,0 +1,254 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::*;
+import meta::pure::functions::collection::*;
+
+
+Class meta::pure::compiler::helper::ParametersBinding
+{
+    typeBindings: Map<String, List<GenericType>>[1];
+    multiplicityBindings: Map<String, List<Multiplicity>>[1];
+}
+
+Class meta::pure::compiler::helper::PlainParametersBinding extends ParametersBinding
+{
+}
+
+Class meta::pure::compiler::helper::EnclosingOwnerParametersBinding extends ParametersBinding
+{
+    owner: TypeAndMultiplicityParametersOwner[1];
+}
+
+Class meta::pure::compiler::helper::FunctionCallParametersBinding extends ParametersBinding
+{
+    expr: meta::pure::metamodel::valuespecification::FunctionExpression[0..1];
+    function: meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner[0..1]; // Corresponds to FunctionIndexEntry
+    ownTypeParams: Map<String, TypeParameter>[1];
+    ownMulParams: Map<String, MultiplicityParameter>[1];
+    enclosingOwner: EnclosingOwnerParametersBinding[0..1];
+}
+
+function meta::pure::compiler::helper::newPlainParametersBinding():PlainParametersBinding[1]
+{
+    ^PlainParametersBinding(
+        typeBindings = ^Map<String, List<GenericType>>(),
+        multiplicityBindings = ^Map<String, List<Multiplicity>>()
+    );
+}
+
+function meta::pure::compiler::helper::addTypeBinding(pb:ParametersBinding[1], typeParam:TypeParameter[1], argGT:GenericType[1]):ParametersBinding[1]
+{
+    $pb->match([
+        fcpb : FunctionCallParametersBinding[1] |
+            if($fcpb.enclosingOwner->isNotEmpty() && $typeParam.owner == $fcpb.enclosingOwner->toOne().owner,
+                | // Route to enclosing owner
+                  ^$fcpb(
+                      enclosingOwner = $fcpb.enclosingOwner->toOne()->addTypeBinding($typeParam, $argGT)->cast(@EnclosingOwnerParametersBinding)
+                  ),
+                | // Add locally
+                  ^$fcpb(typeBindings = $fcpb.typeBindings->putMapList($typeParam.name, $argGT))
+            ),
+        other : ParametersBinding[1] | 
+            ^$other(typeBindings = $other.typeBindings->putMapList($typeParam.name, $argGT))
+    ])
+}
+
+function meta::pure::compiler::helper::addMultiplicityBinding(pb:ParametersBinding[1], mulParam:MultiplicityParameter[1], argMul:Multiplicity[1]):ParametersBinding[1]
+{
+    ^$pb(multiplicityBindings = $pb.multiplicityBindings->putMapList($mulParam.name, $argMul))
+}
+
+function meta::pure::compiler::helper::putMapList<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<K,List<V>>[1]
+{
+    let currentList = $map->get($key);
+    let newList = if($currentList->isEmpty(),
+        | ^List<V>(values = [$value]),
+        | ^List<V>(values = $currentList->toOne().values->concatenate([$value])->removeDuplicates())
+    );
+    $map->put($key, $newList);
+}
+
+function meta::pure::compiler::helper::unify_step1_pairwiseBind(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    $fcpb.typeBindings->keyValues()->fold({kv, b |
+        if($kv.second.values->size() > 1,
+            | let vals = $kv.second.values;
+              meta::pure::compiler::helper::range($vals->size())->fold({i, b2 |
+                  meta::pure::compiler::helper::range($i + 1, $vals->size())->fold({j, b3 |
+                      let res1 = meta::pure::compiler::helper::collectTypeParameterBindings($vals->at($i), $vals->at($j), $b3);
+                      meta::pure::compiler::helper::collectTypeParameterBindings($vals->at($j), $vals->at($i), $res1);
+                  }, $b2)
+              }, $b);,
+            | $b
+        )
+    }, $fcpb->cast(@ParametersBinding))->match([
+        f: FunctionCallParametersBinding[1] | $f,
+        other: ParametersBinding[1] | $fcpb
+    ]);
+}
+
+function meta::pure::compiler::helper::unify_step2_transitiveType_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], gt:GenericType[1]):meta::pure::functions::collection::Pair<FunctionCallParametersBinding, Boolean>[1]
+{
+    if($gt->instanceOf(GenericTypeValue) && $gt->cast(@GenericTypeValue).type->isNotEmpty() && $gt->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
+        | let targetName = $gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter).name;
+          let targetBindingOptional = $tb.typeBindings->get($targetName);
+          
+          let targetBinding = if(($targetBindingOptional->isEmpty() || $targetBindingOptional->toOne().values->isEmpty()) && $tb.enclosingOwner->isNotEmpty(),
+              | if($gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter).owner == $tb.enclosingOwner->toOne().owner,
+                    | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
+                    | $targetBindingOptional
+                ),
+              | $targetBindingOptional
+          );
+          
+          if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
+              | let resolved = $targetBinding->toOne().values->at(0);
+                if($resolved->instanceOf(GenericTypeValue) && $resolved->cast(@GenericTypeValue).type->isNotEmpty() && $resolved->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
+                    | pair($tb, $changed),
+                    | pair(^$tb(typeBindings = $tb.typeBindings->put($kvName, ^List<GenericType>(values=$resolved))), true)
+                );,
+              | pair($tb, $changed)
+          );,
+        | pair($tb, $changed)
+    );
+}
+
+function meta::pure::compiler::helper::unify_step2_transitiveType(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    let kvs = $fcpb.typeBindings->keyValues();
+    let newState = fold($kvs, {kv, stateAndChanged |
+         let tb = $stateAndChanged.first;
+         let changed = $stateAndChanged.second;
+         if($kv.second.values->size() == 1,
+            | meta::pure::compiler::helper::unify_step2_transitiveType_Helper($tb, $changed, $kv.first, $kv.second.values->at(0)),
+            | pair($tb, $changed)
+         );
+    }, pair($fcpb, false));
+    
+    if($newState.second == true,
+        | meta::pure::compiler::helper::unify_step2_transitiveType($newState.first),
+        | $newState.first
+    );
+}
+
+function meta::pure::compiler::helper::unify_step3_transitiveMul_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], mul:Multiplicity[1]):meta::pure::functions::collection::Pair<FunctionCallParametersBinding, Boolean>[1]
+{
+    if($mul->instanceOf(MultiplicityParameter),
+        | let targetName = $mul->cast(@MultiplicityParameter).name;
+          let targetBinding = $tb.multiplicityBindings->get($targetName);
+          if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
+              | let resolved = $targetBinding->toOne().values->at(0);
+                if($resolved->instanceOf(MultiplicityParameter),
+                    | pair($tb, $changed),
+                    | pair(^$tb(multiplicityBindings = $tb.multiplicityBindings->put($kvName, ^List<Multiplicity>(values=$resolved))), true)
+                );,
+              | pair($tb, $changed)
+          );,
+        | pair($tb, $changed)
+    );
+}
+
+function meta::pure::compiler::helper::unify_step3_transitiveMul(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    let kvs = $fcpb.multiplicityBindings->keyValues();
+    let newState = fold($kvs, {kv, stateAndChanged |
+         let tb = $stateAndChanged.first;
+         let changed = $stateAndChanged.second;
+         if($kv.second.values->size() == 1,
+            | meta::pure::compiler::helper::unify_step3_transitiveMul_Helper($tb, $changed, $kv.first, $kv.second.values->at(0)),
+            | pair($tb, $changed)
+         );
+    }, pair($fcpb, false));
+    
+    if($newState.second == true,
+        | meta::pure::compiler::helper::unify_step3_transitiveMul($newState.first),
+        | $newState.first
+    );
+}
+
+function meta::pure::compiler::helper::unify_preReduce_Helper(fcpb:FunctionCallParametersBinding[1], kvName:String[1], kvValues:List<GenericType>[1]):FunctionCallParametersBinding[1]
+{
+    let newValsAndChanged = $kvValues.values->fold({gt, agg |
+        if($gt->instanceOf(GenericTypeValue) && $gt->cast(@GenericTypeValue).type->isNotEmpty() && $gt->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
+            | let tp = $gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter);
+              if($tp.owner == $fcpb.enclosingOwner->toOne().owner,
+                  | let ownerBinding = $fcpb.enclosingOwner->toOne().typeBindings->get($tp.name);
+                    if($ownerBinding->isNotEmpty() && $ownerBinding->toOne().values->size() == 1,
+                        | let ownerResolved = $ownerBinding->toOne().values->at(0);
+                          if($ownerResolved->instanceOf(GenericTypeValue) && $ownerResolved->cast(@GenericTypeValue).type->isNotEmpty() && $ownerResolved->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
+                              | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second),
+                              | pair(^List<GenericType>(values=$agg.first.values->concatenate($ownerResolved)), true)
+                          );,
+                        | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
+                    );,
+                  | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
+              );,
+            | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
+        )
+    }, pair(^List<GenericType>(), false));
+    
+    if($newValsAndChanged.second,
+        | ^$fcpb(typeBindings = $fcpb.typeBindings->put($kvName, $newValsAndChanged.first)),
+        | $fcpb
+    );
+}
+
+function meta::pure::compiler::helper::unify_step4_preReduceEnclosing(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    if($fcpb.enclosingOwner->isEmpty(),
+        | $fcpb,
+        | let kvs = $fcpb.typeBindings->keyValues();
+          fold($kvs, {kv, b |
+              if($kv.second.values->size() > 1,
+                  | meta::pure::compiler::helper::unify_preReduce_Helper($b, $kv.first, $kv.second),
+                  | $b
+              );
+          }, $fcpb);
+    );
+}
+
+function meta::pure::compiler::helper::unify_step5_finalReduce(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    let st1 = fold($fcpb.typeBindings->keyValues(), {kv, b |
+        if($kv.second.values->size() > 1,
+            | let common = meta::pure::compiler::helper::findCommonGenericType($kv.second.values, false);
+              if($common->isEmpty(),
+                  | $b,
+                  | ^$b(typeBindings = $b.typeBindings->put($kv.first, ^List<GenericType>(values=$common->toOne())))
+              );,
+            | $b
+        );
+    }, $fcpb);
+    
+    fold($st1.multiplicityBindings->keyValues(), {kv, b |
+        if($kv.second.values->size() > 1,
+            | let common = meta::pure::compiler::helper::findCommonMultiplicity($kv.second.values);
+              if($common->isEmpty(),
+                  | $b,
+                  | ^$b(multiplicityBindings = $b.multiplicityBindings->put($kv.first, ^List<Multiplicity>(values=$common->toOne())))
+              );,
+            | $b
+        );
+    }, $st1);
+}
+
+function meta::pure::compiler::helper::unify(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+{
+    let step1 = meta::pure::compiler::helper::unify_step1_pairwiseBind($fcpb);
+    let step2 = meta::pure::compiler::helper::unify_step2_transitiveType($step1);
+    let step3 = meta::pure::compiler::helper::unify_step3_transitiveMul($step2);
+    let step4 = meta::pure::compiler::helper::unify_step4_preReduceEnclosing($step3);
+    meta::pure::compiler::helper::unify_step5_finalReduce($step4);
+}

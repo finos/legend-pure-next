@@ -20,10 +20,9 @@ import meta.pure.metamodel.extension.ProfileImpl;
 import meta.pure.metamodel.extension.StereotypeImpl;
 import meta.pure.metamodel.extension.TagImpl;
 import meta.pure.metamodel.type.Type;
-
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Handler for Profile.

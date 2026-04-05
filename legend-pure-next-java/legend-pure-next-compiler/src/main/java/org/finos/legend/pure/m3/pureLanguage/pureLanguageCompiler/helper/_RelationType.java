@@ -259,42 +259,44 @@ public class _RelationType
 
     /**
      * Reconcile inferred types in RelationType columns by name.
-     * Widens inferred generic types and multiplicities where the expected type subsumes the actual.
+     * Returns a new RelationType with columns widened where applicable.
+     * <p>
+     * Pure functional — no in-place mutation.
+     * The caller is responsible for integrating the returned copy into the tree.
      */
-    public static void reconcileInferred(meta.pure.metamodel.relation.RelationType expectedRT,
-                                         meta.pure.metamodel.relation.RelationType actualRT,
-                                         MetadataAccess model)
+    public static RelationType reconcileInferred(meta.pure.metamodel.relation.RelationType expectedRT,
+                                                 meta.pure.metamodel.relation.RelationType actualRT,
+                                                 MetadataAccess model)
     {
-        if (expectedRT._columns() != null && actualRT._columns() != null)
+        if (expectedRT._columns() == null || actualRT._columns() == null)
         {
-            for (var actualCol : actualRT._columns())
-            {
-                // Skip wildcard columns
-                if (actualCol._nameWildCard() != null && actualCol._nameWildCard())
-                {
-                    continue;
-                }
-                var expectedCol = expectedRT._columns().detect(c -> actualCol._name().equals(c._name()));
-                if (expectedCol != null)
-                {
-                    if (actualCol._genericType() instanceof Inferred
-                            && expectedCol._genericType() != null
-                            && _GenericType.isCompatible(expectedCol._genericType(), actualCol._genericType(), model))
-                    {
-                        ((meta.pure.metamodel.relation.ColumnImpl) actualCol)
-                                ._genericType(_GenericType.asInferred(expectedCol._genericType(), model));
-                    }
-                    if (actualCol._multiplicity() instanceof Inferred
-                            && expectedCol._multiplicity() != null
-                            && _Multiplicity.subsumes(expectedCol._multiplicity(), actualCol._multiplicity()))
-                    {
-                        ((meta.pure.metamodel.relation.ColumnImpl) actualCol)
-                                ._multiplicity(_Multiplicity.asInferred(expectedCol._multiplicity(), model));
-                    }
-                    _GenericType.reconcileInferred(expectedCol._genericType(), actualCol._genericType(), model);
-                }
-            }
+            return actualRT;
         }
+
+        return new RelationTypeImpl(model)
+                ._classifierGenericType(actualRT._classifierGenericType())
+                ._columns(expectedRT._columns().zip(actualRT._columns())
+                        .collect(pair ->
+                        {
+                            Column expectedCol = pair.getOne();
+                            Column actualCol = pair.getTwo();
+                            return new meta.pure.metamodel.relation.ColumnImpl(model)
+                                    ._classifierGenericType( actualCol._classifierGenericType())
+                                    ._name(actualCol._name())
+                                    ._nameWildCard(actualCol._nameWildCard())
+                                    ._genericType(_GenericType.reconcileInferred(expectedCol._genericType(),
+                                            actualCol._genericType() instanceof Inferred
+                                                    && expectedCol._genericType() != null
+                                                    && _GenericType.isCompatible(expectedCol._genericType(), actualCol._genericType(), model)
+                                                    ? _GenericType.asInferred(expectedCol._genericType(), model)
+                                                    : actualCol._genericType(),
+                                            model))
+                                    ._multiplicity(actualCol._multiplicity() instanceof Inferred
+                                            && expectedCol._multiplicity() != null
+                                            && _Multiplicity.subsumes(expectedCol._multiplicity(), actualCol._multiplicity())
+                                            ? _Multiplicity.asInferred(expectedCol._multiplicity(), model)
+                                            : actualCol._multiplicity());
+                        }));
     }
 
     /**
@@ -331,8 +333,8 @@ public class _RelationType
                 changed = true;
                 Multiplicity finalMul = resolvedColMul != null ? resolvedColMul
                         : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
-                                ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
-                                ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
+                          ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
+                          ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
                 RelationTypeImpl tempRT = new RelationTypeImpl(model);
                 GenericType tempOwnerGT = _GenericType.buildUserDefinedGenericType(tempRT, model);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,

@@ -15,7 +15,6 @@
 package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.multiplicity.PackageableMultiplicity;
-import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
@@ -24,10 +23,8 @@ import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.CollectionImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -103,4 +103,10 @@ public class Error implements PackageableElement
     {
         throw new UnsupportedOperationException("Error does not support stereotypes");
     }
+
+    @Override
+    public Any _copy()
+    {
+        throw new UnsupportedOperationException("Error does not support stereotypes");
+    }
 }

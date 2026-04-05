@@ -1,19 +1,26 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
 
 import meta.pure.metamodel.function.Function;
+import meta.pure.metamodel.function.property.AbstractProperty;
 import meta.pure.metamodel.function.property.Property;
+import meta.pure.metamodel.function.property.QualifiedProperty;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.DotApplication;
+import meta.pure.metamodel.valuespecification.DotApplicationImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
@@ -57,17 +64,12 @@ public final class DotApplicationResolver
         String functionName = expr._functionName();
 
         // Resolve the receiver to get its genericType before property lookup
-        ValueSpecification receiver = ValueSpecificationResolver.resolve(expr._parametersValues().getFirst(), model, context);
-        expr._parametersValues().set(0, receiver);
-
-        if (receiver._genericType() == null)
-        {
-            return expr;
-        }
+        MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
+        ValueSpecification receiver = processParameters.getFirst();
 
         Type ownerType = _GenericType.type(receiver._genericType());
-        context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s",
-                functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())));
+        context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s additionalParams=%d",
+                functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())), processParameters.size());
 
         // Type parameter reference (e.g., Z from a PCT function) — can't resolve properties
         if (ownerType == null)
@@ -79,10 +81,38 @@ public final class DotApplicationResolver
             return expr;
         }
 
-        Function result = lookupFunction(functionName, receiver, ownerType, expr, model, context);
+        Function result = lookupFunction(functionName, processParameters.size(), receiver, ownerType, expr, model, context);
         if (result == null)
         {
             return expr;  // error already recorded in lookupFunction
+        }
+
+        // Resolve return type and multiplicity; for qualified properties, apply class type bindings
+        GenericType resolvedGT;
+        Multiplicity resolvedMul;
+        if (result instanceof QualifiedProperty qp)
+        {
+            resolvedGT = qp._genericType();
+            resolvedMul = qp._multiplicity();
+            if (_GenericType.type(receiver._genericType()) instanceof meta.pure.metamodel.type.Class ownerClass)
+            {
+                ParametersBinding bindings = _Class.buildBindingsFromGenericType(ownerClass, receiver._genericType());
+                if (!bindings.typeBindings().isEmpty() || !bindings.multiplicityBindings().isEmpty())
+                {
+                    resolvedGT = _GenericType.makeAsConcreteAsPossible(resolvedGT, bindings, model);
+                    resolvedMul = _Multiplicity.makeAsConcreteAsPossible(resolvedMul, bindings);
+                }
+            }
+        }
+        else if (result instanceof AbstractProperty ap)
+        {
+            resolvedGT = ap._genericType();
+            resolvedMul = ap._multiplicity();
+        }
+        else
+        {
+            resolvedGT = ((Column) result)._genericType();
+            resolvedMul = ((Column) result)._multiplicity();
         }
 
         Multiplicity receiverMul = receiver._multiplicity();
@@ -92,18 +122,16 @@ public final class DotApplicationResolver
         {
             // Normal case: [1] receiver, direct access
             context.debug("  direct access [1]");
-            expr._func(result);
-            if (result instanceof Property prop)
-            {
-                expr._genericType(prop._genericType());
-                expr._multiplicity(prop._multiplicity());
-            }
-            return expr;
+            return  ((DotApplicationImpl) expr._copy())
+                                        ._parametersValues(processParameters)
+                                        ._func(result)
+                                        ._genericType(resolvedGT)
+                                        ._multiplicity(resolvedMul);
         }
         else
         {
             context.debug("  AUTOMAP: receiverMul=%s", lazy(() -> _Multiplicity.print(receiverMul)));
-            return buildAutomap(expr, receiver, functionName, model, context);
+            return buildAutomap(expr, receiver, functionName, processParameters, model, context);
         }
     }
 
@@ -113,6 +141,7 @@ public final class DotApplicationResolver
      */
     private static Function lookupFunction(
             String functionName,
+            int paramCount,
             ValueSpecification receiver,
             Type ownerType,
             FunctionExpression expr,
@@ -140,20 +169,43 @@ public final class DotApplicationResolver
         // Property/qualified-property access on a PropertyOwner (Class, Association, etc.)
         if (ownerType instanceof meta.pure.metamodel.SimplePropertyOwner po)
         {
-            Property matchedProp = _Class.findProperty(po, functionName);
-            if (matchedProp != null)
+            // Simple property: only match when no additional params (just the receiver)
+            if (paramCount == 1)
             {
-                Function resolved = _Property.resolveProperty(matchedProp, receiver._genericType(), model);
-                context.debug("  property found: %s -> %s", matchedProp._name(), lazy(() -> CompilationContext.debugFunc(resolved)));
-                return resolved;
+                Property matchedProp = _Class.findProperty(po, functionName);
+                if (matchedProp != null)
+                {
+                    Function resolved = _Property.resolveProperty(matchedProp, receiver._genericType(), model);
+                    context.debug("  property found: %s -> %s", matchedProp._name(), lazy(() -> CompilationContext.debugFunc(resolved)));
+                    return resolved;
+                }
             }
             if (po instanceof meta.pure.metamodel.type.Class cls)
             {
-                meta.pure.metamodel.function.property.QualifiedProperty matchedQP = _Class.findQualifiedProperty(cls, functionName);
-                if (matchedQP != null)
+                // Find all QPs by name, then filter by arity (paramCount includes the receiver = this)
+                MutableList<QualifiedProperty> allQPs = _Class.findQualifiedProperties(cls, functionName);
+                MutableList<QualifiedProperty> matched = allQPs.select(qp -> qp._parameters().size() == paramCount);
+                if (matched.size() == 1)
                 {
-                    context.debug("  qualified property found: %s", matchedQP._name());
-                    return matchedQP;
+                    context.debug("  qualified property found: %s (arity %d)", matched.getFirst()._name(), paramCount);
+                    return matched.getFirst();
+                }
+                else if (matched.size() > 1)
+                {
+                    // Multiple QPs with same name and arity — ambiguous (future: type-based disambiguation)
+                    context.addError(new CompilationError(
+                            "Ambiguous qualified property '" + functionName + "' with " + (paramCount - 1) + " parameter(s) in class '" + _GenericType.print(receiver._genericType()) + "'",
+                            expr._sourceInformation()));
+                    return null;
+                }
+                else if (allQPs.notEmpty())
+                {
+                    // QPs exist but none match by arity
+                    String available = allQPs.collect(qp -> functionName + "(" + (qp._parameters().size() - 1) + " params)").makeString(", ");
+                    context.addError(new CompilationError(
+                            "No qualified property '" + functionName + "' with " + (paramCount - 1) + " parameter(s) found in class '" + _GenericType.print(receiver._genericType()) + "'. Available: " + available,
+                            expr._sourceInformation()));
+                    return null;
                 }
             }
             context.addError(new CompilationError(
@@ -195,6 +247,7 @@ public final class DotApplicationResolver
             FunctionExpression expr,
             ValueSpecification receiver,
             String accessName,
+            MutableList<ValueSpecification> processParameters,
             MetadataAccess model,
             CompilationContext context)
     {
@@ -207,14 +260,18 @@ public final class DotApplicationResolver
                 ._multiplicity(pureOne);
 
         // Build lambda body: $v_automap.name (an unresolved DotApplication)
+        // For qualified properties, includes additional parameters (e.g., $v_automap.name('ok3'))
         VariableExpression varRef = _VariableExpression.newVariableExpression(model)
                 ._name("v_automap");
+
+        MutableList<ValueSpecification> dotBodyParams = Lists.mutable.with(varRef);
+        dotBodyParams.addAll(processParameters.subList(1, processParameters.size()));
 
         meta.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
                 new meta.pure.metamodel.valuespecification.DotApplicationImpl(model);
         dotBody._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
         dotBody._functionName(accessName);
-        dotBody._parametersValues(Lists.mutable.with(varRef));
+        dotBody._parametersValues(dotBodyParams);
         dotBody._sourceInformation(expr._sourceInformation());
 
         // Build the lambda (no genericType — Phase 2 will resolve it)
@@ -241,12 +298,12 @@ public final class DotApplicationResolver
         // Resolve the map function through the standard path
         context.debug("  automap: resolving map() expression");
         context.debugDepthInc();
-        ValueSpecificationResolver.resolve(mapExpr, model, context);
+        ValueSpecification resolved = ValueSpecificationResolver.resolve(mapExpr, model, context);
         context.debugDepthDec();
         context.debug("  automap: map() resolved gt=%s mul=%s",
-                lazy(() -> _GenericType.print(mapExpr._genericType())), lazy(() -> _Multiplicity.print(mapExpr._multiplicity())));
+                lazy(() -> _GenericType.print(resolved._genericType())), lazy(() -> _Multiplicity.print(resolved._multiplicity())));
 
-        if (mapExpr._func() == null)
+        if (!(resolved instanceof FunctionExpression fe) || fe._func() == null)
         {
             context.addError(new CompilationError(
                     "Can't resolve automap for property '" + accessName + "' on '"
@@ -254,7 +311,7 @@ public final class DotApplicationResolver
                     expr._sourceInformation()));
         }
 
-        return mapExpr;
+        return (FunctionExpression) resolved;
     }
 
     /**

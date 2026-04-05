@@ -103,4 +103,10 @@ public class CompiledGraph implements PackageableElement
     {
         throw new UnsupportedOperationException("CompiledGraph does not support stereotypes");
     }
+
+    @Override
+    public Any _copy()
+    {
+        throw new UnsupportedOperationException("CompiledGraph does not support stereotypes");
+    }
 }
