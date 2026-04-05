@@ -14,8 +14,9 @@
 
 package org.finos.legend.pure.execution;
 
-import java.util.LinkedHashMap;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+
+import java.util.LinkedHashMap;
 
 /**
  * Runtime representation of a Pure {@code Map<K,V>} value.

@@ -17,7 +17,6 @@ import meta.pure.metamodel.valuespecification.FunctionApplication;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
-import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
@@ -37,7 +36,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.RelationColumnResolver;
 
@@ -80,7 +78,6 @@ public class FunctionApplicationResolver
         {
             // Multiple candidates (most-specific-first) — try each with rollback.
             MutableList<CompilationError> bestCandidateErrors = null;
-            FunctionExpression lastResolved = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {
                 int errorCheckpoint = context.currentErrorCount();
@@ -109,14 +106,13 @@ public class FunctionApplicationResolver
                 {
                     bestCandidateErrors = candidateErrors;
                 }
-                lastResolved = resetResolutionForFunctionExpression(resolved, model, context);
             }
             // No candidate resolved cleanly — restore the best candidate's errors
             if (bestCandidateErrors != null)
             {
                 context.addErrors(bestCandidateErrors);
             }
-            return (FunctionApplication) lastResolved._func(null);
+            return (FunctionApplication) ((FunctionApplication) expr._copy())._func(null);
         }
     }
 
@@ -194,7 +190,6 @@ public class FunctionApplicationResolver
                         {
                             parameterInfo.savedErrors = context.snapshotErrorsFrom(checkpoint);
                             context.rollbackErrorsTo(checkpoint);
-                            ValueSpecificationResolver.resetResolution(parameterValue, model, context);
                             context.debug("=> NOT RESOLVED");
                         }
                         context.debugDepthDec();
@@ -216,6 +211,7 @@ public class FunctionApplicationResolver
                     }
                 }
             }
+
             // We set func even if some of the parameters are not resolved so that later reverse-match can be triggered... but it's confusing... as func set means resolved...
             FunctionExpression resultFunctionExpression = newFunctionExpression
                     ._parametersValues(Lists.mutable.with(parameterInfos).collect(x -> x.newParam))
@@ -620,25 +616,6 @@ public class FunctionApplicationResolver
         return sb.toString();
     }
 
-
-    /**
-     * Reset all resolution state and re-resolve args for the next candidate attempt.
-     */
-    public static FunctionExpression resetResolutionForFunctionExpression(FunctionExpression expr, MetadataAccess model, CompilationContext context)
-    {
-        context.debug("resetResolution: %s func=%s gt=%s mul=%s", expr._functionName(), lazy(() -> CompilationContext.debugFunc(expr._func())), lazy(() -> _GenericType.print(expr._genericType())), lazy(() -> _Multiplicity.print(expr._multiplicity())));
-        // Wipe matched function and resolved type/multiplicity parameters
-        expr._func(null)
-                ._resolvedTypeParameters(null)
-                ._resolvedMultiplicityParameters(null);
-
-        // Full reset on all parameter values, handling automap revert
-        if (expr._parametersValues() != null)
-        {
-            expr._parametersValues(expr._parametersValues().collect(p -> ValueSpecificationResolver.resetResolution(p, model, context)));
-        }
-        return expr;
-    }
 
     // ========================================================================
     // Internal helpers
