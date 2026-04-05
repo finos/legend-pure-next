@@ -103,10 +103,6 @@ public class RdfJavaGenerator
         generateAnnotations(outputDir);
         generateClassInterfaces(outputDir);
         generateClassImplementations(outputDir);
-        if (isMetamodel)
-        {
-            generateClassProxies(outputDir);
-        }
         generateEnums(outputDir);
 
         System.out.println("\nGeneration complete. Output: " + outputDir);
@@ -698,140 +694,6 @@ public class RdfJavaGenerator
     }
 
     /**
-     * Check if a class is a PackageableElement subtype (directly or transitively).
-     */
-    private boolean isPackageableElementSubtype(ClassInfo classInfo)
-    {
-        return isPackageableElementSubtype(classInfo.name, Sets.mutable.empty());
-    }
-
-    private boolean isPackageableElementSubtype(String className, MutableSet<String> visited)
-    {
-        if ("PackageableElement".equals(className))
-        {
-            return true;
-        }
-        if (visited.contains(className))
-        {
-            return false;
-        }
-        visited.add(className);
-        ClassInfo info = m3Model.classInfoMap().get(className);
-        if (info == null)
-        {
-            return false;
-        }
-        return info.generalizations.anySatisfy(parent -> isPackageableElementSubtype(parent, visited));
-    }
-
-    // =========================================================================
-    // Code Generation - Proxies
-    // =========================================================================
-
-    /**
-     * Generate proxy classes for PackageableElement subtypes.
-     * Each proxy holds a path + MetadataAccess and delegates all getters
-     * to model.getElement(path), ensuring cross-references always see
-     * the latest version after map swaps.
-     */
-    private void generateClassProxies(Path outputDir) throws IOException
-    {
-        for (ClassInfo classInfo : m3Model.classInfoMap().valuesView())
-        {
-            boolean isAbstract = classInfo.stereotypes.anySatisfy(stereo -> bareName(stereo).equals("abstract"));
-            if (isAbstract || !isPackageableElementSubtype(classInfo))
-            {
-                continue;
-            }
-
-            String javaPackage = toJavaPackage(classInfo.packagePath);
-            Path packageDir = outputDir.resolve(javaPackage.replace('.', '/'));
-            Files.createDirectories(packageDir);
-
-            String javaCode = generateClassProxyCode(classInfo);
-            Path filePath = packageDir.resolve(classInfo.name + "Proxy.java");
-            Files.write(filePath, javaCode.getBytes(StandardCharsets.UTF_8));
-            System.out.println("  Generated: " + classInfo.name + "Proxy.java");
-        }
-    }
-
-    private String generateClassProxyCode(ClassInfo classInfo)
-    {
-        StringBuilder sb = new StringBuilder();
-        String thisPackage = toJavaPackage(classInfo.packagePath);
-
-        MutableList<PropertyInfo> allProperties = collectAllProperties(m3Model, classInfo);
-
-        sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n");
-        sb.append("package ").append(thisPackage).append(";\n\n");
-
-        // Imports
-        MutableSortedSet<String> imports = SortedSets.mutable.empty();
-        imports.add("org.eclipse.collections.api.list.MutableList");
-        allProperties.forEach(prop -> addTypeImport(imports, prop.typeName, thisPackage));
-        imports.forEach(imp -> sb.append("import ").append(imp).append(";\n"));
-        sb.append("\n");
-
-        sb.append("/**\n");
-        sb.append(" * Generated proxy for ").append(classInfo.name).append(".\n");
-        sb.append(" * Delegates all property access to model.getElement(path),\n");
-        sb.append(" * ensuring cross-references always see the latest version.\n");
-        sb.append(" */\n");
-        sb.append("public class ").append(classInfo.name).append("Proxy");
-        sb.append(" implements ").append(classInfo.name);
-        sb.append("\n{\n");
-
-        // Fields
-        sb.append("    private final String path;\n");
-        sb.append("    private final org.finos.legend.pure.m3.module.MetadataAccess model;\n\n");
-
-        // Constructor
-        sb.append("    public ").append(classInfo.name).append("Proxy(String path, org.finos.legend.pure.m3.module.MetadataAccess model)\n");
-        sb.append("    {\n");
-        sb.append("        this.path = path;\n");
-        sb.append("        this.model = model;\n");
-        sb.append("    }\n\n");
-
-        // resolve() helper
-        sb.append("    private ").append(classInfo.name).append(" resolve()\n");
-        sb.append("    {\n");
-        sb.append("        return (").append(classInfo.name).append(") model.getElement(path);\n");
-        sb.append("    }\n\n");
-
-        // Getters — delegate to resolve()
-        allProperties.forEach(prop ->
-        {
-            String javaType = mapToJavaType(prop.typeName, prop.isMany);
-            String getterName = "_" + prop.name;
-
-            sb.append("    @Override\n");
-            sb.append("    public ").append(javaType).append(" ").append(getterName).append("()\n");
-            sb.append("    {\n");
-            sb.append("        return resolve().").append(getterName).append("();\n");
-            sb.append("    }\n\n");
-
-            // Fluent setter — throws since proxy is read-only
-            sb.append("    @Override\n");
-            sb.append("    public ").append(classInfo.name).append("Proxy _");
-            sb.append(prop.name).append("(");
-            sb.append(javaType).append(" value)\n");
-            sb.append("    {\n");
-            sb.append("        throw new UnsupportedOperationException(\"Proxy is read-only: ").append(classInfo.name).append("Proxy._").append(prop.name).append("\");\n");
-            sb.append("    }\n\n");
-        });
-
-        // _copy() — delegate to resolve() with cast
-        sb.append("    @Override\n");
-        sb.append("    public ").append(classInfo.name).append(" _copy()\n");
-        sb.append("    {\n");
-        sb.append("        return (").append(classInfo.name).append(") resolve()._copy();\n");
-        sb.append("    }\n\n");
-
-        sb.append("}\n");
-        return sb.toString();
-    }
-
-    /**
      * Write a string to a file, wrapping IOException as unchecked.
      */
     private void writeFile(Path path, String content)
@@ -849,6 +711,7 @@ public class RdfJavaGenerator
     // =========================================================================
     // Main Entry Point
     // =========================================================================
+
 
     /**
      * Main method to run the Java generator from command line.
