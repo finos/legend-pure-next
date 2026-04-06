@@ -291,3 +291,31 @@ function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testFi
     assert($noCommon->isNotEmpty(), |'');
     assert('Any' == $noCommon->toOne()->cast(@PackageableElement).name->toOne(), |'');
 }
+
+function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testEvaluateRelationTypeOperation():Boolean[1]
+{
+    let rt1 = ^RelationType<Any>(
+        columns = [
+            meta::pure::compiler::helper::buildColumn('age', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer), meta::pure::metamodel::multiplicity::PureOne, false)
+        ]
+    );
+    let rt2 = ^RelationType<Any>(
+        columns = [
+            meta::pure::compiler::helper::buildColumn('name', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=String), meta::pure::metamodel::multiplicity::PureOne, false)
+        ]
+    );
+
+    let unionResult = meta::pure::compiler::helper::evaluateRelationTypeOperation($rt1, $rt2, GenericTypeOperationType.Union);
+    assert($unionResult->isNotEmpty());
+    let unionCols = $unionResult->toOne().columns;
+    assert($unionCols->size() == 2);
+    assert($unionCols->at(0).name == 'age');
+    assert($unionCols->at(1).name == 'name');
+
+    let diffResult = meta::pure::compiler::helper::evaluateRelationTypeOperation($unionResult->toOne(), $rt2, GenericTypeOperationType.Difference);
+    assert($diffResult->isNotEmpty());
+    let diffCols = $diffResult->toOne().columns;
+    assert($diffCols->size() == 1);
+    assert($diffCols->at(0).name == 'age');
+    true;
+}
