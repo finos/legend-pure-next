@@ -52,12 +52,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Execution (for running Pure tests) -->
+        <!-- Execution (for native implementations) -->
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-execution</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

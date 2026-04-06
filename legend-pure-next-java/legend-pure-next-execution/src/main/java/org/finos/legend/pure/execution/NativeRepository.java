@@ -27,7 +27,6 @@ import org.finos.legend.pure.execution.natives.math.MathNatives;
 import org.finos.legend.pure.execution.natives.meta.ElementPathNatives;
 import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
-import org.finos.legend.pure.execution.natives.compiler.CompilerNatives;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
@@ -93,8 +92,48 @@ public class NativeRepository
 
     public NativeRepository(MetadataAccess resolver)
     {
+        this(resolver, null);
+    }
+
+    private NativeRepository(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions)
+    {
         this.resolver = resolver;
         registerDefaults();
+        if (extensions != null)
+        {
+            extensions.forEach(ext -> ext.register(natives, lazyNatives, resolver));
+        }
+    }
+
+    public static class Builder
+    {
+        private MetadataAccess resolver;
+        private final List<NativeExtension> nativeExtensions = new ArrayList<>();
+
+        public Builder withResolver(MetadataAccess resolver)
+        {
+            this.resolver = resolver;
+            return this;
+        }
+
+        public Builder withNativeExtensions(Iterable<? extends NativeExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.nativeExtensions::add);
+            }
+            return this;
+        }
+
+        public NativeRepository build()
+        {
+            return new NativeRepository(resolver, nativeExtensions);
+        }
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
     }
 
     public MetadataAccess resolver()
@@ -175,7 +214,6 @@ public class NativeRepository
         ElementPathNatives.register(natives, lazyNatives, resolver);
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
-        CompilerNatives.register(natives, lazyNatives, resolver);
     }
 
     // =========================================================================

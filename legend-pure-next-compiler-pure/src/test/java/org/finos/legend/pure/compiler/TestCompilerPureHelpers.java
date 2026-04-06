@@ -60,7 +60,10 @@ class TestCompilerPureHelpers
                 .build();
         model.compile();
 
-        PureExecution execution = new PureExecution(new ScopedMetadataAccess(compilerModule, model));
+        PureExecution execution = PureExecution.builder()
+                .withResolver(new ScopedMetadataAccess(compilerModule, model))
+                .withNativeExtensions(Lists.mutable.with(new org.finos.legend.pure.compiler.pure.natives.CompilerNatives()))
+                .build();
 
         List<DynamicTest> tests = new ArrayList<>();
         for (String path : compilerModule.elementPaths())

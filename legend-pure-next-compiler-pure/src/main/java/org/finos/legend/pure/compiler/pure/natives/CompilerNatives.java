@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.execution.natives.compiler;
+package org.finos.legend.pure.compiler.pure.natives;
 
 import meta.pure.protocol.PureFile;
+import org.finos.legend.pure.execution.NativeExtension;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution._E_ValueSpecification;
@@ -25,11 +26,12 @@ import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 import java.util.List;
 import java.util.Map;
 
-public class CompilerNatives
+public class CompilerNatives implements NativeExtension
 {
-    public static void register(Map<String, NativeImpl> natives,
-                                Map<String, LazyNativeImpl> lazyNatives,
-                                MetadataAccess resolver)
+    @Override
+    public void register(Map<String, NativeImpl> natives,
+                         Map<String, LazyNativeImpl> lazyNatives,
+                         MetadataAccess resolver)
     {
         // meta::pure::compiler::parse(sourceId:String[1], content:String[1]):PureFile[1]
         natives.put("parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
