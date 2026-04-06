@@ -1186,9 +1186,38 @@ public class MetaNatives
         {
             if (method.getName().equals(setterName) && method.getParameterCount() == 1)
             {
+                Class<?> paramType = method.getParameterTypes()[0];
+                Object finalValue = rawValue;
+                if (paramType.isEnum() && rawValue instanceof meta.pure.metamodel.type.Enum enumValue)
+                {
+                    try
+                    {
+                        try
+                        {
+                            Object en = java.lang.Enum.valueOf((Class<java.lang.Enum>) (Class) paramType, enumValue._name());
+                            finalValue = en;
+                        }
+                        catch (IllegalArgumentException ign)
+                        {
+                            for (Object constant : paramType.getEnumConstants())
+                            {
+                                if (((java.lang.Enum<?>) constant).name().equalsIgnoreCase(enumValue._name()))
+                                {
+                                    finalValue = constant;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Ignore, let standard invocation fail if incorrect
+                    }
+                }
+
                 try
                 {
-                    method.invoke(instance, rawValue);
+                    method.invoke(instance, finalValue);
                     return;
                 }
                 catch (Exception e)

@@ -2,6 +2,15 @@ import meta::pure::compiler::helper::*;
 
 // FunctionType printing
 
+function meta::pure::compiler::helper::newFunctionType():FunctionType[1]
+{
+    ^FunctionType(
+        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any),
+        returnMultiplicity = PureOne
+    );
+}
+
+
 function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1]):String[1]
 {
     $ft->printFunctionType(true)
