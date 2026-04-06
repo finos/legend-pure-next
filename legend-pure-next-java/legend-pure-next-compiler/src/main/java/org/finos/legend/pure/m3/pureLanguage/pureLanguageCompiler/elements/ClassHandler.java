@@ -30,7 +30,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
@@ -183,7 +182,7 @@ public final class ClassHandler
                                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                                 : _GenericType.buildUserDefinedGenericType(cls, model);
                         meta.pure.metamodel.valuespecification.VariableExpressionImpl thisVar =
-                                _VariableExpression.newVariableExpression(model)
+                                new VariableExpressionImpl(model)
                                         ._name("this")
                                         ._genericType(ownerGenericType)
                                         ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
@@ -259,7 +258,7 @@ public final class ClassHandler
                 && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                 ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
                 : _GenericType.buildUserDefinedGenericType(cls, model);
-        VariableExpressionImpl thisVar = _VariableExpression.newVariableExpression(model)
+        VariableExpressionImpl thisVar = new VariableExpressionImpl(model)
                 ._name("this")
                 ._genericType(ownerGenericType)
                 ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));

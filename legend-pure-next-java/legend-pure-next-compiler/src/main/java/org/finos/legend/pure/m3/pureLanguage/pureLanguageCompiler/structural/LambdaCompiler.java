@@ -7,7 +7,6 @@ import meta.pure.protocol.grammar.function.LambdaFunction;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 /**
  * Compiles grammar-level {@link LambdaFunction}
@@ -48,7 +47,7 @@ public final class LambdaCompiler
 
     private static VariableExpression compileParameter(meta.pure.protocol.grammar.valuespecification.VariableExpression gp, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        VariableExpressionImpl cp = _VariableExpression.newVariableExpression(model)._name(gp._name() != null ? gp._name() : "");
+        VariableExpressionImpl cp = new VariableExpressionImpl(model)._name(gp._name() != null ? gp._name() : "");
         if (gp._sourceInformation() != null)
         {
             cp._sourceInformation(SourceInformationCompiler.compile(gp._sourceInformation(), model));

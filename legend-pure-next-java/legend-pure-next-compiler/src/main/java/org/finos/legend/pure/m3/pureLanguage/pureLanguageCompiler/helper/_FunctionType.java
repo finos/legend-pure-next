@@ -19,6 +19,7 @@ import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
@@ -35,18 +36,6 @@ public final class _FunctionType
 {
     private _FunctionType()
     {
-    }
-
-    /**
-     * Create a new {@link FunctionTypeImpl} with its {@code classifierGenericType}
-     * properly set to {@code GenericType(rawType=FunctionType)}.
-     */
-    public static FunctionTypeImpl newFunctionType(MetadataAccess model)
-    {
-        FunctionTypeImpl ft = new FunctionTypeImpl(model);
-        ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(
-                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::FunctionType"), model));
-        return ft;
     }
 
     /**
@@ -120,7 +109,7 @@ public final class _FunctionType
             return null;
         }
 
-        FunctionTypeImpl result = newFunctionType(model);
+        FunctionTypeImpl result = new FunctionTypeImpl(model);
 
         // Unify parameter types (contravariant: GLB)
         if (paramCount > 0)
@@ -147,7 +136,7 @@ public final class _FunctionType
                         : null;
 
                 String pName = functionTypes.getFirst()._parameters().get(idx) != null ? functionTypes.getFirst()._parameters().get(idx)._name() : null;
-                VariableExpressionImpl param = _VariableExpression.newVariableExpression(model)
+                VariableExpressionImpl param = new VariableExpressionImpl(model)
                         ._name((pName == null || pName.isEmpty()) ? "p" + idx : pName);
                 if (commonParamType != null)
                 {
@@ -337,7 +326,10 @@ public final class _FunctionType
                 if (resolvedGT != p._genericType() || resolvedMul != p._multiplicity())
                 {
                     String pName = p._name();
-                    return (VariableExpression) _VariableExpression.newVariableExpression(model)._name((pName == null || pName.isEmpty()) ? "p" + index : pName)._genericType(resolvedGT)._multiplicity(resolvedMul);
+                    return new VariableExpressionImpl(model)
+                            ._name((pName == null || pName.isEmpty()) ? "p" + index : pName)
+                            ._genericType(resolvedGT)
+                            ._multiplicity(resolvedMul);
                 }
                 return p;
             });
@@ -351,14 +343,11 @@ public final class _FunctionType
 
         if (changed)
         {
-            FunctionTypeImpl newFT = newFunctionType(model);
-            if (resolvedParams != null)
-            {
-                newFT._parameters(resolvedParams);
-            }
-            newFT._returnType(resolvedReturnType);
-            newFT._returnMultiplicity(resolvedReturnMul);
-            return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newFT)._typeArguments(_GenericType.typeArguments(genericType));
+            return new InferredGenericTypeImpl(model)
+                            ._type(new FunctionTypeImpl(model)._parameters(resolvedParams)
+                                    ._returnType(resolvedReturnType)
+                                    ._returnMultiplicity(resolvedReturnMul))
+                            ._typeArguments(_GenericType.typeArguments(genericType));
         }
         return null;
     }

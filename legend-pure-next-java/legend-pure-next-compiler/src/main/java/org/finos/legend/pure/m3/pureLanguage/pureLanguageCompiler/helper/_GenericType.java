@@ -61,20 +61,10 @@ public class _GenericType
         };
     }
 
-    public static meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl buildUserDefinedGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
+    public static meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl buildUserDefinedGenericType(Type rawType, MetadataAccess model)
     {
-        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        if (rawType != null)
-        {
-            gt._type(rawType);
-        }
-
-        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        cgt._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::UserDefinedGenericType"));
-        cgt._classifierGenericType(cgt);
-        
-        gt._classifierGenericType(cgt);
-        return gt;
+        return new UserDefinedGenericTypeImpl(model)
+                        ._type(rawType);
     }
 
     /**
@@ -139,7 +129,7 @@ public class _GenericType
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
             return new InferredGenericTypeImpl(model)
-                    ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
+                        ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
         }
 
         // If all elements are the same type parameter reference, return it directly.

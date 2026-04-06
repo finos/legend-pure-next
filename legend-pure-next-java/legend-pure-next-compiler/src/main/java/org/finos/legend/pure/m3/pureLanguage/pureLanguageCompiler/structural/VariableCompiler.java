@@ -16,10 +16,10 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 /**
  * Compiles a grammar-level {@link meta.pure.protocol.grammar.valuespecification.VariableExpression}
@@ -54,7 +54,7 @@ public final class VariableCompiler
             }
             return null;
         }
-        return _VariableExpression.newVariableExpression(model)
+        return new VariableExpressionImpl(model)
                 ._name(grammarParam._name() != null ? grammarParam._name() : "")
                 ._genericType(genericType)
                 ._multiplicity(MultiplicityCompiler.compile(grammarParam._multiplicity(), model));

@@ -21,13 +21,13 @@ import meta.pure.metamodel.relationship.GeneralizationImpl;
 import meta.pure.metamodel.type.EnumImpl;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
+import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
@@ -72,7 +72,7 @@ public final class EnumerationHandler
             // Create a parameterless lambda whose body is the AtomicValue
 
             // ClassifierGenericType -----
-            meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
+            meta.pure.metamodel.type.FunctionTypeImpl ft = new FunctionTypeImpl(model);
             ft._returnType(enumGT);
             ft._returnMultiplicity(pureOne);
             GenericType classifierGenericType = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)

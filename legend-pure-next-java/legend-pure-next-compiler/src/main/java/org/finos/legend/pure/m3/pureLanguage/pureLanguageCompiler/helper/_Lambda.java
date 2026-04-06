@@ -43,7 +43,7 @@ public final class _Lambda
      */
     public static FunctionType buildFunctionType(LambdaFunction lambda, MetadataAccess model)
     {
-        FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
+        FunctionTypeImpl ft = new FunctionTypeImpl(model);
         if (lambda._parameters() != null)
         {
             ft._parameters(lambda._parameters());

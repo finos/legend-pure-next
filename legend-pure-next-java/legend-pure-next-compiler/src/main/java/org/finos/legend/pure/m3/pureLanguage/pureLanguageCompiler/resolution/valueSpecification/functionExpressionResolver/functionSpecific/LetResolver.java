@@ -4,11 +4,11 @@ import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 public class LetResolver
 {
@@ -43,7 +43,7 @@ public class LetResolver
             // concrete resolved type of the assigned value.
             ValueSpecification valueExpr = fe._parametersValues().get(1);
             context.compilerContextExtensions(PureLanguageCompilerContext.class).addToCurrentScope(
-                    _VariableExpression.newVariableExpression(model)
+                    new VariableExpressionImpl(model)
                             ._name(varName)
                             ._genericType(valueExpr._genericType())
                             ._multiplicity(valueExpr._multiplicity()));

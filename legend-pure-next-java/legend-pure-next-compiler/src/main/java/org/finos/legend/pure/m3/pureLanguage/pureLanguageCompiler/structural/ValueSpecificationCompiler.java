@@ -14,7 +14,6 @@ import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -151,7 +150,7 @@ public final class ValueSpecificationCompiler
     private static VariableExpressionImpl compileVariableExpression(
             meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model)
     {
-        VariableExpressionImpl result = _VariableExpression.newVariableExpression(model)
+        VariableExpressionImpl result = new VariableExpressionImpl(model)
                 ._name(var._name() != null ? var._name() : "");
         if (var._sourceInformation() != null)
         {

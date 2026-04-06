@@ -17,17 +17,17 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 import meta.pure.metamodel.function.property.QualifiedProperty;
 import meta.pure.metamodel.function.property.QualifiedPropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 
 import java.util.Objects;
@@ -80,7 +80,7 @@ public final class QualifiedPropertyCompiler
         // Prepend implicit 'this' parameter typed to the owner
         if (owner != null)
         {
-            VariableExpression thisParam = _VariableExpression.newVariableExpression(model)
+            VariableExpression thisParam = new VariableExpressionImpl(model)
                     ._name("this")
                     ._genericType(owner)
                     ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
@@ -110,7 +110,7 @@ public final class QualifiedPropertyCompiler
                     _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::function::property::QualifiedProperty"), model)
                             ._typeArguments(Lists.mutable.with(
                                     _GenericType.buildUserDefinedGenericType(
-                                            _FunctionType.newFunctionType(model)
+                                            new FunctionTypeImpl(model)
                                                     ._parameters(parameters)
                                                     ._returnType(genericType)
                                                     ._returnMultiplicity(multiplicity), model))));

@@ -15,6 +15,7 @@ import meta.pure.metamodel.valuespecification.DotApplicationImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -25,7 +26,6 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Property;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.ValueSpecificationResolver;
 
 import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
@@ -66,7 +66,10 @@ public final class DotApplicationResolver
         // Resolve the receiver to get its genericType before property lookup
         MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
         ValueSpecification receiver = processParameters.getFirst();
-
+        if (receiver._genericType() == null)
+        {
+            return expr;
+        }
         Type ownerType = _GenericType.type(receiver._genericType());
         context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s additionalParams=%d",
                 functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())), processParameters.size());
@@ -254,14 +257,14 @@ public final class DotApplicationResolver
         Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         // Build lambda param: v_automap:ReceiverElementType[1]
-        VariableExpression lambdaParam = _VariableExpression.newVariableExpression(model)
+        VariableExpression lambdaParam = new VariableExpressionImpl(model)
                 ._name("v_automap")
                 ._genericType(receiver._genericType())
                 ._multiplicity(pureOne);
 
         // Build lambda body: $v_automap.name (an unresolved DotApplication)
         // For qualified properties, includes additional parameters (e.g., $v_automap.name('ok3'))
-        VariableExpression varRef = _VariableExpression.newVariableExpression(model)
+        VariableExpression varRef = new VariableExpressionImpl(model)
                 ._name("v_automap");
 
         MutableList<ValueSpecification> dotBodyParams = Lists.mutable.with(varRef);
