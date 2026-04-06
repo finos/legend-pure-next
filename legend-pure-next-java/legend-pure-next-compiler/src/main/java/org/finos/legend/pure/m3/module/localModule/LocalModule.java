@@ -57,8 +57,8 @@ public class LocalModule implements Module
 
     /** Sources provided as content strings (for tests). */
     private final List<PureContent> sources;
-    /** Source folder containing .pure files (for production). */
-    private final Path sourceFolder;
+    /** Source folders containing .pure files (for production). */
+    private final List<Path> sourceFolders;
 
     private PureModel pureModel;
     private TopLevelCompiler state;
@@ -74,7 +74,7 @@ public class LocalModule implements Module
         this.packagePattern = packagePattern;
         this.dependencies = dependencies;
         this.sources = sources;
-        this.sourceFolder = null;
+        this.sourceFolders = null;
     }
 
     @Override
@@ -88,11 +88,22 @@ public class LocalModule implements Module
      */
     public LocalModule(String name, String packagePattern, List<String> dependencies, Path sourceFolder)
     {
+        this(name, packagePattern, List.of(sourceFolder), dependencies);
+    }
+
+    /**
+     * Create a module from multiple folders of .pure files.
+     */
+    public LocalModule(String name, String packagePattern, Iterable<Path> sourceFolders, List<String> dependencies)
+    {
         this.name = name;
         this.packagePattern = packagePattern;
         this.dependencies = dependencies;
         this.sources = null;
-        this.sourceFolder = sourceFolder;
+        this.sourceFolders = new java.util.ArrayList<>();
+        if (sourceFolders != null) {
+            sourceFolders.forEach(this.sourceFolders::add);
+        }
     }
 
     @Override
@@ -192,32 +203,37 @@ public class LocalModule implements Module
         {
             return sources;
         }
-        if (sourceFolder == null)
+        if (sourceFolders == null || sourceFolders.isEmpty())
         {
             return List.of();
         }
-        try (Stream<Path> walk = Files.walk(sourceFolder))
+        List<PureContent> result = new java.util.ArrayList<>();
+        for (Path sourceFolder : sourceFolders)
         {
-            return walk.filter(p -> p.toString().endsWith(".pure"))
-                    .map(p ->
-                    {
-                        try
+            if (!Files.exists(sourceFolder)) continue;
+            try (Stream<Path> walk = Files.walk(sourceFolder))
+            {
+                walk.filter(p -> p.toString().endsWith(".pure"))
+                        .forEach(p ->
                         {
-                            String content = Files.readString(p, StandardCharsets.UTF_8);
-                            String sourceId = sourceFolder.relativize(p).toString();
-                            return new PureContent(content, sourceId);
-                        }
-                        catch (IOException e)
-                        {
-                            throw new RuntimeException("Failed to read: " + p, e);
-                        }
-                    })
-                    .toList();
+                            try
+                            {
+                                String content = Files.readString(p, StandardCharsets.UTF_8);
+                                String sourceId = sourceFolder.relativize(p).toString();
+                                result.add(new PureContent(content, sourceId));
+                            }
+                            catch (IOException e)
+                            {
+                                throw new RuntimeException("Failed to read: " + p, e);
+                            }
+                        });
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Failed to scan folder: " + sourceFolder, e);
+            }
         }
-        catch (IOException e)
-        {
-            throw new RuntimeException("Failed to scan folder: " + sourceFolder, e);
-        }
+        return result;
     }
 
     private void validateNonDuplicateElements(TopLevelCompiler cs)

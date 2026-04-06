@@ -639,7 +639,11 @@ public class M3ProtocolGenerator
         ResIterator profileIter = model.listSubjectsWithProperty(rdfType, m3Profile);
         while (profileIter.hasNext())
         {
-            writeProfile(w, profileIter.next());
+            Resource profileRes = profileIter.next();
+            if (!"meta_pure_profiles_typemodifiers".equals(getLocalName(profileRes)))
+            {
+                writeProfile(w, profileRes);
+            }
         }
 
         ResIterator stereotypeIter = model.listSubjectsWithProperty(rdfType, m3Stereotype);
@@ -930,7 +934,8 @@ public class M3ProtocolGenerator
 
                 if (oldUri != null
                         && oldUri.contains("meta_pure_metamodel")
-                        && !oldUri.contains("meta_pure_protocol_grammar"))
+                        && !oldUri.contains("meta_pure_protocol_grammar")
+                        && !oldUri.contains("meta_pure_metamodel_type_primitives"))
                 {
                     String newUri = oldUri.replace(
                         "meta_pure_metamodel", "meta_pure_protocol_grammar");

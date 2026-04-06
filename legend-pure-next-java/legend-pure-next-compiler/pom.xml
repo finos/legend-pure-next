@@ -179,6 +179,7 @@
                             <mainClass>org.finos.legend.pure.m3.SpecificationBinaryBuilder</mainClass>
                             <arguments>
                                 <argument>${project.basedir}/../../legend-pure-next-specification/src/main/resources/specification/functions</argument>
+                                <argument>${project.basedir}/../../legend-pure-next-specification/target/generated-resources/specification_protocol</argument>
                                 <argument>${project.build.directory}/core.pdb</argument>
                             </arguments>
                         </configuration>

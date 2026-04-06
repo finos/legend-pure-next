@@ -40,6 +40,8 @@ public class M3MetamodelReader
     private static final String M3_NS = "https://finos.org/legend/pure/m3#";
 
     private final Model model;
+    private final boolean fullyQualifyTypes;
+
     private final Resource m3Class;
     private final Resource m3Enumeration;
     private final Resource m3Property;
@@ -50,12 +52,23 @@ public class M3MetamodelReader
 
     public M3MetamodelReader(String ttlPath)
     {
-        this(RDFDataMgr.loadModel(ttlPath));
+        this(RDFDataMgr.loadModel(ttlPath), false);
+    }
+
+    public M3MetamodelReader(String ttlPath, boolean fullyQualifyTypes)
+    {
+        this(RDFDataMgr.loadModel(ttlPath), fullyQualifyTypes);
     }
 
     public M3MetamodelReader(Model model)
     {
+        this(model, false);
+    }
+
+    public M3MetamodelReader(Model model, boolean fullyQualifyTypes)
+    {
         this.model = model;
+        this.fullyQualifyTypes = fullyQualifyTypes;
         this.m3Class = model.createResource(M3_NS + "Class");
         this.m3Enumeration = model.createResource(M3_NS + "Enumeration");
         this.m3Property = model.createResource(M3_NS + "Property");
@@ -373,7 +386,8 @@ public class M3MetamodelReader
         Statement rawTypeStmt = getM3Statement(node.asResource(), "type");
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
-            return getLocalName(rawTypeStmt.getObject().asResource());
+            Resource typeRes = rawTypeStmt.getObject().asResource();
+            return fullyQualifyTypes ? getFqn(typeRes) : getLocalName(typeRes);
         }
         return null;
     }
@@ -430,7 +444,8 @@ public class M3MetamodelReader
         {
             return null;
         }
-        String rawName = getName(rawTypeStmt.getObject().asResource());
+        Resource typeRes = rawTypeStmt.getObject().asResource();
+        String rawName = fullyQualifyTypes ? getFqn(typeRes) : getName(typeRes);
         if (rawName == null)
         {
             return null;
@@ -561,6 +576,14 @@ public class M3MetamodelReader
                 {
                     sb.append(getName(tp.getObject().asResource()));
                 }
+                else 
+                {
+                    sb.append("Any");
+                }
+            }
+            else
+            {
+                sb.append("Any");
             }
             Statement multStmt = getM3StatementMulti(paramRes, "multiplicity", "ValueSpecification_multiplicity");
             if (multStmt != null && multStmt.getObject().isResource())
@@ -581,6 +604,14 @@ public class M3MetamodelReader
             {
                 sb.append(getName(tp.getObject().asResource()));
             }
+            else
+            {
+                sb.append("Any");
+            }
+        }
+        else
+        {
+            sb.append("Any");
         }
 
         Statement retMultStmt = getM3Statement(ftRes, "returnMultiplicity");
@@ -784,6 +815,29 @@ public class M3MetamodelReader
      * PackageableElement uses :name, Property uses :abstractProperty_name,
      * Enum values use :enumValue, TypeParameter uses :typeParameter_name, etc.
      */
+    private String getFqn(Resource res)
+    {
+        String name = getName(res);
+        if (name == null)
+        {
+            name = getLocalName(res);
+            if (name == null)
+            {
+                return null;
+            }
+        }
+        String pkg = getPackagePath(res);
+        if (pkg != null && !pkg.isEmpty())
+        {
+            if (name.startsWith("meta::"))
+            {
+                return name;
+            }
+            return pkg + "::" + name;
+        }
+        return name;
+    }
+
     private String getName(Resource res)
     {
         for (String predicate : NAME_PREDICATES)

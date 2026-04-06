@@ -41,7 +41,7 @@ public class RdfPureGenerator
         }
         String inputFile = args[0];
         String sourceName = Path.of(inputFile).getFileName().toString();
-        M3Model model = new M3MetamodelReader(inputFile).read();
+        M3Model model = new M3MetamodelReader(inputFile, true).read();
         new RdfPureGenerator(model, sourceName).generate(Path.of(args[1]));
     }
 
@@ -71,16 +71,6 @@ public class RdfPureGenerator
         StringBuilder sb = new StringBuilder();
         sb.append("// AUTO-GENERATED from ").append(sourceName).append(" - DO NOT EDIT\n\n");
 
-        if (!m3Model.profileInfoMap().isEmpty())
-        {
-            sb.append("// --- Profiles ---\n\n");
-            m3Model.profileInfoMap().valuesView().forEach(pi ->
-            {
-                generateProfile(sb, pi);
-                sb.append("\n");
-            });
-        }
-
         MutableSortedMap<String, MutableList<ClassInfo>> classesByPackage = SortedMaps.mutable.empty();
         m3Model.classInfoMap().valuesView().forEach(ci ->
         {
@@ -98,6 +88,17 @@ public class RdfPureGenerator
         MutableSortedMap<String, Object> allPackages = SortedMaps.mutable.empty();
         allPackages.putAll(classesByPackage);
         enumsByPackage.keysView().forEach(pkg -> allPackages.putIfAbsent(pkg, null));
+
+        if (!m3Model.profileInfoMap().isEmpty())
+        {
+            sb.append("// --- Profiles ---\n\n");
+            m3Model.profileInfoMap().valuesView().forEach(pi ->
+            {
+                generateProfile(sb, pi);
+                sb.append("\n");
+            });
+        }
+
 
         boolean[] first = {true};
         allPackages.keysView().forEach(pkg ->
@@ -153,18 +154,20 @@ public class RdfPureGenerator
     private void generateClass(StringBuilder sb, ClassInfo classInfo)
     {
         String fqn = buildFqn(classInfo.packagePath, classInfo.name);
+        sb.append("Class ");
         if (!classInfo.stereotypes.isEmpty())
         {
-            classInfo.stereotypes.forEach(st -> sb.append("<<").append(st).append(">>"));
-            sb.append("\n");
+            sb.append("<<");
+            sb.append(classInfo.stereotypes.makeString(", "));
+            sb.append(">> ");
         }
         if (!classInfo.taggedValues.isEmpty())
         {
             classInfo.taggedValues.forEach(tv ->
                     sb.append("{").append(tv.tag).append(" = '").append(tv.value).append("'}"));
-            sb.append("\n");
+            sb.append(" ");
         }
-        sb.append("Class ").append(fqn);
+        sb.append(fqn);
         if (!classInfo.typeParameters.isEmpty() || !classInfo.multiplicityParameters.isEmpty())
         {
             sb.append("<");
@@ -189,8 +192,9 @@ public class RdfPureGenerator
             sb.append("  ");
             if (!prop.stereotypes.isEmpty())
             {
-                prop.stereotypes.forEach(st -> sb.append("<<").append(st).append(">>"));
-                sb.append(" ");
+                sb.append("<<");
+                sb.append(prop.stereotypes.makeString(", "));
+                sb.append(">> ");
             }
             if (!prop.taggedValues.isEmpty())
             {

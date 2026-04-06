@@ -1,0 +1,36 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::protocol::*;
+
+native function meta::pure::compiler::parse(sourceId:String[1], content:String[1]):PureFile[1];
+
+function <<test.Test>> meta::pure::compiler::testParseNativeIntegration() : Boolean[1]
+{
+    let content = 'Class pkg::MyClass { name:String[1]; }';
+    let file = meta::pure::compiler::parse('testSource', $content);
+    assertEquals('testSource', $file.sourceId);
+    assertEquals(1, $file.sections->size());
+    
+    let section = $file.sections->at(0);
+    assertEquals(1, $section.elements->size());
+    
+    let cls = $section.elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
+    assertEquals('MyClass', $cls.name);
+    assertEquals('pkg', $cls.package->cast(@meta::pure::protocol::grammar::Package_Pointer).pointerValue);
+    assertEquals(1, $cls.properties->size());
+    
+    let prop = $cls.properties->at(0);
+    assertEquals('name', $prop.name);
+}

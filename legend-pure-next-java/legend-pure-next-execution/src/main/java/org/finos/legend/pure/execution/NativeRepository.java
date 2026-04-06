@@ -27,6 +27,7 @@ import org.finos.legend.pure.execution.natives.math.MathNatives;
 import org.finos.legend.pure.execution.natives.meta.ElementPathNatives;
 import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
+import org.finos.legend.pure.execution.natives.compiler.CompilerNatives;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
@@ -174,6 +175,7 @@ public class NativeRepository
         ElementPathNatives.register(natives, lazyNatives, resolver);
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
+        CompilerNatives.register(natives, lazyNatives, resolver);
     }
 
     // =========================================================================

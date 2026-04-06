@@ -49,10 +49,14 @@ public class SpecificationBinaryBuilder
             System.exit(1);
         }
 
-        Path sourceDir = Path.of(args[0]);
-        Path outputFile = Path.of(args[1]);
+        List<Path> sourceDirs = new ArrayList<>();
+        for (int i = 0; i < args.length - 1; i++)
+        {
+            sourceDirs.add(Path.of(args[i]));
+        }
+        Path outputFile = Path.of(args[args.length - 1]);
 
-        compile(sourceDir, outputFile);
+        compile(sourceDirs, outputFile);
     }
 
     /**
@@ -60,12 +64,12 @@ public class SpecificationBinaryBuilder
      * The archive includes both bootstrap M3 types and locally compiled elements,
      * driven from the module index rather than scanning the package tree.
      */
-    public static void compile(Path sourceDir, Path outputFile) throws IOException
+    public static void compile(List<Path> sourceDirs, Path outputFile) throws IOException
     {
-        System.out.println("Compiling Pure model from " + sourceDir + "...");
+        System.out.println("Compiling Pure model from " + sourceDirs + "...");
 
         // --- Compile ---
-        LocalModule localModule = new LocalModule("specification", "(meta::pure)(::.*)?", List.of("m3"), sourceDir);
+        LocalModule localModule = new LocalModule("specification", "(meta::pure)(::.*)?", sourceDirs, List.of("m3"));
         MutableList<Module> modules = Lists.mutable.with(new BootstrapModule(), localModule);
         MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
         PureModel model = PureModel.withModules(modules).withExtensions(extensions).build();
