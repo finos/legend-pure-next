@@ -28,14 +28,14 @@ class meta::pure::test::MyClassWithTypeVariables extends Any  ~Class<meta::pure:
           Variable x :#Integer##[1]#  ~VariableExpression  @8:25-8:26
       Variable z :#String##[1]#  ~VariableExpression  @8:40-8:41
   constraint wx
-    Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:Integer[1])
+    Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:Integer[1])  ~#LambdaFunction<#{meta::pure::test::MyClassWithTypeVariables[1], Integer[1]->#Boolean##[1]#}#>#
       FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @3:36-3:39
         ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @3:27-3:34
           DotApplication meta::pure::test::MyClassWithTypeVariables.text :#String##[*]#  ~DotApplication  @3:22-3:26
             Variable this :#meta::pure::test::MyClassWithTypeVariables##[1]#  ~VariableExpression  @3:17-3:21
         Variable x :#Integer##[1]#  ~VariableExpression  @3:38-3:39
     messageFunction
-      Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:Integer[1])
+      Lambda(this:meta::pure::test::MyClassWithTypeVariables[1], x:Integer[1])  ~#LambdaFunction<#{meta::pure::test::MyClassWithTypeVariables[1], Integer[1]->#String##[1]#}#>#
         FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~FunctionInvocation  @3:58-3:110
           FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~FunctionInvocation  @3:58-3:110
             FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~FunctionInvocation  @3:58-3:110

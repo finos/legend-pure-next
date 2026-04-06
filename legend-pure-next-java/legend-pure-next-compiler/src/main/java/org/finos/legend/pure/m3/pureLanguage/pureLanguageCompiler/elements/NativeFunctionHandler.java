@@ -36,14 +36,14 @@ public final class NativeFunctionHandler
 
     public static NativeFunction firstPass(meta.pure.protocol.grammar.function.NativeFunction grammar, MetadataAccess model)
     {
-        return new NativeFunctionImpl(model)
+        return new NativeFunctionImpl()
                 ._name(grammar._name())
                 ._functionName(grammar._functionName());
     }
 
     public static NativeFunction secondPass(NativeFunctionImpl result, meta.pure.protocol.grammar.function.NativeFunction grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        PackageableFunctionCompiler.compileShared(result, grammar, imports, model, context);
+        result = (NativeFunctionImpl) PackageableFunctionCompiler.compileShared(result, grammar, imports, model, context);
 
         // Compile stereotypes and tagged values
         if (grammar._stereotypes() != null && grammar._stereotypes().notEmpty())

@@ -22,9 +22,11 @@ import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.FunctionType;
+import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -192,7 +194,7 @@ public final class RelationColumnResolver
         MutableList<String> columnNames = extractColumnNames(expr);
 
         // Look up each column in the reference relation — this IS the SUBSET result
-        RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
+        RelationTypeImpl enrichedRT = new RelationTypeImpl();
         GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
         MutableList<Column> enrichedColumns = columnNames.collect(colName ->
                 {
@@ -210,7 +212,12 @@ public final class RelationColumnResolver
                             foundColumn._multiplicity(), false, model);
                 }
         ).select(Objects::nonNull);
-        enrichedRT._columns(enrichedColumns);
+        enrichedRT._columns(enrichedColumns)
+                  ._classifierGenericType(
+                            new UserDefinedGenericTypeImpl(model)
+                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                    ._typeArguments(Lists.mutable.with(enrichedGT))
+                  );
 
         context.debug("tryResolveSubsetForTypeHolder: resolved Z=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
@@ -250,23 +257,28 @@ public final class RelationColumnResolver
         MutableList<String> columnNames = extractColumnNames(expr);
 
         // Build the enriched RelationType using the column name + resolved K type
-        RelationTypeImpl enrichedRT = new RelationTypeImpl(model);
+        RelationTypeImpl enrichedRT = new RelationTypeImpl();
         GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
         enrichedRT._columns(columnNames.collect(colName ->
-                        _Column.build(
-                                colName,
-                                enrichedGT,
-                                resolvedColType,
-                                wildcardCol._multiplicity() != null
-                                        ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
-                                        : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
-                                          ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
-                                          ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L)),
-                                false,
-                                model
+                                _Column.build(
+                                        colName,
+                                        enrichedGT,
+                                        resolvedColType,
+                                        wildcardCol._multiplicity() != null
+                                                ? _Multiplicity.makeAsConcreteAsPossible(wildcardCol._multiplicity(), bindings)
+                                                : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
+                                                  ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
+                                                  ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L)),
+                                        false,
+                                        model
+                                )
                         )
-                )
-        );
+                    )
+                    ._classifierGenericType(
+                            new UserDefinedGenericTypeImpl(model)
+                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                    ._typeArguments(Lists.mutable.with(enrichedGT))
+                    );
 
         context.debug("resolveFromEqualWithWildcard: resolved V=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
@@ -275,8 +287,8 @@ public final class RelationColumnResolver
                         paramValues.get(0),
                         paramValues.get(1)
                                 ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                                                ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                                                ._typeArguments(Lists.mutable.with(enrichedGT))
+                                        ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                                        ._typeArguments(Lists.mutable.with(enrichedGT))
                                 )
                 )
         );
@@ -331,8 +343,17 @@ public final class RelationColumnResolver
         MutableList<Column> mergedColumns = ((Collection) paramValues.get(0))._values().flatCollect(v ->
                 ((RelationType) _GenericType.type(_GenericType.typeArguments(((FunctionExpression) v)._parametersValues().getLast()._genericType()).getFirst()))._columns()
         );
+        RelationType mergedRT = new RelationTypeImpl();
 
-        meta.pure.metamodel.relation.RelationType mergedRT = new RelationTypeImpl(model)._columns(mergedColumns);
+        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(mergedRT);
+
+        mergedRT._columns(mergedColumns)
+                ._classifierGenericType(
+                        new UserDefinedGenericTypeImpl(model)
+                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                ._typeArguments(Lists.mutable.with(enrichedGT))
+                );
+
 
         return expr._parametersValues(
                 Lists.mutable.with(
@@ -386,10 +407,15 @@ public final class RelationColumnResolver
         ValueSpecification lastExpr = lambda._expressionSequence().getLast();
         String colName = (String) ((AtomicValue) paramValues.get(nameIdx))._value();
 
-        RelationTypeImpl relationType = new RelationTypeImpl(model);
+        RelationTypeImpl relationType = new RelationTypeImpl();
         GenericType ownerGT = new InferredGenericTypeImpl(model)._type(relationType);
         Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
-        relationType._columns(Lists.mutable.with(col));
+        relationType._columns(Lists.mutable.with(col))
+                    ._classifierGenericType(
+                            new UserDefinedGenericTypeImpl(model)
+                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                    ._typeArguments(Lists.mutable.with(ownerGT))
+                    );
 
         return expr._parametersValues(paramValues.collectWithIndex((x, y) ->
                         y == typeHolderIdx ? x._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)

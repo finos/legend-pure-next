@@ -16,8 +16,11 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
+import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Column;
@@ -41,14 +44,21 @@ public final class RelationTypeCompiler
             meta.pure.protocol.grammar.relation.RelationType rt,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        RelationTypeImpl result = new RelationTypeImpl(model);
+        RelationTypeImpl result = new RelationTypeImpl();
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
-        return result._columns(rt._columns().collect(col -> _Column.build(
-                col._name(),
-                ownerGT,
-                col._genericType() != null ? GenericTypeCompiler.compile(col._genericType(), imports, model, context) : null,
-                col._multiplicity() != null ? MultiplicityCompiler.compile(col._multiplicity(), model) : null,
-                col._nameWildCard() != null && col._nameWildCard(),
-                model)));
+        return result
+                ._columns(rt._columns().collect(col -> _Column.build(
+                                                                    col._name(),
+                                                                    ownerGT,
+                                                                    col._genericType() != null ? GenericTypeCompiler.compile(col._genericType(), imports, model, context) : null,
+                                                                    col._multiplicity() != null ? MultiplicityCompiler.compile(col._multiplicity(), model) : null,
+                                                                    col._nameWildCard() != null && col._nameWildCard(),
+                                                                    model)
+                                                                )
+                )._classifierGenericType(
+                        new UserDefinedGenericTypeImpl(model)
+                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                ._typeArguments(Lists.mutable.with(ownerGT))
+                );
     }
 }

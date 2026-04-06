@@ -20,21 +20,21 @@ function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
     typeParam T -> String
     mulParam m -> [1]
     AtomicValue  '' :String[1]  ~AtomicValue  @4:4-4:5
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @4:14-4:20
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<String|?>  @4:14-4:20
   ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[2]#  ~ArrowInvocation  @5:13-5:28
     typeParam T -> String
     mulParam m -> [2]
     Collection :#String#[2]  ~Collection  @5:4-5:12
       AtomicValue  'a' :String[1]  ~AtomicValue  @5:5-5:7
       AtomicValue  'b' :String[1]  ~AtomicValue  @5:9-5:11
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @5:21-5:27
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<String|?>  @5:21-5:27
   ArrowInvocation _cast_T_MANY__GenericTypeAndMultiplicityHolder_1__T_m_ :#String##[1..*]#  ~ArrowInvocation  @6:13-6:27
     typeParam T -> #String#
     mulParam m -> [1..*]
     Collection :#String#[2]  ~Collection  @6:4-6:12
       AtomicValue  'a' :String[1]  ~AtomicValue  @6:5-6:7
       AtomicValue  'b' :String[1]  ~AtomicValue  @6:9-6:11
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @6:21-6:26
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<?|1..*>  @6:21-6:26
   ArrowInvocation _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#Integer##[1]#  ~ArrowInvocation  @7:5-7:36
     typeParam T -> Integer
     mulParam m -> #[1]#
@@ -42,8 +42,8 @@ function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
       typeParam T -> Number
       mulParam m -> [1]
       AtomicValue  1 :Integer[1]  ~AtomicValue  @7:4-7:4
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Number|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @7:12-7:18
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @7:28-7:35
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Number|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Number|?>  @7:12-7:18
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>  @7:28-7:35
 
 native function _cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_(source:Any[m], object:GenericTypeAndMultiplicityHolder<T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_|?>[1]):T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_[m]  ~NativeFunction<{Any[m], GenericTypeAndMultiplicityHolder<T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_|?>[1]->T~_cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_[m]}>
 

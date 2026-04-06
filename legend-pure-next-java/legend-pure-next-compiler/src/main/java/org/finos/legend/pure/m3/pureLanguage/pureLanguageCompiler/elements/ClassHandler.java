@@ -28,6 +28,7 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
@@ -54,8 +55,8 @@ public final class ClassHandler
 
     public static meta.pure.metamodel.type.Class firstPass(meta.pure.protocol.grammar.type.Class grammar, MetadataAccess model)
     {
-        return new ClassImpl(model)
-                ._name(grammar._name());
+        return new ClassImpl() // the classifierGenericType is set in the secondPass
+                   ._name(grammar._name());
     }
 
     public static meta.pure.metamodel.type.Class secondPass(ClassImpl result, meta.pure.protocol.grammar.type.Class grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
@@ -193,6 +194,8 @@ public final class ClassHandler
                         {
                             // Resolve expression sequence through the third-pass compiler
                             lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
+                            // Set the classifierGenericType on the lambda now that its body is resolved
+                            lambda._classifierGenericType(_Lambda.getLambdaClassifierGenericType(model, lambda));
                         }
                         finally
                         {

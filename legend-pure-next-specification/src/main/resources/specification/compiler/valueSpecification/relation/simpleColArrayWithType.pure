@@ -11,4 +11,4 @@ function test__ColSpecArray_1_():ColSpecArray<(name:String[1], id:Integer[1])>[1
     Collection :#String#[2]  ~Collection
       AtomicValue  'name' :String[1]  ~AtomicValue  @4:6-4:9
       AtomicValue  'id' :String[1]  ~AtomicValue  @4:19-4:20
-    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<(name:String[1], id:Integer[1])>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<(name:String[1], id:Integer[1])>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<(name:String[1], id:Integer[1])>

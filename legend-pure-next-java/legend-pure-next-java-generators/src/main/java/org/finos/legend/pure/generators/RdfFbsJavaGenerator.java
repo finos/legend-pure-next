@@ -989,6 +989,15 @@ public class RdfFbsJavaGenerator
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
         sb.append("        return String.valueOf(obj);\n");
         sb.append("    }\n\n");
+        sb.append("    private static String sourceInfo(Object obj)\n");
+        sb.append("    {\n");
+        sb.append("        if (obj instanceof Any a && a._sourceInformation() != null)\n");
+        sb.append("        {\n");
+        sb.append("            meta.pure.metamodel.SourceInformation si = a._sourceInformation();\n");
+        sb.append("            return \" at \" + si._sourceId() + \":\" + si._startLine() + \"c\" + si._startColumn();\n");
+        sb.append("        }\n");
+        sb.append("        return \"\";\n");
+        sb.append("    }\n\n");
 
         // Generate a write method for each class
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
@@ -1008,11 +1017,11 @@ public class RdfFbsJavaGenerator
 
                 if ("PureOne".equals(prop.multiplicity))
                 {
-                    sb.append("        if (obj._").append(prop.name).append("() == null) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1] but is null: \" + pointerPath(obj)); }\n");
+                    sb.append("        if (obj._").append(prop.name).append("() == null) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1] but is null: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
                 }
                 else if ("OneMany".equals(prop.multiplicity))
                 {
-                    sb.append("        if (obj._").append(prop.name).append("() == null || obj._").append(prop.name).append("().isEmpty()) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj)); }\n");
+                    sb.append("        if (obj._").append(prop.name).append("() == null || obj._").append(prop.name).append("().isEmpty()) { throw new IllegalArgumentException(\"Validation error: Property '").append(prop.name).append("' on '").append(classInfo.name).append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
                 }
             });
 

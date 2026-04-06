@@ -111,8 +111,7 @@ public final class ValueSpecificationCompiler
     {
         if (holder instanceof meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolder)
         {
-            return new meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl(model)
-                    ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model));
+            return new meta.pure.metamodel.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl();
         }
         else if (holder instanceof meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolder)
         {
@@ -136,8 +135,8 @@ public final class ValueSpecificationCompiler
                 classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
             }
 
-            return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl(model)
-                    ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder"), model))
+            return new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
+                    ._classifierGenericType(classifierGT)
                     ._genericType(classifierGT)
                     ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"))
                     ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation(), context.getSourceId(), model) : null);

@@ -25,7 +25,11 @@ public final class LambdaCompiler
      */
     public static LambdaFunctionImpl compile(LambdaFunction grammarLambda, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        LambdaFunctionImpl result = new LambdaFunctionImpl(model);
+        LambdaFunctionImpl result = new LambdaFunctionImpl();
+        if (grammarLambda._sourceInformation() != null)
+        {
+            result._sourceInformation(SourceInformationCompiler.compile(grammarLambda._sourceInformation(), context.getSourceId(), model));
+        }
 
         MutableList<? extends meta.pure.protocol.grammar.valuespecification.VariableExpression> grammarParams = grammarLambda._parameters();
         if (grammarParams != null && grammarParams.notEmpty())

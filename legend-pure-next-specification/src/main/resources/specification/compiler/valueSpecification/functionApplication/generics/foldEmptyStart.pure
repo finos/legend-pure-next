@@ -13,7 +13,7 @@ function test::tst__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
       typeParam T -> Integer
       mulParam m -> [0]
       Collection :#Nil#[0]  ~Collection  @4:10-4:11
-      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @4:19-4:26
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>  @4:19-4:26
     Lambda(val:#Integer##[1]#, acc:#Nil##[*]#) :#LambdaFunction<#{#Integer##[1]#, #Nil##[*]#->#Integer##[1..*]#}#>#[1]  ~AtomicValue  @4:30-4:56
       FunctionInvocation add_T_MANY__T_1__T_$1_MANY$_ :#Integer##[1..*]#  ~FunctionInvocation  @4:41-4:55
         typeParam T -> #Integer#

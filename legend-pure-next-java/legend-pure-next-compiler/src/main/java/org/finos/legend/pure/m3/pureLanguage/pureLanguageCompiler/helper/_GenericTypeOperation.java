@@ -20,9 +20,11 @@ import meta.pure.metamodel.relation.GenericTypeOperationImpl;
 import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
+import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -98,7 +100,7 @@ public final class _GenericTypeOperation
         {
             case UNION ->
             {
-                RelationTypeImpl result = new RelationTypeImpl(model);
+                RelationTypeImpl result = new RelationTypeImpl();
                 GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
@@ -115,7 +117,13 @@ public final class _GenericTypeOperation
                         columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
                     }
                 }
-                yield result._columns(columns);
+                yield result
+                        ._columns(columns)
+                        ._classifierGenericType(
+                                new UserDefinedGenericTypeImpl(model)
+                                        ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                        ._typeArguments(Lists.mutable.with(ownerGT))
+                        );
             }
             case DIFFERENCE ->
             {
@@ -124,7 +132,7 @@ public final class _GenericTypeOperation
                 {
                     rightRT._columns().forEach(c -> rightNames.add(c._name()));
                 }
-                RelationTypeImpl result = new RelationTypeImpl(model);
+                RelationTypeImpl result = new RelationTypeImpl();
                 GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
                 MutableList<Column> columns = Lists.mutable.empty();
                 if (leftRT._columns() != null)
@@ -137,7 +145,13 @@ public final class _GenericTypeOperation
                         }
                     }
                 }
-                yield result._columns(columns);
+                yield result
+                        ._columns(columns)
+                        ._classifierGenericType(
+                                new UserDefinedGenericTypeImpl(model)
+                                        ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                        ._typeArguments(Lists.mutable.with(ownerGT))
+                        );
             }
             case EQUAL, SUBSET -> null;
         };

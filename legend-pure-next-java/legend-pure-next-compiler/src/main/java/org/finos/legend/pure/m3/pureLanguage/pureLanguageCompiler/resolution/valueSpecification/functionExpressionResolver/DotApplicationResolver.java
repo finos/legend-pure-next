@@ -275,7 +275,7 @@ public final class DotApplicationResolver
         dotBody._sourceInformation(expr._sourceInformation());
 
         // Build the lambda (no genericType — Phase 2 will resolve it)
-        meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl(model);
+        meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
         lambda._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model));
         lambda._parameters(Lists.mutable.with(lambdaParam));
         lambda._expressionSequence(Lists.mutable.with(dotBody));
@@ -312,25 +312,5 @@ public final class DotApplicationResolver
         }
 
         return (FunctionExpression) resolved;
-    }
-
-    /**
-     * Check whether a FunctionExpression is an automap: a {@code map(...)} call
-     * with a lambda whose parameter is named {@code v_automap}.
-     */
-    public static boolean isAutomap(FunctionExpression fe)
-    {
-        if (fe._parametersValues().size() == 2)
-        {
-            ValueSpecification second = fe._parametersValues().get(1);
-            if (second instanceof meta.pure.metamodel.valuespecification.AtomicValue av
-                    && av._value() instanceof meta.pure.metamodel.function.LambdaFunction lambda)
-            {
-                return lambda._parameters() != null
-                        && lambda._parameters().size() == 1
-                        && "v_automap".equals(lambda._parameters().getFirst()._name());
-            }
-        }
-        return false;
     }
 }

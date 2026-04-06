@@ -44,17 +44,17 @@ public final class PackageableFunctionCompiler
      * return type, return multiplicity, type parameters, multiplicity parameters,
      * stereotypes, and tagged values.
      */
-    public static void compileShared(
+    public static PackageableFunction compileShared(
             PackageableFunction result,
             meta.pure.protocol.grammar.function.PackageableFunction grammar,
             MutableList<String> imports,
             MetadataAccess model,
             CompilationContext context)
     {
-        result._typeParameters(grammar._typeParameters()
+            result._typeParameters(grammar._typeParameters()
                         .collect(tp -> GenericTypeCompiler.compileTypeParameter(tp, result, model))
                         .select(Objects::nonNull))
-                ._multiplicityParameters(grammar._multiplicityParameters()
+                   ._multiplicityParameters(grammar._multiplicityParameters()
                         .<meta.pure.metamodel.multiplicity.MultiplicityParameter>collect(mp -> MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
                         .select(Objects::nonNull));
 
@@ -82,6 +82,8 @@ public final class PackageableFunctionCompiler
                                                 ._parameters(result._parameters())
                                                 ._returnType(result._returnGenericType())
                                                 ._returnMultiplicity(result._returnMultiplicity()), model))));
+
+        return result;
     }
 
     /**

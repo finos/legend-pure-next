@@ -384,29 +384,28 @@ public class RdfJavaGenerator
 
         if (isMetamodel)
         {
-            // Deprecated no-arg constructor (for bootstrap/FlatBuffer internals)
-            sb.append("    @Deprecated\n");
+            // No-arg constructor (for bootstrap/FlatBuffer internals)
+            if (classInfo.typeParameters.isEmpty() && classInfo.multiplicityParameters.isEmpty())
+            {
+                sb.append("    @Deprecated\n");
+            }
             sb.append("    public ").append(classInfo.name).append("Impl() {}\n\n");
 
-            // Factory constructor that auto-sets classifierGenericType
-            String purePath = classInfo.packagePath != null
-                    ? classInfo.packagePath + "::" + classInfo.name
-                    : classInfo.name;
-            sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
-            sb.append("    {\n");
-            if (classInfo.typeParameters.isEmpty())
+            if (classInfo.typeParameters.isEmpty() && classInfo.multiplicityParameters.isEmpty())
             {
-                // Non-parameterized types: use pre-built PackageableGenericType from bootstrap
+                // Non-parameterized types: take model, use pre-built PackageableGenericType from bootstrap
+                sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
+                sb.append("    {\n");
                 sb.append("        this._classifierGenericType(\n");
                 sb.append("            (meta.pure.metamodel.type.generics.GenericType) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
             }
             else
             {
-                // Parameterized types: typeArguments are instance-specific, so build fresh
-                sb.append("        this._classifierGenericType(\n");
-                sb.append("            org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType\n");
-                sb.append("                .buildUserDefinedGenericType(\n");
-                sb.append("                    (meta.pure.metamodel.type.Type) model.getElement(\"").append(purePath).append("\"), model));\n");
+                // Parameterized types: typeArguments/multiplicityArguments are instance-specific,
+                // so the caller must provide the fully-built classifierGenericType
+                sb.append("    public ").append(classInfo.name).append("Impl(meta.pure.metamodel.type.generics.GenericType classifierGenericType)\n");
+                sb.append("    {\n");
+                sb.append("        this._classifierGenericType(classifierGenericType);\n");
             }
             sb.append("    }\n\n");
         }

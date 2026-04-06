@@ -37,7 +37,7 @@ function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1
                   Variable v_automap :#(legal:#String##[1]#, other:#Integer##[0..1]#)##[1]#  ~VariableExpression
           AtomicValue  'w' :String[1]  ~AtomicValue  @6:64-6:66
       AtomicValue  'new' :String[1]  ~AtomicValue  @6:24-6:26
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(new:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(new:#String##[1]#)#|1>[1]
 
 native function over__Window_1_():Window<T~over__Window_1_>[1]  ~NativeFunction<{->Window<T~over__Window_1_>[1]}>
 

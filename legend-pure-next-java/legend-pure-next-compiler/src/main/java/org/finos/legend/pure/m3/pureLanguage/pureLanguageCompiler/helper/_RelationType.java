@@ -21,6 +21,7 @@ import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -178,7 +179,7 @@ public class _RelationType
         }
 
         // For each common column, find the common type and multiplicity
-        RelationTypeImpl result = new RelationTypeImpl(model);
+        RelationTypeImpl result = new RelationTypeImpl();
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
 
         MutableList<Column> commonColumns = Lists.mutable.empty();
@@ -206,7 +207,13 @@ public class _RelationType
             commonColumns.add(_Column.build(colName, ownerGT, commonType, commonMul, false, model));
         }
 
-        return result._columns(commonColumns);
+        return result
+                ._columns(commonColumns)
+                ._classifierGenericType(
+                    new UserDefinedGenericTypeImpl(model)
+                            ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            ._typeArguments(Lists.mutable.with(ownerGT))
+                );
     }
 
     /**
@@ -273,30 +280,30 @@ public class _RelationType
             return actualRT;
         }
 
-        return new RelationTypeImpl(model)
-                ._classifierGenericType(actualRT._classifierGenericType())
-                ._columns(expectedRT._columns().zip(actualRT._columns())
-                        .collect(pair ->
-                        {
-                            Column expectedCol = pair.getOne();
-                            Column actualCol = pair.getTwo();
-                            return new meta.pure.metamodel.relation.ColumnImpl(model)
-                                    ._classifierGenericType( actualCol._classifierGenericType())
-                                    ._name(actualCol._name())
-                                    ._nameWildCard(actualCol._nameWildCard())
-                                    ._genericType(_GenericType.reconcileInferred(expectedCol._genericType(),
-                                            actualCol._genericType() instanceof Inferred
-                                                    && expectedCol._genericType() != null
-                                                    && _GenericType.isCompatible(expectedCol._genericType(), actualCol._genericType(), model)
-                                                    ? _GenericType.asInferred(expectedCol._genericType(), model)
-                                                    : actualCol._genericType(),
-                                            model))
-                                    ._multiplicity(actualCol._multiplicity() instanceof Inferred
-                                            && expectedCol._multiplicity() != null
-                                            && _Multiplicity.subsumes(expectedCol._multiplicity(), actualCol._multiplicity())
-                                            ? _Multiplicity.asInferred(expectedCol._multiplicity(), model)
-                                            : actualCol._multiplicity());
-                        }));
+        return new RelationTypeImpl()
+                    ._classifierGenericType(actualRT._classifierGenericType())
+                    ._columns(expectedRT._columns().zip(actualRT._columns())
+                            .collect(pair ->
+                            {
+                                Column expectedCol = pair.getOne();
+                                Column actualCol = pair.getTwo();
+                                return new meta.pure.metamodel.relation.ColumnImpl()
+                                        ._classifierGenericType( actualCol._classifierGenericType())
+                                        ._name(actualCol._name())
+                                        ._nameWildCard(actualCol._nameWildCard())
+                                        ._genericType(_GenericType.reconcileInferred(expectedCol._genericType(),
+                                                actualCol._genericType() instanceof Inferred
+                                                        && expectedCol._genericType() != null
+                                                        && _GenericType.isCompatible(expectedCol._genericType(), actualCol._genericType(), model)
+                                                        ? _GenericType.asInferred(expectedCol._genericType(), model)
+                                                        : actualCol._genericType(),
+                                                model))
+                                        ._multiplicity(actualCol._multiplicity() instanceof Inferred
+                                                && expectedCol._multiplicity() != null
+                                                && _Multiplicity.subsumes(expectedCol._multiplicity(), actualCol._multiplicity())
+                                                ? _Multiplicity.asInferred(expectedCol._multiplicity(), model)
+                                                : actualCol._multiplicity());
+                            }));
     }
 
     /**
@@ -335,7 +342,7 @@ public class _RelationType
                         : new meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl(model)
                           ._lowerBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L))
                           ._upperBound(new meta.pure.metamodel.multiplicity.MultiplicityValueImpl(model)._value(1L));
-                RelationTypeImpl tempRT = new RelationTypeImpl(model);
+                RelationTypeImpl tempRT = new RelationTypeImpl();
                 GenericType tempOwnerGT = _GenericType.buildUserDefinedGenericType(tempRT, model);
                 resolvedColumns.add(_Column.build(col._name(), tempOwnerGT, resolvedColGT != null ? resolvedColGT : colGT, finalMul,
                         col._nameWildCard() != null && col._nameWildCard(), model));
@@ -347,7 +354,7 @@ public class _RelationType
         }
         if (changed)
         {
-            RelationTypeImpl newRT = new RelationTypeImpl(model);
+            RelationTypeImpl newRT = new RelationTypeImpl();
             GenericType newOwnerGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(newRT);
             MutableList<Column> rebuiltColumns = Lists.mutable.empty();
             for (Column col : resolvedColumns)
@@ -355,7 +362,12 @@ public class _RelationType
                 rebuiltColumns.add(_Column.build(col._name(), newOwnerGT, col._genericType(),
                         col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
             }
-            newRT._columns(rebuiltColumns);
+            newRT._columns(rebuiltColumns)
+                 ._classifierGenericType(
+                        new UserDefinedGenericTypeImpl(model)
+                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                ._typeArguments(Lists.mutable.with(newOwnerGT))
+                 );
             return newOwnerGT;
         }
         return null;

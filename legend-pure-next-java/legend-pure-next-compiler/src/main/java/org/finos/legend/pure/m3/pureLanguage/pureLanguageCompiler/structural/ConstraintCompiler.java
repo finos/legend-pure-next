@@ -10,6 +10,7 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 
 /**
@@ -81,6 +82,7 @@ public final class ConstraintCompiler
                 }
                 lambda._parameters(params);
                 lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
+                lambda._classifierGenericType(_Lambda.getLambdaClassifierGenericType(model, lambda));
                 compiled._functionDefinition(lambda);
             }
 
@@ -98,6 +100,7 @@ public final class ConstraintCompiler
                 }
                 msgLambda._parameters(msgParams);
                 msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
+                msgLambda._classifierGenericType(_Lambda.getLambdaClassifierGenericType(model, msgLambda));
                 compiled._messageFunction(msgLambda);
             }
         });
