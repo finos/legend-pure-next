@@ -5,7 +5,6 @@ import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
-import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
@@ -333,7 +332,8 @@ public class FunctionApplicationResolver
             if (reconciledFT != null && reconciledFT._parameters() != null)
             {
                 // ^$lambda(parameters = reconciledFT._parameters())
-                LambdaFunctionImpl newLambda = new LambdaFunctionImpl(model)
+                LambdaFunctionImpl newLambda = new LambdaFunctionImpl()
+                        ._classifierGenericType(reconciledGT)
                         ._parameters(reconciledFT._parameters())
                         ._expressionSequence(lambda._expressionSequence())
                         ._openVariables(lambda._openVariables());

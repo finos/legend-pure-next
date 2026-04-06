@@ -22,10 +22,12 @@ import meta.pure.metamodel.type.EnumImpl;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
@@ -40,7 +42,7 @@ public final class EnumerationHandler
 
     public static Enumeration firstPass(meta.pure.protocol.grammar.type.Enumeration grammar, MetadataAccess model)
     {
-        return new EnumerationImpl(model)
+        return new EnumerationImpl() // the classifierGenericType is set in the secondPass
                 ._name(grammar._name());
     }
 
@@ -62,13 +64,24 @@ public final class EnumerationHandler
         var properties = grammar._properties().collect(grammarProp ->
         {
             // Create the Enum instance
-            EnumImpl enumInstance = new EnumImpl(model)
+            EnumImpl enumInstance = new EnumImpl()  // the classifierGenericType is set below
                     ._name(grammarProp._name())
                     ._classifierGenericType(enumGT)
                     ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
 
             // Create a parameterless lambda whose body is the AtomicValue
-            LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl(model);
+
+            // ClassifierGenericType -----
+            meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
+            ft._returnType(enumGT);
+            ft._returnMultiplicity(pureOne);
+            GenericType classifierGenericType = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
+                    ._type((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"))
+                    ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
+                            new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));
+            // ClassifierGenericType -----
+
+            LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
             defaultValueLambda._expressionSequence(Lists.mutable.with(
                     new AtomicValueImpl(model)
                                 ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model))
@@ -76,21 +89,23 @@ public final class EnumerationHandler
                                 ._genericType(enumGT)
                                 ._multiplicity(pureOne)
                     )
-            );
+            )._classifierGenericType(classifierGenericType);
+
+
+
 
             // Create the Property: Property<Enumeration<E>, E | 1>
-            return new PropertyImpl(model)
-                    ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
-                    ._name(grammarProp._name())
-                    ._owner(result)
-                    ._genericType(enumGT)
-                    ._multiplicity(pureOne)
-                    ._classifierGenericType(
+            return new PropertyImpl(
                             _GenericType.buildUserDefinedGenericType(propertyType, model)
-                                    ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
-                                    ._multiplicityArguments(Lists.mutable.with(pureOne)))
-                    ._defaultValue(defaultValueLambda)
-                    ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
+                            ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
+                            ._multiplicityArguments(Lists.mutable.with(pureOne))
+                        )._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                         ._name(grammarProp._name())
+                         ._owner(result)
+                         ._genericType(enumGT)
+                         ._multiplicity(pureOne)
+                         ._defaultValue(defaultValueLambda)
+                         ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
         });
 
         org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> props =

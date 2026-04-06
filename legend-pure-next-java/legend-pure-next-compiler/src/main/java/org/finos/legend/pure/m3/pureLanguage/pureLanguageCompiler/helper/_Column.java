@@ -47,7 +47,7 @@ public final class _Column
     public static Column build(String name, GenericType owner, GenericType genericType, Multiplicity multiplicity, boolean nameWildCard, MetadataAccess model)
     {
         Multiplicity mul = multiplicity != null ? multiplicity : (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
-        return new ColumnImpl(model)
+        return new ColumnImpl()
                 ._name(name)
                 ._nameWildCard(nameWildCard)
                 ._genericType(genericType)

@@ -232,6 +232,11 @@ public final class CompiledGraphPrinter
                     {
                         sb.append("()");
                     }
+                    GenericType lambdaCgt = ((Any) lambda)._classifierGenericType();
+                    if (lambdaCgt != null)
+                    {
+                        sb.append("  ~").append(printType(lambdaCgt));
+                    }
                     sb.append('\n');
                     if (lambda._expressionSequence() != null)
                     {
@@ -342,6 +347,11 @@ public final class CompiledGraphPrinter
                     {
                         sb.append("  = ^").append(fullPath(e)).append("(name='").append(enumVal._name()).append("')");
                     }
+                    GenericType lambdaCgt = ((Any) p._defaultValue())._classifierGenericType();
+                    if (lambdaCgt != null)
+                    {
+                        sb.append("  ~lambda:").append(printType(lambdaCgt));
+                    }
                 }
                 appendSourceInfo(sb, p._sourceInformation());
                 sb.append('\n');
@@ -357,13 +367,28 @@ public final class CompiledGraphPrinter
         if (p._p_stereotypes() != null)
         {
             p._p_stereotypes().forEach(s ->
-                indent(sb, 1).append("stereotype ").append(s._value()).append('\n'));
+            {
+                indent(sb, 1).append("stereotype ").append(s._value());
+                GenericType sCgt = ((Any) s)._classifierGenericType();
+                if (sCgt != null)
+                {
+                    sb.append("  ~").append(printType(sCgt));
+                }
+                sb.append('\n');
+            });
         }
         if (p._p_tags() != null)
         {
             p._p_tags().forEach(t ->
-                indent(sb, 1).append("tag ").append(t._value()).append('\n'));
-        }
+            {
+                indent(sb, 1).append("tag ").append(t._value());
+                GenericType tCgt = ((Any) t)._classifierGenericType();
+                if (tCgt != null)
+                {
+                    sb.append("  ~").append(printType(tCgt));
+                }
+                sb.append('\n');
+            });        }
     }
 
     private static void printPrimitiveType(PrimitiveType p, StringBuilder sb)
@@ -441,6 +466,11 @@ public final class CompiledGraphPrinter
         else
         {
             sb.append("()");
+        }
+        GenericType lambdaCgt = ((Any) lambda)._classifierGenericType();
+        if (lambdaCgt != null)
+        {
+            sb.append("  ~").append(printType(lambdaCgt));
         }
         sb.append('\n');
         if (lambda._expressionSequence() != null)

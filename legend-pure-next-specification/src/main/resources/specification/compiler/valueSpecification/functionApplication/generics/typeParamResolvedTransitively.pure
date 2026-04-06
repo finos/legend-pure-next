@@ -31,7 +31,7 @@ function test::testTypeParamResolution_Function_1__Any_MANY_(f:Function<{Functio
       Lambda :#LambdaFunction<#{->#test::TPR_Person##[1]#}#>#[1]  ~AtomicValue  @15:14-15:54
         FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~FunctionInvocation  @15:15-15:54
           typeParam T -> test::TPR_Person
-          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @15:15-15:54
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @15:15-15:54
           Collection :#KeyExpression#[2]  ~Collection  @15:15-15:54
             FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @15:27-15:39
               AtomicValue  'firstName' :String[1]  ~AtomicValue  @15:27-15:39

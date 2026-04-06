@@ -7,5 +7,5 @@ function test():Any[*]
 
 ###CompiledGraph
 function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @4:3-4:10
-  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @5:3-5:9
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<Integer|?>  @4:3-4:10
+  TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<String|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<String|?>  @5:3-5:9

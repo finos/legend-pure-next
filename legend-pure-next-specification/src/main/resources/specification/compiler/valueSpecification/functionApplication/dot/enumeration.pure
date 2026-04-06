@@ -14,9 +14,9 @@ function test::primitive::testEnumValue(): Any[*]
 
 ###CompiledGraph
 enumeration test::primitive::MyEnum extends Enum  ~Enumeration<test::primitive::MyEnum>  @2:1-7:1
-  property A  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='A')  @4:3-4:3
-  property B  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='B')  @5:3-5:3
-  property C  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='C')  @6:3-6:3
+  property A  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='A')  ~lambda:#LambdaFunction<#{->test::primitive::MyEnum[1]}#>#  @4:3-4:3
+  property B  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='B')  ~lambda:#LambdaFunction<#{->test::primitive::MyEnum[1]}#>#  @5:3-5:3
+  property C  ~Property<Enumeration<test::primitive::MyEnum>, test::primitive::MyEnum|1>  = ^test::primitive::MyEnum(name='C')  ~lambda:#LambdaFunction<#{->test::primitive::MyEnum[1]}#>#  @6:3-6:3
 
 function test::primitive::testEnumValue__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
   DotApplication test::primitive::MyEnum.A :#test::primitive::MyEnum##[1]#  ~DotApplication  @11:26-11:27

@@ -55,7 +55,7 @@ public final class PropertyCompiler
             context.enrichCurrentErrorsFrom(errorsBefore, "property '" + grammarProperty._name() + "'");
             return null;
         }
-        PropertyImpl result = new PropertyImpl(model)
+        PropertyImpl result = new PropertyImpl()
                 ._name(grammarProperty._name())
                 ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._genericType(genericType)

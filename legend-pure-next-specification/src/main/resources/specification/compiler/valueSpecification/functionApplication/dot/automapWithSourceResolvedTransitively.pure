@@ -45,7 +45,7 @@ function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Functi
           typeParam T -> #test::TPR_Person#
           FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~FunctionInvocation  @20:25-20:64
             typeParam T -> test::TPR_Person
-            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder  @20:25-20:64
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @20:25-20:64
             Collection :#KeyExpression#[2]  ~Collection  @20:25-20:64
               FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @20:37-20:49
                 AtomicValue  'firstName' :String[1]  ~AtomicValue  @20:37-20:49

@@ -10,7 +10,7 @@ native function _length(str:String[1]):Integer[1];
 primitive protocol::Varchar  ~PrimitiveType  @2:1-5:1
   typeVariable x :Integer[1]
   constraint
-    Lambda(this:protocol::Varchar[1], x:Integer[1])
+    Lambda(this:protocol::Varchar[1], x:Integer[1])  ~#LambdaFunction<#{protocol::Varchar[1], Integer[1]->#Boolean##[1]#}#>#
       FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @4:22-4:25
         ArrowInvocation _length_String_1__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @4:10-4:20
           Variable this :#protocol::Varchar##[1]#  ~VariableExpression  @4:5-4:9

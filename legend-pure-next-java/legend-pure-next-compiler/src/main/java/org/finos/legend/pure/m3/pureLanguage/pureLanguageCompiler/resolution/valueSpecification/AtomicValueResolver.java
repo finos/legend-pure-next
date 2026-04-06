@@ -19,8 +19,8 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
@@ -80,7 +80,7 @@ public class AtomicValueResolver
         // from bindings before calling resolve again.
         // Use isConcreteInContext to allow in-scope type params (e.g., class-level T)
         if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeTypeParamNames()) ||
-                                   !_Multiplicity.isConcreteInContext(p._multiplicity(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeMultiplicityParamNames())))
+                !_Multiplicity.isConcreteInContext(p._multiplicity(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeMultiplicityParamNames())))
         {
             context.addError(new CompilationError("Can't resolve lambda parameter types", av._sourceInformation()));
             return av;
@@ -111,30 +111,15 @@ public class AtomicValueResolver
         ((LambdaFunctionImpl) lambda)._openVariables(openVars);
 
         // Always (re)build the lambda's genericType: LambdaFunction<{paramTypes -> returnType}>
-        if (lambda._expressionSequence() != null && lambda._expressionSequence().notEmpty())
-        {
-            ValueSpecification lastExpr = lambda._expressionSequence().getLast();
-            if (lastExpr._genericType() != null)
-            {
-                meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
-                ft._parameters(params);
-                ft._returnType(lastExpr._genericType());
-                ft._returnMultiplicity(lastExpr._multiplicity());
+        GenericType lambdaGT = _Lambda.getLambdaClassifierGenericType(model, lambda);
 
-                meta.pure.metamodel.type.Type lambdaType = (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction");
-                GenericType lambdaGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
-                        ._type(lambdaType)
-                        ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                                new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));
+        context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
 
-                context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
-                return (AtomicValue)((AtomicValue) av._copy())
-                        ._value(lambda)
-                        ._genericType(lambdaGT);
-            }
-        }
-        return av;
+        return (AtomicValue) ((AtomicValue) av._copy())
+                ._value(lambda._classifierGenericType(lambdaGT))
+                ._genericType(lambdaGT);
     }
+
 
     /**
      * Recursively collect VariableExpression references from a value specification tree,

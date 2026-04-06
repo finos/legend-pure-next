@@ -91,7 +91,7 @@ public final class QualifiedPropertyCompiler
         MutableList<ValueSpecification> expressionSequence = grammarQP._expressionSequence()
                         .collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context));
 
-        QualifiedPropertyImpl result = new QualifiedPropertyImpl(model)
+        QualifiedPropertyImpl result = new QualifiedPropertyImpl()
                 ._name(grammarQP._name())
                 ._genericType(genericType)
                 ._multiplicity(multiplicity)

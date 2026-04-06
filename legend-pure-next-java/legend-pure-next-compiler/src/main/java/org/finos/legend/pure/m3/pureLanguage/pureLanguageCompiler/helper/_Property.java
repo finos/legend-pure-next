@@ -46,12 +46,11 @@ public class _Property
             }
         }
 
-        return new PropertyImpl(model)
+        return new PropertyImpl(resolvedClassifierGenericType)
                 ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)
                 ._multiplicity(resolvedMultiplicity)
-                ._owner(prop._owner())
-                ._classifierGenericType(resolvedClassifierGenericType);
+                ._owner(prop._owner());
     }
 }
