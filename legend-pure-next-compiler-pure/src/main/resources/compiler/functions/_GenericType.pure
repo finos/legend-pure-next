@@ -35,7 +35,11 @@ function meta::pure::compiler::helper::printGenericTypeValue(gtv:GenericTypeValu
                         ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
                         pe : PackageableElement[1] |
                             if($fullPath,
-                                | $pe->meta::pure::compiler::helper::fullPath(),
+                                | let pPath = $pe->meta::pure::compiler::helper::fullPath();
+                                  if($pPath->startsWith('meta::pure::metamodel::') || $pPath->startsWith('meta::pure::functions::'),
+                                      | $pe.name->toOne(),
+                                      | $pPath
+                                  );,
                                 | $pe.name->toOne()
                             ),
                         a  : Any[1]                | 'Unknown'
@@ -214,17 +218,45 @@ function meta::pure::compiler::helper::collectReferencedMultiplicityParameterNam
 
 // Tests
 
+Class meta::pure::compiler::helper::tests::genericType::MyClass<T>
+{
+    tpProp: T[1];
+    nestedTpProp: Class<T>[1];
+}
+
+Class meta::pure::compiler::helper::tests::genericType::TestClass
+{
+    intProp: Integer[1];
+    strProp: String[1];
+    listProp: Class<Integer>[1];
+    myClassProp: meta::pure::compiler::helper::tests::genericType::MyClass<Integer>[1];
+    classTpProp: Class<meta::pure::compiler::helper::tests::genericType::MyClass<String>>[1];
+}
+
+function meta::pure::compiler::helper::tests::genericType::getPropGT(name:String[1]):GenericType[1]
+{
+    let tc = meta::pure::compiler::helper::tests::genericType::TestClass;
+    let prop = $tc.properties->filter(p | $p.name == $name)->toOne();
+    $prop.genericType;
+}
+
+function meta::pure::compiler::helper::tests::genericType::getMyClassTpGT():GenericType[1]
+{
+    let mc = meta::pure::compiler::helper::tests::genericType::MyClass;
+    let prop = $mc.properties->filter(p | $p.name == 'tpProp')->toOne();
+    $prop.genericType;
+}
+
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeSimple():Boolean[1]
 {
-    let intGT = ^GenericTypeValue(type = Integer);
-    // Full path should match the elementToPath
-    assertEquals(Integer->elementToPath(), $intGT->printGenericType(true));
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
+    assertEquals('Integer', $intGT->printGenericType(true));
     assertEquals('Integer', $intGT->printGenericType(false));
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeString():Boolean[1]
 {
-    let strGT = ^GenericTypeValue(type = String);
+    let strGT = meta::pure::compiler::helper::tests::genericType::getPropGT('strProp');
     assertEquals('String', $strGT->printGenericType(false));
 }
 
@@ -236,108 +268,94 @@ function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPri
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testPrintGenericTypeTypeParameter():Boolean[1]
 {
-    let tp = ^TypeParameter(name = 'T', contravariant = false);
-    let tpGT = ^GenericTypeValue(type = $tp);
-    // TypeParameter name may not round-trip through ^ constructor due to runtime property resolution
+    let tpGT = meta::pure::compiler::helper::tests::genericType::getMyClassTpGT();
     let result = $tpGT->printGenericType(false);
     assert($result->length() > 0);
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testGenericTypeTypeArguments():Boolean[1]
 {
-    let intGT = ^GenericTypeValue(type = Integer);
-    let listGT = ^GenericTypeValue(type = Class, typeArguments = $intGT);
+    let listGT = meta::pure::compiler::helper::tests::genericType::getPropGT('listProp');
     assertEquals(1, $listGT->genericTypeTypeArguments()->size());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testGenericTypeMultiplicityArguments():Boolean[1]
 {
-    let intGT = ^GenericTypeValue(type = Integer);
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
     assert($intGT->genericTypeMultiplicityArguments()->isEmpty());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericType():Boolean[1]
 {
-    // Concrete type
-    let intGT = ^GenericTypeValue(type = Integer);
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
     assert($intGT->isConcreteGenericType());
 
-    // TypeParameter reference is not concrete
-    let tp = ^TypeParameter(name = 'T', contravariant = false);
-    let tpGT = ^GenericTypeValue(type = $tp);
+    let tpGT = meta::pure::compiler::helper::tests::genericType::getMyClassTpGT();
     assertFalse($tpGT->isConcreteGenericType());
 
-    // UndefinedGenericType is considered concrete (it's a wildcard)
     let ugt = ^UndefinedGenericType();
     assert($ugt->isConcreteGenericType());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericTypeWithTypeArgs():Boolean[1]
 {
-    // GenericType with concrete type arguments is concrete
-    let intGT = ^GenericTypeValue(type = Integer);
-    let classGT = ^GenericTypeValue(type = Class, typeArguments = $intGT);
+    let classGT = meta::pure::compiler::helper::tests::genericType::getPropGT('listProp');
     assert($classGT->isConcreteGenericType());
 
-    // GenericType with type parameter in type argument is not concrete
-    let tp = ^TypeParameter(name = 'T', contravariant = false);
-    let tpGT = ^GenericTypeValue(type = $tp);
-    let classGT2 = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
-    assertFalse($classGT2->isConcreteGenericType());
+    let tpClassProp = meta::pure::compiler::helper::tests::genericType::getPropGT('classTpProp');
+    assert($tpClassProp->isConcreteGenericType());
+    
+    let mc = meta::pure::compiler::helper::tests::genericType::MyClass;
+    let nPropGT = $mc.properties->filter(p | $p.name == 'nestedTpProp')->toOne().genericType;
+    assertFalse($nPropGT->isConcreteGenericType());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testCollectReferencedTypeParameterNames():Boolean[1]
 {
-    // Concrete type has no type parameter references
-    let intGT = ^GenericTypeValue(type = Integer);
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
     assertEquals(0, $intGT->collectReferencedTypeParameterNames()->size());
 
-    // TypeParameter reference returns its name
-    let tp = ^TypeParameter(name = 'T', contravariant = false);
-    let tpGT = ^GenericTypeValue(type = $tp);
+    let tpGT = meta::pure::compiler::helper::tests::genericType::getMyClassTpGT();
     let names = $tpGT->collectReferencedTypeParameterNames();
     assertEquals(1, $names->size());
     assertEquals('T', $names->at(0));
 
-    // Nested in type arguments
-    let classGT = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
-    let nestedNames = $classGT->collectReferencedTypeParameterNames();
+    let myClassProp = meta::pure::compiler::helper::tests::genericType::getPropGT('myClassProp');
+    assertEquals(0, $myClassProp->collectReferencedTypeParameterNames()->size());
+
+    let mc = meta::pure::compiler::helper::tests::genericType::MyClass;
+    let tpClassGT = $mc.properties->filter(p | $p.name == 'nestedTpProp')->toOne().genericType;
+    let nestedNames = $tpClassGT->collectReferencedTypeParameterNames();
     assertEquals(1, $nestedNames->size());
     assertEquals('T', $nestedNames->at(0));
 
-    // UndefinedGenericType returns empty
     let ugt = ^UndefinedGenericType();
     assertEquals(0, $ugt->collectReferencedTypeParameterNames()->size());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testCollectReferencedMultiplicityParameterNames():Boolean[1]
 {
-    // Concrete type has no multiplicity parameter references
-    let intGT = ^GenericTypeValue(type = Integer);
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
     assertEquals(0, $intGT->collectReferencedMultiplicityParameterNames()->size());
 
-    // UndefinedGenericType returns empty
     let ugt = ^UndefinedGenericType();
     assertEquals(0, $ugt->collectReferencedMultiplicityParameterNames()->size());
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::genericType::testIsConcreteGenericTypeInContext():Boolean[1]
 {
-    // Concrete type is concrete in any context
-    let intGT = ^GenericTypeValue(type = Integer);
+    let intGT = meta::pure::compiler::helper::tests::genericType::getPropGT('intProp');
     assert($intGT->isConcreteGenericTypeInContext([]));
 
-    // TypeParameter reference is concrete if it's in scope
-    let tp = ^TypeParameter(name = 'T', contravariant = false);
-    let tpGT = ^GenericTypeValue(type = $tp);
+    let tpGT = meta::pure::compiler::helper::tests::genericType::getMyClassTpGT();
     assert($tpGT->isConcreteGenericTypeInContext(['T']));
     assertFalse($tpGT->isConcreteGenericTypeInContext([]));
     assertFalse($tpGT->isConcreteGenericTypeInContext(['V']));
 
-    // Nested type parameter: Class<T> is concrete if T is in scope
-    let classGT = ^GenericTypeValue(type = Class, typeArguments = $tpGT);
-    assert($classGT->isConcreteGenericTypeInContext(['T']));
-    assertFalse($classGT->isConcreteGenericTypeInContext([]));
+    let mc = meta::pure::compiler::helper::tests::genericType::MyClass;
+    let nestedTpProp = $mc.properties->filter(p | $p.name == 'nestedTpProp')->toOne().genericType;
+    assert($nestedTpProp->isConcreteGenericTypeInContext(['T']));
+    assertFalse($nestedTpProp->isConcreteGenericTypeInContext([]));
 }
 
 function meta::pure::compiler::helper::collectTypeParameterBindings(paramGT:GenericType[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
@@ -473,7 +491,7 @@ function meta::pure::compiler::helper::range(start:Integer[1], end:Integer[1]):I
 function meta::pure::compiler::helper::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1]):GenericType[0..1]
 {
     if($genericTypes->isEmpty(),
-        | ^GenericTypeValue(type = Nil),
+        | ^meta::pure::metamodel::type::generics::InferredGenericType(type = Nil),
         | let nonNullValues = $genericTypes->filter(gt | $gt->instanceOf(GenericTypeValue))->cast(@GenericTypeValue);
           
           let firstName = if($nonNullValues->isNotEmpty() && $nonNullValues->at(0).type->isNotEmpty() && $nonNullValues->at(0).type->toOne()->instanceOf(TypeParameter),
@@ -493,7 +511,7 @@ function meta::pure::compiler::helper::findCommonGenericType(genericTypes:Generi
                       if($commonType->isEmpty(),
                           | [],
                           | let common = $commonType->toOne();
-                            let resultType = ^GenericTypeValue(type = $common);
+                            let resultType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common);
                             
                             let projected = if($rawTypes->forAll(t | $t == $common),
                                 | $nonNullValues,
@@ -561,7 +579,7 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
                   );
                   if($resultRT->isEmpty(),
                       | $genericType,
-                      | ^GenericTypeValue(type = $resultRT->toOne())
+                      | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $resultRT->toOne())
                   );,
                 | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
                       | ^$gto(left = $resolvedLeft, right = $resolvedRight),

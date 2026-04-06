@@ -48,7 +48,7 @@ public final class RelationTypeCompiler
         GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
         return result
                 ._columns(rt._columns().collect(col -> _Column.build(
-                                                                    col._name(),
+                                                                    col._name() != null ? col._name() : "",
                                                                     ownerGT,
                                                                     col._genericType() != null ? GenericTypeCompiler.compile(col._genericType(), imports, model, context) : null,
                                                                     col._multiplicity() != null ? MultiplicityCompiler.compile(col._multiplicity(), model) : null,

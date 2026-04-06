@@ -170,8 +170,8 @@ function meta::pure::compiler::helper::findCommonMultiplicity(multiplicities:Mul
                 );
                 // Build a concrete multiplicity using ^ConcreteMultiplicity
                 if($maxUpper == -1,
-                    | ^ConcreteMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower)),
-                    | ^ConcreteMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower), upperBound = ^MultiplicityValue(value = $maxUpper))
+                    | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower)),
+                    | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower), upperBound = ^MultiplicityValue(value = $maxUpper))
                 );
           )
     )

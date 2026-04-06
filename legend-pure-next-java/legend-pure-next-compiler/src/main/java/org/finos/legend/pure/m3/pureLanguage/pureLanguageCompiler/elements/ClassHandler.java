@@ -70,7 +70,16 @@ public final class ClassHandler
             result._typeParameters(typeParameters);
         }
 
-        // Register declared type params in scope so property GenericType references reuse the same objects
+        // Compile and set multiplicity parameters (e.g., m for Class<T|m>)
+        MutableList<meta.pure.metamodel.multiplicity.MultiplicityParameter> multiplicityParameters = grammar._multiplicityParameters()
+                .collect(mp -> org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.MultiplicityCompiler.compileMultiplicityParameter(mp, result, model))
+                .select(Objects::nonNull);
+        if (multiplicityParameters.notEmpty())
+        {
+            result._multiplicityParameters(multiplicityParameters);
+        }
+
+        // Register declared type/multiplicity params in scope so property GenericType references reuse the same objects
         PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
         plcc.setEnclosingOwner(result);
 
@@ -81,6 +90,11 @@ public final class ClassHandler
             ownerGenericType._typeArguments(
                     typeParameters.collect(tp ->
                             _GenericType.buildUserDefinedGenericType(tp, model)));
+        }
+        if (multiplicityParameters.notEmpty())
+        {
+            ownerGenericType._multiplicityArguments(
+                    multiplicityParameters.collect(mp -> mp));
         }
 
         MutableList<meta.pure.metamodel.function.property.Property> properties = grammar._properties()

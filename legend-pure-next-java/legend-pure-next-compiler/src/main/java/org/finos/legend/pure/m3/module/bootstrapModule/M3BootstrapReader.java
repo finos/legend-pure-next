@@ -147,6 +147,9 @@ public class M3BootstrapReader
             Resource m3Tag = model.createResource(M3_NS + "Tag");
             wireClassifierGenericType(model, m3Tag, index);
 
+            // Wire stereotypes onto matching elements
+            wireStereotypesToElements(model, index);
+
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
             bootstrapProperties(model, m3Property, index);
@@ -452,7 +455,8 @@ public class M3BootstrapReader
             {
                 continue;
             }
-            String profName = getLocalName(profStmt.getObject().asResource());
+            Resource profRes = profStmt.getObject().asResource();
+            String profName = getName(model, profRes);
             if (profName == null)
             {
                 continue;
@@ -565,31 +569,10 @@ public class M3BootstrapReader
                 Statement stStmt = stIt.next();
                 if (stStmt.getObject().isResource())
                 {
-                    Resource stRes = stStmt.getObject().asResource();
-                    String stName = getName(model, stRes);
-                    if (stName != null)
+                    Stereotype st = findStereotype(model, stStmt.getObject().asResource(), index);
+                    if (st != null)
                     {
-                        // Look up the existing Stereotype from its parent Profile (created by wireStereotypesToProfiles)
-                        Statement profStmt = getM3Statement(model, stRes, "profile");
-                        if (profStmt != null && profStmt.getObject().isResource())
-                        {
-                            String profName = getLocalName(profStmt.getObject().asResource());
-                            if (profName != null)
-                            {
-                                for (PackageableElement el : index.valuesView())
-                                {
-                                    if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
-                                    {
-                                        Stereotype found = p._p_stereotypes().detect(s -> stName.equals(s._value()));
-                                        if (found != null)
-                                        {
-                                            stereotypes.add(found);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        stereotypes.add(st);
                     }
                 }
             }
@@ -613,6 +596,68 @@ public class M3BootstrapReader
             }
         }
         return null;
+    }
+
+    private static Stereotype findStereotype(Model model, Resource stRes, MutableMap<String, PackageableElement> index)
+    {
+        String stName = getName(model, stRes);
+        if (stName != null)
+        {
+            Statement profStmt = getM3Statement(model, stRes, "profile");
+            if (profStmt != null && profStmt.getObject().isResource())
+            {
+                Resource profRes = profStmt.getObject().asResource();
+                String profName = getName(model, profRes);
+                if (profName != null)
+                {
+                    for (PackageableElement el : index.valuesView())
+                    {
+                        if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
+                        {
+                            return p._p_stereotypes().detect(s -> stName.equals(s._value()));
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void wireStereotypesToElements(Model model, MutableMap<String, PackageableElement> index)
+    {
+        org.apache.jena.rdf.model.Property stereotypesPred = model.getProperty(M3_NS + "stereotypes");
+        for (StmtIterator stIt = model.listStatements(null, stereotypesPred, (RDFNode) null); stIt.hasNext();)
+        {
+            Statement stStmt = stIt.next();
+            Resource subject = stStmt.getSubject();
+            if (!subject.isResource())
+            {
+                continue;
+            }
+
+            String name = getName(model, subject);
+            String packagePath = getPackagePath(model, subject);
+            if (name == null)
+            {
+                continue;
+            }
+
+            String fullPath = packagePath != null ? packagePath + "::" + name : name;
+            PackageableElement element = index.get(fullPath);
+            if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+            {
+                if (stStmt.getObject().isResource())
+                {
+                    Stereotype st = findStereotype(model, stStmt.getObject().asResource(), index);
+                    if (st != null)
+                    {
+                        MutableList<Stereotype> stereotypes = Lists.mutable.withAll(ews._stereotypes());
+                        stereotypes.add(st);
+                        ews._stereotypes(stereotypes);
+                    }
+                }
+            }
+        }
     }
 
     /**

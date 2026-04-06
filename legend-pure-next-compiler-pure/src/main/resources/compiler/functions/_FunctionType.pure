@@ -128,7 +128,7 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
     
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
-        | ^GenericTypeValue(
+        | ^meta::pure::metamodel::type::generics::InferredGenericType(
               type = ^$ft(parameters = $newParams, returnType = $rRetGT, returnMultiplicity = $rRetMul),
               typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
               multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])

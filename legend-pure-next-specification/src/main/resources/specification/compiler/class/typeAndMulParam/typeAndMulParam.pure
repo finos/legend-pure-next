@@ -1,0 +1,12 @@
+Class meta::pure::test::classWithTypeParams<T, U>
+{
+}
+
+Class meta::pure::test::classWithMulParams<T|m>
+{
+}
+
+###CompiledGraph
+class meta::pure::test::classWithTypeParams extends Any  ~Class<meta::pure::test::classWithTypeParams<T~meta::pure::test::classWithTypeParams, U~meta::pure::test::classWithTypeParams>>  @1:1-3:1
+
+class meta::pure::test::classWithMulParams extends Any  ~Class<meta::pure::test::classWithMulParams<T~meta::pure::test::classWithMulParams|m~meta::pure::test::classWithMulParams>>  @5:1-7:1

@@ -656,23 +656,7 @@ public class MetaNatives
             Class<?> implClass = Class.forName(javaClassName);
             return implClass.getDeclaredConstructor().newInstance();
         }
-        catch (ClassNotFoundException e)
-        {
-            String baseName = classPath.replace("::", ".");
-            int lastDot = baseName.lastIndexOf('.');
-            String userDefinedClassName = lastDot >= 0
-                    ? baseName.substring(0, lastDot + 1) + "UserDefined" + baseName.substring(lastDot + 1) + "Impl"
-                    : "UserDefined" + baseName + "Impl";
-            try
-            {
-                return Class.forName(userDefinedClassName).getDeclaredConstructor().newInstance();
-            }
-            catch (ReflectiveOperationException ignored)
-            {
-                return new DynamicInstance(classPath);
-            }
-        }
-        catch (ReflectiveOperationException e)
+        catch (Exception e)
         {
             return new DynamicInstance(classPath);
         }
@@ -1135,27 +1119,21 @@ public class MetaNatives
         {
             Class<?> implClass = Class.forName(javaClassName);
             Any any = (Any) implClass.getDeclaredConstructor().newInstance();
-            any._classifierGenericType(_GenericType.typeArguments(gtmh2._genericType()).getFirst());
-            return any;
-        }
-        catch (ClassNotFoundException e)
-        {
-            String baseName = classPath.replace("::", ".");
-            int lastDot = baseName.lastIndexOf('.');
-            String userDefinedClassName = lastDot >= 0
-                    ? baseName.substring(0, lastDot + 1) + "UserDefined" + baseName.substring(lastDot + 1) + "Impl"
-                    : "UserDefined" + baseName + "Impl";
             try
             {
-                Class<?> udClass = Class.forName(userDefinedClassName);
-                return udClass.getDeclaredConstructor().newInstance();
+                if (_GenericType.typeArguments(gtmh2._genericType()) != null
+                        && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
+                {
+                    any._classifierGenericType(_GenericType.typeArguments(gtmh2._genericType()).getFirst());
+                }
             }
-            catch (ReflectiveOperationException ignored)
+            catch (Exception ignored)
             {
-                return new DynamicInstance(classPath);
+                // classifierGenericType assignment failed — still return the compiled instance
             }
+            return any;
         }
-        catch (ReflectiveOperationException e)
+        catch (Exception e)
         {
             return new DynamicInstance(classPath);
         }
@@ -1208,7 +1186,7 @@ public class MetaNatives
                         {
                         }
                     }
-                    throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName(), e);
+                    throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + rawValue.getClass().getSimpleName(), e);
                 }
             }
         }

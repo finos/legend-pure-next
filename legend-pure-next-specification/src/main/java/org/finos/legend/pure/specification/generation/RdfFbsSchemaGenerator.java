@@ -77,6 +77,11 @@ public class RdfFbsSchemaGenerator
         sb.append("    path: string;\n");
         sb.append("}\n\n");
 
+        // Ancestor reference table for cycle back-references
+        sb.append("table AncestorRef {\n");
+        sb.append("    depth: int;\n");
+        sb.append("}\n\n");
+
         // Generate union types for pointer properties with nonPointerSubtypes
         MutableSet<String> generatedUnions = Sets.mutable.empty();
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
@@ -95,7 +100,7 @@ public class RdfFbsSchemaGenerator
                     String uName = unionTypeName(fbsField);
                     if (generatedUnions.add(uName))
                     {
-                        sb.append("union ").append(uName).append(" { PointerRef");
+                        sb.append("union ").append(uName).append(" { PointerRef, AncestorRef");
                         nps.forEach(subtype -> sb.append(", ").append(subtype).append("Def"));
                         sb.append(" }\n\n");
                     }
@@ -124,6 +129,8 @@ public class RdfFbsSchemaGenerator
                     });
                     // Include the base type itself as fallback
                     sb.append(", ").append(classInfo.name).append("Def");
+                    // Include AncestorRef for cycle back-references
+                    sb.append(", AncestorRef");
                     sb.append(" }\n\n");
                 }
             }

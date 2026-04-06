@@ -116,6 +116,6 @@ class test::new::support::MyClassWithK extends Any  ~Class<test::new::support::M
   property name :String[1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, String|1>
   property value :K~test::new::support::MyClassWithK[0..1]  ~Property<test::new::support::MyClassWithK<K~test::new::support::MyClassWithK>, K~test::new::support::MyClassWithK|0..1>
 
-class test::new::support::MyClassWithKandM extends Any  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>>  @36:1-40:1
-  property name :String[1]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>, String|1>
-  property value :K~test::new::support::MyClassWithKandM[m]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM>, K~test::new::support::MyClassWithKandM|m>
+class test::new::support::MyClassWithKandM extends Any  ~Class<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>>  @36:1-40:1
+  property name :String[1]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, String|1>
+  property value :K~test::new::support::MyClassWithKandM[m]  ~Property<test::new::support::MyClassWithKandM<K~test::new::support::MyClassWithKandM|m~test::new::support::MyClassWithKandM>, K~test::new::support::MyClassWithKandM|m>
