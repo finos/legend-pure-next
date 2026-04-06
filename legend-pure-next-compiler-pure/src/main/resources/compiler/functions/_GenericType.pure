@@ -16,7 +16,14 @@ function meta::pure::compiler::helper::printGenericType(genericType:GenericType[
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
-            a   : Any[1]                  | 'Unknown'
+            a   : Any[1]                  | if($genericType->meta::pure::compiler::helper::genericTypeRawType()->isEmpty(),
+                                               | 'Unknown',
+                                               | $genericType->meta::pure::compiler::helper::genericTypeRawType()->toOne()->cast(@PackageableElement).name->toOne()
+                                                 + if($genericType->meta::pure::compiler::helper::genericTypeTypeArguments()->isEmpty(),
+                                                      | '',
+                                                      | '<' + $genericType->meta::pure::compiler::helper::genericTypeTypeArguments()->map(t | $t->printGenericType($fullPath))->joinStrings(', ') + '>'
+                                                   )
+                                            )
         ]
     )
 }

@@ -265,14 +265,15 @@ function meta::pure::compiler::helper::toString(pb:ParametersBinding[1]):String[
     let mulKeys = $pb.multiplicityBindings->keys();
     let mulPart = if($mulKeys->isEmpty(), | '', | 
         $mulKeys->map(k | 
-            $k + '=' + $pb.multiplicityBindings->get($k)->toOne().values->map(m | $m->meta::pure::compiler::helper::printMultiplicityBare())->joinStrings('/')
+            $k + '=' + $pb.multiplicityBindings->get($k)->toOne().values->map(m | $m->meta::pure::compiler::helper::printMultiplicity())->joinStrings('/')
         )->joinStrings(', ')
     );
     
-    let parts = if($typePart->length() > 0,
-        | if($mulPart->length() > 0, | $typePart + ' | ' + $mulPart, | $typePart),
-        | $mulPart
+    if($typePart == '' && $mulPart == '',
+        | '',
+        | '{' + if($typePart != '',
+              | if($mulPart != '', | $typePart + ' | ' + $mulPart, | $typePart),
+              | $mulPart
+          ) + '}'
     );
-    
-    '{' + $parts + '}';
 }

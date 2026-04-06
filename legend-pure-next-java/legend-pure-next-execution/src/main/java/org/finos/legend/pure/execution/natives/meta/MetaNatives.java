@@ -289,6 +289,11 @@ public class MetaNatives
                 classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 cgt = pe._classifierGenericType();
             }
+            else if (original instanceof Any any)
+            {
+                cgt = any._classifierGenericType();
+                classPath = any.getClass().getInterfaces()[0].getName().replace(".", "::");
+            }
             else
             {
                 throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
@@ -322,6 +327,11 @@ public class MetaNatives
             {
                 classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 cgt = pe._classifierGenericType();
+            }
+            else if (original instanceof Any any)
+            {
+                cgt = any._classifierGenericType();
+                classPath = any.getClass().getInterfaces()[0].getName().replace(".", "::");
             }
             else
             {
@@ -816,6 +826,15 @@ public class MetaNatives
             if (value instanceof ValueSpecification vs)
             {
                 return vs;
+            }
+            if (value instanceof java.util.List<?> list)
+            {
+                java.util.List<ValueSpecification> wrapped = new java.util.ArrayList<>();
+                for (Object item : list)
+                {
+                    wrapped.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+                }
+                return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
             }
             return _E_ValueSpecification.wrap(value, null, null, resolver);
         }

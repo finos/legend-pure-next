@@ -155,5 +155,5 @@ function <<test.Test>> meta::pure::compiler::helper::tests::class::testBuildBind
     assertEquals(1, $mBinding->multiplicityLowerBound());
     assertEquals(-1, $mBinding->multiplicityUpperBound());
 
-    assertEquals('{T=Wrapper<String>, U=Integer | m=1..*}', $bindings->meta::pure::compiler::helper::toString());
+    assertEquals('{T=Wrapper<String>, U=Integer | m=[1..*]}', $bindings->meta::pure::compiler::helper::toString());
 }
