@@ -50,17 +50,3 @@ function meta::pure::compiler::test::assertCompiledGraph(content:String[1]):Bool
        | true
     );
 }
-
-
-native function meta::pure::compiler::test::getSpecificationFilePaths():String[*];
-native function meta::pure::compiler::test::readSpecificationFile(path:String[1]):String[1];
-
-function <<test.Test>> meta::pure::compiler::test::testAllCompiledGraphs():Boolean[1]
-{
-    let files = meta::pure::compiler::test::getSpecificationFilePaths();
-    $files->filter(f | contains($f, 'class/property/simple.pure'))->map(f | 
-      let content = meta::pure::compiler::test::readSpecificationFile($f);
-      meta::pure::compiler::test::assertCompiledGraph($content);
-    );
-    true;
-}

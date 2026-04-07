@@ -86,7 +86,7 @@
                             <mainClass>org.finos.legend.pure.compiler.CompilerBinaryBuilder</mainClass>
                             <arguments>
                                 <argument>${project.basedir}/../legend-pure-next-java/legend-pure-next-compiler/target/core.pdb</argument>
-                                <argument>${project.basedir}/src/main/resources/compiler/functions</argument>
+                                <argument>${project.basedir}/src/main/resources/compiler</argument>
                                 <argument>${project.build.directory}/compiler.pdb</argument>
                             </arguments>
                         </configuration>

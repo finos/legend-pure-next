@@ -79,17 +79,14 @@ public class CompilerBinaryBuilder
 
         // Collect elements from the local module only
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
-        for (Module module : modules)
+        for (String path : localModule.elementPaths())
         {
-            for (String path : module.elementPaths())
+            if (!elementsByPath.containsKey(path))
             {
-                if (!elementsByPath.containsKey(path))
+                PackageableElement element = localModule.getElement(path);
+                if (element != null)
                 {
-                    PackageableElement element = module.getElement(path);
-                    if (element != null)
-                    {
-                        elementsByPath.put(path, element);
-                    }
+                    elementsByPath.put(path, element);
                 }
             }
         }
