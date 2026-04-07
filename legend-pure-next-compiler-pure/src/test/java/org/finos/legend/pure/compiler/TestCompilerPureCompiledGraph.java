@@ -6,7 +6,6 @@ import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.execution.PureExecution;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,11 +37,17 @@ public class TestCompilerPureCompiledGraph
     {
         PDBModule coreModule = new PDBModule(
                 Path.of("../legend-pure-next-java/legend-pure-next-compiler/target/core.pdb"),
-                PDBModule.Mode.COMPILATION);
+                PDBModule.Mode.EXECUTION,
+                "core",
+                "*",
+                Lists.mutable.with());
 
-        LocalModule compilerModule = new LocalModule("compiler", "*",
-                Lists.mutable.with(coreModule.getName()),
-                Path.of("src/main/resources"));
+        PDBModule compilerModule = new PDBModule(
+                Path.of("target/compiler.pdb"),
+                PDBModule.Mode.EXECUTION,
+                "compiler",
+                "*",
+                Lists.mutable.with("core"));
 
         PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, compilerModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
