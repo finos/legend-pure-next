@@ -71,42 +71,42 @@ public class CompiledGraph implements PackageableElement
     @Override
     public SourceInformation _sourceInformation()
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support sourceInformation");
+        return null;
     }
 
     @Override
     public Any _sourceInformation(SourceInformation value)
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support sourceInformation");
+        return this;
     }
 
     @Override
     public MutableList<TaggedValue> _taggedValues()
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support taggedValues");
+        return null;
     }
 
     @Override
     public ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value)
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support taggedValues");
+        return this;
     }
 
     @Override
     public MutableList<Stereotype_Pointer> _stereotypes()
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support stereotypes");
+        return null;
     }
 
     @Override
     public ElementWithStereotypes _stereotypes(MutableList<Stereotype_Pointer> value)
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support stereotypes");
+        return this;
     }
 
     @Override
     public Any _copy()
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support stereotypes");
+        throw new UnsupportedOperationException("CompiledGraph does not support copy");
     }
 }

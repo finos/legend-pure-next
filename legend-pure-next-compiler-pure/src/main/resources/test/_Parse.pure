@@ -34,3 +34,8 @@ function <<test.Test>> meta::pure::compiler::testParseNativeIntegration() : Bool
     let prop = $cls.properties->at(0);
     assertEquals('name', $prop.name);
 }
+
+Class meta::pure::compiler::test::CompiledGraph extends meta::pure::protocol::grammar::PackageableElement
+{
+    value : String[1];
+}

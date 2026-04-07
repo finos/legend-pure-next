@@ -59,8 +59,8 @@ public final class _Multiplicity
 
         long generalLower = lowerBound(general);
         long specificLower = lowerBound(specific);
-        Long generalUpper = upperBound(general);   // null means unbounded (*)
-        Long specificUpper = upperBound(specific);  // null means unbounded (*)
+        Long generalUpper = upperBound(general);
+        Long specificUpper = upperBound(specific);
 
         // general.lower must be <= specific.lower
         if (generalLower > specificLower)
@@ -124,7 +124,7 @@ public final class _Multiplicity
 
     /**
      * Return the upper bound of a multiplicity.
-     * Returns {@code null} for unbounded (i.e. {@code [*]}).
+     * Uses Long.MAX_VALUE to represent an unlimited ('*') upper bound.
      */
     public static Long upperBound(Multiplicity m)
     {

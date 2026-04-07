@@ -53,7 +53,7 @@ class TestCompilerPureHelpers
         // Compile compiler Pure files against core.pdb
         LocalModule compilerModule = new LocalModule("compiler", "*",
                 Lists.mutable.with(coreModule.getName()),
-                Path.of("src/main/resources/compiler/functions"));
+                Path.of("src/main/resources"));
 
         PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, compilerModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
@@ -62,7 +62,7 @@ class TestCompilerPureHelpers
 
         PureExecution execution = PureExecution.builder()
                 .withResolver(new ScopedMetadataAccess(compilerModule, model))
-                .withNativeExtensions(Lists.mutable.with(new org.finos.legend.pure.compiler.pure.natives.CompilerNatives()))
+                .withNativeExtensions(Lists.mutable.with(new TestCompilerNatives()))
                 .build();
 
         List<DynamicTest> tests = new ArrayList<>();

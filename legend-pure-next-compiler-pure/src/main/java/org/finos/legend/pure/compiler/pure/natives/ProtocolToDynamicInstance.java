@@ -11,13 +11,41 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 
+import java.util.function.Function;
+
 public class ProtocolToDynamicInstance
 {
     private final MetadataAccess resolver;
+    private final Function<Object, String> typeResolutionStrategy;
 
     public ProtocolToDynamicInstance(MetadataAccess resolver)
     {
+        this(resolver, ProtocolToDynamicInstance::defaultTypeResolutionStrategy);
+    }
+
+    public ProtocolToDynamicInstance(MetadataAccess resolver, Function<Object, String> typeResolutionStrategy)
+    {
         this.resolver = resolver;
+        this.typeResolutionStrategy = typeResolutionStrategy;
+    }
+
+    public static String defaultTypeResolutionStrategy(Object javaPOJO)
+    {
+        if (javaPOJO.getClass().getName().startsWith("org.finos.legend.pure.m3.generated.protocol.") 
+            || javaPOJO.getClass().getName().startsWith("meta.pure.protocol.")
+            || javaPOJO.getClass().getName().startsWith("meta.pure.compiler."))
+        {
+            String fullName = javaPOJO.getClass().getName();
+            if (fullName.startsWith("org.finos.legend.pure.m3.generated."))
+            {
+                fullName = "meta.pure." + fullName.substring("org.finos.legend.pure.m3.generated.".length());
+            }
+            if (fullName.endsWith("Impl")) {
+                fullName = fullName.substring(0, fullName.length() - 4);
+            }
+            return fullName.replace(".", "::");
+        }
+        return null;
     }
 
     public Object convert(Object javaPOJO)
@@ -47,20 +75,9 @@ public class ProtocolToDynamicInstance
             return results;
         }
 
-        // If it's a generated protocol class (from meta.pure.protocol packaging)
-        if (javaPOJO.getClass().getName().startsWith("org.finos.legend.pure.m3.generated.protocol.") 
-            || javaPOJO.getClass().getName().startsWith("meta.pure.protocol."))
+        String pureClassPath = this.typeResolutionStrategy.apply(javaPOJO);
+        if (pureClassPath != null)
         {
-            String fullName = javaPOJO.getClass().getName();
-            if (fullName.startsWith("org.finos.legend.pure.m3.generated."))
-            {
-                fullName = "meta.pure." + fullName.substring("org.finos.legend.pure.m3.generated.".length());
-            }
-            if (fullName.endsWith("Impl")) {
-                fullName = fullName.substring(0, fullName.length() - 4);
-            }
-
-            String pureClassPath = fullName.replace(".", "::");
             meta.pure.metamodel.PackageableElement pureClass = resolver.getElement(pureClassPath);
             if (pureClass == null) {
                 throw new RuntimeException("Could not find Pure class for protocol object: " + pureClassPath);

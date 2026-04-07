@@ -67,6 +67,15 @@ public final class DotApplicationResolver
         MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
         ValueSpecification receiver = processParameters.getFirst();
 
+        if (receiver._genericType() == null)
+        {
+            context.addError(new CompilationError(
+                    "Can't resolve property '" + functionName + "' on unresolved receiver",
+                    expr._sourceInformation()));
+            // Return unresolved
+            return expr._parametersValues(processParameters);
+        }
+
         Type ownerType = _GenericType.type(receiver._genericType());
         context.debug("resolveDotApplication: .%s receiverGT=%s receiverMul=%s additionalParams=%d",
                 functionName, lazy(() -> _GenericType.print(receiver._genericType())), lazy(() -> _Multiplicity.print(receiver._multiplicity())), processParameters.size());
