@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::helper::*;
 import meta::pure::compiler::printer::*;
+import meta::pure::compiler::printer::primitive::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::multiplicity::*;
 import meta::pure::metamodel::type::generics::*;
@@ -29,7 +30,10 @@ function meta::pure::compiler::printer::printElement(element:PackageableElement[
 {
     if($element->instanceOf(meta::pure::metamodel::type::Class),
        | $element->cast(@meta::pure::metamodel::type::Class<Any>)->printClass(),
-       | 'unsupported: ' + $element->fullPath()
+       | if($element->instanceOf(meta::pure::metamodel::type::PrimitiveType),
+            | $element->cast(@meta::pure::metamodel::type::PrimitiveType)->printPrimitive(),
+            | 'unsupported: ' + $element->fullPath()
+         )
     )
 }
 

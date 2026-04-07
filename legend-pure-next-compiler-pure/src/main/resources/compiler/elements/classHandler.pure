@@ -38,9 +38,12 @@ function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::
         typeArguments = [^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $skeleton)]
     );
 
-    // Reconstruct Class with properties resolved
-    ^$skeleton(
-        classifierGenericType = $classifierGT,
+    // Create instance with correct classifierGenericType via new(GenericType), then enrich with properties
+    let result = meta::pure::functions::lang::new($classifierGT)->cast(@meta::pure::metamodel::type::Class<Any>);
+    ^$result(
+        name = $skeleton.name,
+        package = $skeleton.package,
+        sourceInformation = $skeleton.sourceInformation,
         generalizations = $generalizations,
         properties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton))
     );

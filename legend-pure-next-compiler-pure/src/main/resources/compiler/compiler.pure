@@ -16,30 +16,63 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::metamodel::PackageableElement[*]
 {
-    let context = ^meta::pure::compiler::CompilerContext(elementMap=newMap([]));
+    let allElements = $file.sections.elements;
 
-    // Pass 1: Build structural scaffolding for all classes
-    let protocolClasses = $file.sections.elements->filter(e | $e->instanceOf(meta::pure::protocol::grammar::type::Class))->cast(@meta::pure::protocol::grammar::type::Class);
-    
-    let pass1Context = $protocolClasses->fold({c, ctx |
-        let packagePath = $c.package->toOne().pointerValue;
-        let className = $packagePath + '::' + $c.name;
-        let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-        let emptyClass = ^meta::pure::metamodel::type::Class<Any>(
-            name = $c.name,
-            package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
-            sourceInformation = $c.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
-                sourceId = $si.sourceId,
-                startLine = $si.startLine,
-                startColumn = $si.startColumn,
-                endLine = $si.endLine,
-                endColumn = $si.endColumn
-            ))
-        );
-        ^CompilerContext(elementMap=$ctx.elementMap->put($className, $emptyClass));
-    }, $context);
+    // Pass 1: Build structural scaffolding
+    let pass1Context = $allElements->fold({e, ctx |
+        $e->match([
+            c:meta::pure::protocol::grammar::type::Class[1] |
+                let packagePath = $c.package->toOne().pointerValue;
+                let className = $packagePath + '::' + $c.name;
+                let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+                let emptyClass = meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Class)
+                )->cast(@meta::pure::metamodel::type::Class<Any>);
+                let skeleton = ^$emptyClass(
+                    name = $c.name,
+                    package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+                    sourceInformation = $c.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                        sourceId = $si.sourceId,
+                        startLine = $si.startLine,
+                        startColumn = $si.startColumn,
+                        endLine = $si.endLine,
+                        endColumn = $si.endColumn
+                    ))
+                );
+                ^CompilerContext(elementMap=$ctx.elementMap->put($className, $skeleton));,
+            p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
+                let packagePath = $p.package->toOne().pointerValue;
+                let pName = $packagePath + '::' + $p.name;
+                let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+                let emptyPrim = meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::PrimitiveType)
+                )->cast(@meta::pure::metamodel::type::PrimitiveType);
+                let primSkeleton = ^$emptyPrim(
+                    name = $p.name,
+                    package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+                    sourceInformation = $p.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                        sourceId = $si.sourceId,
+                        startLine = $si.startLine,
+                        startColumn = $si.startColumn,
+                        endLine = $si.endLine,
+                        endColumn = $si.endColumn
+                    ))
+                );
+                ^CompilerContext(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
+            a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
+        ]);
+    }, ^meta::pure::compiler::CompilerContext(elementMap=newMap([])));
 
-    // Pass 2: Connect attributes and internal references
-    $protocolClasses->map(c | $c->meta::pure::compiler::compileClass($pass1Context));
+    // Pass 2: Compile elements
+    $allElements->map(e |
+        $e->match([
+            c:meta::pure::protocol::grammar::type::Class[1] |
+                $c->meta::pure::compiler::compileClass($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
+                $p->meta::pure::compiler::compilePrimitive($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            a:meta::pure::protocol::grammar::PackageableElement[1] |
+                []->cast(@meta::pure::metamodel::PackageableElement)
+        ]);
+    );
 }
 

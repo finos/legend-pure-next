@@ -16,12 +16,12 @@ import meta::pure::metamodel::valuespecification::*;
 
 function meta::pure::compiler::helper::newVariableExpression():VariableExpression[1]
 {
-    ^VariableExpression(
+    let ve = meta::pure::functions::lang::new(^meta::pure::metamodel::type::generics::InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
+    ^$ve(
         name = '',
         genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = Any),
-        multiplicity = meta::pure::metamodel::multiplicity::PureOne,
-        classifierGenericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = VariableExpression)
-    )
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
 }
 
 function <<test.Test>> meta::pure::compiler::helper::tests::variableExpression::testNewVariableExpression():Boolean[1]

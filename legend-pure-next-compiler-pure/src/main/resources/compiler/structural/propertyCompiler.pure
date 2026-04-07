@@ -61,10 +61,11 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
         multiplicityArguments = [$mMult]
     );
 
-    ^meta::pure::metamodel::function::property::Property<Nil, Any|*>(
+    // Create property with correct classifierGenericType via new(GenericType)
+    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+    ^$prop(
         name = $protocolProperty.name,
         aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        classifierGenericType = $propClassifierGT,
         genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType),
         multiplicity = $mMult,
         sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(

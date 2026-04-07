@@ -186,6 +186,39 @@ public class MetaNatives
             throw new RuntimeException("Not possible");
         });
 
+        // new(GenericType[1]) : Any[1] — construct an instance with the given GenericType as classifierGenericType
+        natives.put("new_GenericType_1__Any_1_", (args, eval, genericType, multiplicity) ->
+        {
+            Object rawArg = _E_ValueSpecification.unwrap(args.get(0));
+            if (!(rawArg instanceof meta.pure.metamodel.type.generics.GenericType gt))
+            {
+                throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
+            }
+
+            meta.pure.metamodel.type.Type rawType = _GenericType.type(gt);
+            String classPath = "Unknown";
+            if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
+            {
+                classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+                if (classPath.isEmpty())
+                {
+                    classPath = pe._name() != null ? pe._name() : "Unknown";
+                }
+            }
+
+            Object instance = createInstanceByPath(classPath);
+            if (instance instanceof Any any)
+            {
+                any._classifierGenericType(gt);
+            }
+            else if (instance instanceof DynamicInstance di)
+            {
+                di.setClassifierGenericType(gt);
+            }
+
+            return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+        });
+
         // new(GenericTypeAndMultiplicityHolder[1], KeyExpression[*]) : T[1] — construct from key expressions
         natives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
         {
@@ -299,6 +332,12 @@ public class MetaNatives
                 throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
             }
 
+            // If path is empty (e.g., instance has no name yet), derive from classifierGenericType
+            if ((classPath == null || classPath.isEmpty()) && cgt != null)
+            {
+                classPath = resolveClassPathFromCGT(cgt);
+            }
+
             Object copy = createInstanceByPath(classPath);
             if (copy instanceof Any anyC && cgt != null)
             {
@@ -336,6 +375,12 @@ public class MetaNatives
             else
             {
                 throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
+            }
+
+            // If path is empty (e.g., instance has no name yet), derive from classifierGenericType
+            if ((classPath == null || classPath.isEmpty()) && cgt != null)
+            {
+                classPath = resolveClassPathFromCGT(cgt);
             }
 
             Object copy = createInstanceByPath(classPath);
@@ -673,6 +718,24 @@ public class MetaNatives
     }
 
     /**
+     * Derive the class path from a classifierGenericType.
+     * Used as fallback when the instance has no name/package yet (freshly created via new(GenericType)).
+     */
+    static String resolveClassPathFromCGT(meta.pure.metamodel.type.generics.GenericType cgt)
+    {
+        meta.pure.metamodel.type.Type rawType = _GenericType.type(cgt);
+        if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
+        {
+            String path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+            if (path != null && !path.isEmpty())
+            {
+                return path;
+            }
+        }
+        return "Unknown";
+    }
+
+    /**
      * Shallow-copy all properties from source to target.
      * For DynamicInstance sources, copies from the value map.
      * For Java class sources, uses metamodel-driven reflection.
@@ -893,6 +956,13 @@ public class MetaNatives
 
             if (key != null)
             {
+                // classifierGenericType is system-managed — block user assignment
+                if ("classifierGenericType".equals(key))
+                {
+                    throw new RuntimeException("Cannot set 'classifierGenericType' directly. "
+                            + "This field is system-managed and derived from the instantiation. "
+                            + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.");
+                }
                 setInstanceProperty(instance, key, value);
                 if (value != null)
                 {

@@ -24,13 +24,13 @@ function meta::pure::compiler::helper::resolveProperty(prop:Property<Nil,Any|*>[
        | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
     );
     
-    ^Property<Nil,Any|*>(
+    let resolvedProp = meta::pure::functions::lang::new($resolvedTuple.second.second)->cast(@Property<Nil,Any|*>);
+    ^$resolvedProp(
         aggregation = AggregationKind.None,
         name = $prop.name,
         genericType = $resolvedTuple.first,
         multiplicity = $resolvedTuple.second.first,
-        owner = $prop.owner,
-        classifierGenericType = $resolvedTuple.second.second
+        owner = $prop.owner
     );
 }
 

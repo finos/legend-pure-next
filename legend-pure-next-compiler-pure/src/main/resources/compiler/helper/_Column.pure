@@ -10,12 +10,12 @@ function meta::pure::compiler::helper::buildColumn(name:String[1], owner:Generic
         multiplicityArguments = [$multiplicity]
     );
 
-    ^Column(
+    let col = meta::pure::functions::lang::new($cgtype)->cast(@Column);
+    ^$col(
         name = $name,
         nameWildCard = $nameWildCard,
         genericType = $genericType,
-        multiplicity = $multiplicity,
-        classifierGenericType = $cgtype
+        multiplicity = $multiplicity
     );
 }
 
