@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -9,6 +11,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 5,
             "startColumn" : 3,
@@ -22,6 +25,7 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "MyClass",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 5,
                 "startColumn" : 13,
@@ -33,6 +37,7 @@
             "_type" : "UndefinedMultiplicity"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 19,
             "endLine" : 5,
             "startColumn" : 12,
@@ -40,6 +45,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 5,
           "startColumn" : 5,
@@ -52,6 +58,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 6,
             "startColumn" : 3,
@@ -65,6 +72,7 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "MyClass",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 6,
                 "startColumn" : 13,
@@ -77,6 +85,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 26,
                   "endLine" : 6,
                   "startColumn" : 21,
@@ -89,6 +98,7 @@
             "_type" : "UndefinedMultiplicity"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 6,
             "startColumn" : 12,
@@ -96,6 +106,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 28,
           "endLine" : 6,
           "startColumn" : 5,
@@ -108,6 +119,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 7,
             "startColumn" : 3,
@@ -121,6 +133,7 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "MyClass",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 7,
                 "startColumn" : 13,
@@ -133,6 +146,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 26,
                   "endLine" : 7,
                   "startColumn" : 21,
@@ -145,6 +159,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Integer",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 35,
                   "endLine" : 7,
                   "startColumn" : 29,
@@ -157,6 +172,7 @@
             "_type" : "UndefinedMultiplicity"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 36,
             "endLine" : 7,
             "startColumn" : 12,
@@ -164,6 +180,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 37,
           "endLine" : 7,
           "startColumn" : 5,
@@ -176,6 +193,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 8,
             "startColumn" : 3,
@@ -188,6 +206,7 @@
             "multiplicityArguments" : [ {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 0
               }
             } ],
@@ -195,6 +214,7 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "MyClass",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 8,
                 "startColumn" : 13,
@@ -207,6 +227,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 26,
                   "endLine" : 8,
                   "startColumn" : 21,
@@ -219,6 +240,7 @@
             "_type" : "UndefinedMultiplicity"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 29,
             "endLine" : 8,
             "startColumn" : 12,
@@ -226,6 +248,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 30,
           "endLine" : 8,
           "startColumn" : 5,
@@ -238,6 +261,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 9,
             "startColumn" : 3,
@@ -251,6 +275,7 @@
               "_type" : "Type_Pointer",
               "pointerValue" : "Varchar",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 9,
                 "startColumn" : 13,
@@ -267,6 +292,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 9,
                 "startColumn" : 21,
@@ -279,6 +305,7 @@
             "_type" : "UndefinedMultiplicity"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 9,
             "startColumn" : 12,
@@ -286,6 +313,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 9,
           "startColumn" : 5,
@@ -295,6 +323,7 @@
       "functionName" : "castExpressions",
       "name" : "castExpressions__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -303,6 +332,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 41,
             "endLine" : 3,
             "startColumn" : 39,
@@ -313,10 +343,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 10,
         "startColumn" : 1,
@@ -325,12 +357,14 @@
     }, {
       "_type" : "PrimitiveType",
       "generalizations" : [ {
+        "_type" : "Generalization",
         "general" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 51,
               "endLine" : 12,
               "startColumn" : 46,
@@ -339,6 +373,7 @@
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 51,
           "endLine" : 12,
           "startColumn" : 46,
@@ -347,9 +382,11 @@
       } ],
       "name" : "Varchar",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 51,
         "endLine" : 12,
         "startColumn" : 1,
@@ -359,15 +396,18 @@
       "_type" : "Class",
       "name" : "MyClass",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 16,
               "startColumn" : 9,
@@ -378,14 +418,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "name",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 16,
           "startColumn" : 3,
@@ -393,6 +436,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 17,
         "startColumn" : 1,

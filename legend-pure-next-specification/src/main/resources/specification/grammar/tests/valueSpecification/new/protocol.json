@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -17,13 +19,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 5,
             "startColumn" : 3,
@@ -34,13 +39,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 5,
             "startColumn" : 3,
@@ -59,6 +67,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 22,
                 "endLine" : 5,
                 "startColumn" : 12,
@@ -75,6 +84,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 22,
                 "endLine" : 5,
                 "startColumn" : 17,
@@ -83,6 +93,7 @@
               "value" : "test"
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 22,
               "endLine" : 5,
               "startColumn" : 12,
@@ -91,6 +102,7 @@
           } ]
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 5,
           "startColumn" : 3,
@@ -111,13 +123,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 34,
             "endLine" : 6,
             "startColumn" : 3,
@@ -128,13 +143,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 2
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 2
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 34,
             "endLine" : 6,
             "startColumn" : 3,
@@ -153,6 +171,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 6,
                 "startColumn" : 12,
@@ -169,6 +188,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 6,
                 "startColumn" : 17,
@@ -177,6 +197,7 @@
               "value" : "hello"
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 6,
               "startColumn" : 12,
@@ -195,6 +216,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 33,
                 "endLine" : 6,
                 "startColumn" : 26,
@@ -211,6 +233,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 33,
                 "endLine" : 6,
                 "startColumn" : 32,
@@ -219,6 +242,7 @@
               "value" : 42
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 33,
               "endLine" : 6,
               "startColumn" : 26,
@@ -227,6 +251,7 @@
           } ]
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 34,
           "endLine" : 6,
           "startColumn" : 3,
@@ -237,13 +262,16 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 2
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 2
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 42,
           "endLine" : 7,
           "startColumn" : 3,
@@ -264,13 +292,16 @@
             "multiplicity" : {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 7,
               "startColumn" : 4,
@@ -281,13 +312,16 @@
             "multiplicity" : {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 7,
               "startColumn" : 4,
@@ -306,6 +340,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 20,
                   "endLine" : 7,
                   "startColumn" : 13,
@@ -322,6 +357,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 20,
                   "endLine" : 7,
                   "startColumn" : 18,
@@ -330,6 +366,7 @@
                 "value" : "a"
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 7,
                 "startColumn" : 13,
@@ -338,6 +375,7 @@
             } ]
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 21,
             "endLine" : 7,
             "startColumn" : 4,
@@ -358,13 +396,16 @@
             "multiplicity" : {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 7,
               "startColumn" : 24,
@@ -375,13 +416,16 @@
             "multiplicity" : {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 7,
               "startColumn" : 24,
@@ -400,6 +444,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 40,
                   "endLine" : 7,
                   "startColumn" : 33,
@@ -416,6 +461,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 40,
                   "endLine" : 7,
                   "startColumn" : 38,
@@ -424,6 +470,7 @@
                 "value" : "b"
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 40,
                 "endLine" : 7,
                 "startColumn" : 33,
@@ -432,6 +479,7 @@
             } ]
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 41,
             "endLine" : 7,
             "startColumn" : 24,
@@ -455,6 +503,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 17,
                   "endLine" : 8,
                   "startColumn" : 12,
@@ -466,13 +515,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 8,
             "startColumn" : 3,
@@ -483,13 +535,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 8,
             "startColumn" : 3,
@@ -508,6 +563,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 31,
                 "endLine" : 8,
                 "startColumn" : 20,
@@ -524,6 +580,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 31,
                 "endLine" : 8,
                 "startColumn" : 25,
@@ -532,6 +589,7 @@
               "value" : "typed"
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 31,
               "endLine" : 8,
               "startColumn" : 20,
@@ -540,6 +598,7 @@
           } ]
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 32,
           "endLine" : 8,
           "startColumn" : 3,
@@ -555,9 +614,11 @@
             "multiplicityArguments" : [ {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 1
               }
             } ],
@@ -571,6 +632,7 @@
                 "_type" : "Type_Pointer",
                 "pointerValue" : "String",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 17,
                   "endLine" : 9,
                   "startColumn" : 12,
@@ -582,13 +644,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 38,
             "endLine" : 9,
             "startColumn" : 3,
@@ -599,13 +664,16 @@
           "multiplicity" : {
             "_type" : "UserDefinedAdHocMultiplicity",
             "lowerBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             },
             "upperBound" : {
+              "_type" : "MultiplicityValue",
               "value" : 1
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 38,
             "endLine" : 9,
             "startColumn" : 3,
@@ -624,6 +692,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 37,
                 "endLine" : 9,
                 "startColumn" : 22,
@@ -640,6 +709,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 37,
                 "endLine" : 9,
                 "startColumn" : 27,
@@ -648,6 +718,7 @@
               "value" : "typedMult"
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 37,
               "endLine" : 9,
               "startColumn" : 22,
@@ -656,6 +727,7 @@
           } ]
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 38,
           "endLine" : 9,
           "startColumn" : 3,
@@ -665,6 +737,7 @@
       "functionName" : "newExpressions",
       "name" : "newExpressions__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -673,6 +746,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 40,
             "endLine" : 3,
             "startColumn" : 38,
@@ -683,10 +757,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 10,
         "startColumn" : 1,
@@ -696,15 +772,18 @@
       "_type" : "Class",
       "name" : "MyClass",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 14,
               "startColumn" : 9,
@@ -715,26 +794,31 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "name",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 14,
           "startColumn" : 3,
           "startLine" : 14
         }
       }, {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 15,
               "startColumn" : 10,
@@ -745,14 +829,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 0
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "value",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 15,
           "startColumn" : 3,
@@ -760,6 +847,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 16,
         "startColumn" : 1,

@@ -1,10 +1,13 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "NativeFunction",
       "functionName" : "rename",
       "name" : "rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "meta::pure::functions::relation"
       },
       "parameters" : [ {
@@ -15,6 +18,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 93,
               "endLine" : 2,
               "startColumn" : 86,
@@ -32,14 +36,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "r",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 99,
           "endLine" : 2,
           "startColumn" : 83,
@@ -53,6 +60,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 113,
               "endLine" : 2,
               "startColumn" : 107,
@@ -76,6 +84,7 @@
                 "type" : {
                   "_type" : "RelationType",
                   "columns" : [ {
+                    "_type" : "Column",
                     "genericType" : {
                       "_type" : "UserDefinedGenericType",
                       "type" : {
@@ -85,6 +94,7 @@
                     },
                     "nameWildCard" : true,
                     "sourceInformation" : {
+                      "_type" : "SourceInformation",
                       "endColumn" : 120,
                       "endLine" : 2,
                       "startColumn" : 118,
@@ -107,14 +117,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "old",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 127,
           "endLine" : 2,
           "startColumn" : 102,
@@ -128,6 +141,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 141,
               "endLine" : 2,
               "startColumn" : 135,
@@ -149,6 +163,7 @@
               "type" : {
                 "_type" : "RelationType",
                 "columns" : [ {
+                  "_type" : "Column",
                   "genericType" : {
                     "_type" : "UserDefinedGenericType",
                     "type" : {
@@ -158,6 +173,7 @@
                   },
                   "nameWildCard" : true,
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 148,
                     "endLine" : 2,
                     "startColumn" : 146,
@@ -171,14 +187,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "new",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 153,
           "endLine" : 2,
           "startColumn" : 130,
@@ -191,6 +210,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Relation",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 164,
             "endLine" : 2,
             "startColumn" : 157,
@@ -230,21 +250,27 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 1
         },
         "upperBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 1
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 175,
         "endLine" : 2,
         "startColumn" : 1,
         "startLine" : 2
       },
       "stereotypes" : [ {
+        "_type" : "Stereotype_PointerImpl",
         "extraPointerValues" : [ {
+          "_type" : "PointerValue",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 30,
             "endLine" : 2,
             "startColumn" : 23,
@@ -254,6 +280,7 @@
         } ],
         "pointerValue" : "PCT",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 21,
           "endLine" : 2,
           "startColumn" : 19,

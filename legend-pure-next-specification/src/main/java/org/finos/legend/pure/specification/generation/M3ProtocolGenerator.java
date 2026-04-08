@@ -78,7 +78,6 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoExcluded;
     private final Resource protocolInfoInferred;
     private final Resource protocolInfoPointer;
-    private final Resource protocolInfoMainTaxonomy;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
@@ -125,8 +124,7 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_inferred");
         this.protocolInfoPointer =
             model.createResource(M3_NS + "ProtocolInfo_pointer");
-        this.protocolInfoMainTaxonomy =
-            model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
+
         this.protocolInfoAbstract =
             model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
@@ -336,7 +334,7 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Class ;\n");
 
-        // Write stereotypes (only mainTaxonomy and abstract for protocol)
+        // Write stereotypes (only abstract for protocol)
         MutableList<String> stereos = Lists.mutable.empty();
         StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
         while (stereoIter.hasNext())
@@ -345,7 +343,7 @@ public class M3ProtocolGenerator
             if (stereoStmt.getObject().isResource())
             {
                 Resource stereoRes = stereoStmt.getObject().asResource();
-                if (stereoRes.equals(protocolInfoMainTaxonomy) || stereoRes.equals(protocolInfoAbstract))
+                if (stereoRes.equals(protocolInfoAbstract))
                 {
                     stereos.add(getLocalName(stereoRes));
                 }
@@ -1114,7 +1112,7 @@ public class M3ProtocolGenerator
         Resource protocolType = model.createResource(M3_NS + protocolTypeName);
         model.add(protocolType, rdfType, m3Class);
         model.add(protocolType, nameProp, protocolTypeName);
-        model.add(protocolType, stereotypesProp, protocolInfoMainTaxonomy);
+
 
         // Set package from original type
         Statement origPkgStmt = model.getProperty(originalType, packageProp);

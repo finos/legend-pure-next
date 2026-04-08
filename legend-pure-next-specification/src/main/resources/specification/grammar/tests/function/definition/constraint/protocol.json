@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -9,6 +11,7 @@
           "_type" : "VariableExpression",
           "name" : "x",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 9,
             "startColumn" : 5,
@@ -24,6 +27,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 9,
             "startColumn" : 10,
@@ -32,6 +36,7 @@
           "value" : 1
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 9,
           "startColumn" : 8,
@@ -41,6 +46,7 @@
       "functionName" : "constrained",
       "name" : "constrained_Integer_1__Integer_1_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "parameters" : [ {
@@ -51,6 +57,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 2,
               "startColumn" : 35,
@@ -61,14 +68,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "x",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 44,
           "endLine" : 2,
           "startColumn" : 32,
@@ -76,6 +86,7 @@
         }
       } ],
       "postConstraints" : [ {
+        "_type" : "Constraint",
         "functionDefinition" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {
@@ -85,6 +96,7 @@
               "_type" : "VariableExpression",
               "name" : "return",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 6,
                 "startColumn" : 5,
@@ -100,6 +112,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 15,
                 "endLine" : 6,
                 "startColumn" : 15,
@@ -108,6 +121,7 @@
               "value" : 2
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 6,
               "startColumn" : 13,
@@ -115,6 +129,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 6,
             "startColumn" : 5,
@@ -122,6 +137,7 @@
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 15,
           "endLine" : 6,
           "startColumn" : 5,
@@ -129,6 +145,7 @@
         }
       } ],
       "preConstraints" : [ {
+        "_type" : "Constraint",
         "functionDefinition" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {
@@ -137,6 +154,7 @@
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 5,
                 "endLine" : 4,
                 "startColumn" : 5,
@@ -155,6 +173,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 9,
                 "endLine" : 4,
                 "startColumn" : 9,
@@ -163,6 +182,7 @@
               "value" : 0
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 4,
               "startColumn" : 7,
@@ -170,6 +190,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 9,
             "endLine" : 4,
             "startColumn" : 5,
@@ -177,12 +198,14 @@
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 9,
           "endLine" : 4,
           "startColumn" : 5,
           "startLine" : 4
         }
       }, {
+        "_type" : "Constraint",
         "functionDefinition" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {
@@ -192,6 +215,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 5,
                 "startColumn" : 15,
@@ -207,6 +231,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 5,
                 "startColumn" : 20,
@@ -215,6 +240,7 @@
               "value" : 0
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 20,
               "endLine" : 5,
               "startColumn" : 18,
@@ -222,6 +248,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 5,
             "startColumn" : 5,
@@ -230,6 +257,7 @@
         },
         "name" : "positive",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 5,
           "startColumn" : 5,
@@ -242,6 +270,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Integer",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 2,
             "startColumn" : 48,
@@ -252,13 +281,16 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 1
         },
         "upperBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 1
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 10,
         "startColumn" : 1,

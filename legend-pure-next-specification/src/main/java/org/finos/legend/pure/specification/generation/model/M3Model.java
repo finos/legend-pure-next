@@ -33,7 +33,6 @@ public class M3Model
     private final MutableMap<String, MutableList<PropertyInfo>> propertiesByOwner = Maps.mutable.empty();
     private final MutableMap<String, ProfileInfo> profileInfoMap = Maps.mutable.empty();
     private final MutableSet<String> classesWithSubtypes = Sets.mutable.empty();
-    private final MutableSet<String> mainTaxonomyClasses = Sets.mutable.empty();
     private final MutableSet<String> primitiveTypes = Sets.mutable.empty();
 
     // Maps stereotype resource URI -> "ProfileName.stereotypeName"
@@ -72,7 +71,7 @@ public class M3Model
 
     public MutableSet<String> mainTaxonomyClasses()
     {
-        return mainTaxonomyClasses;
+        return classesWithSubtypes;
     }
 
     public MutableSet<String> primitiveTypes()

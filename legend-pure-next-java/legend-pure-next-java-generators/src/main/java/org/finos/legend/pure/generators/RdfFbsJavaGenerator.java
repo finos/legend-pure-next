@@ -63,7 +63,7 @@ public class RdfFbsJavaGenerator
         this.mainTaxonomySubtypes = Maps.mutable.empty();
         m3Model.classInfoMap().valuesView().forEach(ci ->
         {
-            if (isMainTaxonomy(ci))
+            if (isMainTaxonomy(m3Model, ci))
             {
                 MutableList<String> subtypes = collectAllSubtypes(m3Model, ci.name);
                 if (subtypes.notEmpty())
@@ -150,6 +150,10 @@ public class RdfFbsJavaGenerator
     {
         for (ClassInfo classInfo : m3Model.classInfoMap().valuesView())
         {
+            if (isAbstract(classInfo))
+            {
+                continue;
+            }
             String javaPackage = toJavaPackage(classInfo.packagePath);
             Path packageDir = outputDir.resolve(javaPackage.replace('.', '/'));
             Files.createDirectories(packageDir);
@@ -212,9 +216,13 @@ public class RdfFbsJavaGenerator
                         }
                     });
                     // Also import base type Def and wrapper
-                    imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs." + prop.typeName + "Def");
+                    boolean baseIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
+                    if (!baseIsAbstract)
+                    {
+                        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs." + prop.typeName + "Def");
+                    }
                     ClassInfo baseTypeInfo = m3Model.classInfoMap().get(prop.typeName);
-                    if (baseTypeInfo != null)
+                    if (baseTypeInfo != null && !baseIsAbstract)
                     {
                         String basePkg = toJavaPackage(baseTypeInfo.packagePath);
                         if (!basePkg.equals(thisPackage))
@@ -225,9 +233,13 @@ public class RdfFbsJavaGenerator
                 }
                 else if (isClassType)
                 {
-                    imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs." + prop.typeName + "Def");
+                    boolean baseIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
+                    if (!baseIsAbstract)
+                    {
+                        imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs." + prop.typeName + "Def");
+                    }
                     ClassInfo propTypeInfo = m3Model.classInfoMap().get(prop.typeName);
-                    if (propTypeInfo != null)
+                    if (propTypeInfo != null && !baseIsAbstract)
                     {
                         String propPkg = toJavaPackage(propTypeInfo.packagePath);
                         if (!propPkg.equals(thisPackage))
@@ -280,7 +292,7 @@ public class RdfFbsJavaGenerator
         // Lazy cache fields for properties that create wrapper objects
         allProps.forEach(prop ->
         {
-            if (hasStereotype(prop.stereotypes, "excluded")) { return; }
+            if (hasStereotype(prop.stereotypes, "excluded") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))) { return; }
             boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
             boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer
                     && !"Any".equals(prop.typeName);
@@ -370,22 +382,6 @@ public class RdfFbsJavaGenerator
             else if (isEnumType)
             {
                 generateEnumGetter(sb, prop, javaType, javaAccessor);
-            }
-            else if (isMainTaxonomyType(prop.typeName) && prop.isMany)
-            {
-                generateMainTaxonomyListGetter(sb, prop, javaType, javaAccessor);
-            }
-            else if (isMainTaxonomyType(prop.typeName))
-            {
-                generateMainTaxonomySingleGetter(sb, prop, javaType, javaAccessor, cacheField);
-            }
-            else if (isClassType && prop.isMany)
-            {
-                generateOwnedListGetter(sb, prop, javaType, javaAccessor);
-            }
-            else if (isClassType)
-            {
-                generateOwnedSingleGetter(sb, prop, javaType, javaAccessor);
             }
             else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
             {
@@ -483,6 +479,22 @@ public class RdfFbsJavaGenerator
                 sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        return null;\n");
+            }
+            else if (isMainTaxonomyType(prop.typeName) && prop.isMany)
+            {
+                generateMainTaxonomyListGetter(sb, prop, javaType, javaAccessor);
+            }
+            else if (isMainTaxonomyType(prop.typeName))
+            {
+                generateMainTaxonomySingleGetter(sb, prop, javaType, javaAccessor, cacheField);
+            }
+            else if (isClassType && prop.isMany)
+            {
+                generateOwnedListGetter(sb, prop, javaType, javaAccessor);
+            }
+            else if (isClassType)
+            {
+                generateOwnedSingleGetter(sb, prop, javaType, javaAccessor);
             }
             else
             {
@@ -785,13 +797,17 @@ public class RdfFbsJavaGenerator
         });
 
         // Fallback for the base type itself (last in union)
+        boolean propIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
         int baseIdx = subtypes.size() + 1;
-        sb.append("                case ").append(baseIdx).append(": { ");
-        sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def(), i); ");
-        sb.append("if (d != null) result.add(new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this)); break; }\n");
+        if (!propIsAbstract)
+        {
+            sb.append("                case ").append(baseIdx).append(": { ");
+            sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def(), i); ");
+            sb.append("if (d != null) result.add(new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this)); break; }\n");
+        }
 
         // AncestorRef (cycle back-reference) — last in mainTaxonomy union
-        int ancestorRefIdx = subtypes.size() + 2;
+        int ancestorRefIdx = propIsAbstract ? subtypes.size() + 1 : subtypes.size() + 2;
         sb.append("                case ").append(ancestorRefIdx).append(": { AncestorRef ar = (AncestorRef) fb.").append(fbField)
           .append("(new AncestorRef(), i); if (ar != null) { Object t = this; for (int d = 0; d < ar.depth(); d++) { if (t instanceof FlatBufferWrapper w) t = w._fbParent(); else break; } result.add((").append(innerType)
           .append(") t); } break; }\n");
@@ -838,20 +854,24 @@ public class RdfFbsJavaGenerator
         });
 
         // Base type fallback
+        boolean propIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
         int baseIdx = subtypes.size() + 1;
-        sb.append("            case ").append(baseIdx).append(": { ");
-        sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def()); ");
-        if (cacheField != null)
+        if (!propIsAbstract)
         {
-            sb.append(cacheField).append(" = d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this) : null; return ").append(cacheField).append("; }\n");
-        }
-        else
-        {
-            sb.append("return d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this) : null; }\n");
+            sb.append("            case ").append(baseIdx).append(": { ");
+            sb.append(prop.typeName).append("Def d = (").append(prop.typeName).append("Def) fb.").append(fbField).append("(new ").append(prop.typeName).append("Def()); ");
+            if (cacheField != null)
+            {
+                sb.append(cacheField).append(" = d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this) : null; return ").append(cacheField).append("; }\n");
+            }
+            else
+            {
+                sb.append("return d != null ? new ").append(prop.typeName).append("FlatBufferWrapper(d, resolver, this) : null; }\n");
+            }
         }
 
         // AncestorRef (cycle back-reference) — last in mainTaxonomy union
-        int ancestorRefIdx = subtypes.size() + 2;
+        int ancestorRefIdx = propIsAbstract ? subtypes.size() + 1 : subtypes.size() + 2;
         sb.append("            case ").append(ancestorRefIdx).append(": { ");
         sb.append("AncestorRef ar = (AncestorRef) fb.").append(fbField).append("(new AncestorRef()); ");
         sb.append("if (ar != null) { Object t = this; for (int d = 0; d < ar.depth(); d++) { if (t instanceof FlatBufferWrapper w) t = w._fbParent(); else break; } return (").append(javaType).append(") t; } }\n");
@@ -1075,6 +1095,11 @@ public class RdfFbsJavaGenerator
         // Generate a write method for each class
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
+            if (isAbstract(classInfo))
+            {
+                return;
+            }
+
             MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
 
             sb.append("    public int write").append(classInfo.name).append("(").append(classInfo.name).append(" obj)\n");
@@ -1105,7 +1130,7 @@ public class RdfFbsJavaGenerator
             // Pre-create string and nested offsets
             allProps.forEach(prop ->
             {
-                if (hasStereotype(prop.stereotypes, "excluded"))
+                if (hasStereotype(prop.stereotypes, "excluded") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name)))
                 {
                     return;
                 }
@@ -1210,12 +1235,16 @@ public class RdfFbsJavaGenerator
                         });
 
                         // Fallback to base type
+                        boolean propIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
                         int baseIdx = subtypes.size() + 1;
-                        sb.append("                else\n");
-                        sb.append("                {\n");
-                        sb.append("                    ").append(fbField).append("Offsets[i] = write").append(prop.typeName).append("((").append(prop.typeName).append(") _item);\n");
-                        sb.append("                    ").append(fbField).append("Types[i] = ").append(baseIdx).append(";\n");
-                        sb.append("                }\n");
+                        if (!propIsAbstract)
+                        {
+                            sb.append("                else\n");
+                            sb.append("                {\n");
+                            sb.append("                    ").append(fbField).append("Offsets[i] = write").append(prop.typeName).append("((").append(prop.typeName).append(") _item);\n");
+                            sb.append("                    ").append(fbField).append("Types[i] = ").append(baseIdx).append(";\n");
+                            sb.append("                }\n");
+                        }
 
                         sb.append("            }\n");
                         sb.append("        }\n");
@@ -1311,12 +1340,16 @@ public class RdfFbsJavaGenerator
                         sb.append("            }\n");
                     });
                     // Fallback: write as the base type
+                    boolean propIsAbstract = isAbstract(m3Model.classInfoMap().get(prop.typeName));
                     int baseIdx = subtypes.size() + 1;
-                    sb.append("            else\n");
-                    sb.append("            {\n");
-                    sb.append("                ").append(fbField).append("Offset = write").append(prop.typeName).append("((").append(prop.typeName).append(") obj._").append(prop.name).append("());\n");
-                    sb.append("                ").append(fbField).append("UnionType = ").append(baseIdx).append(";\n");
-                    sb.append("            }\n");
+                    if (!propIsAbstract)
+                    {
+                        sb.append("            else\n");
+                        sb.append("            {\n");
+                        sb.append("                ").append(fbField).append("Offset = write").append(prop.typeName).append("((").append(prop.typeName).append(") obj._").append(prop.name).append("());\n");
+                        sb.append("                ").append(fbField).append("UnionType = ").append(baseIdx).append(";\n");
+                        sb.append("            }\n");
+                    }
                     sb.append("        }\n");
                 }
                 else if (isClassType)
@@ -1436,7 +1469,7 @@ public class RdfFbsJavaGenerator
 
             allProps.forEach(prop ->
             {
-                if (hasStereotype(prop.stereotypes, "excluded"))
+                if (hasStereotype(prop.stereotypes, "excluded") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name)))
                 {
                     return;
                 }

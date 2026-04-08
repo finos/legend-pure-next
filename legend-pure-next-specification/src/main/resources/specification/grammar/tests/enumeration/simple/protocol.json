@@ -1,22 +1,29 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Enumeration",
       "name" : "AnEnum",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "properties" : [ {
+        "_type" : "Property",
         "name" : "Val",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 5,
           "endLine" : 6,
           "startColumn" : 3,
           "startLine" : 6
         }
       }, {
+        "_type" : "Property",
         "name" : "Val2",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 6,
           "endLine" : 7,
           "startColumn" : 3,
@@ -24,6 +31,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,
         "startColumn" : 1,

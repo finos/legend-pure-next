@@ -85,6 +85,10 @@ public class M3MetamodelReader
     {
         M3Model m3Model = new M3Model();
         collectProfileInfo(m3Model);
+
+        // Inject omitted profiles from protocol grammar (e.g. typemodifiers)
+        m3Model.stereotypeDisplayNames().put(M3_NS + "meta_pure_profiles_typemodifiers_abstract", "typemodifiers.abstract");
+
         collectClassInfo(m3Model);
         collectEnumInfo(m3Model);
         collectPrimitiveInfo(m3Model);
@@ -179,11 +183,7 @@ public class M3MetamodelReader
             info.typeParameters = extractTypeParameters(classRes);
             info.multiplicityParameters = extractMultiplicityParameters(classRes);
 
-            // Track mainTaxonomy for JSON type annotations
-            if (info.stereotypes.anySatisfy(s -> s.endsWith(".mainTaxonomy")))
-            {
-                m3Model.mainTaxonomyClasses().add(name);
-            }
+
 
             m3Model.classInfoMap().put(info.name, info);
         }

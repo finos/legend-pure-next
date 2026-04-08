@@ -372,7 +372,7 @@
 # --- GenericType ---
 
 :GenericType a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "AdHocGenericTypeValue,UndefinedGenericType,GenericTypeOperation" ] ;
     :name "GenericType" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GenericTypeBase ] ;
@@ -1135,7 +1135,7 @@
 # --- PackageableElement ---
 
 :PackageableElement a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "PackageableElement" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_PackageableElement ] ;
     :package :meta_pure_metamodel ;
@@ -1233,6 +1233,7 @@
 # --- Function ---
 
 :Function a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "Function" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Function ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
@@ -1242,6 +1243,7 @@
 # --- FunctionWithParameters ---
 
 :FunctionWithParameters a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "FunctionWithParameters" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :FunctionWithParameters ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
@@ -1258,6 +1260,7 @@
 # --- PackageableFunction ---
 
 :PackageableFunction a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "PackageableFunction" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackageableFunction ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name "K" ] ] ] ] ;
     :package :meta_pure_metamodel_function ;
@@ -1308,6 +1311,7 @@
 # --- FunctionDefinition ---
 
 :FunctionDefinition a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value "LambdaFunction" ] ;
     :name "FunctionDefinition" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name "T" ] ] ] ] ;
@@ -1363,6 +1367,7 @@
 # --- AbstractProperty ---
 
 :AbstractProperty a :Class ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "AbstractProperty" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :AbstractProperty ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name "T" ] ] ] ] ;
     :package :meta_pure_metamodel_function_property ;
@@ -1531,7 +1536,7 @@
 # --- ValueSpecification ---
 
 :ValueSpecification a :Class ;
-    :stereotypes :ProtocolInfo_mainTaxonomy , :meta_pure_profiles_typemodifiers_abstract ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
     :name "ValueSpecification" ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_ValueSpecification ] ;
     :package :meta_pure_metamodel_valuespecification ;
@@ -2288,10 +2293,6 @@
 
 
 
-:ProtocolInfo_mainTaxonomy a :Stereotype ;
-    :classifierGenericType :GenericType_Stereotype ;
-    :stereotype_name "mainTaxonomy" ;
-    :profile :ProtocolInfo .
 
 :ProtocolInfo_nonPointerSubtypes a :Tag ;
     :classifierGenericType :GenericType_Tag ;

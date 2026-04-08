@@ -1,15 +1,20 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Class",
       "multiplicityParameters" : [ {
+        "_type" : "UserDefinedMultiplicityParameter",
         "name" : "m"
       } ],
       "name" : "X",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "x"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -23,6 +28,7 @@
         },
         "name" : "val",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 14,
           "endLine" : 4,
           "startColumn" : 5,
@@ -30,6 +36,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
         "startColumn" : 1,

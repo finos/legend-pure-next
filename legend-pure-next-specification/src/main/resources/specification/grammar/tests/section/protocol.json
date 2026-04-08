@@ -1,18 +1,23 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Class",
       "name" : "MyClass",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "x::b"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Prop",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 6,
               "startColumn" : 11,
@@ -23,14 +28,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "prop",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 6,
           "startColumn" : 5,
@@ -38,6 +46,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
         "startColumn" : 1,
@@ -47,9 +56,11 @@
       "_type" : "Class",
       "name" : "Prop",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "x::b"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 11,
         "startColumn" : 1,
@@ -59,19 +70,23 @@
     "imports" : [ "x::b::*" ],
     "parserName" : "Pure"
   }, {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Class",
       "name" : "MyOtherClass",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "a::b"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Prop",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 18,
               "startColumn" : 11,
@@ -82,14 +97,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "prop",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 18,
           "startColumn" : 5,
@@ -97,6 +115,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 19,
         "startColumn" : 1,
@@ -106,9 +125,11 @@
       "_type" : "Class",
       "name" : "Prop",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "a::b"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 23,
         "startColumn" : 1,

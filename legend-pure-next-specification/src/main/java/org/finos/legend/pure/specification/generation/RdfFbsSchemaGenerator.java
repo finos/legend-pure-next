@@ -113,7 +113,7 @@ public class RdfFbsSchemaGenerator
         MutableMap<String, String> mainTaxonomyUnions = Maps.mutable.empty();
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
-            if (isMainTaxonomy(classInfo))
+            if (isMainTaxonomy(m3Model, classInfo))
             {
                 MutableList<String> subtypes = collectAllSubtypes(m3Model, classInfo.name);
                 if (subtypes.notEmpty())
@@ -128,9 +128,14 @@ public class RdfFbsSchemaGenerator
                         sb.append(subtype).append("Def");
                     });
                     // Include the base type itself as fallback
-                    sb.append(", ").append(classInfo.name).append("Def");
+                    if (!isAbstract(classInfo))
+                    {
+                        if (subtypes.notEmpty()) { sb.append(", "); }
+                        sb.append(classInfo.name).append("Def");
+                    }
                     // Include AncestorRef for cycle back-references
-                    sb.append(", AncestorRef");
+                    if (subtypes.notEmpty() || !isAbstract(classInfo)) { sb.append(", "); }
+                    sb.append("AncestorRef");
                     sb.append(" }\n\n");
                 }
             }
@@ -146,6 +151,10 @@ public class RdfFbsSchemaGenerator
         // Generate tables
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
+            if (isAbstract(classInfo))
+            {
+                return;
+            }
             MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
 
             sb.append("table ").append(classInfo.name).append("Def {\n");
@@ -215,10 +224,14 @@ public class RdfFbsSchemaGenerator
         sb.append("    path: string;\n");
         sb.append("    element_type: string;\n");
 
-        m3Model.classInfoMap().keysView().toSortedList().forEach(name ->
+        m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(ci ->
         {
-            String fbsField = toFbsFieldName(name);
-            sb.append("    ").append(fbsField).append("_val: ").append(name).append("Def;\n");
+            if (isAbstract(ci))
+            {
+                return;
+            }
+            String fbsField = toFbsFieldName(ci.name);
+            sb.append("    ").append(fbsField).append("_val: ").append(ci.name).append("Def;\n");
         });
 
         sb.append("}\n\n");
