@@ -347,15 +347,18 @@ public class MetaNatives
             }
 
             Object copy = createInstanceByPath(classPath);
-            if (copy instanceof Any anyC && cgt != null)
-            {
-                anyC._classifierGenericType(cgt);
-            }
-            else if (copy instanceof DynamicInstance diC && cgt != null)
-            {
-                diC.setClassifierGenericType(cgt);
-            }
+            // First copy all properties (including classifierGenericType from original)
             shallowCopyProperties(original, copy, cgt, resolver);
+            // Then fix and set the self-referential classifierGenericType to point to the copy
+            meta.pure.metamodel.type.generics.GenericType copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            if (copy instanceof Any anyC && copyCgt != null)
+            {
+                anyC._classifierGenericType(copyCgt);
+            }
+            else if (copy instanceof DynamicInstance diC && copyCgt != null)
+            {
+                diC.setClassifierGenericType(copyCgt);
+            }
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
@@ -392,15 +395,18 @@ public class MetaNatives
             }
 
             Object copy = createInstanceByPath(classPath);
-            if (copy instanceof Any anyC && cgt != null)
-            {
-                anyC._classifierGenericType(cgt);
-            }
-            else if (copy instanceof DynamicInstance diC && cgt != null)
-            {
-                diC.setClassifierGenericType(cgt);
-            }
+            // First copy all properties (including classifierGenericType from original)
             shallowCopyProperties(original, copy, cgt, resolver);
+            // Then fix and set the self-referential classifierGenericType to point to the copy
+            meta.pure.metamodel.type.generics.GenericType copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            if (copy instanceof Any anyC && copyCgt != null)
+            {
+                anyC._classifierGenericType(copyCgt);
+            }
+            else if (copy instanceof DynamicInstance diC && copyCgt != null)
+            {
+                diC.setClassifierGenericType(copyCgt);
+            }
 
             // Track deep-copied nested objects
             Map<String, DynamicInstance> deepCopied = new HashMap<>();
@@ -560,11 +566,84 @@ public class MetaNatives
         NativeImpl evalAndDeactivate = (args, eval, genericType, multiplicity) -> args.get(0);
         natives.put("evaluateAndDeactivate_Any_m__Any_m_", evalAndDeactivate);
         natives.put("evaluateAndDeactivate", evalAndDeactivate);
+
+        // newClass() : Class<Any>[1] — create a new empty Class with a self-referential classifierGenericType
+        natives.put("newClass__Class_1_", (args, eval, genericType, multiplicity) ->
+        {
+            meta.pure.metamodel.type.ClassImpl newClass = new meta.pure.metamodel.type.ClassImpl();
+
+            // Build classifierGenericType = Class<self> where the typeArgument points to this class.
+            // Structure: UserDefinedGenericType(type=Class, typeArguments=[UserDefinedGenericType(type=newClass)])
+            meta.pure.metamodel.type.Type classType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Class");
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
+            cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
+            newClass._classifierGenericType(cgt);
+
+            return _E_ValueSpecification.wrap(newClass, genericType, multiplicity, resolver);
+        });
     }
 
     // =========================================================================
     // Helper methods
     // =========================================================================
+
+    /**
+     * Fix self-referential classifierGenericType during copy.
+     * If the original's CGT has a typeArgument whose rawType IS the original instance itself
+     * (e.g., Class&lt;self&gt;), create a new CGT with the typeArgument pointing to the copy.
+     * Returns the updated CGT, or the original if no self-reference was found.
+     */
+    static meta.pure.metamodel.type.generics.GenericType fixSelfReferentialCGT(
+            meta.pure.metamodel.type.generics.GenericType cgt,
+            Object original, Object copy,
+            MetadataAccess resolver)
+    {
+        if (cgt == null)
+        {
+            return null;
+        }
+        if (cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue cgtv)
+        {
+            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> typeArgs = cgtv._typeArguments();
+            if (typeArgs != null && typeArgs.notEmpty())
+            {
+                boolean hasSelfRef = false;
+                for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
+                {
+                    if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
+                            && argV._type() == original)
+                    {
+                        hasSelfRef = true;
+                        break;
+                    }
+                }
+                if (hasSelfRef && copy instanceof meta.pure.metamodel.type.Type copyType)
+                {
+                    // Build a new CGT with updated self-references
+                    org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> newArgs =
+                            typeArgs.collect(arg ->
+                            {
+                                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
+                                    && argV._type() == original)
+                                {
+                                    return (meta.pure.metamodel.type.generics.GenericType) _GenericType.buildUserDefinedGenericType(copyType, resolver);
+                                }
+                                return arg;
+                            });
+                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl newCgt =
+                            _GenericType.buildUserDefinedGenericType(cgtv._type(), resolver);
+                    newCgt._typeArguments(newArgs);
+                    if (cgtv._multiplicityArguments() != null)
+                    {
+                        newCgt._multiplicityArguments(cgtv._multiplicityArguments());
+                    }
+                    return newCgt;
+                }
+            }
+        }
+        return cgt;
+    }
 
     static void validateConstraints(meta.pure.metamodel.type.Type type,
                                     meta.pure.metamodel.type.generics.GenericType targetGT,
@@ -793,19 +872,8 @@ public class MetaNatives
             }
             if (target instanceof DynamicInstance di)
             {
-                if (value instanceof org.eclipse.collections.api.list.MutableList<?> mlist)
-                {
-                    List<ValueSpecification> vsItems = new ArrayList<>();
-                    for (Object item : mlist)
-                    {
-                        vsItems.add(_E_ValueSpecification.wrap(item, null, null, resolver));
-                    }
-                    di.put(propName, CollectionNatives.makeCollection(vsItems, resolver));
-                }
-                else
-                {
-                    di.put(propName, _E_ValueSpecification.wrap(value, null, null, resolver));
-                }
+                // put() auto-unwraps, so pass raw value directly
+                di.put(propName, value);
             }
             else
             {
@@ -881,39 +949,43 @@ public class MetaNatives
      */
     static ValueSpecification getInstanceProperty(Object instance, String propName, MetadataAccess resolver)
     {
+        Object value;
         if (instance instanceof DynamicInstance di)
         {
-            Object val = di.get(propName);
-            return (val instanceof ValueSpecification vs) ? vs : (val != null ? _E_ValueSpecification.wrap(val, null, null, resolver) : null);
+            value = di.get(propName);
         }
-        String methodName = "_" + propName;
-        try
+        else
         {
-            java.lang.reflect.Method getter = instance.getClass().getMethod(methodName);
-            Object value = getter.invoke(instance);
-            if (value == null)
+            String methodName = "_" + propName;
+            try
+            {
+                java.lang.reflect.Method getter = instance.getClass().getMethod(methodName);
+                value = getter.invoke(instance);
+            }
+            catch (ReflectiveOperationException e)
             {
                 return null;
             }
-            if (value instanceof ValueSpecification vs)
-            {
-                return vs;
-            }
-            if (value instanceof java.util.List<?> list)
-            {
-                java.util.List<ValueSpecification> wrapped = new java.util.ArrayList<>();
-                for (Object item : list)
-                {
-                    wrapped.add(_E_ValueSpecification.wrap(item, null, null, resolver));
-                }
-                return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
-            }
-            return _E_ValueSpecification.wrap(value, null, null, resolver);
         }
-        catch (ReflectiveOperationException e)
+
+        if (value == null)
         {
             return null;
         }
+        if (value instanceof ValueSpecification vs)
+        {
+            return vs;
+        }
+        if (value instanceof java.util.List<?> list)
+        {
+            java.util.List<ValueSpecification> wrapped = new java.util.ArrayList<>();
+            for (Object item : list)
+            {
+                wrapped.add(_E_ValueSpecification.wrap(item, null, null, resolver));
+            }
+            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
+        }
+        return _E_ValueSpecification.wrap(value, null, null, resolver);
     }
 
     /**
@@ -1052,34 +1124,55 @@ public class MetaNatives
     static void appendToProperty(Object instance, String key, Object value,
                                   MetadataAccess resolver)
     {
-        Object existing = getInstanceProperty(instance, key, resolver);
-        List<Object> list;
-        if (existing instanceof Collection col)
+        // Read existing raw value
+        Object existing;
+        if (instance instanceof DynamicInstance di)
         {
-            list = new ArrayList<>(col._values());
-        }
-        else if (existing != null)
-        {
-            list = new ArrayList<>();
-            list.add(existing);
+            existing = di.get(key);
         }
         else
         {
-            list = new ArrayList<>();
+            String methodName = "_" + key;
+            try
+            {
+                java.lang.reflect.Method getter = instance.getClass().getMethod(methodName);
+                existing = getter.invoke(instance);
+            }
+            catch (ReflectiveOperationException e)
+            {
+                existing = null;
+            }
         }
-        if (value instanceof Collection col)
+
+        // Build flat list of raw values — Pure has no List<List>
+        List<Object> list = new ArrayList<>();
+        if (existing instanceof java.util.List<?> l)
         {
-            list.addAll(col._values());
+            list.addAll(l);
+        }
+        else if (existing != null)
+        {
+            list.add(existing);
+        }
+
+        if (value instanceof java.util.List<?> l)
+        {
+            list.addAll(l);
         }
         else if (value != null)
         {
             list.add(value);
         }
-        List<ValueSpecification> vsList = new ArrayList<>();
-        for (Object item : list) {
-            vsList.add((item instanceof ValueSpecification vs) ? vs : _E_ValueSpecification.wrap(item, null, null, resolver));
+
+        // Store back as a raw list
+        if (instance instanceof DynamicInstance di)
+        {
+            di.put(key, list);
         }
-        setInstanceProperty(instance, key, CollectionNatives.makeCollection(vsList, resolver));
+        else
+        {
+            setPropertyViaReflection(instance, key, org.eclipse.collections.api.factory.Lists.mutable.withAll(list));
+        }
     }
 
     public static void setReverseAssociationPointers(Object instance, String classPath,
@@ -1243,27 +1336,27 @@ public class MetaNatives
 
     static void setInstanceProperty(Object instance, String key, Object value)
     {
+        // DynamicInstance: put() auto-unwraps ValueSpecification wrappers
         if (instance instanceof DynamicInstance di)
         {
             di.put(key, value);
             return;
         }
 
-        // For FlatBuffer-generated (Any-implementing) types: unwrap and invoke setter via reflection
-        Object rawValue;
+        // Compiled Java targets: unwrap and set via reflection
         if (value instanceof meta.pure.metamodel.valuespecification.Collection col)
         {
-            rawValue = col._values();
-        }
-        else if (value != null)
-        {
-            rawValue = _E_ValueSpecification.unwrap(value);
-        }
-        else
-        {
-            rawValue = null;
+            org.eclipse.collections.api.list.MutableList<Object> items = col._values().collect(_E_ValueSpecification::unwrap);
+            setPropertyViaReflection(instance, key, items);
+            return;
         }
 
+        Object rawValue = value != null ? _E_ValueSpecification.unwrap(value) : null;
+        setPropertyViaReflection(instance, key, rawValue);
+    }
+
+    private static void setPropertyViaReflection(Object instance, String key, Object rawValue)
+    {
         String setterName = "_" + key;
         for (java.lang.reflect.Method method : instance.getClass().getMethods())
         {
@@ -1317,7 +1410,7 @@ public class MetaNatives
                         {
                         }
                     }
-                    throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + rawValue.getClass().getSimpleName(), e);
+                    throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + (rawValue == null ? "null" : rawValue.getClass().getSimpleName()), e);
                 }
             }
         }

@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.execution;
 
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -30,9 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * this serves as a generic runtime representation that holds property
  * values in a map and supports property access by name.</p>
  *
- * <p>All property values are stored as {@link ValueSpecification} instances,
- * preserving Pure type metadata throughout evaluation. Multi-valued properties
- * are stored as {@code CollectionImpl}; single-valued as {@code AtomicValueImpl}.</p>
+ * <p>All property values are stored as <b>raw unwrapped</b> Java objects
+ * (e.g., {@code String}, {@code Long}, {@code DynamicInstance}, {@code List}).
+ * The {@link #put} method automatically unwraps {@code ValueSpecification}
+ * wrappers so that consumers reading via {@link #get} receive raw values.
+ * Callers that need a {@code ValueSpecification} should re-wrap on read.</p>
  */
 public class DynamicInstance
 {
@@ -67,11 +67,20 @@ public class DynamicInstance
         return classPath;
     }
 
+    /**
+     * Store a property value, automatically unwrapping any ValueSpecification wrapper.
+     * Collections are unwrapped to a {@code List<Object>} of raw values.
+     * Scalars wrapped in AtomicValue are unwrapped to the raw Java value.
+     */
     public void put(String propertyName, Object value)
     {
-        values.put(propertyName, value);
+        values.put(propertyName, _E_ValueSpecification.unwrap(value));
     }
 
+    /**
+     * Retrieve a raw property value. The returned value is always unwrapped
+     * (String, Long, DynamicInstance, List, etc. — never a ValueSpecification).
+     */
     public Object get(String propertyName)
     {
         return values.get(propertyName);

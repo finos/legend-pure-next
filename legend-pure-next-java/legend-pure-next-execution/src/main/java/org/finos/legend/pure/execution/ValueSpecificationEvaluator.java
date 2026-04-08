@@ -143,7 +143,6 @@ public class ValueSpecificationEvaluator
                 case NativeFunction nf ->
                 {
                     String signature = nf._name();
-System.out.println("EXECUTING NATIVE: " + signature);
                     if (natives.isLazy(signature))
                     {
                         yield natives.executeLazy(signature, this, fe);
@@ -478,7 +477,6 @@ System.out.println("EXECUTING NATIVE: " + signature);
             case NativeFunction nf ->
             {
                 String signature = nf._name();
-System.out.println("EXECUTING NATIVE: " + signature);
                 yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
             }
             case meta.pure.metamodel.function.property.AbstractProperty prop ->
