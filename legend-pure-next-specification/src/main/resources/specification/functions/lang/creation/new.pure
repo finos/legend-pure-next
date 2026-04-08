@@ -147,3 +147,15 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewClassFail
                     ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Class)
                 ), 'Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam');
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testClassifierGenericType():Boolean[1]
+{
+    let x = ^LA_Person(firstName='Pierre', lastName='Doe');
+    assertIs (LA_Person, $x.classifierGenericType->cast(@GenericTypeValue).type);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testCantSetClassifierGenericType():Boolean[1]
+{
+    assertError(|^LA_Person(classifierGenericType = ^UserDefinedGenericType(type=Any), firstName='Pierre', lastName='Doe')
+                , 'Cannot set \'classifierGenericType\' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.');
+}

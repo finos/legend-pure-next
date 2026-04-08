@@ -159,12 +159,19 @@ public class MetaNatives
             {
                 Object instance = createInstance(classPath, gtmh2);
 
-                if (instance instanceof DynamicInstance di
-                        && gtmh2._genericType() != null
+                if (gtmh2._genericType() != null
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    di.setClassifierGenericType(_GenericType.typeArguments(gtmh2._genericType()).getFirst());
+                    meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    if (instance instanceof Any any)
+                    {
+                        any._classifierGenericType(cgt);
+                    }
+                    else if (instance instanceof DynamicInstance di)
+                    {
+                        di.setClassifierGenericType(cgt);
+                    }
                 }
 
                 // Validate constraints on the class after construction
@@ -249,12 +256,19 @@ public class MetaNatives
             if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh2)
             {
                 Object instance = createInstance(classPath, gtmh2);
-                if (instance instanceof DynamicInstance di
-                        && gtmh2._genericType() != null
+                if (gtmh2._genericType() != null
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    di.setClassifierGenericType(_GenericType.typeArguments(gtmh2._genericType()).getFirst());
+                    meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    if (instance instanceof Any any)
+                    {
+                        any._classifierGenericType(cgt);
+                    }
+                    else if (instance instanceof DynamicInstance di)
+                    {
+                        di.setClassifierGenericType(cgt);
+                    }
                 }
 
                 // Collect key/value pairs for reverse pointer processing
@@ -435,6 +449,12 @@ public class MetaNatives
                 }
             }
 
+            // Post-process the copy and all nested elements to rewrite self references pointing to original
+            if (copy instanceof meta.pure.metamodel.type.Type)
+            {
+                fixSelfReferencesRecursive(copy, original, copy, new java.util.HashSet<>(), resolver);
+            }
+
             // Collect key/value pairs for reverse pointer processing
             List<Map.Entry<String, Object>> allProps = getAllPropertyEntries(copy, cgt, resolver);
 
@@ -612,7 +632,7 @@ public class MetaNatives
                 for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
                 {
                     if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                            && argV._type() == original)
+                            && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
                     {
                         hasSelfRef = true;
                         break;
@@ -625,7 +645,7 @@ public class MetaNatives
                             typeArgs.collect(arg ->
                             {
                                 if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                                    && argV._type() == original)
+                                    && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
                                 {
                                     return (meta.pure.metamodel.type.generics.GenericType) _GenericType.buildUserDefinedGenericType(copyType, resolver);
                                 }
@@ -1398,12 +1418,23 @@ public class MetaNatives
                 }
                 catch (Exception e)
                 {
-                    if (rawValue instanceof List<?> list
-                            && org.eclipse.collections.api.list.MutableList.class.isAssignableFrom(method.getParameterTypes()[0]))
+                    Class<?> _paramType = method.getParameterTypes()[0];
+                    if (org.eclipse.collections.api.RichIterable.class.isAssignableFrom(_paramType) || java.util.Collection.class.isAssignableFrom(_paramType))
                     {
                         try
                         {
-                            method.invoke(instance, org.eclipse.collections.api.factory.Lists.mutable.withAll(list));
+                            if (rawValue instanceof List<?> list)
+                            {
+                                method.invoke(instance, org.eclipse.collections.api.factory.Lists.mutable.withAll(list));
+                            }
+                            else if (rawValue != null)
+                            {
+                                method.invoke(instance, org.eclipse.collections.api.factory.Lists.mutable.with(rawValue));
+                            }
+                            else
+                            {
+                                method.invoke(instance, org.eclipse.collections.api.factory.Lists.mutable.empty());
+                            }
                             return;
                         }
                         catch (Exception ignored)
@@ -1411,6 +1442,147 @@ public class MetaNatives
                         }
                     }
                     throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + (rawValue == null ? "null" : rawValue.getClass().getSimpleName()), e);
+                }
+            }
+        }
+    }
+
+    private static void fixSelfReferencesRecursive(Object current, Object original, Object copyTarget, java.util.Set<Object> visited, MetadataAccess resolver)
+    {
+        if (current == null || original == null) return;
+        if (current instanceof ValueSpecification vs)
+        {
+            current = _E_ValueSpecification.unwrap(vs);
+            if (current == null) return;
+        }
+        if (!visited.add(current)) return;
+
+        // Prune unbounded traversals into external global items. Since we are cloning the
+        // copyTarget element locally, any distinct PackageableElement is out of scope.
+        if (current instanceof PackageableElement && current != copyTarget)
+        {
+            return;
+        }
+
+        if (current instanceof Any anyC)
+        {
+            meta.pure.metamodel.type.generics.GenericType currentCgt = anyC._classifierGenericType();
+            if (currentCgt != null)
+            {
+                meta.pure.metamodel.type.generics.GenericType newCgt = fixSelfReferentialCGT(currentCgt, original, copyTarget, resolver);
+                if (newCgt != currentCgt)
+                {
+                    anyC._classifierGenericType(newCgt);
+                }
+            }
+
+            for (Map.Entry<String, Object> entry : getAllPropertyEntries(current, currentCgt, resolver))
+            {
+                Object rawVal = _E_ValueSpecification.unwrap(entry.getValue());
+                if (rawVal == null) continue;
+
+                if (rawVal instanceof meta.pure.metamodel.type.generics.GenericType propGt)
+                {
+                    meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
+                    if (replaced != propGt)
+                    {
+                        setInstanceProperty(current, entry.getKey(), replaced);
+                    }
+                    fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
+                }
+                else if (rawVal instanceof java.util.List<?> lst)
+                {
+                    java.util.List<Object> newList = null;
+                    for (int i = 0; i < lst.size(); i++)
+                    {
+                        Object item = _E_ValueSpecification.unwrap(lst.get(i));
+                        if (item == null) continue;
+
+                        if (item instanceof meta.pure.metamodel.type.generics.GenericType propGt)
+                        {
+                            meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
+                            if (replaced != propGt)
+                            {
+                                if (newList == null) newList = new java.util.ArrayList<>(lst);
+                                newList.set(i, replaced);
+                            }
+                            fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
+                        }
+                        else
+                        {
+                            fixSelfReferencesRecursive(item, original, copyTarget, visited, resolver);
+                        }
+                    }
+                    if (newList != null)
+                    {
+                        setInstanceProperty(current, entry.getKey(), newList);
+                    }
+                }
+                else
+                {
+                    fixSelfReferencesRecursive(rawVal, original, copyTarget, visited, resolver);
+                }
+            }
+        }
+        else if (current instanceof DynamicInstance di)
+        {
+            meta.pure.metamodel.type.generics.GenericType currentCgt = di.getClassifierGenericType();
+            if (currentCgt != null)
+            {
+                meta.pure.metamodel.type.generics.GenericType newCgt = fixSelfReferentialCGT(currentCgt, original, copyTarget, resolver);
+                if (newCgt != currentCgt)
+                {
+                    di.setClassifierGenericType(newCgt);
+                }
+            }
+
+            for (Map.Entry<String, Object> entry : di.getValues().entrySet())
+            {
+                Object rawVal = _E_ValueSpecification.unwrap(entry.getValue());
+                if (rawVal == null) continue;
+
+                if (rawVal instanceof meta.pure.metamodel.type.generics.GenericType propGt)
+                {
+                    meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
+                    if (replaced != propGt)
+                    {
+                        di.put(entry.getKey(), _E_ValueSpecification.wrap(replaced, null, null, resolver));
+                    }
+                    fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
+                }
+                else if (rawVal instanceof java.util.List<?> lst)
+                {
+                    java.util.List<Object> newList = null;
+                    for (int i = 0; i < lst.size(); i++)
+                    {
+                        Object item = _E_ValueSpecification.unwrap(lst.get(i));
+                        if (item == null) continue;
+
+                        if (item instanceof meta.pure.metamodel.type.generics.GenericType propGt)
+                        {
+                            meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
+                            if (replaced != propGt)
+                            {
+                                if (newList == null) newList = new java.util.ArrayList<>(lst);
+                                newList.set(i, replaced);
+                            }
+                            fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
+                        }
+                        else
+                        {
+                            fixSelfReferencesRecursive(item, original, copyTarget, visited, resolver);
+                        }
+                    }
+                    if (newList != null)
+                    {
+                        java.util.List<ValueSpecification> wrappedList = new java.util.ArrayList<>();
+                        for (Object obj : newList) wrappedList.add(_E_ValueSpecification.wrap(obj, null, null, resolver));
+                        di.put(entry.getKey(), org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrappedList, resolver));
+                    }
+                }
+                else
+                {
+                    fixSelfReferencesRecursive(rawVal, original, copyTarget, visited, resolver);
                 }
             }
         }

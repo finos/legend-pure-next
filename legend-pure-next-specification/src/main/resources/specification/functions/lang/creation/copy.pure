@@ -288,3 +288,32 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySubClas
     assertEquals('Somewhere', $upCastCopy->cast(@LA_Address).name);
     assertIs(LA_GeographicEntityType.REGION, $upCastCopy.type);
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testSelfPointerStability():Boolean[1]
+{
+    let x = meta::pure::functions::meta::creation::newClass();
+    let z = ^$x();
+    assertIsNot ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
+    assertIs ($z, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
+
+    let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::property::Property,
+        typeArguments = [
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $z),
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String)
+        ],
+        multiplicityArguments = [PureOne]
+    );
+    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+    ^$prop(
+        name = 'test',
+        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
+        multiplicity = PureOne
+    );
+
+    let n = ^$z(properties = $prop);
+    assertIs($n, $n.properties->at(0).classifierGenericType->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type);
+}
+
+

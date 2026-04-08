@@ -299,7 +299,7 @@ public class ValueSpecificationEvaluator
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
-            Object propertyValueRaw = di.get(propertyName);
+            Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
             return wrapPropertyResult(propertyValueRaw, genericType, multiplicity);
         }
 
@@ -348,6 +348,10 @@ public class ValueSpecificationEvaluator
         String methodName = "_" + propertyName;
         try
         {
+            if (target == null)
+            {
+                throw new RuntimeException("Cannot access property '" + propertyName + "' because target is null");
+            }
             Method method = target.getClass().getMethod(methodName);
             return method.invoke(target);
         }

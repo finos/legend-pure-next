@@ -67,11 +67,20 @@ public class BooleanNatives
         {
             Object a = _E_ValueSpecification.unwrap(args.get(0));
             Object b = _E_ValueSpecification.unwrap(args.get(1));
-            if (a instanceof DynamicInstance || b instanceof DynamicInstance)
+            boolean result;
+            if (a == b)
             {
-                return _E_ValueSpecification.wrap(a == b, genericType, multiplicity, resolver);
+                result = true;
             }
-            return _E_ValueSpecification.wrap(NativeRepository.pureEquals(a, b), genericType, multiplicity, resolver);
+            else if (a instanceof Number && b instanceof Number || a instanceof String && b instanceof String || a instanceof Boolean && b instanceof Boolean || a instanceof meta.pure.metamodel.type.Enum && b instanceof meta.pure.metamodel.type.Enum)
+            {
+                result = NativeRepository.pureEquals(a, b);
+            }
+            else
+            {
+                result = false;
+            }
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
         });
 
         // compare — order comparison
