@@ -16,6 +16,7 @@ package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.function.FunctionDefinition;
+import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.function.NativeFunction;
 import meta.pure.metamodel.function.PackageableFunction;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -28,6 +29,7 @@ import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -95,7 +97,7 @@ public class ValueSpecificationEvaluator
     {
         return switch (vs)
         {
-            case AtomicValue av -> av;
+            case AtomicValue av -> captureLambdaClosureIfNeeded(av);
             case VariableExpression ve ->
             {
                 String name = ve._name();
@@ -126,6 +128,50 @@ public class ValueSpecificationEvaluator
             default -> throw new RuntimeException(
                     "Unsupported ValueSpecification type: " + vs.getClass().getSimpleName());
         };
+    }
+
+    /**
+     * If the AtomicValue wraps a {@link LambdaFunction} with open variables,
+     * capture the current (definition-site) scope bindings for those variables
+     * into a {@link Closure}, and return a new AtomicValue wrapping the Closure.
+     *
+     * <p>This ensures the lambda carries its own captured bindings and does not
+     * accidentally pick up identically-named variables from a later call site.</p>
+     *
+     * @param av the atomic value to inspect
+     * @return the original av (if not a lambda), or a new av wrapping a Closure
+     */
+    private AtomicValue captureLambdaClosureIfNeeded(AtomicValue av)
+    {
+        Object value = av._value();
+        if (!(value instanceof LambdaFunction lambda))
+        {
+            return av;
+        }
+
+        MutableList<VariableExpression> openVars = lambda._openVariables();
+        if (openVars == null || openVars.isEmpty())
+        {
+            return av;
+        }
+
+        // Snapshot only the open-variable bindings from the current (definition-site) scope
+        Map<String, ValueSpecification> currentScope = varStack.peek();
+        Map<String, ValueSpecification> captured = new HashMap<>();
+        for (VariableExpression ov : openVars)
+        {
+            String name = ov._name();
+            ValueSpecification binding = currentScope.get(name);
+            if (binding != null)
+            {
+                captured.put(name, binding);
+            }
+        }
+
+        Closure closure = new Closure(lambda, captured);
+        return (AtomicValue) ((AtomicValue) av._copy())
+                ._value(closure)
+                ._genericType(av._genericType());
     }
 
     private ValueSpecification evaluateFunctionExpression(FunctionExpression fe)
@@ -242,31 +288,9 @@ public class ValueSpecificationEvaluator
                 }
             }
 
-            // If the resolved QP's param count doesn't match the arg count,
-            // search the owner class for the correct overload by name + param count
-            if (qp._parameters() != null && qp._parameters().size() != args.size())
-            {
-                Object target2 = _E_ValueSpecification.unwrap(args.get(0));
-                meta.pure.metamodel.type.Type ownerType2 = null;
-                if (target2 instanceof DynamicInstance di2 && di2.getClassifierGenericType() != null)
-                {
-                    ownerType2 = _GenericType.type(di2.getClassifierGenericType());
-                }
-                if (ownerType2 instanceof meta.pure.metamodel.type.Class cls2 && cls2._qualifiedProperties() != null)
-                {
-                    String qpName = qp._name();
-                    for (var candidateQP : cls2._qualifiedProperties())
-                    {
-                        if (qpName.equals(candidateQP._name())
-                                && candidateQP._parameters() != null
-                                && candidateQP._parameters().size() == args.size())
-                        {
-                            qp = candidateQP;
-                            break;
-                        }
-                    }
-                }
-            }
+            // Dynamic dispatch: use C3 linearization to find the most-specific
+            // qualified property override based on the target's actual runtime type.
+            qp = resolveQualifiedPropertyDispatch(qp, args);
 
             return evaluateFunctionDefinition(qp, args);
         }
@@ -282,6 +306,65 @@ public class ValueSpecificationEvaluator
         ValueSpecification targetVs = evaluate(paramSpecs.get(0));
 
         return accessProperty(targetVs, propertyName, fe._genericType(), fe._multiplicity());
+    }
+
+    /**
+     * Resolve which QualifiedProperty to invoke using C3 linearization.
+     *
+     * <p>Walks the C3 method resolution order (MRO) of the target's actual
+     * runtime type from most-specific to least-specific. The first class in
+     * the MRO that declares a qualified property with the same name and
+     * compatible parameter count is selected. This gives virtual dispatch
+     * semantics: subclass overrides of qualified properties are called even
+     * when the call site was compiled against a superclass type.</p>
+     *
+     * @param staticQP the statically-resolved qualified property from the call site
+     * @param args     the already-evaluated arguments (first element is the target)
+     * @return the most-specific matching QP, or {@code staticQP} if no override is found
+     */
+    private meta.pure.metamodel.function.property.QualifiedProperty resolveQualifiedPropertyDispatch(
+            meta.pure.metamodel.function.property.QualifiedProperty staticQP,
+            List<ValueSpecification> args)
+    {
+        if (args.isEmpty())
+        {
+            return staticQP;
+        }
+
+        Object target = _E_ValueSpecification.unwrap(args.get(0));
+        if (!(target instanceof DynamicInstance di) || di.getClassifierGenericType() == null)
+        {
+            return staticQP;
+        }
+
+        meta.pure.metamodel.type.Type runtimeType = _GenericType.type(di.getClassifierGenericType());
+        if (runtimeType == null)
+        {
+            return staticQP;
+        }
+
+        String qpName = staticQP._name();
+        int argCount = args.size();
+
+        // Walk the C3 linearization from most-specific to least-specific
+        MutableList<meta.pure.metamodel.type.Type> mro = _Type.linearize(runtimeType, this.natives.resolver());
+        for (meta.pure.metamodel.type.Type type : mro)
+        {
+            if (type instanceof meta.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
+            {
+                for (var candidateQP : cls._qualifiedProperties())
+                {
+                    if (qpName.equals(candidateQP._name())
+                            && candidateQP._parameters() != null
+                            && candidateQP._parameters().size() == argCount)
+                    {
+                        return candidateQP;
+                    }
+                }
+            }
+        }
+
+        return staticQP;
     }
 
     private static final Object PROPERTY_NOT_FOUND = new Object();
@@ -402,6 +485,10 @@ public class ValueSpecificationEvaluator
      * Evaluate a FunctionDefinition (user-defined or lambda) by binding
      * its parameters to the provided arguments and evaluating its
      * expression sequence.
+     *
+     * <p>If the {@code fd} is a {@link Closure}, its captured definition-site
+     * scope is used as the base scope instead of the current call-site scope.
+     * This ensures proper lexical scoping for lambdas with open variables.</p>
      */
     public ValueSpecification evaluateFunctionDefinition(FunctionDefinition fd, List<ValueSpecification> args)
     {
@@ -410,8 +497,11 @@ public class ValueSpecificationEvaluator
             throw new RuntimeException("Cannot evaluate null FunctionDefinition");
         }
 
-        // Build variable scope from parameter bindings — inherits parent scope for closures
-        Map<String, ValueSpecification> childVars = new HashMap<>(varStack.peek());
+        // Use the closure's captured scope if available; otherwise inherit the call-site scope.
+        Map<String, ValueSpecification> baseScope = (fd instanceof Closure closure)
+                ? closure.capturedScope()
+                : varStack.peek();
+        Map<String, ValueSpecification> childVars = new HashMap<>(baseScope);
         MutableList<VariableExpression> params = fd._parameters();
         if (params != null)
         {

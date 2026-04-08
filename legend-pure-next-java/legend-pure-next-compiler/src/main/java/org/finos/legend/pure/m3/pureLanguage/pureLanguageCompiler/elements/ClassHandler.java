@@ -164,6 +164,69 @@ public final class ClassHandler
 
         QualifiedPropertyCompiler.resolveAndValidate(cls._qualifiedProperties(), model, context);
 
+        // Validate Qualified Property overrides
+        if (cls._qualifiedProperties() != null)
+        {
+            cls._qualifiedProperties().forEach(qp ->
+            {
+                if (cls._generalizations() != null)
+                {
+                    for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+                    {
+                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.type.Class superOwner)
+                        {
+                            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.QualifiedProperty> superProps = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findQualifiedProperties(superOwner, qp._name());
+                            if (superProps != null && superProps.notEmpty())
+                            {
+                                GenericType receiverGT = cls._classifierGenericType() != null && _GenericType.typeArguments(cls._classifierGenericType()) != null && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
+                                        ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
+                                        : _GenericType.buildUserDefinedGenericType(cls, model);
+                                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.buildBindingsFromGenericType(cls, receiverGT);
+
+                                for (meta.pure.metamodel.function.property.QualifiedProperty superProp : superProps)
+                                {
+                                    if (qp._parameters().size() == superProp._parameters().size())
+                                    {
+                                        boolean match = true;
+                                        for (int i = 1; i < qp._parameters().size(); i++)
+                                        {
+                                            GenericType subclassParamGT = qp._parameters().get(i)._genericType();
+                                            GenericType superParamGT = _GenericType.makeAsConcreteAsPossible(superProp._parameters().get(i)._genericType(), bindings, model);
+                                            if (subclassParamGT == null || superParamGT == null || !_GenericType.print(subclassParamGT).equals(_GenericType.print(superParamGT)))
+                                            {
+                                                match = false;
+                                                break;
+                                            }
+                                        }
+                                        if (match)
+                                        {
+                                            GenericType msReturnGT = qp._genericType();
+                                            GenericType otherReturnGT = _GenericType.makeAsConcreteAsPossible(superProp._genericType(), bindings, model);
+                                            meta.pure.metamodel.multiplicity.Multiplicity msReturnMul = qp._multiplicity();
+                                            meta.pure.metamodel.multiplicity.Multiplicity otherReturnMul = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.makeAsConcreteAsPossible(superProp._multiplicity(), bindings);
+
+                                            if (msReturnGT != null && otherReturnGT != null && !_GenericType.isCompatible(otherReturnGT, msReturnGT, model))
+                                            {
+                                                String clsName = cls._name();
+                                                System.out.println(qp._sourceInformation());
+                                                context.addError(new CompilationError("Qualified property override variance mismatch for '" + qp._name() + "' in class '" + clsName + "'. Return type is not covariant. Overridden property has return type '" + _GenericType.print(otherReturnGT) + "', but overriding property has return type '" + _GenericType.print(msReturnGT) + "'.", qp._sourceInformation()));
+                                            }
+                                            if (msReturnMul != null && otherReturnMul != null && !org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.subsumes(otherReturnMul, msReturnMul))
+                                            {
+                                                String clsName = cls._name();
+                                                context.addError(new CompilationError("Qualified property override variance mismatch for '" + qp._name() + "' in class '" + clsName + "'. Return multiplicity is not subsumed. Overridden property has return multiplicity '" + org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.print(otherReturnMul) + "', but overriding property has return multiplicity '" + org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.print(msReturnMul) + "'.", qp._sourceInformation()));
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Resolve constraint expression sequences
         if (grammar != null)
         {
@@ -175,6 +238,42 @@ public final class ClassHandler
         {
             cls._properties().forEach(prop ->
             {
+                // Validate that if this property overrides a superclass property, its return type and multiplicity are INVARIANT
+                if (cls._generalizations() != null)
+                {
+                    for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
+                    {
+                        if (gen._general() != null && _GenericType.type(gen._general()) instanceof meta.pure.metamodel.SimplePropertyOwner superOwner)
+                        {
+                            meta.pure.metamodel.function.property.Property superProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findProperty(superOwner, prop._name());
+                            if (superProp != null)
+                            {
+                                // Exempt inherited properties from Any (such as sourceInformation) which use protocol-level covariance
+                                if (superOwner == model.getElement("meta::pure::metamodel::type::Any"))
+                                {
+                                    continue;
+                                }
+
+                                GenericType receiverGT = cls._classifierGenericType() != null && _GenericType.typeArguments(cls._classifierGenericType()) != null && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
+                                        ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()
+                                        : _GenericType.buildUserDefinedGenericType(cls, model);
+                                meta.pure.metamodel.function.Function resolvedSuperProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Property.resolveProperty(superProp, receiverGT, model);
+                                
+                                String subclassType = _GenericType.print(prop._genericType());
+                                String subclassMul = _Multiplicity.print(prop._multiplicity());
+                                String superType = _GenericType.print(((meta.pure.metamodel.function.property.Property)resolvedSuperProp)._genericType());
+                                String superMul = _Multiplicity.print(((meta.pure.metamodel.function.property.Property)resolvedSuperProp)._multiplicity());
+                                
+                                if (!subclassType.equals(superType) || !subclassMul.equals(superMul))
+                                {
+                                    context.addError(new CompilationError("Property override variance mismatch for '" + prop._name() + "'. Overridden property has type '" + superType + superMul + "', but overriding property has type '" + subclassType + subclassMul + "'. Simple property overrides must be strictly invariant in type and multiplicity.", prop._sourceInformation()));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (prop._defaultValue() != null)
                 {
                     // A property with a default value must have lower bound >= 1

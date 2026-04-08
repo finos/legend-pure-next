@@ -90,7 +90,7 @@ public final class DotApplicationResolver
             return expr;
         }
 
-        Function result = lookupFunction(functionName, processParameters.size(), receiver, ownerType, expr, model, context);
+        Function result = lookupFunction(functionName, processParameters, receiver, ownerType, expr, model, context);
         if (result == null)
         {
             return expr;  // error already recorded in lookupFunction
@@ -150,13 +150,14 @@ public final class DotApplicationResolver
      */
     private static Function lookupFunction(
             String functionName,
-            int paramCount,
+            MutableList<ValueSpecification> processParameters,
             ValueSpecification receiver,
             Type ownerType,
             FunctionExpression expr,
             MetadataAccess model,
             CompilationContext context)
     {
+        int paramCount = processParameters.size();
         // Enum value property on a specific Enumeration instance
         if (receiver instanceof AtomicValue av && av._value() instanceof Enumeration enumeration)
         {
@@ -191,9 +192,35 @@ public final class DotApplicationResolver
             }
             if (po instanceof meta.pure.metamodel.type.Class cls)
             {
-                // Find all QPs by name, then filter by arity (paramCount includes the receiver = this)
+                // Find all QPs by name, then filter by arity and argument compatibility
                 MutableList<QualifiedProperty> allQPs = _Class.findQualifiedProperties(cls, functionName);
-                MutableList<QualifiedProperty> matched = allQPs.select(qp -> qp._parameters().size() == paramCount);
+                ParametersBinding classBindings = _Class.buildBindingsFromGenericType(cls, receiver._genericType());
+                
+                MutableList<QualifiedProperty> matched = allQPs.select(qp -> 
+                {
+                    if (qp._parameters().size() != paramCount)
+                    {
+                        return false;
+                    }
+                    for (int i = 1; i < paramCount; i++)
+                    {
+                        GenericType argGT = processParameters.get(i)._genericType();
+                        Multiplicity argMul = processParameters.get(i)._multiplicity();
+                        if (argGT == null || argMul == null)
+                        {
+                            continue;
+                        }
+                        GenericType paramGT = _GenericType.makeAsConcreteAsPossible(qp._parameters().get(i)._genericType(), classBindings, model);
+                        Multiplicity paramMul = _Multiplicity.makeAsConcreteAsPossible(qp._parameters().get(i)._multiplicity(), classBindings);
+                        
+                        if (!_GenericType.isCompatible(paramGT, argGT, model) || !_Multiplicity.subsumes(paramMul, argMul))
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                
                 if (matched.size() == 1)
                 {
                     context.debug("  qualified property found: %s (arity %d)", matched.getFirst()._name(), paramCount);
@@ -201,7 +228,54 @@ public final class DotApplicationResolver
                 }
                 else if (matched.size() > 1)
                 {
-                    // Multiple QPs with same name and arity — ambiguous (future: type-based disambiguation)
+                    // Check if the first match overrides all other matches.
+                    // Because findQualifiedProperties returns bottom-up, if the overriding property 
+                    // matches the arguments, it appears first. We verify it truly overrides to avoid masking true ambiguities.
+                    QualifiedProperty mostSpecific = matched.getFirst();
+                    boolean allOverridden = true;
+                    for (int j = 1; j < matched.size(); j++)
+                    {
+                        QualifiedProperty other = matched.get(j);
+                        for (int i = 1; i < paramCount; i++)
+                        {
+                            GenericType msParamGT = _GenericType.makeAsConcreteAsPossible(mostSpecific._parameters().get(i)._genericType(), classBindings, model);
+                            GenericType otherParamGT = _GenericType.makeAsConcreteAsPossible(other._parameters().get(i)._genericType(), classBindings, model);
+                            String msPrint = msParamGT != null ? _GenericType.print(msParamGT) : "";
+                            String otherPrint = otherParamGT != null ? _GenericType.print(otherParamGT) : "";
+                            if (!msPrint.equals(otherPrint))
+                            {
+                                allOverridden = false;
+                                break;
+                            }
+                        }
+                        if (allOverridden)
+                        {
+                            GenericType msReturnGT = _GenericType.makeAsConcreteAsPossible(mostSpecific._genericType(), classBindings, model);
+                            GenericType otherReturnGT = _GenericType.makeAsConcreteAsPossible(other._genericType(), classBindings, model);
+                            Multiplicity msReturnMul = _Multiplicity.makeAsConcreteAsPossible(mostSpecific._multiplicity(), classBindings);
+                            Multiplicity otherReturnMul = _Multiplicity.makeAsConcreteAsPossible(other._multiplicity(), classBindings);
+
+                            if (msReturnGT != null && otherReturnGT != null && !_GenericType.isCompatible(otherReturnGT, msReturnGT, model))
+                            {
+                                allOverridden = false;
+                            }
+                            if (msReturnMul != null && otherReturnMul != null && !_Multiplicity.subsumes(otherReturnMul, msReturnMul))
+                            {
+                                allOverridden = false;
+                            }
+                        }
+                        if (!allOverridden)
+                        {
+                            break;
+                        }
+                    }
+                    
+                    if (allOverridden)
+                    {
+                        return mostSpecific;
+                    }
+                    
+                    // Multiple QPs match and they aren't simple overrides — ambiguous
                     context.addError(new CompilationError(
                             "Ambiguous qualified property '" + functionName + "' with " + (paramCount - 1) + " parameter(s) in class '" + _GenericType.print(receiver._genericType()) + "'",
                             expr._sourceInformation()));
@@ -209,10 +283,10 @@ public final class DotApplicationResolver
                 }
                 else if (allQPs.notEmpty())
                 {
-                    // QPs exist but none match by arity
+                    // QPs exist but none match by arity/arguments
                     String available = allQPs.collect(qp -> functionName + "(" + (qp._parameters().size() - 1) + " params)").makeString(", ");
                     context.addError(new CompilationError(
-                            "No qualified property '" + functionName + "' with " + (paramCount - 1) + " parameter(s) found in class '" + _GenericType.print(receiver._genericType()) + "'. Available: " + available,
+                            "No qualified property '" + functionName + "' with " + (paramCount - 1) + " parameter(s) found matching argument types in class '" + _GenericType.print(receiver._genericType()) + "'. Available: " + available,
                             expr._sourceInformation()));
                     return null;
                 }

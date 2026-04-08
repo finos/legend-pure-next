@@ -97,3 +97,15 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
     assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType()->cast(@GenericTypeValue).typeArguments->size());
     assertEmpty($type->properties()->filter(p | $p->eval($f1) != $p->eval($f2)));
 }
+
+Class meta::pure::functions::lang::tests::eval::MyClass
+{
+    name: String[1];
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::eval::testPropertyAsFunction():Boolean[1]
+{
+    let prop = meta::pure::functions::lang::tests::eval::MyClass.properties->filter(p | $p.name == 'name')->toOne();
+    let instance = ^meta::pure::functions::lang::tests::eval::MyClass(name='TestName');
+    assertEquals('TestName', $prop->eval($instance));
+}
