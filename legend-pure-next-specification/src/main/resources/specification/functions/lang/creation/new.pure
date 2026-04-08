@@ -140,3 +140,10 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithTypeV
    assertEquals(10, ^MyClassWithTypeVariables(10)(text = ['a', 'b']).x());
    assertError(|^MyClassWithTypeVariables(1)(text = ['a', 'b']).res('z'), 'Constraint :[wx] violated in the Class MyClassWithTypeVariables, Message: Error 2 >= 1');
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewClassFailsWithoutTypeArgs():Boolean[1]
+{
+    assertError(|meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Class)
+                ), 'Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam');
+}

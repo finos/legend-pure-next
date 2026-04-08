@@ -42,7 +42,7 @@ public class DynamicInstance
     private static final AtomicLong ID_COUNTER = new AtomicLong(0);
 
     private final String classPath;
-    private final Map<String, ValueSpecification> values;
+    private final Map<String, Object> values;
     private final String id;
 
     public DynamicInstance(String classPath)
@@ -67,12 +67,12 @@ public class DynamicInstance
         return classPath;
     }
 
-    public void put(String propertyName, ValueSpecification value)
+    public void put(String propertyName, Object value)
     {
         values.put(propertyName, value);
     }
 
-    public ValueSpecification get(String propertyName)
+    public Object get(String propertyName)
     {
         return values.get(propertyName);
     }
@@ -87,7 +87,7 @@ public class DynamicInstance
         return id;
     }
 
-    public Map<String, ValueSpecification> getValues()
+    public Map<String, Object> getValues()
     {
         return values;
     }

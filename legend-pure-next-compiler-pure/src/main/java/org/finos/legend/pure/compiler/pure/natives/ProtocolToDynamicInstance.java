@@ -1,9 +1,7 @@
 package org.finos.legend.pure.compiler.pure.natives;
 
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
 
@@ -109,24 +107,15 @@ public class ProtocolToDynamicInstance
                             }
                             Object convertedVal = convert(val, depth + 1);
                             
-                            // To properly put in a DynamicInstance, it must be wrapped in a ValueSpecification
-                            meta.pure.metamodel.multiplicity.Multiplicity mulOne = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
-                            meta.pure.metamodel.multiplicity.Multiplicity mulMany = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::ZeroMany");
-                            
-                            ValueSpecification vs;
-                            if (convertedVal instanceof List) {
-                                org.eclipse.collections.api.list.MutableList<ValueSpecification> wrappedItems = org.eclipse.collections.api.factory.Lists.mutable.empty();
-                                for (Object item : (List<?>) convertedVal) {
-                                    wrappedItems.add(_E_ValueSpecification.wrap(item, null, mulOne, resolver));
-                                }
-                                vs = new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
-                                        ._values(wrappedItems)
-                                        ._multiplicity(mulMany);
-                            } else {
-                                vs = _E_ValueSpecification.wrap(convertedVal, null, mulOne, resolver);
+                            // DynamicInstance now stores raw objects directly
+                            if (convertedVal instanceof List<?> listVal)
+                            {
+                                instance.put(propName, org.eclipse.collections.api.factory.Lists.mutable.withAll(listVal));
                             }
-
-                            instance.put(propName, vs);
+                            else
+                            {
+                                instance.put(propName, convertedVal);
+                            }
                         }
                     }
                     catch (Exception e)

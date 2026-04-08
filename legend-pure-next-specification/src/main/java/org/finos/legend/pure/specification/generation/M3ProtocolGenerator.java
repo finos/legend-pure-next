@@ -729,9 +729,35 @@ public class M3ProtocolGenerator
         {
             Property pred = model.createProperty(M3_NS, predLocalName);
             Statement stmt = model.getProperty(res, pred);
-            if (stmt != null && stmt.getObject().isLiteral())
+            if (stmt != null)
             {
-                return stmt.getString();
+                String val = getLiteralString(stmt);
+                if (val != null)
+                {
+                    return val;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     */
+    private String getLiteralString(Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            Property dataProp = model.createProperty(M3_NS, "data");
+            Statement dataStmt = model.getProperty(stmt.getObject().asResource(), dataProp);
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getString();
             }
         }
         return null;
@@ -1084,10 +1110,13 @@ public class M3ProtocolGenerator
                     Statement valStmt = model.getProperty(tvRes, valueProp);
                     if (valStmt != null)
                     {
-                        String val = valStmt.getString();
-                        for (String name : val.split(","))
+                        String val = getLiteralString(valStmt);
+                        if (val != null)
                         {
-                            result.add(name.trim());
+                            for (String name : val.split(","))
+                            {
+                                result.add(name.trim());
+                            }
                         }
                     }
                 }

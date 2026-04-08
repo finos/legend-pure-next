@@ -206,6 +206,14 @@ public class MetaNatives
                 }
             }
 
+            if ("meta::pure::metamodel::type::Class".equals(classPath))
+            {
+                if (_GenericType.typeArguments(gt) == null || _GenericType.typeArguments(gt).isEmpty())
+                {
+                    throw new RuntimeException("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
+                }
+            }
+
             Object instance = createInstanceByPath(classPath);
             if (instance instanceof Any any)
             {
@@ -250,7 +258,7 @@ public class MetaNatives
                 }
 
                 // Collect key/value pairs for reverse pointer processing
-                List<Map.Entry<String, ValueSpecification>> keyValues = new ArrayList<>();
+                List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
                 Object keyExprsRaw = _E_ValueSpecification.unwrap(args.get(1));
                 if (keyExprsRaw instanceof List<?> keyExprs)
                 {
@@ -422,7 +430,7 @@ public class MetaNatives
             }
 
             // Collect key/value pairs for reverse pointer processing
-            List<Map.Entry<String, ValueSpecification>> allProps = getAllPropertyEntries(copy, cgt, resolver);
+            List<Map.Entry<String, Object>> allProps = getAllPropertyEntries(copy, cgt, resolver);
 
             // Set reverse association pointers for ALL properties on the copy
             setReverseAssociationPointers(copy, classPath, allProps, resolver);
@@ -436,10 +444,10 @@ public class MetaNatives
             {
                 DynamicInstance nestedCopy = dcEntry.getValue();
                 String nestedClassPath = nestedCopy.getClassPath();
-                List<Map.Entry<String, ValueSpecification>> nestedProps = new ArrayList<>();
-                for (Map.Entry<String, ValueSpecification> nestedEntry : nestedCopy.getValues().entrySet())
+                List<Map.Entry<String, Object>> nestedProps = new ArrayList<>();
+                for (Map.Entry<String, Object> nestedEntry : nestedCopy.getValues().entrySet())
                 {
-                    ValueSpecification val = nestedEntry.getValue();
+                    Object val = nestedEntry.getValue();
                     if (val == null)
                     {
                         continue;
@@ -746,7 +754,7 @@ public class MetaNatives
     {
         if (source instanceof DynamicInstance diSource)
         {
-            for (Map.Entry<String, ValueSpecification> entry : diSource.getValues().entrySet())
+            for (Map.Entry<String, Object> entry : diSource.getValues().entrySet())
             {
                 if (entry.getValue() != null)
                 {
@@ -875,7 +883,8 @@ public class MetaNatives
     {
         if (instance instanceof DynamicInstance di)
         {
-            return di.get(propName);
+            Object val = di.get(propName);
+            return (val instanceof ValueSpecification vs) ? vs : (val != null ? _E_ValueSpecification.wrap(val, null, null, resolver) : null);
         }
         String methodName = "_" + propName;
         try
@@ -910,13 +919,13 @@ public class MetaNatives
     /**
      * Get all property entries from any instance type.
      */
-    private static List<Map.Entry<String, ValueSpecification>> getAllPropertyEntries(
+    private static List<Map.Entry<String, Object>> getAllPropertyEntries(
             Object instance, meta.pure.metamodel.type.generics.GenericType cgt, MetadataAccess resolver)
     {
-        List<Map.Entry<String, ValueSpecification>> entries = new ArrayList<>();
+        List<Map.Entry<String, Object>> entries = new ArrayList<>();
         if (instance instanceof DynamicInstance di)
         {
-            for (Map.Entry<String, ValueSpecification> entry : di.getValues().entrySet())
+            for (Map.Entry<String, Object> entry : di.getValues().entrySet())
             {
                 if (entry.getValue() != null)
                 {
@@ -943,16 +952,16 @@ public class MetaNatives
     }
 
     static void processKeyExpression(Object ke, Object instance,
-                                     List<Map.Entry<String, ValueSpecification>> keyValues)
+                                     List<Map.Entry<String, Object>> keyValues)
     {
         if (ke instanceof DynamicInstance di)
         {
-            // name is stored as a VS; unwrap to get the String key
-            ValueSpecification nameVS = di.get("name");
+            // name is stored as an Object; unwrap to get the String key
+            Object nameVS = di.get("name");
             Object nameObj = _E_ValueSpecification.unwrap(nameVS);
             String key = nameObj != null ? nameObj.toString() : null;
-            // expression is a VS already
-            ValueSpecification value = di.get("expression");
+            // expression is an Object
+            Object value = di.get("expression");
 
             if (key != null)
             {
@@ -976,10 +985,10 @@ public class MetaNatives
                                                   Map<String, DynamicInstance> deepCopied,
                                                   MetadataAccess resolver)
     {
-        ValueSpecification nameVS = keyExpr.get("name");
+        Object nameVS = keyExpr.get("name");
         Object nameObj = _E_ValueSpecification.unwrap(nameVS);
         String fullKey = nameObj != null ? nameObj.toString() : null;
-        ValueSpecification value = keyExpr.get("expression");
+        Object value = keyExpr.get("expression");
         if (fullKey == null)
         {
             return;
@@ -988,7 +997,7 @@ public class MetaNatives
         int dotIdx = fullKey.indexOf('.');
         if (dotIdx < 0)
         {
-            ValueSpecification addVS = keyExpr.get("add");
+            Object addVS = keyExpr.get("add");
             if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(addVS)))
             {
                 appendToProperty(copy, fullKey, value, resolver);
@@ -1029,9 +1038,9 @@ public class MetaNatives
             }
 
             DynamicInstance syntheticKe = new DynamicInstance("KeyExpression");
-            syntheticKe.put("name", _E_ValueSpecification.wrap(restKey, nameVS != null ? nameVS._genericType() : null, null, resolver));
+            syntheticKe.put("name", _E_ValueSpecification.wrap(restKey, (nameVS instanceof ValueSpecification vs) ? vs._genericType() : null, null, resolver));
             syntheticKe.put("expression", value);
-            ValueSpecification addVS2 = keyExpr.get("add");
+            Object addVS2 = keyExpr.get("add");
             if (addVS2 != null)
             {
                 syntheticKe.put("add", addVS2);
@@ -1040,11 +1049,11 @@ public class MetaNatives
         }
     }
 
-    static void appendToProperty(Object instance, String key, ValueSpecification value,
+    static void appendToProperty(Object instance, String key, Object value,
                                   MetadataAccess resolver)
     {
-        ValueSpecification existing = getInstanceProperty(instance, key, resolver);
-        List<ValueSpecification> list;
+        Object existing = getInstanceProperty(instance, key, resolver);
+        List<Object> list;
         if (existing instanceof Collection col)
         {
             list = new ArrayList<>(col._values());
@@ -1066,11 +1075,15 @@ public class MetaNatives
         {
             list.add(value);
         }
-        setInstanceProperty(instance, key, CollectionNatives.makeCollection(list, resolver));
+        List<ValueSpecification> vsList = new ArrayList<>();
+        for (Object item : list) {
+            vsList.add((item instanceof ValueSpecification vs) ? vs : _E_ValueSpecification.wrap(item, null, null, resolver));
+        }
+        setInstanceProperty(instance, key, CollectionNatives.makeCollection(vsList, resolver));
     }
 
     public static void setReverseAssociationPointers(Object instance, String classPath,
-                                                     List<Map.Entry<String, ValueSpecification>> keyValues,
+                                                     List<Map.Entry<String, Object>> keyValues,
                                                      MetadataAccess resolver)
     {
         if (resolver == null || keyValues.isEmpty())
@@ -1091,10 +1104,10 @@ public class MetaNatives
             return;
         }
 
-        for (Map.Entry<String, ValueSpecification> kv : keyValues)
+        for (Map.Entry<String, Object> kv : keyValues)
         {
             String propName = kv.getKey();
-            ValueSpecification propVS = kv.getValue();
+            Object propVS = kv.getValue();
             if (propVS == null)
             {
                 continue;
@@ -1228,7 +1241,7 @@ public class MetaNatives
         }
     }
 
-    static void setInstanceProperty(Object instance, String key, ValueSpecification value)
+    static void setInstanceProperty(Object instance, String key, Object value)
     {
         if (instance instanceof DynamicInstance di)
         {

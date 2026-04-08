@@ -33,17 +33,7 @@ function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::
         specific = $skeleton
     ));
 
-    let classifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::type::Class,
-        typeArguments = [^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $skeleton)]
-    );
-
-    // Create instance with correct classifierGenericType via new(GenericType), then enrich with properties
-    let result = meta::pure::functions::lang::new($classifierGT)->cast(@meta::pure::metamodel::type::Class<Any>);
-    ^$result(
-        name = $skeleton.name,
-        package = $skeleton.package,
-        sourceInformation = $skeleton.sourceInformation,
+    ^$skeleton(
         generalizations = $generalizations,
         properties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton))
     );

@@ -260,27 +260,21 @@ public class RdfFbsSchemaGenerator
             return isMany ? "[" + unionName + "]" : unionName;
         }
 
-        String baseType = switch (m3Type)
+        // Delegate to formal primitive mapping
+        String fbsType = m3Type != null ? PrimitiveFbsTypeMapping.toFbsType(m3Type) : "string";
+        String baseType;
+        if (fbsType != null)
         {
-            case null -> "string";
-            case "String" -> "string";
-            case "Boolean" -> "bool";
-            case "Integer" -> "long";
-            case "Float" -> "double";
-            case "Decimal" -> "string";
-            case "Date", "DateTime", "StrictDate" -> "string";
-            case "Number" -> "double";
-            case "Byte" -> "ubyte";
-            case "Any" -> "string";
-            default ->
-            {
-                if (m3Model.classInfoMap().containsKey(m3Type))
-                {
-                    yield m3Type + "Def";
-                }
-                yield "string";
-            }
-        };
+            baseType = fbsType;
+        }
+        else if (m3Model.classInfoMap().containsKey(m3Type))
+        {
+            baseType = m3Type + "Def";
+        }
+        else
+        {
+            baseType = "string";
+        }
 
         return isMany ? "[" + baseType + "]" : baseType;
     }

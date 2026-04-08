@@ -372,10 +372,10 @@ public class NativeRepository
                 }
             }
             // Fallback: compare all values
-            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsA = diA.getValues();
-            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsB = diB.getValues();
+            Map<String, Object> valsA = diA.getValues();
+            Map<String, Object> valsB = diB.getValues();
             if (valsA.size() != valsB.size()) return false;
-            for (Map.Entry<String, meta.pure.metamodel.valuespecification.ValueSpecification> e : valsA.entrySet())
+            for (Map.Entry<String, Object> e : valsA.entrySet())
             {
                 if (!pureEquals(_E_ValueSpecification.unwrap(e.getValue()),
                                 _E_ValueSpecification.unwrap(valsB.get(e.getKey()))))

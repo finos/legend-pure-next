@@ -458,7 +458,9 @@ public class CollectionNatives
             for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(0), resolver)._values())
             {
                 DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
-                map.put(pair.get("first"), pair.get("second"));
+                ValueSpecification kVS = _E_ValueSpecification.wrap(pair.get("first"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("first"), resolver), null, resolver);
+                ValueSpecification vVS = _E_ValueSpecification.wrap(pair.get("second"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("second"), resolver), null, resolver);
+                map.put(kVS, vVS);
             }
             return _E_ValueSpecification.wrap(new PureMap(map), genericType, multiplicity, resolver);
         });
@@ -520,8 +522,8 @@ public class CollectionNatives
             for (ValueSpecification pairVS : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
             {
                 DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
-                ValueSpecification kVS = pair.get("first");
-                ValueSpecification vVS = pair.get("second");
+                ValueSpecification kVS = _E_ValueSpecification.wrap(pair.get("first"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("first"), resolver), null, resolver);
+                ValueSpecification vVS = _E_ValueSpecification.wrap(pair.get("second"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("second"), resolver), null, resolver);
                 m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, kVS));
                 m.put(kVS, vVS);
             }

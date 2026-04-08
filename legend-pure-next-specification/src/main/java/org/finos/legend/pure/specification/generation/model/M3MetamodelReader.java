@@ -328,10 +328,8 @@ public class M3MetamodelReader
                 {
                     String tagUri = tagStmt.getObject().asResource().getURI();
                     String display = m3Model.tagDisplayNames().get(tagUri);
-                    String value = valueStmt.getObject().isLiteral()
-                            ? valueStmt.getLiteral().getString()
-                            : valueStmt.getObject().toString();
-                    if (display != null)
+                    String value = getLiteralString(valueStmt);
+                    if (display != null && value != null)
                     {
                         result.add(new TaggedValueEntry(display, value));
                     }
@@ -479,11 +477,15 @@ public class M3MetamodelReader
             if (maStmt.getObject().isResource())
             {
                 Resource maRes = maStmt.getObject().asResource();
-                // Check for multiplicityParameter reference: [ a :UserDefinedMultiplicityParameter ; :MultiplicityParameter_name "m" ]
+                // Check for multiplicityParameter reference: [ :classifierGenericType :GenericType_String ; :data "m" ]
                 Statement mpStmt = getM3Statement(maRes, "MultiplicityParameter_name");
-                if (mpStmt != null && mpStmt.getObject().isLiteral())
+                if (mpStmt != null)
                 {
-                    result.add(mpStmt.getString());
+                    String name = getLiteralString(mpStmt);
+                    if (name != null)
+                    {
+                        result.add(name);
+                    }
                 }
             }
         });
@@ -619,9 +621,13 @@ public class M3MetamodelReader
         {
             Resource retMultRes = retMultStmt.getObject().asResource();
             Statement mpStmt = getM3Statement(retMultRes, "MultiplicityParameter_name");
-            if (mpStmt != null && mpStmt.getObject().isLiteral())
+            if (mpStmt != null)
             {
-                sb.append("[").append(mpStmt.getString()).append("]");
+                String mpName = getLiteralString(mpStmt);
+                if (mpName != null)
+                {
+                    sb.append("[").append(mpName).append("]");
+                }
             }
             else
             {
@@ -723,9 +729,13 @@ public class M3MetamodelReader
             return "";
         }
         Statement contraStmt = getM3Statement(tpRes, "contravariant");
-        if (contraStmt != null && contraStmt.getObject().isLiteral() && contraStmt.getBoolean())
+        if (contraStmt != null)
         {
-            return "-" + tpName;
+            String contraVal = getLiteralString(contraStmt);
+            if ("true".equals(contraVal))
+            {
+                return "-" + tpName;
+            }
         }
         return tpName;
     }
@@ -735,10 +745,11 @@ public class M3MetamodelReader
         MutableList<String> result = Lists.mutable.empty();
         listM3StatementsMulti(classRes, "multiplicityParameters", "TypeAndMultiplicityParametersOwner_multiplicityParameters").forEach(mpStmt ->
         {
-            if (mpStmt.getObject().isLiteral())
+            String val = getLiteralString(mpStmt);
+            if (val != null)
             {
-                // Direct literal form: :multiplicityParameters "m"
-                result.add(mpStmt.getString());
+                // Direct literal or typed primitive node form
+                result.add(val);
             }
             else if (mpStmt.getObject().isResource())
             {
@@ -843,9 +854,36 @@ public class M3MetamodelReader
         for (String predicate : NAME_PREDICATES)
         {
             Statement stmt = getM3Statement(res, predicate);
-            if (stmt != null && stmt.getObject().isLiteral())
+            if (stmt != null)
             {
-                return stmt.getString();
+                String val = getLiteralString(stmt);
+                if (val != null)
+                {
+                    return val;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     * This is the unified method for reading primitive values from the TTL.
+     */
+    private String getLiteralString(Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            // Typed primitive node: [ :classifierGenericType :GenericType_X ; :data "value" ]
+            Statement dataStmt = getM3Statement(stmt.getObject().asResource(), "data");
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getString();
             }
         }
         return null;

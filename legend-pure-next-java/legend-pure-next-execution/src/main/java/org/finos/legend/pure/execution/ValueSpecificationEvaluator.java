@@ -143,6 +143,7 @@ public class ValueSpecificationEvaluator
                 case NativeFunction nf ->
                 {
                     String signature = nf._name();
+System.out.println("EXECUTING NATIVE: " + signature);
                     if (natives.isLazy(signature))
                     {
                         yield natives.executeLazy(signature, this, fe);
@@ -299,8 +300,8 @@ public class ValueSpecificationEvaluator
         // DynamicInstance (from 'new' function) — property access via map
         if (target instanceof DynamicInstance di)
         {
-            ValueSpecification result = di.get(propertyName);
-            return result != null ? result : wrapPropertyResult(null, genericType, multiplicity);
+            Object propertyValueRaw = di.get(propertyName);
+            return wrapPropertyResult(propertyValueRaw, genericType, multiplicity);
         }
 
         // For metamodel objects, use reflection to find _<propertyName>() accessor
@@ -477,6 +478,7 @@ public class ValueSpecificationEvaluator
             case NativeFunction nf ->
             {
                 String signature = nf._name();
+System.out.println("EXECUTING NATIVE: " + signature);
                 yield natives.execute(signature, args, this, nf._returnGenericType(), nf._returnMultiplicity());
             }
             case meta.pure.metamodel.function.property.AbstractProperty prop ->

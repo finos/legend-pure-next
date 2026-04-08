@@ -251,9 +251,10 @@ public class M3BootstrapReader
             {
                 Resource lowerRes = lowerStmt.getObject().asResource();
                 Statement valueStmt = getM3Statement(model, lowerRes, "value");
-                if (valueStmt != null && valueStmt.getObject().isLiteral())
+                String valueStr = valueStmt != null ? getLiteralString(model, valueStmt) : null;
+                if (valueStr != null)
                 {
-                    MultiplicityValueImpl lowerBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    MultiplicityValueImpl lowerBound = new MultiplicityValueImpl()._value(Long.parseLong(valueStr));
                     Statement cgtStmt = getM3Statement(model, lowerRes, "classifierGenericType");
                     if (cgtStmt != null && cgtStmt.getObject().isResource())
                     {
@@ -269,9 +270,10 @@ public class M3BootstrapReader
             {
                 Resource upperRes = upperStmt.getObject().asResource();
                 Statement valueStmt = getM3Statement(model, upperRes, "value");
-                if (valueStmt != null && valueStmt.getObject().isLiteral())
+                String valueStr = valueStmt != null ? getLiteralString(model, valueStmt) : null;
+                if (valueStr != null)
                 {
-                    MultiplicityValueImpl upperBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    MultiplicityValueImpl upperBound = new MultiplicityValueImpl()._value(Long.parseLong(valueStr));
                     Statement cgtStmt = getM3Statement(model, upperRes, "classifierGenericType");
                     if (cgtStmt != null && cgtStmt.getObject().isResource())
                     {
@@ -777,9 +779,36 @@ public class M3BootstrapReader
         for (String predicate : new String[]{"name", "typeParameter_name", "MultiplicityParameter_name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
         {
             Statement stmt = getM3Statement(model, res, predicate);
-            if (stmt != null && stmt.getObject().isLiteral())
+            if (stmt != null)
             {
-                return stmt.getLiteral().getString();
+                String val = getLiteralString(model, stmt);
+                if (val != null)
+                {
+                    return val;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     * This is the unified method for reading primitive values from the TTL.
+     */
+    private static String getLiteralString(Model model, Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getLiteral().getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            // Typed primitive node: [ :classifierGenericType :GenericType_X ; :data "value" ]
+            Statement dataStmt = getM3Statement(model, stmt.getObject().asResource(), "data");
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getLiteral().getString();
             }
         }
         return null;
@@ -886,9 +915,10 @@ public class M3BootstrapReader
                 }
 
                 Statement contravariantStmt = getM3Statement(model, paramRes, "contravariant");
-                if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                if (contravariantStmt != null)
                 {
-                    tp._contravariant(contravariantStmt.getBoolean());
+                    String contraVal = getLiteralString(model, contravariantStmt);
+                    tp._contravariant("true".equals(contraVal));
                 }
                 else
                 {
@@ -985,10 +1015,11 @@ public class M3BootstrapReader
         {
             Resource mulRes = returnMulStmt.getObject().asResource();
             Statement mulParamStmt = getM3Statement(model, mulRes, "MultiplicityParameter_name");
-            if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
+            String mulParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
+            if (mulParamName != null)
             {
-                // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
-                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                // Multiplicity parameter reference: [ :MultiplicityParameter_name [ :classifierGenericType ... ; :data "m" ] ]
+                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamName);
                 Statement cgtStmt = getM3Statement(model, mulRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {
@@ -1039,9 +1070,9 @@ public class M3BootstrapReader
                 {
                     String paramName = null;
                     Statement tpNameStmt = getM3Statement(model, rawTypeRes, "typeParameter_name");
-                    if (tpNameStmt != null && tpNameStmt.getObject().isLiteral())
+                    if (tpNameStmt != null)
                     {
-                        paramName = tpNameStmt.getString();
+                        paramName = getLiteralString(model, tpNameStmt);
                     }
                     if (paramName == null)
                     {
@@ -1058,9 +1089,10 @@ public class M3BootstrapReader
                         }
 
                         Statement contravariantStmt = getM3Statement(model, rawTypeRes, "contravariant");
-                        if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                        if (contravariantStmt != null)
                         {
-                            tp._contravariant(contravariantStmt.getBoolean());
+                            String contraVal = getLiteralString(model, contravariantStmt);
+                            tp._contravariant("true".equals(contraVal));
                         }
                         else
                         {
@@ -1106,9 +1138,10 @@ public class M3BootstrapReader
         {
             // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
             Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
-            if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
+            String mulArgParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
+            if (mulArgParamName != null)
             {
-                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(mulArgParamName);
                 Statement cgtStmt = getM3Statement(model, mulArgRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {

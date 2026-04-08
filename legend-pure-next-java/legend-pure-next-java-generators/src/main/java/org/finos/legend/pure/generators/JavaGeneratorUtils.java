@@ -55,23 +55,16 @@ public final class JavaGeneratorUtils
 
     /**
      * Map an M3 primitive type name to the corresponding Java type.
+     * Delegates to {@link PrimitiveJavaTypeMapping} for known primitives.
      */
     public static String mapPrimitiveType(String m3Type)
     {
-        return switch (m3Type)
+        if (m3Type == null)
         {
-            case null -> "Object";
-            case "String" -> "String";
-            case "Boolean" -> "Boolean";
-            case "Integer" -> "Long";
-            case "Float" -> "Double";
-            case "Decimal" -> "java.math.BigDecimal";
-            case "Date", "DateTime", "StrictDate" -> "java.time.temporal.Temporal";
-            case "Number" -> "Number";
-            case "Byte" -> "Byte";
-            case "Any" -> "Object";
-            default -> m3Type;
-        };
+            return "Object";
+        }
+        String javaType = PrimitiveJavaTypeMapping.toJavaType(m3Type);
+        return javaType != null ? javaType : m3Type;
     }
 
     /**
