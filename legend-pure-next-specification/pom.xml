@@ -131,7 +131,7 @@
                             <mainClass>org.finos.legend.pure.specification.generation.RdfPureGenerator</mainClass>
                             <arguments>
                                 <argument>${project.build.directory}/generated-resources/specification/m3_protocol.ttl</argument>
-                                <argument>${project.build.directory}/generated-resources/specification/m3_protocol.pure</argument>
+                                <argument>${project.build.directory}/generated-resources/specification_protocol/m3_protocol.pure</argument>
                             </arguments>
                         </configuration>
                     </execution>

@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -15,6 +17,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 4,
             "startColumn" : 5,
@@ -23,6 +26,7 @@
           "value" : 10
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 4,
           "startColumn" : 3,
@@ -41,6 +45,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 5,
             "startColumn" : 4,
@@ -57,6 +62,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 5,
             "startColumn" : 6,
@@ -65,6 +71,7 @@
           "value" : 10
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 8,
           "endLine" : 5,
           "startColumn" : 3,
@@ -83,6 +90,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 6,
             "startColumn" : 4,
@@ -99,6 +107,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 6,
             "startColumn" : 6,
@@ -115,6 +124,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 9,
             "endLine" : 6,
             "startColumn" : 9,
@@ -123,6 +133,7 @@
           "value" : 2
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 6,
           "startColumn" : 3,
@@ -132,6 +143,7 @@
       "functionName" : "sliceExpressions",
       "name" : "sliceExpressions__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -140,6 +152,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 42,
             "endLine" : 2,
             "startColumn" : 40,
@@ -150,10 +163,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
         "startColumn" : 1,

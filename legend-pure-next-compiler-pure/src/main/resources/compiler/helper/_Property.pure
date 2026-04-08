@@ -1,0 +1,67 @@
+import meta::pure::compiler::helper::*;
+
+// Property helpers
+
+function meta::pure::compiler::helper::resolveProperty(prop:Property<Nil,Any|*>[1], receiverType:GenericType[1]):Property<Nil,Any|*>[1]
+{
+    let resolvedGenericType = $prop.genericType;
+    let resolvedMultiplicity = $prop.multiplicity;
+    let resolvedClassifierGenericType = $prop.classifierGenericType;
+    
+    let resolvedTuple = if($receiverType->meta::pure::compiler::helper::genericTypeRawType()->toOne()->instanceOf(Class),
+       | let ownerClass = $receiverType->meta::pure::compiler::helper::genericTypeRawType()->toOne()->cast(@Class<Any>);
+         let bindings = $ownerClass->meta::pure::compiler::helper::buildBindingsFromGenericType($receiverType);
+         if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
+            | pair(
+                $resolvedGenericType->meta::pure::compiler::helper::makeAsConcreteAsPossible($bindings),
+                pair(
+                    $resolvedMultiplicity->meta::pure::compiler::helper::makeAsConcreteAsPossible($bindings),
+                    $resolvedClassifierGenericType->toOne()->meta::pure::compiler::helper::makeAsConcreteAsPossible($bindings)
+                )
+              ),
+            | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+         );,
+       | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+    );
+    
+    let resolvedProp = meta::pure::functions::lang::new($resolvedTuple.second.second)->cast(@Property<Nil,Any|*>);
+    ^$resolvedProp(
+        aggregation = AggregationKind.None,
+        name = $prop.name,
+        genericType = $resolvedTuple.first,
+        multiplicity = $resolvedTuple.second.first,
+        owner = $prop.owner
+    );
+}
+
+// Tests
+
+Class meta::pure::compiler::helper::tests::property::MyClass<T, U|m>
+{
+}
+
+Class meta::pure::compiler::helper::tests::property::TestClass
+{
+    prop : meta::pure::compiler::helper::tests::property::MyClass<String, Integer | 1..*>[1];
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::property::testResolveProperty():Boolean[1]
+{
+    let ownerClass = meta::pure::compiler::helper::tests::property::MyClass;
+    let prop = meta::pure::compiler::helper::tests::property::TestClass.properties->filter(p | $p.name == 'prop')->toOne();
+    let receiverType = $prop.genericType->toOne();
+    
+    let sourceProp = ^Property<Nil,Any|*>(
+        aggregation = AggregationKind.None,
+        name = 'mockProp',
+        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(
+            type = meta::pure::compiler::helper::tests::property::TestClass
+        ),
+        multiplicity = PureOne,
+        owner = $ownerClass
+    );
+
+    // TODO: A more comprehensive test that has type parameter references inside the source prop
+    let resolvedProp = meta::pure::compiler::helper::resolveProperty($sourceProp, $receiverType);
+    assertEquals('mockProp', $resolvedProp.name);
+}

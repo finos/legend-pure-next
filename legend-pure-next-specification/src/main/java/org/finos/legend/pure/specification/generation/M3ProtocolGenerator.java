@@ -78,7 +78,6 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoExcluded;
     private final Resource protocolInfoInferred;
     private final Resource protocolInfoPointer;
-    private final Resource protocolInfoMainTaxonomy;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
@@ -125,8 +124,7 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_inferred");
         this.protocolInfoPointer =
             model.createResource(M3_NS + "ProtocolInfo_pointer");
-        this.protocolInfoMainTaxonomy =
-            model.createResource(M3_NS + "ProtocolInfo_mainTaxonomy");
+
         this.protocolInfoAbstract =
             model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
         this.taggedValuesProp = model.createProperty(M3_NS, "taggedValues");
@@ -336,7 +334,7 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Class ;\n");
 
-        // Write stereotypes (only mainTaxonomy and abstract for protocol)
+        // Write stereotypes (only abstract for protocol)
         MutableList<String> stereos = Lists.mutable.empty();
         StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
         while (stereoIter.hasNext())
@@ -345,7 +343,7 @@ public class M3ProtocolGenerator
             if (stereoStmt.getObject().isResource())
             {
                 Resource stereoRes = stereoStmt.getObject().asResource();
-                if (stereoRes.equals(protocolInfoMainTaxonomy) || stereoRes.equals(protocolInfoAbstract))
+                if (stereoRes.equals(protocolInfoAbstract))
                 {
                     stereos.add(getLocalName(stereoRes));
                 }
@@ -639,7 +637,11 @@ public class M3ProtocolGenerator
         ResIterator profileIter = model.listSubjectsWithProperty(rdfType, m3Profile);
         while (profileIter.hasNext())
         {
-            writeProfile(w, profileIter.next());
+            Resource profileRes = profileIter.next();
+            if (!"meta_pure_profiles_typemodifiers".equals(getLocalName(profileRes)))
+            {
+                writeProfile(w, profileRes);
+            }
         }
 
         ResIterator stereotypeIter = model.listSubjectsWithProperty(rdfType, m3Stereotype);
@@ -727,9 +729,35 @@ public class M3ProtocolGenerator
         {
             Property pred = model.createProperty(M3_NS, predLocalName);
             Statement stmt = model.getProperty(res, pred);
-            if (stmt != null && stmt.getObject().isLiteral())
+            if (stmt != null)
             {
-                return stmt.getString();
+                String val = getLiteralString(stmt);
+                if (val != null)
+                {
+                    return val;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     */
+    private String getLiteralString(Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            Property dataProp = model.createProperty(M3_NS, "data");
+            Statement dataStmt = model.getProperty(stmt.getObject().asResource(), dataProp);
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getString();
             }
         }
         return null;
@@ -930,7 +958,8 @@ public class M3ProtocolGenerator
 
                 if (oldUri != null
                         && oldUri.contains("meta_pure_metamodel")
-                        && !oldUri.contains("meta_pure_protocol_grammar"))
+                        && !oldUri.contains("meta_pure_protocol_grammar")
+                        && !oldUri.contains("meta_pure_metamodel_type_primitives"))
                 {
                     String newUri = oldUri.replace(
                         "meta_pure_metamodel", "meta_pure_protocol_grammar");
@@ -1081,10 +1110,13 @@ public class M3ProtocolGenerator
                     Statement valStmt = model.getProperty(tvRes, valueProp);
                     if (valStmt != null)
                     {
-                        String val = valStmt.getString();
-                        for (String name : val.split(","))
+                        String val = getLiteralString(valStmt);
+                        if (val != null)
                         {
-                            result.add(name.trim());
+                            for (String name : val.split(","))
+                            {
+                                result.add(name.trim());
+                            }
                         }
                     }
                 }
@@ -1109,7 +1141,7 @@ public class M3ProtocolGenerator
         Resource protocolType = model.createResource(M3_NS + protocolTypeName);
         model.add(protocolType, rdfType, m3Class);
         model.add(protocolType, nameProp, protocolTypeName);
-        model.add(protocolType, stereotypesProp, protocolInfoMainTaxonomy);
+
 
         // Set package from original type
         Statement origPkgStmt = model.getProperty(originalType, packageProp);

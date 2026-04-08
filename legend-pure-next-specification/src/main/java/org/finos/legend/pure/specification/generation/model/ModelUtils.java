@@ -157,7 +157,7 @@ public final class ModelUtils
                 capitalizeNext = false;
             }
         }
-        return result + "Union";
+        return result + "PropertyUnion";
     }
 
     /**
@@ -207,11 +207,19 @@ public final class ModelUtils
     }
 
     /**
-     * Check if a class is marked with the mainTaxonomy stereotype.
+     * Check if a class has subtypes.
      */
-    public static boolean isMainTaxonomy(ClassInfo classInfo)
+    public static boolean isMainTaxonomy(M3Model m3Model, ClassInfo classInfo)
     {
-        return hasStereotype(classInfo.stereotypes, "mainTaxonomy");
+        return m3Model.classesWithSubtypes().contains(classInfo.name);
+    }
+
+    /**
+     * Check if a class is marked as abstract.
+     */
+    public static boolean isAbstract(ClassInfo ci)
+    {
+        return ci != null && ci.stereotypes.anySatisfy(stereo -> bareName(stereo).equals("abstract") || stereo.endsWith("_abstract"));
     }
 
     /**
@@ -223,7 +231,7 @@ public final class ModelUtils
     {
         MutableList<String> result = Lists.mutable.empty();
         collectSubtypesRecursive(m3Model, className, result);
-        return result.sortThis();
+        return result.reject(name -> isAbstract(m3Model.classInfoMap().get(name))).sortThis();
     }
 
     private static void collectSubtypesRecursive(M3Model m3Model, String className, MutableList<String> result)

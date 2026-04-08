@@ -25,6 +25,19 @@ public class NewResolver
             return;
         }
 
+        // Check if the class is abstract
+        if (cls._stereotypes() != null && cls._stereotypes().anySatisfy(s ->
+                "abstract".equals(s._value()) &&
+                s._profile() != null &&
+                "meta::pure::profiles::typemodifiers".equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(s._profile()))))
+        {
+            SourceInformation srcInfo = fe._sourceInformation();
+            context.addError(new CompilationError(
+                    "Cannot instantiate abstract class '" + org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(cls) + "'",
+                    srcInfo));
+            return;
+        }
+
         // Collect all provided property names from key expressions
         org.eclipse.collections.api.set.MutableSet<String> providedNames = org.eclipse.collections.impl.factory.Sets.mutable.empty();
         org.eclipse.collections.api.list.ListIterable<? extends ValueSpecification> params = fe._parametersValues();

@@ -1,18 +1,23 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Class",
       "name" : "LightProperty",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 4,
               "startColumn" : 10,
@@ -23,14 +28,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "value",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 4,
           "startColumn" : 3,
@@ -38,6 +46,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
         "startColumn" : 1,

@@ -43,10 +43,53 @@ public class PureExecution
     private final ValueSpecificationEvaluator evaluator;
     private final MetadataAccess resolver;
 
-    public PureExecution(MetadataAccess resolver)
+
+    private PureExecution(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions)
     {
         this.resolver = resolver;
-        this.evaluator = new ValueSpecificationEvaluator(new NativeRepository(resolver));
+        this.evaluator = new ValueSpecificationEvaluator(
+                NativeRepository.builder()
+                        .withResolver(resolver)
+                        .withNativeExtensions(extensions)
+                        .build()
+        );
+    }
+
+    public static class Builder
+    {
+        private MetadataAccess resolver;
+        private final List<NativeExtension> nativeExtensions = new ArrayList<>();
+
+        public Builder withResolver(MetadataAccess resolver)
+        {
+            this.resolver = resolver;
+            return this;
+        }
+
+        public Builder withNativeExtensions(Iterable<? extends NativeExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.nativeExtensions::add);
+            }
+            return this;
+        }
+
+        public PureExecution build()
+        {
+            return new PureExecution(resolver, nativeExtensions);
+        }
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    // Retained for backward compatibility
+    public PureExecution(MetadataAccess resolver)
+    {
+        this(resolver, null);
     }
 
     public PureExecution()

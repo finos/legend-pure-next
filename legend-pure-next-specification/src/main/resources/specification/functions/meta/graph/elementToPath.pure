@@ -98,10 +98,10 @@ function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEn
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementToPath::testEphemeralPackageableElements():Boolean[1]
 {
-    assertEquals('Root::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Root')))->elementToPath());
-    assertEquals('Other::pkg::MyElement', ^PackageableElement(name='MyElement', package=^Package(name='pkg', package=^Package(name='Other')))->elementToPath());
+    assertEquals('pkg::MyElement', ^meta::pure::metamodel::extension::Profile(name='MyElement', package=^Package(name='pkg', package=^Package(name='Root')))->elementToPath());
+    assertEquals('pkg::MyElement', ^meta::pure::metamodel::extension::Profile(name='MyElement', package=^Package(name='pkg', package=^Package(name='Other')))->elementToPath());
 
-    assertEquals('', ^PackageableElement(name='')->elementToPath());
+    assertEquals('', ^meta::pure::metamodel::extension::Profile(name='')->elementToPath());
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::elementPath::testTopLevelElementPath():Boolean[1]
@@ -162,14 +162,14 @@ function <<test.Test>> meta::pure::functions::meta::tests::elementPath::testEphe
 {
     let rootPkg = ^Package(name='Root');
     let pkgPkg = ^Package(name='pkg', package=$rootPkg);
-    let element = ^PackageableElement(name='MyElement', package=$pkgPkg);
+    let element = ^meta::pure::metamodel::extension::Profile(name='MyElement', package=$pkgPkg);
     assertEquals([$rootPkg], $rootPkg->elementPath());
     assertEquals([$rootPkg, $pkgPkg], $pkgPkg->elementPath());
     assertEquals([$rootPkg, $pkgPkg, $element], $element->elementPath());
 
     let otherRootPkg = ^Package(name='Other');
     let otherPkgPkg = ^Package(name='pkg', package=$otherRootPkg);
-    let otherElement = ^PackageableElement(name='MyElement', package=$otherPkgPkg);
+    let otherElement = ^meta::pure::metamodel::extension::Profile(name='MyElement', package=$otherPkgPkg);
     assertEquals([$otherRootPkg], $otherRootPkg->elementPath());
     assertEquals([$otherRootPkg, $otherPkgPkg], $otherPkgPkg->elementPath());
     assertEquals([$otherRootPkg, $otherPkgPkg, $otherElement], $otherElement->elementPath());

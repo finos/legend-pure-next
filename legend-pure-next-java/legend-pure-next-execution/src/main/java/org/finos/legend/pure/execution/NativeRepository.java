@@ -92,8 +92,48 @@ public class NativeRepository
 
     public NativeRepository(MetadataAccess resolver)
     {
+        this(resolver, null);
+    }
+
+    private NativeRepository(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions)
+    {
         this.resolver = resolver;
         registerDefaults();
+        if (extensions != null)
+        {
+            extensions.forEach(ext -> ext.register(natives, lazyNatives, resolver));
+        }
+    }
+
+    public static class Builder
+    {
+        private MetadataAccess resolver;
+        private final List<NativeExtension> nativeExtensions = new ArrayList<>();
+
+        public Builder withResolver(MetadataAccess resolver)
+        {
+            this.resolver = resolver;
+            return this;
+        }
+
+        public Builder withNativeExtensions(Iterable<? extends NativeExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.nativeExtensions::add);
+            }
+            return this;
+        }
+
+        public NativeRepository build()
+        {
+            return new NativeRepository(resolver, nativeExtensions);
+        }
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
     }
 
     public MetadataAccess resolver()
@@ -332,10 +372,10 @@ public class NativeRepository
                 }
             }
             // Fallback: compare all values
-            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsA = diA.getValues();
-            Map<String, meta.pure.metamodel.valuespecification.ValueSpecification> valsB = diB.getValues();
+            Map<String, Object> valsA = diA.getValues();
+            Map<String, Object> valsB = diB.getValues();
             if (valsA.size() != valsB.size()) return false;
-            for (Map.Entry<String, meta.pure.metamodel.valuespecification.ValueSpecification> e : valsA.entrySet())
+            for (Map.Entry<String, Object> e : valsA.entrySet())
             {
                 if (!pureEquals(_E_ValueSpecification.unwrap(e.getValue()),
                                 _E_ValueSpecification.unwrap(valsB.get(e.getKey()))))

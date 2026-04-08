@@ -1,0 +1,58 @@
+import meta::pure::compiler::helper::*;
+
+// Function helpers
+
+function meta::pure::compiler::helper::resolveFunctionType(genericType:GenericType[1]):FunctionType[0..1]
+{
+    let res = $genericType->meta::pure::compiler::helper::resolveForTarget(Function);
+    let rt = if($res->isNotEmpty(), | $res->toOne()->meta::pure::compiler::helper::genericTypeTypeArguments(), | []);
+    if($rt->isNotEmpty(),
+       | $rt->at(0)->meta::pure::compiler::helper::genericTypeRawType()->toOne()->cast(@FunctionType),
+       | []
+    );
+}
+
+function meta::pure::compiler::helper::getFunctionType(func:Function<Any>[1]):FunctionType[1]
+{
+    $func.classifierGenericType->toOne()->meta::pure::compiler::helper::resolveFunctionType()->toOne()
+}
+
+function meta::pure::compiler::helper::validateFunctionParameters(params:VariableExpression[*]):Boolean[1]
+{
+    let allNames = $params.name;
+    let duplicates = $allNames->filter(n | $allNames->filter(x | $x == $n)->size() > 1)->removeDuplicates();
+    assert($duplicates->isEmpty(), | 'Duplicate parameter name(s): ' + $duplicates->joinStrings(', '));
+    true;
+}
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::tests::function::testResolveFunctionType():Boolean[1]
+{
+    let lambda = {a:String[1]| $a + 'ok'};
+    let cgt = $lambda->meta::pure::compiler::helper::getLambdaClassifierGenericType();
+    
+    let ft = $cgt->meta::pure::compiler::helper::resolveFunctionType()->toOne();
+    
+    assert($ft.parameters->isNotEmpty());
+    assertEquals('a', $ft.parameters->at(0).name);
+    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->meta::pure::compiler::helper::genericTypeRawType()->toOne());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::function::testGetFunctionType():Boolean[1]
+{
+    let func = meta::pure::compiler::helper::tests::function::testResolveFunctionType__Boolean_1_;
+    let ft = $func->meta::pure::compiler::helper::getFunctionType();
+    
+    assertEquals(Boolean, $ft.returnType->toOne()->meta::pure::compiler::helper::genericTypeRawType()->toOne());
+    assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityLowerBound());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::tests::function::testValidateFunctionParameters():Boolean[1]
+{
+    let params = [
+        ^VariableExpression(name='a', genericType=^meta::pure::metamodel::type::generics::InferredGenericType(type=String), multiplicity=PureOne),
+        ^VariableExpression(name='b', genericType=^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer), multiplicity=PureOne)
+    ];
+    assert(meta::pure::compiler::helper::validateFunctionParameters($params));
+}

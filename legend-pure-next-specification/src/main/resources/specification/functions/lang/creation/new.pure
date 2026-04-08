@@ -18,6 +18,7 @@ import meta::pure::functions::lang::tests::new::*;
 import meta::pure::functions::lang::*;
 
 native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new<T>(generic:GenericTypeAndMultiplicityHolder<T|1>[1]):T[1];
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::lang::new(generic:GenericType[1]):Any[1];
 native function
     <<PCT.function, PCT.platformOnly>>
     {
@@ -138,4 +139,23 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithTypeV
    assertEquals('15z', ^MyClassWithTypeVariables(5)().res('z'));
    assertEquals(10, ^MyClassWithTypeVariables(10)(text = ['a', 'b']).x());
    assertError(|^MyClassWithTypeVariables(1)(text = ['a', 'b']).res('z'), 'Constraint :[wx] violated in the Class MyClassWithTypeVariables, Message: Error 2 >= 1');
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewClassFailsWithoutTypeArgs():Boolean[1]
+{
+    assertError(|meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Class)
+                ), 'Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam');
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testClassifierGenericType():Boolean[1]
+{
+    let x = ^LA_Person(firstName='Pierre', lastName='Doe');
+    assertIs (LA_Person, $x.classifierGenericType->cast(@GenericTypeValue).type);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testCantSetClassifierGenericType():Boolean[1]
+{
+    assertError(|^LA_Person(classifierGenericType = ^UserDefinedGenericType(type=Any), firstName='Pierre', lastName='Doe')
+                , 'Cannot set \'classifierGenericType\' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.');
 }

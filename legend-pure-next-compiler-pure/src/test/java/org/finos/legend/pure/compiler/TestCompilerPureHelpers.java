@@ -22,7 +22,6 @@ import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.execution.PureExecution;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
-import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.junit.jupiter.api.DynamicTest;
@@ -45,22 +44,31 @@ class TestCompilerPureHelpers
     @TestFactory
     Collection<DynamicTest> pureHelperTests() throws IOException
     {
-        // Load core.pdb (contains bootstrap + standard library)
         PDBModule coreModule = new PDBModule(
                 Path.of("../legend-pure-next-java/legend-pure-next-compiler/target/core.pdb"),
-                PDBModule.Mode.COMPILATION);
+                PDBModule.Mode.EXECUTION,
+                "core",
+                "*",
+                Lists.mutable.with());
 
-        // Compile compiler Pure files against core.pdb
-        LocalModule compilerModule = new LocalModule("compiler", "*",
-                Lists.mutable.with(coreModule.getName()),
-                Path.of("src/main/resources/compiler/functions"));
+        PDBModule compilerModule = new PDBModule(
+                Path.of("target/compiler.pdb"),
+                PDBModule.Mode.EXECUTION,
+                "compiler",
+                "*",
+                Lists.mutable.with("core"));
 
         PureModel model = PureModel.withModules(Lists.mutable.with(coreModule, compilerModule))
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                 .build();
         model.compile();
 
-        PureExecution execution = new PureExecution(new ScopedMetadataAccess(compilerModule, model));
+
+
+        PureExecution execution = PureExecution.builder()
+                .withResolver(new ScopedMetadataAccess(compilerModule, model))
+                .withNativeExtensions(Lists.mutable.with(new TestCompilerNatives()))
+                .build();
 
         List<DynamicTest> tests = new ArrayList<>();
         for (String path : compilerModule.elementPaths())

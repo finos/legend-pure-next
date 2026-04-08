@@ -77,6 +77,11 @@ public class RdfFbsSchemaGenerator
         sb.append("    path: string;\n");
         sb.append("}\n\n");
 
+        // Ancestor reference table for cycle back-references
+        sb.append("table AncestorRef {\n");
+        sb.append("    depth: int;\n");
+        sb.append("}\n\n");
+
         // Generate union types for pointer properties with nonPointerSubtypes
         MutableSet<String> generatedUnions = Sets.mutable.empty();
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
@@ -95,7 +100,7 @@ public class RdfFbsSchemaGenerator
                     String uName = unionTypeName(fbsField);
                     if (generatedUnions.add(uName))
                     {
-                        sb.append("union ").append(uName).append(" { PointerRef");
+                        sb.append("union ").append(uName).append(" { PointerRef, AncestorRef");
                         nps.forEach(subtype -> sb.append(", ").append(subtype).append("Def"));
                         sb.append(" }\n\n");
                     }
@@ -108,7 +113,7 @@ public class RdfFbsSchemaGenerator
         MutableMap<String, String> mainTaxonomyUnions = Maps.mutable.empty();
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
-            if (isMainTaxonomy(classInfo))
+            if (isMainTaxonomy(m3Model, classInfo))
             {
                 MutableList<String> subtypes = collectAllSubtypes(m3Model, classInfo.name);
                 if (subtypes.notEmpty())
@@ -123,7 +128,14 @@ public class RdfFbsSchemaGenerator
                         sb.append(subtype).append("Def");
                     });
                     // Include the base type itself as fallback
-                    sb.append(", ").append(classInfo.name).append("Def");
+                    if (!isAbstract(classInfo))
+                    {
+                        if (subtypes.notEmpty()) { sb.append(", "); }
+                        sb.append(classInfo.name).append("Def");
+                    }
+                    // Include AncestorRef for cycle back-references
+                    if (subtypes.notEmpty() || !isAbstract(classInfo)) { sb.append(", "); }
+                    sb.append("AncestorRef");
                     sb.append(" }\n\n");
                 }
             }
@@ -139,6 +151,10 @@ public class RdfFbsSchemaGenerator
         // Generate tables
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
+            if (isAbstract(classInfo))
+            {
+                return;
+            }
             MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
 
             sb.append("table ").append(classInfo.name).append("Def {\n");
@@ -208,10 +224,14 @@ public class RdfFbsSchemaGenerator
         sb.append("    path: string;\n");
         sb.append("    element_type: string;\n");
 
-        m3Model.classInfoMap().keysView().toSortedList().forEach(name ->
+        m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(ci ->
         {
-            String fbsField = toFbsFieldName(name);
-            sb.append("    ").append(fbsField).append("_val: ").append(name).append("Def;\n");
+            if (isAbstract(ci))
+            {
+                return;
+            }
+            String fbsField = toFbsFieldName(ci.name);
+            sb.append("    ").append(fbsField).append("_val: ").append(ci.name).append("Def;\n");
         });
 
         sb.append("}\n\n");
@@ -240,27 +260,21 @@ public class RdfFbsSchemaGenerator
             return isMany ? "[" + unionName + "]" : unionName;
         }
 
-        String baseType = switch (m3Type)
+        // Delegate to formal primitive mapping
+        String fbsType = m3Type != null ? PrimitiveFbsTypeMapping.toFbsType(m3Type) : "string";
+        String baseType;
+        if (fbsType != null)
         {
-            case null -> "string";
-            case "String" -> "string";
-            case "Boolean" -> "bool";
-            case "Integer" -> "long";
-            case "Float" -> "double";
-            case "Decimal" -> "string";
-            case "Date", "DateTime", "StrictDate" -> "string";
-            case "Number" -> "double";
-            case "Byte" -> "ubyte";
-            case "Any" -> "string";
-            default ->
-            {
-                if (m3Model.classInfoMap().containsKey(m3Type))
-                {
-                    yield m3Type + "Def";
-                }
-                yield "string";
-            }
-        };
+            baseType = fbsType;
+        }
+        else if (m3Model.classInfoMap().containsKey(m3Type))
+        {
+            baseType = m3Type + "Def";
+        }
+        else
+        {
+            baseType = "string";
+        }
 
         return isMany ? "[" + baseType + "]" : baseType;
     }

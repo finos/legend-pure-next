@@ -1,18 +1,23 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Association",
       "name" : "AnAssociation4",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "properties" : [ {
+        "_type" : "Property",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassA",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 5,
               "startColumn" : 6,
@@ -23,20 +28,24 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "a",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 45,
           "endLine" : 5,
           "startColumn" : 3,
           "startLine" : 5
         }
       }, {
+        "_type" : "Property",
         "defaultValue" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {
@@ -44,13 +53,16 @@
             "multiplicity" : {
               "_type" : "UserDefinedAdHocMultiplicity",
               "lowerBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 2
               },
               "upperBound" : {
+                "_type" : "MultiplicityValue",
                 "value" : 2
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 94,
               "endLine" : 6,
               "startColumn" : 51,
@@ -71,13 +83,16 @@
                 "multiplicity" : {
                   "_type" : "UserDefinedAdHocMultiplicity",
                   "lowerBound" : {
+                    "_type" : "MultiplicityValue",
                     "value" : 1
                   },
                   "upperBound" : {
+                    "_type" : "MultiplicityValue",
                     "value" : 1
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 71,
                   "endLine" : 6,
                   "startColumn" : 52,
@@ -85,6 +100,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 71,
                 "endLine" : 6,
                 "startColumn" : 52,
@@ -105,13 +121,16 @@
                 "multiplicity" : {
                   "_type" : "UserDefinedAdHocMultiplicity",
                   "lowerBound" : {
+                    "_type" : "MultiplicityValue",
                     "value" : 1
                   },
                   "upperBound" : {
+                    "_type" : "MultiplicityValue",
                     "value" : 1
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 93,
                   "endLine" : 6,
                   "startColumn" : 74,
@@ -119,6 +138,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 93,
                 "endLine" : 6,
                 "startColumn" : 74,
@@ -127,6 +147,7 @@
             } ]
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 94,
             "endLine" : 6,
             "startColumn" : 49,
@@ -139,6 +160,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassB",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 6,
               "startColumn" : 6,
@@ -149,11 +171,13 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "b",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 95,
           "endLine" : 6,
           "startColumn" : 3,
@@ -161,6 +185,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
         "startColumn" : 1,
@@ -170,9 +195,11 @@
       "_type" : "Class",
       "name" : "AssociationClassA",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 11,
         "startColumn" : 1,
@@ -182,9 +209,11 @@
       "_type" : "Class",
       "name" : "AssociationClassB",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 15,
         "startColumn" : 1,

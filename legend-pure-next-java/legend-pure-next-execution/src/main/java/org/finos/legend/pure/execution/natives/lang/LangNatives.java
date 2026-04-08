@@ -60,20 +60,25 @@ public class LangNatives
             List<ValueSpecification> fnArgs = new ArrayList<>();
             for (ValueSpecification item : _E_ValueSpecification.toCollection(args.get(1), resolver)._values())
             {
-                // Each item is a Pure List DynamicInstance — extract its 'values' property
                 if (item instanceof AtomicValue av && av._value() instanceof DynamicInstance di)
                 {
-                    ValueSpecification valuesVS = di.get("values");
-
-                    if (valuesVS instanceof meta.pure.metamodel.valuespecification.Collection col)
+                    Object valuesRaw = di.get("values");
+                    if (valuesRaw instanceof Iterable<?> it)
                     {
-                        // Multi-valued: the Collection VS already has the right type metadata
-                        fnArgs.add(col);
+                        List<ValueSpecification> wrappedList = new ArrayList<>();
+                        for (Object v : it)
+                        {
+                            wrappedList.add(_E_ValueSpecification.wrap(v, org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(v, resolver), null, resolver));
+                        }
+                        fnArgs.add(org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrappedList, resolver));
                     }
-                    else if (valuesVS != null)
+                    else
                     {
-                        // Single-valued: pass the scalar VS directly
-                        fnArgs.add(valuesVS);
+                        ValueSpecification valuesVS = _E_ValueSpecification.wrap(valuesRaw, org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(valuesRaw, resolver), null, resolver);
+                        if (valuesVS != null)
+                        {
+                            fnArgs.add(valuesVS);
+                        }
                     }
                 }
                 else

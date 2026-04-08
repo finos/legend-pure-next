@@ -1,0 +1,40 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Class<Any>[1]
+{
+    let packagePath = $protocolClass.package->toOne().pointerValue;
+    let className = $packagePath + '::' + $protocolClass.name;
+    let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+
+    let superTypes = if($protocolClass.generalizations->isEmpty(),
+        | [meta::pure::metamodel::type::Any],
+        | $protocolClass.generalizations->map(g |
+            let genType = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
+            $context->resolveElement($genType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue)->toOne()->cast(@meta::pure::metamodel::type::Type);
+        )
+    );
+
+    let generalizations = $superTypes->map(s | ^meta::pure::metamodel::relationship::Generalization(
+        general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $s),
+        specific = $skeleton
+    ));
+
+    ^$skeleton(
+        generalizations = $generalizations,
+        properties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton))
+    );
+}

@@ -147,6 +147,9 @@ public class M3BootstrapReader
             Resource m3Tag = model.createResource(M3_NS + "Tag");
             wireClassifierGenericType(model, m3Tag, index);
 
+            // Wire stereotypes onto matching elements
+            wireStereotypesToElements(model, index);
+
             // Third pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
             bootstrapProperties(model, m3Property, index);
@@ -248,9 +251,10 @@ public class M3BootstrapReader
             {
                 Resource lowerRes = lowerStmt.getObject().asResource();
                 Statement valueStmt = getM3Statement(model, lowerRes, "value");
-                if (valueStmt != null && valueStmt.getObject().isLiteral())
+                String valueStr = valueStmt != null ? getLiteralString(model, valueStmt) : null;
+                if (valueStr != null)
                 {
-                    MultiplicityValueImpl lowerBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    MultiplicityValueImpl lowerBound = new MultiplicityValueImpl()._value(Long.parseLong(valueStr));
                     Statement cgtStmt = getM3Statement(model, lowerRes, "classifierGenericType");
                     if (cgtStmt != null && cgtStmt.getObject().isResource())
                     {
@@ -266,9 +270,10 @@ public class M3BootstrapReader
             {
                 Resource upperRes = upperStmt.getObject().asResource();
                 Statement valueStmt = getM3Statement(model, upperRes, "value");
-                if (valueStmt != null && valueStmt.getObject().isLiteral())
+                String valueStr = valueStmt != null ? getLiteralString(model, valueStmt) : null;
+                if (valueStr != null)
                 {
-                    MultiplicityValueImpl upperBound = new MultiplicityValueImpl()._value(valueStmt.getLong());
+                    MultiplicityValueImpl upperBound = new MultiplicityValueImpl()._value(Long.parseLong(valueStr));
                     Statement cgtStmt = getM3Statement(model, upperRes, "classifierGenericType");
                     if (cgtStmt != null && cgtStmt.getObject().isResource())
                     {
@@ -452,7 +457,8 @@ public class M3BootstrapReader
             {
                 continue;
             }
-            String profName = getLocalName(profStmt.getObject().asResource());
+            Resource profRes = profStmt.getObject().asResource();
+            String profName = getName(model, profRes);
             if (profName == null)
             {
                 continue;
@@ -565,31 +571,10 @@ public class M3BootstrapReader
                 Statement stStmt = stIt.next();
                 if (stStmt.getObject().isResource())
                 {
-                    Resource stRes = stStmt.getObject().asResource();
-                    String stName = getName(model, stRes);
-                    if (stName != null)
+                    Stereotype st = findStereotype(model, stStmt.getObject().asResource(), index);
+                    if (st != null)
                     {
-                        // Look up the existing Stereotype from its parent Profile (created by wireStereotypesToProfiles)
-                        Statement profStmt = getM3Statement(model, stRes, "profile");
-                        if (profStmt != null && profStmt.getObject().isResource())
-                        {
-                            String profName = getLocalName(profStmt.getObject().asResource());
-                            if (profName != null)
-                            {
-                                for (PackageableElement el : index.valuesView())
-                                {
-                                    if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
-                                    {
-                                        Stereotype found = p._p_stereotypes().detect(s -> stName.equals(s._value()));
-                                        if (found != null)
-                                        {
-                                            stereotypes.add(found);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        stereotypes.add(st);
                     }
                 }
             }
@@ -613,6 +598,68 @@ public class M3BootstrapReader
             }
         }
         return null;
+    }
+
+    private static Stereotype findStereotype(Model model, Resource stRes, MutableMap<String, PackageableElement> index)
+    {
+        String stName = getName(model, stRes);
+        if (stName != null)
+        {
+            Statement profStmt = getM3Statement(model, stRes, "profile");
+            if (profStmt != null && profStmt.getObject().isResource())
+            {
+                Resource profRes = profStmt.getObject().asResource();
+                String profName = getName(model, profRes);
+                if (profName != null)
+                {
+                    for (PackageableElement el : index.valuesView())
+                    {
+                        if (el instanceof meta.pure.metamodel.extension.Profile p && profName.equals(el._name()))
+                        {
+                            return p._p_stereotypes().detect(s -> stName.equals(s._value()));
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void wireStereotypesToElements(Model model, MutableMap<String, PackageableElement> index)
+    {
+        org.apache.jena.rdf.model.Property stereotypesPred = model.getProperty(M3_NS + "stereotypes");
+        for (StmtIterator stIt = model.listStatements(null, stereotypesPred, (RDFNode) null); stIt.hasNext();)
+        {
+            Statement stStmt = stIt.next();
+            Resource subject = stStmt.getSubject();
+            if (!subject.isResource())
+            {
+                continue;
+            }
+
+            String name = getName(model, subject);
+            String packagePath = getPackagePath(model, subject);
+            if (name == null)
+            {
+                continue;
+            }
+
+            String fullPath = packagePath != null ? packagePath + "::" + name : name;
+            PackageableElement element = index.get(fullPath);
+            if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
+            {
+                if (stStmt.getObject().isResource())
+                {
+                    Stereotype st = findStereotype(model, stStmt.getObject().asResource(), index);
+                    if (st != null)
+                    {
+                        MutableList<Stereotype> stereotypes = Lists.mutable.withAll(ews._stereotypes());
+                        stereotypes.add(st);
+                        ews._stereotypes(stereotypes);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -732,9 +779,36 @@ public class M3BootstrapReader
         for (String predicate : new String[]{"name", "typeParameter_name", "MultiplicityParameter_name", "abstractProperty_name", "stereotype_name", "tag_value", "enumValue", "VariableExpression_name"})
         {
             Statement stmt = getM3Statement(model, res, predicate);
-            if (stmt != null && stmt.getObject().isLiteral())
+            if (stmt != null)
             {
-                return stmt.getLiteral().getString();
+                String val = getLiteralString(model, stmt);
+                if (val != null)
+                {
+                    return val;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     * This is the unified method for reading primitive values from the TTL.
+     */
+    private static String getLiteralString(Model model, Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getLiteral().getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            // Typed primitive node: [ :classifierGenericType :GenericType_X ; :data "value" ]
+            Statement dataStmt = getM3Statement(model, stmt.getObject().asResource(), "data");
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getLiteral().getString();
             }
         }
         return null;
@@ -841,9 +915,10 @@ public class M3BootstrapReader
                 }
 
                 Statement contravariantStmt = getM3Statement(model, paramRes, "contravariant");
-                if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                if (contravariantStmt != null)
                 {
-                    tp._contravariant(contravariantStmt.getBoolean());
+                    String contraVal = getLiteralString(model, contravariantStmt);
+                    tp._contravariant("true".equals(contraVal));
                 }
                 else
                 {
@@ -940,10 +1015,11 @@ public class M3BootstrapReader
         {
             Resource mulRes = returnMulStmt.getObject().asResource();
             Statement mulParamStmt = getM3Statement(model, mulRes, "MultiplicityParameter_name");
-            if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
+            String mulParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
+            if (mulParamName != null)
             {
-                // Multiplicity parameter reference: [ :multiplicityParameter "m" ]
-                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                // Multiplicity parameter reference: [ :MultiplicityParameter_name [ :classifierGenericType ... ; :data "m" ] ]
+                meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl mp = new meta.pure.metamodel.multiplicity.UserDefinedMultiplicityParameterImpl()._name(mulParamName);
                 Statement cgtStmt = getM3Statement(model, mulRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {
@@ -994,9 +1070,9 @@ public class M3BootstrapReader
                 {
                     String paramName = null;
                     Statement tpNameStmt = getM3Statement(model, rawTypeRes, "typeParameter_name");
-                    if (tpNameStmt != null && tpNameStmt.getObject().isLiteral())
+                    if (tpNameStmt != null)
                     {
-                        paramName = tpNameStmt.getString();
+                        paramName = getLiteralString(model, tpNameStmt);
                     }
                     if (paramName == null)
                     {
@@ -1013,9 +1089,10 @@ public class M3BootstrapReader
                         }
 
                         Statement contravariantStmt = getM3Statement(model, rawTypeRes, "contravariant");
-                        if (contravariantStmt != null && contravariantStmt.getObject().isLiteral())
+                        if (contravariantStmt != null)
                         {
-                            tp._contravariant(contravariantStmt.getBoolean());
+                            String contraVal = getLiteralString(model, contravariantStmt);
+                            tp._contravariant("true".equals(contraVal));
                         }
                         else
                         {
@@ -1061,9 +1138,10 @@ public class M3BootstrapReader
         {
             // Check for multiplicityParameter reference (e.g., [ :multiplicityParameter "m" ])
             Statement mulParamStmt = getM3Statement(model, mulArgRes, "MultiplicityParameter_name");
-            if (mulParamStmt != null && mulParamStmt.getObject().isLiteral())
+            String mulArgParamName = mulParamStmt != null ? getLiteralString(model, mulParamStmt) : null;
+            if (mulArgParamName != null)
             {
-                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(mulParamStmt.getString());
+                UserDefinedMultiplicityParameterImpl mp = new UserDefinedMultiplicityParameterImpl()._name(mulArgParamName);
                 Statement cgtStmt = getM3Statement(model, mulArgRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {

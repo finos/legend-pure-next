@@ -1,8 +1,11 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "PrimitiveType",
       "constraints" : [ {
+        "_type" : "Constraint",
         "functionDefinition" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {
@@ -15,6 +18,7 @@
                 "_type" : "VariableExpression",
                 "name" : "this",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 9,
                   "endLine" : 5,
                   "startColumn" : 5,
@@ -22,6 +26,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 5,
                 "startColumn" : 10,
@@ -31,6 +36,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 24,
                 "endLine" : 5,
                 "startColumn" : 23,
@@ -38,6 +44,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 5,
               "startColumn" : 21,
@@ -45,6 +52,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 5,
             "startColumn" : 5,
@@ -52,6 +60,7 @@
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 5,
           "startColumn" : 5,
@@ -59,12 +68,14 @@
         }
       } ],
       "generalizations" : [ {
+        "_type" : "Generalization",
         "general" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 100,
               "endLine" : 3,
               "startColumn" : 95,
@@ -73,6 +84,7 @@
           }
         },
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 100,
           "endLine" : 3,
           "startColumn" : 95,
@@ -81,17 +93,22 @@
       } ],
       "name" : "Varchar",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 6,
         "startColumn" : 1,
         "startLine" : 3
       },
       "stereotypes" : [ {
+        "_type" : "Stereotype_PointerImpl",
         "extraPointerValues" : [ {
+          "_type" : "PointerValue",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 25,
             "endLine" : 3,
             "startColumn" : 22,
@@ -101,6 +118,7 @@
         } ],
         "pointerValue" : "AProfile",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 3,
           "startColumn" : 13,
@@ -108,9 +126,13 @@
         }
       } ],
       "taggedValues" : [ {
+        "_type" : "TaggedValue",
         "tag" : {
+          "_type" : "Tag_PointerImpl",
           "extraPointerValues" : [ {
+            "_type" : "PointerValue",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 42,
               "endLine" : 3,
               "startColumn" : 39,
@@ -120,6 +142,7 @@
           } ],
           "pointerValue" : "AProfile",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 37,
             "endLine" : 3,
             "startColumn" : 30,
@@ -136,6 +159,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 81,
               "endLine" : 3,
               "startColumn" : 75,
@@ -146,14 +170,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "x",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 84,
           "endLine" : 3,
           "startColumn" : 72,
@@ -164,7 +191,9 @@
       "_type" : "Profile",
       "name" : "AProfile",
       "p_stereotypes" : [ {
+        "_type" : "Stereotype",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 10,
           "startColumn" : 17,
@@ -173,7 +202,9 @@
         "value" : "flag"
       } ],
       "p_tags" : [ {
+        "_type" : "Tag",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 13,
           "endLine" : 11,
           "startColumn" : 10,
@@ -182,9 +213,11 @@
         "value" : "tag1"
       } ],
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 12,
         "startColumn" : 1,

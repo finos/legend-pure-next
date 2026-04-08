@@ -52,11 +52,19 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Execution (for running Pure tests) -->
+        <!-- Execution (for native implementations) -->
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-execution</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <!-- Test dependencies from compiler -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-compiler</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -78,7 +86,7 @@
                             <mainClass>org.finos.legend.pure.compiler.CompilerBinaryBuilder</mainClass>
                             <arguments>
                                 <argument>${project.basedir}/../legend-pure-next-java/legend-pure-next-compiler/target/core.pdb</argument>
-                                <argument>${project.basedir}/src/main/resources/compiler/functions</argument>
+                                <argument>${project.basedir}/src/main/resources</argument>
                                 <argument>${project.build.directory}/compiler.pdb</argument>
                             </arguments>
                         </configuration>

@@ -335,7 +335,7 @@ public class RdfMultiplicityValidationTest
             {
                 continue;
             }
-            String propName = nameStmt.getString();
+            String propName = getLiteralString(model, nameStmt);
 
             // Get the RDF resource local name (the actual predicate used on instances)
             String rdfPredicateName = prop.isURIResource() ? localName(prop.getURI()) : null;
@@ -458,11 +458,16 @@ public class RdfMultiplicityValidationTest
         }
         Resource boundBlank = boundStmt.getObject().asResource();
         Statement valueStmt = boundBlank.getProperty(valueProp);
-        if (valueStmt == null || !valueStmt.getObject().isLiteral())
+        if (valueStmt == null)
         {
             return defaultValue;
         }
-        return valueStmt.getLong();
+        String valStr = getLiteralString(model, valueStmt);
+        if (valStr == null)
+        {
+            return defaultValue;
+        }
+        return Long.parseLong(valStr);
     }
 
     /**
@@ -527,11 +532,37 @@ public class RdfMultiplicityValidationTest
         // For blank nodes, try to get the :name property
         Property nameProp = model.getProperty(M3_NS + "name");
         Statement nameStmt = instance.getProperty(nameProp);
-        if (nameStmt != null && nameStmt.getObject().isLiteral())
+        if (nameStmt != null)
         {
-            return "[blank:" + nameStmt.getString() + "]";
+            String val = getLiteralString(model, nameStmt);
+            if (val != null)
+            {
+                return "[blank:" + val + "]";
+            }
         }
         return "[blank:" + instance.getId() + "]";
+    }
+
+    /**
+     * Extract a string value from a statement, handling both raw RDF literals
+     * and typed primitive nodes (blank nodes with :classifierGenericType and :data).
+     */
+    private String getLiteralString(Model model, Statement stmt)
+    {
+        if (stmt.getObject().isLiteral())
+        {
+            return stmt.getString();
+        }
+        else if (stmt.getObject().isResource())
+        {
+            Property dataProp = model.getProperty(M3_NS + "data");
+            Statement dataStmt = stmt.getObject().asResource().getProperty(dataProp);
+            if (dataStmt != null && dataStmt.getObject().isLiteral())
+            {
+                return dataStmt.getString();
+            }
+        }
+        return null;
     }
 
     private Model loadModel(String resourceName)

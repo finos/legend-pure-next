@@ -122,37 +122,4 @@ public final class _Class
             }
         }
     }
-
-    /**
-     * Find a qualified property by name on a Class, searching own qualified properties,
-     * then traversing up the class hierarchy.
-     */
-    public static QualifiedProperty findQualifiedProperty(Class cls, String name)
-    {
-        // Direct qualified properties
-        if (cls._qualifiedProperties() != null)
-        {
-            QualifiedProperty match = cls._qualifiedProperties().detect(qp -> name.equals(qp._name()));
-            if (match != null)
-            {
-                return match;
-            }
-        }
-        // Inherited qualified properties via generalizations
-        if (cls._generalizations() != null)
-        {
-            for (meta.pure.metamodel.relationship.Generalization gen : cls._generalizations())
-            {
-                if (gen._general() != null && _GenericType.type(gen._general()) instanceof Class superClass)
-                {
-                    QualifiedProperty match = findQualifiedProperty(superClass, name);
-                    if (match != null)
-                    {
-                        return match;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 }

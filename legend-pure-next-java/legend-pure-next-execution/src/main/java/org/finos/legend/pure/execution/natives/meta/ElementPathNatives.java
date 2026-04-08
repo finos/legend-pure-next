@@ -192,7 +192,7 @@ public class ElementPathNatives
 
     private static void buildDynamicPathSegments(DynamicInstance di, List<String> segments, ValueSpecificationEvaluator eval)
     {
-        Object pkg = _E_ValueSpecification.unwrap(di.get("package"));
+        Object pkg = di.get("package");
         if (pkg instanceof DynamicInstance parent)
         {
             buildDynamicPathSegments(parent, segments, eval);
@@ -201,7 +201,7 @@ public class ElementPathNatives
         {
             buildAllNamedPackageSegments(parent, segments);
         }
-        Object name = _E_ValueSpecification.unwrap(di.get("name"));
+        Object name = di.get("name");
         if (name instanceof String s && !s.isEmpty())
         {
             segments.add(s);
@@ -240,7 +240,7 @@ public class ElementPathNatives
 
     private static void buildDynamicElementPath(DynamicInstance di, List<Object> path, ValueSpecificationEvaluator eval)
     {
-        Object pkg = _E_ValueSpecification.unwrap(di.get("package"));
+        Object pkg = di.get("package");
         if (pkg instanceof DynamicInstance parent)
         {
             buildDynamicElementPath(parent, path, eval);

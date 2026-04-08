@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -15,6 +17,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 5,
             "endLine" : 5,
             "startColumn" : 5,
@@ -23,6 +26,7 @@
           "value" : 1
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 5,
           "startColumn" : 6,
@@ -47,6 +51,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 10,
                 "endLine" : 6,
                 "startColumn" : 7,
@@ -63,6 +68,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 6,
                 "startColumn" : 15,
@@ -71,6 +77,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 19,
               "endLine" : 6,
               "startColumn" : 12,
@@ -78,6 +85,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 25,
             "endLine" : 6,
             "startColumn" : 21,
@@ -85,6 +93,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 6,
           "startColumn" : 5,
@@ -109,6 +118,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 7,
                 "startColumn" : 8,
@@ -125,6 +135,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 7,
                 "startColumn" : 16,
@@ -133,6 +144,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 20,
               "endLine" : 7,
               "startColumn" : 13,
@@ -140,6 +152,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 21,
             "endLine" : 7,
             "startColumn" : 6,
@@ -147,6 +160,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 27,
           "endLine" : 7,
           "startColumn" : 23,
@@ -171,6 +185,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 9,
                 "endLine" : 8,
                 "startColumn" : 6,
@@ -187,6 +202,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 18,
                 "endLine" : 8,
                 "startColumn" : 14,
@@ -195,6 +211,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 8,
               "startColumn" : 11,
@@ -202,6 +219,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 18,
             "endLine" : 8,
             "startColumn" : 11,
@@ -209,6 +227,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 8,
           "startColumn" : 20,
@@ -236,6 +255,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 11,
                   "endLine" : 9,
                   "startColumn" : 8,
@@ -255,6 +275,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 21,
                     "endLine" : 9,
                     "startColumn" : 17,
@@ -263,6 +284,7 @@
                   "value" : false
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 21,
                   "endLine" : 9,
                   "startColumn" : 16,
@@ -270,6 +292,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 21,
                 "endLine" : 9,
                 "startColumn" : 13,
@@ -277,6 +300,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 9,
               "startColumn" : 13,
@@ -284,6 +308,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 22,
             "endLine" : 9,
             "startColumn" : 6,
@@ -291,6 +316,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 28,
           "endLine" : 9,
           "startColumn" : 24,
@@ -315,6 +341,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 10,
                 "startColumn" : 7,
@@ -323,6 +350,7 @@
               "value" : 1
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 10,
               "startColumn" : 6,
@@ -338,6 +366,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 10,
               "startColumn" : 11,
@@ -346,6 +375,7 @@
             "value" : 2
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 10,
             "startColumn" : 9,
@@ -353,6 +383,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 17,
           "endLine" : 10,
           "startColumn" : 13,
@@ -377,6 +408,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 8,
                 "endLine" : 11,
                 "startColumn" : 8,
@@ -393,6 +425,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 11,
                 "startColumn" : 12,
@@ -401,6 +434,7 @@
               "value" : 2
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 11,
               "startColumn" : 10,
@@ -408,6 +442,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 13,
             "endLine" : 11,
             "startColumn" : 6,
@@ -415,6 +450,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 11,
           "startColumn" : 15,
@@ -439,6 +475,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 8,
                 "endLine" : 12,
                 "startColumn" : 8,
@@ -455,6 +492,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 12,
                 "startColumn" : 12,
@@ -463,6 +501,7 @@
               "value" : 2
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 12,
               "startColumn" : 10,
@@ -470,6 +509,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 13,
             "endLine" : 12,
             "startColumn" : 6,
@@ -477,6 +517,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 12,
           "startColumn" : 15,
@@ -501,6 +542,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 10,
                 "endLine" : 13,
                 "startColumn" : 7,
@@ -509,6 +551,7 @@
               "value" : true
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 10,
               "endLine" : 13,
               "startColumn" : 6,
@@ -524,6 +567,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 19,
               "endLine" : 13,
               "startColumn" : 15,
@@ -532,6 +576,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 19,
             "endLine" : 13,
             "startColumn" : 12,
@@ -539,6 +584,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 13,
           "startColumn" : 21,
@@ -560,6 +606,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 14,
               "startColumn" : 6,
@@ -568,6 +615,7 @@
             "value" : true
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 9,
             "endLine" : 14,
             "startColumn" : 5,
@@ -586,6 +634,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 14,
               "startColumn" : 14,
@@ -594,6 +643,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 14,
             "startColumn" : 19,
@@ -601,6 +651,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 14,
           "startColumn" : 11,
@@ -622,6 +673,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 15,
               "startColumn" : 6,
@@ -630,6 +682,7 @@
             "value" : 1
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 15,
             "startColumn" : 7,
@@ -637,6 +690,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 15,
           "startColumn" : 5,
@@ -655,6 +709,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 16,
             "startColumn" : 7,
@@ -663,6 +718,7 @@
           "value" : -1
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 13,
           "endLine" : 16,
           "startColumn" : 9,
@@ -684,6 +740,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 17,
               "startColumn" : 6,
@@ -700,6 +757,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 10,
               "endLine" : 17,
               "startColumn" : 10,
@@ -708,6 +766,7 @@
             "value" : 1
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 17,
             "startColumn" : 8,
@@ -715,6 +774,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 17,
           "startColumn" : 12,
@@ -739,6 +799,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 18,
                 "startColumn" : 7,
@@ -755,6 +816,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 18,
                 "startColumn" : 11,
@@ -763,6 +825,7 @@
               "value" : 1
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 18,
               "startColumn" : 9,
@@ -770,6 +833,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 17,
             "endLine" : 18,
             "startColumn" : 13,
@@ -777,6 +841,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 17,
           "endLine" : 18,
           "startColumn" : 5,
@@ -801,6 +866,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 8,
                 "endLine" : 19,
                 "startColumn" : 8,
@@ -817,6 +883,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 19,
                 "startColumn" : 12,
@@ -825,6 +892,7 @@
               "value" : 1
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 19,
               "startColumn" : 10,
@@ -832,6 +900,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 13,
             "endLine" : 19,
             "startColumn" : 6,
@@ -839,6 +908,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 19,
           "startColumn" : 15,
@@ -863,6 +933,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 8,
                 "endLine" : 20,
                 "startColumn" : 8,
@@ -879,6 +950,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 13,
                 "endLine" : 20,
                 "startColumn" : 13,
@@ -887,6 +959,7 @@
               "value" : -1
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 13,
               "endLine" : 20,
               "startColumn" : 10,
@@ -894,6 +967,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 14,
             "endLine" : 20,
             "startColumn" : 6,
@@ -901,6 +975,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 20,
           "startColumn" : 16,
@@ -922,6 +997,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 10,
               "endLine" : 21,
               "startColumn" : 7,
@@ -930,6 +1006,7 @@
             "value" : true
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 21,
             "startColumn" : 6,
@@ -937,6 +1014,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 21,
           "startColumn" : 12,
@@ -958,6 +1036,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 22,
               "startColumn" : 6,
@@ -966,6 +1045,7 @@
             "value" : true
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 14,
             "endLine" : 22,
             "startColumn" : 10,
@@ -973,6 +1053,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 14,
           "endLine" : 22,
           "startColumn" : 5,
@@ -994,6 +1075,7 @@
                 "_type" : "VariableExpression",
                 "name" : "c",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 7,
                   "endLine" : 23,
                   "startColumn" : 6,
@@ -1001,6 +1083,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 23,
                 "startColumn" : 8,
@@ -1008,6 +1091,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 28,
               "endLine" : 23,
               "startColumn" : 20,
@@ -1017,6 +1101,7 @@
             "_type" : "VariableExpression",
             "name" : "names",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 39,
               "endLine" : 23,
               "startColumn" : 34,
@@ -1024,6 +1109,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 40,
             "endLine" : 23,
             "startColumn" : 29,
@@ -1031,6 +1117,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 40,
           "endLine" : 23,
           "startColumn" : 5,
@@ -1052,6 +1139,7 @@
                 "_type" : "VariableExpression",
                 "name" : "c",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 8,
                   "endLine" : 24,
                   "startColumn" : 7,
@@ -1059,6 +1147,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 24,
                 "startColumn" : 9,
@@ -1066,6 +1155,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 29,
               "endLine" : 24,
               "startColumn" : 21,
@@ -1073,6 +1163,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 29,
             "endLine" : 24,
             "startColumn" : 6,
@@ -1082,6 +1173,7 @@
           "_type" : "VariableExpression",
           "name" : "names",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 41,
             "endLine" : 24,
             "startColumn" : 36,
@@ -1089,6 +1181,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 42,
           "endLine" : 24,
           "startColumn" : 31,
@@ -1107,6 +1200,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 8,
                 "endLine" : 25,
                 "startColumn" : 7,
@@ -1114,6 +1208,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 20,
               "endLine" : 25,
               "startColumn" : 9,
@@ -1121,6 +1216,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 25,
             "startColumn" : 6,
@@ -1128,6 +1224,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 26,
           "endLine" : 25,
           "startColumn" : 22,
@@ -1146,6 +1243,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 26,
                 "startColumn" : 6,
@@ -1153,6 +1251,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 26,
               "startColumn" : 8,
@@ -1160,6 +1259,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 26,
             "startColumn" : 8,
@@ -1167,6 +1267,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 26,
           "startColumn" : 5,
@@ -1176,6 +1277,7 @@
       "functionName" : "f",
       "name" : "f__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -1184,6 +1286,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 3,
             "startColumn" : 25,
@@ -1194,10 +1297,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 27,
         "startColumn" : 1,

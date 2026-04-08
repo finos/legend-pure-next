@@ -1,0 +1,79 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+{
+    let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
+    let resolvedType = $protocolType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
+
+    let resolvedOpt = $context->resolveElement($resolvedType);
+    let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
+        | $context->resolveElement($packagePath + '::' + $resolvedType),
+        | $resolvedOpt
+    );
+
+    let debug = if($resolvedOptWithPackage->isEmpty(),
+        | println('FAILED RESOLUTION FOR: ' + $resolvedType),
+        | []
+    );
+    let metamodelType = $resolvedOptWithPackage->toOne()->cast(@meta::pure::metamodel::type::Type);
+
+    // Default implementation maps Protocol Multiplicity to Metamodel Multiplicity bounds
+    let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
+
+    let mMult = if($pMult.upperBound->isEmpty(),
+                    | if($pMult.lowerBound.value == 0,
+                          | meta::pure::metamodel::multiplicity::ZeroMany,
+                          | meta::pure::metamodel::multiplicity::OneMany
+                      ),
+                    | let upper = $pMult.upperBound->toOne().value;
+                      if($pMult.lowerBound.value == 1 && $upper == 1,
+                          | meta::pure::metamodel::multiplicity::PureOne,
+                          | if($pMult.lowerBound.value == 0 && $upper == 1,
+                                | meta::pure::metamodel::multiplicity::ZeroOne,
+                                | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
+                                      lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
+                                      upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+                                  )
+                            )
+                      );
+                );
+
+    let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::property::Property,
+        typeArguments = [
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $owner),
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType)
+        ],
+        multiplicityArguments = [$mMult]
+    );
+
+    // Create property with correct classifierGenericType via new(GenericType)
+    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+    ^$prop(
+        name = $protocolProperty.name,
+        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType),
+        multiplicity = $mMult,
+        sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        ))
+    );
+}

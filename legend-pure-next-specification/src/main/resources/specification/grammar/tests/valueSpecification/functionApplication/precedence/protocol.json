@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -18,6 +20,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 4,
               "startColumn" : 3,
@@ -34,6 +37,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 4,
               "startColumn" : 7,
@@ -42,6 +46,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 4,
             "startColumn" : 5,
@@ -57,6 +62,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 4,
             "startColumn" : 11,
@@ -65,6 +71,7 @@
           "value" : 2
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 4,
           "startColumn" : 9,
@@ -83,6 +90,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 3,
             "endLine" : 5,
             "startColumn" : 3,
@@ -102,6 +110,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 5,
               "startColumn" : 7,
@@ -118,6 +127,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 5,
               "startColumn" : 11,
@@ -126,6 +136,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 5,
             "startColumn" : 9,
@@ -133,6 +144,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 5,
           "startColumn" : 5,
@@ -151,6 +163,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 3,
             "endLine" : 6,
             "startColumn" : 3,
@@ -170,6 +183,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 6,
               "startColumn" : 7,
@@ -186,6 +200,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 6,
               "startColumn" : 11,
@@ -194,6 +209,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 6,
             "startColumn" : 9,
@@ -201,6 +217,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 6,
           "startColumn" : 5,
@@ -222,6 +239,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 7,
               "startColumn" : 3,
@@ -238,6 +256,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 7,
               "startColumn" : 7,
@@ -246,6 +265,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 7,
             "startColumn" : 5,
@@ -261,6 +281,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 7,
             "startColumn" : 11,
@@ -269,6 +290,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 7,
           "startColumn" : 9,
@@ -278,6 +300,7 @@
       "functionName" : "precedenceArithmetic",
       "name" : "precedenceArithmetic__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -286,6 +309,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 46,
             "endLine" : 2,
             "startColumn" : 44,
@@ -296,10 +320,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,
         "startColumn" : 1,
@@ -323,6 +349,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 12,
               "startColumn" : 3,
@@ -339,6 +366,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 12,
               "startColumn" : 7,
@@ -347,6 +375,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 12,
             "startColumn" : 5,
@@ -362,6 +391,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 12,
             "startColumn" : 11,
@@ -370,6 +400,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 12,
           "startColumn" : 9,
@@ -388,6 +419,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 3,
             "endLine" : 13,
             "startColumn" : 3,
@@ -407,6 +439,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 13,
               "startColumn" : 7,
@@ -423,6 +456,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 13,
               "startColumn" : 11,
@@ -431,6 +465,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 13,
             "startColumn" : 9,
@@ -438,6 +473,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 13,
           "startColumn" : 5,
@@ -459,6 +495,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 14,
               "startColumn" : 3,
@@ -475,6 +512,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 14,
               "startColumn" : 7,
@@ -483,6 +521,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 14,
             "startColumn" : 5,
@@ -501,6 +540,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 14,
               "startColumn" : 11,
@@ -517,6 +557,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 14,
               "startColumn" : 15,
@@ -525,6 +566,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 14,
             "startColumn" : 13,
@@ -532,6 +574,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 14,
           "startColumn" : 9,
@@ -553,6 +596,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 15,
               "startColumn" : 3,
@@ -569,6 +613,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 15,
               "startColumn" : 7,
@@ -577,6 +622,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 15,
             "startColumn" : 5,
@@ -595,6 +641,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 15,
               "startColumn" : 11,
@@ -611,6 +658,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 15,
               "startColumn" : 15,
@@ -619,6 +667,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 15,
             "startColumn" : 13,
@@ -626,6 +675,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 15,
           "startColumn" : 9,
@@ -647,6 +697,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 16,
               "startColumn" : 3,
@@ -663,6 +714,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 16,
               "startColumn" : 7,
@@ -671,6 +723,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 16,
             "startColumn" : 5,
@@ -686,6 +739,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 16,
             "startColumn" : 12,
@@ -694,6 +748,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 12,
           "endLine" : 16,
           "startColumn" : 9,
@@ -712,6 +767,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 3,
             "endLine" : 17,
             "startColumn" : 3,
@@ -731,6 +787,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 8,
               "endLine" : 17,
               "startColumn" : 8,
@@ -747,6 +804,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 17,
               "startColumn" : 12,
@@ -755,6 +813,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 17,
             "startColumn" : 10,
@@ -762,6 +821,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 8,
           "endLine" : 17,
           "startColumn" : 5,
@@ -771,6 +831,7 @@
       "functionName" : "precedenceComparison",
       "name" : "precedenceComparison__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -779,6 +840,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 46,
             "endLine" : 10,
             "startColumn" : 44,
@@ -789,10 +851,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 18,
         "startColumn" : 1,
@@ -816,6 +880,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 22,
               "startColumn" : 3,
@@ -832,6 +897,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 22,
               "startColumn" : 11,
@@ -840,6 +906,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 22,
             "startColumn" : 8,
@@ -858,6 +925,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 22,
               "startColumn" : 20,
@@ -874,6 +942,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 32,
               "endLine" : 22,
               "startColumn" : 28,
@@ -882,6 +951,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 22,
             "startColumn" : 25,
@@ -889,6 +959,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 32,
           "endLine" : 22,
           "startColumn" : 17,
@@ -913,6 +984,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 6,
                 "endLine" : 23,
                 "startColumn" : 3,
@@ -929,6 +1001,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 15,
                 "endLine" : 23,
                 "startColumn" : 11,
@@ -937,6 +1010,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 23,
               "startColumn" : 8,
@@ -955,6 +1029,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 23,
                 "startColumn" : 20,
@@ -971,6 +1046,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 32,
                 "endLine" : 23,
                 "startColumn" : 28,
@@ -979,6 +1055,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 32,
               "endLine" : 23,
               "startColumn" : 25,
@@ -986,6 +1063,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 23,
             "startColumn" : 17,
@@ -1004,6 +1082,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 23,
               "startColumn" : 37,
@@ -1020,6 +1099,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 50,
               "endLine" : 23,
               "startColumn" : 46,
@@ -1028,6 +1108,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 50,
             "endLine" : 23,
             "startColumn" : 43,
@@ -1035,6 +1116,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 50,
           "endLine" : 23,
           "startColumn" : 34,
@@ -1056,6 +1138,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 24,
               "startColumn" : 3,
@@ -1072,6 +1155,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 24,
               "startColumn" : 11,
@@ -1080,6 +1164,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 24,
             "startColumn" : 8,
@@ -1101,6 +1186,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 24,
                 "startColumn" : 20,
@@ -1117,6 +1203,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 32,
                 "endLine" : 24,
                 "startColumn" : 28,
@@ -1125,6 +1212,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 32,
               "endLine" : 24,
               "startColumn" : 25,
@@ -1143,6 +1231,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 41,
                 "endLine" : 24,
                 "startColumn" : 37,
@@ -1159,6 +1248,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 50,
                 "endLine" : 24,
                 "startColumn" : 46,
@@ -1167,6 +1257,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 50,
               "endLine" : 24,
               "startColumn" : 43,
@@ -1174,6 +1265,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 50,
             "endLine" : 24,
             "startColumn" : 34,
@@ -1181,6 +1273,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 32,
           "endLine" : 24,
           "startColumn" : 17,
@@ -1202,6 +1295,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 25,
               "startColumn" : 3,
@@ -1221,6 +1315,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 25,
                 "startColumn" : 12,
@@ -1229,6 +1324,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 25,
               "startColumn" : 11,
@@ -1236,6 +1332,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 25,
             "startColumn" : 8,
@@ -1260,6 +1357,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 26,
                   "endLine" : 25,
                   "startColumn" : 23,
@@ -1276,6 +1374,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 35,
                   "endLine" : 25,
                   "startColumn" : 31,
@@ -1284,6 +1383,7 @@
                 "value" : false
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 35,
                 "endLine" : 25,
                 "startColumn" : 28,
@@ -1291,6 +1391,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 36,
               "endLine" : 25,
               "startColumn" : 21,
@@ -1309,6 +1410,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 45,
                 "endLine" : 25,
                 "startColumn" : 41,
@@ -1325,6 +1427,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 54,
                 "endLine" : 25,
                 "startColumn" : 50,
@@ -1333,6 +1436,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 54,
               "endLine" : 25,
               "startColumn" : 47,
@@ -1340,6 +1444,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 25,
             "startColumn" : 38,
@@ -1347,6 +1452,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 36,
           "endLine" : 25,
           "startColumn" : 18,
@@ -1374,6 +1480,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 10,
                   "endLine" : 26,
                   "startColumn" : 7,
@@ -1390,6 +1497,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 19,
                   "endLine" : 26,
                   "startColumn" : 15,
@@ -1398,6 +1506,7 @@
                 "value" : false
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 26,
                 "startColumn" : 12,
@@ -1405,6 +1514,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 19,
               "endLine" : 26,
               "startColumn" : 12,
@@ -1423,6 +1533,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 27,
                 "endLine" : 26,
                 "startColumn" : 24,
@@ -1442,6 +1553,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 37,
                   "endLine" : 26,
                   "startColumn" : 33,
@@ -1450,6 +1562,7 @@
                 "value" : false
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 37,
                 "endLine" : 26,
                 "startColumn" : 32,
@@ -1457,6 +1570,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 37,
               "endLine" : 26,
               "startColumn" : 29,
@@ -1464,6 +1578,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 37,
             "endLine" : 26,
             "startColumn" : 21,
@@ -1471,6 +1586,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 38,
           "endLine" : 26,
           "startColumn" : 3,
@@ -1501,6 +1617,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 10,
                     "endLine" : 27,
                     "startColumn" : 7,
@@ -1517,6 +1634,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 19,
                     "endLine" : 27,
                     "startColumn" : 15,
@@ -1525,6 +1643,7 @@
                   "value" : false
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 19,
                   "endLine" : 27,
                   "startColumn" : 12,
@@ -1532,6 +1651,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 27,
                 "startColumn" : 12,
@@ -1550,6 +1670,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 27,
                   "endLine" : 27,
                   "startColumn" : 24,
@@ -1569,6 +1690,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 37,
                     "endLine" : 27,
                     "startColumn" : 33,
@@ -1577,6 +1699,7 @@
                   "value" : false
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 37,
                   "endLine" : 27,
                   "startColumn" : 32,
@@ -1584,6 +1707,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 37,
                 "endLine" : 27,
                 "startColumn" : 29,
@@ -1591,6 +1715,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 37,
               "endLine" : 27,
               "startColumn" : 21,
@@ -1615,6 +1740,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 47,
                     "endLine" : 27,
                     "startColumn" : 44,
@@ -1631,6 +1757,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 56,
                     "endLine" : 27,
                     "startColumn" : 52,
@@ -1639,6 +1766,7 @@
                   "value" : false
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 56,
                   "endLine" : 27,
                   "startColumn" : 49,
@@ -1657,6 +1785,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 64,
                     "endLine" : 27,
                     "startColumn" : 61,
@@ -1676,6 +1805,7 @@
                       }
                     },
                     "sourceInformation" : {
+                      "_type" : "SourceInformation",
                       "endColumn" : 74,
                       "endLine" : 27,
                       "startColumn" : 70,
@@ -1684,6 +1814,7 @@
                     "value" : false
                   } ],
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 74,
                     "endLine" : 27,
                     "startColumn" : 69,
@@ -1691,6 +1822,7 @@
                   }
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 74,
                   "endLine" : 27,
                   "startColumn" : 66,
@@ -1698,6 +1830,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 74,
                 "endLine" : 27,
                 "startColumn" : 58,
@@ -1705,6 +1838,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 75,
               "endLine" : 27,
               "startColumn" : 42,
@@ -1712,6 +1846,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 75,
             "endLine" : 27,
             "startColumn" : 39,
@@ -1719,6 +1854,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 76,
           "endLine" : 27,
           "startColumn" : 3,
@@ -1737,6 +1873,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 28,
             "startColumn" : 3,
@@ -1756,6 +1893,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 28,
               "startColumn" : 11,
@@ -1769,6 +1907,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 21,
                 "endLine" : 28,
                 "startColumn" : 20,
@@ -1776,6 +1915,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 33,
               "endLine" : 28,
               "startColumn" : 22,
@@ -1783,6 +1923,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 33,
             "endLine" : 28,
             "startColumn" : 17,
@@ -1790,6 +1931,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 33,
           "endLine" : 28,
           "startColumn" : 8,
@@ -1805,6 +1947,7 @@
             "_type" : "VariableExpression",
             "name" : "x",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 4,
               "endLine" : 29,
               "startColumn" : 3,
@@ -1812,6 +1955,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 29,
             "startColumn" : 5,
@@ -1830,6 +1974,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 29,
               "startColumn" : 21,
@@ -1843,6 +1988,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 31,
                 "endLine" : 29,
                 "startColumn" : 30,
@@ -1850,6 +1996,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 43,
               "endLine" : 29,
               "startColumn" : 32,
@@ -1857,6 +2004,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 43,
             "endLine" : 29,
             "startColumn" : 27,
@@ -1864,6 +2012,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 43,
           "endLine" : 29,
           "startColumn" : 18,
@@ -1879,6 +2028,7 @@
             "_type" : "VariableExpression",
             "name" : "x",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 4,
               "endLine" : 30,
               "startColumn" : 3,
@@ -1886,6 +2036,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 30,
             "startColumn" : 5,
@@ -1904,6 +2055,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 30,
               "startColumn" : 21,
@@ -1920,6 +2072,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 33,
               "endLine" : 30,
               "startColumn" : 30,
@@ -1928,6 +2081,7 @@
             "value" : true
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 33,
             "endLine" : 30,
             "startColumn" : 27,
@@ -1935,6 +2089,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 33,
           "endLine" : 30,
           "startColumn" : 18,
@@ -1944,6 +2099,7 @@
       "functionName" : "precedenceBooleanWithEqual",
       "name" : "precedenceBooleanWithEqual__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -1952,6 +2108,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 52,
             "endLine" : 20,
             "startColumn" : 50,
@@ -1962,10 +2119,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 31,
         "startColumn" : 1,
@@ -1989,6 +2148,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 35,
               "startColumn" : 3,
@@ -2005,6 +2165,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 35,
               "startColumn" : 7,
@@ -2013,6 +2174,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 35,
             "startColumn" : 5,
@@ -2031,6 +2193,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 35,
               "startColumn" : 12,
@@ -2047,6 +2210,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 35,
               "startColumn" : 16,
@@ -2055,6 +2219,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 35,
             "startColumn" : 14,
@@ -2062,6 +2227,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 35,
           "startColumn" : 9,
@@ -2083,6 +2249,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 36,
               "startColumn" : 3,
@@ -2099,6 +2266,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 36,
               "startColumn" : 7,
@@ -2107,6 +2275,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 36,
             "startColumn" : 5,
@@ -2125,6 +2294,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 36,
               "startColumn" : 12,
@@ -2141,6 +2311,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 36,
               "startColumn" : 16,
@@ -2149,6 +2320,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 36,
             "startColumn" : 14,
@@ -2156,6 +2328,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 36,
           "startColumn" : 9,
@@ -2180,6 +2353,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 37,
                 "startColumn" : 3,
@@ -2196,6 +2370,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 37,
                 "startColumn" : 7,
@@ -2204,6 +2379,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 37,
               "startColumn" : 5,
@@ -2222,6 +2398,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 37,
                 "startColumn" : 12,
@@ -2238,6 +2415,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 37,
                 "startColumn" : 16,
@@ -2246,6 +2424,7 @@
               "value" : 5
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 37,
               "startColumn" : 14,
@@ -2253,6 +2432,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 37,
             "startColumn" : 9,
@@ -2271,6 +2451,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 37,
               "startColumn" : 21,
@@ -2287,6 +2468,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 37,
               "startColumn" : 25,
@@ -2295,6 +2477,7 @@
             "value" : 7
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 25,
             "endLine" : 37,
             "startColumn" : 23,
@@ -2302,6 +2485,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 37,
           "startColumn" : 18,
@@ -2323,6 +2507,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 38,
               "startColumn" : 3,
@@ -2339,6 +2524,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 38,
               "startColumn" : 7,
@@ -2347,6 +2533,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 38,
             "startColumn" : 5,
@@ -2368,6 +2555,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 38,
                 "startColumn" : 12,
@@ -2384,6 +2572,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 38,
                 "startColumn" : 16,
@@ -2392,6 +2581,7 @@
               "value" : 5
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 38,
               "startColumn" : 14,
@@ -2410,6 +2600,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 21,
                 "endLine" : 38,
                 "startColumn" : 21,
@@ -2426,6 +2617,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 25,
                 "endLine" : 38,
                 "startColumn" : 25,
@@ -2434,6 +2626,7 @@
               "value" : 7
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 38,
               "startColumn" : 23,
@@ -2441,6 +2634,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 25,
             "endLine" : 38,
             "startColumn" : 18,
@@ -2448,6 +2642,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 38,
           "startColumn" : 9,
@@ -2457,6 +2652,7 @@
       "functionName" : "precedenceComparisonBoolean",
       "name" : "precedenceComparisonBoolean__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -2465,6 +2661,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 53,
             "endLine" : 33,
             "startColumn" : 51,
@@ -2475,10 +2672,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 39,
         "startColumn" : 1,
@@ -2505,6 +2704,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 43,
                 "startColumn" : 3,
@@ -2521,6 +2721,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 43,
                 "startColumn" : 7,
@@ -2529,6 +2730,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 43,
               "startColumn" : 5,
@@ -2544,6 +2746,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 43,
               "startColumn" : 11,
@@ -2552,6 +2755,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 43,
             "startColumn" : 9,
@@ -2573,6 +2777,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 43,
                 "startColumn" : 16,
@@ -2589,6 +2794,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 43,
                 "startColumn" : 20,
@@ -2597,6 +2803,7 @@
               "value" : 6
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 20,
               "endLine" : 43,
               "startColumn" : 18,
@@ -2612,6 +2819,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 43,
               "startColumn" : 24,
@@ -2620,6 +2828,7 @@
             "value" : 7
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 43,
             "startColumn" : 22,
@@ -2627,6 +2836,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 43,
           "startColumn" : 13,
@@ -2651,6 +2861,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 44,
                 "startColumn" : 3,
@@ -2667,6 +2878,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 44,
                 "startColumn" : 7,
@@ -2675,6 +2887,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 44,
               "startColumn" : 5,
@@ -2690,6 +2903,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 44,
               "startColumn" : 11,
@@ -2698,6 +2912,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 44,
             "startColumn" : 9,
@@ -2722,6 +2937,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 16,
                   "endLine" : 44,
                   "startColumn" : 16,
@@ -2738,6 +2954,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 20,
                   "endLine" : 44,
                   "startColumn" : 20,
@@ -2746,6 +2963,7 @@
                 "value" : 6
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 44,
                 "startColumn" : 18,
@@ -2761,6 +2979,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 24,
                 "endLine" : 44,
                 "startColumn" : 24,
@@ -2769,6 +2988,7 @@
               "value" : 7
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 44,
               "startColumn" : 22,
@@ -2787,6 +3007,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 29,
                 "endLine" : 44,
                 "startColumn" : 29,
@@ -2803,6 +3024,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 34,
                 "endLine" : 44,
                 "startColumn" : 34,
@@ -2811,6 +3033,7 @@
               "value" : 9
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 34,
               "endLine" : 44,
               "startColumn" : 31,
@@ -2818,6 +3041,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 34,
             "endLine" : 44,
             "startColumn" : 26,
@@ -2825,6 +3049,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 44,
           "startColumn" : 13,
@@ -2852,6 +3077,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 3,
                   "endLine" : 45,
                   "startColumn" : 3,
@@ -2868,6 +3094,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 7,
                   "endLine" : 45,
                   "startColumn" : 7,
@@ -2876,6 +3103,7 @@
                 "value" : 3
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 45,
                 "startColumn" : 5,
@@ -2891,6 +3119,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 45,
                 "startColumn" : 11,
@@ -2899,6 +3128,7 @@
               "value" : 4
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 45,
               "startColumn" : 9,
@@ -2920,6 +3150,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 16,
                   "endLine" : 45,
                   "startColumn" : 16,
@@ -2936,6 +3167,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 20,
                   "endLine" : 45,
                   "startColumn" : 20,
@@ -2944,6 +3176,7 @@
                 "value" : 6
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 45,
                 "startColumn" : 18,
@@ -2959,6 +3192,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 24,
                 "endLine" : 45,
                 "startColumn" : 24,
@@ -2967,6 +3201,7 @@
               "value" : 7
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 45,
               "startColumn" : 22,
@@ -2974,6 +3209,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 45,
             "startColumn" : 13,
@@ -2992,6 +3228,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 29,
               "endLine" : 45,
               "startColumn" : 29,
@@ -3008,6 +3245,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 34,
               "endLine" : 45,
               "startColumn" : 34,
@@ -3016,6 +3254,7 @@
             "value" : 9
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 34,
             "endLine" : 45,
             "startColumn" : 31,
@@ -3023,6 +3262,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 34,
           "endLine" : 45,
           "startColumn" : 26,
@@ -3032,6 +3272,7 @@
       "functionName" : "precedenceMixed",
       "name" : "precedenceMixed__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -3040,6 +3281,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 41,
             "endLine" : 41,
             "startColumn" : 39,
@@ -3050,10 +3292,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 46,
         "startColumn" : 1,
@@ -3077,6 +3321,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 50,
               "startColumn" : 3,
@@ -3093,6 +3338,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 50,
               "startColumn" : 7,
@@ -3101,6 +3347,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 50,
             "startColumn" : 5,
@@ -3119,6 +3366,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 50,
               "startColumn" : 12,
@@ -3135,6 +3383,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 50,
               "startColumn" : 16,
@@ -3143,6 +3392,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 50,
             "startColumn" : 14,
@@ -3150,6 +3400,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 50,
           "startColumn" : 9,
@@ -3174,6 +3425,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 51,
                 "startColumn" : 3,
@@ -3190,6 +3442,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 51,
                 "startColumn" : 7,
@@ -3198,6 +3451,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 51,
               "startColumn" : 5,
@@ -3213,6 +3467,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 51,
               "startColumn" : 12,
@@ -3221,6 +3476,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 51,
             "startColumn" : 9,
@@ -3228,6 +3484,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 12,
           "endLine" : 51,
           "startColumn" : 9,
@@ -3252,6 +3509,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 52,
                 "startColumn" : 3,
@@ -3268,6 +3526,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 52,
                 "startColumn" : 7,
@@ -3276,6 +3535,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 52,
               "startColumn" : 5,
@@ -3294,6 +3554,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 12,
                 "endLine" : 52,
                 "startColumn" : 12,
@@ -3310,6 +3571,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 16,
                 "endLine" : 52,
                 "startColumn" : 16,
@@ -3318,6 +3580,7 @@
               "value" : 5
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 52,
               "startColumn" : 14,
@@ -3325,6 +3588,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 52,
             "startColumn" : 9,
@@ -3332,6 +3596,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 52,
           "startColumn" : 9,
@@ -3341,6 +3606,7 @@
       "functionName" : "precedenceEqualityArithmetic",
       "name" : "precedenceEqualityArithmetic__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -3349,6 +3615,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 48,
             "startColumn" : 52,
@@ -3359,10 +3626,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 53,
         "startColumn" : 1,
@@ -3386,6 +3655,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 57,
               "startColumn" : 3,
@@ -3402,6 +3672,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 57,
               "startColumn" : 7,
@@ -3410,6 +3681,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 57,
             "startColumn" : 5,
@@ -3428,6 +3700,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 57,
               "startColumn" : 12,
@@ -3444,6 +3717,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 57,
               "startColumn" : 16,
@@ -3452,6 +3726,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 57,
             "startColumn" : 14,
@@ -3459,6 +3734,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 16,
           "endLine" : 57,
           "startColumn" : 9,
@@ -3486,6 +3762,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 3,
                   "endLine" : 58,
                   "startColumn" : 3,
@@ -3502,6 +3779,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 7,
                   "endLine" : 58,
                   "startColumn" : 7,
@@ -3510,6 +3788,7 @@
                 "value" : 3
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 58,
                 "startColumn" : 5,
@@ -3525,6 +3804,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 58,
                 "startColumn" : 11,
@@ -3533,6 +3813,7 @@
               "value" : 4
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 58,
               "startColumn" : 9,
@@ -3554,6 +3835,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 16,
                   "endLine" : 58,
                   "startColumn" : 16,
@@ -3570,6 +3852,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 20,
                   "endLine" : 58,
                   "startColumn" : 20,
@@ -3578,6 +3861,7 @@
                 "value" : 6
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 58,
                 "startColumn" : 18,
@@ -3593,6 +3877,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 24,
                 "endLine" : 58,
                 "startColumn" : 24,
@@ -3601,6 +3886,7 @@
               "value" : 7
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 58,
               "startColumn" : 22,
@@ -3608,6 +3894,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 58,
             "startColumn" : 13,
@@ -3615,6 +3902,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 58,
           "startColumn" : 13,
@@ -3636,6 +3924,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 59,
               "startColumn" : 3,
@@ -3652,6 +3941,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 8,
               "endLine" : 59,
               "startColumn" : 8,
@@ -3660,6 +3950,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 8,
             "endLine" : 59,
             "startColumn" : 5,
@@ -3678,6 +3969,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 13,
               "endLine" : 59,
               "startColumn" : 13,
@@ -3694,6 +3986,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 59,
               "startColumn" : 18,
@@ -3702,6 +3995,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 18,
             "endLine" : 59,
             "startColumn" : 15,
@@ -3709,6 +4003,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 59,
           "startColumn" : 10,
@@ -3718,6 +4013,7 @@
       "functionName" : "precedenceEqualityComparison",
       "name" : "precedenceEqualityComparison__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -3726,6 +4022,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 55,
             "startColumn" : 52,
@@ -3736,10 +4033,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 60,
         "startColumn" : 1,
@@ -3760,6 +4059,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 4,
                 "endLine" : 64,
                 "startColumn" : 3,
@@ -3767,6 +4067,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 64,
               "startColumn" : 5,
@@ -3782,6 +4083,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 64,
               "startColumn" : 16,
@@ -3790,6 +4092,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 64,
             "startColumn" : 14,
@@ -3805,6 +4108,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 64,
             "startColumn" : 20,
@@ -3813,6 +4117,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 64,
           "startColumn" : 18,
@@ -3828,6 +4133,7 @@
             "_type" : "VariableExpression",
             "name" : "x",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 4,
               "endLine" : 65,
               "startColumn" : 3,
@@ -3835,6 +4141,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 65,
             "startColumn" : 5,
@@ -3850,6 +4157,7 @@
               "_type" : "VariableExpression",
               "name" : "y",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 65,
                 "startColumn" : 10,
@@ -3857,6 +4165,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 13,
               "endLine" : 65,
               "startColumn" : 12,
@@ -3872,6 +4181,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 17,
               "endLine" : 65,
               "startColumn" : 17,
@@ -3880,6 +4190,7 @@
             "value" : 2
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 17,
             "endLine" : 65,
             "startColumn" : 15,
@@ -3887,6 +4198,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 13,
           "endLine" : 65,
           "startColumn" : 8,
@@ -3905,6 +4217,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 4,
                 "endLine" : 66,
                 "startColumn" : 3,
@@ -3912,6 +4225,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 66,
               "startColumn" : 5,
@@ -3924,6 +4238,7 @@
               "_type" : "VariableExpression",
               "name" : "y",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 66,
                 "startColumn" : 10,
@@ -3931,6 +4246,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 13,
               "endLine" : 66,
               "startColumn" : 12,
@@ -3938,6 +4254,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 13,
             "endLine" : 66,
             "startColumn" : 8,
@@ -3953,6 +4270,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 66,
                 "startColumn" : 18,
@@ -3960,6 +4278,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 66,
               "startColumn" : 20,
@@ -3972,6 +4291,7 @@
               "_type" : "VariableExpression",
               "name" : "y",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 26,
                 "endLine" : 66,
                 "startColumn" : 25,
@@ -3979,6 +4299,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 28,
               "endLine" : 66,
               "startColumn" : 27,
@@ -3986,6 +4307,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 28,
             "endLine" : 66,
             "startColumn" : 23,
@@ -3993,6 +4315,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 28,
           "endLine" : 66,
           "startColumn" : 15,
@@ -4008,6 +4331,7 @@
             "_type" : "VariableExpression",
             "name" : "x",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 4,
               "endLine" : 67,
               "startColumn" : 3,
@@ -4015,6 +4339,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 67,
             "startColumn" : 5,
@@ -4027,6 +4352,7 @@
             "_type" : "VariableExpression",
             "name" : "y",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 67,
               "startColumn" : 17,
@@ -4034,6 +4360,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 26,
             "endLine" : 67,
             "startColumn" : 19,
@@ -4041,6 +4368,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 26,
           "endLine" : 67,
           "startColumn" : 14,
@@ -4059,6 +4387,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 4,
                 "endLine" : 68,
                 "startColumn" : 3,
@@ -4066,6 +4395,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 68,
               "startColumn" : 5,
@@ -4081,6 +4411,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 68,
               "startColumn" : 16,
@@ -4089,6 +4420,7 @@
             "value" : 2
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 68,
             "startColumn" : 14,
@@ -4104,6 +4436,7 @@
               "_type" : "VariableExpression",
               "name" : "y",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 22,
                 "endLine" : 68,
                 "startColumn" : 21,
@@ -4111,6 +4444,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 30,
               "endLine" : 68,
               "startColumn" : 23,
@@ -4126,6 +4460,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 34,
               "endLine" : 68,
               "startColumn" : 34,
@@ -4134,6 +4469,7 @@
             "value" : 1
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 34,
             "endLine" : 68,
             "startColumn" : 32,
@@ -4141,6 +4477,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 34,
           "endLine" : 68,
           "startColumn" : 18,
@@ -4162,6 +4499,7 @@
                 "_type" : "VariableExpression",
                 "name" : "x",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 4,
                   "endLine" : 69,
                   "startColumn" : 3,
@@ -4169,6 +4507,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 6,
                 "endLine" : 69,
                 "startColumn" : 5,
@@ -4181,6 +4520,7 @@
                 "_type" : "VariableExpression",
                 "name" : "y",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 12,
                   "endLine" : 69,
                   "startColumn" : 11,
@@ -4188,6 +4528,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 14,
                 "endLine" : 69,
                 "startColumn" : 13,
@@ -4195,6 +4536,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 69,
               "startColumn" : 8,
@@ -4207,6 +4549,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 20,
                 "endLine" : 69,
                 "startColumn" : 19,
@@ -4214,6 +4557,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 31,
               "endLine" : 69,
               "startColumn" : 21,
@@ -4221,6 +4565,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 31,
             "endLine" : 69,
             "startColumn" : 16,
@@ -4233,6 +4578,7 @@
             "_type" : "VariableExpression",
             "name" : "y",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 37,
               "endLine" : 69,
               "startColumn" : 36,
@@ -4240,6 +4586,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 48,
             "endLine" : 69,
             "startColumn" : 38,
@@ -4247,6 +4594,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 48,
           "endLine" : 69,
           "startColumn" : 33,
@@ -4265,6 +4613,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 4,
                 "endLine" : 70,
                 "startColumn" : 3,
@@ -4272,6 +4621,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 12,
               "endLine" : 70,
               "startColumn" : 5,
@@ -4287,6 +4637,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 70,
               "startColumn" : 16,
@@ -4295,6 +4646,7 @@
             "value" : 0
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 16,
             "endLine" : 70,
             "startColumn" : 14,
@@ -4313,6 +4665,7 @@
                 "_type" : "VariableExpression",
                 "name" : "y",
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 22,
                   "endLine" : 70,
                   "startColumn" : 21,
@@ -4320,6 +4673,7 @@
                 }
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 27,
                 "endLine" : 70,
                 "startColumn" : 23,
@@ -4335,6 +4689,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 37,
                 "endLine" : 70,
                 "startColumn" : 32,
@@ -4343,6 +4698,7 @@
               "value" : "test"
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 37,
               "endLine" : 70,
               "startColumn" : 29,
@@ -4355,6 +4711,7 @@
               "_type" : "VariableExpression",
               "name" : "z",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 43,
                 "endLine" : 70,
                 "startColumn" : 42,
@@ -4362,6 +4719,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 54,
               "endLine" : 70,
               "startColumn" : 44,
@@ -4369,6 +4727,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 70,
             "startColumn" : 39,
@@ -4376,6 +4735,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 37,
           "endLine" : 70,
           "startColumn" : 18,
@@ -4385,6 +4745,7 @@
       "functionName" : "precedenceWithDotAndArrow",
       "name" : "precedenceWithDotAndArrow__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -4393,6 +4754,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 51,
             "endLine" : 62,
             "startColumn" : 49,
@@ -4403,10 +4765,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 71,
         "startColumn" : 1,
@@ -4427,6 +4791,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 3,
             "endLine" : 75,
             "startColumn" : 3,
@@ -4446,6 +4811,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 75,
               "startColumn" : 7,
@@ -4462,6 +4828,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 75,
               "startColumn" : 11,
@@ -4470,6 +4837,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 75,
             "startColumn" : 9,
@@ -4477,6 +4845,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 75,
           "startColumn" : 5,
@@ -4498,6 +4867,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 76,
               "startColumn" : 3,
@@ -4514,6 +4884,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 76,
               "startColumn" : 7,
@@ -4522,6 +4893,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 76,
             "startColumn" : 5,
@@ -4537,6 +4909,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 76,
             "startColumn" : 11,
@@ -4545,6 +4918,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 76,
           "startColumn" : 9,
@@ -4566,6 +4940,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 77,
               "startColumn" : 3,
@@ -4585,6 +4960,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 77,
                 "startColumn" : 7,
@@ -4601,6 +4977,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 11,
                 "endLine" : 77,
                 "startColumn" : 11,
@@ -4609,6 +4986,7 @@
               "value" : 4
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 77,
               "startColumn" : 9,
@@ -4616,6 +4994,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 77,
             "startColumn" : 5,
@@ -4631,6 +5010,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 77,
             "startColumn" : 15,
@@ -4639,6 +5019,7 @@
           "value" : 5
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 15,
           "endLine" : 77,
           "startColumn" : 13,
@@ -4648,6 +5029,7 @@
       "functionName" : "precedenceMinusMultiply",
       "name" : "precedenceMinusMultiply__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -4656,6 +5038,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 49,
             "endLine" : 73,
             "startColumn" : 47,
@@ -4666,10 +5049,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 78,
         "startColumn" : 1,
@@ -4693,6 +5078,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 82,
               "startColumn" : 3,
@@ -4709,6 +5095,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 82,
               "startColumn" : 7,
@@ -4717,6 +5104,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 82,
             "startColumn" : 5,
@@ -4732,6 +5120,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 82,
             "startColumn" : 11,
@@ -4740,6 +5129,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 82,
           "startColumn" : 5,
@@ -4761,6 +5151,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 83,
               "startColumn" : 3,
@@ -4777,6 +5168,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 83,
               "startColumn" : 7,
@@ -4785,6 +5177,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 83,
             "startColumn" : 5,
@@ -4800,6 +5193,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 83,
             "startColumn" : 11,
@@ -4808,6 +5202,7 @@
           "value" : 4
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 83,
           "startColumn" : 5,
@@ -4829,6 +5224,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 3,
               "endLine" : 84,
               "startColumn" : 3,
@@ -4845,6 +5241,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 84,
               "startColumn" : 7,
@@ -4853,6 +5250,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 84,
             "startColumn" : 5,
@@ -4871,6 +5269,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 84,
               "startColumn" : 11,
@@ -4887,6 +5286,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 84,
               "startColumn" : 15,
@@ -4895,6 +5295,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 84,
             "startColumn" : 13,
@@ -4902,6 +5303,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 84,
           "startColumn" : 5,
@@ -4926,6 +5328,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 3,
                 "endLine" : 85,
                 "startColumn" : 3,
@@ -4942,6 +5345,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 7,
                 "endLine" : 85,
                 "startColumn" : 7,
@@ -4950,6 +5354,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 85,
               "startColumn" : 5,
@@ -4965,6 +5370,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 85,
               "startColumn" : 11,
@@ -4973,6 +5379,7 @@
             "value" : 4
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 85,
             "startColumn" : 9,
@@ -4988,6 +5395,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 85,
             "startColumn" : 15,
@@ -4996,6 +5404,7 @@
           "value" : 5
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 15,
           "endLine" : 85,
           "startColumn" : 9,
@@ -5017,6 +5426,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 86,
               "startColumn" : 3,
@@ -5033,6 +5443,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 86,
               "startColumn" : 11,
@@ -5041,6 +5452,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 86,
             "startColumn" : 8,
@@ -5056,6 +5468,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 86,
             "startColumn" : 20,
@@ -5064,6 +5477,7 @@
           "value" : true
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 86,
           "startColumn" : 17,
@@ -5085,6 +5499,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 87,
               "startColumn" : 3,
@@ -5101,6 +5516,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 87,
               "startColumn" : 11,
@@ -5109,6 +5525,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 87,
             "startColumn" : 8,
@@ -5124,6 +5541,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 87,
             "startColumn" : 20,
@@ -5132,6 +5550,7 @@
           "value" : true
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 87,
           "startColumn" : 17,
@@ -5156,6 +5575,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 6,
                 "endLine" : 88,
                 "startColumn" : 3,
@@ -5172,6 +5592,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 15,
                 "endLine" : 88,
                 "startColumn" : 11,
@@ -5180,6 +5601,7 @@
               "value" : false
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 88,
               "startColumn" : 8,
@@ -5195,6 +5617,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 88,
               "startColumn" : 20,
@@ -5203,6 +5626,7 @@
             "value" : true
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 88,
             "startColumn" : 17,
@@ -5218,6 +5642,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 88,
             "startColumn" : 28,
@@ -5226,6 +5651,7 @@
           "value" : false
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 32,
           "endLine" : 88,
           "startColumn" : 25,
@@ -5235,6 +5661,7 @@
       "functionName" : "precedenceChaining",
       "name" : "precedenceChaining__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -5243,6 +5670,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 44,
             "endLine" : 80,
             "startColumn" : 42,
@@ -5253,10 +5681,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 89,
         "startColumn" : 1,
@@ -5280,6 +5710,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 5,
               "endLine" : 93,
               "startColumn" : 5,
@@ -5296,6 +5727,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 93,
               "startColumn" : 9,
@@ -5304,6 +5736,7 @@
             "value" : 3
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 9,
             "endLine" : 93,
             "startColumn" : 7,
@@ -5311,6 +5744,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 93,
           "startColumn" : 3,
@@ -5326,6 +5760,7 @@
             "_type" : "VariableExpression",
             "name" : "x",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 5,
               "endLine" : 94,
               "startColumn" : 4,
@@ -5333,6 +5768,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 5,
             "endLine" : 94,
             "startColumn" : 3,
@@ -5342,6 +5778,7 @@
           "_type" : "VariableExpression",
           "name" : "y",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 94,
             "startColumn" : 10,
@@ -5349,6 +5786,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 94,
           "startColumn" : 7,
@@ -5373,6 +5811,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 5,
                 "endLine" : 95,
                 "startColumn" : 5,
@@ -5389,6 +5828,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 9,
                 "endLine" : 95,
                 "startColumn" : 9,
@@ -5397,6 +5837,7 @@
               "value" : 3
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 95,
               "startColumn" : 7,
@@ -5404,6 +5845,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 95,
             "startColumn" : 3,
@@ -5422,6 +5864,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 95,
               "startColumn" : 15,
@@ -5438,6 +5881,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 19,
               "endLine" : 95,
               "startColumn" : 19,
@@ -5446,6 +5890,7 @@
             "value" : 5
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 19,
             "endLine" : 95,
             "startColumn" : 17,
@@ -5453,6 +5898,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 95,
           "startColumn" : 12,
@@ -5471,6 +5917,7 @@
               "_type" : "VariableExpression",
               "name" : "x",
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 5,
                 "endLine" : 96,
                 "startColumn" : 4,
@@ -5478,6 +5925,7 @@
               }
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 5,
               "endLine" : 96,
               "startColumn" : 3,
@@ -5487,6 +5935,7 @@
             "_type" : "VariableExpression",
             "name" : "y",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 96,
               "startColumn" : 10,
@@ -5494,6 +5943,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 96,
             "startColumn" : 7,
@@ -5506,6 +5956,7 @@
             "_type" : "VariableExpression",
             "name" : "z",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 96,
               "startColumn" : 17,
@@ -5513,6 +5964,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 18,
             "endLine" : 96,
             "startColumn" : 16,
@@ -5520,6 +5972,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 96,
           "startColumn" : 13,
@@ -5529,6 +5982,7 @@
       "functionName" : "precedenceNotExpr",
       "name" : "precedenceNotExpr__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -5537,6 +5991,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 43,
             "endLine" : 91,
             "startColumn" : 41,
@@ -5547,10 +6002,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 97,
         "startColumn" : 1,
@@ -5586,6 +6043,7 @@
                       }
                     },
                     "sourceInformation" : {
+                      "_type" : "SourceInformation",
                       "endColumn" : 3,
                       "endLine" : 101,
                       "startColumn" : 3,
@@ -5602,6 +6060,7 @@
                       }
                     },
                     "sourceInformation" : {
+                      "_type" : "SourceInformation",
                       "endColumn" : 7,
                       "endLine" : 101,
                       "startColumn" : 7,
@@ -5610,6 +6069,7 @@
                     "value" : 2
                   } ],
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 7,
                     "endLine" : 101,
                     "startColumn" : 5,
@@ -5625,6 +6085,7 @@
                     }
                   },
                   "sourceInformation" : {
+                    "_type" : "SourceInformation",
                     "endColumn" : 11,
                     "endLine" : 101,
                     "startColumn" : 11,
@@ -5633,6 +6094,7 @@
                   "value" : 3
                 } ],
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 11,
                   "endLine" : 101,
                   "startColumn" : 9,
@@ -5648,6 +6110,7 @@
                   }
                 },
                 "sourceInformation" : {
+                  "_type" : "SourceInformation",
                   "endColumn" : 15,
                   "endLine" : 101,
                   "startColumn" : 15,
@@ -5656,6 +6119,7 @@
                 "value" : 4
               } ],
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 15,
                 "endLine" : 101,
                 "startColumn" : 13,
@@ -5671,6 +6135,7 @@
                 }
               },
               "sourceInformation" : {
+                "_type" : "SourceInformation",
                 "endColumn" : 23,
                 "endLine" : 101,
                 "startColumn" : 20,
@@ -5679,6 +6144,7 @@
               "value" : true
             } ],
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 101,
               "startColumn" : 17,
@@ -5694,6 +6160,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 32,
               "endLine" : 101,
               "startColumn" : 28,
@@ -5702,6 +6169,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 32,
             "endLine" : 101,
             "startColumn" : 25,
@@ -5717,6 +6185,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 40,
             "endLine" : 101,
             "startColumn" : 37,
@@ -5725,6 +6194,7 @@
           "value" : true
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 40,
           "endLine" : 101,
           "startColumn" : 34,
@@ -5734,6 +6204,7 @@
       "functionName" : "precedenceFullStack",
       "name" : "precedenceFullStack__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -5742,6 +6213,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 45,
             "endLine" : 99,
             "startColumn" : 43,
@@ -5752,10 +6224,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 102,
         "startColumn" : 1,
@@ -5779,6 +6253,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 6,
               "endLine" : 106,
               "startColumn" : 3,
@@ -5795,6 +6270,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 106,
               "startColumn" : 11,
@@ -5803,6 +6279,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 15,
             "endLine" : 106,
             "startColumn" : 8,
@@ -5818,6 +6295,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 106,
             "startColumn" : 20,
@@ -5826,6 +6304,7 @@
           "value" : true
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 23,
           "endLine" : 106,
           "startColumn" : 17,
@@ -5844,6 +6323,7 @@
             }
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 107,
             "startColumn" : 3,
@@ -5863,6 +6343,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 107,
               "startColumn" : 11,
@@ -5879,6 +6360,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 107,
               "startColumn" : 19,
@@ -5887,6 +6369,7 @@
             "value" : false
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 23,
             "endLine" : 107,
             "startColumn" : 16,
@@ -5894,6 +6377,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 14,
           "endLine" : 107,
           "startColumn" : 8,
@@ -5903,6 +6387,7 @@
       "functionName" : "precedenceBoolean",
       "name" : "precedenceBoolean__Any_MANY_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "returnGenericType" : {
@@ -5911,6 +6396,7 @@
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 43,
             "endLine" : 104,
             "startColumn" : 41,
@@ -5921,10 +6407,12 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedAdHocMultiplicity",
         "lowerBound" : {
+          "_type" : "MultiplicityValue",
           "value" : 0
         }
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 108,
         "startColumn" : 1,

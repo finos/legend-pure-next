@@ -1,8 +1,9 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 
 import meta.pure.metamodel.SourceInformationImpl;
+import meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.m3.module.MetadataAccess;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Any;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 /**
  * Compiles/converts between grammar-level and metamodel-level SourceInformation.
@@ -63,15 +64,14 @@ public final class SourceInformationCompiler
         {
             return null;
         }
-        String sourceId = src._sourceId() != null ? src._sourceId() : fallbackSourceId;
-        return _Any.withClassifierGenericType(
-                new SourceInformationImpl(model)
-                        ._sourceId(sourceId)
+        return  new SourceInformationImpl(model)
+                        ._sourceId(src._sourceId() != null ? src._sourceId() : fallbackSourceId)
                         ._startLine(src._startLine())
                         ._startColumn(src._startColumn())
                         ._endLine(src._endLine())
-                        ._endColumn(src._endColumn()),
-                "meta::pure::metamodel::SourceInformation",
-                model);
+                        ._endColumn(src._endColumn())
+                        ._classifierGenericType(
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::SourceInformation"), model)
+                        );
     }
 }

@@ -1,12 +1,16 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "Class",
       "name" : "ClassWithPropertiesWithAggregationKind",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
       "properties" : [ {
+        "_type" : "Property",
         "aggregation" : "NONE",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -14,6 +18,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 23,
               "endLine" : 4,
               "startColumn" : 17,
@@ -24,20 +29,24 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "value",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 27,
           "endLine" : 4,
           "startColumn" : 3,
           "startLine" : 4
         }
       }, {
+        "_type" : "Property",
         "aggregation" : "COMPOSITE",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -45,6 +54,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 29,
               "endLine" : 5,
               "startColumn" : 23,
@@ -55,20 +65,24 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "value2",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 33,
           "endLine" : 5,
           "startColumn" : 3,
           "startLine" : 5
         }
       }, {
+        "_type" : "Property",
         "aggregation" : "SHARED",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
@@ -76,6 +90,7 @@
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 26,
               "endLine" : 6,
               "startColumn" : 20,
@@ -86,14 +101,17 @@
         "multiplicity" : {
           "_type" : "UserDefinedAdHocMultiplicity",
           "lowerBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           },
           "upperBound" : {
+            "_type" : "MultiplicityValue",
             "value" : 1
           }
         },
         "name" : "value3",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 30,
           "endLine" : 6,
           "startColumn" : 3,
@@ -101,6 +119,7 @@
         }
       } ],
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
         "startColumn" : 1,

@@ -2,6 +2,15 @@ import meta::pure::compiler::helper::*;
 
 // FunctionType printing
 
+function meta::pure::compiler::helper::newFunctionType():FunctionType[1]
+{
+    ^FunctionType(
+        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any),
+        returnMultiplicity = PureOne
+    );
+}
+
+
 function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1]):String[1]
 {
     $ft->printFunctionType(true)
@@ -128,7 +137,7 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
     
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
-        | ^GenericTypeValue(
+        | ^meta::pure::metamodel::type::generics::InferredGenericType(
               type = ^$ft(parameters = $newParams, returnType = $rRetGT, returnMultiplicity = $rRetMul),
               typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
               multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])

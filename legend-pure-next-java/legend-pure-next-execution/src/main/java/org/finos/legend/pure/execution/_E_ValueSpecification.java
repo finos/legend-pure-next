@@ -80,11 +80,15 @@ public class _E_ValueSpecification
      * Extract the raw Java value from a ValueSpecification.
      * Returns null for null inputs or GenericTypeAndMultiplicityHolder values.
      */
-    public static Object unwrap(ValueSpecification vs)
+    public static Object unwrap(Object p)
     {
-        if (vs == null)
+        if (p == null)
         {
             return null;
+        }
+        if (!(p instanceof ValueSpecification vs))
+        {
+            return p;
         }
         if (vs instanceof AtomicValue av)
         {
@@ -94,9 +98,16 @@ public class _E_ValueSpecification
         if (vs instanceof Collection col)
         {
             List<Object> results = new ArrayList<>();
-            for (ValueSpecification v : col._values())
+            for (Object v : col._values())
             {
-                results.add(unwrap(v));
+                if (v instanceof ValueSpecification vvs)
+                {
+                    results.add(unwrap(vvs));
+                }
+                else
+                {
+                    results.add(v);
+                }
             }
             return results;
         }

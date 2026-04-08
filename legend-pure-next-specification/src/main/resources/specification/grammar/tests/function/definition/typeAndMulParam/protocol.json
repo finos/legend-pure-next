@@ -1,5 +1,7 @@
 {
+  "_type" : "PureFile",
   "sections" : [ {
+    "_type" : "Section",
     "elements" : [ {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
@@ -18,6 +20,7 @@
               }
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 4,
               "startColumn" : 5,
@@ -37,6 +40,7 @@
               "_type" : "UndefinedMultiplicity"
             },
             "sourceInformation" : {
+              "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 4,
               "startColumn" : 15,
@@ -44,6 +48,7 @@
             }
           } ],
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 38,
             "endLine" : 4,
             "startColumn" : 8,
@@ -59,6 +64,7 @@
             "name" : "m"
           },
           "sourceInformation" : {
+            "_type" : "SourceInformation",
             "endColumn" : 37,
             "endLine" : 4,
             "startColumn" : 35,
@@ -66,6 +72,7 @@
           }
         } ],
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 38,
           "endLine" : 4,
           "startColumn" : 8,
@@ -74,10 +81,12 @@
       } ],
       "functionName" : "with",
       "multiplicityParameters" : [ {
+        "_type" : "UserDefinedMultiplicityParameter",
         "name" : "m"
       } ],
       "name" : "with_T_m__T_m_",
       "package" : {
+        "_type" : "Package_PointerImpl",
         "pointerValue" : "meta::pure::mapping"
       },
       "parameters" : [ {
@@ -95,6 +104,7 @@
         },
         "name" : "t",
         "sourceInformation" : {
+          "_type" : "SourceInformation",
           "endColumn" : 47,
           "endLine" : 2,
           "startColumn" : 41,
@@ -113,6 +123,7 @@
         "name" : "m"
       },
       "sourceInformation" : {
+        "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
         "startColumn" : 1,

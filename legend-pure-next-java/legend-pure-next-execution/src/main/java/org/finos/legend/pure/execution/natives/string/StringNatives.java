@@ -553,7 +553,7 @@ public class StringNatives
         }
 
         // Use Pure type system when VS is available
-        if (vs != null)
+        if (vs != null && vs._genericType() != null)
         {
             Type argType = _GenericType.type(vs._genericType());
             if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date"), resolver))
@@ -594,7 +594,7 @@ public class StringNatives
                                                MetadataAccess resolver)
     {
         // Use Pure type system when VS is available
-        if (vs != null)
+        if (vs != null && vs._genericType() != null)
         {
             Type argType = _GenericType.type(vs._genericType());
             if (_Type.subtypeOf(argType, (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date"), resolver))

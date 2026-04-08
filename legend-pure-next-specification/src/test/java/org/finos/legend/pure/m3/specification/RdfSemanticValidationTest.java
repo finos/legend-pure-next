@@ -237,7 +237,8 @@ public class RdfSemanticValidationTest {
                 String predicateUri = stmt.getPredicate().getURI();
                 if (predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") ||
                     predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#first") ||
-                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest")) {
+                    predicateUri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest") ||
+                    predicateUri.equals("https://finos.org/legend/pure/m3#classifierGenericType")) {
                     typedBlankNodes.add(stmt.getSubject().getId().toString());
                 }
             }

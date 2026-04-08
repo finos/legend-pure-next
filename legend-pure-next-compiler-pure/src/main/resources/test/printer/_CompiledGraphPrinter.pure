@@ -1,0 +1,123 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::*;
+import meta::pure::compiler::printer::*;
+import meta::pure::compiler::printer::primitive::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::string::*;
+
+function meta::pure::compiler::printer::printCompiledGraph(elements:PackageableElement[*]):String[1]
+{
+    $elements->map(e | $e->printElement())->joinStrings('\n\n')
+}
+
+function meta::pure::compiler::printer::printElement(element:PackageableElement[1]):String[1]
+{
+    if($element->instanceOf(meta::pure::metamodel::type::Class),
+       | $element->cast(@meta::pure::metamodel::type::Class<Any>)->printClass(),
+       | if($element->instanceOf(meta::pure::metamodel::type::PrimitiveType),
+            | $element->cast(@meta::pure::metamodel::type::PrimitiveType)->printPrimitive(),
+            | 'unsupported: ' + $element->fullPath()
+         )
+    )
+}
+
+function meta::pure::compiler::printer::printClass(c:meta::pure::metamodel::type::Class<Any>[1]):String[1]
+{
+    [
+        'class ', $c->fullPath(), 
+        if($c.generalizations->isEmpty(), | '', | [ ' extends ', $c.generalizations->cast(@Any)->map(g | let g2 = $g->cast(@meta::pure::metamodel::relationship::Generalization); $g2.general->printType();)->joinStrings(', ') ]->joinStrings('') ),
+        $c.classifierGenericType->printClassifierGenericType(),
+        $c.sourceInformation->printSourceInfo(),
+        if($c.properties->isEmpty(), | '', | [ '\n', $c.properties->cast(@Any)->map(p | 
+            let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+            [ 'property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
+        )->joinStrings('\n') ]->joinStrings(''))
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::printer::printClassifierGenericType(cgt:GenericType[0..1]):String[1]
+{
+    if($cgt->isEmpty(),
+        | '',
+        | '  ~' + $cgt->toOne()->printType()
+    );
+}
+
+function meta::pure::compiler::printer::printSourceInfo(si:meta::pure::metamodel::SourceInformation[0..1]):String[1]
+{
+    if($si->isEmpty(),
+        | '',
+        | '  @' + $si.startLine->toOne()->toString() + ':' + $si.startColumn->toOne()->toString() + '-' + $si.endLine->toOne()->toString() + ':' + $si.endColumn->toOne()->toString()
+    );
+}
+
+function meta::pure::compiler::printer::printType(gt:GenericType[1]):String[1]
+{
+    // Need to handle missing core mappings!
+    let coreType = if($gt->instanceOf(GenericTypeValue) && $gt->cast(@GenericTypeValue).type->isNotEmpty(),
+        | let t = $gt->cast(@GenericTypeValue).type->toOne();
+          if($t->instanceOf(PackageableElement) && $t->cast(@PackageableElement).name->isNotEmpty(),
+             | let path = $t->cast(@PackageableElement)->fullPath();
+               if($path->startsWith('meta::pure::metamodel::type::primitives::'),
+                  | $path->substring(41),
+                  | if($path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'),
+                       | $t->cast(@PackageableElement).name->toOne(),
+                       | $path
+                    )
+               );,
+             | '?'
+          );,
+        | '?'
+    );
+    let typeArgs = $gt->genericTypeTypeArguments()->map(t | $t->printType())->joinStrings(', ');
+    let mulArgs = $gt->genericTypeMultiplicityArguments()->map(m | $m->printMul())->map(m | if($m->startsWith('[') && $m->endsWith(']'), | $m->substring(1, $m->length() - 1), | $m))->joinStrings(', ');
+    
+    let args = if($typeArgs == '', | '', | $typeArgs) + if($mulArgs == '', | '', | '|' + $mulArgs);
+    if($args == '', | $coreType, | $coreType + '<' + $args + '>');
+}
+
+function meta::pure::compiler::printer::printMul(mul:Multiplicity[1]):String[1]
+{
+    if($mul->instanceOf(PackageableMultiplicity),
+       | let path = $mul->cast(@PackageableMultiplicity)->fullPath();
+         let strip1 = if($path->startsWith('meta::pure::metamodel::multiplicity::'), | $path->substring(37), | $path);
+         let strip2 = if($strip1->startsWith('Inferred'), | $strip1->substring(8), | $strip1);
+         
+         if($strip2 == 'PureOne', | '[1]',
+            | if($strip2 == 'ZeroOne', | '[0..1]',
+                 | if($strip2 == 'ZeroMany', | '[*]',
+                      | if($strip2 == 'OneMany', | '[1..*]',
+                           | '[' + $strip2 + ']'
+                        )
+                   )
+              )
+         );,
+       | let cm = $mul->cast(@ConcreteMultiplicity);
+         if($cm.upperBound->isEmpty(),
+            | if($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0,
+                 | '[*]',
+                 | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'
+              ),
+            | if($cm.lowerBound.value == $cm.upperBound.value,
+                 | '[' + $cm.lowerBound.value->toOne()->toString() + ']',
+                 | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
+              )
+         );
+    );
+}
