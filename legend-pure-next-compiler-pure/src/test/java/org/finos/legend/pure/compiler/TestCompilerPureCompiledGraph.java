@@ -99,6 +99,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
                                   !testName.contains("association/property/simple.pure") &&
+                                  !testName.contains("association/property/typeArguments.pure") &&
+                                  !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure")) {
                                   return;
