@@ -167,6 +167,73 @@ public class LocalModule implements Module
         return files;
     }
 
+    public String getSourceIdForElement(String elementPath)
+    {
+        if (state != null && state.elementIndex().containsKey(elementPath))
+        {
+            return state.elementIndex().get(elementPath).sourceId();
+        }
+        return null;
+    }
+
+    public String getSourceText(String sourceId)
+    {
+        if (sources != null)
+        {
+            for (PureContent c : sources)
+            {
+                if (sourceId.equals(c.sourceId()))
+                {
+                    return c.content();
+                }
+            }
+        }
+        if (sourceFolders != null)
+        {
+            for (Path folder : sourceFolders)
+            {
+                Path file = folder.resolve(sourceId);
+                if (Files.exists(file))
+                {
+                    try
+                    {
+                        return Files.readString(file, StandardCharsets.UTF_8);
+                    }
+                    catch (IOException e)
+                    {
+                        // ignore and try next
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+
+    public boolean saveSourceText(String sourceId, String content)
+    {
+        if (sourceFolders != null)
+        {
+            for (Path folder : sourceFolders)
+            {
+                Path file = folder.resolve(sourceId);
+                if (Files.exists(file))
+                {
+                    try
+                    {
+                        Files.writeString(file, content, StandardCharsets.UTF_8);
+                        return true;
+                    }
+                    catch (IOException e)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /**
      * Parse source files and run the full compilation pipeline.
      *

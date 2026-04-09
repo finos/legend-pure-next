@@ -77,7 +77,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         // Execute command support for pure/execute
         ExecuteCommandOptions execOptions = new ExecuteCommandOptions(
-                List.of("pure/execute", "pure/packageTree", "pure/fileTree"));
+                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile"));
         capabilities.setExecuteCommandProvider(execOptions);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
@@ -146,7 +146,24 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     @Override
     public void didSave(DidSaveTextDocumentParams params)
     {
-        // No-op — we compile on change
+        String uri = params.getTextDocument().getUri();
+        if (uri.startsWith("file:///"))
+        {
+            String sourceId = uri.substring(8);
+            if (!"user.pure".equals(sourceId))
+            {
+                String content = params.getText();
+                if (content != null)
+                {
+                    boolean saved = compilerPureModule.saveSourceText(sourceId, content);
+                    if (saved)
+                    {
+                        System.out.println("[LSP] Saved file: " + sourceId);
+                        compileAndPublishDiagnostics();
+                    }
+                }
+            }
+        }
     }
 
     // =========================================================================
@@ -186,8 +203,77 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 sendFileTree();
                 return null;
             });
+            case "pure/jumpToElement" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && !params.getArguments().isEmpty())
+                {
+                    String elementPath = String.valueOf(params.getArguments().get(0));
+                    if (elementPath.startsWith("\"") && elementPath.endsWith("\"")) {
+                        elementPath = elementPath.substring(1, elementPath.length() - 1);
+                    }
+                    handleJumpToElement(elementPath);
+                }
+                return null;
+            });
+            case "pure/openFile" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && !params.getArguments().isEmpty())
+                {
+                    String sourceId = String.valueOf(params.getArguments().get(0));
+                    if (sourceId.startsWith("\"") && sourceId.endsWith("\"")) {
+                        sourceId = sourceId.substring(1, sourceId.length() - 1);
+                    }
+                    handleOpenFile(sourceId);
+                }
+                return null;
+            });
+            case "pure/saveFile" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && params.getArguments().size() >= 2)
+                {
+                    String sourceId = String.valueOf(params.getArguments().get(0));
+                    if (sourceId.startsWith("\"") && sourceId.endsWith("\"")) {
+                        sourceId = sourceId.substring(1, sourceId.length() - 1);
+                    }
+                    Object contentObj = params.getArguments().get(1);
+                    String content = contentObj instanceof com.google.gson.JsonPrimitive 
+                        ? ((com.google.gson.JsonPrimitive) contentObj).getAsString() 
+                        : String.valueOf(contentObj);
+                    
+                    boolean skipCompile = false;
+                    if (params.getArguments().size() >= 3) {
+                        Object skipObj = params.getArguments().get(2);
+                        if (skipObj instanceof com.google.gson.JsonPrimitive) {
+                            skipCompile = ((com.google.gson.JsonPrimitive) skipObj).getAsBoolean();
+                        } else {
+                            skipCompile = Boolean.parseBoolean(String.valueOf(skipObj));
+                        }
+                    }
+                    handleSaveFile(sourceId, content, skipCompile);
+                }
+                return null;
+            });
             default -> CompletableFuture.completedFuture(null);
         };
+    }
+
+    private void handleSaveFile(String sourceId, String content, boolean skipCompile)
+    {
+        if (content != null && !"user.pure".equals(sourceId))
+        {
+            boolean saved = compilerPureModule.saveSourceText(sourceId, content);
+            if (saved)
+            {
+                System.out.println("[LSP] Saved file via command: " + sourceId);
+                if (!skipCompile) {
+                    compileAndPublishDiagnostics();
+                }
+            }
+            else
+            {
+                System.err.println("[LSP] Failed to save file via command: " + sourceId);
+            }
+        }
     }
 
     // =========================================================================
@@ -508,6 +594,60 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         return renderTreeJson(rootChildren);
     }
 
+    private void handleJumpToElement(String elementPath)
+    {
+        if (client == null) { return; }
+        
+        if (lastModel != null)
+        {
+            Module userModule = lastModel.getModule("user");
+            if (userModule instanceof LocalModule lu)
+            {
+                String sourceId = lu.getSourceIdForElement(elementPath);
+                if (sourceId != null && "user.pure".equals(sourceId))
+                {
+                    sendOpenFile(sourceId, currentSource);
+                    return;
+                }
+            }
+        }
+
+        String sourceId = compilerPureModule.getSourceIdForElement(elementPath);
+        if (sourceId != null)
+        {
+            String content = compilerPureModule.getSourceText(sourceId);
+            if (content != null)
+            {
+                sendOpenFile(sourceId, content);
+            }
+        }
+    }
+
+    private void handleOpenFile(String sourceId)
+    {
+        if (client == null) { return; }
+
+        if ("user.pure".equals(sourceId))
+        {
+            sendOpenFile(sourceId, currentSource);
+            return;
+        }
+
+        String content = compilerPureModule.getSourceText(sourceId);
+        if (content != null)
+        {
+            sendOpenFile(sourceId, content);
+        }
+    }
+
+    private void sendOpenFile(String sourceId, String content)
+    {
+        if (client instanceof PureLanguageClient pureClient)
+        {
+            pureClient.openFile(new OpenFileParams(sourceId, content));
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private String renderTreeJson(Map<String, Object> children)
     {
@@ -573,6 +713,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/treeData")
         void treeData(TreeDataParams params);
+
+        @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/openFile")
+        void openFile(OpenFileParams params);
     }
 
     public static class ExecuteResultParams
@@ -611,5 +754,24 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         public void setTreeId(String treeId) { this.treeId = treeId; }
         public String getJson() { return json; }
         public void setJson(String json) { this.json = json; }
+    }
+
+    public static class OpenFileParams
+    {
+        private String sourceId;
+        private String content;
+
+        public OpenFileParams() {}
+
+        public OpenFileParams(String sourceId, String content)
+        {
+            this.sourceId = sourceId;
+            this.content = content;
+        }
+
+        public String getSourceId() { return sourceId; }
+        public void setSourceId(String sourceId) { this.sourceId = sourceId; }
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
     }
 }

@@ -55,16 +55,67 @@
             -webkit-text-fill-color: transparent;
             letter-spacing: 0.5px;
         }
+        .file-tabs-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            max-width: 100%;
+            scrollbar-width: none;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px 0 12px;
+        }
+        .file-tabs-container::-webkit-scrollbar {
+            display: none;
+        }
         .file-tab {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 12px;
+            padding: 6px 16px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .file-tab:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .file-tab.active {
             background: var(--bg-primary);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 13px;
+            border-bottom: none;
             color: var(--text-primary);
+            position: relative;
+        }
+        .file-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--bg-primary);
+        }
+        .file-tab .close-tab {
+            margin-left: 2px;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 4px;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+        .file-tab .close-tab:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--error);
         }
         .file-icon { color: var(--accent); font-size: 14px; }
         .header-right {
@@ -359,37 +410,7 @@
             animation: spin 0.8s linear infinite;
         }
 
-        /* Editor / Diagram tab bar */
-        .editor-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-            background: var(--bg-tertiary);
-        }
-        .editor-tab {
-            padding: 6px 16px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .editor-tab:hover {
-            color: var(--text-primary);
-            background: rgba(88, 166, 255, 0.05);
-        }
-        .editor-tab.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
-            background: rgba(88, 166, 255, 0.08);
-        }
 
-        /* Diagram canvas container */
         .diagram-container {
             flex: 1;
             min-height: 0;
@@ -461,10 +482,6 @@
     <div class="header">
         <div class="header-left">
             <span class="logo">◆ Pure IDE</span>
-            <div class="file-tab">
-                <span class="file-icon">⬡</span>
-                <span>user.pure</span>
-            </div>
         </div>
         <div class="header-right">
             <div class="status-indicator">
@@ -504,14 +521,12 @@
 
         <!-- Editor + Result -->
         <div class="editor-result-area">
-            <!-- Editor / Diagram tabs -->
-            <div class="editor-tabs">
-                <button class="editor-tab active" id="editorTabBtn" onclick="switchEditorTab('editor')">
-                    ✎ Editor
-                </button>
-                <button class="editor-tab" id="diagramTabBtn" onclick="switchEditorTab('diagram')">
-                    ◈ Diagram
-                </button>
+            <!-- File tabs -->
+            <div class="file-tabs-container" id="fileTabsContainer">
+                <div class="file-tab active" data-source-id="user.pure" onclick="switchToFile('user.pure')">
+                    <span class="file-icon">⬡</span>
+                    <span>user.pure</span>
+                </div>
             </div>
 
             <!-- Editor -->
@@ -557,6 +572,9 @@
         let documentVersion = 0;
         const DOC_URI = 'file:///user.pure';
 
+        let openFiles = [{ sourceId: 'user.pure' }];
+        let activeFile = 'user.pure';
+
         // =================================================================
         // Sidebar Tab Switching
         // =================================================================
@@ -588,11 +606,14 @@
             return TYPE_ICONS[type] || { icon: '○', cls: 'icon-default' };
         }
 
-        function renderTree(nodes, container, depth) {
+        function renderTree(nodes, container, treeId, depth, parentPath) {
             depth = depth || 0;
+            parentPath = parentPath || '';
             for (const node of nodes) {
                 const hasChildren = node.children && node.children.length > 0;
                 const iconInfo = getIcon(node.type, hasChildren);
+                const separator = treeId === 'packageTree' ? '::' : '/';
+                const currentPath = parentPath ? parentPath + separator + node.name : node.name;
 
                 const nodeDiv = document.createElement('div');
                 nodeDiv.className = 'tree-node';
@@ -622,13 +643,31 @@
                 if (hasChildren) {
                     const childrenDiv = document.createElement('div');
                     childrenDiv.className = 'tree-children';
-                    renderTree(node.children, childrenDiv, depth + 1);
+                    renderTree(node.children, childrenDiv, treeId, depth + 1, currentPath);
                     nodeDiv.appendChild(childrenDiv);
 
                     item.addEventListener('click', () => {
                         const isExpanded = childrenDiv.classList.contains('expanded');
                         childrenDiv.classList.toggle('expanded');
                         chevron.classList.toggle('expanded');
+                    });
+                } else {
+                    item.addEventListener('click', () => {
+                        if (treeId === 'packageTree') {
+                            if (node.type !== 'Package') {
+                                sendRequest('workspace/executeCommand', {
+                                    command: 'pure/jumpToElement',
+                                    arguments: [currentPath]
+                                });
+                            }
+                        } else if (treeId === 'fileTree') {
+                            if (node.type === 'File') {
+                                sendRequest('workspace/executeCommand', {
+                                    command: 'pure/openFile',
+                                    arguments: [currentPath]
+                                });
+                            }
+                        }
                     });
                 }
 
@@ -642,7 +681,7 @@
                 const panelId = treeId === 'packageTree' ? 'panelElements' : 'panelFiles';
                 const panel = document.getElementById(panelId);
                 panel.innerHTML = '';
-                renderTree(nodes, panel, 0);
+                renderTree(nodes, panel, treeId, 0, '');
             } catch (e) {
                 console.error('Failed to parse tree data:', e);
             }
@@ -830,6 +869,16 @@
             // F9 keybinding (editor-scoped)
             editor.addCommand(monaco.KeyCode.F9, executeCode);
 
+            // Handle save command (Cmd+S / Ctrl+S)
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                if (activeFile !== 'user.pure' && initialized && ws && ws.readyState === WebSocket.OPEN) {
+                    sendRequest('workspace/executeCommand', {
+                        command: 'pure/saveFile',
+                        arguments: [activeFile, editor.getValue()]
+                    }).catch(console.error);
+                }
+            });
+
             // Global F9 keybinding (works even when editor doesn't have focus)
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'F9') {
@@ -840,12 +889,17 @@
 
             // Notify LSP on content change
             editor.onDidChangeModelContent(() => {
+                // Only send didChange if the active model is user.pure
+                // We keep the LSP single source context pinned to user.pure for execution.
                 if (initialized && ws && ws.readyState === WebSocket.OPEN) {
-                    documentVersion++;
-                    sendNotification('textDocument/didChange', {
-                        textDocument: { uri: DOC_URI, version: documentVersion },
-                        contentChanges: [{ text: editor.getValue() }]
-                    });
+                    const currentUri = editor.getModel().uri.toString();
+                    if (currentUri === DOC_URI) {
+                        documentVersion++;
+                        sendNotification('textDocument/didChange', {
+                            textDocument: { uri: DOC_URI, version: documentVersion },
+                            contentChanges: [{ text: editor.getValue() }]
+                        });
+                    }
                 }
             });
 
@@ -945,6 +999,93 @@
             else if (msg.method === 'pure/treeData') {
                 handleTreeData(msg.params);
             }
+            else if (msg.method === 'pure/openFile') {
+                handleOpenFile(msg.params);
+            }
+        }
+
+        function handleOpenFile(params) {
+            if (!params || !params.sourceId) return;
+
+            const uriStr = 'file:///' + params.sourceId.replace(/\\/g, '/');
+            const uri = monaco.Uri.parse(uriStr);
+            let model = monaco.editor.getModel(uri);
+            const content = params.content || '';
+
+            if (!model) {
+                model = monaco.editor.createModel(content, 'pure', uri);
+            } else {
+                if (model.getValue() !== content && params.sourceId !== 'user.pure') {
+                    model.setValue(content);
+                }
+            }
+
+            if (!openFiles.find(f => f.sourceId === params.sourceId)) {
+                openFiles.push({ sourceId: params.sourceId });
+            }
+
+            switchToFile(params.sourceId);
+        }
+
+        function switchToFile(sourceId) {
+            activeFile = sourceId;
+
+            const uriStr = 'file:///' + sourceId.replace(/\\/g, '/');
+            const uri = monaco.Uri.parse(uriStr);
+            const model = monaco.editor.getModel(uri);
+
+            if (model && editor) {
+                editor.setModel(model);
+                editor.updateOptions({ readOnly: false });
+            }
+
+            renderFileTabs();
+        }
+
+        function closeFile(e, sourceId) {
+            if (e) e.stopPropagation();
+            if (sourceId === 'user.pure') return;
+
+            openFiles = openFiles.filter(f => f.sourceId !== sourceId);
+            
+            if (activeFile === sourceId) {
+                switchToFile('user.pure');
+            } else {
+                renderFileTabs();
+            }
+        }
+
+        function renderFileTabs() {
+            const container = document.getElementById('fileTabsContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            openFiles.forEach(f => {
+                const tab = document.createElement('div');
+                tab.className = 'file-tab' + (f.sourceId === activeFile ? ' active' : '');
+                tab.onclick = () => switchToFile(f.sourceId);
+                
+                const icon = document.createElement('span');
+                icon.className = 'file-icon';
+                icon.textContent = f.sourceId === 'user.pure' ? '⬡' : '📄';
+                
+                const name = document.createElement('span');
+                name.textContent = f.sourceId.split('/').pop();
+                name.title = f.sourceId;
+
+                tab.appendChild(icon);
+                tab.appendChild(name);
+
+                if (f.sourceId !== 'user.pure') {
+                    const closeBtn = document.createElement('span');
+                    closeBtn.className = 'close-tab';
+                    closeBtn.innerHTML = '&times;';
+                    closeBtn.onclick = (e) => closeFile(e, f.sourceId);
+                    tab.appendChild(closeBtn);
+                }
+
+                container.appendChild(tab);
+            });
         }
 
         // =================================================================
@@ -994,6 +1135,26 @@
         // =================================================================
         // Execute
         // =================================================================
+        function saveAllOpenFiles() {
+            if (!initialized || !ws || ws.readyState !== WebSocket.OPEN) return Promise.resolve();
+
+            const savePromises = openFiles.map(f => {
+                if (f.sourceId !== 'user.pure') {
+                    const uriStr = 'file:///' + f.sourceId.replace(/\\/g, '/');
+                    const uri = monaco.Uri.parse(uriStr);
+                    const model = monaco.editor.getModel(uri);
+                    if (model) {
+                        return sendRequest('workspace/executeCommand', {
+                            command: 'pure/saveFile',
+                            arguments: [f.sourceId, model.getValue(), true]
+                        }).catch(e => console.error("Error saving " + f.sourceId, e));
+                    }
+                }
+                return Promise.resolve();
+            });
+            return Promise.all(savePromises);
+        }
+
         function executeCode() {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 showResult('Not connected to LSP server', true);
@@ -1003,18 +1164,22 @@
             // Show spinner
             const content = document.getElementById('resultContent');
             content.className = 'result-content';
-            content.innerHTML = '<span class="spinner"></span> Compiling and executing...';
+            content.innerHTML = '<span class="spinner"></span> Saving and executing...';
 
             const badge = document.getElementById('resultBadge');
             badge.style.display = 'none';
 
-            sendRequest('workspace/executeCommand', {
-                command: 'pure/execute',
-                arguments: []
-            }).then(() => {
-                // Result comes via pure/executeResult notification
-            }).catch(err => {
-                showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
+            saveAllOpenFiles().then(() => {
+                sendRequest('workspace/executeCommand', {
+                    command: 'pure/execute',
+                    arguments: []
+                }).then(() => {
+                    // Result comes via pure/executeResult notification
+                }).catch(err => {
+                    showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
+                });
+            }).catch(e => {
+                showResult('Save failed: ' + e, true);
             });
         }
 
@@ -1040,27 +1205,6 @@
         function setStatus(state, text) {
             document.getElementById('statusDot').className = 'status-dot ' + state;
             document.getElementById('statusText').textContent = text;
-        }
-        // =================================================================
-        // Editor / Diagram Tab Switching
-        // =================================================================
-        let currentEditorTab = 'editor';
-
-        function switchEditorTab(tab) {
-            currentEditorTab = tab;
-            document.getElementById('editorTabBtn').classList.toggle('active', tab === 'editor');
-            document.getElementById('diagramTabBtn').classList.toggle('active', tab === 'diagram');
-            const editorPanel = document.getElementById('editorPanel');
-            const diagramPanel = document.getElementById('diagramPanel');
-            if (tab === 'editor') {
-                editorPanel.style.display = '';
-                diagramPanel.classList.remove('active');
-                if (editor) editor.layout();
-            } else {
-                editorPanel.style.display = 'none';
-                diagramPanel.classList.add('active');
-                updateDiagram();
-            }
         }
 
         // =================================================================
