@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
     let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;

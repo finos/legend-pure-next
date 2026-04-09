@@ -12,7 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::*;
+
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::printer::*;
 import meta::pure::compiler::printer::primitive::*;
 import meta::pure::metamodel::*;

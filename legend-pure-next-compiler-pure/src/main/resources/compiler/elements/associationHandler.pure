@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::relationship::Association[1]
+function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::relationship::Association[1]
 {
     let packagePath = $protocolAssoc.package->toOne().pointerValue;
     let assocName = $packagePath + '::' + $protocolAssoc.name;
@@ -24,8 +29,8 @@ function meta::pure::compiler::compileAssociation(protocolAssoc:meta::pure::prot
     let p2Protocol = $protocolAssoc.properties->at(1);
     
     // Resolve return types
-    let mGenType1 = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->meta::pure::compiler::compileGenericType($context, $packagePath, []);
-    let mGenType2 = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->meta::pure::compiler::compileGenericType($context, $packagePath, []);
+    let mGenType1 = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []);
+    let mGenType2 = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []);
     
     let mMult1 = meta::pure::compiler::compileLocalMultiplicity($p1Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
     let mMult2 = meta::pure::compiler::compileLocalMultiplicity($p2Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
@@ -80,7 +85,7 @@ function meta::pure::compiler::compileAssociation(protocolAssoc:meta::pure::prot
     );
 }
 
-function meta::pure::compiler::compileLocalMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+function meta::pure::compiler::elements::compileLocalMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
 {
     if($pMult.upperBound->isEmpty(),
         | if($pMult.lowerBound.value == 0,

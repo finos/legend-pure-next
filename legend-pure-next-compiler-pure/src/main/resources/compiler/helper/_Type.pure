@@ -1,7 +1,26 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::functions::meta::tests::model::*;
 
-function meta::pure::compiler::helper::isTopType(t:Type[1]):Boolean[1]
+function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
@@ -11,7 +30,7 @@ function meta::pure::compiler::helper::isTopType(t:Type[1]):Boolean[1]
     )
 }
 
-function meta::pure::compiler::helper::isBottomType(t:Type[1]):Boolean[1]
+function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
 {
     $t->match(
         [
@@ -21,12 +40,12 @@ function meta::pure::compiler::helper::isBottomType(t:Type[1]):Boolean[1]
     )
 }
 
-function meta::pure::compiler::helper::directSupertypes(t:Type[1]):Type[*]
+function meta::pure::compiler::helper::type::directSupertypes(t:Type[1]):Type[*]
 {
     $t.generalizations->map(g | $g.general->genericTypeRawType())
 }
 
-function meta::pure::compiler::helper::genericTypeRawType(gt:GenericType[1]):Type[0..1]
+function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1]):Type[0..1]
 {
     $gt->match(
         [
@@ -36,7 +55,7 @@ function meta::pure::compiler::helper::genericTypeRawType(gt:GenericType[1]):Typ
     )
 }
 
-function meta::pure::compiler::helper::linearize(t:Type[1]):Type[*]
+function meta::pure::compiler::helper::type::linearize(t:Type[1]):Type[*]
 {
     let parents = $t->directSupertypes();
     if($parents->isEmpty(),
@@ -47,7 +66,7 @@ function meta::pure::compiler::helper::linearize(t:Type[1]):Type[*]
     );
 }
 
-function meta::pure::compiler::helper::c3merge(lists:List<Any>[*]):Type[*]
+function meta::pure::compiler::helper::type::c3merge(lists:List<Any>[*]):Type[*]
 {
     let nonEmpty = $lists->filter(l | $l.values->isNotEmpty());
     if($nonEmpty->isEmpty(),
@@ -63,7 +82,7 @@ function meta::pure::compiler::helper::c3merge(lists:List<Any>[*]):Type[*]
     );
 }
 
-function meta::pure::compiler::helper::subtypeOf(sub:Type[1], super:Type[1]):Boolean[1]
+function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1]):Boolean[1]
 {
     if($sub == $super,
         | true,
@@ -74,12 +93,12 @@ function meta::pure::compiler::helper::subtypeOf(sub:Type[1], super:Type[1]):Boo
     );
 }
 
-function meta::pure::compiler::helper::findCommonType(types:Type[*]):Type[0..1]
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*]):Type[0..1]
 {
     $types->findCommonType(false)
 }
 
-function meta::pure::compiler::helper::findCommonType(types:Type[*], contravariant:Boolean[1]):Type[0..1]
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1]):Type[0..1]
 {
     if($types->isEmpty(),
         | [],
@@ -119,7 +138,7 @@ function meta::pure::compiler::helper::findCommonType(types:Type[*], contravaria
 }
 
 
-function meta::pure::compiler::helper::isFunctionType(t:Type[1]):Boolean[1]
+function meta::pure::compiler::helper::type::isFunctionType(t:Type[1]):Boolean[1]
 {
     $t->linearize()->filter(x | $x->match(
         [
@@ -131,21 +150,21 @@ function meta::pure::compiler::helper::isFunctionType(t:Type[1]):Boolean[1]
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsTopType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsTopType():Boolean[1]
 {
     assert(Any->isTopType());
     assertFalse(String->isTopType());
     assertFalse(Integer->isTopType());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsBottomType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsBottomType():Boolean[1]
 {
     assert(Nil->isBottomType());
     assertFalse(Any->isBottomType());
     assertFalse(String->isBottomType());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testLinearize():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testLinearize():Boolean[1]
 {
     // Any linearizes to just itself (no parents)
     let anyLin = Any->linearize();
@@ -176,7 +195,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testL
     assertEquals(Any, $floatLin->at(2));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testSubtypeOf():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testSubtypeOf():Boolean[1]
 {
     assert(Integer->subtypeOf(Integer));
     assert(Integer->subtypeOf(Number));
@@ -188,7 +207,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testS
     assert(String->subtypeOf(Any));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testFindCommonType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testFindCommonType():Boolean[1]
 {
     let sameTypes = [Integer, Integer];
     assertEquals(Integer, $sameTypes->findCommonType());
@@ -210,7 +229,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testF
 }
 
 
-function <<test.Test>> meta::pure::compiler::helper::tests::typeHierarchy::testIsFunctionType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsFunctionType():Boolean[1]
 {
     assertFalse(Integer->isFunctionType());
     assertFalse(String->isFunctionType());

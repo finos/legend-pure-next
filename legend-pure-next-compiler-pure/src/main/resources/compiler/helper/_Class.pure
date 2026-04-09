@@ -1,8 +1,27 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
 // Class helpers — property lookup across inheritance hierarchy
 
-function meta::pure::compiler::helper::findProperty(owner:Any[1], name:String[1]):Property<Nil, Any|*>[0..1]
+function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:String[1]):Property<Nil, Any|*>[0..1]
 {
     $owner->match(
         [
@@ -29,7 +48,7 @@ function meta::pure::compiler::helper::findProperty(owner:Any[1], name:String[1]
     )
 }
 
-function meta::pure::compiler::helper::findQualifiedProperties(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[*]
+function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[*]
 {
     // Direct qualified properties
     let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
@@ -44,7 +63,7 @@ function meta::pure::compiler::helper::findQualifiedProperties(cls:Class<Any>[1]
 
 // buildBindingsFromGenericType — zips class type/multiplicity params with receiver type args
 
-function meta::pure::compiler::helper::buildBindingsFromGenericType(ownerClass:Class<Any>[1], receiverType:GenericType[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::class::buildBindingsFromGenericType(ownerClass:Class<Any>[1], receiverType:GenericType[1]):ParametersBinding[1]
 {
     let typeArgs = $receiverType->genericTypeTypeArguments();
     let mulArgs = $receiverType->genericTypeMultiplicityArguments();
@@ -61,82 +80,82 @@ function meta::pure::compiler::helper::buildBindingsFromGenericType(ownerClass:C
 
 // Tests
 
-Class meta::pure::compiler::helper::tests::class::SuperClass
+Class meta::pure::compiler::helper::class::tests::SuperClass
 {
     superProp : String[1];
     superQual(a:String[1]) { $a } : String[1];
     overloadedQual(a:String[1]) { $a } : String[1];
 }
 
-Class meta::pure::compiler::helper::tests::class::SubClass extends meta::pure::compiler::helper::tests::class::SuperClass
+Class meta::pure::compiler::helper::class::tests::SubClass extends meta::pure::compiler::helper::class::tests::SuperClass
 {
     subProp : Integer[1];
     subQual(a:String[1]) { $a } : String[1];
     overloadedQual(a:String[1], b:String[1]) { $a } : String[1];
 }
 
-Association meta::pure::compiler::helper::tests::class::Asso
+Association meta::pure::compiler::helper::class::tests::Asso
 {
-    origin : meta::pure::compiler::helper::tests::class::SubClass[1];
-    assocProp : meta::pure::compiler::helper::tests::class::SuperClass[1];
+    origin : meta::pure::compiler::helper::class::tests::SubClass[1];
+    assocProp : meta::pure::compiler::helper::class::tests::SuperClass[1];
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::class::testFindProperty():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testFindProperty():Boolean[1]
 {
-    let subClass = meta::pure::compiler::helper::tests::class::SubClass;
+    let subClass = meta::pure::compiler::helper::class::tests::SubClass;
 
     // Direct
-    let subProp = $subClass->meta::pure::compiler::helper::findProperty('subProp');
+    let subProp = $subClass->findProperty('subProp');
     assert($subProp->isNotEmpty());
     assertEquals('subProp', $subProp->toOne().name);
 
     // Inherited
-    let superProp = $subClass->meta::pure::compiler::helper::findProperty('superProp');
+    let superProp = $subClass->findProperty('superProp');
     assert($superProp->isNotEmpty());
     assertEquals('superProp', $superProp->toOne().name);
 
     // Association
-    let assocProp = $subClass->meta::pure::compiler::helper::findProperty('assocProp');
+    let assocProp = $subClass->findProperty('assocProp');
     assert($assocProp->isNotEmpty());
     assertEquals('assocProp', $assocProp->toOne().name);
 
     // Not Found
-    let notFound = $subClass->meta::pure::compiler::helper::findProperty('notFound');
+    let notFound = $subClass->findProperty('notFound');
     assert($notFound->isEmpty());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::class::testFindQualifiedProperties():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testFindQualifiedProperties():Boolean[1]
 {
-    let subClass = meta::pure::compiler::helper::tests::class::SubClass;
+    let subClass = meta::pure::compiler::helper::class::tests::SubClass;
 
-    assertEquals(1, $subClass->meta::pure::compiler::helper::findQualifiedProperties('subQual')->size());
-    assertEquals(1, $subClass->meta::pure::compiler::helper::findQualifiedProperties('superQual')->size());
+    assertEquals(1, $subClass->findQualifiedProperties('subQual')->size());
+    assertEquals(1, $subClass->findQualifiedProperties('superQual')->size());
     // Since SubClass defines overloadedQual with different signature than SuperClass, both are returned
-    assertEquals(2, $subClass->meta::pure::compiler::helper::findQualifiedProperties('overloadedQual')->size());
+    assertEquals(2, $subClass->findQualifiedProperties('overloadedQual')->size());
 
-    assertEquals(0, $subClass->meta::pure::compiler::helper::findQualifiedProperties('notFound')->size());
+    assertEquals(0, $subClass->findQualifiedProperties('notFound')->size());
 }
 
-Class meta::pure::compiler::helper::tests::class::Wrapper<Z>
+Class meta::pure::compiler::helper::class::tests::Wrapper<Z>
 {
 }
 
-Class meta::pure::compiler::helper::tests::class::MyClass<T, U|m>
+Class meta::pure::compiler::helper::class::tests::MyClass<T, U|m>
 {
 }
 
-Class meta::pure::compiler::helper::tests::class::TestClass
+Class meta::pure::compiler::helper::class::tests::TestClass
 {
-    prop : meta::pure::compiler::helper::tests::class::MyClass<meta::pure::compiler::helper::tests::class::Wrapper<String>, Integer | 1..*>[1];
+    prop : meta::pure::compiler::helper::class::tests::MyClass<meta::pure::compiler::helper::class::tests::Wrapper<String>, Integer | 1..*>[1];
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::class::testBuildBindingsFromGenericType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::class::tests::testBuildBindingsFromGenericType():Boolean[1]
 {
-    let ownerClass = meta::pure::compiler::helper::tests::class::MyClass;
-    let prop = meta::pure::compiler::helper::tests::class::TestClass.properties->filter(p | $p.name == 'prop')->toOne();
+    let ownerClass = meta::pure::compiler::helper::class::tests::MyClass;
+    let prop = meta::pure::compiler::helper::class::tests::TestClass.properties->filter(p | $p.name == 'prop')->toOne();
     let receiverType = $prop.genericType->toOne();
 
-    let bindings = $ownerClass->meta::pure::compiler::helper::buildBindingsFromGenericType($receiverType);
+    let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
     
     let tKeys = $bindings.typeBindings->keys();
     assertEquals(['T', 'U'], $tKeys->sort());
@@ -145,7 +164,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::class::testBuildBind
     assertEquals(['m'], $mKeys);
     
     let tBinding = $bindings.typeBindings->get('T')->toOne().values->at(0);
-    assertEquals(meta::pure::compiler::helper::tests::class::Wrapper, $tBinding->genericTypeRawType()->toOne());
+    assertEquals(meta::pure::compiler::helper::class::tests::Wrapper, $tBinding->genericTypeRawType()->toOne());
     assertEquals(String, $tBinding->genericTypeTypeArguments()->at(0)->genericTypeRawType()->toOne());
     
     let uBinding = $bindings.typeBindings->get('U')->toOne().values->at(0);
@@ -155,5 +174,5 @@ function <<test.Test>> meta::pure::compiler::helper::tests::class::testBuildBind
     assertEquals(1, $mBinding->multiplicityLowerBound());
     assertEquals(-1, $mBinding->multiplicityUpperBound());
 
-    assertEquals('{T=Wrapper<String>, U=Integer | m=[1..*]}', $bindings->meta::pure::compiler::helper::toString());
+    assertEquals('{T=Wrapper<String>, U=Integer | m=[1..*]}', $bindings->toString());
 }

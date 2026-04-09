@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileFunctionDefinitionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileFunctionDefinitionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     
@@ -42,7 +47,7 @@ function meta::pure::compiler::compileFunctionDefinitionPass1(fn:meta::pure::pro
     ^CompilerContext(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::compileFunctionDefinitionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::UserDefinedFunction<Any>[1]
+function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::UserDefinedFunction<Any>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     
@@ -54,7 +59,7 @@ function meta::pure::compiler::compileFunctionDefinitionPass2(fn:meta::pure::pro
     // Compile parameters
     let compiledParams = $fn.parameters->map(p | 
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let mGenType = $pType->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+        let mGenType = $pType->compileGenericType($ctx, $packagePath, []);
         
         let mMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
         
@@ -67,7 +72,7 @@ function meta::pure::compiler::compileFunctionDefinitionPass2(fn:meta::pure::pro
     
     // Compile return type
     let rType = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let rGenType = $rType->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+    let rGenType = $rType->compileGenericType($ctx, $packagePath, []);
     
     let rMMult = $fn.returnMultiplicity->meta::pure::compiler::compileMultiplicity();
     
@@ -95,7 +100,7 @@ function meta::pure::compiler::compileFunctionDefinitionPass2(fn:meta::pure::pro
     let paramScope = $compiledParams;
 
     // Compile expression sequence with sequential scope expansion (let bindings)
-    let bodyResult = meta::pure::compiler::compileExpressionSequence($fn.expressionSequence, $ctx, $paramScope);
+    let bodyResult = compileExpressionSequence($fn.expressionSequence, $ctx, $paramScope);
     
     ^$skeleton(
         parameters = $compiledParams,

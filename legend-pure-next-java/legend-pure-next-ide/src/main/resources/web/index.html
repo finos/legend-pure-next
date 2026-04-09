@@ -1025,6 +1025,16 @@
             }
 
             switchToFile(params.sourceId);
+
+            if (params.line && editor) {
+                setTimeout(() => {
+                    const line = params.line;
+                    const column = params.column || 1;
+                    editor.setPosition({ lineNumber: line, column: column });
+                    editor.revealLineInCenter(line);
+                    editor.focus();
+                }, 10);
+            }
         }
 
         function switchToFile(sourceId) {

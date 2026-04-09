@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::PrimitiveType[1]
+function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::PrimitiveType[1]
 {
     let packagePath = $protocolPrimitive.package->toOne().pointerValue;
     let primitiveName = $packagePath + '::' + $protocolPrimitive.name;

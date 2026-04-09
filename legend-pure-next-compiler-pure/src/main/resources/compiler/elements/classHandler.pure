@@ -12,16 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Class<Any>[1]
+function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Class<Any>[1]
 {
     let packagePath = $protocolClass.package->toOne().pointerValue;
     let className = $packagePath + '::' + $protocolClass.name;
     let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
 
     // Compile properties and generalizations (they reference $skeleton for now)
-    let compiledProperties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton));
+    let compiledProperties = $protocolClass.properties->map(p | $p->compileProperty($context, $packagePath, $skeleton));
 
     let compiledGeneralizations = if($protocolClass.generalizations->isEmpty(),
         | [^meta::pure::metamodel::relationship::Generalization(
@@ -30,7 +35,7 @@ function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::
           )],
         | $protocolClass.generalizations->map(g |
             ^meta::pure::metamodel::relationship::Generalization(
-                general = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->meta::pure::compiler::compileGenericType($context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter)),
+                general = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter)),
                 specific = $skeleton
             )
         )

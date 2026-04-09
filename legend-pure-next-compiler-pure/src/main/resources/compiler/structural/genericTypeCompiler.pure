@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::metamodel::type::generics::GenericType[1]
 {
     let protocolType = $protocolGT.type->toOne();
     let metamodelType = $protocolType->match([
@@ -32,7 +37,7 @@ function meta::pure::compiler::compileGenericType(protocolGT:meta::pure::protoco
     ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = $metamodelType,
         typeArguments = $protocolGT.typeArguments->map(a | 
-            $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->meta::pure::compiler::compileGenericType($context, $packagePath, $typeParameters)
+            $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters)
         )
     );
 }

@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Enumeration<Any>[1]
+function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Enumeration<Any>[1]
 {
     let packagePath = $protocolEnum.package->toOne().pointerValue;
     let enumName = $packagePath + '::' + $protocolEnum.name;
@@ -32,7 +37,7 @@ function meta::pure::compiler::compileEnumeration(protocolEnum:meta::pure::proto
     );
 }
 
-function meta::pure::compiler::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:meta::pure::metamodel::type::Enumeration<Any>[1], selfGenType:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+function meta::pure::compiler::elements::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:meta::pure::metamodel::type::Enumeration<Any>[1], selfGenType:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
 {
     let pureOne = meta::pure::metamodel::multiplicity::PureOne;
 

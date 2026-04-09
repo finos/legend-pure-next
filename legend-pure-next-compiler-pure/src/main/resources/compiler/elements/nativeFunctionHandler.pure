@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     
@@ -42,7 +47,7 @@ function meta::pure::compiler::compileNativeFunctionPass1(fn:meta::pure::protoco
     ^CompilerContext(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::NativeFunction<Any>[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::NativeFunction<Any>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     
@@ -54,7 +59,7 @@ function meta::pure::compiler::compileNativeFunctionPass2(fn:meta::pure::protoco
     // Compile parameters
     let compiledParams = $fn.parameters->map(p | 
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let mGenType = $pType->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+        let mGenType = $pType->compileGenericType($ctx, $packagePath, []);
         
         let pMult = $p.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
         let mMult = if($pMult.upperBound->isEmpty(),
@@ -84,7 +89,7 @@ function meta::pure::compiler::compileNativeFunctionPass2(fn:meta::pure::protoco
     
     // Compile return type
     let rTypeStr = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let rMGenType = $rTypeStr->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+    let rMGenType = $rTypeStr->compileGenericType($ctx, $packagePath, []);
     
     let rPMult = $fn.returnMultiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
     let rMMult = if($rPMult.upperBound->isEmpty(),

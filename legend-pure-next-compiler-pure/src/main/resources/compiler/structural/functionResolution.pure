@@ -12,34 +12,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::*;
-import meta::pure::compiler::helper::*;
+
 
 // ============================================================================
 // Function resolution: resolve a FunctionInvocation using the native index
 // ============================================================================
 
-Class meta::pure::compiler::FunctionResolutionResult
+Class meta::pure::compiler::structural::functionResolution::FunctionResolutionResult
 {
     resolvedFunction: meta::pure::metamodel::function::PackageableFunction<Any>[0..1];
     resolvedName: String[1];
     returnGenericType: meta::pure::metamodel::type::generics::GenericType[1];
     returnMultiplicity: meta::pure::metamodel::multiplicity::Multiplicity[1];
-    bindings: meta::pure::compiler::helper::ParametersBinding[1];
+    bindings: ParametersBinding[1];
     resolvedTypeParameters: meta::pure::metamodel::type::generics::ResolvedTypeParameter[*];
     resolvedMultiplicityParameters: meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter[*];
 }
 
-function meta::pure::compiler::resolveFunctionInvocation(
+function meta::pure::compiler::structural::functionResolution::resolveFunctionInvocation(
     functionName:String[1], 
     argTypes:meta::pure::metamodel::type::generics::GenericType[*], 
     argMuls:meta::pure::metamodel::multiplicity::Multiplicity[*]
-):meta::pure::compiler::FunctionResolutionResult[1]
+):FunctionResolutionResult[1]
 {
     // Use the native function index to find candidates by short name + arity
     let candidates = meta::pure::compiler::findFunctionsByNameAndArity($functionName, $argTypes->size());
     
-    let emptyResult = ^meta::pure::compiler::FunctionResolutionResult(
+    let emptyResult = ^FunctionResolutionResult(
         resolvedName = $functionName,
         returnGenericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
         returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne,
@@ -51,41 +71,41 @@ function meta::pure::compiler::resolveFunctionInvocation(
           $candidates->fold({candidate, best |
               if($best.resolvedFunction->isNotEmpty(),
                   | $best,
-                  | let ft = $candidate->meta::pure::compiler::helper::getFunctionType();
+                  | let ft = $candidate->getFunctionType();
                     let params = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
                     
                     // Collect bindings from arg types against param types
-                    let bindings = meta::pure::compiler::helper::range($argTypes->size())->fold({i, b |
+                    let bindings = range($argTypes->size())->fold({i, b |
                         let paramGT = $params->at($i).genericType->toOne();
                         let argGT = $argTypes->at($i);
                         let _dbg = println('  BIND[' + $i->toString() + '] paramGT=' + $paramGT->type()->elementToPath() + ' argGT=' + $argGT->type()->elementToPath() + if($argGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | ' argGT.type=' + if($argGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isEmpty(), |'NONE', | $argGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath()), |' argGT-not-GTV'));
-                        let b2 = meta::pure::compiler::helper::collectTypeParameterBindings($paramGT, $argGT, $b);
+                        let b2 = collectTypeParameterBindings($paramGT, $argGT, $b);
                         let paramMul = $params->at($i).multiplicity->toOne();
                         let argMul = $argMuls->at($i);
-                        meta::pure::compiler::helper::collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
+                        collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
                     }, newPlainParametersBinding()->cast(@ParametersBinding));
                     
                     // Resolve return type using bindings
-                    let returnGT = meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
-                    let returnMul = meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
+                    let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
+                    let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
                     
                     // Wrap as inferred
-                    let inferredReturnGT = meta::pure::compiler::asInferredGenericType($returnGT);
-                    let inferredReturnMul = meta::pure::compiler::asInferredMultiplicity($returnMul);
+                    let inferredReturnGT = asInferredGenericType($returnGT);
+                    let inferredReturnMul = asInferredMultiplicity($returnMul);
                     
                     // Build resolved type/multiplicity parameters
                     let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
                         let vals = $bindings.typeBindings->get($k)->toOne().values;
                         ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(
                             name = $k,
-                            value = meta::pure::compiler::asInferredGenericType($vals->at(0))
+                            value = asInferredGenericType($vals->at(0))
                         );
                     );
                     let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
                         let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
                         ^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(
                             name = $k,
-                            value = meta::pure::compiler::asInferredMultiplicity($vals->at(0))
+                            value = asInferredMultiplicity($vals->at(0))
                         );
                     );
                     
@@ -93,7 +113,7 @@ function meta::pure::compiler::resolveFunctionInvocation(
                     let _d2 = println('    returnGT class=' + $inferredReturnGT->type()->elementToPath());
                     let _d3 = if($inferredReturnGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | println('    returnGT.type=' + if($inferredReturnGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isEmpty(), |'NONE', | $inferredReturnGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath())), | println('    returnGT not GTV'));
                     
-                    ^meta::pure::compiler::FunctionResolutionResult(
+                    ^FunctionResolutionResult(
                         resolvedFunction = $candidate,
                         resolvedName = $candidate.name->toOne(),
                         returnGenericType = $inferredReturnGT,
@@ -111,7 +131,7 @@ function meta::pure::compiler::resolveFunctionInvocation(
 // Inferred wrappers
 // ============================================================================
 
-function meta::pure::compiler::asInferredGenericType(gt:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::structural::functionResolution::asInferredGenericType(gt:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::GenericType[1]
 {
     if($gt->instanceOf(meta::pure::metamodel::type::generics::InferredGenericType),
         | $gt,
@@ -127,7 +147,7 @@ function meta::pure::compiler::asInferredGenericType(gt:meta::pure::metamodel::t
     );
 }
 
-function meta::pure::compiler::asInferredMultiplicity(mul:meta::pure::metamodel::multiplicity::Multiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+function meta::pure::compiler::structural::functionResolution::asInferredMultiplicity(mul:meta::pure::metamodel::multiplicity::Multiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
 {
     if($mul->instanceOf(meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity),
         | $mul,
@@ -146,7 +166,7 @@ function meta::pure::compiler::asInferredMultiplicity(mul:meta::pure::metamodel:
 // Literal type inference for AtomicValues
 // ============================================================================
 
-function meta::pure::compiler::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::structural::functionResolution::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
 {
     let pureName = meta::pure::compiler::primitiveType($value);
     if($pureName->isNotEmpty(),

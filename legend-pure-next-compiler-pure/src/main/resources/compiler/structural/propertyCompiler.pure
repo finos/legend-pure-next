@@ -12,12 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
 {
     let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let mGenType = $protocolType->meta::pure::compiler::compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let mGenType = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
 
     // Default implementation maps Protocol Multiplicity to Metamodel Multiplicity bounds
     let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
@@ -43,7 +63,7 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
-            $owner.classifierGenericType->toOne()->meta::pure::compiler::helper::genericTypeTypeArguments()->at(0),
+            $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
             $mGenType
         ],
         multiplicityArguments = [$mMult]

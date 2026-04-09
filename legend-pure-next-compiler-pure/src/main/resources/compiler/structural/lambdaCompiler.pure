@@ -12,14 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]): meta::pure::compiler::ValueCompileResult[1]
+function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]): ValueCompileResult[1]
 {
     // Compile parameters
     let compiledParams = $l.parameters->map(p | 
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let pmGenType = if($pType.type->isEmpty(), | [], | $pType->meta::pure::compiler::compileGenericType($ctx, '', []));
+        let pmGenType = if($pType.type->isEmpty(), | [], | $pType->compileGenericType($ctx, '', []));
         
         let pmMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
         
@@ -33,7 +38,7 @@ function meta::pure::compiler::compileLambda(l:meta::pure::protocol::grammar::fu
     let innerScope = $scope->concatenate($compiledParams);
     
     // Compile block sequence
-    let compiledSequence = meta::pure::compiler::compileExpressionSequence($l.expressionSequence, $ctx, $innerScope);
+    let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx, $innerScope);
     
     // Any open variable detected in the sequence that isn't in innerScope is an open variable
     let openVariables = $compiledSequence.openVariables->filter(var | 
@@ -44,12 +49,12 @@ function meta::pure::compiler::compileLambda(l:meta::pure::protocol::grammar::fu
     let bodyReturnGT = if($compiledSequence.specs->isEmpty(),
         | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
         | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
-          meta::pure::compiler::asInferredGenericType($lastExpr.genericType->toOne());
+          asInferredGenericType($lastExpr.genericType->toOne());
     );
     let bodyReturnMul = if($compiledSequence.specs->isEmpty(),
         | meta::pure::metamodel::multiplicity::PureOne,
         | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
-          meta::pure::compiler::asInferredMultiplicity($lastExpr.multiplicity->toOne());
+          asInferredMultiplicity($lastExpr.multiplicity->toOne());
     );
     
     // Build FunctionType from params + inferred return type
@@ -85,7 +90,7 @@ function meta::pure::compiler::compileLambda(l:meta::pure::protocol::grammar::fu
         sourceInformation = $l.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
     );
     
-    ^meta::pure::compiler::ValueCompileResult(
+    ^ValueCompileResult(
         values = [$m3Lambda],
         openVariables = $openVariables
     );

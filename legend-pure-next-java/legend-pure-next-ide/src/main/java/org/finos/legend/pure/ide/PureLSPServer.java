@@ -483,7 +483,20 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                     {
                         if (!elementTypes.containsKey(path))
                         {
-                            elementTypes.put(path, "UserDefined");
+                            meta.pure.metamodel.PackageableElement element = m.getElement(path);
+                            String type = "UserDefined";
+                            if (element != null)
+                            {
+                                if (element instanceof meta.pure.metamodel.type.Class) { type = "Class"; }
+                                else if (element instanceof meta.pure.metamodel.type.Enumeration) { type = "Enumeration"; }
+                                else if (element instanceof meta.pure.metamodel.relationship.Association) { type = "Association"; }
+                                else if (element instanceof meta.pure.metamodel.extension.Profile) { type = "Profile"; }
+                                else if (element instanceof meta.pure.metamodel.function.UserDefinedFunction) { type = "UserDefinedFunction"; }
+                                else if (element instanceof meta.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
+                                else if (element instanceof meta.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
+                                else if (element instanceof meta.pure.metamodel.Package) { type = "Package"; }
+                            }
+                            elementTypes.put(path, type);
                         }
                     }
                 }
@@ -606,7 +619,17 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 String sourceId = lu.getSourceIdForElement(elementPath);
                 if (sourceId != null && "user.pure".equals(sourceId))
                 {
-                    sendOpenFile(sourceId, currentSource);
+                    meta.pure.metamodel.PackageableElement element = lu.getElement(elementPath);
+                    if (element != null && element._sourceInformation() != null)
+                    {
+                        Long lLine = element._sourceInformation()._startLine();
+                        Long lCol = element._sourceInformation()._startColumn();
+                        sendOpenFile(sourceId, currentSource, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
+                    }
+                    else
+                    {
+                        sendOpenFile(sourceId, currentSource);
+                    }
                     return;
                 }
             }
@@ -618,7 +641,17 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             String content = compilerPureModule.getSourceText(sourceId);
             if (content != null)
             {
-                sendOpenFile(sourceId, content);
+                meta.pure.metamodel.PackageableElement element = compilerPureModule.getElement(elementPath);
+                if (element != null && element._sourceInformation() != null)
+                {
+                    Long lLine = element._sourceInformation()._startLine();
+                    Long lCol = element._sourceInformation()._startColumn();
+                    sendOpenFile(sourceId, content, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
+                }
+                else
+                {
+                    sendOpenFile(sourceId, content);
+                }
             }
         }
     }
@@ -645,6 +678,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         if (client instanceof PureLanguageClient pureClient)
         {
             pureClient.openFile(new OpenFileParams(sourceId, content));
+        }
+    }
+
+    private void sendOpenFile(String sourceId, String content, Integer line, Integer column)
+    {
+        if (client instanceof PureLanguageClient pureClient)
+        {
+            pureClient.openFile(new OpenFileParams(sourceId, content, line, column));
         }
     }
 
@@ -760,6 +801,8 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     {
         private String sourceId;
         private String content;
+        private Integer line;
+        private Integer column;
 
         public OpenFileParams() {}
 
@@ -768,6 +811,19 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             this.sourceId = sourceId;
             this.content = content;
         }
+
+        public OpenFileParams(String sourceId, String content, Integer line, Integer column)
+        {
+            this.sourceId = sourceId;
+            this.content = content;
+            this.line = line;
+            this.column = column;
+        }
+
+        public Integer getLine() { return line; }
+        public void setLine(Integer line) { this.line = line; }
+        public Integer getColumn() { return column; }
+        public void setColumn(Integer column) { this.column = column; }
 
         public String getSourceId() { return sourceId; }
         public void setSourceId(String sourceId) { this.sourceId = sourceId; }
