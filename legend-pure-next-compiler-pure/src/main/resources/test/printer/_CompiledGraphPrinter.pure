@@ -32,6 +32,7 @@ function meta::pure::compiler::printer::printElement(element:PackageableElement[
         [
             c:meta::pure::metamodel::type::Class<Any>[1] | $c->printClass(),
             assoc:meta::pure::metamodel::relationship::Association[1] | $assoc->printAssociation(),
+            en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en->printEnumeration(),
             p:meta::pure::metamodel::type::PrimitiveType[1] | $p->printPrimitive(),
             a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
         ]
@@ -63,6 +64,29 @@ function meta::pure::compiler::printer::printAssociation(assoc:meta::pure::metam
             [ '  property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
         )->joinStrings('\n') ]->joinStrings(''))
     ]->joinStrings('');
+}
+
+function meta::pure::compiler::printer::printEnumeration(en:meta::pure::metamodel::type::Enumeration<Any>[1]):String[1]
+{
+    [
+        'enumeration ', $en->fullPath(), ' extends Enum',
+        $en.classifierGenericType->printClassifierGenericType(),
+        $en.sourceInformation->printSourceInfo(),
+        if($en.properties->isEmpty(), | '', | [ '\n', $en.properties->cast(@Any)->map(p | $p->meta::pure::compiler::printer::printEnumerationProperty())->joinStrings('\n') ]->joinStrings(''))
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::printer::printEnumerationProperty(p:Any[1]):String[1]
+{
+    let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+    let expr = $p2.defaultValue->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>).expressionSequence->at(0);
+    let val = $expr->match([
+        a:meta::pure::metamodel::valuespecification::AtomicValue[1] | $a.value->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>),
+        en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en
+    ]);
+    let propCGT = $p2.classifierGenericType->printClassifierGenericType();
+    let enumFullName = $p2.owner->toOne()->fullPath();
+    [ '  property ', $p2.name->toOne(), $propCGT, '  = ^', $enumFullName, '(name=\'', $val.name->toOne(), '\')  ~lambda:#LambdaFunction<#{->', $enumFullName, '[1]}#>#', $p2.sourceInformation->printSourceInfo() ]->joinStrings('');
 }
 
 function meta::pure::compiler::printer::printClassifierGenericType(cgt:GenericType[0..1]):String[1]

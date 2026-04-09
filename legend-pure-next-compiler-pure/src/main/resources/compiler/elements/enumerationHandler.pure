@@ -1,0 +1,83 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Enumeration<Any>[1]
+{
+    let packagePath = $protocolEnum.package->toOne().pointerValue;
+    let enumName = $packagePath + '::' + $protocolEnum.name;
+    let skeleton = $context->resolveElement($enumName)->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+
+    let selfGenType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $skeleton);
+
+    let pureOne = meta::pure::metamodel::multiplicity::PureOne;
+
+    // Build the enum value properties
+    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::buildEnumProperty($skeleton, $selfGenType));
+
+    ^$skeleton(
+        properties = $enumValues
+    );
+}
+
+function meta::pure::compiler::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:meta::pure::metamodel::type::Enumeration<Any>[1], selfGenType:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+{
+    let pureOne = meta::pure::metamodel::multiplicity::PureOne;
+
+    let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::property::Property,
+        typeArguments = [
+            $skeleton.classifierGenericType->toOne(), 
+            $selfGenType 
+        ],
+        multiplicityArguments = [$pureOne]
+    );
+
+    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+    
+    let lambdaReturn = ^meta::pure::metamodel::type::FunctionType(
+        returnType = $selfGenType,
+        returnMultiplicity = $pureOne
+    );
+    let defaultLambdaGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::LambdaFunction,
+        typeArguments = [^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $lambdaReturn)]
+    );
+    let emptyLambda = meta::pure::functions::lang::new($defaultLambdaGT)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+
+    ^$prop(
+        name = $p.name,
+        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+        genericType = $selfGenType,
+        multiplicity = $pureOne,
+        owner = $skeleton,
+        defaultValue = ^$emptyLambda(
+            expressionSequence = [
+                ^meta::pure::metamodel::valuespecification::AtomicValue(
+                    genericType = $selfGenType,
+                    multiplicity = $pureOne,
+                    value = ^$skeleton(name = $p.name)
+                )
+            ]
+        ),
+        sourceInformation = $p.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        ))
+    );
+}
