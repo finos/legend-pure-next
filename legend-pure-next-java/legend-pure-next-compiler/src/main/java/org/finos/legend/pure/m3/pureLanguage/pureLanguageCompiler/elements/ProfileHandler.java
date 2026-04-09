@@ -23,6 +23,7 @@ import meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
 /**
  * Handler for Profile.
@@ -36,7 +37,7 @@ public final class ProfileHandler
     public static Profile firstPass(meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
         ProfileImpl result = new ProfileImpl(model)
-                ._name(grammar._name());
+                                ._name(grammar._name());
 
         return result
                 ._p_stereotypes(grammar._p_stereotypes().collect(s ->
@@ -46,7 +47,8 @@ public final class ProfileHandler
                 ._p_tags(grammar._p_tags().collect(t ->
                         new TagImpl(model)
                                 ._value(t._value())
-                                ._profile(result)));
+                                ._profile(result)))
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
     }
 
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)

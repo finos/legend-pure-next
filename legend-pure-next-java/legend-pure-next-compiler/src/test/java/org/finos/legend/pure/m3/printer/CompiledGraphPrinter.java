@@ -363,6 +363,7 @@ public final class CompiledGraphPrinter
     {
         sb.append("profile ").append(fullPath(p));
         appendClassifierGenericType(sb, p);
+        appendSourceInfo(sb, p._sourceInformation());
         sb.append('\n');
         if (p._p_stereotypes() != null)
         {

@@ -36,8 +36,28 @@ function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::
         )
     );
 
+    let compiledStereotypes = $protocolClass.stereotypes->map(s |
+        let profile = $context->resolveElement($s.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        let stereotypeName = $s.extraPointerValues->at(0).value;
+        $profile.p_stereotypes->filter(x | $x.value == $stereotypeName)->toOne();
+    );
+
+    let compiledTaggedValues = $protocolClass.taggedValues->map(t |
+        let profile = $context->resolveElement($t.tag.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        let tagName = $t.tag.extraPointerValues->at(0).value;
+        let pTag = $profile.p_tags->filter(x | $x.value == $tagName)->toOne();
+        let tvGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::TaggedValue);
+        let inst = meta::pure::functions::lang::new($tvGT)->cast(@meta::pure::metamodel::extension::TaggedValue);
+        ^$inst(
+            tag = $pTag,
+            value = $t.value
+        );
+    );
+
     // Use ~.~ to wire specific and owner back to the copy
     ^$skeleton(
+        stereotypes = $compiledStereotypes,
+        taggedValues = $compiledTaggedValues,
         generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
         properties = $compiledProperties->map(p | ^$p(owner = ~.~))
     );

@@ -33,6 +33,7 @@ function meta::pure::compiler::printer::printElement(element:PackageableElement[
             c:meta::pure::metamodel::type::Class<Any>[1] | $c->printClass(),
             assoc:meta::pure::metamodel::relationship::Association[1] | $assoc->printAssociation(),
             en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en->printEnumeration(),
+            pr:meta::pure::metamodel::extension::Profile[1] | $pr->printProfile(),
             p:meta::pure::metamodel::type::PrimitiveType[1] | $p->printPrimitive(),
             a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
         ]
@@ -46,6 +47,8 @@ function meta::pure::compiler::printer::printClass(c:meta::pure::metamodel::type
         if($c.generalizations->isEmpty(), | '', | [ ' extends ', $c.generalizations->cast(@Any)->map(g | let g2 = $g->cast(@meta::pure::metamodel::relationship::Generalization); $g2.general->printType();)->joinStrings(', ') ]->joinStrings('') ),
         $c.classifierGenericType->printClassifierGenericType(),
         $c.sourceInformation->printSourceInfo(),
+        if($c.stereotypes->isEmpty(), | '', | '\n  <<' + $c.stereotypes->map(s | $s.profile->toOne()->fullPath() + '.' + $s.value)->joinStrings(', ') + '>>'),
+        if($c.taggedValues->isEmpty(), | '', | '\n  {' + $c.taggedValues->map(t | $t.tag.profile->toOne()->fullPath() + '.' + $t.tag.value + ' = \'' + $t.value + '\'')->joinStrings(', ') + '}'),
         if($c.properties->isEmpty(), | '', | [ '\n', $c.properties->cast(@Any)->map(p | 
             let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
             [ 'property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
@@ -87,6 +90,17 @@ function meta::pure::compiler::printer::printEnumerationProperty(p:Any[1]):Strin
     let propCGT = $p2.classifierGenericType->printClassifierGenericType();
     let enumFullName = $p2.owner->toOne()->fullPath();
     [ '  property ', $p2.name->toOne(), $propCGT, '  = ^', $enumFullName, '(name=\'', $val.name->toOne(), '\')  ~lambda:#LambdaFunction<#{->', $enumFullName, '[1]}#>#', $p2.sourceInformation->printSourceInfo() ]->joinStrings('');
+}
+
+function meta::pure::compiler::printer::printProfile(pr:meta::pure::metamodel::extension::Profile[1]):String[1]
+{
+    [
+        'profile ', $pr->fullPath(),
+        $pr.classifierGenericType->printClassifierGenericType(),
+        $pr.sourceInformation->printSourceInfo(),
+        if($pr.p_stereotypes->isEmpty(), | '', | [ '\n', $pr.p_stereotypes->map(s | '  stereotype ' + $s.value + $s.classifierGenericType->printClassifierGenericType())->joinStrings('\n') ]->joinStrings('')),
+        if($pr.p_tags->isEmpty(), | '', | [ '\n', $pr.p_tags->map(t | '  tag ' + $t.value + $t.classifierGenericType->printClassifierGenericType())->joinStrings('\n') ]->joinStrings(''))
+    ]->joinStrings('');
 }
 
 function meta::pure::compiler::printer::printClassifierGenericType(cgt:GenericType[0..1]):String[1]

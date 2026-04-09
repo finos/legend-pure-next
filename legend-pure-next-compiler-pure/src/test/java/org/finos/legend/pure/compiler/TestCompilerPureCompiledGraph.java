@@ -93,6 +93,7 @@ public class TestCompilerPureCompiledGraph
                               
                               if (!testName.contains("class/property/simple.pure") &&
                                   !testName.contains("class/property/typeArguments.pure") &&
+                                  !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
                                   !testName.contains("class/inheritance/typeArguments.pure") &&
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&

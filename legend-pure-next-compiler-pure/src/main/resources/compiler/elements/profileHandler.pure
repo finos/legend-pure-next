@@ -1,0 +1,57 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
+    let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
+    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+    let emptyProfile = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Profile)
+    )->cast(@meta::pure::metamodel::extension::Profile);
+    
+    let profileSkeletonInt = ^$emptyProfile(
+        name = $pr.name,
+        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+        p_stereotypes = $pr.p_stereotypes->map(s |
+            let stInst = meta::pure::functions::lang::new(
+                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Stereotype)
+            )->cast(@meta::pure::metamodel::extension::Stereotype);
+            ^$stInst(value = $s.value, profile = ~.~);
+        ),
+        p_tags = $pr.p_tags->map(t |
+            let tagInst = meta::pure::functions::lang::new(
+                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Tag)
+            )->cast(@meta::pure::metamodel::extension::Tag);
+            ^$tagInst(value = $t.value, profile = ~.~);
+        ),
+        sourceInformation = $pr.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        ))
+    );
+    
+    let profileSkeleton = ^$profileSkeletonInt(
+        classifierGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+            type = meta::pure::metamodel::extension::Profile
+        )
+    );
+    
+    ^CompilerContext(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
+}

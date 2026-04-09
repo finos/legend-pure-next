@@ -18,7 +18,7 @@ class protocol::LightProfileStereotypesTaggedValues extends Any  ~Class<protocol
   {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
   property value :Integer[1]  ~Property<protocol::LightProfileStereotypesTaggedValues, Integer|1>
 
-profile protocol::support::AProfile  ~Profile
+profile protocol::support::AProfile  ~Profile  @9:1-13:1
   stereotype flag  ~Stereotype
   stereotype newFlag  ~Stereotype
   tag tag1  ~Tag
