@@ -91,6 +91,8 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 $pr->meta::pure::compiler::compileProfilePass1($ctx);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
                 $fn->meta::pure::compiler::compileNativeFunctionPass1($ctx);,
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                $fd->meta::pure::compiler::compileFunctionDefinitionPass1($ctx);,
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
                 let packagePath = $p.package->toOne().pointerValue;
                 let pName = $packagePath + '::' + $p.name;
@@ -127,6 +129,8 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 $en->meta::pure::compiler::compileEnumeration($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
                 $fn->meta::pure::compiler::compileNativeFunctionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                $fd->meta::pure::compiler::compileFunctionDefinitionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
                 let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
                 let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
@@ -134,6 +138,28 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
             a:meta::pure::protocol::grammar::PackageableElement[1] |
                 []->cast(@meta::pure::metamodel::PackageableElement)
         ]);
+    );
+}
+
+function meta::pure::compiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+{
+    let pMult = $m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
+    if($pMult.upperBound->isEmpty(),
+        | if($pMult.lowerBound.value == 0,
+              | meta::pure::metamodel::multiplicity::ZeroMany,
+              | meta::pure::metamodel::multiplicity::OneMany
+          ),
+        | let upper = $pMult.upperBound->toOne().value;
+          if($pMult.lowerBound.value == 1 && $upper == 1,
+              | meta::pure::metamodel::multiplicity::PureOne,
+              | if($pMult.lowerBound.value == 0 && $upper == 1,
+                    | meta::pure::metamodel::multiplicity::ZeroOne,
+                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
+                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
+                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+                      )
+                )
+          );
     );
 }
 

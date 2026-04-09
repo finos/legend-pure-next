@@ -32,5 +32,6 @@
         <module>legend-pure-next-compiler</module>
         <module>legend-pure-next-parser</module>
         <module>legend-pure-next-execution</module>
+        <module>legend-pure-next-ide</module>
     </modules>
 </project>

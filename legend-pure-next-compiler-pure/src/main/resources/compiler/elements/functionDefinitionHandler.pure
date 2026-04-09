@@ -1,0 +1,107 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::compileFunctionDefinitionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    
+    let mangledName = $fn.name;
+    let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
+    
+    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+    let emptyFunc = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::UserDefinedFunction)
+    )->cast(@meta::pure::metamodel::function::UserDefinedFunction<Any>);
+    
+    let skeleton = ^$emptyFunc(
+        name = $mangledName,
+        functionName = $fn.name,
+        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+        sourceInformation = $fn.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        ))
+    );
+    
+    ^CompilerContext(elementMap=$ctx.elementMap->put($fName, $skeleton));
+}
+
+function meta::pure::compiler::compileFunctionDefinitionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::UserDefinedFunction<Any>[1]
+{
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    
+    let mangledName = $fn.name;
+    let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
+    
+    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@meta::pure::metamodel::function::UserDefinedFunction<Any>);
+    
+    // Compile parameters
+    let compiledParams = $fn.parameters->map(p | 
+        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+        let mGenType = $pType->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+        
+        let mMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
+        
+        ^meta::pure::metamodel::valuespecification::VariableExpression(
+            name = $p.name,
+            genericType = $mGenType,
+            multiplicity = $mMult
+        )->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    );
+    
+    // Compile return type
+    let rType = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let rGenType = $rType->meta::pure::compiler::compileGenericType($ctx, $packagePath, []);
+    
+    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::compileMultiplicity();
+    
+    // FunctionType
+    let functionType = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
+    )->cast(@meta::pure::metamodel::type::FunctionType);
+    
+    let funcType = ^$functionType(
+        parameters = $compiledParams,
+        returnType = $rGenType,
+        returnMultiplicity = $rMMult
+    );
+        
+    let finalGenType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::UserDefinedFunction,
+        typeArguments = [
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+                type = $funcType
+            )
+        ]
+    );
+
+    // Initial scope variables using parameters
+    let paramScope = $compiledParams;
+
+    // Compile expression sequence with sequential scope expansion (let bindings)
+    let bodyResult = meta::pure::compiler::compileExpressionSequence($fn.expressionSequence, $ctx, $paramScope);
+    
+    ^$skeleton(
+        parameters = $compiledParams,
+        returnGenericType = $rGenType,
+        returnMultiplicity = $rMMult,
+        classifierGenericType = $finalGenType,
+        expressionSequence = $bodyResult.specs
+    );
+}

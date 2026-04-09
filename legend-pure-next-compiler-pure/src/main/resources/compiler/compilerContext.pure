@@ -21,6 +21,10 @@ Class meta::pure::compiler::CompilerContext
 
 native function meta::pure::compiler::getPackageableElement(path:String[1]):meta::pure::metamodel::PackageableElement[0..1];
 
+native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];
+
+native function meta::pure::compiler::primitiveType(name:Any[1]):String[0..1];
+
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):meta::pure::metamodel::PackageableElement[0..1]
 {
     let localResolution = $context.elementMap->get($path);

@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure IDE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #1c2333;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.15);
+            --success: #3fb950;
+            --error: #f85149;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+            --sidebar-width: 280px;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            min-height: 44px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #58a6ff, #a371f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .file-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .file-icon { color: var(--accent); font-size: 14px; }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            transition: background 0.3s ease;
+        }
+        .status-dot.connected { background: var(--success); box-shadow: 0 0 6px rgba(63, 185, 80, 0.5); }
+        .status-dot.error { background: var(--error); }
+
+        .run-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .run-btn:hover {
+            background: linear-gradient(135deg, #2ea043, #3fb950);
+            box-shadow: 0 0 12px rgba(46, 160, 67, 0.3);
+            transform: translateY(-1px);
+        }
+        .run-btn:active { transform: translateY(0); }
+        .run-btn .shortcut {
+            font-size: 11px;
+            opacity: 0.7;
+            padding: 1px 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+        }
+
+        /* Main layout: sidebar + editor */
+        .main-area {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: 200px;
+            max-width: 500px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+        .sidebar-tab {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .sidebar-tab:hover {
+            color: var(--text-primary);
+            background: rgba(88, 166, 255, 0.05);
+        }
+        .sidebar-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .sidebar-tab .tab-icon {
+            font-size: 13px;
+        }
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .tree-panel {
+            display: none;
+        }
+        .tree-panel.active {
+            display: block;
+        }
+        .tree-loading {
+            padding: 16px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Tree nodes */
+        .tree-node {
+            user-select: none;
+        }
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            padding-left: calc(8px + var(--depth, 0) * 16px);
+            font-size: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0 4px;
+            transition: background 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-item:hover {
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .tree-item .chevron {
+            width: 16px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            text-align: center;
+            transition: transform 0.15s ease;
+        }
+        .tree-item .chevron.expanded {
+            transform: rotate(90deg);
+        }
+        .tree-item .chevron.leaf {
+            visibility: hidden;
+        }
+        .tree-item .node-icon {
+            font-size: 13px;
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+        .tree-item .node-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-children {
+            display: none;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* Type-specific icons */
+        .icon-package { color: #d2a8ff; }
+        .icon-class { color: #79c0ff; }
+        .icon-enum { color: #ffa657; }
+        .icon-function { color: #7ee787; }
+        .icon-association { color: #f778ba; }
+        .icon-profile { color: #ff7b72; }
+        .icon-measure { color: #a5d6ff; }
+        .icon-default { color: var(--text-secondary); }
+        .icon-file { color: var(--text-secondary); }
+        .icon-folder { color: #d2a8ff; }
+
+        /* Resize handle */
+        .resize-handle {
+            width: 4px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+        .resize-handle:hover,
+        .resize-handle.active {
+            background: var(--accent);
+        }
+
+        /* Editor + result container */
+        .editor-result-area {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Editor area */
+        .editor-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+        #editor { width: 100%; height: 100%; }
+
+        /* Result panel */
+        .result-panel {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            min-height: 120px;
+            max-height: 35vh;
+            display: flex;
+            flex-direction: column;
+            transition: min-height 0.3s ease;
+        }
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            user-select: none;
+        }
+        .result-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .result-header-left .icon { font-size: 14px; }
+        .result-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .result-badge.success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+        .result-badge.error { background: rgba(248, 81, 73, 0.15); color: var(--error); }
+        .result-content {
+            flex: 1;
+            padding: 12px 16px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+        .result-content.error { color: var(--error); }
+        .result-content.success { color: var(--success); }
+        .result-content .placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        /* Spinner */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Editor / Diagram tab bar */
+        .editor-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+        .editor-tab {
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .editor-tab:hover {
+            color: var(--text-primary);
+            background: rgba(88, 166, 255, 0.05);
+        }
+        .editor-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(88, 166, 255, 0.08);
+        }
+
+        /* Diagram canvas container */
+        .diagram-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            display: none;
+            background: #0d1117;
+        }
+        .diagram-container.active {
+            display: block;
+        }
+        .diagram-container canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        .diagram-container canvas.dragging {
+            cursor: grabbing;
+        }
+        .diagram-container canvas.moving {
+            cursor: move;
+        }
+        .diagram-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-style: italic;
+        }
+        .diagram-toolbar {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        .diagram-toolbar button {
+            padding: 4px 8px;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .diagram-toolbar button:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+        .diagram-zoom-label {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 8px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <span class="logo">◆ Pure IDE</span>
+            <div class="file-tab">
+                <span class="file-icon">⬡</span>
+                <span>user.pure</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <button class="run-btn" id="runBtn" onclick="executeCode()">
+                ▶ Run <span class="shortcut">F9</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main area: sidebar + editor -->
+    <div class="main-area">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" id="tabElements" onclick="switchTab('elements')">
+                    <span class="tab-icon">◇</span> Elements
+                </button>
+                <button class="sidebar-tab" id="tabFiles" onclick="switchTab('files')">
+                    <span class="tab-icon">▤</span> Files
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="tree-panel active" id="panelElements">
+                    <div class="tree-loading"><span class="spinner"></span> Loading elements...</div>
+                </div>
+                <div class="tree-panel" id="panelFiles">
+                    <div class="tree-loading"><span class="spinner"></span> Loading files...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resize Handle -->
+        <div class="resize-handle" id="resizeHandle"></div>
+
+        <!-- Editor + Result -->
+        <div class="editor-result-area">
+            <!-- Editor / Diagram tabs -->
+            <div class="editor-tabs">
+                <button class="editor-tab active" id="editorTabBtn" onclick="switchEditorTab('editor')">
+                    ✎ Editor
+                </button>
+                <button class="editor-tab" id="diagramTabBtn" onclick="switchEditorTab('diagram')">
+                    ◈ Diagram
+                </button>
+            </div>
+
+            <!-- Editor -->
+            <div class="editor-container" id="editorPanel">
+                <div id="editor"></div>
+            </div>
+
+            <!-- Diagram -->
+            <div class="diagram-container" id="diagramPanel">
+                <div class="diagram-toolbar">
+                    <button onclick="diagramZoomIn()" title="Zoom In">+</button>
+                    <button onclick="diagramZoomOut()" title="Zoom Out">−</button>
+                    <button onclick="diagramFitToScreen()" title="Fit to Screen">⊞</button>
+                </div>
+                <canvas id="diagramCanvas"></canvas>
+                <div class="diagram-zoom-label" id="diagramZoomLabel">100%</div>
+            </div>
+
+            <!-- Result Panel -->
+            <div class="result-panel">
+                <div class="result-header">
+                    <div class="result-header-left">
+                        <span class="icon">◉</span>
+                        <span>Output</span>
+                        <span class="result-badge" id="resultBadge" style="display:none"></span>
+                    </div>
+                </div>
+                <div class="result-content" id="resultContent">
+                    <span class="placeholder">Press F9 or click Run to compile and execute go():Any[*]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+    <script>
+        let editor;
+        let ws;
+        let requestId = 0;
+        let pendingRequests = {};
+        let initialized = false;
+        let documentVersion = 0;
+        const DOC_URI = 'file:///user.pure';
+
+        // =================================================================
+        // Sidebar Tab Switching
+        // =================================================================
+        function switchTab(tab) {
+            document.getElementById('tabElements').classList.toggle('active', tab === 'elements');
+            document.getElementById('tabFiles').classList.toggle('active', tab === 'files');
+            document.getElementById('panelElements').classList.toggle('active', tab === 'elements');
+            document.getElementById('panelFiles').classList.toggle('active', tab === 'files');
+        }
+
+        // =================================================================
+        // Tree Rendering
+        // =================================================================
+        const TYPE_ICONS = {
+            'Package':              { icon: '📦', cls: 'icon-package' },
+            'Class':                { icon: '◇',  cls: 'icon-class' },
+            'Enumeration':          { icon: '◆',  cls: 'icon-enum' },
+            'FunctionDefinition':   { icon: 'ƒ',  cls: 'icon-function' },
+            'ConcreteFunctionDefinition': { icon: 'ƒ', cls: 'icon-function' },
+            'Association':          { icon: '⟷',  cls: 'icon-association' },
+            'Profile':              { icon: '◎',  cls: 'icon-profile' },
+            'Measure':              { icon: '⊡',  cls: 'icon-measure' },
+            'UserDefined':          { icon: '✦',  cls: 'icon-function' },
+            'File':                 { icon: '📄', cls: 'icon-file' },
+        };
+
+        function getIcon(type, hasChildren) {
+            if (hasChildren) return TYPE_ICONS['Package'];
+            return TYPE_ICONS[type] || { icon: '○', cls: 'icon-default' };
+        }
+
+        function renderTree(nodes, container, depth) {
+            depth = depth || 0;
+            for (const node of nodes) {
+                const hasChildren = node.children && node.children.length > 0;
+                const iconInfo = getIcon(node.type, hasChildren);
+
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'tree-node';
+
+                const item = document.createElement('div');
+                item.className = 'tree-item';
+                item.style.setProperty('--depth', depth);
+                item.title = node.name + (node.type && node.type !== 'Package' ? ' (' + node.type + ')' : '');
+
+                const chevron = document.createElement('span');
+                chevron.className = 'chevron' + (hasChildren ? '' : ' leaf');
+                chevron.textContent = '▶';
+
+                const icon = document.createElement('span');
+                icon.className = 'node-icon ' + iconInfo.cls;
+                icon.textContent = iconInfo.icon;
+
+                const name = document.createElement('span');
+                name.className = 'node-name';
+                name.textContent = node.name;
+
+                item.appendChild(chevron);
+                item.appendChild(icon);
+                item.appendChild(name);
+                nodeDiv.appendChild(item);
+
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'tree-children';
+                    renderTree(node.children, childrenDiv, depth + 1);
+                    nodeDiv.appendChild(childrenDiv);
+
+                    item.addEventListener('click', () => {
+                        const isExpanded = childrenDiv.classList.contains('expanded');
+                        childrenDiv.classList.toggle('expanded');
+                        chevron.classList.toggle('expanded');
+                    });
+                }
+
+                container.appendChild(nodeDiv);
+            }
+        }
+
+        function populateTree(treeId, jsonStr) {
+            try {
+                const nodes = JSON.parse(jsonStr);
+                const panelId = treeId === 'packageTree' ? 'panelElements' : 'panelFiles';
+                const panel = document.getElementById(panelId);
+                panel.innerHTML = '';
+                renderTree(nodes, panel, 0);
+            } catch (e) {
+                console.error('Failed to parse tree data:', e);
+            }
+        }
+
+        // =================================================================
+        // Sidebar Resize
+        // =================================================================
+        (function() {
+            const handle = document.getElementById('resizeHandle');
+            const sidebar = document.getElementById('sidebar');
+            let isResizing = false;
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = Math.min(Math.max(e.clientX, 200), 500);
+                sidebar.style.width = newWidth + 'px';
+                if (editor) editor.layout();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // =================================================================
+        // Monaco setup
+        // =================================================================
+        require.config({
+            paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }
+        });
+
+        require(['vs/editor/editor.main'], function () {
+            // Register Pure language
+            monaco.languages.register({ id: 'pure' });
+
+            monaco.languages.setMonarchTokensProvider('pure', {
+                keywords: [
+                    'function', 'let', 'if', 'else', 'true', 'false',
+                    'import', 'Class', 'Enum', 'Association', 'Profile',
+                    'Measure', 'native', 'extends', 'new', 'cast',
+                    'instanceof', 'not', 'and', 'or'
+                ],
+                typeKeywords: [
+                    'String', 'Integer', 'Float', 'Boolean', 'Date',
+                    'StrictDate', 'DateTime', 'Number', 'Decimal',
+                    'Any', 'Nil', 'Byte'
+                ],
+                operators: [
+                    '->', '+', '-', '*', '/', '==', '!=', '<', '>', '<=', '>=',
+                    '&&', '||', '!', '|', '=', ';', ',', '.', '::', '~'
+                ],
+                symbols: /[=><~?:&|+\-*\/\^%]+/,
+                escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4})/,
+
+                tokenizer: {
+                    root: [
+                        // Comments
+                        [/\/\/.*$/, 'comment'],
+                        [/\/\*/, 'comment', '@comment'],
+
+                        // Strings
+                        [/'/, 'string', '@string_single'],
+
+                        // Numbers
+                        [/\d+\.\d*/, 'number.float'],
+                        [/\d+/, 'number'],
+
+                        // Multiplicity brackets
+                        [/\[/, 'delimiter.bracket', '@multiplicity'],
+
+                        // Variable references
+                        [/\$[a-zA-Z_]\w*/, 'variable'],
+
+                        // Identifiers and keywords
+                        [/[a-zA-Z_]\w*/, {
+                            cases: {
+                                '@keywords': 'keyword',
+                                '@typeKeywords': 'type',
+                                '@default': 'identifier'
+                            }
+                        }],
+
+                        // Operators
+                        [/@symbols/, {
+                            cases: {
+                                '@operators': 'operator',
+                                '@default': ''
+                            }
+                        }],
+
+                        // Delimiters
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/[;,.]/, 'delimiter'],
+                    ],
+                    comment: [
+                        [/[^\/*]+/, 'comment'],
+                        [/\*\//, 'comment', '@pop'],
+                        [/[\/*]/, 'comment']
+                    ],
+                    string_single: [
+                        [/[^'\\]+/, 'string'],
+                        [/@escapes/, 'string.escape'],
+                        [/\\./, 'string.escape.invalid'],
+                        [/'/, 'string', '@pop']
+                    ],
+                    multiplicity: [
+                        [/\*/, 'keyword'],
+                        [/\d+/, 'number'],
+                        [/\.\./, 'operator'],
+                        [/\]/, 'delimiter.bracket', '@pop'],
+                    ]
+                }
+            });
+
+            // Custom theme
+            monaco.editor.defineTheme('pure-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: 'ff7b72', fontStyle: 'bold' },
+                    { token: 'type', foreground: '79c0ff' },
+                    { token: 'variable', foreground: 'ffa657' },
+                    { token: 'string', foreground: 'a5d6ff' },
+                    { token: 'number', foreground: '79c0ff' },
+                    { token: 'comment', foreground: '8b949e', fontStyle: 'italic' },
+                    { token: 'operator', foreground: 'ff7b72' },
+                    { token: 'identifier', foreground: 'e6edf3' },
+                    { token: 'delimiter', foreground: '8b949e' },
+                ],
+                colors: {
+                    'editor.background': '#0d1117',
+                    'editor.foreground': '#e6edf3',
+                    'editor.lineHighlightBackground': '#161b2280',
+                    'editor.selectionBackground': '#264f7840',
+                    'editorCursor.foreground': '#58a6ff',
+                    'editorLineNumber.foreground': '#484f58',
+                    'editorLineNumber.activeForeground': '#8b949e',
+                    'editor.selectionHighlightBackground': '#3fb95020',
+                    'editorBracketMatch.background': '#58a6ff20',
+                    'editorBracketMatch.border': '#58a6ff40',
+                }
+            });
+
+            // Create editor
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: [
+                    'function go():Any[*]',
+                    '{',
+                    "   'Hello World!';",
+                    '}'
+                ].join('\n'),
+                language: 'pure',
+                theme: 'pure-dark',
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                scrollBeyondLastLine: false,
+                padding: { top: 12 },
+                smoothScrolling: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                bracketPairColorization: { enabled: true },
+                automaticLayout: true,
+                tabSize: 3,
+                insertSpaces: true,
+            });
+
+            // F9 keybinding (editor-scoped)
+            editor.addCommand(monaco.KeyCode.F9, executeCode);
+
+            // Global F9 keybinding (works even when editor doesn't have focus)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F9') {
+                    e.preventDefault();
+                    executeCode();
+                }
+            });
+
+            // Notify LSP on content change
+            editor.onDidChangeModelContent(() => {
+                if (initialized && ws && ws.readyState === WebSocket.OPEN) {
+                    documentVersion++;
+                    sendNotification('textDocument/didChange', {
+                        textDocument: { uri: DOC_URI, version: documentVersion },
+                        contentChanges: [{ text: editor.getValue() }]
+                    });
+                }
+            });
+
+            // Connect to LSP
+            connectLSP();
+
+            // Connect diagram sync
+            setupDiagramSync();
+        });
+
+        // =================================================================
+        // LSP WebSocket client
+        // =================================================================
+        function connectLSP() {
+            ws = new WebSocket('ws://localhost:9091');
+
+            ws.onopen = () => {
+                setStatus('connected', 'Connected');
+                // Send initialize
+                sendRequest('initialize', {
+                    processId: null,
+                    capabilities: {},
+                    rootUri: null,
+                }).then(result => {
+                    // Send initialized notification
+                    sendNotification('initialized', {});
+                    initialized = true;
+
+                    // Send didOpen
+                    sendNotification('textDocument/didOpen', {
+                        textDocument: {
+                            uri: DOC_URI,
+                            languageId: 'pure',
+                            version: documentVersion,
+                            text: editor ? editor.getValue() : ''
+                        }
+                    });
+
+                    // Request trees
+                    requestTrees();
+                });
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleLSPMessage(msg);
+                } catch (e) {
+                    console.error('Failed to parse LSP message:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                setStatus('', 'Disconnected');
+                initialized = false;
+                // Reconnect after delay
+                setTimeout(connectLSP, 3000);
+            };
+
+            ws.onerror = (err) => {
+                setStatus('error', 'Connection error');
+                console.error('WebSocket error:', err);
+            };
+        }
+
+        function sendRequest(method, params) {
+            return new Promise((resolve, reject) => {
+                const id = ++requestId;
+                pendingRequests[id] = { resolve, reject };
+                const msg = JSON.stringify({ jsonrpc: '2.0', id, method, params });
+                ws.send(msg);
+            });
+        }
+
+        function sendNotification(method, params) {
+            const msg = JSON.stringify({ jsonrpc: '2.0', method, params });
+            ws.send(msg);
+        }
+
+        function handleLSPMessage(msg) {
+            // Response to a request
+            if (msg.id !== undefined && pendingRequests[msg.id]) {
+                const { resolve, reject } = pendingRequests[msg.id];
+                delete pendingRequests[msg.id];
+                if (msg.error) { reject(msg.error); }
+                else { resolve(msg.result); }
+                return;
+            }
+
+            // Notification from server
+            if (msg.method === 'textDocument/publishDiagnostics') {
+                handleDiagnostics(msg.params);
+            }
+            else if (msg.method === 'pure/executeResult') {
+                handleExecuteResult(msg.params);
+            }
+            else if (msg.method === 'pure/treeData') {
+                handleTreeData(msg.params);
+            }
+        }
+
+        // =================================================================
+        // Tree Data
+        // =================================================================
+        function requestTrees() {
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/packageTree', arguments: []
+            }).catch(e => console.error('packageTree request failed:', e));
+
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/fileTree', arguments: []
+            }).catch(e => console.error('fileTree request failed:', e));
+        }
+
+        function handleTreeData(params) {
+            if (params && params.treeId && params.json) {
+                populateTree(params.treeId, params.json);
+            }
+        }
+
+        // =================================================================
+        // Diagnostics → Monaco markers
+        // =================================================================
+        function handleDiagnostics(params) {
+            if (!editor) return;
+            const model = editor.getModel();
+            if (!model) return;
+
+            const markers = (params.diagnostics || []).map(d => ({
+                severity: d.severity === 1
+                    ? monaco.MarkerSeverity.Error
+                    : d.severity === 2
+                        ? monaco.MarkerSeverity.Warning
+                        : monaco.MarkerSeverity.Info,
+                startLineNumber: d.range.start.line + 1,
+                startColumn: d.range.start.character + 1,
+                endLineNumber: d.range.end.line + 1,
+                endColumn: d.range.end.character + 1,
+                message: d.message,
+                source: d.source || 'pure',
+            }));
+
+            monaco.editor.setModelMarkers(model, 'pure', markers);
+        }
+
+        // =================================================================
+        // Execute
+        // =================================================================
+        function executeCode() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showResult('Not connected to LSP server', true);
+                return;
+            }
+
+            // Show spinner
+            const content = document.getElementById('resultContent');
+            content.className = 'result-content';
+            content.innerHTML = '<span class="spinner"></span> Compiling and executing...';
+
+            const badge = document.getElementById('resultBadge');
+            badge.style.display = 'none';
+
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/execute',
+                arguments: []
+            }).then(() => {
+                // Result comes via pure/executeResult notification
+            }).catch(err => {
+                showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
+            });
+        }
+
+        function handleExecuteResult(params) {
+            showResult(params.result, params.isError || params.error);
+        }
+
+        function showResult(text, isError) {
+            const content = document.getElementById('resultContent');
+            const badge = document.getElementById('resultBadge');
+
+            content.textContent = text;
+            content.className = 'result-content ' + (isError ? 'error' : 'success');
+
+            badge.style.display = 'inline';
+            badge.textContent = isError ? 'ERROR' : 'SUCCESS';
+            badge.className = 'result-badge ' + (isError ? 'error' : 'success');
+        }
+
+        // =================================================================
+        // Status
+        // =================================================================
+        function setStatus(state, text) {
+            document.getElementById('statusDot').className = 'status-dot ' + state;
+            document.getElementById('statusText').textContent = text;
+        }
+        // =================================================================
+        // Editor / Diagram Tab Switching
+        // =================================================================
+        let currentEditorTab = 'editor';
+
+        function switchEditorTab(tab) {
+            currentEditorTab = tab;
+            document.getElementById('editorTabBtn').classList.toggle('active', tab === 'editor');
+            document.getElementById('diagramTabBtn').classList.toggle('active', tab === 'diagram');
+            const editorPanel = document.getElementById('editorPanel');
+            const diagramPanel = document.getElementById('diagramPanel');
+            if (tab === 'editor') {
+                editorPanel.style.display = '';
+                diagramPanel.classList.remove('active');
+                if (editor) editor.layout();
+            } else {
+                editorPanel.style.display = 'none';
+                diagramPanel.classList.add('active');
+                updateDiagram();
+            }
+        }
+
+        // =================================================================
+        // Diagram DSL Parser (no regex — uses indexOf + character scanning)
+        // =================================================================
+
+        function isWordChar(ch) {
+            return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+                   (ch >= '0' && ch <= '9') || ch === '_';
+        }
+
+        function isWhitespace(ch) {
+            return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r';
+        }
+
+        function isNumberChar(ch) {
+            return (ch >= '0' && ch <= '9') || ch === '.' || ch === '+' || ch === '-';
+        }
+
+        function skipWs(str, pos) {
+            while (pos < str.length && isWhitespace(str[pos])) pos++;
+            return pos;
+        }
+
+        function scanWord(str, pos) {
+            let end = pos;
+            while (end < str.length && (isWordChar(str[end]) || str[end] === ':')) end++;
+            return { value: str.substring(pos, end), end };
+        }
+
+        function scanNumber(str, pos) {
+            let end = pos;
+            while (end < str.length && isNumberChar(str[end])) end++;
+            return { value: str.substring(pos, end), end };
+        }
+
+        function findAllOccurrences(text, keyword) {
+            const indices = [];
+            let pos = 0;
+            while (true) {
+                const idx = text.indexOf(keyword, pos);
+                if (idx === -1) break;
+                indices.push(idx);
+                pos = idx + keyword.length;
+            }
+            return indices;
+        }
+
+        function parseDiagramSource(text) {
+            const diagrams = [];
+            // Find ###Diagram sections using indexOf
+            const sectionTag = '###Diagram';
+            const sectionIndices = findAllOccurrences(text, sectionTag);
+            if (sectionIndices.length === 0) return diagrams;
+
+            for (let si = 0; si < sectionIndices.length; si++) {
+                const sectionHeaderStart = sectionIndices[si];
+                const sectionContentStart = sectionHeaderStart + sectionTag.length;
+                // Section extends to the next ### section or end of text
+                let sectionEnd = text.length;
+                const nextSection = text.indexOf('###', sectionContentStart);
+                if (nextSection !== -1) sectionEnd = nextSection;
+
+                const sectionText = text.substring(sectionContentStart, sectionEnd);
+
+                // Find Diagram blocks using indexOf
+                let searchPos = 0;
+                while (true) {
+                    const dIdx = sectionText.indexOf('Diagram', searchPos);
+                    if (dIdx === -1) break;
+                    // Make sure 'Diagram' is preceded by whitespace/start and followed by whitespace
+                    if (dIdx > 0 && isWordChar(sectionText[dIdx - 1])) {
+                        searchPos = dIdx + 7;
+                        continue;
+                    }
+                    let pos = skipWs(sectionText, dIdx + 7);
+                    if (pos >= sectionText.length || !isWordChar(sectionText[pos])) {
+                        searchPos = pos;
+                        continue;
+                    }
+                    // Scan diagram name (qualified name with ::)
+                    const nameResult = scanWord(sectionText, pos);
+                    const diagramName = nameResult.value;
+                    pos = skipWs(sectionText, nameResult.end);
+
+                    // Optionally skip (width=..., height=...) block
+                    if (pos < sectionText.length && sectionText[pos] === '(') {
+                        // Find matching close paren
+                        let depth = 1;
+                        let pp = pos + 1;
+                        while (pp < sectionText.length && depth > 0) {
+                            if (sectionText[pp] === '(') depth++;
+                            else if (sectionText[pp] === ')') depth--;
+                            pp++;
+                        }
+                        pos = skipWs(sectionText, pp);
+                    }
+
+                    // Expect '{'
+                    if (pos >= sectionText.length || sectionText[pos] !== '{') {
+                        searchPos = pos;
+                        continue;
+                    }
+
+                    const bodyStart = pos + 1;
+                    const bodyEnd = findMatchingBrace(sectionText, pos);
+                    if (bodyEnd === -1) { searchPos = bodyStart; continue; }
+                    const body = sectionText.substring(bodyStart, bodyEnd);
+
+                    // Track section boundaries in original text for serializer
+                    const diagramBlockStart = sectionContentStart + dIdx;
+                    const diagramBlockEnd = sectionContentStart + bodyEnd + 1;
+
+                    const diagram = {
+                        name: diagramName,
+                        typeViews: [],
+                        generalizationViews: [],
+                        associationViews: [],
+                        propertyViews: [],
+                        _sectionStart: sectionHeaderStart,
+                        _diagramStart: diagramBlockStart,
+                        _diagramEnd: diagramBlockEnd,
+                    };
+
+                    // Parse TypeViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'TypeView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.typeViews.push({
+                            id,
+                            type: props['type'] || '',
+                            position: parsePoint(props['position']),
+                            width: parseFloat(props['width']) || 150,
+                            height: parseFloat(props['height']) || 60,
+                            color: props['color'] || '#FFFFCC',
+                            stereotypesVisible: props['stereotypesVisible'] === 'true',
+                            attributesVisible: props['attributesVisible'] === 'true',
+                        });
+                    }
+
+                    // Parse GeneralizationViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'GeneralizationView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.generalizationViews.push({
+                            id,
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                        });
+                    }
+
+                    // Parse AssociationViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'AssociationView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.associationViews.push({
+                            id,
+                            association: props['association'] || '',
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                            label: props['label'] || '',
+                        });
+                    }
+
+                    // Parse PropertyViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'PropertyView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.propertyViews.push({
+                            id,
+                            property: props['property'] || '',
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                            label: props['label'] || '',
+                        });
+                    }
+
+                    diagrams.push(diagram);
+                    searchPos = bodyEnd + 1;
+                }
+            }
+            return diagrams;
+        }
+
+        function findMatchingBrace(text, openIndex) {
+            let depth = 0;
+            for (let i = openIndex; i < text.length; i++) {
+                if (text[i] === '{') depth++;
+                else if (text[i] === '}') { depth--; if (depth === 0) return i; }
+            }
+            return -1;
+        }
+
+        // Find all view blocks of a given type using indexOf + paren-matching
+        function findViewBlocks(body, viewType) {
+            const results = [];
+            let searchPos = 0;
+            while (true) {
+                const idx = body.indexOf(viewType, searchPos);
+                if (idx === -1) break;
+                // Ensure not part of a longer word
+                if (idx > 0 && isWordChar(body[idx - 1])) {
+                    searchPos = idx + viewType.length;
+                    continue;
+                }
+                let pos = idx + viewType.length;
+                // Skip whitespace
+                pos = skipWs(body, pos);
+                // Scan identifier (id)
+                if (pos >= body.length || !isWordChar(body[pos])) {
+                    searchPos = pos;
+                    continue;
+                }
+                const idResult = scanWord(body, pos);
+                const id = idResult.value;
+                pos = skipWs(body, idResult.end);
+                // Expect '('
+                if (pos >= body.length || body[pos] !== '(') {
+                    searchPos = pos;
+                    continue;
+                }
+                const openIdx = pos;
+                let depth = 1;
+                let i = openIdx + 1;
+                while (i < body.length && depth > 0) {
+                    if (body[i] === '(' || body[i] === '[') depth++;
+                    else if (body[i] === ')' || body[i] === ']') depth--;
+                    i++;
+                }
+                const propsStr = body.substring(openIdx + 1, i - 1);
+                results.push({ id, propsStr });
+                searchPos = i;
+            }
+            return results;
+        }
+
+        function parseViewProperties(propsStr) {
+            const result = {};
+            // Scan for key=value pairs using character scanning
+            const keys = [];
+            let pos = 0;
+            while (pos < propsStr.length) {
+                pos = skipWs(propsStr, pos);
+                if (pos >= propsStr.length) break;
+                // Try to scan an identifier
+                if (!isWordChar(propsStr[pos])) { pos++; continue; }
+                const wordStart = pos;
+                const wordResult = scanWord(propsStr, pos);
+                // Skip past :: in qualified names that are values, not keys
+                pos = skipWs(propsStr, wordResult.end);
+                if (pos < propsStr.length && propsStr[pos] === '=') {
+                    keys.push({ key: wordResult.value, valueStart: pos + 1 });
+                    pos = pos + 1;
+                } else {
+                    pos = wordResult.end + 1;
+                }
+            }
+            for (let i = 0; i < keys.length; i++) {
+                const start = keys[i].valueStart;
+                const end = i < keys.length - 1
+                    ? findCommaBeforeKey(propsStr, keys[i + 1].key, start)
+                    : propsStr.length;
+                let value = propsStr.substring(start, end).trim();
+                if (value.endsWith(',')) value = value.slice(0, -1).trim();
+                result[keys[i].key] = value;
+            }
+            return result;
+        }
+
+        function findCommaBeforeKey(str, key, afterPos) {
+            const keyIdx = str.indexOf(key + '=', afterPos);
+            if (keyIdx === -1) {
+                // try with space before =
+                const keyIdx2 = str.indexOf(key + ' =', afterPos);
+                if (keyIdx2 === -1) return str.length;
+                for (let i = keyIdx2 - 1; i >= afterPos; i--) {
+                    if (str[i] === ',') return i;
+                }
+                return keyIdx2;
+            }
+            for (let i = keyIdx - 1; i >= afterPos; i--) {
+                if (str[i] === ',') return i;
+            }
+            return keyIdx;
+        }
+
+        function parsePoint(str) {
+            if (!str) return { x: 0, y: 0 };
+            const open = str.indexOf('(');
+            if (open === -1) return { x: 0, y: 0 };
+            const comma = str.indexOf(',', open + 1);
+            if (comma === -1) return { x: 0, y: 0 };
+            const close = str.indexOf(')', comma + 1);
+            if (close === -1) return { x: 0, y: 0 };
+            const x = parseFloat(str.substring(open + 1, comma).trim());
+            const y = parseFloat(str.substring(comma + 1, close).trim());
+            return { x: isNaN(x) ? 0 : x, y: isNaN(y) ? 0 : y };
+        }
+
+        function parsePoints(str) {
+            if (!str) return [];
+            const points = [];
+            let pos = 0;
+            while (true) {
+                const open = str.indexOf('(', pos);
+                if (open === -1) break;
+                const comma = str.indexOf(',', open + 1);
+                if (comma === -1) break;
+                const close = str.indexOf(')', comma + 1);
+                if (close === -1) break;
+                const x = parseFloat(str.substring(open + 1, comma).trim());
+                const y = parseFloat(str.substring(comma + 1, close).trim());
+                if (!isNaN(x) && !isNaN(y)) {
+                    points.push({ x, y });
+                }
+                pos = close + 1;
+            }
+            return points;
+        }
+
+        // =================================================================
+        // Diagram DSL Serializer
+        // =================================================================
+
+        function serializePoint(p) {
+            return '(' + p.x.toFixed(1) + ', ' + p.y.toFixed(1) + ')';
+        }
+
+        function serializePoints(pts) {
+            return '[' + pts.map(serializePoint).join(', ') + ']';
+        }
+
+        function serializeViewProps(props) {
+            return Object.entries(props)
+                .map(([k, v]) => '      ' + k + '=' + v)
+                .join(',\n');
+        }
+
+        function serializeDiagram(diagram) {
+            const lines = [];
+            lines.push('Diagram ' + diagram.name);
+            lines.push('{');
+
+            for (const tv of diagram.typeViews) {
+                lines.push('   TypeView ' + tv.id);
+                lines.push('   (');
+                const props = [
+                    '      type=' + tv.type,
+                    '      stereotypesVisible=' + tv.stereotypesVisible,
+                    '      attributesVisible=' + tv.attributesVisible,
+                    '      attributeStereotype=none',
+                    '      attributeTypes=none',
+                    '      color=' + tv.color,
+                    '      lineWidth=-1.0',
+                    '      position=' + serializePoint(tv.position),
+                    '      width=' + tv.width.toFixed(1),
+                    '      height=' + tv.height.toFixed(1),
+                ];
+                lines.push(props.join(',\n'));
+                lines.push('   )');
+            }
+
+            function serializeRelationshipView(viewTypeName, rv, extraProps) {
+                lines.push('   ' + viewTypeName + ' ' + rv.id);
+                lines.push('   (');
+                const tvLookup = {};
+                if (diagram) diagram.typeViews.forEach(t => { tvLookup[t.id] = t; });
+                rebuildViewPoints(rv, tvLookup);
+                const props = [
+                    ...(extraProps || []),
+                    '      source=' + rv.source,
+                    '      target=' + rv.target,
+                    '      points=' + serializePoints(rv.points || []),
+                ];
+                if (rv.color && rv.color !== '#000000') props.push('      color=' + rv.color);
+                if (rv.lineWidth && rv.lineWidth !== 1) props.push('      lineWidth=' + rv.lineWidth.toFixed(1));
+                if (rv.label) props.push('      label=' + rv.label);
+                lines.push(props.join(',\n'));
+                lines.push('   )');
+            }
+
+            for (const gv of diagram.generalizationViews) {
+                serializeRelationshipView('GeneralizationView', gv);
+            }
+            for (const av of diagram.associationViews) {
+                serializeRelationshipView('AssociationView', av, [
+                    '      association=' + av.association,
+                ]);
+            }
+            for (const pv of diagram.propertyViews) {
+                serializeRelationshipView('PropertyView', pv, [
+                    '      property=' + pv.property,
+                ]);
+            }
+
+            lines.push('}');
+            return lines.join('\n');
+        }
+
+        // Replace the diagram block in the editor source with re-serialized text
+        function updateDiagramInSource() {
+            if (!diagramData || !editor) return;
+            const source = editor.getValue();
+            const serialized = serializeDiagram(diagramData);
+            const newSource = source.substring(0, diagramData._diagramStart)
+                + serialized
+                + source.substring(diagramData._diagramEnd);
+            // Update boundary for next edit
+            const lengthDelta = serialized.length - (diagramData._diagramEnd - diagramData._diagramStart);
+            diagramData._diagramEnd = diagramData._diagramStart + serialized.length;
+            editor.setValue(newSource);
+        }
+
+        // =================================================================
+        // Diagram Renderer (Canvas 2D, inspired by legend-studio)
+        // =================================================================
+        let diagramData = null;
+        let diagramZoom = 1.0;
+        let diagramOffsetX = 0;
+        let diagramOffsetY = 0;
+        let diagramDragging = null; // { viewIndex, startX, startY, origX, origY }
+        let diagramPanning = null;  // { startX, startY, origOffX, origOffY }
+        let diagramLineDragging = null; // { viewType, viewIndex, pointIndex, isNew }
+        let selectedRelationship = null; // { viewType, viewIndex }
+        let diagramAnchorDragging = null; // { viewType, viewIndex, anchorEnd: 'source'|'target' }
+
+        // Colors (dark theme matching legend-studio)
+        const DG = {
+            bg: '#0d1117',
+            classViewFill: '#1c2333',
+            classViewHeaderBg: '#252d3a',
+            classViewStroke: '#58a6ff',
+            classViewHeaderText: '#e6edf3',
+            classViewPropertyText: '#8b949e',
+            lineColor: '#8b949e',
+            genTriangleFill: '#0d1117',
+            genTriangleStroke: '#8b949e',
+            diamondFill: '#0d1117',
+            diamondStroke: '#8b949e',
+            selectedStroke: '#58a6ff',
+            fontFamily: "'Segoe UI', Helvetica, Arial, sans-serif",
+            fontSize: 12,
+            lineHeight: 16,
+            headerPadding: 8,
+            propPaddingX: 10,
+            propPaddingY: 4,
+            triangleSize: 10,
+            diamondSize: 8,
+        };
+
+        let diagramClassDefs = {}; // { 'test::A': { name, properties: [{name, type, multiplicity}] } }
+
+        function parseClassDefinitions(text) {
+            const classes = {};
+            // Find Class blocks using indexOf
+            let searchPos = 0;
+            while (true) {
+                const classIdx = text.indexOf('Class ', searchPos);
+                if (classIdx === -1) break;
+                // Ensure word boundary: not preceded by a word char
+                if (classIdx > 0 && isWordChar(text[classIdx - 1])) {
+                    searchPos = classIdx + 6;
+                    continue;
+                }
+                let pos = skipWs(text, classIdx + 6);
+                if (pos >= text.length || !isWordChar(text[pos])) {
+                    searchPos = pos;
+                    continue;
+                }
+                // Scan qualified name
+                const nameResult = scanWord(text, pos);
+                const qualifiedName = nameResult.value;
+                pos = skipWs(text, nameResult.end);
+                // Optionally skip 'extends QualifiedName'
+                if (pos + 7 < text.length && text.substring(pos, pos + 7) === 'extends') {
+                    pos = skipWs(text, pos + 7);
+                    const extResult = scanWord(text, pos);
+                    pos = skipWs(text, extResult.end);
+                }
+                // Expect '{'
+                if (pos >= text.length || text[pos] !== '{') {
+                    searchPos = pos;
+                    continue;
+                }
+                const bodyStart = pos + 1;
+                const bodyEnd = findMatchingBrace(text, pos);
+                if (bodyEnd === -1) { searchPos = bodyStart; continue; }
+                const body = text.substring(bodyStart, bodyEnd);
+                const properties = parseClassProperties(body);
+                classes[qualifiedName] = { name: qualifiedName.split('::').pop(), properties };
+                searchPos = bodyEnd + 1;
+            }
+            return classes;
+        }
+
+        // Parse property definitions: name : Type[multiplicity]
+        function parseClassProperties(body) {
+            const properties = [];
+            let pos = 0;
+            while (pos < body.length) {
+                pos = skipWs(body, pos);
+                if (pos >= body.length) break;
+                if (!isWordChar(body[pos])) { pos++; continue; }
+                // Scan potential property name
+                const nameResult = scanWord(body, pos);
+                const name = nameResult.value;
+                pos = skipWs(body, nameResult.end);
+                // Expect ':'
+                if (pos >= body.length || body[pos] !== ':') {
+                    // Not a property line, skip to next line
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                pos = skipWs(body, pos + 1); // skip ':'
+                // Scan type
+                if (pos >= body.length || !isWordChar(body[pos])) {
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                const typeResult = scanWord(body, pos);
+                const type = typeResult.value;
+                pos = skipWs(body, typeResult.end);
+                // Expect '['
+                if (pos >= body.length || body[pos] !== '[') {
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                const bracketClose = body.indexOf(']', pos + 1);
+                if (bracketClose === -1) { pos++; continue; }
+                const multiplicity = body.substring(pos + 1, bracketClose).trim();
+                properties.push({ name, type, multiplicity });
+                pos = bracketClose + 1;
+            }
+            return properties;
+        }
+
+        function updateDiagram() {
+            if (currentEditorTab !== 'diagram') return;
+            const text = editor ? editor.getValue() : '';
+            const diagrams = parseDiagramSource(text);
+            diagramData = diagrams.length > 0 ? diagrams[0] : null;
+            diagramClassDefs = parseClassDefinitions(text);
+            // Compute anchor offsets from stored points (like legend-studio's _offsetX/_offsetY)
+            if (diagramData) initRelationshipOffsets(diagramData);
+
+            const canvas = document.getElementById('diagramCanvas');
+            const container = document.getElementById('diagramPanel');
+            if (!canvas || !container) return;
+
+            // Resize canvas to container
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+
+            drawDiagram();
+        }
+
+        function drawDiagram() {
+            const canvas = document.getElementById('diagramCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const w = canvas.width / dpr;
+            const h = canvas.height / dpr;
+
+            // Clear
+            ctx.fillStyle = DG.bg;
+            ctx.fillRect(0, 0, w, h);
+
+            if (!diagramData || diagramData.typeViews.length === 0) {
+                ctx.fillStyle = '#8b949e';
+                ctx.font = `italic 14px ${DG.fontFamily}`;
+                ctx.textAlign = 'center';
+                ctx.fillText('No diagram found. Add a ###Diagram section to your Pure source.', w / 2, h / 2);
+                ctx.textAlign = 'left';
+                return;
+            }
+
+            ctx.save();
+            ctx.translate(diagramOffsetX, diagramOffsetY);
+            ctx.scale(diagramZoom, diagramZoom);
+
+            // Build typeView lookup
+            const tvLookup = {};
+            diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+
+            // Draw relationship lines first (behind class boxes)
+            // Generalization views
+            diagramData.generalizationViews.forEach(gv => {
+                drawRelationshipLine(ctx, gv, tvLookup, 'generalization');
+            });
+            // Association views
+            diagramData.associationViews.forEach(av => {
+                drawRelationshipLine(ctx, av, tvLookup, 'association');
+            });
+            // Property views
+            diagramData.propertyViews.forEach(pv => {
+                drawRelationshipLine(ctx, pv, tvLookup, 'property');
+            });
+
+            // Draw class views
+            diagramData.typeViews.forEach(tv => {
+                drawClassView(ctx, tv);
+            });
+
+            ctx.restore();
+
+            // Update zoom label
+            const lbl = document.getElementById('diagramZoomLabel');
+            if (lbl) lbl.textContent = Math.round(diagramZoom * 100) + '%';
+        }
+
+        function drawClassView(ctx, tv) {
+            const x = tv.position.x;
+            const y = tv.position.y;
+            const w = tv.width;
+            const h = tv.height;
+            const r = 4; // corner radius
+
+            // Parse color from DSL (e.g., #FFFFCC)
+            let fillColor = DG.classViewFill;
+            if (tv.color && tv.color.startsWith('#')) {
+                // Blend the DSL color with our dark theme (darken it)
+                fillColor = blendDiagramColor(tv.color);
+            }
+
+            // Box shadow (subtle glow)
+            ctx.save();
+            ctx.shadowColor = 'rgba(88, 166, 255, 0.1)';
+            ctx.shadowBlur = 8;
+
+            // Rounded rect
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            ctx.restore();
+
+            // Border
+            ctx.strokeStyle = DG.classViewStroke;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Header background
+            const headerH = DG.lineHeight + DG.headerPadding * 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + headerH);
+            ctx.lineTo(x, y + headerH);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fillStyle = DG.classViewHeaderBg;
+            ctx.fill();
+            ctx.restore();
+
+            // Header separator
+            ctx.beginPath();
+            ctx.moveTo(x, y + headerH);
+            ctx.lineTo(x + w, y + headerH);
+            ctx.strokeStyle = DG.classViewStroke;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+
+            // Class name (short name from qualified path)
+            const className = tv.type.split('::').pop() || tv.type;
+            ctx.font = `bold ${DG.fontSize}px ${DG.fontFamily}`;
+            ctx.fillStyle = DG.classViewHeaderText;
+            ctx.textBaseline = 'middle';
+            const textW = ctx.measureText(className).width;
+            ctx.fillText(className, x + (w - textW) / 2, y + headerH / 2);
+
+            // Draw properties (if class definition is available)
+            const classDef = diagramClassDefs[tv.type];
+            if (classDef && classDef.properties.length > 0) {
+                const primitiveTypes = new Set([
+                    'String', 'Integer', 'Float', 'Boolean', 'Date',
+                    'StrictDate', 'DateTime', 'Number', 'Decimal', 'Binary',
+                ]);
+                // Collect property names that have a PropertyView (rendered as lines)
+                const propertyViewNames = new Set();
+                if (diagramData) {
+                    diagramData.propertyViews.forEach(pv => {
+                        // property= is typically 'ClassName.propName' or 'package::ClassName.propName'
+                        const dotIdx = (pv.property || '').lastIndexOf('.');
+                        if (dotIdx !== -1) propertyViewNames.add(pv.property.substring(dotIdx + 1));
+                    });
+                    diagramData.associationViews.forEach(av => {
+                        // association views might reference properties too
+                        const dotIdx = (av.association || '').lastIndexOf('.');
+                        if (dotIdx !== -1) propertyViewNames.add(av.association.substring(dotIdx + 1));
+                    });
+                }
+
+                ctx.textBaseline = 'top';
+                ctx.font = `${DG.fontSize - 1}px ${DG.fontFamily}`;
+                let propY = y + headerH + DG.propPaddingY;
+                for (const prop of classDef.properties) {
+                    const typeName = prop.type.split('::').pop();
+                    const isPrimitive = primitiveTypes.has(typeName);
+                    // Show property inside box if primitive, or if complex but no PropertyView for it
+                    if (isPrimitive || !propertyViewNames.has(prop.name)) {
+                        const propText = `${prop.name} : ${typeName}[${prop.multiplicity}]`;
+                        ctx.fillStyle = isPrimitive ? '#79c0ff' : DG.classViewPropertyText;
+                        ctx.fillText(propText, x + DG.propPaddingX, propY);
+                        propY += DG.lineHeight;
+                    }
+                }
+            }
+
+            ctx.textBaseline = 'top';
+        }
+
+        function blendDiagramColor(hex) {
+            // Convert #RRGGBB to darkened version for dark theme
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            // Dark blend: mix with dark bg
+            const dr = Math.round(r * 0.15 + 28);
+            const dg = Math.round(g * 0.15 + 35);
+            const db = Math.round(b * 0.15 + 51);
+            return `rgb(${dr}, ${dg}, ${db})`;
+        }
+
+        // Point-to-line-segment distance
+        function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+            let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+        }
+
+        // Find which relationship line segment is near a point
+        function findRelationshipNearPoint(mx, my, threshold) {
+            if (!diagramData) return null;
+            const allViews = [
+                { type: 'generalization', views: diagramData.generalizationViews },
+                { type: 'association', views: diagramData.associationViews },
+                { type: 'property', views: diagramData.propertyViews },
+            ];
+            const tvLookup = {};
+            diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+
+            for (const { type, views } of allViews) {
+                for (let vi = 0; vi < views.length; vi++) {
+                    const view = views[vi];
+                    const fullPath = buildViewFullPath(view, tvLookup);
+                    if (fullPath.length < 2) continue;
+                    const sourceTV = tvLookup[view.source];
+                    const targetTV = tvLookup[view.target];
+
+                    // Check edge anchors first (source and target intersection points)
+                    if (sourceTV && targetTV) {
+                        const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+                        const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+                        const sourceEdge = lineBoxIntersection(sourceAnchor, fullPath[1], sourceTV);
+                        const targetEdge = lineBoxIntersection(targetAnchor, fullPath[fullPath.length - 2], targetTV);
+                        if (Math.hypot(mx - sourceEdge.x, my - sourceEdge.y) < threshold) {
+                            return { viewType: type, viewIndex: vi, isAnchor: true, anchorEnd: 'source' };
+                        }
+                        if (Math.hypot(mx - targetEdge.x, my - targetEdge.y) < threshold) {
+                            return { viewType: type, viewIndex: vi, isAnchor: true, anchorEnd: 'target' };
+                        }
+                    }
+
+                    // Check existing waypoints (for dragging existing points)
+                    const path = view.path || [];
+                    for (let pi = 0; pi < path.length; pi++) {
+                        const d = Math.hypot(mx - path[pi].x, my - path[pi].y);
+                        if (d < threshold) {
+                            return { viewType: type, viewIndex: vi, pointIndex: pi, isExisting: true };
+                        }
+                    }
+                    // Check line segments
+                    for (let i = 0; i < fullPath.length - 1; i++) {
+                        const d = pointToSegmentDist(mx, my, fullPath[i].x, fullPath[i].y, fullPath[i+1].x, fullPath[i+1].y);
+                        if (d < threshold) {
+                            return { viewType: type, viewIndex: vi, segmentIndex: i };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Initialize anchor offsets from stored points (like legend-studio's _offsetX/_offsetY)
+        function initRelationshipOffsets(diagram) {
+            const tvLookup = {};
+            diagram.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+            const allViews = [
+                ...diagram.generalizationViews,
+                ...diagram.associationViews,
+                ...diagram.propertyViews,
+            ];
+            for (const view of allViews) {
+                const sourceTV = tvLookup[view.source];
+                const targetTV = tvLookup[view.target];
+                if (!sourceTV || !targetTV || !view.points || view.points.length < 2) {
+                    view.sourceOffset = { x: 0, y: 0 };
+                    view.targetOffset = { x: 0, y: 0 };
+                    // Store only intermediate waypoints in view.path (like legend-studio)
+                    view.path = (view.points && view.points.length > 2)
+                        ? view.points.slice(1, -1) : [];
+                    continue;
+                }
+                const sc = { x: sourceTV.position.x + sourceTV.width / 2, y: sourceTV.position.y + sourceTV.height / 2 };
+                const tc = { x: targetTV.position.x + targetTV.width / 2, y: targetTV.position.y + targetTV.height / 2 };
+                view.sourceOffset = { x: view.points[0].x - sc.x, y: view.points[0].y - sc.y };
+                view.targetOffset = { x: view.points[view.points.length - 1].x - tc.x, y: view.points[view.points.length - 1].y - tc.y };
+                // Store only intermediate waypoints (like legend-studio's path)
+                view.path = view.points.length > 2 ? view.points.slice(1, -1) : [];
+            }
+        }
+
+        // Compute anchor endpoint (like legend-studio's computeEdgeEndpoint)
+        function computeEdgeEndpoint(view, tvLookup, isSource) {
+            const tvId = isSource ? view.source : view.target;
+            const tv = tvLookup[tvId];
+            if (!tv) return { x: 0, y: 0 };
+            const center = {
+                x: tv.position.x + tv.width / 2,
+                y: tv.position.y + tv.height / 2,
+            };
+            const offset = isSource ? view.sourceOffset : view.targetOffset;
+            if (!offset) return center;
+            const anchor = { x: center.x + offset.x, y: center.y + offset.y };
+            // If anchor is inside box, use it; otherwise reset to center
+            if (pointInsideBox(anchor, tv)) {
+                return anchor;
+            }
+            // Reset offset
+            if (isSource) { view.sourceOffset = { x: 0, y: 0 }; }
+            else { view.targetOffset = { x: 0, y: 0 }; }
+            return center;
+        }
+
+        // Build the full path for a view (like legend-studio's buildFullPath)
+        function buildViewFullPath(view, tvLookup) {
+            const sourceTV = tvLookup[view.source];
+            const targetTV = tvLookup[view.target];
+            if (!sourceTV || !targetTV) return [];
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+            // Filter out intermediate waypoints inside boxes
+            const path = (view.path || []).filter(p =>
+                !pointInsideBox(p, sourceTV) && !pointInsideBox(p, targetTV)
+            );
+            return [sourceAnchor, ...path, targetAnchor];
+        }
+
+        function drawRelationshipLine(ctx, view, tvLookup, type) {
+            const sourceTV = tvLookup[view.source];
+            const targetTV = tvLookup[view.target];
+            if (!sourceTV || !targetTV) return;
+
+            // Compute anchors from center + offset (like legend-studio)
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+
+            // Filter intermediates (like legend-studio's manageInsidePointsDynamically)
+            const intermediatePoints = (view.path || []).filter(p =>
+                !pointInsideBox(p, sourceTV) && !pointInsideBox(p, targetTV)
+            );
+            const fullPath = [sourceAnchor, ...intermediatePoints, targetAnchor];
+
+            // Clip at box edges
+            const n = fullPath.length;
+            const sourceEdge = lineBoxIntersection(sourceAnchor, fullPath[1], sourceTV);
+            const targetEdge = lineBoxIntersection(targetAnchor, fullPath[n - 2], targetTV);
+
+            // Build edge-clipped path
+            const clippedPath = [sourceEdge, ...intermediatePoints, targetEdge];
+
+            // Draw polyline
+            ctx.beginPath();
+            ctx.strokeStyle = DG.lineColor;
+            ctx.lineWidth = Math.max(view.lineWidth || 1, 1);
+            for (let i = 0; i < clippedPath.length; i++) {
+                if (i === 0) ctx.moveTo(clippedPath[i].x, clippedPath[i].y);
+                else ctx.lineTo(clippedPath[i].x, clippedPath[i].y);
+            }
+            ctx.stroke();
+
+            // Draw arrowhead/diamond
+            if (clippedPath.length >= 2) {
+                const cp = clippedPath;
+                if (type === 'generalization') {
+                    drawTriangleAtEdge(ctx, cp[cp.length - 2], cp[cp.length - 1], targetEdge, targetTV);
+                } else if (type === 'association' || type === 'property') {
+                    drawArrow(ctx, cp[cp.length - 2], targetEdge);
+                    drawDiamond(ctx, cp[1], sourceEdge);
+                }
+            }
+
+            // Draw waypoint handles on selected line
+            if (selectedRelationship &&
+                selectedRelationship.viewType === type &&
+                diagramData) {
+                const views = type === 'generalization' ? diagramData.generalizationViews
+                    : type === 'association' ? diagramData.associationViews
+                    : diagramData.propertyViews;
+                if (views[selectedRelationship.viewIndex] === view) {
+                    ctx.fillStyle = '#58a6ff';
+                    for (const pt of intermediatePoints) {
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 4 / diagramZoom, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = 'rgba(88, 166, 255, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(sourceEdge.x, sourceEdge.y, 3 / diagramZoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(targetEdge.x, targetEdge.y, 3 / diagramZoom, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Prune points that lie inside class view boxes
+        function pruneInsidePoints(path, sourceTV, targetTV) {
+            if (path.length < 2) return path;
+            let start = 0;
+            while (start < path.length - 1 && pointInsideBox(path[start], sourceTV)) start++;
+            let end = path.length - 1;
+            while (end > 0 && pointInsideBox(path[end], targetTV)) end--;
+            // Keep one point inside at each end for proper line direction
+            start = Math.max(0, start - 1);
+            end = Math.min(path.length - 1, end + 1);
+            const result = path.slice(start, end + 1);
+            return result.length >= 2 ? result : [path[0], path[path.length - 1]];
+        }
+
+        function pointInsideBox(p, tv) {
+            return p.x >= tv.position.x && p.x <= tv.position.x + tv.width &&
+                   p.y >= tv.position.y && p.y <= tv.position.y + tv.height;
+        }
+
+        // Compute intersection of line segment (from→to) with box edges
+        function lineBoxIntersection(from, to, tv) {
+            const bx = tv.position.x, by = tv.position.y;
+            const bw = tv.width, bh = tv.height;
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            if (dx === 0 && dy === 0) return to;
+
+            let bestT = 1;
+            // Left edge
+            if (dx !== 0) { const t = (bx - from.x) / dx; const yy = from.y + t * dy; if (t > 0 && t <= 1 && yy >= by && yy <= by + bh && t < bestT) bestT = t; }
+            // Right edge
+            if (dx !== 0) { const t = (bx + bw - from.x) / dx; const yy = from.y + t * dy; if (t > 0 && t <= 1 && yy >= by && yy <= by + bh && t < bestT) bestT = t; }
+            // Top edge
+            if (dy !== 0) { const t = (by - from.y) / dy; const xx = from.x + t * dx; if (t > 0 && t <= 1 && xx >= bx && xx <= bx + bw && t < bestT) bestT = t; }
+            // Bottom edge
+            if (dy !== 0) { const t = (by + bh - from.y) / dy; const xx = from.x + t * dx; if (t > 0 && t <= 1 && xx >= bx && xx <= bx + bw && t < bestT) bestT = t; }
+
+            return { x: from.x + bestT * dx, y: from.y + bestT * dy };
+        }
+
+        // Draw generalization triangle at box edge (matching legend-studio's drawInheritance)
+        function drawTriangleAtEdge(ctx, fromPt, toPt, intersection, targetTV) {
+            const startX = fromPt.x, startY = fromPt.y;
+            const endX = toPt.x, endY = toPt.y;
+
+            // Compute angle using atan (not atan2) + PI correction, matching legend-studio
+            let angle = Math.atan((endY - startY) / (endX - startX));
+            angle = endX >= startX ? angle : angle + Math.PI;
+
+            const size = DG.triangleSize;
+            // Triangle points relative to origin, then rotated
+            const pts = [
+                { x: 0, y: 0 },
+                { x: -size, y: -size / 2 },
+                { x: -size, y: size / 2 },
+            ];
+
+            ctx.beginPath();
+            for (let i = 0; i < pts.length; i++) {
+                const rx = intersection.x + (pts[i].x * Math.cos(angle) - pts[i].y * Math.sin(angle));
+                const ry = intersection.y + (pts[i].x * Math.sin(angle) + pts[i].y * Math.cos(angle));
+                if (i === 0) ctx.moveTo(rx, ry);
+                else ctx.lineTo(rx, ry);
+            }
+            ctx.closePath();
+            ctx.fillStyle = DG.genTriangleFill;
+            ctx.fill();
+            ctx.strokeStyle = DG.genTriangleStroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+
+        function drawArrow(ctx, from, to) {
+            const size = 8;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.translate(to.x, to.y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, -size / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, size / 3);
+            ctx.strokeStyle = DG.lineColor;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawDiamond(ctx, from, to) {
+            const size = DG.diamondSize;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.translate(to.x, to.y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, -size / 2);
+            ctx.lineTo(-size * 2, 0);
+            ctx.lineTo(-size, size / 2);
+            ctx.closePath();
+            ctx.fillStyle = DG.diamondFill;
+            ctx.fill();
+            ctx.strokeStyle = DG.diamondStroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // =================================================================
+        // Diagram Interaction (drag, pan, zoom)
+        // =================================================================
+        (function() {
+            const canvas = document.getElementById('diagramCanvas');
+            if (!canvas) return;
+
+            canvas.addEventListener('mousedown', (e) => {
+                if (!diagramData) return;
+                const { mx, my } = canvasMouseToModel(e);
+
+                // Check if clicking on a TypeView
+                for (let i = diagramData.typeViews.length - 1; i >= 0; i--) {
+                    const tv = diagramData.typeViews[i];
+                    if (mx >= tv.position.x && mx <= tv.position.x + tv.width &&
+                        my >= tv.position.y && my <= tv.position.y + tv.height) {
+                        diagramDragging = {
+                            viewIndex: i,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            origX: tv.position.x,
+                            origY: tv.position.y,
+                        };
+                        canvas.classList.add('moving');
+                        e.preventDefault();
+                        return;
+                    }
+                }
+
+                // Check if clicking on a relationship line
+                const lineHit = findRelationshipNearPoint(mx, my, 8 / diagramZoom);
+                if (lineHit) {
+                    const views = lineHit.viewType === 'generalization' ? diagramData.generalizationViews
+                        : lineHit.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[lineHit.viewIndex];
+                    selectedRelationship = { viewType: lineHit.viewType, viewIndex: lineHit.viewIndex };
+
+                    if (lineHit.isAnchor) {
+                        // Drag edge anchor to reposition offset (like legend-studio)
+                        diagramAnchorDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            anchorEnd: lineHit.anchorEnd,
+                        };
+                    } else if (lineHit.isExisting) {
+                        // Drag existing waypoint in view.path
+                        diagramLineDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            pointIndex: lineHit.pointIndex, // index in view.path
+                        };
+                    } else {
+                        // Insert new waypoint into view.path
+                        if (!view.path) view.path = [];
+                        // segmentIndex refers to fullPath [anchor, ...path, anchor]
+                        const insertIdx = lineHit.segmentIndex;
+                        view.path.splice(insertIdx, 0, { x: mx, y: my });
+                        diagramLineDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            pointIndex: insertIdx,
+                        };
+                    }
+                    canvas.classList.add('moving');
+                    e.preventDefault();
+                    drawDiagram();
+                    return;
+                }
+
+                // Click on empty space deselects
+                selectedRelationship = null;
+
+                // Pan
+                diagramPanning = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    origOffX: diagramOffsetX,
+                    origOffY: diagramOffsetY,
+                };
+                canvas.classList.add('dragging');
+                e.preventDefault();
+                drawDiagram();
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (diagramDragging) {
+                    const tv = diagramData.typeViews[diagramDragging.viewIndex];
+                    const dx = (e.clientX - diagramDragging.startX) / diagramZoom;
+                    const dy = (e.clientY - diagramDragging.startY) / diagramZoom;
+                    tv.position.x = diagramDragging.origX + dx;
+                    tv.position.y = diagramDragging.origY + dy;
+                    // Remove intermediate waypoints that ended up inside the moved box
+                    // (like legend-studio's manageInsidePointsDynamically)
+                    manageInsidePointsDynamically(tv);
+                    drawDiagram();
+                } else if (diagramAnchorDragging) {
+                    // Continuous anchor drag within box (like legend-studio)
+                    const { mx, my } = canvasMouseToModel(e);
+                    const views = diagramAnchorDragging.viewType === 'generalization' ? diagramData.generalizationViews
+                        : diagramAnchorDragging.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[diagramAnchorDragging.viewIndex];
+                    const tvLookup = {};
+                    diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+                    const tvId = diagramAnchorDragging.anchorEnd === 'source' ? view.source : view.target;
+                    const tv = tvLookup[tvId];
+                    if (tv) {
+                        const center = {
+                            x: tv.position.x + tv.width / 2,
+                            y: tv.position.y + tv.height / 2,
+                        };
+                        if (diagramAnchorDragging.anchorEnd === 'source') {
+                            view.sourceOffset = { x: mx - center.x, y: my - center.y };
+                        } else {
+                            view.targetOffset = { x: mx - center.x, y: my - center.y };
+                        }
+                    }
+                    drawDiagram();
+                } else if (diagramLineDragging) {
+                    const { mx, my } = canvasMouseToModel(e);
+                    const views = diagramLineDragging.viewType === 'generalization' ? diagramData.generalizationViews
+                        : diagramLineDragging.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[diagramLineDragging.viewIndex];
+                    if (view.path && view.path[diagramLineDragging.pointIndex]) {
+                        const tvLookup = {};
+                        diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+                        const sourceTV = tvLookup[view.source];
+                        const targetTV = tvLookup[view.target];
+                        const dragPt = { x: mx, y: my };
+
+                        // If dragged point enters source box → transition to anchor drag
+                        if (sourceTV && pointInsideBox(dragPt, sourceTV)) {
+                            const center = {
+                                x: sourceTV.position.x + sourceTV.width / 2,
+                                y: sourceTV.position.y + sourceTV.height / 2,
+                            };
+                            view.sourceOffset = { x: mx - center.x, y: my - center.y };
+                            view.path.splice(diagramLineDragging.pointIndex, 1);
+                            // Transition to anchor dragging (continue within box)
+                            diagramAnchorDragging = {
+                                viewType: diagramLineDragging.viewType,
+                                viewIndex: diagramLineDragging.viewIndex,
+                                anchorEnd: 'source',
+                            };
+                            diagramLineDragging = null;
+                        }
+                        // If dragged point enters target box → transition to anchor drag
+                        else if (targetTV && pointInsideBox(dragPt, targetTV)) {
+                            const center = {
+                                x: targetTV.position.x + targetTV.width / 2,
+                                y: targetTV.position.y + targetTV.height / 2,
+                            };
+                            view.targetOffset = { x: mx - center.x, y: my - center.y };
+                            view.path.splice(diagramLineDragging.pointIndex, 1);
+                            // Transition to anchor dragging (continue within box)
+                            diagramAnchorDragging = {
+                                viewType: diagramLineDragging.viewType,
+                                viewIndex: diagramLineDragging.viewIndex,
+                                anchorEnd: 'target',
+                            };
+                            diagramLineDragging = null;
+                        }
+                        // Normal drag: just update position
+                        else {
+                            view.path[diagramLineDragging.pointIndex].x = mx;
+                            view.path[diagramLineDragging.pointIndex].y = my;
+                        }
+                    }
+                    drawDiagram();
+                } else if (diagramPanning) {
+                    diagramOffsetX = diagramPanning.origOffX + (e.clientX - diagramPanning.startX);
+                    diagramOffsetY = diagramPanning.origOffY + (e.clientY - diagramPanning.startY);
+                    drawDiagram();
+                }
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                diagramUpdateSuppressed = true;
+                try {
+                    if (diagramDragging) {
+                        pruneWaypointsInsideMovedBox(diagramDragging.viewIndex);
+                        updateDiagramInSource();
+                        diagramDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramAnchorDragging) {
+                        updateDiagramInSource();
+                        diagramAnchorDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramLineDragging) {
+                        updateDiagramInSource();
+                        diagramLineDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramPanning) {
+                        diagramPanning = null;
+                        canvas.classList.remove('dragging');
+                    }
+                } finally {
+                    diagramUpdateSuppressed = false;
+                }
+            });
+
+            canvas.addEventListener('mouseleave', (e) => {
+                diagramUpdateSuppressed = true;
+                try {
+                    if (diagramDragging) {
+                        updateDiagramInSource();
+                        diagramDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramAnchorDragging) {
+                        updateDiagramInSource();
+                        diagramAnchorDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramLineDragging) {
+                        updateDiagramInSource();
+                        diagramLineDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramPanning) {
+                        diagramPanning = null;
+                        canvas.classList.remove('dragging');
+                    }
+                } finally {
+                    diagramUpdateSuppressed = false;
+                }
+            });
+
+            // Zoom with mouse wheel
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newZoom = Math.max(0.1, Math.min(4, diagramZoom * zoomFactor));
+
+                // Zoom toward mouse position
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                diagramOffsetX = mx - (mx - diagramOffsetX) * (newZoom / diagramZoom);
+                diagramOffsetY = my - (my - diagramOffsetY) * (newZoom / diagramZoom);
+                diagramZoom = newZoom;
+                drawDiagram();
+            }, { passive: false });
+        })();
+
+        function canvasMouseToModel(e) {
+            const canvas = document.getElementById('diagramCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            return {
+                mx: (cx - diagramOffsetX) / diagramZoom,
+                my: (cy - diagramOffsetY) / diagramZoom,
+            };
+        }
+
+        // Remove intermediate waypoints inside a class box (like legend-studio's manageInsidePointsDynamically)
+        // When a dot is consumed, update the offset so the anchor moves to where the dot was
+        function manageInsidePointsDynamically(tv) {
+            if (!diagramData) return;
+            const center = {
+                x: tv.position.x + tv.width / 2,
+                y: tv.position.y + tv.height / 2,
+            };
+            const allViews = [
+                ...diagramData.generalizationViews,
+                ...diagramData.associationViews,
+                ...diagramData.propertyViews,
+            ];
+            for (const view of allViews) {
+                if (view.source !== tv.id && view.target !== tv.id) continue;
+                if (!view.path) view.path = [];
+                const consumed = view.path.filter(p => pointInsideBox(p, tv));
+                if (consumed.length > 0) {
+                    // Use consumed point as new anchor offset
+                    const pick = view.source === tv.id ? consumed[0] : consumed[consumed.length - 1];
+                    const offset = { x: pick.x - center.x, y: pick.y - center.y };
+                    if (view.source === tv.id) {
+                        view.sourceOffset = offset;
+                    } else {
+                        view.targetOffset = offset;
+                    }
+                    view.path = view.path.filter(p => !pointInsideBox(p, tv));
+                }
+            }
+        }
+
+        // After dragging a box, prune waypoints that ended up inside the moved box
+        function pruneWaypointsInsideMovedBox(viewIndex) {
+            if (!diagramData) return;
+            const tv = diagramData.typeViews[viewIndex];
+            const tvLookup = {};
+            diagramData.typeViews.forEach(t => { tvLookup[t.id] = t; });
+
+            const allViews = [
+                ...diagramData.generalizationViews,
+                ...diagramData.associationViews,
+                ...diagramData.propertyViews,
+            ];
+
+            for (const view of allViews) {
+                if (view.source !== tv.id && view.target !== tv.id) continue;
+                rebuildViewPoints(view, tvLookup);
+            }
+            drawDiagram();
+        }
+
+        // Rebuild view.points from current offsets and path (for serialization)
+        function rebuildViewPoints(view, tvLookup) {
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+            view.points = [sourceAnchor, ...(view.path || []), targetAnchor];
+        }
+
+        let diagramUpdateSuppressed = false;
+        let diagramUpdateTimer = null;
+
+        // Hook into editor changes to update diagram
+        function setupDiagramSync() {
+            if (!editor) return;
+            editor.onDidChangeModelContent(() => {
+                if (diagramUpdateSuppressed) return;
+                if (currentEditorTab === 'diagram') {
+                    clearTimeout(diagramUpdateTimer);
+                    diagramUpdateTimer = setTimeout(updateDiagram, 300);
+                }
+            });
+        }
+
+        // Zoom controls
+        function diagramZoomIn() {
+            diagramZoom = Math.min(4, diagramZoom * 1.2);
+            drawDiagram();
+        }
+        function diagramZoomOut() {
+            diagramZoom = Math.max(0.1, diagramZoom / 1.2);
+            drawDiagram();
+        }
+        function diagramFitToScreen() {
+            if (!diagramData || diagramData.typeViews.length === 0) return;
+            const canvas = document.getElementById('diagramCanvas');
+            const dpr = window.devicePixelRatio || 1;
+            const cw = canvas.width / dpr;
+            const ch = canvas.height / dpr;
+
+            // Compute bounding box of all type views
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            diagramData.typeViews.forEach(tv => {
+                minX = Math.min(minX, tv.position.x);
+                minY = Math.min(minY, tv.position.y);
+                maxX = Math.max(maxX, tv.position.x + tv.width);
+                maxY = Math.max(maxY, tv.position.y + tv.height);
+            });
+
+            const padding = 40;
+            const dw = maxX - minX + padding * 2;
+            const dh = maxY - minY + padding * 2;
+            diagramZoom = Math.min(cw / dw, ch / dh, 2);
+            diagramOffsetX = (cw - dw * diagramZoom) / 2 - (minX - padding) * diagramZoom;
+            diagramOffsetY = (ch - dh * diagramZoom) / 2 - (minY - padding) * diagramZoom;
+            drawDiagram();
+        }
+
+        // ResizeObserver for diagram resizing
+        const diagramResizeObserver = new ResizeObserver(() => {
+            if (currentEditorTab === 'diagram') updateDiagram();
+        });
+        const diagPanel = document.getElementById('diagramPanel');
+        if (diagPanel) diagramResizeObserver.observe(diagPanel);
+    </script>
+</body>
+</html>

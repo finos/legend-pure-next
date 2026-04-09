@@ -101,6 +101,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("association/property/simple.pure") &&
                                   !testName.contains("association/property/typeArguments.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
+                                  !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure")) {
                                   return;
