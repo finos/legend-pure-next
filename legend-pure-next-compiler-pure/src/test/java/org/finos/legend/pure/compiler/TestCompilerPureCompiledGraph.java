@@ -91,8 +91,11 @@ public class TestCompilerPureCompiledGraph
                           {
                               String testName = finalStart.relativize(p).toString();
                               
-                              if (!testName.contains("class/property/simple.pure") && 
+                              if (!testName.contains("class/property/simple.pure") &&
+                                  !testName.contains("class/property/typeArguments.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
+                                  !testName.contains("class/inheritance/typeArguments.pure") &&
+                                  !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure")) {
                                   return;

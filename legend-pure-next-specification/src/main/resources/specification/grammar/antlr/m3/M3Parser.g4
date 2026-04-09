@@ -275,7 +275,10 @@ expressionInstance: NEW_SYMBOL
 expressionInstanceRightSide: expressionInstanceAtomicRightSide
 ;
 
-expressionInstanceAtomicRightSide: combinedExpression | expressionInstance | qualifiedName
+parentReference: TILDE (DOT TILDE)* (DOT propertyName (DOT propertyName)*)?
+;
+
+expressionInstanceAtomicRightSide: parentReference | combinedExpression | expressionInstance | qualifiedName
 ;
 
 expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)* PLUS? EQUAL expressionInstanceRightSide

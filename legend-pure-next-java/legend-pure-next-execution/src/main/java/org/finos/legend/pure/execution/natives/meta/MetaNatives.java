@@ -235,10 +235,16 @@ public class MetaNatives
         });
 
         // new(GenericTypeAndMultiplicityHolder[1], KeyExpression[*]) : T[1] — construct from key expressions
-        natives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
+        // Registered as a LAZY native so we can push the instance onto the construction stack
+        // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
+        lazyNatives.put("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
+            org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
+            // Step 1: Evaluate ONLY the type holder (first arg)
+            ValueSpecification typeHolderVS = eval.evaluate(paramSpecs.get(0));
+
             String classPath = "Unknown";
-            if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh
+            if (typeHolderVS instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
@@ -253,8 +259,9 @@ public class MetaNatives
                     }
                 }
             }
-            if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh2)
+            if (typeHolderVS instanceof GenericTypeAndMultiplicityHolder gtmh2)
             {
+                // Step 2: Create the instance
                 Object instance = createInstance(classPath, gtmh2);
                 if (gtmh2._genericType() != null
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
@@ -271,31 +278,41 @@ public class MetaNatives
                     }
                 }
 
-                // Collect key/value pairs for reverse pointer processing
-                List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
-                Object keyExprsRaw = _E_ValueSpecification.unwrap(args.get(1));
-                if (keyExprsRaw instanceof List<?> keyExprs)
+                // Step 3: Push onto construction stack, then evaluate key expressions
+                eval.pushConstruction(instance);
+                try
                 {
-                    for (Object ke : keyExprs)
-                    {
-                        processKeyExpression(ke, instance, keyValues);
-                    }
-                }
-                else
-                {
-                    processKeyExpression(keyExprsRaw, instance, keyValues);
-                }
+                    ValueSpecification keyExprsVS = eval.evaluate(paramSpecs.get(1));
 
-                // Set reverse association pointers
-                setReverseAssociationPointers(instance, classPath, keyValues, resolver);
+                    // Step 4: Process key expressions
+                    List<Map.Entry<String, Object>> keyValues = new ArrayList<>();
+                    Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
+                    if (keyExprsRaw instanceof List<?> keyExprs)
+                    {
+                        for (Object ke : keyExprs)
+                        {
+                            processKeyExpression(ke, instance, keyValues);
+                        }
+                    }
+                    else
+                    {
+                        processKeyExpression(keyExprsRaw, instance, keyValues);
+                    }
+
+                    // Set reverse association pointers
+                    setReverseAssociationPointers(instance, classPath, keyValues, resolver);
+                }
+                finally
+                {
+                    eval.popConstruction();
+                }
 
                 // Validate constraints on the class after construction
-                if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh3
-                        && gtmh3._genericType() != null
-                        && _GenericType.typeArguments(gtmh3._genericType()) != null
-                        && _GenericType.typeArguments(gtmh3._genericType()).notEmpty())
+                if (gtmh2._genericType() != null
+                        && _GenericType.typeArguments(gtmh2._genericType()) != null
+                        && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh3._genericType()).getFirst();
+                    meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
                     meta.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
                     if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
                     {
@@ -303,7 +320,7 @@ public class MetaNatives
                     }
                 }
 
-                return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+                return _E_ValueSpecification.wrap(instance, fe._genericType(), fe._multiplicity(), resolver);
             }
             throw new RuntimeException("Not possible");
         });
@@ -328,6 +345,22 @@ public class MetaNatives
         natives.put("keyExpression_String_1__Any_MANY__KeyExpression_1_", keyExprFn);
         natives.put("keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_", keyExprFn);
 
+        // parentReference — returns a sentinel that resolves to a parent instance during new/copy construction
+        natives.put("parentReference_Integer_1__String_1__Any_1_", (args, eval, genericType, multiplicity) ->
+        {
+            int depth = ((Number) _E_ValueSpecification.unwrap(args.get(0))).intValue();
+            String propPath = (String) _E_ValueSpecification.unwrap(args.get(1));
+            // Look up the construction stack: depth 0 = self (top), depth 1 = parent, etc.
+            Object target = eval.peekConstruction(depth);
+            if (target == null)
+            {
+                throw new RuntimeException("Parent reference ~ at depth " + depth
+                        + " is out of bounds (construction stack size: unknown). "
+                        + "Ensure ~ is used inside a ^Type(...) expression.");
+            }
+            return _E_ValueSpecification.wrap(target, genericType, multiplicity, resolver);
+        });
+
         // copy(T[1]) : T[1] — simple copy with no overrides
         natives.put("copy_T_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
@@ -341,8 +374,8 @@ public class MetaNatives
             }
             else if (original instanceof PackageableElement pe)
             {
-                classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 cgt = pe._classifierGenericType();
+                classPath = pe.getClass().getInterfaces()[0].getName().replace(".", "::");
             }
             else if (original instanceof Any any)
             {
@@ -377,9 +410,14 @@ public class MetaNatives
         });
 
         // copy(T[1], KeyExpression[*]) : T[1] — shallow copy with property overrides
-        natives.put("copy_T_1__KeyExpression_MANY__T_1_", (args, eval, genericType, multiplicity) ->
+        // Registered as a LAZY native so we can push the copy onto the construction stack
+        // BEFORE evaluating key expressions, enabling parentReference (~) resolution.
+        lazyNatives.put("copy_T_1__KeyExpression_MANY__T_1_", (fe, eval) ->
         {
-            Object original = _E_ValueSpecification.unwrap(args.get(0));
+            org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
+            // Step 1: Evaluate the source object (first arg)
+            ValueSpecification sourceVS = eval.evaluate(paramSpecs.get(0));
+            Object original = _E_ValueSpecification.unwrap(sourceVS);
             String classPath;
             meta.pure.metamodel.type.generics.GenericType cgt;
             if (original instanceof DynamicInstance di)
@@ -389,8 +427,8 @@ public class MetaNatives
             }
             else if (original instanceof PackageableElement pe)
             {
-                classPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
                 cgt = pe._classifierGenericType();
+                classPath = pe.getClass().getInterfaces()[0].getName().replace(".", "::");
             }
             else if (original instanceof Any any)
             {
@@ -408,10 +446,9 @@ public class MetaNatives
                 classPath = resolveClassPathFromCGT(cgt);
             }
 
+            // Step 2: Create the copy
             Object copy = createInstanceByPath(classPath);
-            // First copy all properties (including classifierGenericType from original)
             shallowCopyProperties(original, copy, cgt, resolver);
-            // Then fix and set the self-referential classifierGenericType to point to the copy
             meta.pure.metamodel.type.generics.GenericType copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
             if (copy instanceof Any anyC && copyCgt != null)
             {
@@ -422,38 +459,42 @@ public class MetaNatives
                 diC.setClassifierGenericType(copyCgt);
             }
 
-            // Track deep-copied nested objects
+            // Step 3: Push onto construction stack, then evaluate key expressions
+            eval.pushConstruction(copy);
             Map<String, DynamicInstance> deepCopied = new HashMap<>();
+            try
+            {
+                ValueSpecification keyExprsVS = eval.evaluate(paramSpecs.get(1));
 
-            // Apply key expression overrides
-            Object keyExprsRaw = _E_ValueSpecification.unwrap(args.get(1));
-            List<Object> keyExprList;
-            if (keyExprsRaw instanceof List<?> list)
-            {
-                keyExprList = new ArrayList<>(list);
-            }
-            else
-            {
-                keyExprList = new ArrayList<>();
-                if (keyExprsRaw != null)
+                Object keyExprsRaw = _E_ValueSpecification.unwrap(keyExprsVS);
+                List<Object> keyExprList;
+                if (keyExprsRaw instanceof List<?> list)
                 {
-                    keyExprList.add(keyExprsRaw);
+                    keyExprList = new ArrayList<>(list);
+                }
+                else
+                {
+                    keyExprList = new ArrayList<>();
+                    if (keyExprsRaw != null)
+                    {
+                        keyExprList.add(keyExprsRaw);
+                    }
+                }
+
+                for (Object ke : keyExprList)
+                {
+                    if (ke instanceof DynamicInstance diKe)
+                    {
+                        applyCopyKeyExpressionWithDotPath(copy, diKe, deepCopied, resolver);
+                    }
                 }
             }
-
-            for (Object ke : keyExprList)
+            finally
             {
-                if (ke instanceof DynamicInstance diKe)
-                {
-                    applyCopyKeyExpressionWithDotPath(copy, diKe, deepCopied, resolver);
-                }
+                eval.popConstruction();
             }
 
-            // Post-process the copy and all nested elements to rewrite self references pointing to original
-            if (copy instanceof meta.pure.metamodel.type.Type)
-            {
-                fixSelfReferencesRecursive(copy, original, copy, new java.util.HashSet<>(), resolver);
-            }
+
 
             // Collect key/value pairs for reverse pointer processing
             List<Map.Entry<String, Object>> allProps = getAllPropertyEntries(copy, cgt, resolver);
@@ -495,7 +536,7 @@ public class MetaNatives
                 }
             }
 
-            return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
+            return _E_ValueSpecification.wrap(copy, fe._genericType(), fe._multiplicity(), resolver);
         });
 
         // cast(Any[m], T[1]) : T[m]
@@ -587,15 +628,73 @@ public class MetaNatives
         natives.put("evaluateAndDeactivate_Any_m__Any_m_", evalAndDeactivate);
         natives.put("evaluateAndDeactivate", evalAndDeactivate);
 
-        // newClass() : Class<Any>[1] — create a new empty Class with a self-referential classifierGenericType
-        natives.put("newClass__Class_1_", (args, eval, genericType, multiplicity) ->
+        // newClass(TypeParameter[*], MultiplicityParameter[*]) : Class<Any>[1]
+        natives.put("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_", (args, eval, genericType, multiplicity) ->
         {
             meta.pure.metamodel.type.ClassImpl newClass = new meta.pure.metamodel.type.ClassImpl();
 
             // Build classifierGenericType = Class<self> where the typeArgument points to this class.
-            // Structure: UserDefinedGenericType(type=Class, typeArguments=[UserDefinedGenericType(type=newClass)])
             meta.pure.metamodel.type.Type classType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Class");
             meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
+            
+            // Build typeArguments from the provided typeParameters
+            Object typeParamsRaw = _E_ValueSpecification.unwrap(args.get(0));
+            List<Object> typeParams;
+            if (typeParamsRaw instanceof List<?> list)
+            {
+                typeParams = new ArrayList<>(list);
+            }
+            else
+            {
+                typeParams = new ArrayList<>();
+                if (typeParamsRaw != null)
+                {
+                    typeParams.add(typeParamsRaw);
+                }
+            }
+            if (typeParams != null && !typeParams.isEmpty())
+            {
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerTypeArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                for (Object tp : typeParams)
+                {
+                    if (tp instanceof meta.pure.metamodel.type.generics.TypeParameter)
+                    {
+                        ((meta.pure.metamodel.type.generics.TypeParameter) tp)._owner(newClass);
+                    }
+                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) tp, resolver);
+                    innerTypeArgs.add(tpArg);
+                }
+                selfRef._typeArguments(innerTypeArgs); 
+            }
+            // Build multiplicityArguments from provided multiplicityParameters
+            Object mulParamsRaw = _E_ValueSpecification.unwrap(args.get(1));
+            List<Object> mulParams;
+            if (mulParamsRaw instanceof List<?> list)
+            {
+                mulParams = new ArrayList<>(list);
+            }
+            else
+            {
+                mulParams = new ArrayList<>();
+                if (mulParamsRaw != null)
+                {
+                    mulParams.add(mulParamsRaw);
+                }
+            }
+            if (mulParams != null && !mulParams.isEmpty())
+            {
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.multiplicity.Multiplicity> innerMulArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                for (Object mp : mulParams)
+                {
+                    if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter)
+                    {
+                        ((meta.pure.metamodel.multiplicity.MultiplicityParameter) mp)._owner(newClass);
+                    }
+                    innerMulArgs.add((meta.pure.metamodel.multiplicity.Multiplicity) mp);
+                }
+                selfRef._multiplicityArguments(innerMulArgs);
+            }
+            
             meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
             cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
             newClass._classifierGenericType(cgt);
@@ -647,7 +746,38 @@ public class MetaNatives
                                 if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
                                     && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
                                 {
-                                    return (meta.pure.metamodel.type.generics.GenericType) _GenericType.buildUserDefinedGenericType(copyType, resolver);
+                                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
+                                            _GenericType.buildUserDefinedGenericType(copyType, resolver);
+                                    // Copy inner typeArguments (e.g., TypeParameters like T)
+                                    // and fix their owners to point to the copy
+                                    if (argV._typeArguments() != null && argV._typeArguments().notEmpty())
+                                    {
+                                        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerArgs =
+                                                argV._typeArguments().collect(innerArg -> {
+                                                    if (innerArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue innerV
+                                                            && innerV._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp
+                                                            && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                                    {
+                                                        tp._owner(owner);
+                                                    }
+                                                    return innerArg;
+                                                });
+                                        selfRef._typeArguments(innerArgs);
+                                    }
+                                    if (argV._multiplicityArguments() != null && argV._multiplicityArguments().notEmpty())
+                                    {
+                                        // Fix MultiplicityParameter owners too
+                                        for (meta.pure.metamodel.multiplicity.Multiplicity mp : argV._multiplicityArguments())
+                                        {
+                                            if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mulParam
+                                                    && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                            {
+                                                mulParam._owner(owner);
+                                            }
+                                        }
+                                        selfRef._multiplicityArguments(argV._multiplicityArguments());
+                                    }
+                                    return (meta.pure.metamodel.type.generics.GenericType) selfRef;
                                 }
                                 return arg;
                             });
@@ -1442,147 +1572,6 @@ public class MetaNatives
                         }
                     }
                     throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + (rawValue == null ? "null" : rawValue.getClass().getSimpleName()), e);
-                }
-            }
-        }
-    }
-
-    private static void fixSelfReferencesRecursive(Object current, Object original, Object copyTarget, java.util.Set<Object> visited, MetadataAccess resolver)
-    {
-        if (current == null || original == null) return;
-        if (current instanceof ValueSpecification vs)
-        {
-            current = _E_ValueSpecification.unwrap(vs);
-            if (current == null) return;
-        }
-        if (!visited.add(current)) return;
-
-        // Prune unbounded traversals into external global items. Since we are cloning the
-        // copyTarget element locally, any distinct PackageableElement is out of scope.
-        if (current instanceof PackageableElement && current != copyTarget)
-        {
-            return;
-        }
-
-        if (current instanceof Any anyC)
-        {
-            meta.pure.metamodel.type.generics.GenericType currentCgt = anyC._classifierGenericType();
-            if (currentCgt != null)
-            {
-                meta.pure.metamodel.type.generics.GenericType newCgt = fixSelfReferentialCGT(currentCgt, original, copyTarget, resolver);
-                if (newCgt != currentCgt)
-                {
-                    anyC._classifierGenericType(newCgt);
-                }
-            }
-
-            for (Map.Entry<String, Object> entry : getAllPropertyEntries(current, currentCgt, resolver))
-            {
-                Object rawVal = _E_ValueSpecification.unwrap(entry.getValue());
-                if (rawVal == null) continue;
-
-                if (rawVal instanceof meta.pure.metamodel.type.generics.GenericType propGt)
-                {
-                    meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
-                    if (replaced != propGt)
-                    {
-                        setInstanceProperty(current, entry.getKey(), replaced);
-                    }
-                    fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
-                }
-                else if (rawVal instanceof java.util.List<?> lst)
-                {
-                    java.util.List<Object> newList = null;
-                    for (int i = 0; i < lst.size(); i++)
-                    {
-                        Object item = _E_ValueSpecification.unwrap(lst.get(i));
-                        if (item == null) continue;
-
-                        if (item instanceof meta.pure.metamodel.type.generics.GenericType propGt)
-                        {
-                            meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
-                            if (replaced != propGt)
-                            {
-                                if (newList == null) newList = new java.util.ArrayList<>(lst);
-                                newList.set(i, replaced);
-                            }
-                            fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
-                        }
-                        else
-                        {
-                            fixSelfReferencesRecursive(item, original, copyTarget, visited, resolver);
-                        }
-                    }
-                    if (newList != null)
-                    {
-                        setInstanceProperty(current, entry.getKey(), newList);
-                    }
-                }
-                else
-                {
-                    fixSelfReferencesRecursive(rawVal, original, copyTarget, visited, resolver);
-                }
-            }
-        }
-        else if (current instanceof DynamicInstance di)
-        {
-            meta.pure.metamodel.type.generics.GenericType currentCgt = di.getClassifierGenericType();
-            if (currentCgt != null)
-            {
-                meta.pure.metamodel.type.generics.GenericType newCgt = fixSelfReferentialCGT(currentCgt, original, copyTarget, resolver);
-                if (newCgt != currentCgt)
-                {
-                    di.setClassifierGenericType(newCgt);
-                }
-            }
-
-            for (Map.Entry<String, Object> entry : di.getValues().entrySet())
-            {
-                Object rawVal = _E_ValueSpecification.unwrap(entry.getValue());
-                if (rawVal == null) continue;
-
-                if (rawVal instanceof meta.pure.metamodel.type.generics.GenericType propGt)
-                {
-                    meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
-                    if (replaced != propGt)
-                    {
-                        di.put(entry.getKey(), _E_ValueSpecification.wrap(replaced, null, null, resolver));
-                    }
-                    fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
-                }
-                else if (rawVal instanceof java.util.List<?> lst)
-                {
-                    java.util.List<Object> newList = null;
-                    for (int i = 0; i < lst.size(); i++)
-                    {
-                        Object item = _E_ValueSpecification.unwrap(lst.get(i));
-                        if (item == null) continue;
-
-                        if (item instanceof meta.pure.metamodel.type.generics.GenericType propGt)
-                        {
-                            meta.pure.metamodel.type.generics.GenericType replaced = fixSelfReferentialCGT(propGt, original, copyTarget, resolver);
-                            if (replaced != propGt)
-                            {
-                                if (newList == null) newList = new java.util.ArrayList<>(lst);
-                                newList.set(i, replaced);
-                            }
-                            fixSelfReferencesRecursive(replaced, original, copyTarget, visited, resolver);
-                        }
-                        else
-                        {
-                            fixSelfReferencesRecursive(item, original, copyTarget, visited, resolver);
-                        }
-                    }
-                    if (newList != null)
-                    {
-                        java.util.List<ValueSpecification> wrappedList = new java.util.ArrayList<>();
-                        for (Object obj : newList) wrappedList.add(_E_ValueSpecification.wrap(obj, null, null, resolver));
-                        di.put(entry.getKey(), org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrappedList, resolver));
-                    }
-                }
-                else
-                {
-                    fixSelfReferencesRecursive(rawVal, original, copyTarget, visited, resolver);
                 }
             }
         }

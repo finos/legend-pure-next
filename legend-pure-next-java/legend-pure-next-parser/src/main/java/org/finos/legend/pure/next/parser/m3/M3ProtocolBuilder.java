@@ -1205,6 +1205,33 @@ public class M3ProtocolBuilder
     private ValueSpecification visitExprInstanceRightSide(final M3Parser.ExpressionInstanceRightSideContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
         M3Parser.ExpressionInstanceAtomicRightSideContext atomic = ctx.expressionInstanceAtomicRightSide();
+        if (atomic.parentReference() != null)
+        {
+            M3Parser.ParentReferenceContext parentRef = atomic.parentReference();
+            // First tilde = self (depth 0), each additional .~ adds 1 to depth
+            int tildeCount = parentRef.TILDE().size();
+            int depth = tildeCount - 1;
+
+            // Build property path from DOT-separated propertyNames (may be empty for bare ~)
+            String propPath = ListAdapter.adapt(parentRef.propertyName())
+                    .collect(pnCtx -> pnCtx.getText())
+                    .makeString(".");
+
+            MutableList<ValueSpecification> params = Lists.mutable.with(
+                    new AtomicValueImpl()
+                            ._sourceInformation(buildSourceInfo(parentRef))
+                            ._genericType(buildPrimitiveGenericType("Integer"))
+                            ._value((long) depth),
+                    new AtomicValueImpl()
+                            ._sourceInformation(buildSourceInfo(parentRef))
+                            ._genericType(buildPrimitiveGenericType("String"))
+                            ._value(propPath));
+
+            return new FunctionInvocationImpl()
+                    ._sourceInformation(buildSourceInfo(parentRef))
+                    ._functionName("parentReference")
+                    ._parametersValues(params);
+        }
         if (atomic.combinedExpression() != null)
         {
             return visitCombinedExpr(atomic.combinedExpression(), typeParamNames, multParamNames);

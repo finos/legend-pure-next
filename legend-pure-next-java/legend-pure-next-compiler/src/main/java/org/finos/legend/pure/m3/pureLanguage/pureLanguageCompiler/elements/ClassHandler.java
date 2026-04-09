@@ -208,7 +208,6 @@ public final class ClassHandler
                                             if (msReturnGT != null && otherReturnGT != null && !_GenericType.isCompatible(otherReturnGT, msReturnGT, model))
                                             {
                                                 String clsName = cls._name();
-                                                System.out.println(qp._sourceInformation());
                                                 context.addError(new CompilationError("Qualified property override variance mismatch for '" + qp._name() + "' in class '" + clsName + "'. Return type is not covariant. Overridden property has return type '" + _GenericType.print(otherReturnGT) + "', but overriding property has return type '" + _GenericType.print(msReturnGT) + "'.", qp._sourceInformation()));
                                             }
                                             if (msReturnMul != null && otherReturnMul != null && !org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.subsumes(otherReturnMul, msReturnMul))

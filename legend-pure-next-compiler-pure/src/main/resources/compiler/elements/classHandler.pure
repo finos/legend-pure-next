@@ -20,21 +20,25 @@ function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::
     let className = $packagePath + '::' + $protocolClass.name;
     let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
 
-    let superTypes = if($protocolClass.generalizations->isEmpty(),
-        | [meta::pure::metamodel::type::Any],
+    // Compile properties and generalizations (they reference $skeleton for now)
+    let compiledProperties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton));
+
+    let compiledGeneralizations = if($protocolClass.generalizations->isEmpty(),
+        | [^meta::pure::metamodel::relationship::Generalization(
+              general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+              specific = $skeleton
+          )],
         | $protocolClass.generalizations->map(g |
-            let genType = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
-            $context->resolveElement($genType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue)->toOne()->cast(@meta::pure::metamodel::type::Type);
+            ^meta::pure::metamodel::relationship::Generalization(
+                general = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->meta::pure::compiler::compileGenericType($context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter)),
+                specific = $skeleton
+            )
         )
     );
 
-    let generalizations = $superTypes->map(s | ^meta::pure::metamodel::relationship::Generalization(
-        general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $s),
-        specific = $skeleton
-    ));
-
+    // Use ~.~ to wire specific and owner back to the copy
     ^$skeleton(
-        generalizations = $generalizations,
-        properties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton))
+        generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
+        properties = $compiledProperties->map(p | ^$p(owner = ~.~))
     );
 }

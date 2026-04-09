@@ -16,20 +16,8 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
 {
-    let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
-    let resolvedType = $protocolType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
-
-    let resolvedOpt = $context->resolveElement($resolvedType);
-    let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-        | $context->resolveElement($packagePath + '::' + $resolvedType),
-        | $resolvedOpt
-    );
-
-    let debug = if($resolvedOptWithPackage->isEmpty(),
-        | println('FAILED RESOLUTION FOR: ' + $resolvedType),
-        | []
-    );
-    let metamodelType = $resolvedOptWithPackage->toOne()->cast(@meta::pure::metamodel::type::Type);
+    let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let mGenType = $protocolType->meta::pure::compiler::compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
 
     // Default implementation maps Protocol Multiplicity to Metamodel Multiplicity bounds
     let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
@@ -55,8 +43,8 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $owner),
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType)
+            $owner.classifierGenericType->toOne()->meta::pure::compiler::helper::genericTypeTypeArguments()->at(0),
+            $mGenType
         ],
         multiplicityArguments = [$mMult]
     );
@@ -66,7 +54,7 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
     ^$prop(
         name = $protocolProperty.name,
         aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType),
+        genericType = $mGenType,
         multiplicity = $mMult,
         sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
             sourceId = $si.sourceId,

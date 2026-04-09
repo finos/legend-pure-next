@@ -159,3 +159,20 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testCantSetClass
     assertError(|^LA_Person(classifierGenericType = ^UserDefinedGenericType(type=Any), firstName='Pierre', lastName='Doe')
                 , 'Cannot set \'classifierGenericType\' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.');
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewSelfReferenceLoop():Boolean[1]
+{
+    let n = ^LA_Node(value=1, next=~);
+    assertEquals(1, $n.value);
+    assertIs($n, $n.next->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewNestedBackReference():Boolean[1]
+{
+    // Outer node's next is an inner node whose next points back to the outer via ~.~
+    let outer = ^LA_Node(value=1, next=^LA_Node(value=2, next=~.~));
+    assertEquals(1, $outer.value);
+    let inner = $outer.next->toOne();
+    assertEquals(2, $inner.value);
+    assertIs($outer, $inner.next->toOne());
+}

@@ -1,0 +1,53 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+import meta::pure::functions::lang::tests::model::*;
+import meta::pure::functions::lang::tests::parentReference::*;
+
+native function <<PCT.platformOnly>> meta::pure::functions::lang::parentReference(depth:Integer[1], propertyPath:String[1]):Any[1];
+
+// =============================================
+// Test: Self-reference loop using ~
+// =============================================
+function <<test.Test>> meta::pure::functions::lang::tests::parentReference::testSelfReferenceLoop():Boolean[1]
+{
+    let n = ^LA_Node(value=1, next=~);
+    assertEquals(1, $n.value);
+    assertIs($n, $n.next->toOne());
+}
+
+// =============================================
+// Test: Nested back-reference using ~.~
+// =============================================
+function <<test.Test>> meta::pure::functions::lang::tests::parentReference::testNestedBackReference():Boolean[1]
+{
+    // Outer node's next is an inner node whose next points back to the outer via ~.~
+    let outer = ^LA_Node(value=1, next=^LA_Node(value=2, next=~.~));
+    assertEquals(1, $outer.value);
+    let inner = $outer.next->toOne();
+    assertEquals(2, $inner.value);
+    assertIs($outer, $inner.next->toOne());
+}
+
+// =============================================
+// Test: Copy with self-reference loop using ~
+// =============================================
+function <<test.Test>> meta::pure::functions::lang::tests::parentReference::testCopySelfReference():Boolean[1]
+{
+    let n = ^LA_Node(value=1);
+    let c = ^$n(next=~);
+    assertEquals(1, $c.value);
+    assertIs($c, $c.next->toOne());
+}
