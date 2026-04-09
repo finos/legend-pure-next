@@ -31,6 +31,7 @@ function meta::pure::compiler::printer::printElement(element:PackageableElement[
     $element->match(
         [
             c:meta::pure::metamodel::type::Class<Any>[1] | $c->printClass(),
+            assoc:meta::pure::metamodel::relationship::Association[1] | $assoc->printAssociation(),
             p:meta::pure::metamodel::type::PrimitiveType[1] | $p->printPrimitive(),
             a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
         ]
@@ -47,6 +48,19 @@ function meta::pure::compiler::printer::printClass(c:meta::pure::metamodel::type
         if($c.properties->isEmpty(), | '', | [ '\n', $c.properties->cast(@Any)->map(p | 
             let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
             [ 'property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
+        )->joinStrings('\n') ]->joinStrings(''))
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::printer::printAssociation(assoc:meta::pure::metamodel::relationship::Association[1]):String[1]
+{
+    [
+        'association ', $assoc->fullPath(),
+        $assoc.classifierGenericType->printClassifierGenericType(),
+        $assoc.sourceInformation->printSourceInfo(),
+        if($assoc.properties->isEmpty(), | '', | [ '\n', $assoc.properties->cast(@Any)->map(p | 
+            let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+            [ '  property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
         )->joinStrings('\n') ]->joinStrings(''))
     ]->joinStrings('');
 }
