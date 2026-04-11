@@ -19,6 +19,7 @@ import meta.pure.metamodel.function.property.PropertyImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
@@ -46,7 +47,7 @@ public class _Property
             }
         }
 
-        return new PropertyImpl(resolvedClassifierGenericType)
+        return new PropertyImpl((GenericTypeValue) resolvedClassifierGenericType)
                 ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)

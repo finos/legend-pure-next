@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.execution;
 
+import meta.pure.metamodel.type.generics.GenericTypeValue;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DynamicInstance
 {
-    private meta.pure.metamodel.type.generics.GenericType classifierGenericType;
+    private GenericTypeValue classifierGenericType;
 
     private static final ThreadLocal<Set<DynamicInstance>> PRINTING = ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
     private static final AtomicLong ID_COUNTER = new AtomicLong(0);
@@ -52,12 +54,12 @@ public class DynamicInstance
         this.id = "Anonymous_" + ID_COUNTER.incrementAndGet();
     }
 
-    public meta.pure.metamodel.type.generics.GenericType getClassifierGenericType()
+    public GenericTypeValue getClassifierGenericType()
     {
         return classifierGenericType;
     }
 
-    public void setClassifierGenericType(meta.pure.metamodel.type.generics.GenericType classifierGenericType)
+    public void setClassifierGenericType(GenericTypeValue classifierGenericType)
     {
         this.classifierGenericType = classifierGenericType;
     }

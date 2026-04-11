@@ -23,6 +23,9 @@ import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
+import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -55,9 +58,9 @@ public final class EnumerationHandler
         Multiplicity pureOne = (Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         // GenericType for this specific enumeration (e.g., CC_GeographicEntityType)
-        meta.pure.metamodel.type.generics.GenericType enumGT = _GenericType.buildUserDefinedGenericType(result, model);
+        UserDefinedGenericTypeImpl enumGT = _GenericType.buildUserDefinedGenericType(result, model);
         // GenericType for Enumeration<E> parameterized with this enum type
-        meta.pure.metamodel.type.generics.GenericType enumerationOfE = _GenericType.buildUserDefinedGenericType(enumerationType, model)
+        UserDefinedGenericTypeImpl enumerationOfE = _GenericType.buildUserDefinedGenericType(enumerationType, model)
                 ._typeArguments(Lists.mutable.with(enumGT));
 
         // Create one Property per enum value, each with a defaultValue containing the Enum instance
@@ -75,7 +78,7 @@ public final class EnumerationHandler
             meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
             ft._returnType(enumGT);
             ft._returnMultiplicity(pureOne);
-            GenericType classifierGenericType = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
+            InferredGenericTypeImpl classifierGenericType = new InferredGenericTypeImpl(model)
                     ._type((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"))
                     ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
                             new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));

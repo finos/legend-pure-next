@@ -90,9 +90,9 @@
 :classifierGenericType a :Property ;
     :stereotypes :ProtocolInfo_inferred ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "classifierGenericType" ] ;
-    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Any :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Any :GenericType_GenericTypeValue ) ; :multiplicityArguments :PureOne ] ;
     :owner :Any ;
-    :genericType :GenericType_GenericTypeBase ;
+    :genericType :GenericType_GenericTypeValue ;
     :multiplicity :PureOne .
 
 :elementOverride a :Property ;

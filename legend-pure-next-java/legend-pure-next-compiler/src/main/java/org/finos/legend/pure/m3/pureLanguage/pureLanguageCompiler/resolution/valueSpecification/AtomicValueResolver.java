@@ -4,6 +4,7 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
@@ -116,7 +117,7 @@ public class AtomicValueResolver
         context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
 
         return (AtomicValue) ((AtomicValue) av._copy())
-                ._value(lambda._classifierGenericType(lambdaGT))
+                ._value(lambda._classifierGenericType((GenericTypeValue) lambdaGT))
                 ._genericType(lambdaGT);
     }
 

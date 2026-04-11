@@ -17,7 +17,8 @@ package org.finos.legend.pure.execution.natives.meta;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.valuespecification.Collection;
+import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.DynamicInstance;
@@ -25,7 +26,6 @@ import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
 import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
 import org.finos.legend.pure.execution._E_ValueSpecification;
-import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
@@ -163,14 +163,15 @@ public class MetaNatives
                         && _GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+
+                    GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
                     if (instance instanceof Any any)
                     {
-                        any._classifierGenericType(cgt);
+                        any._classifierGenericType((GenericTypeValue) cgt);
                     }
                     else if (instance instanceof DynamicInstance di)
                     {
-                        di.setClassifierGenericType(cgt);
+                        di.setClassifierGenericType((GenericTypeValue) cgt);
                     }
                 }
 
@@ -197,7 +198,7 @@ public class MetaNatives
         natives.put("new_GenericType_1__Any_1_", (args, eval, genericType, multiplicity) ->
         {
             Object rawArg = _E_ValueSpecification.unwrap(args.get(0));
-            if (!(rawArg instanceof meta.pure.metamodel.type.generics.GenericType gt))
+            if (!(rawArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue gt))
             {
                 throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
             }
@@ -270,11 +271,11 @@ public class MetaNatives
                     meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
                     if (instance instanceof Any any)
                     {
-                        any._classifierGenericType(cgt);
+                        any._classifierGenericType((GenericTypeValue) cgt);
                     }
                     else if (instance instanceof DynamicInstance di)
                     {
-                        di.setClassifierGenericType(cgt);
+                        di.setClassifierGenericType((GenericTypeValue) cgt);
                     }
                 }
 
@@ -366,7 +367,7 @@ public class MetaNatives
         {
             Object original = _E_ValueSpecification.unwrap(args.get(0));
             String classPath;
-            meta.pure.metamodel.type.generics.GenericType cgt;
+            GenericTypeValue cgt;
             if (original instanceof DynamicInstance di)
             {
                 classPath = di.getClassPath();
@@ -397,7 +398,7 @@ public class MetaNatives
             // First copy all properties (including classifierGenericType from original)
             shallowCopyProperties(original, copy, cgt, resolver);
             // Then fix and set the self-referential classifierGenericType to point to the copy
-            meta.pure.metamodel.type.generics.GenericType copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
             if (copy instanceof Any anyC && copyCgt != null)
             {
                 anyC._classifierGenericType(copyCgt);
@@ -419,7 +420,7 @@ public class MetaNatives
             ValueSpecification sourceVS = eval.evaluate(paramSpecs.get(0));
             Object original = _E_ValueSpecification.unwrap(sourceVS);
             String classPath;
-            meta.pure.metamodel.type.generics.GenericType cgt;
+            GenericTypeValue cgt;
             if (original instanceof DynamicInstance di)
             {
                 classPath = di.getClassPath();
@@ -449,7 +450,7 @@ public class MetaNatives
             // Step 2: Create the copy
             Object copy = createInstanceByPath(classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
-            meta.pure.metamodel.type.generics.GenericType copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
             if (copy instanceof Any anyC && copyCgt != null)
             {
                 anyC._classifierGenericType(copyCgt);
@@ -493,7 +494,6 @@ public class MetaNatives
             {
                 eval.popConstruction();
             }
-
 
 
             // Collect key/value pairs for reverse pointer processing
@@ -636,7 +636,7 @@ public class MetaNatives
             // Build classifierGenericType = Class<self> where the typeArgument points to this class.
             meta.pure.metamodel.type.Type classType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Class");
             meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(newClass, resolver);
-            
+
             // Build typeArguments from the provided typeParameters
             Object typeParamsRaw = _E_ValueSpecification.unwrap(args.get(0));
             List<Object> typeParams;
@@ -664,7 +664,7 @@ public class MetaNatives
                     meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) tp, resolver);
                     innerTypeArgs.add(tpArg);
                 }
-                selfRef._typeArguments(innerTypeArgs); 
+                selfRef._typeArguments(innerTypeArgs);
             }
             // Build multiplicityArguments from provided multiplicityParameters
             Object mulParamsRaw = _E_ValueSpecification.unwrap(args.get(1));
@@ -694,7 +694,7 @@ public class MetaNatives
                 }
                 selfRef._multiplicityArguments(innerMulArgs);
             }
-            
+
             meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
             cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
             newClass._classifierGenericType(cgt);
@@ -713,8 +713,8 @@ public class MetaNatives
      * (e.g., Class&lt;self&gt;), create a new CGT with the typeArgument pointing to the copy.
      * Returns the updated CGT, or the original if no self-reference was found.
      */
-    static meta.pure.metamodel.type.generics.GenericType fixSelfReferentialCGT(
-            meta.pure.metamodel.type.generics.GenericType cgt,
+    static GenericTypeValue fixSelfReferentialCGT(
+            GenericTypeValue cgt,
             Object original, Object copy,
             MetadataAccess resolver)
     {
@@ -722,74 +722,73 @@ public class MetaNatives
         {
             return null;
         }
-        if (cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue cgtv)
+
+        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> typeArgs = cgt._typeArguments();
+        if (typeArgs != null && typeArgs.notEmpty())
         {
-            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> typeArgs = cgtv._typeArguments();
-            if (typeArgs != null && typeArgs.notEmpty())
+            boolean hasSelfRef = false;
+            for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
             {
-                boolean hasSelfRef = false;
-                for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
+                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
+                        && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
                 {
-                    if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                            && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
-                    {
-                        hasSelfRef = true;
-                        break;
-                    }
+                    hasSelfRef = true;
+                    break;
                 }
-                if (hasSelfRef && copy instanceof meta.pure.metamodel.type.Type copyType)
-                {
-                    // Build a new CGT with updated self-references
-                    org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> newArgs =
-                            typeArgs.collect(arg ->
-                            {
-                                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
+            }
+            if (hasSelfRef && copy instanceof meta.pure.metamodel.type.Type copyType)
+            {
+                // Build a new CGT with updated self-references
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> newArgs =
+                        typeArgs.collect(arg ->
+                        {
+                            if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
                                     && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
+                            {
+                                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
+                                        _GenericType.buildUserDefinedGenericType(copyType, resolver);
+                                // Copy inner typeArguments (e.g., TypeParameters like T)
+                                // and fix their owners to point to the copy
+                                if (argV._typeArguments() != null && argV._typeArguments().notEmpty())
                                 {
-                                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
-                                            _GenericType.buildUserDefinedGenericType(copyType, resolver);
-                                    // Copy inner typeArguments (e.g., TypeParameters like T)
-                                    // and fix their owners to point to the copy
-                                    if (argV._typeArguments() != null && argV._typeArguments().notEmpty())
-                                    {
-                                        org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerArgs =
-                                                argV._typeArguments().collect(innerArg -> {
-                                                    if (innerArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue innerV
-                                                            && innerV._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp
-                                                            && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
-                                                    {
-                                                        tp._owner(owner);
-                                                    }
-                                                    return innerArg;
-                                                });
-                                        selfRef._typeArguments(innerArgs);
-                                    }
-                                    if (argV._multiplicityArguments() != null && argV._multiplicityArguments().notEmpty())
-                                    {
-                                        // Fix MultiplicityParameter owners too
-                                        for (meta.pure.metamodel.multiplicity.Multiplicity mp : argV._multiplicityArguments())
-                                        {
-                                            if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mulParam
-                                                    && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                    org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerArgs =
+                                            argV._typeArguments().collect(innerArg ->
                                             {
-                                                mulParam._owner(owner);
-                                            }
-                                        }
-                                        selfRef._multiplicityArguments(argV._multiplicityArguments());
-                                    }
-                                    return (meta.pure.metamodel.type.generics.GenericType) selfRef;
+                                                if (innerArg instanceof meta.pure.metamodel.type.generics.GenericTypeValue innerV
+                                                        && innerV._type() instanceof meta.pure.metamodel.type.generics.TypeParameter tp
+                                                        && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                                {
+                                                    tp._owner(owner);
+                                                }
+                                                return innerArg;
+                                            });
+                                    selfRef._typeArguments(innerArgs);
                                 }
-                                return arg;
-                            });
-                    meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl newCgt =
-                            _GenericType.buildUserDefinedGenericType(cgtv._type(), resolver);
-                    newCgt._typeArguments(newArgs);
-                    if (cgtv._multiplicityArguments() != null)
-                    {
-                        newCgt._multiplicityArguments(cgtv._multiplicityArguments());
-                    }
-                    return newCgt;
+                                if (argV._multiplicityArguments() != null && argV._multiplicityArguments().notEmpty())
+                                {
+                                    // Fix MultiplicityParameter owners too
+                                    for (meta.pure.metamodel.multiplicity.Multiplicity mp : argV._multiplicityArguments())
+                                    {
+                                        if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mulParam
+                                                && copyType instanceof meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner)
+                                        {
+                                            mulParam._owner(owner);
+                                        }
+                                    }
+                                    selfRef._multiplicityArguments(argV._multiplicityArguments());
+                                }
+                                return (meta.pure.metamodel.type.generics.GenericType) selfRef;
+                            }
+                            return arg;
+                        });
+                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl newCgt =
+                        _GenericType.buildUserDefinedGenericType(cgt._type(), resolver);
+                newCgt._typeArguments(newArgs);
+                if (cgt._multiplicityArguments() != null)
+                {
+                    newCgt._multiplicityArguments(cgt._multiplicityArguments());
                 }
+                return newCgt;
             }
         }
         return cgt;
@@ -798,7 +797,7 @@ public class MetaNatives
     static void validateConstraints(meta.pure.metamodel.type.Type type,
                                     meta.pure.metamodel.type.generics.GenericType targetGT,
                                     Object value, ValueSpecificationEvaluator eval,
-                                     MetadataAccess resolver)
+                                    MetadataAccess resolver)
     {
         if (type == null)
         {
@@ -1272,7 +1271,7 @@ public class MetaNatives
     }
 
     static void appendToProperty(Object instance, String key, Object value,
-                                  MetadataAccess resolver)
+                                 MetadataAccess resolver)
     {
         // Read existing raw value
         Object existing;
@@ -1441,8 +1440,8 @@ public class MetaNatives
     }
 
     private static void setReversePointerOnTarget(Object target, String reversePropName,
-                                                   ValueSpecification instanceVS,
-                                                   MetadataAccess resolver)
+                                                  ValueSpecification instanceVS,
+                                                  MetadataAccess resolver)
     {
         if (target instanceof List<?> targets)
         {
@@ -1469,7 +1468,7 @@ public class MetaNatives
                 if (_GenericType.typeArguments(gtmh2._genericType()) != null
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
-                    any._classifierGenericType(_GenericType.typeArguments(gtmh2._genericType()).getFirst());
+                    any._classifierGenericType((GenericTypeValue) _GenericType.typeArguments(gtmh2._genericType()).getFirst());
                 }
             }
             catch (Exception ignored)

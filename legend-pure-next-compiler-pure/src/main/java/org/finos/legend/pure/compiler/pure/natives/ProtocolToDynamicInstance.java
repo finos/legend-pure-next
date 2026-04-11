@@ -1,5 +1,6 @@
 package org.finos.legend.pure.compiler.pure.natives;
 
+import meta.pure.metamodel.type.generics.UserDefinedGenericType;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.execution.DynamicInstance;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -82,7 +83,7 @@ public class ProtocolToDynamicInstance
             }
 
             DynamicInstance instance = new DynamicInstance(pureClassPath);
-            meta.pure.metamodel.type.generics.GenericType cgt = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) pureClass, resolver);
+            UserDefinedGenericType cgt = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) pureClass, resolver);
             instance.setClassifierGenericType(cgt);
             
             // Loop through all _XXX() methods of the POJO to get properties

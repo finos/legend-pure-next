@@ -43,6 +43,7 @@ import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
+import meta.pure.metamodel.type.generics.UserDefinedGenericType;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedPackageableGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
@@ -427,7 +428,7 @@ public class M3BootstrapReader
             Statement cgtStmt = getM3Statement(model, res, "classifierGenericType");
             if (cgtStmt != null && cgtStmt.getObject().isResource())
             {
-                GenericType cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
+                UserDefinedGenericType cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
                 element._classifierGenericType(cgt);
             }
         }
@@ -692,13 +693,13 @@ public class M3BootstrapReader
             }
 
             // GenericType for this enumeration's values (e.g., GenericType pointing to GenericTypeOperationType)
-            GenericType enumGT = new UserDefinedGenericTypeImpl()
+            UserDefinedGenericType enumGT = new UserDefinedGenericTypeImpl()
                     ._type((Type) enumeration);
             enumGT._classifierGenericType(enumGT);
 
             // GenericType for Enumeration<E> parameterized with this enum type
             Type enumerationType = (Type) index.get("meta::pure::metamodel::type::Enumeration");
-            GenericType enumerationOfE = new UserDefinedGenericTypeImpl()
+            UserDefinedGenericType enumerationOfE = new UserDefinedGenericTypeImpl()
                     ._type(enumerationType)
                     ._typeArguments(Lists.mutable.with(enumGT));
             enumerationOfE._classifierGenericType(enumerationOfE);
@@ -727,13 +728,13 @@ public class M3BootstrapReader
 
                 // Build classifierGenericTypes for the wrapper objects
                 Type lambdaType = (Type) index.get("meta::pure::metamodel::function::LambdaFunction");
-                GenericType lambdaCGT = new UserDefinedGenericTypeImpl()
+                UserDefinedGenericType lambdaCGT = new UserDefinedGenericTypeImpl()
                         ._type(lambdaType)
                         ._typeArguments(Lists.mutable.with(enumGT));
                 lambdaCGT._classifierGenericType(lambdaCGT);
 
                 Type atomicValueType = (Type) index.get("meta::pure::metamodel::valuespecification::AtomicValue");
-                GenericType avCGT = new UserDefinedGenericTypeImpl()
+                UserDefinedGenericType avCGT = new UserDefinedGenericTypeImpl()
                         ._type(atomicValueType);
                 avCGT._classifierGenericType(avCGT);
 
@@ -749,7 +750,7 @@ public class M3BootstrapReader
                 ));
 
                 // Create the Property: Property<Enumeration<E>, E | 1>
-                GenericType propCGT = new UserDefinedGenericTypeImpl()
+                UserDefinedGenericType propCGT = new UserDefinedGenericTypeImpl()
                         ._type(propertyType)
                         ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                         ._multiplicityArguments(Lists.mutable.with(pureOne));
@@ -995,7 +996,7 @@ public class M3BootstrapReader
             Statement veCgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
             if (veCgtStmt != null && veCgtStmt.getObject().isResource())
             {
-                GenericType cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
+                UserDefinedGenericType cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
                 ve._classifierGenericType(cgt);
             }
 
@@ -1046,7 +1047,7 @@ public class M3BootstrapReader
      * Build a GenericType from an RDF resource. Handles typeParameter references,
      * concrete rawType references, typeArguments, and multiplicityArguments.
      */
-    private static GenericType buildGenericType(
+    private static UserDefinedGenericType buildGenericType(
             Model model, Resource gtRes, MutableMap<String, PackageableElement> index)
     {
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();

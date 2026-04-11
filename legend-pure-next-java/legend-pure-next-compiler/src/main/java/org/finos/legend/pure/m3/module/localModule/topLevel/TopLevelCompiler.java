@@ -20,6 +20,7 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
@@ -402,7 +403,7 @@ public class TopLevelCompiler
         return allImports;
     }
 
-    private Package getOrCreatePackage(Package root, String packagePath, GenericType packageGT, MetadataAccess model)
+    private Package getOrCreatePackage(Package root, String packagePath, GenericTypeValue packageGT, MetadataAccess model)
     {
         Package current = root;
         StringBuilder currentPath = new StringBuilder();
