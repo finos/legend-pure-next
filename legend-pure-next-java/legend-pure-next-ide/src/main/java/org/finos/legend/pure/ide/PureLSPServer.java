@@ -78,7 +78,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         // Execute command support for pure/execute
         ExecuteCommandOptions execOptions = new ExecuteCommandOptions(
-                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests"));
+                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests", "pure/search"));
         capabilities.setExecuteCommandProvider(execOptions);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
@@ -298,6 +298,17 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                     handleSaveFile(sourceId, content, skipCompile);
                 }
                 return null;
+            });
+            case "pure/search" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && !params.getArguments().isEmpty())
+                {
+                    String query = getArgString(params.getArguments().get(0));
+                    boolean caseSensitive = params.getArguments().size() >= 2
+                            && Boolean.parseBoolean(String.valueOf(params.getArguments().get(1)));
+                    return handleSearch(query, caseSensitive);
+                }
+                return List.of();
             });
             default -> CompletableFuture.completedFuture(null);
         };
@@ -677,6 +688,41 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     }
 
 
+
+    private List<Map<String, Object>> handleSearch(String query, boolean caseSensitive)
+    {
+        List<Map<String, Object>> results = new ArrayList<>();
+        if (query == null || query.isEmpty())
+        {
+            return results;
+        }
+        String needle = caseSensitive ? query : query.toLowerCase(java.util.Locale.ROOT);
+        for (LocalModule module : editableModules)
+        {
+            for (String sourceId : module.sourceFiles())
+            {
+                String content = module.getSourceText(sourceId);
+                if (content == null) { continue; }
+                String[] lines = content.split("\n", -1);
+                for (int i = 0; i < lines.length; i++)
+                {
+                    String line = lines[i];
+                    String haystack = caseSensitive ? line : line.toLowerCase(java.util.Locale.ROOT);
+                    int col = haystack.indexOf(needle);
+                    if (col >= 0)
+                    {
+                        Map<String, Object> match = new LinkedHashMap<>();
+                        match.put("sourceId", sourceId);
+                        match.put("line", i + 1);
+                        match.put("col", col + 1);
+                        match.put("text", line);
+                        results.add(match);
+                    }
+                }
+            }
+        }
+        return results;
+    }
 
     private void sendExecuteResult(String result, boolean isError)
     {

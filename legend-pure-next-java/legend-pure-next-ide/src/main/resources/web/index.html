@@ -243,6 +243,106 @@
             gap: 8px;
         }
 
+        /* Search panel */
+        .search-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+        }
+        .search-input-row {
+            display: flex;
+            position: relative;
+            align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            padding: 5px 28px 5px 8px;
+            font-size: 12px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+        }
+        .search-input:focus {
+            border-color: var(--accent);
+        }
+        .search-case-btn {
+            position: absolute;
+            right: 5px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 1px 3px;
+            line-height: 1;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .search-case-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .search-case-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: rgba(88, 166, 255, 0.12);
+        }
+        .search-results {
+            margin-top: 4px;
+            font-size: 12px;
+        }
+        .search-file-group {
+            margin-bottom: 4px;
+        }
+        .search-file-header {
+            padding: 3px 4px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .search-file-header:hover {
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .search-match {
+            padding: 2px 8px 2px 16px;
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-secondary);
+        }
+        .search-match:hover {
+            background: rgba(88, 166, 255, 0.08);
+            color: var(--text-primary);
+        }
+        .search-match .match-line {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-right: 6px;
+        }
+        .search-match mark {
+            background: rgba(255, 200, 0, 0.3);
+            color: inherit;
+            border-radius: 2px;
+        }
+        .search-summary {
+            padding: 4px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-style: italic;
+        }
+
         /* Tree nodes */
         .tree-node {
             user-select: none;
@@ -644,6 +744,7 @@
                 <div class="result-tabs">
                     <button id="bottomTabOutput" class="bottom-tab active" onclick="switchBottomTab('output')"><span class="icon">◉</span> Output <span class="result-badge" id="resultBadge" style="display:none"></span></button>
                     <button id="bottomTabTests" class="bottom-tab" onclick="switchBottomTab('tests')"><span class="icon">✔</span> Tests</button>
+                    <button id="bottomTabSearch" class="bottom-tab" onclick="switchBottomTab('search')"><span class="icon">⌕</span> Search</button>
                 </div>
                 
                 <div class="bottom-content-panel active" id="bottomPanelOutput">
@@ -687,6 +788,16 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="bottom-content-panel" id="bottomPanelSearch">
+                    <div class="search-panel">
+                        <div class="search-input-row">
+                            <input type="text" id="searchInput" class="search-input" placeholder="Search in files…" oninput="onSearchInput()" onkeydown="onSearchKeyDown(event)" />
+                            <button id="searchCaseBtn" class="search-case-btn" title="Match case" onclick="toggleSearchCase()">Aa</button>
+                        </div>
+                        <div id="searchResults" class="search-results"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -716,13 +827,93 @@
         }
 
         // =================================================================
+        // Search
+        // =================================================================
+        let searchDebounceTimer = null;
+
+        function onSearchInput() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(triggerSearch, 300);
+        }
+
+        function onSearchKeyDown(e) {
+            if (e.key === 'Enter') { triggerSearch(); }
+        }
+
+        let searchCaseSensitive = false;
+
+        function toggleSearchCase() {
+            searchCaseSensitive = !searchCaseSensitive;
+            document.getElementById('searchCaseBtn').classList.toggle('active', searchCaseSensitive);
+            triggerSearch();
+        }
+
+        function triggerSearch() {
+            const query = document.getElementById('searchInput').value;
+            const resultsEl = document.getElementById('searchResults');
+            if (!query) { resultsEl.innerHTML = ''; return; }
+            resultsEl.innerHTML = '<div class="search-summary">Searching…</div>';
+            sendRequest('workspace/executeCommand', { command: 'pure/search', arguments: [query, searchCaseSensitive] })
+                .then(results => renderSearchResults(results, query, searchCaseSensitive))
+                .catch(() => { resultsEl.innerHTML = '<div class="search-summary">Search failed.</div>'; });
+        }
+
+        function renderSearchResults(results, query, caseSensitive) {
+            const resultsEl = document.getElementById('searchResults');
+            if (!results || results.length === 0) {
+                resultsEl.innerHTML = '<div class="search-summary">No results found.</div>';
+                return;
+            }
+
+            // Group by sourceId
+            const grouped = {};
+            for (const r of results) {
+                if (!grouped[r.sourceId]) { grouped[r.sourceId] = []; }
+                grouped[r.sourceId].push(r);
+            }
+
+            const totalMatches = results.length;
+            const fileCount = Object.keys(grouped).length;
+            let html = `<div class="search-summary">${totalMatches} result${totalMatches !== 1 ? 's' : ''} in ${fileCount} file${fileCount !== 1 ? 's' : ''}</div>`;
+
+            const flags = caseSensitive ? 'g' : 'gi';
+            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(escapedQuery, flags);
+
+            for (const [sourceId, matches] of Object.entries(grouped)) {
+                const shortName = sourceId.split('/').pop();
+                html += `<div class="search-file-group">`;
+                html += `<div class="search-file-header" title="${sourceId}" onclick="openSearchFile('${sourceId.replace(/'/g, "\\'")}')">${shortName} <span style="font-weight:normal;opacity:0.6">(${matches.length})</span></div>`;
+                for (const m of matches) {
+                    const highlighted = m.text.replace(re, match => `<mark>${match}</mark>`);
+                    html += `<div class="search-match" onclick="openSearchMatch('${sourceId.replace(/'/g, "\\'")}',${m.line},${m.col})"><span class="match-line">${m.line}</span>${highlighted}</div>`;
+                }
+                html += `</div>`;
+            }
+            resultsEl.innerHTML = html;
+        }
+
+        function openSearchFile(sourceId) {
+            sendRequest('workspace/executeCommand', { command: 'pure/openFile', arguments: [sourceId] });
+        }
+
+        function openSearchMatch(sourceId, line, col) {
+            pendingJumpLine = line;
+            pendingJumpCol = col;
+            sendRequest('workspace/executeCommand', { command: 'pure/openFile', arguments: [sourceId] });
+        }
+
+        // =================================================================
         // Bottom Tab Switching
         // =================================================================
         function switchBottomTab(tab) {
             document.getElementById('bottomTabOutput').classList.toggle('active', tab === 'output');
             document.getElementById('bottomTabTests').classList.toggle('active', tab === 'tests');
+            document.getElementById('bottomTabSearch').classList.toggle('active', tab === 'search');
             document.getElementById('bottomPanelOutput').classList.toggle('active', tab === 'output');
             document.getElementById('bottomPanelTests').classList.toggle('active', tab === 'tests');
+            document.getElementById('bottomPanelSearch').classList.toggle('active', tab === 'search');
+            if (tab === 'search') { document.getElementById('searchInput').focus(); }
         }
 
         // =================================================================
@@ -1475,6 +1666,11 @@
                 if (e.key === 'F9') {
                     e.preventDefault();
                     executeCode();
+                }
+                // Ctrl+Shift+F / Cmd+Shift+F → open search tab
+                if (e.key === 'f' && e.shiftKey && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    switchBottomTab('search');
                 }
             });
 
