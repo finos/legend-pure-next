@@ -82,6 +82,7 @@ public class FunctionApplicationResolver
             // independent of the parent candidate's expected type.  Lambdas are
             // excluded because their parameter types depend on the candidate's
             // type-parameter bindings.
+            int preResolveCheckpoint = context.currentErrorCount();
             FunctionApplication preResolvedExpr = (FunctionApplication)
                     ((FunctionApplication) expr._copy())._parametersValues(
                             expr._parametersValues().collect(
@@ -89,6 +90,7 @@ public class FunctionApplicationResolver
                                     ? pv
                                     : ValueSpecificationResolver.resolve(pv, model, context))
                     );
+            context.rollbackErrorsTo(preResolveCheckpoint);
 
             // Multiple candidates (most-specific-first) — try each with rollback.
             MutableList<CompilationError> bestCandidateErrors = null;
