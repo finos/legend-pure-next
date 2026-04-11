@@ -261,8 +261,8 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType()->cast(@GenericTypeValue).type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType()->cast(@GenericTypeValue).typeArguments->size());
+    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
 }
 
 function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::functions::lang::tests::copy::testFunctionDefinitionWithInstanceCopy():Boolean[1]
@@ -273,8 +273,8 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType()->cast(@GenericTypeValue).type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType()->cast(@GenericTypeValue).typeArguments->size());
+    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
 }
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySubClass():Boolean[1]

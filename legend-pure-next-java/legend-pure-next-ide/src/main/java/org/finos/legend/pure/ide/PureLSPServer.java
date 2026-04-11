@@ -619,7 +619,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             }
             if (adapterElem instanceof FunctionDefinition fd) {
                 adapterArg = org.finos.legend.pure.execution._E_ValueSpecification.wrap(
-                        fd, fd._classifierGenericType(), null, coreModule);
+                        fd, org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(fd, coreModule), null, coreModule);
             }
         }
 

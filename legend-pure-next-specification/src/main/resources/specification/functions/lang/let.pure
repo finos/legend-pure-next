@@ -37,7 +37,7 @@ function <<PCT.test>> meta::pure::functions::lang::tests::letFn::testAssignNewIn
 {
     let res = $f->eval(|let person = ^LA_Person(firstName='John', lastName='Doe');
                         $person;);
-    assertIs(LA_Person, genericType($res)->cast(@GenericTypeValue).type->toOne());
+    assertIs(LA_Person, genericType($res).type->toOne());
     assertEquals('John', $res.firstName);
     assertEquals('Doe', $res.lastName);
 }

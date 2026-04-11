@@ -92,8 +92,8 @@ public class MetaNatives
             return _E_ValueSpecification.wrap(type, genericType, multiplicity, resolver);
         });
 
-        // genericType(Any[*]) : GenericType[1]
-        natives.put("genericType_Any_MANY__GenericType_1_", (args, eval, genericType, multiplicity) ->
+        // genericType(Any[*]) : GenericTypeValue[1]
+        natives.put("genericType_Any_MANY__GenericTypeValue_1_", (args, eval, genericType, multiplicity) ->
         {
             ValueSpecification vs = args.get(0);
             Object val = _E_ValueSpecification.unwrap(vs);
