@@ -15,6 +15,7 @@
 package org.finos.legend.pure.ide;
 
 import meta.pure.metamodel.function.FunctionDefinition;
+import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
@@ -24,7 +25,6 @@ import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
@@ -47,15 +47,15 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 {
     private LanguageClient client;
     private final PDBModule coreModule;
-    private final LocalModule compilerPureModule;
+    private final MutableList<LocalModule> editableModules;
     private String currentSource = "";
     private String currentUri = "";
     private PureModel lastModel;
 
-    public PureLSPServer(PDBModule coreModule, LocalModule compilerPureModule)
+    public PureLSPServer(PDBModule coreModule, MutableList<LocalModule> editableModules)
     {
         this.coreModule = coreModule;
-        this.compilerPureModule = compilerPureModule;
+        this.editableModules = editableModules;
     }
 
     public void connect(LanguageClient client)
@@ -81,6 +81,24 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         capabilities.setExecuteCommandProvider(execOptions);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
+    }
+
+    @Override
+    public void initialized(InitializedParams params)
+    {
+        // Push the welcome file content to the client
+        if (client instanceof PureLanguageClient pureClient)
+        {
+            LocalModule welcomeModule = findModuleForSource("welcome.pure");
+            if (welcomeModule != null)
+            {
+                String content = welcomeModule.getSourceText("welcome.pure");
+                if (content != null)
+                {
+                    pureClient.openFile(new OpenFileParams("welcome.pure", content));
+                }
+            }
+        }
     }
 
     @Override
@@ -150,17 +168,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         if (uri.startsWith("file:///"))
         {
             String sourceId = uri.substring(8);
-            if (!"user.pure".equals(sourceId))
+            String content = params.getText();
+            if (content != null)
             {
-                String content = params.getText();
-                if (content != null)
+                boolean saved = saveToModule(sourceId, content);
+                if (saved)
                 {
-                    boolean saved = compilerPureModule.saveSourceText(sourceId, content);
-                    if (saved)
-                    {
-                        System.out.println("[LSP] Saved file: " + sourceId);
-                        compileAndPublishDiagnostics();
-                    }
+                    System.out.println("[LSP] Saved file: " + sourceId);
+                    compileAndPublishDiagnostics();
                 }
             }
         }
@@ -173,19 +188,16 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     @Override
     public void didChangeConfiguration(DidChangeConfigurationParams params)
     {
-        // No-op
     }
 
     @Override
     public void didChangeWatchedFiles(DidChangeWatchedFilesParams params)
     {
-        // No-op
     }
 
     @Override
     public CompletableFuture<Object> executeCommand(ExecuteCommandParams params)
     {
-        System.out.println("[LSP] executeCommand: " + params.getCommand());
         return switch (params.getCommand())
         {
             case "pure/execute" -> CompletableFuture.supplyAsync(() ->
@@ -207,8 +219,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             {
                 if (params.getArguments() != null && !params.getArguments().isEmpty())
                 {
-                    String elementPath = String.valueOf(params.getArguments().get(0));
-                    if (elementPath.startsWith("\"") && elementPath.endsWith("\"")) {
+                    String elementPath = String.valueOf(params.getArguments().getFirst());
+                    if (elementPath.startsWith("\"") && elementPath.endsWith("\""))
+                    {
                         elementPath = elementPath.substring(1, elementPath.length() - 1);
                     }
                     handleJumpToElement(elementPath);
@@ -219,8 +232,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             {
                 if (params.getArguments() != null && !params.getArguments().isEmpty())
                 {
-                    String sourceId = String.valueOf(params.getArguments().get(0));
-                    if (sourceId.startsWith("\"") && sourceId.endsWith("\"")) {
+                    String sourceId = String.valueOf(params.getArguments().getFirst());
+                    if (sourceId.startsWith("\"") && sourceId.endsWith("\""))
+                    {
                         sourceId = sourceId.substring(1, sourceId.length() - 1);
                     }
                     handleOpenFile(sourceId);
@@ -259,9 +273,9 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     private void handleSaveFile(String sourceId, String content, boolean skipCompile)
     {
-        if (content != null && !"user.pure".equals(sourceId))
+        if (content != null)
         {
-            boolean saved = compilerPureModule.saveSourceText(sourceId, content);
+            boolean saved = saveToModule(sourceId, content);
             if (saved)
             {
                 System.out.println("[LSP] Saved file via command: " + sourceId);
@@ -280,66 +294,89 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     // Compilation
     // =========================================================================
 
-    private CompilationResult compileCurrentSource()
+    private CompilationResult compileCurrentSource() throws Exception
     {
         System.out.println("[LSP] Compiling source (" + currentSource.length() + " chars)");
-        try
-        {
-            LocalModule userModule = new LocalModule("user", "*",
-                    Lists.mutable.with(coreModule.getName(), compilerPureModule.getName()),
-                    Lists.mutable.with(new PureContent(currentSource, "user.pure")));
+        // Persist the live editor content to the welcome module's filesystem
+        saveToModule("welcome.pure", currentSource);
 
-            PureModel model = PureModel.withModules(Lists.mutable.with(userModule, compilerPureModule, coreModule))
-                    .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
-                    .build();
+        MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).with(coreModule);
 
-            CompilationResult result = model.compile();
-            if (result.errors().isEmpty())
-            {
-                this.lastModel = model;
-            }
-            return result;
-        }
-        catch (Exception e)
+        PureModel model = PureModel.withModules(modules)
+                .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
+                .build();
+
+        CompilationResult result = model.compile();
+        if (result.errors().isEmpty())
         {
-            System.err.println("[LSP] Compilation exception: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+            this.lastModel = model;
         }
+        return result;
     }
 
     private void compileAndPublishDiagnostics()
     {
-        if (client == null || currentUri.isEmpty())
+        if (client == null) { return; }
+
+        CompilationResult result = null;
+        Exception compileException = null;
+        try
         {
-            return;
+            result = compileCurrentSource();
+        }
+        catch (Exception e)
+        {
+            compileException = e;
         }
 
         List<Diagnostic> diagnostics = new ArrayList<>();
-        CompilationResult result = compileCurrentSource();
 
-        if (result == null)
+        if (compileException != null)
         {
-            diagnostics.add(new Diagnostic(
-                    new Range(new Position(0, 0), new Position(0, 1)),
-                    "Internal compilation error",
-                    DiagnosticSeverity.Error, "pure"));
+            String msg = compileException.getMessage();
+            int line = 0;
+            int col = 0;
+            if (msg != null && msg.contains("at line "))
+            {
+                try
+                {
+                    String[] parts = msg.split("at line ");
+                    String[] locParts = parts[1].split(" - ")[0].split(":");
+                    line = Math.max(0, Integer.parseInt(locParts[0]) - 1);
+                    col = Math.max(0, Integer.parseInt(locParts[1])); // Monaco expects 1-based but in LSP it's 0-based
+                }
+                catch (Exception ignored) {}
+
+                diagnostics.add(new Diagnostic(
+                        new Range(new Position(line, col), new Position(line, col + 1)),
+                        msg,
+                        DiagnosticSeverity.Error, "pure"));
+            }
+            else
+            {
+                diagnostics.add(new Diagnostic(
+                        new Range(new Position(0, 0), new Position(0, 1)),
+                        msg != null ? msg : "Internal compilation error",
+                        DiagnosticSeverity.Error, "pure"));
+            }
         }
-        else if (!result.errors().isEmpty())
+        else if (result != null && !result.errors().isEmpty())
         {
             for (CompilationError error : result.errors())
             {
-                int line = 0;
-                int col = 0;
-                int endLine = 0;
-                int endCol = 1;
-                if (error.sourceInformation() != null)
+                int line = 0, col = 0, endLine, endCol;
+                meta.pure.metamodel.SourceInformation si = error.sourceInformation();
+                if (si != null)
                 {
-                    var si = error.sourceInformation();
                     line = si._startLine() != null ? Math.max(0, si._startLine().intValue() - 1) : 0;
                     col = si._startColumn() != null ? Math.max(0, si._startColumn().intValue() - 1) : 0;
                     endLine = si._endLine() != null ? Math.max(0, si._endLine().intValue() - 1) : line;
                     endCol = si._endColumn() != null ? si._endColumn().intValue() : col + 1;
+                }
+                else
+                {
+                    endLine = line;
+                    endCol = col + 1;
                 }
                 Diagnostic diag = new Diagnostic(
                         new Range(new Position(line, col), new Position(endLine, endCol)),
@@ -365,12 +402,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         try
         {
-            // Compile
-            LocalModule userModule = new LocalModule("user", "*",
-                    Lists.mutable.with(coreModule.getName(), compilerPureModule.getName()),
-                    Lists.mutable.with(new PureContent(currentSource, "user.pure")));
+            // Persist the live editor content to the welcome module's filesystem
+            saveToModule("welcome.pure", currentSource);
 
-            PureModel model = PureModel.withModules(Lists.mutable.with(userModule, compilerPureModule, coreModule))
+            MutableList<Module> modules = Lists.mutable.<Module>withAll(editableModules).with(coreModule);
+
+            PureModel model = PureModel.withModules(modules)
                     .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                     .build();
 
@@ -378,26 +415,25 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
             if (!result.errors().isEmpty())
             {
-                StringBuilder sb = new StringBuilder("Compilation errors:\n");
-                for (CompilationError err : result.errors())
+                StringBuilder sb = new StringBuilder();
+                sb.append("Compilation errors:\n");
+                for (CompilationError error : result.errors())
                 {
-                    sb.append("  ").append(err.message()).append("\n");
+                    sb.append("  ").append(error.message()).append("\n");
                 }
                 sendExecuteResult(sb.toString(), true);
                 return;
             }
 
-            // Resolve go():Any[*]
-            org.finos.legend.pure.m3.module.Module testModule = model.getModule("user");
+            // Find and execute go():Any[*]
+            Module welcomeMod = model.getModule("welcome");
             FunctionDefinition goFunc = null;
-
-            // Try common mangled names
             for (String candidate : List.of("go__Any_MANY_", "go__String_1_", "go__String_MANY_",
                     "go__Integer_1_", "go__Boolean_1_"))
             {
                 try
                 {
-                    Object element = testModule.getElement(candidate);
+                    Object element = welcomeMod.getElement(candidate);
                     if (element instanceof FunctionDefinition fd)
                     {
                         goFunc = fd;
@@ -413,13 +449,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 return;
             }
 
-            // Execute — use a scoped MetadataAccess that covers both user and core modules
+            // Execute
             PureExecution execution = new PureExecution(
-                    new org.finos.legend.pure.m3.module.ScopedMetadataAccess(testModule, model));
+                    new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model));
             Object output = execution.execute(goFunc);
-
-            String resultStr = formatResult(output);
-            sendExecuteResult(resultStr, false);
+            String execResult = formatResult(output);
+            sendExecuteResult(execResult, false);
         }
         catch (Exception e)
         {
@@ -430,7 +465,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     private String formatResult(Object output)
     {
         if (output == null) { return "null"; }
-        if (output instanceof List<?> list)
+        if (output instanceof java.util.List<?> list)
         {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < list.size(); i++)
@@ -443,11 +478,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         return String.valueOf(output);
     }
 
-    private void sendExecuteResult(String text, boolean isError)
+    private void sendExecuteResult(String result, boolean isError)
     {
         if (client instanceof PureLanguageClient pureClient)
         {
-            pureClient.executeResult(new ExecuteResultParams(text, isError));
+            pureClient.executeResult(new ExecuteResultParams(result, isError));
         }
     }
 
@@ -507,22 +542,12 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         sendTreeData("packageTree", json);
     }
 
-    private void sendFileTree()
+    private void sendTreeData(String treeId, String json)
     {
-        if (client == null) { return; }
-
-        // Collect source files from all modules in the last compiled model
-        Set<String> allFiles = new LinkedHashSet<>();
-        if (lastModel != null)
+        if (json != null && client instanceof PureLanguageClient pureClient)
         {
-            for (Module m : lastModel.modules())
-            {
-                allFiles.addAll(m.sourceFiles());
-            }
+            pureClient.treeData(new TreeDataParams(treeId, json));
         }
-
-        String json = buildFileTreeJson(allFiles);
-        sendTreeData("fileTree", json);
     }
 
     /**
@@ -568,37 +593,78 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         return renderTreeJson(rootChildren);
     }
 
-    /**
-     * Build a JSON tree from source file paths (split by /).     * Each file is a leaf node with type "File".
-     */
-    private String buildFileTreeJson(Set<String> filePaths)
+    @SuppressWarnings("unchecked")
+    private String renderTreeJson(Map<String, Object> nodes)
+    {
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : nodes.entrySet())
+        {
+            if (!first) { sb.append(","); }
+            first = false;
+
+            Map<String, Object> node = (Map<String, Object>) entry.getValue();
+            Map<String, Object> children = (Map<String, Object>) node.get("__children");
+            String type = node.containsKey("__type") ? (String) node.get("__type") : "Package";
+
+            sb.append("{\"name\":\"").append(entry.getKey()).append("\"");
+            sb.append(",\"type\":\"").append(type).append("\"");
+            if (children != null && !children.isEmpty())
+            {
+                sb.append(",\"children\":").append(renderTreeJson(children));
+            }
+            sb.append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    // =========================================================================
+    // File Tree
+    // =========================================================================
+
+    private void sendFileTree()
+    {
+        if (client == null) { return; }
+
+        String json = buildFileTreeJson();
+        if (json != null && client instanceof PureLanguageClient pureClient)
+        {
+            pureClient.treeData(new TreeDataParams("fileTree", json));
+        }
+    }
+
+    private String buildFileTreeJson()
     {
         Map<String, Object> root = new LinkedHashMap<>();
-        root.put("__children", new LinkedHashMap<String, Object>());
+        root.put("__children", new LinkedHashMap<>());
 
-        for (String filePath : filePaths)
+        for (LocalModule module : editableModules)
         {
-            String[] parts = filePath.split("/");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> current = (Map<String, Object>) root.get("__children");
-            for (int i = 0; i < parts.length; i++)
+            for (String sourceId : module.sourceFiles())
             {
-                String part = parts[i];
-                if (!current.containsKey(part))
-                {
-                    Map<String, Object> node = new LinkedHashMap<>();
-                    node.put("__children", new LinkedHashMap<String, Object>());
-                    current.put(part, node);
-                }
+                String[] parts = sourceId.split("/");
                 @SuppressWarnings("unchecked")
-                Map<String, Object> nodeMap = (Map<String, Object>) current.get(part);
-                if (i == parts.length - 1)
+                Map<String, Object> current = (Map<String, Object>) root.get("__children");
+
+                for (int i = 0; i < parts.length; i++)
                 {
-                    nodeMap.put("__type", "File");
+                    if (!current.containsKey(parts[i]))
+                    {
+                        Map<String, Object> node = new LinkedHashMap<>();
+                        node.put("__children", new LinkedHashMap<>());
+                        current.put(parts[i], node);
+                    }
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> nodeMap = (Map<String, Object>) current.get(parts[i]);
+                    if (i == parts.length - 1)
+                    {
+                        nodeMap.put("__type", "File");
+                    }
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> nextChildren = (Map<String, Object>) nodeMap.get("__children");
+                    current = nextChildren;
                 }
-                @SuppressWarnings("unchecked")
-                Map<String, Object> nextChildren = (Map<String, Object>) nodeMap.get("__children");
-                current = nextChildren;
             }
         }
 
@@ -611,46 +677,27 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     {
         if (client == null) { return; }
         
-        if (lastModel != null)
+        // Search all editable modules for the element
+        for (LocalModule module : editableModules)
         {
-            Module userModule = lastModel.getModule("user");
-            if (userModule instanceof LocalModule lu)
+            String sourceId = module.getSourceIdForElement(elementPath);
+            if (sourceId != null)
             {
-                String sourceId = lu.getSourceIdForElement(elementPath);
-                if (sourceId != null && "user.pure".equals(sourceId))
+                String content = module.getSourceText(sourceId);
+                if (content != null)
                 {
-                    meta.pure.metamodel.PackageableElement element = lu.getElement(elementPath);
+                    meta.pure.metamodel.PackageableElement element = module.getElement(elementPath);
                     if (element != null && element._sourceInformation() != null)
                     {
                         Long lLine = element._sourceInformation()._startLine();
                         Long lCol = element._sourceInformation()._startColumn();
-                        sendOpenFile(sourceId, currentSource, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
+                        sendOpenFile(sourceId, content, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
                     }
                     else
                     {
-                        sendOpenFile(sourceId, currentSource);
+                        sendOpenFile(sourceId, content);
                     }
                     return;
-                }
-            }
-        }
-
-        String sourceId = compilerPureModule.getSourceIdForElement(elementPath);
-        if (sourceId != null)
-        {
-            String content = compilerPureModule.getSourceText(sourceId);
-            if (content != null)
-            {
-                meta.pure.metamodel.PackageableElement element = compilerPureModule.getElement(elementPath);
-                if (element != null && element._sourceInformation() != null)
-                {
-                    Long lLine = element._sourceInformation()._startLine();
-                    Long lCol = element._sourceInformation()._startColumn();
-                    sendOpenFile(sourceId, content, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
-                }
-                else
-                {
-                    sendOpenFile(sourceId, content);
                 }
             }
         }
@@ -660,16 +707,15 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     {
         if (client == null) { return; }
 
-        if ("user.pure".equals(sourceId))
+        // Search all editable modules for the file
+        for (LocalModule module : editableModules)
         {
-            sendOpenFile(sourceId, currentSource);
-            return;
-        }
-
-        String content = compilerPureModule.getSourceText(sourceId);
-        if (content != null)
-        {
-            sendOpenFile(sourceId, content);
+            String content = module.getSourceText(sourceId);
+            if (content != null)
+            {
+                sendOpenFile(sourceId, content);
+                return;
+            }
         }
     }
 
@@ -689,64 +735,44 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private String renderTreeJson(Map<String, Object> children)
-    {
-        StringBuilder sb = new StringBuilder("[");
-        boolean first = true;
-
-        // Sort: packages (nodes with children) first, then leaves
-        List<Map.Entry<String, Object>> sorted = new ArrayList<>(children.entrySet());
-        sorted.sort((a, b) ->
-        {
-            Map<String, Object> aNode = (Map<String, Object>) a.getValue();
-            Map<String, Object> bNode = (Map<String, Object>) b.getValue();
-            boolean aHasChildren = !((Map<?, ?>) aNode.get("__children")).isEmpty();
-            boolean bHasChildren = !((Map<?, ?>) bNode.get("__children")).isEmpty();
-            if (aHasChildren != bHasChildren) { return aHasChildren ? -1 : 1; }
-            return a.getKey().compareToIgnoreCase(b.getKey());
-        });
-
-        for (Map.Entry<String, Object> entry : sorted)
-        {
-            if (!first) { sb.append(","); }
-            first = false;
-            Map<String, Object> node = (Map<String, Object>) entry.getValue();
-            Map<String, Object> nodeChildren = (Map<String, Object>) node.get("__children");
-            String type = (String) node.getOrDefault("__type", "Package");
-
-            sb.append("{\"name\":\"").append(escapeJson(entry.getKey())).append("\"");
-            sb.append(",\"type\":\"").append(escapeJson(type)).append("\"");
-            if (!nodeChildren.isEmpty())
-            {
-                sb.append(",\"children\":").append(renderTreeJson(nodeChildren));
-            }
-            sb.append("}");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    private String escapeJson(String s)
-    {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private void sendTreeData(String treeId, String json)
-    {
-        if (client instanceof PureLanguageClient pureClient)
-        {
-            pureClient.treeData(new TreeDataParams(treeId, json));
-        }
-    }
-
     // =========================================================================
-    // Custom notification types
+    // Module helpers
     // =========================================================================
 
     /**
-     * Extended client interface that supports our custom notifications.
+     * Find the editable module that owns the given source file.
      */
+    private LocalModule findModuleForSource(String sourceId)
+    {
+        for (LocalModule module : editableModules)
+        {
+            if (module.getSourceText(sourceId) != null)
+            {
+                return module;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Save source content to the appropriate editable module's filesystem.
+     */
+    private boolean saveToModule(String sourceId, String content)
+    {
+        for (LocalModule module : editableModules)
+        {
+            if (module.saveSourceText(sourceId, content))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // =========================================================================
+    // LSP extension interface
+    // =========================================================================
+
     public interface PureLanguageClient extends LanguageClient
     {
         @org.eclipse.lsp4j.jsonrpc.services.JsonNotification("pure/executeResult")
@@ -759,75 +785,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         void openFile(OpenFileParams params);
     }
 
-    public static class ExecuteResultParams
+    public record ExecuteResultParams(String result, boolean error) {}
+    public record TreeDataParams(String treeId, String json) {}
+
+    public record OpenFileParams(String sourceId, String content, Integer line, Integer column)
     {
-        private String result;
-        private boolean isError;
-
-        public ExecuteResultParams() {}
-
-        public ExecuteResultParams(String result, boolean isError)
-        {
-            this.result = result;
-            this.isError = isError;
-        }
-
-        public String getResult() { return result; }
-        public void setResult(String result) { this.result = result; }
-        public boolean isError() { return isError; }
-        public void setError(boolean error) { isError = error; }
-    }
-
-    public static class TreeDataParams
-    {
-        private String treeId;
-        private String json;
-
-        public TreeDataParams() {}
-
-        public TreeDataParams(String treeId, String json)
-        {
-            this.treeId = treeId;
-            this.json = json;
-        }
-
-        public String getTreeId() { return treeId; }
-        public void setTreeId(String treeId) { this.treeId = treeId; }
-        public String getJson() { return json; }
-        public void setJson(String json) { this.json = json; }
-    }
-
-    public static class OpenFileParams
-    {
-        private String sourceId;
-        private String content;
-        private Integer line;
-        private Integer column;
-
-        public OpenFileParams() {}
-
         public OpenFileParams(String sourceId, String content)
         {
-            this.sourceId = sourceId;
-            this.content = content;
+            this(sourceId, content, null, null);
         }
-
-        public OpenFileParams(String sourceId, String content, Integer line, Integer column)
-        {
-            this.sourceId = sourceId;
-            this.content = content;
-            this.line = line;
-            this.column = column;
-        }
-
-        public Integer getLine() { return line; }
-        public void setLine(Integer line) { this.line = line; }
-        public Integer getColumn() { return column; }
-        public void setColumn(Integer column) { this.column = column; }
-
-        public String getSourceId() { return sourceId; }
-        public void setSourceId(String sourceId) { this.sourceId = sourceId; }
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
     }
 }

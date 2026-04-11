@@ -1,0 +1,6 @@
+###Pure
+function go():Any[*]
+{
+    'welcome';
+}
+

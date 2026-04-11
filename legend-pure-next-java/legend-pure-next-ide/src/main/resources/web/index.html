@@ -8,16 +8,16 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-tertiary: #1c2333;
-            --border: #30363d;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d2d;
+            --border: #3c3c3c;
+            --text-primary: #cccccc;
+            --text-secondary: #969696;
             --accent: #58a6ff;
             --accent-glow: rgba(88, 166, 255, 0.15);
-            --success: #3fb950;
-            --error: #f85149;
+            --success: #89d185;
+            --error: #f48771;
             --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
             --sidebar-width: 280px;
         }
@@ -334,8 +334,21 @@
             flex: 1;
             min-height: 0;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
-        #editor { width: 100%; height: 100%; }
+        #editor { flex: 1; width: 100%; min-height: 0; }
+        .editor-statusbar {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 2px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+            font-family: var(--font-mono);
+            display: flex;
+            justify-content: flex-end;
+        }
 
         /* Result panel */
         .result-panel {
@@ -523,15 +536,14 @@
         <div class="editor-result-area">
             <!-- File tabs -->
             <div class="file-tabs-container" id="fileTabsContainer">
-                <div class="file-tab active" data-source-id="user.pure" onclick="switchToFile('user.pure')">
-                    <span class="file-icon">⬡</span>
-                    <span>user.pure</span>
-                </div>
             </div>
 
             <!-- Editor -->
             <div class="editor-container" id="editorPanel">
                 <div id="editor"></div>
+                <div class="editor-statusbar">
+                    <span id="cursorPosition">Ln 1, Col 1</span>
+                </div>
             </div>
 
             <!-- Diagram -->
@@ -570,10 +582,10 @@
         let pendingRequests = {};
         let initialized = false;
         let documentVersion = 0;
-        const DOC_URI = 'file:///user.pure';
+        const DOC_URI = 'file:///welcome.pure';
 
-        let openFiles = [{ sourceId: 'user.pure' }];
-        let activeFile = 'user.pure';
+        let openFiles = [];
+        let activeFile = null;
 
         // =================================================================
         // Sidebar Tab Switching
@@ -815,38 +827,23 @@
                 base: 'vs-dark',
                 inherit: true,
                 rules: [
-                    { token: 'keyword', foreground: 'ff7b72', fontStyle: 'bold' },
-                    { token: 'type', foreground: '79c0ff' },
-                    { token: 'variable', foreground: 'ffa657' },
-                    { token: 'string', foreground: 'a5d6ff' },
-                    { token: 'number', foreground: '79c0ff' },
-                    { token: 'comment', foreground: '8b949e', fontStyle: 'italic' },
-                    { token: 'operator', foreground: 'ff7b72' },
-                    { token: 'identifier', foreground: 'e6edf3' },
-                    { token: 'delimiter', foreground: '8b949e' },
+                    { token: 'keyword', foreground: '569cd6' },
+                    { token: 'type', foreground: '3dc9b0' },
+                    { token: 'variable', foreground: '4fc1ff' },
+                    { token: 'string', foreground: 'ce9178' },
+                    { token: 'number', foreground: 'b5cea8' },
+                    { token: 'comment', foreground: '6a9955' },
+                    { token: 'operator', foreground: 'd4d4d4' },
+                    { token: 'identifier', foreground: 'dcdcaa' },
+                    { token: 'delimiter', foreground: 'd4d4d4' },
                 ],
-                colors: {
-                    'editor.background': '#0d1117',
-                    'editor.foreground': '#e6edf3',
-                    'editor.lineHighlightBackground': '#161b2280',
-                    'editor.selectionBackground': '#264f7840',
-                    'editorCursor.foreground': '#58a6ff',
-                    'editorLineNumber.foreground': '#484f58',
-                    'editorLineNumber.activeForeground': '#8b949e',
-                    'editor.selectionHighlightBackground': '#3fb95020',
-                    'editorBracketMatch.background': '#58a6ff20',
-                    'editorBracketMatch.border': '#58a6ff40',
-                }
+                colors: {}
             });
 
-            // Create editor
+            // Create initial model with the welcome URI
+            // Create editor — starts empty, server pushes initial file via openFile
             editor = monaco.editor.create(document.getElementById('editor'), {
-                value: [
-                    'function go():Any[*]',
-                    '{',
-                    "   'Hello World!';",
-                    '}'
-                ].join('\n'),
+                value: '',
                 language: 'pure',
                 theme: 'pure-dark',
                 fontSize: 14,
@@ -857,9 +854,9 @@
                 renderLineHighlight: 'all',
                 scrollBeyondLastLine: false,
                 padding: { top: 12 },
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on',
+                smoothScrolling: false,
+                cursorBlinking: 'blink',
+                cursorSmoothCaretAnimation: 'off',
                 bracketPairColorization: { enabled: true },
                 automaticLayout: true,
                 tabSize: 3,
@@ -871,7 +868,7 @@
 
             // Handle save command (Cmd+S / Ctrl+S)
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                if (activeFile !== 'user.pure' && initialized && ws && ws.readyState === WebSocket.OPEN) {
+                if (activeFile && initialized && ws && ws.readyState === WebSocket.OPEN) {
                     sendRequest('workspace/executeCommand', {
                         command: 'pure/saveFile',
                         arguments: [activeFile, editor.getValue()]
@@ -887,10 +884,19 @@
                 }
             });
 
+            // Update cursor position in status bar
+            editor.onDidChangeCursorPosition((e) => {
+                const pos = e.position;
+                const cursorPositionEl = document.getElementById('cursorPosition');
+                if (cursorPositionEl) {
+                    cursorPositionEl.textContent = `Ln ${pos.lineNumber}, Col ${pos.column}`;
+                }
+            });
+
             // Notify LSP on content change
             editor.onDidChangeModelContent(() => {
-                // Only send didChange if the active model is user.pure
-                // We keep the LSP single source context pinned to user.pure for execution.
+                // Only send didChange if the active model is the welcome scratch pad
+                // We keep the LSP single source context pinned to it for execution.
                 if (initialized && ws && ws.readyState === WebSocket.OPEN) {
                     const currentUri = editor.getModel().uri.toString();
                     if (currentUri === DOC_URI) {
@@ -1014,10 +1020,8 @@
 
             if (!model) {
                 model = monaco.editor.createModel(content, 'pure', uri);
-            } else {
-                if (model.getValue() !== content && params.sourceId !== 'user.pure') {
-                    model.setValue(content);
-                }
+            } else if (model.getValue() !== content) {
+                model.setValue(content);
             }
 
             if (!openFiles.find(f => f.sourceId === params.sourceId)) {
@@ -1025,6 +1029,15 @@
             }
 
             switchToFile(params.sourceId);
+
+            // Sync the server if this file is the execution target
+            if (uriStr === DOC_URI && initialized && ws && ws.readyState === WebSocket.OPEN) {
+                documentVersion++;
+                sendNotification('textDocument/didChange', {
+                    textDocument: { uri: DOC_URI, version: documentVersion },
+                    contentChanges: [{ text: content }]
+                });
+            }
 
             if (params.line && editor) {
                 setTimeout(() => {
@@ -1054,12 +1067,15 @@
 
         function closeFile(e, sourceId) {
             if (e) e.stopPropagation();
-            if (sourceId === 'user.pure') return;
-
             openFiles = openFiles.filter(f => f.sourceId !== sourceId);
             
             if (activeFile === sourceId) {
-                switchToFile('user.pure');
+                if (openFiles.length > 0) {
+                    switchToFile(openFiles[0].sourceId);
+                } else {
+                    activeFile = null;
+                    renderFileTabs();
+                }
             } else {
                 renderFileTabs();
             }
@@ -1077,7 +1093,7 @@
                 
                 const icon = document.createElement('span');
                 icon.className = 'file-icon';
-                icon.textContent = f.sourceId === 'user.pure' ? '⬡' : '📄';
+                icon.textContent = '📄';
                 
                 const name = document.createElement('span');
                 name.textContent = f.sourceId.split('/').pop();
@@ -1086,13 +1102,11 @@
                 tab.appendChild(icon);
                 tab.appendChild(name);
 
-                if (f.sourceId !== 'user.pure') {
-                    const closeBtn = document.createElement('span');
-                    closeBtn.className = 'close-tab';
-                    closeBtn.innerHTML = '&times;';
-                    closeBtn.onclick = (e) => closeFile(e, f.sourceId);
-                    tab.appendChild(closeBtn);
-                }
+                const closeBtn = document.createElement('span');
+                closeBtn.className = 'close-tab';
+                closeBtn.innerHTML = '&times;';
+                closeBtn.onclick = (e) => closeFile(e, f.sourceId);
+                tab.appendChild(closeBtn);
 
                 container.appendChild(tab);
             });
@@ -1149,16 +1163,14 @@
             if (!initialized || !ws || ws.readyState !== WebSocket.OPEN) return Promise.resolve();
 
             const savePromises = openFiles.map(f => {
-                if (f.sourceId !== 'user.pure') {
-                    const uriStr = 'file:///' + f.sourceId.replace(/\\/g, '/');
-                    const uri = monaco.Uri.parse(uriStr);
-                    const model = monaco.editor.getModel(uri);
-                    if (model) {
-                        return sendRequest('workspace/executeCommand', {
-                            command: 'pure/saveFile',
-                            arguments: [f.sourceId, model.getValue(), true]
-                        }).catch(e => console.error("Error saving " + f.sourceId, e));
-                    }
+                const uriStr = 'file:///' + f.sourceId.replace(/\\/g, '/');
+                const uri = monaco.Uri.parse(uriStr);
+                const model = monaco.editor.getModel(uri);
+                if (model) {
+                    return sendRequest('workspace/executeCommand', {
+                        command: 'pure/saveFile',
+                        arguments: [f.sourceId, model.getValue(), true]
+                    }).catch(e => console.error("Error saving " + f.sourceId, e));
                 }
                 return Promise.resolve();
             });

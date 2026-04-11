@@ -17,8 +17,8 @@ package org.finos.legend.pure.m3.module;
 import java.util.List;
 
 /**
- * Result of compilation: the list of errors collected.
+ * Result of compilation: the list of errors collected and compilation statistics.
  */
-public record CompilationResult(List<CompilationError> errors)
+public record CompilationResult(List<CompilationError> errors, CompilationStatistics statistics)
 {
 }

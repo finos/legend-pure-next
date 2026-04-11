@@ -15,6 +15,8 @@
 package org.finos.legend.pure.ide;
 
 import com.sun.net.httpserver.HttpServer;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 
@@ -53,13 +55,26 @@ public class PureIDEMain
         // Add LocalModule for next-compiler-pure
         String compilerPurePathStr = args.length > 1
                 ? args[1]
-                : "../../legend-pure-next-compiler-pure/src/main/resources/compiler";
+                : "../../legend-pure-next-compiler-pure/src/main/resources";
         System.out.println("Loading compiler pure from: " + compilerPurePathStr);
-        org.finos.legend.pure.m3.module.localModule.LocalModule compilerPureModule = new LocalModule(
+        LocalModule compilerPureModule = new LocalModule(
                 "next-compiler-pure", "*",
                 java.util.List.of(coreModule.getName()),
                 Path.of(compilerPurePathStr)
         );
+
+        // Add LocalModule for welcome scratch pad
+        String welcomePathStr = args.length > 2
+                ? args[2]
+                : "src/main/resources/welcome";
+        System.out.println("Loading welcome from: " + welcomePathStr);
+        LocalModule welcomeModule = new LocalModule(
+                "welcome", "*",
+                java.util.List.of(coreModule.getName(), compilerPureModule.getName()),
+                Path.of(welcomePathStr)
+        );
+
+        MutableList<LocalModule> editableModules = Lists.mutable.with(welcomeModule, compilerPureModule);
 
         // Start HTTP server for static files
         HttpServer httpServer = HttpServer.create(new InetSocketAddress(HTTP_PORT), 0);
@@ -97,7 +112,7 @@ public class PureIDEMain
         System.out.println("HTTP server started: http://localhost:" + HTTP_PORT);
 
         // Start LSP WebSocket server
-        PureLSPWebSocketServer lspServer = new PureLSPWebSocketServer(LSP_PORT, coreModule, compilerPureModule);
+        PureLSPWebSocketServer lspServer = new PureLSPWebSocketServer(LSP_PORT, coreModule, editableModules);
         lspServer.start();
         System.out.println("LSP WebSocket server started: ws://localhost:" + LSP_PORT);
 

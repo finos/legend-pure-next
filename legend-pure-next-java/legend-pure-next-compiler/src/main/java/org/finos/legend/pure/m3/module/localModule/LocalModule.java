@@ -19,16 +19,21 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.impl.factory.Maps;
 import org.eclipse.collections.impl.list.mutable.ListAdapter;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.CompilationStatistics;
+import org.finos.legend.pure.m3.module.ElementStatistics;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
+import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.PureParser;
@@ -241,6 +246,11 @@ public class LocalModule implements Module
      */
     public CompilationResult compile()
     {
+        long compileStart = System.nanoTime();
+        Runtime runtime = Runtime.getRuntime();
+        runtime.gc();
+        long memBefore = runtime.totalMemory() - runtime.freeMemory();
+
         // Collect raw sources
         List<PureContent> rawSources = collectSources();
 
@@ -248,9 +258,11 @@ public class LocalModule implements Module
         List<LanguageExtension> extensions = pureModel.extensions();
 
         // Parse
+        long parseStart = System.nanoTime();
         PureParser parser = PureParser.builder().withExtensions(extensions).build();
         MutableList<PureFile> files = ListAdapter.adapt(rawSources)
                 .collect(source -> parser.parse(source.sourceId(), source.content()));
+        long parsingDurationNanos = System.nanoTime() - parseStart;
 
         // Compile
         this.compilationContext = new CompilationContext(pureModel.extensions().collect(CompilerExtension::buildCompilerContextExtension).select(Objects::nonNull));
@@ -258,10 +270,36 @@ public class LocalModule implements Module
         this.state.compile(this, files, packagePattern, new ScopedMetadataAccess(this, pureModel), compilationContext);
         validateNonDuplicateElements(this.state);
 
-        List<CompilationError> errors = compilationContext.errors().stream()
-                .map(e -> new CompilationError(e.formatMessage(), e.sourceInformation()))
-                .toList();
-        return new CompilationResult(errors);
+        // Build per-element statistics
+        MutableMap<String, ElementStatistics> elementStats = Maps.mutable.empty();
+        state.elementTimings().forEach((path, timings) ->
+        {
+            IndexEntry entry = state.elementIndex().get(path);
+            String elementType = entry != null && entry.element() != null
+                    ? entry.element().getClass().getSimpleName().replace("Impl", "")
+                    : "Unknown";
+            elementStats.put(path, new ElementStatistics(path, elementType, timings[0], timings[1], timings[2], (int) timings[3], (int) timings[4]));
+        });
+
+        long memAfter = runtime.totalMemory() - runtime.freeMemory();
+        long totalDurationNanos = System.nanoTime() - compileStart;
+
+        CompilationStatistics statistics = new CompilationStatistics(
+                totalDurationNanos,
+                parsingDurationNanos,
+                state.firstPassDurationNanos(),
+                state.secondPassDurationNanos(),
+                state.thirdPassDurationNanos(),
+                state.elementIndex().size(),
+                rawSources.size(),
+                memAfter - memBefore,
+                compilationContext.inferenceRollbackCount(),
+                compilationContext.candidateEvaluationCount(),
+                elementStats);
+
+        List<CompilationError> errors = compilationContext.errors().collect(
+                e -> new CompilationError(e.formatMessage(), e.sourceInformation())).toList();
+        return new CompilationResult(errors, statistics);
     }
 
     private List<PureContent> collectSources()
