@@ -16,6 +16,7 @@ package org.finos.legend.pure.execution.natives.io;
 
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -31,7 +32,7 @@ public class IONatives
         natives.put("print_Any_MANY__Integer_1__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
-            System.out.print(val);
+            System.out.print(PureValuePrinter.print(val));
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
 
@@ -39,7 +40,7 @@ public class IONatives
         natives.put("println_Any_MANY__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
-            System.out.println(val);
+            System.out.println(PureValuePrinter.print(val));
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
     }

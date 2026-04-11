@@ -113,47 +113,5 @@ public class TestCompilerNatives implements NativeExtension
             else if (value instanceof Number)    pureName = "Number";
             return _E_ValueSpecification.wrap(pureName, genericType, multiplicity, resolver);
         });
-
-        // meta::pure::compiler::test::getSpecificationFilePaths():String[*]
-        natives.put("getSpecificationFilePaths__String_MANY_", (args, eval, genericType, multiplicity) ->
-        {
-             try
-             {
-                 java.nio.file.Path start = java.nio.file.Path.of("../../legend-pure-next-specification/src/main/resources/specification/compiler");
-                 if (!java.nio.file.Files.exists(start)) {
-                     start = java.nio.file.Path.of("../legend-pure-next-specification/src/main/resources/specification/compiler");
-                 }
-                 List<meta.pure.metamodel.valuespecification.ValueSpecification> wrappedPaths = new java.util.ArrayList<>();
-                 try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.walk(start))
-                 {
-                     stream.filter(java.nio.file.Files::isRegularFile)
-                           .filter(p -> p.toString().endsWith(".pure"))
-                           .forEach(p -> {
-                               Object wrapped = _E_ValueSpecification.wrap(p.toAbsolutePath().toString(), null, null, resolver);
-                               wrappedPaths.add((meta.pure.metamodel.valuespecification.ValueSpecification) wrapped);
-                           });
-                 }
-                 return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrappedPaths, resolver);
-             }
-             catch (java.io.IOException e)
-             {
-                 throw new RuntimeException("Failed to read specification files", e);
-             }
-        });
-
-        // meta::pure::compiler::test::readSpecificationFile(path:String[1]):String[1]
-        natives.put("readSpecificationFile_String_1__String_1_", (args, eval, genericType, multiplicity) ->
-        {
-             String path = (String) _E_ValueSpecification.unwrap(args.get(0));
-             try
-             {
-                 String content = java.nio.file.Files.readString(java.nio.file.Path.of(path));
-                 return _E_ValueSpecification.wrap(content, genericType, multiplicity, resolver);
-             }
-             catch (java.io.IOException e)
-             {
-                 throw new RuntimeException("Failed to read specification file: " + path, e);
-             }
-        });
     }
 }

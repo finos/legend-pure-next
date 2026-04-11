@@ -15,6 +15,7 @@
 package org.finos.legend.pure.ide;
 
 import meta.pure.metamodel.function.FunctionDefinition;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.lsp4j.*;
@@ -77,7 +78,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
         // Execute command support for pure/execute
         ExecuteCommandOptions execOptions = new ExecuteCommandOptions(
-                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile"));
+                List.of("pure/execute", "pure/packageTree", "pure/fileTree", "pure/jumpToElement", "pure/openFile", "pure/saveFile", "pure/getPCTAdapters", "pure/discoverTests", "pure/runTests"));
         capabilities.setExecuteCommandProvider(execOptions);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
@@ -241,6 +242,37 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 }
                 return null;
             });
+            case "pure/getPCTAdapters" -> CompletableFuture.supplyAsync(this::handleGetPCTAdapters);
+            case "pure/discoverTests" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && !params.getArguments().isEmpty())
+                {
+                    String mode = getArgString(params.getArguments().get(0));
+                    return handleDiscoverTests(mode);
+                }
+                return List.of();
+            });
+            case "pure/runTests" -> CompletableFuture.supplyAsync(() ->
+            {
+                if (params.getArguments() != null && params.getArguments().size() >= 3)
+                {
+                    String mode = getArgString(params.getArguments().get(0));
+                    String adapter = getArgString(params.getArguments().get(1));
+                    Object testsObj = params.getArguments().get(2);
+                    List<String> tests = new ArrayList<>();
+                    if (testsObj instanceof com.google.gson.JsonArray arr) {
+                        for (com.google.gson.JsonElement e : arr) {
+                            tests.add(e.getAsString());
+                        }
+                    } else if (testsObj instanceof List<?> ls) {
+                        for (Object o : ls) {
+                            tests.add(String.valueOf(o));
+                        }
+                    }
+                    return handleRunTests(mode, adapter, tests);
+                }
+                return List.of();
+            });
             case "pure/saveFile" -> CompletableFuture.supplyAsync(() ->
             {
                 if (params.getArguments() != null && params.getArguments().size() >= 2)
@@ -269,6 +301,15 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             });
             default -> CompletableFuture.completedFuture(null);
         };
+    }
+    
+    private String getArgString(Object obj)
+    {
+        if (obj == null) return null;
+        if (obj instanceof com.google.gson.JsonPrimitive jp && jp.isString()) return jp.getAsString();
+        String str = String.valueOf(obj);
+        if (str.startsWith("\"") && str.endsWith("\"")) return str.substring(1, str.length() - 1);
+        return str;
     }
 
     private void handleSaveFile(String sourceId, String content, boolean skipCompile)
@@ -449,12 +490,23 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 return;
             }
 
-            // Execute
-            PureExecution execution = new PureExecution(
-                    new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model));
-            Object output = execution.execute(goFunc);
-            String execResult = formatResult(output);
-            sendExecuteResult(execResult, false);
+            // Execute — capture System.out so Pure print()/println() output is
+            // forwarded to the terminal; the return value is discarded.
+            java.io.ByteArrayOutputStream capturedOut = new java.io.ByteArrayOutputStream();
+            java.io.PrintStream originalOut = System.out;
+            System.setOut(new java.io.PrintStream(capturedOut));
+            try
+            {
+                PureExecution execution = new PureExecution(
+                        new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model));
+                execution.execute(goFunc);
+            }
+            finally
+            {
+                System.setOut(originalOut);
+            }
+            String printed = capturedOut.toString(java.nio.charset.StandardCharsets.UTF_8);
+            sendExecuteResult(printed, false);
         }
         catch (Exception e)
         {
@@ -462,21 +514,169 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         }
     }
 
-    private String formatResult(Object output)
+    // =========================================================================
+    // Test Runner
+    // =========================================================================
+
+    private boolean isTestStereotype(meta.pure.metamodel.PackageableElement element, String expectedProfile, String expectedValue)
     {
-        if (output == null) { return "null"; }
-        if (output instanceof java.util.List<?> list)
+        if (element instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews)
         {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < list.size(); i++)
+            for (meta.pure.metamodel.extension.Stereotype s : ews._stereotypes())
             {
-                if (i > 0) { sb.append("\n"); }
-                sb.append(formatResult(list.get(i)));
+                if (s != null && expectedValue.equals(s._value()) && s._profile() != null && expectedProfile.equals(s._profile()._name()))
+                {
+                    return true;
+                }
             }
-            return sb.toString();
         }
-        return String.valueOf(output);
+        return false;
     }
+
+    private List<String> handleGetPCTAdapters()
+    {
+        List<String> adapters = new ArrayList<>();
+        if (lastModel == null)
+        {
+            try { compileCurrentSource(); } catch (Exception ignored) {}
+        }
+        if (lastModel != null)
+        {
+            for (Module m : lastModel.modules())
+            {
+                for (String path : m.elementPaths())
+                {
+                    try
+                    {
+                        meta.pure.metamodel.PackageableElement element = m.getElement(path);
+                        if (element instanceof FunctionDefinition && isTestStereotype(element, "PCT", "adapter"))
+                        {
+                            adapters.add(path);
+                        }
+                    }
+                    catch (Exception ignored) {}
+                }
+            }
+        }
+        return adapters;
+    }
+
+    private List<String> handleDiscoverTests(String mode)
+    {
+        List<String> tests = new ArrayList<>();
+        if (lastModel == null)
+        {
+            try { compileCurrentSource(); } catch (Exception ignored) {}
+        }
+        if (lastModel != null)
+        {
+            String profile = "pct".equals(mode) ? "PCT" : "test";
+            String value = "test"; // wait, is simple test 'test' value? Usually it's <<test.Test>>. Let's accept 'test' or 'Test'.
+            for (Module m : lastModel.modules())
+            {
+                for (String path : m.elementPaths())
+                {
+                    try
+                    {
+                        meta.pure.metamodel.PackageableElement element = m.getElement(path);
+                        if (element instanceof FunctionDefinition && (isTestStereotype(element, profile, "test") || isTestStereotype(element, profile, "Test") || ("simple".equals(mode) && isTestStereotype(element, "test", "Test"))))
+                        {
+                            tests.add(path);
+                        }
+                    }
+                    catch (Exception ignored) {}
+                }
+            }
+        }
+        return tests;
+    }
+
+    private Object handleRunTests(String mode, String adapterPath, List<String> testPaths)
+    {
+        List<Map<String, String>> results = new ArrayList<>();
+        if (lastModel == null)
+        {
+            try { compileCurrentSource(); } catch (Exception e) {
+                return results; // cannot compile
+            }
+        }
+        
+        PureExecution execution;
+        try {
+            execution = new PureExecution(
+                new org.finos.legend.pure.m3.module.ScopedMetadataAccess(lastModel.getModule("welcome") != null ? lastModel.getModule("welcome") : coreModule, lastModel)
+            );
+        } catch (Exception e) {
+            execution = new PureExecution(coreModule);
+        }
+
+        ValueSpecification adapterArg = null;
+        if ("pct".equals(mode) && adapterPath != null && !adapterPath.isEmpty())
+        {
+            meta.pure.metamodel.PackageableElement adapterElem = null;
+            for (Module m : lastModel.modules()) {
+                if ((adapterElem = m.getElement(adapterPath)) != null) break;
+            }
+            if (adapterElem instanceof FunctionDefinition fd) {
+                adapterArg = org.finos.legend.pure.execution._E_ValueSpecification.wrap(
+                        fd, fd._classifierGenericType(), null, coreModule);
+            }
+        }
+
+        for (String testPath : testPaths)
+        {
+            Map<String, String> result = new LinkedHashMap<>();
+            result.put("test", testPath);
+            
+            meta.pure.metamodel.PackageableElement testElem = null;
+            for (Module m : lastModel.modules()) {
+                if ((testElem = m.getElement(testPath)) != null) break;
+            }
+
+            if (testElem instanceof FunctionDefinition fd)
+            {
+                java.io.ByteArrayOutputStream capturedOut = new java.io.ByteArrayOutputStream();
+                java.io.PrintStream originalOut = System.out;
+                System.setOut(new java.io.PrintStream(capturedOut));
+                try
+                {
+                    if ("pct".equals(mode) && adapterArg != null)
+                    {
+                        execution.execute(fd, adapterArg);
+                    }
+                    else
+                    {
+                        execution.execute(fd);
+                    }
+                    result.put("status", "passed");
+                }
+                catch (org.finos.legend.pure.execution.PureAssertionError e)
+                {
+                    result.put("status", "failed");
+                    result.put("error", "Assertion Failed: " + e.getMessage());
+                }
+                catch (Exception e)
+                {
+                    result.put("status", "failed");
+                    result.put("error", "Error: " + e.getMessage());
+                }
+                finally
+                {
+                    System.setOut(originalOut);
+                    result.put("output", capturedOut.toString(java.nio.charset.StandardCharsets.UTF_8));
+                }
+            }
+            else
+            {
+                result.put("status", "failed");
+                result.put("error", "Test function not found.");
+            }
+            results.add(result);
+        }
+        return results;
+    }
+
+
 
     private void sendExecuteResult(String result, boolean isError)
     {
@@ -675,7 +875,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     private void handleJumpToElement(String elementPath)
     {
-        if (client == null) { return; }
+        System.out.println("[LSP] Received pure/jumpToElement for: " + elementPath);
+        if (client == null) { 
+            System.out.println("[LSP] jumpToElement abort: client is null");
+            return; 
+        }
         
         // Search all editable modules for the element
         for (LocalModule module : editableModules)
@@ -683,23 +887,39 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             String sourceId = module.getSourceIdForElement(elementPath);
             if (sourceId != null)
             {
+                System.out.println("[LSP] Found in module " + module.getName() + " with sourceId " + sourceId);
                 String content = module.getSourceText(sourceId);
                 if (content != null)
                 {
-                    meta.pure.metamodel.PackageableElement element = module.getElement(elementPath);
-                    if (element != null && element._sourceInformation() != null)
+                    try 
                     {
-                        Long lLine = element._sourceInformation()._startLine();
-                        Long lCol = element._sourceInformation()._startColumn();
-                        sendOpenFile(sourceId, content, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
+                        meta.pure.metamodel.PackageableElement element = module.getElement(elementPath);
+                        if (element != null && element._sourceInformation() != null)
+                        {
+                            Long lLine = element._sourceInformation()._startLine();
+                            Long lCol = element._sourceInformation()._startColumn();
+                            System.out.println("[LSP] Found element source info: line " + lLine);
+                            sendOpenFile(sourceId, content, lLine != null ? lLine.intValue() : null, lCol != null ? lCol.intValue() : null);
+                        }
+                        else
+                        {
+                            System.out.println("[LSP] Element source info null, opening base file");
+                            sendOpenFile(sourceId, content);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
+                        System.out.println("[LSP] Exception resolving " + elementPath + ": " + ex.getMessage());
                         sendOpenFile(sourceId, content);
                     }
                     return;
                 }
             }
+        }
+        System.out.println("[LSP] jumpToElement failed: elementPath '" + elementPath + "' not found in any editable module index.");
+        if (client != null)
+        {
+            client.showMessage(new MessageParams(MessageType.Error, "Cannot open source for '" + elementPath + "'. Associated source files are not present in your editable modules."));
         }
     }
 

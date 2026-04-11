@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pure IDE</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -320,6 +321,19 @@
         .resize-handle.active {
             background: var(--accent);
         }
+        
+        .resize-handle-horizontal {
+            height: 4px;
+            cursor: row-resize;
+            background: transparent;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .resize-handle-horizontal:hover,
+        .resize-handle-horizontal.active {
+            background: var(--accent);
+        }
 
         /* Editor + result container */
         .editor-result-area {
@@ -350,37 +364,46 @@
             justify-content: flex-end;
         }
 
-        /* Result panel */
         .result-panel {
             background: var(--bg-secondary);
             border-top: 1px solid var(--border);
-            min-height: 120px;
-            max-height: 35vh;
+            height: 250px;
+            min-height: 40px;
             display: flex;
             flex-direction: column;
+            flex-shrink: 0;
             transition: min-height 0.3s ease;
         }
-        .result-header {
+        .result-tabs {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 16px;
             border-bottom: 1px solid var(--border);
             background: var(--bg-tertiary);
-            cursor: pointer;
-            user-select: none;
         }
-        .result-header-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
+        .bottom-tab {
+            padding: 6px 16px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        .result-header-left .icon { font-size: 14px; }
+        .bottom-tab:hover {
+            color: var(--text-primary);
+            background: rgba(88, 166, 255, 0.05);
+        }
+        .bottom-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(88, 166, 255, 0.08);
+        }
         .result-badge {
             font-size: 10px;
             padding: 1px 6px;
@@ -389,6 +412,16 @@
         }
         .result-badge.success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
         .result-badge.error { background: rgba(248, 81, 73, 0.15); color: var(--error); }
+        .bottom-content-panel {
+            flex: 1;
+            display: none;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .bottom-content-panel.active {
+            display: flex;
+            flex-direction: column;
+        }
         .result-content {
             flex: 1;
             padding: 12px 16px;
@@ -404,6 +437,52 @@
         .result-content .placeholder {
             color: var(--text-secondary);
             font-style: italic;
+        }
+
+        .test-split-view {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .test-tree-side {
+            width: 300px;
+            min-width: 200px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .test-output-side {
+            flex: 1;
+            padding: 12px 16px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding: 4px 0;
+            z-index: 1000;
+            font-size: 12px;
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+        .context-menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+        .context-menu-item:hover {
+            background: var(--accent);
+            color: #fff;
         }
 
         /* Scrollbar */
@@ -557,17 +636,56 @@
                 <div class="diagram-zoom-label" id="diagramZoomLabel">100%</div>
             </div>
 
+            <!-- Horizontal Resize Handle -->
+            <div class="resize-handle-horizontal" id="resizeHandleHorizontal"></div>
+
             <!-- Result Panel -->
-            <div class="result-panel">
-                <div class="result-header">
-                    <div class="result-header-left">
-                        <span class="icon">◉</span>
-                        <span>Output</span>
-                        <span class="result-badge" id="resultBadge" style="display:none"></span>
+            <div class="result-panel" id="resultPanel">
+                <div class="result-tabs">
+                    <button id="bottomTabOutput" class="bottom-tab active" onclick="switchBottomTab('output')"><span class="icon">◉</span> Output <span class="result-badge" id="resultBadge" style="display:none"></span></button>
+                    <button id="bottomTabTests" class="bottom-tab" onclick="switchBottomTab('tests')"><span class="icon">✔</span> Tests</button>
+                </div>
+                
+                <div class="bottom-content-panel active" id="bottomPanelOutput">
+                    <div class="result-content" id="resultContent">
+                        <span class="placeholder">Press F9 or click Run to compile and execute go():Any[*]</span>
                     </div>
                 </div>
-                <div class="result-content" id="resultContent">
-                    <span class="placeholder">Press F9 or click Run to compile and execute go():Any[*]</span>
+                
+                <div class="bottom-content-panel" id="bottomPanelTests">
+                    <div class="test-split-view">
+                        <div class="test-tree-side">
+                            <div style="padding: 10px; border-bottom: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div id="testModeStatus" style="font-weight: bold; font-size: 13px; color: var(--accent);">No Tests Loaded</div>
+                                    <button onclick="reRunLastTests()" title="Re-run tests" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-primary); transition: all 0.2s;">
+                                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M8 2.5a5.487 5.487 0 00-4.131 1.869l1.204 1.204A.25.25 0 014.896 6H1.25A.25.25 0 011 5.75V2.104a.25.25 0 01.427-.177l1.38 1.38A7.001 7.001 0 0114.95 7.16a.75.75 0 11-1.49.178A5.501 5.501 0 008 2.5zM1.705 8.005a.75.75 0 511.474-.272 5.5 5.5 0 0010.72-2.866V6.104a.25.25 0 01.427-.177l1.38 1.38A7.002 7.002 0 011.05 8.84a.75.75 0 01.656-.835z"></path></svg>
+                                    </button>
+                                </div>
+                                <div id="pctAdapterContainer" style="margin-bottom: 4px; display: none;">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PCT Adapter (for PCT runs):</label>
+                                    <select id="pctAdapterSelect" style="width: 100%; padding: 4px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px;">
+                                        <option value="">Default / Auto</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; margin-top: 8px;">
+                                    <button onclick="toggleAllTestNodes(true)" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Expand</button>
+                                    <button onclick="toggleAllTestNodes(false)" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Close</button>
+                                    <div style="flex: 1;"></div>
+                                    <button onclick="filterTestNodes('passed')" id="btnFilterPassed" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">✓ Pass</button>
+                                    <button onclick="filterTestNodes('failed')" id="btnFilterFailed" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">✗ Fail</button>
+                                    <button onclick="filterTestNodes('all')" id="btnFilterAll" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-weight: bold;">All</button>
+                                </div>
+                            </div>
+                            <div id="testTreeContainer" style="padding: 8px 0; overflow-y: auto; font-size: 12px; flex: 1;">
+                                <div style="padding: 0 16px; color: var(--text-secondary); font-style: italic;">No tests loaded.</div>
+                            </div>
+                        </div>
+                        <div class="resize-handle" id="resizeHandleTestTree"></div>
+                        <div class="test-output-side" id="testSpecificOutput">
+                            <div class="placeholder" style="color: var(--text-secondary); font-style: italic;">Select a test to view console output</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -598,30 +716,367 @@
         }
 
         // =================================================================
+        // Bottom Tab Switching
+        // =================================================================
+        function switchBottomTab(tab) {
+            document.getElementById('bottomTabOutput').classList.toggle('active', tab === 'output');
+            document.getElementById('bottomTabTests').classList.toggle('active', tab === 'tests');
+            document.getElementById('bottomPanelOutput').classList.toggle('active', tab === 'output');
+            document.getElementById('bottomPanelTests').classList.toggle('active', tab === 'tests');
+        }
+
+        // =================================================================
+        // Test Runner
+        // =================================================================
+        
+        let availablePCTAdapters = [];
+        let discoveredTests = [];
+        
+        function updatePCTAdapters(adapters) {
+            availablePCTAdapters = adapters || [];
+            const select = document.getElementById('pctAdapterSelect');
+            select.innerHTML = '';
+            if (availablePCTAdapters.length === 0) {
+                select.innerHTML = '<option value="">No adapters found</option>';
+            } else {
+                availablePCTAdapters.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a.split('::').pop() || a;
+                    select.appendChild(opt);
+                });
+            }
+        }
+        
+        let testResultsMap = {};
+        
+        function renderDiscoveredTests(tests, mode) {
+            discoveredTests = tests || [];
+            testResultsMap = {}; // clear results
+            document.getElementById('testSpecificOutput').innerHTML = '<div class="placeholder" style="color: var(--text-secondary); font-style: italic;">Select a test to view console output</div>';
+            
+            const container = document.getElementById('testTreeContainer');
+            if (!tests || tests.length === 0) {
+                container.innerHTML = '<div style="padding: 0 16px; color: var(--text-secondary); font-style: italic;">No tests found.</div>';
+                return;
+            }
+            
+            // Build tree structure
+            const root = { children: {} };
+            tests.forEach(t => {
+                const parts = t.split('::');
+                const name = parts.pop();
+                let current = root;
+                parts.forEach(p => {
+                    if (!current.children[p]) {
+                        current.children[p] = { type: 'Package', children: {} };
+                    } else if (!current.children[p].children) {
+                        current.children[p].children = {};
+                    }
+                    current = current.children[p];
+                });
+                
+                if (!current.children[name]) {
+                    current.children[name] = { type: 'Test', id: t, name: name };
+                } else {
+                    current.children[name].type = 'Test';
+                    current.children[name].id = t;
+                    current.children[name].name = name;
+                }
+            });
+
+            function renderTreeNodes(nodeDict, depth) {
+                let html = '';
+                const keys = Object.keys(nodeDict);
+                const packages = keys.filter(k => nodeDict[k].type === 'Package').sort();
+                const tests = keys.filter(k => nodeDict[k].type !== 'Package').sort();
+                const sortedKeys = packages.concat(tests);
+                
+                sortedKeys.forEach(k => {
+                    const node = nodeDict[k];
+                    if (node.type === 'Package') {
+                        html += `
+                        <div class="tree-node" data-type="Package">
+                            <div class="tree-item" style="--depth: ${depth};" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('.chevron').classList.toggle('expanded');">
+                                <span class="chevron expanded">▶</span>
+                                <span class="node-icon icon-package material-symbols-outlined">folder</span>
+                                <span class="node-name">${k}</span>
+                            </div>
+                            <div class="tree-children" style="display:block;">
+                                ${renderTreeNodes(node.children, depth + 1)}
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `
+                        <div class="tree-node" data-type="Test" data-id="${node.id}" style="margin-bottom: 2px;">
+                            <div class="tree-item" style="--depth: ${depth}; cursor: pointer;" onclick="showTestOutput('${node.id}')">
+                                <span class="chevron leaf"></span>
+                                <span class="node-icon icon-function material-symbols-outlined" id="test-icon-${node.id}">adjust</span>
+                                <span class="node-name" style="color: var(--text-primary);">${node.name}</span>
+                            </div>
+                        </div>`;
+                    }
+                });
+                return html;
+            }
+            
+            container.innerHTML = renderTreeNodes(root.children, 0);
+        }
+        
+        function showTestOutput(testId) {
+            const outContainer = document.getElementById('testSpecificOutput');
+            const res = testResultsMap[testId];
+            if (!res) {
+                outContainer.innerHTML = `<div style="color: var(--text-secondary); font-style: italic;">No execution results available for ${testId}</div>`;
+                return;
+            }
+            let html = `<div style="font-weight:bold; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">${testId}</div>`;
+            if (res.status === 'failed') {
+                html += `<div style="color: var(--error); margin-bottom: 12px;"><strong>Error:</strong> ${res.error}</div>`;
+            } else if (res.status === 'passed') {
+                html += `<div style="color: var(--success); margin-bottom: 12px;"><strong>Status:</strong> Passed</div>`;
+            }
+            
+            if (res.output) {
+                html += `<div><strong>Console Output:</strong></div><pre style="white-space: pre-wrap; font-size: 12px; font-family: var(--font-mono); margin-top: 4px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px;">${res.output}</pre>`;
+            } else {
+                html += `<div style="color: var(--text-secondary); font-style: italic;">No console output</div>`;
+            }
+            outContainer.innerHTML = html;
+        }
+        
+        function triggerRunTestsForPackage(mode, pkg) {
+            switchBottomTab('tests');
+            document.querySelector('.result-panel').style.minHeight = '350px'; 
+            
+            lastTestMode = mode;
+            lastTestPkg = pkg;
+            
+            if (mode === 'pct') {
+                document.getElementById('pctAdapterContainer').style.display = 'block';
+                document.getElementById('testModeStatus').textContent = 'PCT Tests - ' + pkg;
+            } else {
+                document.getElementById('pctAdapterContainer').style.display = 'none';
+                document.getElementById('testModeStatus').textContent = 'Simple Tests - ' + pkg;
+            }
+            
+            if (mode === 'pct' && availablePCTAdapters.length === 0) {
+                sendRequest('workspace/executeCommand', { command: 'pure/getPCTAdapters' })
+                    .then(result => {
+                        updatePCTAdapters(result);
+                        _triggerDiscoverAndRun(mode, pkg);
+                    }).catch(console.error);
+            } else {
+                _triggerDiscoverAndRun(mode, pkg);
+            }
+        }
+        
+        function reRunLastTests() {
+            if (lastTestMode && lastTestPkg) {
+                triggerRunTestsForPackage(lastTestMode, lastTestPkg);
+            } else {
+                alert('No tests have been executed yet to re-run.');
+            }
+        }
+        
+        function _triggerDiscoverAndRun(mode, pkg) {
+            const container = document.getElementById('testTreeContainer');
+            container.innerHTML = '<div style="padding: 0 16px; color: var(--text-secondary);"><span class="spinner"></span> Discovering ' + mode + ' tests...</div>';
+            
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/discoverTests',
+                arguments: [mode]
+            }).then(result => {
+                const tests = result || [];
+                const filtered = tests.filter(t => t.startsWith(pkg + '::'));
+                renderDiscoveredTests(filtered, mode);
+                if (filtered.length > 0) {
+                    runSelectedTests(mode, filtered);
+                } else {
+                    document.getElementById('testSpecificOutput').innerHTML = `<div style="color: var(--text-secondary); padding: 12px;">No tests found in package: ${pkg} (Mode: ${mode})</div>`;
+                }
+            }).catch(err => {
+                console.error(err);
+                container.innerHTML = `<div style="color: var(--error); padding: 16px;">Failed to discover tests: ${err && err.message ? err.message : err}</div>`;
+            });
+        }
+
+        function runSelectedTests(mode, tests) {
+            let adapter = null;
+            if (mode === 'pct') {
+                const selectElement = document.getElementById('pctAdapterSelect');
+                if (selectElement) {
+                    adapter = selectElement.value;
+                }
+                if (!adapter && availablePCTAdapters.length > 0) {
+                    adapter = availablePCTAdapters[0]; // pick first if dropdown wasn't manually selected
+                }
+                if (!adapter) {
+                    alert('Please select a PCT adapter first.');
+                    return;
+                }
+            }
+            
+            tests.forEach(t => {
+                const icon = document.getElementById(`test-icon-${t}`);
+                if (icon) {
+                    icon.innerHTML = '<span class="spinner" style="width:10px;height:10px;border-width:1px;"></span>';
+                    icon.style.color = 'var(--text-secondary)';
+                }
+            });
+            
+            document.getElementById('testSpecificOutput').innerHTML = '<div style="color: var(--text-secondary); padding: 12px;"><span class="spinner"></span> Running tests...</div>';
+            
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/runTests',
+                arguments: [mode, adapter, tests]
+            }).then(result => applyTestResults(result))
+              .catch(err => {
+                  document.getElementById('testSpecificOutput').innerHTML = '<div style="color: var(--error); padding: 12px;">Error executing tests: ' + err + '</div>';
+              });
+        }
+        
+        function applyTestResults(results) {
+            let passedCount = 0;
+            let failedCount = 0;
+            
+            results.forEach(res => {
+                testResultsMap[res.test] = res;
+                
+                const isPassed = res.status === 'passed';
+                const iconElem = document.getElementById(`test-icon-${res.test}`);
+                if (iconElem) {
+                    iconElem.textContent = isPassed ? '✅' : '❌';
+                    iconElem.style.color = isPassed ? 'var(--success)' : 'var(--error)';
+                }
+                
+                if (isPassed) { passedCount++; } else { failedCount++; }
+            });
+            
+            document.getElementById('testSpecificOutput').innerHTML = `
+                <div style="margin-bottom: 12px; font-weight: bold; font-size: 14px; padding: 12px;">
+                    Test Run Finished! <br/>
+                    <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">
+                        Total Ran: ${results.length} | Passed: <span style="color:var(--success)">${passedCount}</span> | Failed: <span style="color:var(--error)">${failedCount}</span>
+                    </span>
+                </div>
+                <div style="color: var(--text-secondary); font-style: italic; padding: 0 12px;">Select a test from the left to view output details</div>
+            `;
+            
+            const badge = document.getElementById('resultBadge');
+            badge.style.display = 'inline-block';
+            badge.className = failedCount === 0 ? 'result-badge success' : 'result-badge error';
+            badge.textContent = failedCount === 0 ? 'TESTS PASSED' : 'TESTS FAILED';
+            
+            applyTestFilters(); // re-evaluate filter
+        }
+        
+        let currentTestFilter = 'all';
+
+        function toggleAllTestNodes(expand) {
+            const panels = document.querySelectorAll('#testTreeContainer .tree-children');
+            const chevrons = document.querySelectorAll('#testTreeContainer .chevron.expanded, #testTreeContainer .chevron:not(.expanded):not(.leaf)');
+            panels.forEach(p => p.style.display = expand ? 'block' : 'none');
+            chevrons.forEach(c => {
+                if (expand) c.classList.add('expanded');
+                else c.classList.remove('expanded');
+            });
+        }
+
+        function filterTestNodes(filter) {
+            currentTestFilter = filter;
+            document.getElementById('btnFilterPassed').style.fontWeight = filter === 'passed' ? 'bold' : 'normal';
+            document.getElementById('btnFilterPassed').style.color = filter === 'passed' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            document.getElementById('btnFilterFailed').style.fontWeight = filter === 'failed' ? 'bold' : 'normal';
+            document.getElementById('btnFilterFailed').style.color = filter === 'failed' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            document.getElementById('btnFilterAll').style.fontWeight = filter === 'all' ? 'bold' : 'normal';
+            document.getElementById('btnFilterAll').style.color = filter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            applyTestFilters();
+        }
+
+        function applyTestFilters() {
+            const rootNodes = document.querySelectorAll('#testTreeContainer > .tree-node');
+            rootNodes.forEach(rn => updateNodeVisibility(rn));
+        }
+
+        function updateNodeVisibility(nodeElem) {
+            if (nodeElem.dataset.type === 'Test') {
+                const id = nodeElem.dataset.id;
+                const res = testResultsMap[id];
+                const status = res ? res.status : 'none';
+                
+                if (currentTestFilter === 'all') {
+                    nodeElem.style.display = 'block';
+                    return true;
+                } else {
+                    const isVisible = (status === currentTestFilter);
+                    nodeElem.style.display = isVisible ? 'block' : 'none';
+                    return isVisible;
+                }
+            } else if (nodeElem.dataset.type === 'Package') {
+                const childrenContainer = nodeElem.querySelector(':scope > .tree-children');
+                let hasVisibleChild = false;
+                if (childrenContainer) {
+                    // recursively check children
+                    const children = childrenContainer.querySelectorAll(':scope > .tree-node');
+                    for (let child of children) {
+                        if (updateNodeVisibility(child)) {
+                            hasVisibleChild = true;
+                        }
+                    }
+                }
+                nodeElem.style.display = (hasVisibleChild || currentTestFilter === 'all') ? 'block' : 'none';
+                return hasVisibleChild;
+            }
+            return true;
+        }
+
+        // =================================================================
         // Tree Rendering
         // =================================================================
         const TYPE_ICONS = {
-            'Package':              { icon: '📦', cls: 'icon-package' },
-            'Class':                { icon: '◇',  cls: 'icon-class' },
-            'Enumeration':          { icon: '◆',  cls: 'icon-enum' },
-            'FunctionDefinition':   { icon: 'ƒ',  cls: 'icon-function' },
-            'ConcreteFunctionDefinition': { icon: 'ƒ', cls: 'icon-function' },
-            'Association':          { icon: '⟷',  cls: 'icon-association' },
-            'Profile':              { icon: '◎',  cls: 'icon-profile' },
-            'Measure':              { icon: '⊡',  cls: 'icon-measure' },
-            'UserDefined':          { icon: '✦',  cls: 'icon-function' },
-            'File':                 { icon: '📄', cls: 'icon-file' },
+            'Package':              { icon: 'folder',  cls: 'icon-package material-symbols-outlined' },
+            'Class':                { icon: 'data_object',  cls: 'icon-class material-symbols-outlined' },
+            'Enumeration':          { icon: 'list',  cls: 'icon-enum material-symbols-outlined' },
+            'PrimitiveType':        { icon: 'category',  cls: 'icon-primitive material-symbols-outlined' },
+            'FunctionDefinition':   { icon: 'function',   cls: 'icon-function material-symbols-outlined' },
+            'ConcreteFunctionDefinition': { icon: 'function', cls: 'icon-function material-symbols-outlined' },
+            'NativeFunction':       { icon: 'bolt',  cls: 'icon-native material-symbols-outlined' },
+            'Association':          { icon: 'link',  cls: 'icon-association material-symbols-outlined' },
+            'Profile':              { icon: 'label',  cls: 'icon-profile material-symbols-outlined' },
+            'Measure':              { icon: 'straighten',  cls: 'icon-measure material-symbols-outlined' },
+            'UserDefinedFunction':  { icon: 'function',  cls: 'icon-function material-symbols-outlined' },
+            'File':                 { icon: 'description',  cls: 'icon-file material-symbols-outlined' },
         };
 
         function getIcon(type, hasChildren) {
             if (hasChildren) return TYPE_ICONS['Package'];
-            return TYPE_ICONS[type] || { icon: '○', cls: 'icon-default' };
+            return TYPE_ICONS[type] || { icon: 'adjust', cls: 'icon-default material-symbols-outlined' };
         }
 
         function renderTree(nodes, container, treeId, depth, parentPath) {
             depth = depth || 0;
             parentPath = parentPath || '';
-            for (const node of nodes) {
+            
+            const sortedNodes = [...nodes].sort((a, b) => {
+                const aHasChildren = a.children && a.children.length > 0;
+                const bHasChildren = b.children && b.children.length > 0;
+                
+                if (aHasChildren && !bHasChildren) return -1;
+                if (!aHasChildren && bHasChildren) return 1;
+                
+                if (!aHasChildren && !bHasChildren) {
+                    const aType = a.type || '';
+                    const bType = b.type || '';
+                    if (aType !== bType) {
+                        return aType.localeCompare(bType);
+                    }
+                }
+                
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            for (const node of sortedNodes) {
                 const hasChildren = node.children && node.children.length > 0;
                 const iconInfo = getIcon(node.type, hasChildren);
                 const separator = treeId === 'packageTree' ? '::' : '/';
@@ -663,6 +1118,13 @@
                         childrenDiv.classList.toggle('expanded');
                         chevron.classList.toggle('expanded');
                     });
+                    
+                    if (treeId === 'packageTree' && node.type === 'Package') {
+                        item.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            showContextMenu(e.pageX, e.pageY, currentPath);
+                        });
+                    }
                 } else {
                     item.addEventListener('click', () => {
                         if (treeId === 'packageTree') {
@@ -687,12 +1149,75 @@
             }
         }
 
+        // =================================================================
+        // Context Menu
+        // =================================================================
+        function showContextMenu(x, y, pkg) {
+            let menu = document.getElementById('treeContextMenu');
+            if (menu) {
+                menu.remove();
+            }
+            menu = document.createElement('div');
+            menu.id = 'treeContextMenu';
+            menu.className = 'context-menu';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            
+            const runSimple = document.createElement('div');
+            runSimple.className = 'context-menu-item';
+            runSimple.textContent = 'Run Simple Tests';
+            runSimple.onclick = () => {
+                triggerRunTestsForPackage('simple', pkg);
+                menu.remove();
+            };
+            
+            const runPCT = document.createElement('div');
+            runPCT.className = 'context-menu-item';
+            runPCT.textContent = 'Run PCT Tests';
+            runPCT.onclick = () => {
+                triggerRunTestsForPackage('pct', pkg);
+                menu.remove();
+            };
+            
+            menu.appendChild(runSimple);
+            menu.appendChild(runPCT);
+            document.body.appendChild(menu);
+            
+            // clear click
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 0);
+        }
+
+        let knownFiles = new Set();
+
         function populateTree(treeId, jsonStr) {
             try {
                 const nodes = JSON.parse(jsonStr);
                 const panelId = treeId === 'packageTree' ? 'panelElements' : 'panelFiles';
                 const panel = document.getElementById(panelId);
                 panel.innerHTML = '';
+                
+                if (treeId === 'fileTree') {
+                    knownFiles.clear();
+                    function extractPaths(nList, parent) {
+                        for (const n of nList) {
+                            const current = parent ? parent + '/' + n.name : n.name;
+                            if (n.type === 'File') {
+                                knownFiles.add(current);
+                            }
+                            if (n.children && Array.isArray(n.children)) {
+                                extractPaths(n.children, current);
+                            }
+                        }
+                    }
+                    extractPaths(nodes, '');
+                }
+
                 renderTree(nodes, panel, treeId, 0, '');
             } catch (e) {
                 console.error('Failed to parse tree data:', e);
@@ -730,6 +1255,75 @@
                     document.body.style.userSelect = '';
                 }
             });
+        })();
+
+        // =================================================================
+        // Horizontal Resize
+        // =================================================================
+        (function() {
+            const handleH = document.getElementById('resizeHandleHorizontal');
+            const resultPanel = document.getElementById('resultPanel');
+            let isResizingH = false;
+
+            handleH.addEventListener('mousedown', (e) => {
+                isResizingH = true;
+                handleH.classList.add('active');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizingH) return;
+                const newHeight = Math.min(Math.max(window.innerHeight - e.clientY, 40), window.innerHeight * 0.8);
+                resultPanel.style.height = newHeight + 'px';
+                if (editor) editor.layout();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizingH) {
+                    isResizingH = false;
+                    handleH.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // =================================================================
+        // Test Tree Resize
+        // =================================================================
+        (function() {
+            const handleT = document.getElementById('resizeHandleTestTree');
+            const testTreeSide = document.querySelector('.test-tree-side');
+            let isResizingT = false;
+
+            if (handleT) {
+                handleT.addEventListener('mousedown', (e) => {
+                    isResizingT = true;
+                    handleT.classList.add('active');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizingT || !testTreeSide) return;
+                    const rect = testTreeSide.getBoundingClientRect();
+                    const newWidth = Math.min(Math.max(e.clientX - rect.left, 150), window.innerWidth * 0.7);
+                    testTreeSide.style.width = newWidth + 'px';
+                    testTreeSide.style.flex = 'none'; // prevent flex overriding width
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizingT) {
+                        isResizingT = false;
+                        handleT.classList.remove('active');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            }
         })();
 
         // =================================================================
@@ -1008,10 +1602,22 @@
             else if (msg.method === 'pure/openFile') {
                 handleOpenFile(msg.params);
             }
+            else if (msg.method === 'window/showMessage') {
+                if (msg.params && msg.params.message) {
+                    alert(msg.params.message);
+                }
+            }
         }
 
         function handleOpenFile(params) {
             if (!params || !params.sourceId) return;
+
+            if (pendingJumpLine !== null) {
+                params.line = pendingJumpLine;
+                params.column = pendingJumpCol;
+                pendingJumpLine = null;
+                pendingJumpCol = null;
+            }
 
             const uriStr = 'file:///' + params.sourceId.replace(/\\/g, '/');
             const uri = monaco.Uri.parse(uriStr);
@@ -1209,11 +1815,65 @@
             showResult(params.result, params.isError || params.error);
         }
 
+        let pendingJumpLine = null;
+        let pendingJumpCol = null;
+
+        window.openFileAndJump = function(sourceId, line, col) {
+            pendingJumpLine = parseInt(line) || 1;
+            pendingJumpCol = parseInt(col) || 1;
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/openFile',
+                arguments: [sourceId]
+            });
+        };
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         function showResult(text, isError) {
             const content = document.getElementById('resultContent');
             const badge = document.getElementById('resultBadge');
 
-            content.textContent = text;
+            let safeText = escapeHtml(text || '');
+            
+            // Invert the stack trace if present
+            const stackParts = safeText.split("Pure stack trace:\n");
+            if (stackParts.length > 1) {
+                let lines = stackParts[1].split('\n');
+                let stackLines = [];
+                let restLines = [];
+                let inStack = true;
+                for (let line of lines) {
+                    if (inStack && line.trim().startsWith('at ')) {
+                        stackLines.push(line);
+                    } else if (inStack && line.trim() === '') {
+                        // ignore empty lines in stack region
+                    } else {
+                        inStack = false;
+                        restLines.push(line);
+                    }
+                }
+                stackLines.reverse();
+                safeText = stackParts[0] + "Pure stack trace:\n" + stackLines.join('\n') + (restLines.length > 0 ? '\n' + restLines.join('\n') : '');
+            }
+
+            // Create links only for known files
+            safeText = safeText.replace(/at (.*?) \(([^:]+):(\d+)(c(\d+))?\)/g, (match, funcName, sourceId, line, cGroup, col) => {
+                if (!knownFiles.has(sourceId)) {
+                    return match;
+                }
+                const c = col || 1;
+                return `at ${funcName} (<a href="#" onclick="openFileAndJump('${sourceId}', ${line}, ${c}); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">${sourceId}:${line}${cGroup || ''}</a>)`;
+            });
+
+            content.innerHTML = safeText;
             content.className = 'result-content ' + (isError ? 'error' : 'success');
 
             badge.style.display = 'inline';

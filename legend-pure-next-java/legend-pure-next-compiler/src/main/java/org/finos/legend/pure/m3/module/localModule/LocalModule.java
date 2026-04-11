@@ -157,18 +157,28 @@ public class LocalModule implements Module
     @Override
     public Set<String> sourceFiles()
     {
-        if (state == null)
-        {
-            return Set.of();
-        }
         Set<String> files = new java.util.LinkedHashSet<>();
-        state.elementIndex().forEachValue(entry ->
+        try
         {
-            if (entry.sourceId() != null)
+            for (PureContent c : collectSources())
             {
-                files.add(entry.sourceId());
+                files.add(c.sourceId());
             }
-        });
+        }
+        catch (Exception e)
+        {
+            // fallback if IO fails
+            if (state != null)
+            {
+                state.elementIndex().forEachValue(entry ->
+                {
+                    if (entry.sourceId() != null)
+                    {
+                        files.add(entry.sourceId());
+                    }
+                });
+            }
+        }
         return files;
     }
 
