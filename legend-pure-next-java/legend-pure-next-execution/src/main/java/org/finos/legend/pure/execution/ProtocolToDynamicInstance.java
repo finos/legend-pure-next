@@ -21,10 +21,14 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class ProtocolToDynamicInstance
 {
+    private static final Map<Class<?>, List<Method>> PROPERTY_METHODS_CACHE = new ConcurrentHashMap<>();
+
     private final MetadataAccess resolver;
     private final Function<Object, String> typeResolutionStrategy;
 
@@ -99,44 +103,53 @@ public class ProtocolToDynamicInstance
             UserDefinedGenericType cgt = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) pureClass, resolver);
             instance.setClassifierGenericType(cgt);
 
-            for (Method method : javaPOJO.getClass().getMethods())
+            for (Method method : getPropertyMethods(javaPOJO.getClass()))
             {
-                String name = method.getName();
-                if (name.startsWith("_") && method.getParameterCount() == 0
-                    && !name.equals("_classifierGenericType")
-                    && !name.equals("_copy")
-                    && !name.equals("_elementOverride"))
+                String propName = method.getName().substring(1);
+                try
                 {
-                    String propName = name.substring(1);
-                    try
+                    Object val = method.invoke(javaPOJO);
+                    if (val != null && val != javaPOJO)
                     {
-                        Object val = method.invoke(javaPOJO);
-                        if (val != null)
+                        Object convertedVal = convert(val, depth + 1);
+                        if (convertedVal instanceof List<?> listVal)
                         {
-                            if (val == javaPOJO)
-                            {
-                                continue;
-                            }
-                            Object convertedVal = convert(val, depth + 1);
-                            if (convertedVal instanceof List<?> listVal)
-                            {
-                                instance.put(propName, org.eclipse.collections.api.factory.Lists.mutable.withAll(listVal));
-                            }
-                            else
-                            {
-                                instance.put(propName, convertedVal);
-                            }
+                            instance.put(propName, org.eclipse.collections.api.factory.Lists.mutable.withAll(listVal));
+                        }
+                        else
+                        {
+                            instance.put(propName, convertedVal);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        throw new RuntimeException("Error converting property " + propName, e);
-                    }
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException("Error converting property " + propName, e);
                 }
             }
             return instance;
         }
 
         return javaPOJO;
+    }
+
+    private static List<Method> getPropertyMethods(Class<?> cls)
+    {
+        return PROPERTY_METHODS_CACHE.computeIfAbsent(cls, c ->
+        {
+            List<Method> result = new java.util.ArrayList<>();
+            for (Method m : c.getMethods())
+            {
+                String name = m.getName();
+                if (name.startsWith("_") && m.getParameterCount() == 0
+                    && !name.equals("_classifierGenericType")
+                    && !name.equals("_copy")
+                    && !name.equals("_elementOverride"))
+                {
+                    result.add(m);
+                }
+            }
+            return List.copyOf(result);
+        });
     }
 }

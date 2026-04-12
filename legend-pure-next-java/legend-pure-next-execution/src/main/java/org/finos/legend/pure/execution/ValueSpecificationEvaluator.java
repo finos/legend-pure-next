@@ -51,7 +51,7 @@ import java.util.Map;
 public class ValueSpecificationEvaluator
 {
     private final NativeRepository natives;
-    private final Deque<String> callStack = new ArrayDeque<>();
+    private final Deque<FunctionExpression> callStack = new ArrayDeque<>();
     private final Deque<Map<String, ValueSpecification>> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
 
@@ -215,8 +215,7 @@ public class ValueSpecificationEvaluator
 
     private ValueSpecification evaluateFunctionExpression(FunctionExpression fe)
     {
-        String sourceFrame = formatSourceFrame(fe);
-        callStack.push(sourceFrame);
+        callStack.push(fe);
         try
         {
             meta.pure.metamodel.function.Function func = fe._func();
@@ -407,6 +406,7 @@ public class ValueSpecificationEvaluator
     }
 
     private static final Object PROPERTY_NOT_FOUND = new Object();
+    private static final Map<Class<?>, Map<String, Method>> METHOD_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Access a property on a target object by name.
@@ -467,19 +467,18 @@ public class ValueSpecificationEvaluator
      */
     private static Object reflectivePropertyGet(Object target, String propertyName)
     {
-        String methodName = "_" + propertyName;
-        try
+        if (target == null)
         {
-            if (target == null)
-            {
-                throw new RuntimeException("Cannot access property '" + propertyName + "' because target is null");
-            }
-            Method method = target.getClass().getMethod(methodName);
-            return method.invoke(target);
+            throw new RuntimeException("Cannot access property '" + propertyName + "' because target is null");
         }
-        catch (NoSuchMethodException e)
+        Method method = lookupMethod(target.getClass(), propertyName);
+        if (method == null)
         {
             return PROPERTY_NOT_FOUND;
+        }
+        try
+        {
+            return method.invoke(target);
         }
         catch (InvocationTargetException e)
         {
@@ -494,6 +493,22 @@ public class ValueSpecificationEvaluator
         {
             throw new RuntimeException("Cannot access property '" + propertyName + "'", e);
         }
+    }
+
+    private static Method lookupMethod(Class<?> cls, String propertyName)
+    {
+        Map<String, Method> classCache = METHOD_CACHE.computeIfAbsent(cls, c -> new java.util.concurrent.ConcurrentHashMap<>());
+        return classCache.computeIfAbsent(propertyName, name ->
+        {
+            try
+            {
+                return cls.getMethod("_" + name);
+            }
+            catch (NoSuchMethodException e)
+            {
+                return null;
+            }
+        });
     }
 
     /**
@@ -651,11 +666,9 @@ public class ValueSpecificationEvaluator
             return "";
         }
         StringBuilder sb = new StringBuilder("\nPure stack trace:");
-        int depth = 0;
-        for (String frame : callStack)
+        for (FunctionExpression frame : callStack)
         {
-            sb.append("\n    ").append(depth == 0 ? "at " : "at ").append(frame);
-            depth++;
+            sb.append("\n    at ").append(formatSourceFrame(frame));
         }
         return sb.toString();
     }
