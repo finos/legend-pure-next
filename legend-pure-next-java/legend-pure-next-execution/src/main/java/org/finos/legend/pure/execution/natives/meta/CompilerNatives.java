@@ -12,22 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.compiler.pure.natives;
+package org.finos.legend.pure.execution.natives.meta;
 
 import meta.pure.protocol.PureFile;
 import org.finos.legend.pure.execution.NativeExtension;
 import org.finos.legend.pure.execution.NativeRepository.LazyNativeImpl;
 import org.finos.legend.pure.execution.NativeRepository.NativeImpl;
+import org.finos.legend.pure.execution.ProtocolToDynamicInstance;
 import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class CompilerNatives implements NativeExtension
 {
+    private final List<ParserExtension> extraExtensions;
+
+    public CompilerNatives()
+    {
+        this(List.of());
+    }
+
+    public CompilerNatives(List<? extends ParserExtension> extraExtensions)
+    {
+        this.extraExtensions = List.copyOf(extraExtensions);
+    }
+
     @Override
     public void register(Map<String, NativeImpl> natives,
                          Map<String, LazyNativeImpl> lazyNatives,
@@ -39,9 +54,12 @@ public class CompilerNatives implements NativeExtension
             String sourceId = (String) _E_ValueSpecification.unwrap(args.get(0));
             String content = (String) _E_ValueSpecification.unwrap(args.get(1));
 
+            List<ParserExtension> extensions = new ArrayList<>();
+            extensions.add(new PureLanguageParser());
+            extensions.addAll(this.extraExtensions);
             PureParser parser = PureParser.builder()
-                .withExtensions(List.of(new PureLanguageParser()))
-                .build();
+                    .withExtensions(extensions)
+                    .build();
             PureFile pureFile = parser.parse(sourceId, content);
 
             ProtocolToDynamicInstance translator = new ProtocolToDynamicInstance(resolver);

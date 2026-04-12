@@ -168,7 +168,7 @@ function meta::pure::compiler::structural::functionResolution::asInferredMultipl
 
 function meta::pure::compiler::structural::functionResolution::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
 {
-    let pureName = meta::pure::compiler::primitiveType($value);
+    let pureName = $value->genericType().type->cast(@NamedType).name;
     if($pureName->isNotEmpty(),
         | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $ctx->resolveElement($pureName->toOne())->toOne()->cast(@meta::pure::metamodel::type::Type)),
         | ^meta::pure::metamodel::type::generics::UndefinedGenericType()

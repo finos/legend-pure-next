@@ -67,7 +67,8 @@ class TestCompilerPureHelpers
 
         PureExecution execution = PureExecution.builder()
                 .withResolver(new ScopedMetadataAccess(compilerModule, model))
-                .withNativeExtensions(Lists.mutable.with(new TestCompilerNatives()))
+                .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                .withParserExtensions(List.of(new org.finos.legend.pure.m3.localModule.compiledgraph.CompiledGraphLanguageExtension()))
                 .build();
 
         List<DynamicTest> tests = new ArrayList<>();

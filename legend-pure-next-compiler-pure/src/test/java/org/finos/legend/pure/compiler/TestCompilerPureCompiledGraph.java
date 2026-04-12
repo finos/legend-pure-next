@@ -58,7 +58,8 @@ public class TestCompilerPureCompiledGraph
         
         execution = PureExecution.builder()
                 .withResolver(resolver)
-                .withNativeExtensions(Lists.mutable.with(new TestCompilerNatives()))
+                .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                .withParserExtensions(List.of(new org.finos.legend.pure.m3.localModule.compiledgraph.CompiledGraphLanguageExtension()))
                 .build();
 
         assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_");

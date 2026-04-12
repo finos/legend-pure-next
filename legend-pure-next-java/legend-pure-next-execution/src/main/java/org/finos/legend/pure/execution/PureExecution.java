@@ -18,6 +18,7 @@ import meta.pure.metamodel.function.FunctionDefinition;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.next.parser.ParserExtension;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +45,13 @@ public class PureExecution
     private final MetadataAccess resolver;
 
 
-    private PureExecution(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions)
+    private PureExecution(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions, List<? extends ParserExtension> parserExtensions)
     {
         this.resolver = resolver;
         this.evaluator = new ValueSpecificationEvaluator(
                 NativeRepository.builder()
                         .withResolver(resolver)
+                        .withParserExtensions(parserExtensions)
                         .withNativeExtensions(extensions)
                         .build()
         );
@@ -59,6 +61,7 @@ public class PureExecution
     {
         private MetadataAccess resolver;
         private final List<NativeExtension> nativeExtensions = new ArrayList<>();
+        private final List<ParserExtension> parserExtensions = new ArrayList<>();
 
         public Builder withResolver(MetadataAccess resolver)
         {
@@ -75,9 +78,18 @@ public class PureExecution
             return this;
         }
 
+        public Builder withParserExtensions(Iterable<? extends ParserExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.parserExtensions::add);
+            }
+            return this;
+        }
+
         public PureExecution build()
         {
-            return new PureExecution(resolver, nativeExtensions);
+            return new PureExecution(resolver, nativeExtensions, parserExtensions);
         }
     }
 
@@ -89,7 +101,7 @@ public class PureExecution
     // Retained for backward compatibility
     public PureExecution(MetadataAccess resolver)
     {
-        this(resolver, null);
+        this(resolver, null, List.of());
     }
 
     public PureExecution()

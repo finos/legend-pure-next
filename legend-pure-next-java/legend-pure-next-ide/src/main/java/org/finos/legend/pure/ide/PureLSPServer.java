@@ -20,6 +20,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
+import org.finos.legend.pure.compiler.CompilerNatives;
 import org.finos.legend.pure.execution.PureExecution;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationError;
@@ -34,6 +35,10 @@ import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * LSP server for the Pure language.
@@ -46,12 +51,16 @@ import java.util.concurrent.CompletableFuture;
  */
 public class PureLSPServer implements LanguageServer, TextDocumentService, WorkspaceService
 {
+    private static final long DEBOUNCE_DELAY_MS = 500;
+
     private LanguageClient client;
     private final PDBModule coreModule;
     private final MutableList<LocalModule> editableModules;
     private String currentSource = "";
     private String currentUri = "";
     private PureModel lastModel;
+    private final ScheduledExecutorService debounceExecutor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> pendingCompile;
 
     public PureLSPServer(PDBModule coreModule, MutableList<LocalModule> editableModules)
     {
@@ -148,7 +157,16 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         {
             currentSource = changes.get(changes.size() - 1).getText();
         }
-        compileAndPublishDiagnostics();
+        scheduleCompile();
+    }
+
+    private void scheduleCompile()
+    {
+        if (pendingCompile != null && !pendingCompile.isDone())
+        {
+            pendingCompile.cancel(false);
+        }
+        pendingCompile = debounceExecutor.schedule(this::compileAndPublishDiagnostics, DEBOUNCE_DELAY_MS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -508,8 +526,10 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             System.setOut(new java.io.PrintStream(capturedOut));
             try
             {
-                PureExecution execution = new PureExecution(
-                        new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model));
+                PureExecution execution = PureExecution.builder()
+                        .withResolver(new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model))
+                        .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                        .build();
                 execution.execute(goFunc);
             }
             finally
@@ -614,11 +634,15 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         
         PureExecution execution;
         try {
-            execution = new PureExecution(
-                new org.finos.legend.pure.m3.module.ScopedMetadataAccess(lastModel.getModule("welcome") != null ? lastModel.getModule("welcome") : coreModule, lastModel)
-            );
+            execution = PureExecution.builder()
+                    .withResolver(new org.finos.legend.pure.m3.module.ScopedMetadataAccess(lastModel.getModule("welcome") != null ? lastModel.getModule("welcome") : coreModule, lastModel))
+                    .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                    .build();
         } catch (Exception e) {
-            execution = new PureExecution(coreModule);
+            execution = PureExecution.builder()
+                    .withResolver(coreModule)
+                    .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                    .build();
         }
 
         ValueSpecification adapterArg = null;

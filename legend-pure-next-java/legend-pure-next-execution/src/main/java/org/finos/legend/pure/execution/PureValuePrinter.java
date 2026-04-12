@@ -59,6 +59,32 @@ public class PureValuePrinter
     // Public entry point
     // =========================================================================
 
+    /**
+     * Formats a value for user-visible output (println/print natives).
+     * Strings are emitted without surrounding quotes; other values use the structural format.
+     */
+    public static String printForOutput(Object value)
+    {
+        if (value instanceof String s)
+        {
+            return s;
+        }
+        if (value instanceof List<?> list)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (Object item : list)
+            {
+                if (sb.length() > 0)
+                {
+                    sb.append('\n');
+                }
+                sb.append(printForOutput(item));
+            }
+            return sb.toString();
+        }
+        return print(value);
+    }
+
     public static String print(Object value)
     {
         StringBuilder sb = new StringBuilder();

@@ -105,7 +105,7 @@ function meta::pure::compiler::printer::printEnumerationProperty(p:Any[1]):Strin
         en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en
     ]);
     let propCGT = $p2.classifierGenericType->printClassifierGenericType();
-    let enumFullName = $p2.owner->toOne()->fullPath();
+    let enumFullName = $p2.owner->toOne()->cast(@PackageableElement)->fullPath();
     [ '  property ', $p2.name->toOne(), $propCGT, '  = ^', $enumFullName, '(name=\'', $val.name->toOne(), '\')  ~lambda:#LambdaFunction<#{->', $enumFullName, '[1]}#>#', $p2.sourceInformation->printSourceInfo() ]->joinStrings('');
 }
 

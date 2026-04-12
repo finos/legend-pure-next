@@ -1651,6 +1651,11 @@
             // F9 keybinding (editor-scoped)
             editor.addCommand(monaco.KeyCode.F9, executeCode);
 
+            // Option+/ (Alt+/) → toggle line comment on selection
+            editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Slash, () => {
+                editor.getAction('editor.action.commentLine').run();
+            });
+
             // Handle save command (Cmd+S / Ctrl+S)
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
                 if (activeFile && initialized && ws && ws.readyState === WebSocket.OPEN) {

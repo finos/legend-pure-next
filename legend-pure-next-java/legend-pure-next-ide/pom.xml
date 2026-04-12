@@ -35,6 +35,13 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Compiler Pure natives (CompilerNatives, etc.) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-compiler-pure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Eclipse Collections -->
         <dependency>
             <groupId>org.eclipse.collections</groupId>

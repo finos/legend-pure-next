@@ -20,6 +20,8 @@ import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.execution.natives.boolean_.BooleanNatives;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
+import org.finos.legend.pure.execution.natives.meta.CompilerNatives;
+import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.execution.natives.io.IONatives;
 import org.finos.legend.pure.execution.natives.lang.AssertNatives;
 import org.finos.legend.pure.execution.natives.lang.LangNatives;
@@ -92,13 +94,13 @@ public class NativeRepository
 
     public NativeRepository(MetadataAccess resolver)
     {
-        this(resolver, null);
+        this(resolver, null, List.of());
     }
 
-    private NativeRepository(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions)
+    private NativeRepository(MetadataAccess resolver, Iterable<? extends NativeExtension> extensions, List<? extends ParserExtension> parserExtensions)
     {
         this.resolver = resolver;
-        registerDefaults();
+        registerDefaults(parserExtensions);
         if (extensions != null)
         {
             extensions.forEach(ext -> ext.register(natives, lazyNatives, resolver));
@@ -109,6 +111,7 @@ public class NativeRepository
     {
         private MetadataAccess resolver;
         private final List<NativeExtension> nativeExtensions = new ArrayList<>();
+        private final List<ParserExtension> parserExtensions = new ArrayList<>();
 
         public Builder withResolver(MetadataAccess resolver)
         {
@@ -125,9 +128,18 @@ public class NativeRepository
             return this;
         }
 
+        public Builder withParserExtensions(Iterable<? extends ParserExtension> extensions)
+        {
+            if (extensions != null)
+            {
+                extensions.forEach(this.parserExtensions::add);
+            }
+            return this;
+        }
+
         public NativeRepository build()
         {
-            return new NativeRepository(resolver, nativeExtensions);
+            return new NativeRepository(resolver, nativeExtensions, parserExtensions);
         }
     }
 
@@ -202,7 +214,7 @@ public class NativeRepository
         }
     }
 
-    private void registerDefaults()
+    private void registerDefaults(List<? extends ParserExtension> parserExtensions)
     {
         StringNatives.register(natives, lazyNatives, resolver);
         MathNatives.register(natives, lazyNatives, resolver);
@@ -214,6 +226,7 @@ public class NativeRepository
         ElementPathNatives.register(natives, lazyNatives, resolver);
         IONatives.register(natives, lazyNatives, resolver);
         org.finos.legend.pure.execution.natives.date.DateNatives.register(natives, lazyNatives, resolver);
+        new CompilerNatives(parserExtensions).register(natives, lazyNatives, resolver);
     }
 
     // =========================================================================

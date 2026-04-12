@@ -32,7 +32,7 @@ public class IONatives
         natives.put("print_Any_MANY__Integer_1__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
-            System.out.print(PureValuePrinter.print(val));
+            System.out.print(PureValuePrinter.printForOutput(val));
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
 
@@ -40,7 +40,7 @@ public class IONatives
         natives.put("println_Any_MANY__Nil_0_", (args, eval, genericType, multiplicity) ->
         {
             Object val = _E_ValueSpecification.unwrap(args.get(0));
-            System.out.println(PureValuePrinter.print(val));
+            System.out.println(PureValuePrinter.printForOutput(val));
             return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
         });
     }
