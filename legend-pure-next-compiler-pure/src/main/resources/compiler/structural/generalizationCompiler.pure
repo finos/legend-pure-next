@@ -15,8 +15,12 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>[1]
+function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:meta::pure::metamodel::type::Type[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>[1]
 {
+    let typeParams = if($skeleton->instanceOf(meta::pure::metamodel::type::Class),
+        | $skeleton->cast(@meta::pure::metamodel::type::Class<Any>).typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter),
+        | []->cast(@meta::pure::metamodel::type::generics::TypeParameter)
+    );
     if($protocolGeneralizations->isEmpty(),
         | ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(
               values = [^meta::pure::metamodel::relationship::Generalization(
@@ -26,7 +30,7 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
               context = $context
           ),
         | $protocolGeneralizations->fold({g, acc |
-              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'super type', $ownerContext);
+              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
                   values += ^meta::pure::metamodel::relationship::Generalization(
                       general = $gtResult.value->toOne(),

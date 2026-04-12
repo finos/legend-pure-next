@@ -115,9 +115,10 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
-                                  !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("function/lambda/lambda_E_dupParamName.pure") &&
                                   !testName.contains("function/lambda/lambda_E_NoInference.pure") &&
+                                  !testName.contains("function/lambda/lambda_E_VarConflicts.pure") &&
+                                  !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/native/simple_E_dupParamName.pure") &&
                                   !testName.contains("function/native/simple_E_unknownParameterType.pure") &&
@@ -127,6 +128,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("function/userDefined/simple_E_dupParamName.pure") &&
                                   !testName.contains("function/userDefined/simple_E_unknownVariable.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
+                                  !testName.contains("primitive/simple_E_wrongSuperType.pure") &&
                                   !testName.contains("primitive/typeVariable.pure"))
                               {
                                   return;

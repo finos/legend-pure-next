@@ -154,7 +154,8 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 let r = $c->compileClass($acc.context);
                 ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-                ^$acc(values += $p->compilePrimitive($acc.context)->cast(@meta::pure::metamodel::PackageableElement)),
+                let r = $p->compilePrimitive($acc.context);
+                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             assoc:meta::pure::protocol::grammar::relationship::Association[1] |
                 let r = $assoc->compileAssociation($acc.context);
                 ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
