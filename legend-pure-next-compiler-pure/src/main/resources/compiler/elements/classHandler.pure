@@ -17,6 +17,7 @@ import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>[1]
@@ -54,23 +55,19 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledGeneralizations = $genAccum.values;
     let ctx2 = $genAccum.context;
 
-    let compiledStereotypes = $protocolClass.stereotypes->map(s |
-        let profile = $ctx2->resolveElement($s.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
-        let stereotypeName = $s.extraPointerValues->at(0).value;
-        $profile.p_stereotypes->filter(x | $x.value == $stereotypeName)->toOne();
-    );
+    let ownerCtx = 'class \'' + $className + '\'';
 
-    let compiledTaggedValues = $protocolClass.taggedValues->map(t |
-        let profile = $ctx2->resolveElement($t.tag.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
-        let tagName = $t.tag.extraPointerValues->at(0).value;
-        let pTag = $profile.p_tags->filter(x | $x.value == $tagName)->toOne();
-        let tvGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::TaggedValue);
-        let inst = meta::pure::functions::lang::new($tvGT)->cast(@meta::pure::metamodel::extension::TaggedValue);
-        ^$inst(
-            tag = $pTag,
-            value = $t.value
-        );
-    );
+    let stereoAccum = $protocolClass.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx2));
+    let compiledStereotypes = $stereoAccum.values;
+    let ctx3 = $stereoAccum.context;
+
+    let tvAccum = $protocolClass.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $ctx3));
+    let compiledTaggedValues = $tvAccum.values;
+    let ctx4 = $tvAccum.context;
 
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>(
         value = ^$skeleton(
@@ -79,6 +76,8 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
             generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
             properties = $compiledProperties->map(p | ^$p(owner = ~.~))
         ),
-        context = $ctx2
+        context = $ctx4
     );
 }
+
+

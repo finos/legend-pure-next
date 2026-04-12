@@ -99,6 +99,9 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/property/typeArguments.pure") &&
                                   !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/profile/profile.pure") &&
+                                  !testName.contains("class/profile/profile_E_unknownProfile.pure") &&
+                                  !testName.contains("class/profile/profile_E_unknownStereotype.pure") &&
+                                  !testName.contains("class/profile/profile_E_unknownTag.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
                                   !testName.contains("class/inheritance/typeArguments.pure") &&
                                   !testName.contains("class/inheritance/typeArguments_E_Unknown.pure") &&
