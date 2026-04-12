@@ -107,6 +107,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("enumeration/") &&
                                   !testName.contains("function/") &&
                                   !testName.contains("primitive/") &&
+                                  !testName.contains("valueSpecification/collection/") &&
+                                  !testName.contains("valueSpecification/element/") &&
                                   !testName.contains("valueSpecification/primitive/"))
                               {
                                   return;

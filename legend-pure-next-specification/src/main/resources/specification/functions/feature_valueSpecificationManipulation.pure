@@ -1,0 +1,133 @@
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testIterateExpressionSequence():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    assert($exprs->size() == 3);
+    let mapped = $exprs->map(e | $e);
+    assert($mapped->size() == 3);
+    let types = $exprs->map(e | $e->type()->elementToPath());
+    assert($types->size() == 3);
+    true;
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testBuildCollectionFromExpressions():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    let mapped = $exprs->map(e | $e)->cast(@meta::pure::metamodel::valuespecification::ValueSpecification);
+    let coll = ^meta::pure::metamodel::valuespecification::Collection(
+        values = $mapped,
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    assert($coll.values->size() == 3);
+    true;
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionValuesAreUnwrapped():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    let mapped = $exprs->map(e | $e)->cast(@meta::pure::metamodel::valuespecification::ValueSpecification);
+    let coll = ^meta::pure::metamodel::valuespecification::Collection(
+        values = $mapped,
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let vals = $coll.values;
+    assert($vals->size() == 3);
+    assertEquals(1, $vals->at(0));
+    assertEquals('hello', $vals->at(1));
+    assertEquals(true, $vals->at(2));
+    true;
+}
+
+Class meta::pure::functions::valueSpecificationManipulation::VSHolder
+{
+    values: meta::pure::metamodel::valuespecification::ValueSpecification[*];
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testFoldPlusEqualsWithValueSpecifications():Boolean[1]
+{
+    let items = [
+        ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+        ^meta::pure::metamodel::valuespecification::AtomicValue(value = 'hello', genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+        ^meta::pure::metamodel::valuespecification::AtomicValue(value = true, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Boolean), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+    ];
+    let result = $items->fold({e, acc |
+        ^$acc(values += $e);
+    }, ^meta::pure::metamodel::valuespecification::Collection(
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    ));
+    assertEquals(3, $result.values->size());
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testAccessValuesViaHolder():Boolean[1]
+{
+    let coll = ^meta::pure::metamodel::valuespecification::Collection(
+        values = [
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 'hello', genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+        ],
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let holder = ^meta::pure::functions::valueSpecificationManipulation::VSHolder(values = [$coll]);
+    let holderVals = $holder.values;
+    assertEquals(1, $holderVals->size());
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testHolderValuesNotEmpty():Boolean[1]
+{
+    let coll = ^meta::pure::metamodel::valuespecification::Collection(
+        values = [
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 42, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+        ],
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let holder = ^meta::pure::functions::valueSpecificationManipulation::VSHolder(values = [$coll]);
+    assert($holder.values->isEmpty() == false);
+    assert($holder.values->at(0)->instanceOf(meta::pure::metamodel::valuespecification::Collection));
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testFoldCollectionThenStoreInHolder():Boolean[1]
+{
+    let items = [
+        ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+        ^meta::pure::metamodel::valuespecification::AtomicValue(value = 2, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+    ];
+    let collection = $items->fold({e, acc |
+        ^$acc(values += $e);
+    }, ^meta::pure::metamodel::valuespecification::Collection(
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    ));
+    let holder = ^meta::pure::functions::valueSpecificationManipulation::VSHolder(values = [$collection]);
+    let holderVals = $holder.values;
+    assertEquals(1, $holderVals->size());
+    let retrieved = $holderVals->at(0);
+    let result = []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->concatenate($retrieved->cast(@meta::pure::metamodel::valuespecification::ValueSpecification));
+    assertEquals(1, $result->size());
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testConcatenateFromHolder():Boolean[1]
+{
+    let av = ^meta::pure::metamodel::valuespecification::AtomicValue(
+        value = 42,
+        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    let holder = ^meta::pure::functions::valueSpecificationManipulation::VSHolder(values = [$av]);
+    let item = $holder.values->at(0);
+    let result = []->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->concatenate($item->cast(@meta::pure::metamodel::valuespecification::ValueSpecification));
+    assertEquals(1, $result->size());
+}
+
+function meta::pure::functions::valueSpecificationManipulation::sampleFunction():Any[*]
+{
+    1;
+    'hello';
+    true;
+}

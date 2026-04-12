@@ -71,12 +71,18 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           let bodyReturnGT = if($compiledSequence.specs->isEmpty(),
               | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
               | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
-                asInferredGenericType($lastExpr.genericType->toOne());
+                if($lastExpr.genericType->isEmpty(),
+                    | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                    | asInferredGenericType($lastExpr.genericType->toOne())
+                );
           );
           let bodyReturnMul = if($compiledSequence.specs->isEmpty(),
               | meta::pure::metamodel::multiplicity::PureOne,
               | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
-                asInferredMultiplicity($lastExpr.multiplicity->toOne());
+                if($lastExpr.multiplicity->isEmpty(),
+                    | meta::pure::metamodel::multiplicity::PureOne,
+                    | asInferredMultiplicity($lastExpr.multiplicity->toOne())
+                );
           );
 
           let lambdaFunctionType = meta::pure::functions::lang::new(

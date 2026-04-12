@@ -17,6 +17,8 @@ import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::helper::function::*;
@@ -101,40 +103,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
     
     match($vs, [
         a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
-            let rawValue = $a.value->toOne();
-            if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
-                | let lambdaResult = $rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction)->compileLambda($ctx, $scope, $mGenType, $mMult);
-                  if($lambdaResult.values->isEmpty(),
-                      | $lambdaResult,
-                      | let compiledVal = $lambdaResult.values->at(0);
-                        let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne());
-                        ^ValueCompileResult(
-                            values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                                value = $compiledVal,
-                                genericType = $inferredGT,
-                                multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                                sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                            )],
-                            openVariables = $lambdaResult.openVariables,
-                            context = $lambdaResult.context
-                        );
-                  );,
-                | let literalGT = inferLiteralType($rawValue, $ctx);
-                  println('  inferLiteralType: ' + $literalGT->type()->elementToPath() + ' mGenType: ' + if($mGenType->isEmpty(), |'EMPTY', | $mGenType->toOne()->type()->elementToPath()) + ' literalGT.type=' + if($literalGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | let t = $literalGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type; if($t->isEmpty(), |'NONE', | $t->toOne()->type()->elementToPath() + ':' + if($t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement), | $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), | '?'));, |'not-GTV'));
-                  let inferredGT = if($literalGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                      | if($mGenType->isEmpty(), | $literalGT, | $mGenType->toOne()),
-                      | $literalGT
-                  );
-                  ^ValueCompileResult(
-                      values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                          value = $rawValue,
-                          genericType = $inferredGT,
-                          multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                          sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                      )],
-                      openVariables = []
-                  );
-            );,
+            resolveAtomicValue($a, $vs, $ctx, $scope, $mGenType, $mMult),
             
         v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
             let inScope = $scope->filter(s | $s.name == $v.name);
@@ -188,9 +157,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
             
         l:meta::pure::protocol::grammar::function::LambdaFunction[1] |
             $l->compileLambda($ctx, $scope, $mGenType, $mMult),
-            
+
+        c:meta::pure::protocol::grammar::valuespecification::Collection[1] |
+            compileCollection($c, $ctx, $scope),
+
         any:Any[1] |
-            // Fallback for unsupported expression trees right now
             ^ValueCompileResult(
                 values = [],
                 openVariables = []

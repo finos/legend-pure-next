@@ -17,6 +17,7 @@ package org.finos.legend.pure.execution.natives.meta;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
@@ -138,9 +139,14 @@ public class MetaNatives
         // new(GenericTypeAndMultiplicityHolder[1]) : T[1] — construct an object with no property assignments
         natives.put("new_GenericTypeAndMultiplicityHolder_1__T_1_", (args, eval, genericType, multiplicity) ->
         {
+            Object unwrapped = _E_ValueSpecification.unwrap(args.get(0));
+            if (!(unwrapped instanceof GenericTypeAndMultiplicityHolder gtmh))
+            {
+                throw new RuntimeException("new(GenericTypeAndMultiplicityHolder[1]) requires a GenericTypeAndMultiplicityHolder argument, got: " + (unwrapped == null ? "null" : unwrapped.getClass().getSimpleName()));
+            }
+
             String classPath = "Unknown";
-            if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh
-                    && gtmh._genericType() != null
+            if (gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
@@ -155,43 +161,30 @@ public class MetaNatives
                 }
             }
 
-            if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh2)
+            Object instance = createInstance(classPath, gtmh);
+
+            if (gtmh._genericType() != null
+                    && _GenericType.typeArguments(gtmh._genericType()) != null
+                    && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
-                Object instance = createInstance(classPath, gtmh2);
-
-                if (gtmh2._genericType() != null
-                        && _GenericType.typeArguments(gtmh2._genericType()) != null
-                        && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
+                GenericType cgt = _GenericType.typeArguments(gtmh._genericType()).getFirst();
+                if (instance instanceof Any any)
                 {
-
-                    GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
-                    if (instance instanceof Any any)
-                    {
-                        any._classifierGenericType((GenericTypeValue) cgt);
-                    }
-                    else if (instance instanceof DynamicInstance di)
-                    {
-                        di.setClassifierGenericType((GenericTypeValue) cgt);
-                    }
+                    any._classifierGenericType((GenericTypeValue) cgt);
+                }
+                else if (instance instanceof DynamicInstance di)
+                {
+                    di.setClassifierGenericType((GenericTypeValue) cgt);
                 }
 
-                // Validate constraints on the class after construction
-                if (args.get(0) instanceof GenericTypeAndMultiplicityHolder gtmh3
-                        && gtmh3._genericType() != null
-                        && _GenericType.typeArguments(gtmh3._genericType()) != null
-                        && _GenericType.typeArguments(gtmh3._genericType()).notEmpty())
+                meta.pure.metamodel.type.Type targetType = _GenericType.type(_GenericType.typeArguments(gtmh._genericType()).getFirst());
+                if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
                 {
-                    meta.pure.metamodel.type.generics.GenericType heldGT = _GenericType.typeArguments(gtmh3._genericType()).getFirst();
-                    meta.pure.metamodel.type.Type targetType = _GenericType.type(heldGT);
-                    if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
-                    {
-                        validateConstraints(targetType, heldGT, instance, eval, resolver);
-                    }
+                    validateConstraints(targetType, _GenericType.typeArguments(gtmh._genericType()).getFirst(), instance, eval, resolver);
                 }
-
-                return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
             }
-            throw new RuntimeException("Not possible");
+
+            return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
         });
 
         // new(GenericType[1]) : Any[1] — construct an instance with the given GenericType as classifierGenericType
@@ -242,10 +235,10 @@ public class MetaNatives
         {
             org.eclipse.collections.api.list.MutableList<ValueSpecification> paramSpecs = fe._parametersValues();
             // Step 1: Evaluate ONLY the type holder (first arg)
-            ValueSpecification typeHolderVS = eval.evaluate(paramSpecs.get(0));
+            Object typeHolder = _E_ValueSpecification.unwrap(eval.evaluate(paramSpecs.get(0)));
 
             String classPath = "Unknown";
-            if (typeHolderVS instanceof GenericTypeAndMultiplicityHolder gtmh
+            if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
@@ -260,7 +253,7 @@ public class MetaNatives
                     }
                 }
             }
-            if (typeHolderVS instanceof GenericTypeAndMultiplicityHolder gtmh2)
+            if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh2)
             {
                 // Step 2: Create the instance
                 Object instance = createInstance(classPath, gtmh2);
@@ -954,6 +947,21 @@ public class MetaNatives
     }
 
     /**
+     * Unwrap preserving metamodel types. Standard unwrap converts Collection to List
+     * and AtomicValue to raw value, which loses the ability to copy/instanceof them.
+     * This returns the original VS when unwrap gives a non-metamodel primitive.
+     */
+    private static Object unwrapPreservingMetamodel(ValueSpecification vs)
+    {
+        Object unwrapped = _E_ValueSpecification.unwrap(vs);
+        if (unwrapped instanceof DynamicInstance || unwrapped instanceof PackageableElement || unwrapped instanceof Any)
+        {
+            return unwrapped;
+        }
+        return vs;
+    }
+
+    /**
      * Derive the class path from a classifierGenericType.
      * Used as fallback when the instance has no name/package yet (freshly created via new(GenericType)).
      */
@@ -1293,27 +1301,31 @@ public class MetaNatives
             }
         }
 
-        // Build flat list of raw values — Pure has no List<List>
+        // Build flat list — unwrap existing items for consistency
         List<Object> list = new ArrayList<>();
         if (existing instanceof java.util.List<?> l)
         {
-            list.addAll(l);
+            for (Object item : l)
+            {
+                list.add(_E_ValueSpecification.unwrap(item));
+            }
         }
         else if (existing != null)
         {
-            list.add(existing);
+            list.add(_E_ValueSpecification.unwrap(existing));
         }
 
-        if (value instanceof java.util.List<?> l)
+        Object unwrappedValue = _E_ValueSpecification.unwrap(value);
+        if (unwrappedValue instanceof java.util.List<?> l)
         {
             list.addAll(l);
         }
-        else if (value != null)
+        else if (unwrappedValue != null)
         {
-            list.add(value);
+            list.add(unwrappedValue);
         }
 
-        // Store back as a raw list
+        // Store back
         if (instance instanceof DynamicInstance di)
         {
             di.put(key, list);

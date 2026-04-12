@@ -94,15 +94,15 @@ public class _E_ValueSpecification
         {
             return av._value();
         }
-        // Collections — unwrap to a list of values
+        // Collections — unwrap one level: each child unwrapped once
         if (vs instanceof Collection col)
         {
             List<Object> results = new ArrayList<>();
             for (Object v : col._values())
             {
-                if (v instanceof ValueSpecification vvs)
+                if (v instanceof AtomicValue childAv)
                 {
-                    results.add(unwrap(vvs));
+                    results.add(childAv._value());
                 }
                 else
                 {
@@ -123,9 +123,9 @@ public class _E_ValueSpecification
                                    meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
                                    MetadataAccess resolver)
     {
-        if (value instanceof ValueSpecification vs)
+        if (value instanceof AtomicValue av)
         {
-            return vs;
+            return av;
         }
         if (value instanceof List<?>)
         {
@@ -156,7 +156,7 @@ public class _E_ValueSpecification
      */
     public static Type getValueOriginalType(ValueSpecification vs, MetadataAccess resolver)
     {
-        Object value = unwrap(vs);
+        Object value = (vs instanceof AtomicValue av) ? av._value() : vs;
         // DynamicInstance — use classifierGenericType
         if (value instanceof DynamicInstance di)
         {
@@ -166,6 +166,10 @@ public class _E_ValueSpecification
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
             GenericType cgt = any._classifierGenericType();
+            if (cgt == null && any instanceof ValueSpecification vsVal && vsVal._genericType() != null)
+            {
+                return _GenericType.type(vsVal._genericType());
+            }
             if (cgt == null)
             {
                 throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
