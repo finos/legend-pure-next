@@ -35,7 +35,7 @@ function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sour
 function meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
 {
     let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
-    let expectedMessage = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim();
+    let expectedMessages = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim()->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
     let pureStart = $content->indexOf('###' + 'Pure');
     let errorLines = $content->substring(0, $pureStart)->split('\n');
     let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
@@ -43,7 +43,8 @@ function meta::pure::compiler::test::assertCompilationError(content:String[1], s
     let parsedFile = meta::pure::compiler::parse($sourceId, $pureContent);
     let result = meta::pure::compiler::compile($parsedFile);
     assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
-    assertEquals($expectedMessage, $result.errors->at(0));
+    assertEquals($expectedMessages->size(), $result.errors->size());
+    assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
 }
 
 function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]

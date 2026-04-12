@@ -96,6 +96,7 @@ public class TestCompilerPureCompiledGraph
                               if (!testName.contains("class/property/simple.pure") &&
                                   !testName.contains("class/property/typeArguments.pure") &&
                                   !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
+                                  !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
                                   !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
                                   !testName.contains("class/inheritance/typeArguments.pure") &&
