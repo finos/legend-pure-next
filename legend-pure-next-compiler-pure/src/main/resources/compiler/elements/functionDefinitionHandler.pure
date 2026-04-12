@@ -103,6 +103,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
     );
 
     let bodyResult = compileExpressionSequence($fn.expressionSequence, $ctx3, $compiledParams);
+    let ctx4 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx3);
 
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>(
         value = ^$skeleton(
@@ -112,6 +113,6 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
             classifierGenericType = $finalGenType,
             expressionSequence = $bodyResult.specs
         ),
-        context = $ctx3
+        context = $ctx4
     );
 }

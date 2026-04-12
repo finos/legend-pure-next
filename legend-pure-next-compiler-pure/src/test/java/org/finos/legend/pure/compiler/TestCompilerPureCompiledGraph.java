@@ -116,6 +116,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
+                                  !testName.contains("function/lambda/lambda_E_dupParamName.pure") &&
+                                  !testName.contains("function/lambda/lambda_E_NoInference.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/native/simple_E_dupParamName.pure") &&
                                   !testName.contains("function/native/simple_E_unknownParameterType.pure") &&

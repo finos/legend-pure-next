@@ -40,48 +40,56 @@ Class meta::pure::compiler::structural::valueSpecificationCompiler::SequenceComp
     specs: meta::pure::metamodel::valuespecification::ValueSpecification[*];
     scope: meta::pure::metamodel::valuespecification::VariableExpression[*];
     openVariables: meta::pure::metamodel::valuespecification::VariableExpression[*];
+    context: meta::pure::compiler::CompilerContext[0..1];
 }
 
 Class meta::pure::compiler::structural::valueSpecificationCompiler::ValueCompileResult
 {
     values: meta::pure::metamodel::valuespecification::ValueSpecification[*];
     openVariables: meta::pure::metamodel::valuespecification::VariableExpression[*];
+    context: meta::pure::compiler::CompilerContext[0..1];
 }
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileExpressionSequence(expressions:meta::pure::protocol::grammar::valuespecification::ValueSpecification[*], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]): SequenceCompileResult[1]
 {
-    let result = fold($expressions, {expr, acc | 
-        let m3ExprResult = $expr->compileValueSpecification($ctx, $acc.scope);
-        
-        let m3Expr = $m3ExprResult.values->at(0);
-        let exprOpenVars = $m3ExprResult.openVariables;
-        
-        // Check if this is a let declaration to expand the scope sequentially
-        let newScope = match($expr, [
-            fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-                if($fi.functionName == 'letFunction',
-                    | let m3FI = $m3Expr->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
-                      let args = $m3FI.parametersValues;
-                      let varName = $args->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
-                      // The let variable's type is the return type of the FunctionInvocation (T[m] resolved to concrete type)
-                      let newVar = ^meta::pure::metamodel::valuespecification::VariableExpression(
-                          name = $varName,
-                          genericType = $m3FI.genericType,
-                          multiplicity = $m3FI.multiplicity
-                      );
-                      $acc.scope->concatenate($newVar);,
-                    | $acc.scope
-                ),
-            a:Any[1] | $acc.scope
-        ]);
-        
-        ^SequenceCompileResult(
-            specs = $acc.specs->concatenate($m3Expr),
-            scope = $newScope,
-            openVariables = $acc.openVariables->concatenate($exprOpenVars)->removeDuplicatesBy({v | $v.name->toOne()})
+    let result = fold($expressions, {expr, acc |
+        let currentCtx = if($acc.context->isNotEmpty(), | $acc.context->toOne(), | $ctx);
+        let m3ExprResult = $expr->compileValueSpecification($currentCtx, $acc.scope);
+        let updatedCtx = if($m3ExprResult.context->isNotEmpty(), | $m3ExprResult.context, | $acc.context);
+
+        if($m3ExprResult.values->isEmpty(),
+            | ^SequenceCompileResult(
+                  specs = $acc.specs,
+                  scope = $acc.scope,
+                  openVariables = $acc.openVariables,
+                  context = $updatedCtx
+              ),
+            | let m3Expr = $m3ExprResult.values->at(0);
+              let exprOpenVars = $m3ExprResult.openVariables;
+              let newScope = match($expr, [
+                  fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+                      if($fi.functionName == 'letFunction',
+                          | let m3FI = $m3Expr->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
+                            let args = $m3FI.parametersValues;
+                            let varName = $args->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
+                            let newVar = ^meta::pure::metamodel::valuespecification::VariableExpression(
+                                name = $varName,
+                                genericType = $m3FI.genericType,
+                                multiplicity = $m3FI.multiplicity
+                            );
+                            $acc.scope->concatenate($newVar);,
+                          | $acc.scope
+                      ),
+                  a:Any[1] | $acc.scope
+              ]);
+              ^SequenceCompileResult(
+                  specs = $acc.specs->concatenate($m3Expr),
+                  scope = $newScope,
+                  openVariables = $acc.openVariables->concatenate($exprOpenVars)->removeDuplicatesBy({v | $v.name->toOne()}),
+                  context = $updatedCtx
+              );
         );
     }, ^SequenceCompileResult(specs=[], scope=$scope, openVariables=[]));
-    
     $result;
 }
 
@@ -93,33 +101,38 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
     match($vs, [
         a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |
             let rawValue = $a.value->toOne();
-            // Check if value is a nested LambdaFunction — compile it recursively
-            let compiledVal = if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
-                | $rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction)->compileLambda($ctx, $scope, $mGenType, $mMult).values->at(0),
-                | $rawValue
-            );
-            
-            // Always try literal type inference first for non-lambda values.
-            // The protocol parser often sets genericType to ValueSpecification (the base type)
-            // which we need to override with the actual literal type.
-            let inferredGT = if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
-                | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne()),
+            if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
+                | let lambdaResult = $rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction)->compileLambda($ctx, $scope, $mGenType, $mMult);
+                  if($lambdaResult.values->isEmpty(),
+                      | $lambdaResult,
+                      | let compiledVal = $lambdaResult.values->at(0);
+                        let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne());
+                        ^ValueCompileResult(
+                            values = [^meta::pure::metamodel::valuespecification::AtomicValue(
+                                value = $compiledVal,
+                                genericType = $inferredGT,
+                                multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
+                                sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                            )],
+                            openVariables = $lambdaResult.openVariables,
+                            context = $lambdaResult.context
+                        );
+                  );,
                 | let literalGT = inferLiteralType($rawValue, $ctx);
                   println('  inferLiteralType: ' + $literalGT->type()->elementToPath() + ' mGenType: ' + if($mGenType->isEmpty(), |'EMPTY', | $mGenType->toOne()->type()->elementToPath()) + ' literalGT.type=' + if($literalGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | let t = $literalGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type; if($t->isEmpty(), |'NONE', | $t->toOne()->type()->elementToPath() + ':' + if($t->toOne()->instanceOf(meta::pure::metamodel::PackageableElement), | $t->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath(), | '?'));, |'not-GTV'));
-                  if($literalGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                  let inferredGT = if($literalGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
                       | if($mGenType->isEmpty(), | $literalGT, | $mGenType->toOne()),
                       | $literalGT
                   );
-            );
-            
-            ^ValueCompileResult(
-                values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                    value = $compiledVal,
-                    genericType = $inferredGT,
-                    multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                    sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                )],
-                openVariables = []
+                  ^ValueCompileResult(
+                      values = [^meta::pure::metamodel::valuespecification::AtomicValue(
+                          value = $rawValue,
+                          genericType = $inferredGT,
+                          multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
+                          sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                      )],
+                      openVariables = []
+                  );
             );,
             
         v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
