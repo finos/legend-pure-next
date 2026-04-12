@@ -17,6 +17,7 @@ import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
@@ -137,53 +138,52 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
             
         v:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
             let inScope = $scope->filter(s | $s.name == $v.name);
-            // Use scoped variable type if available, otherwise use explicit type
-            let varGT = if($inScope->isNotEmpty(),
-                | $inScope->at(0).genericType->toOne(),
-                | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne())
-            );
-            let varMul = if($inScope->isNotEmpty(),
-                | $inScope->at(0).multiplicity->toOne(),
-                | if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne())
-            );
-            // Wrap scoped types as inferred
-            let inferredVarGT = asInferredGenericType($varGT);
-            let inferredVarMul = asInferredMultiplicity($varMul);
-            
-            let m3Var = ^meta::pure::metamodel::valuespecification::VariableExpression(
-                name = $v.name,
-                genericType = $inferredVarGT,
-                multiplicity = $inferredVarMul,
-                sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-            );
-            ^ValueCompileResult(
-                values = [$m3Var],
-                openVariables = if($inScope->isEmpty(), | [$m3Var], | [])
+            if($inScope->isEmpty(),
+                | let siCtx = if($vs.sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx),
+                      | ''
+                  );
+                  let errorCtx = ^$ctx(errors += 'The variable \'' + $v.name + '\' is unknown!' + $siCtx);
+                  ^ValueCompileResult(values = [], openVariables = [], context = $errorCtx);,
+                | let varGT = $inScope->at(0).genericType->toOne();
+                  let varMul = $inScope->at(0).multiplicity->toOne();
+                  let inferredVarGT = asInferredGenericType($varGT);
+                  let inferredVarMul = asInferredMultiplicity($varMul);
+                  let m3Var = ^meta::pure::metamodel::valuespecification::VariableExpression(
+                      name = $v.name,
+                      genericType = $inferredVarGT,
+                      multiplicity = $inferredVarMul,
+                      sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  );
+                  ^ValueCompileResult(
+                      values = [$m3Var],
+                      openVariables = []
+                  );
             );,
             
         fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
             let paramsCompilation = $fi.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
-            let paramValues = $paramsCompilation.values;
-            let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
-            
-            // Resolve function against the native function index
-            let argTypes = $paramValues->map(pv | $pv.genericType->toOne());
-            let argMuls = $paramValues->map(pv | $pv.multiplicity->toOne());
-            let resolution = resolveFunctionInvocation($fi.functionName, $argTypes, $argMuls);
-            
-            let m3Fi = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
-                functionName = $resolution.resolvedName,
-                parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
-                genericType = $resolution.returnGenericType,
-                multiplicity = $resolution.returnMultiplicity,
-                resolvedTypeParameters = $resolution.resolvedTypeParameters,
-                resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters,
-                sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-            );
-            
-            ^ValueCompileResult(
-                values = [$m3Fi],
-                openVariables = $openVars
+            let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
+            if($errorContexts->isNotEmpty(),
+                | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
+                | let paramValues = $paramsCompilation.values;
+                  let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
+                  let argTypes = $paramValues->map(pv | $pv.genericType->toOne());
+                  let argMuls = $paramValues->map(pv | $pv.multiplicity->toOne());
+                  let resolution = resolveFunctionInvocation($fi.functionName, $argTypes, $argMuls);
+                  let m3Fi = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+                      functionName = $resolution.resolvedName,
+                      parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
+                      genericType = $resolution.returnGenericType,
+                      multiplicity = $resolution.returnMultiplicity,
+                      resolvedTypeParameters = $resolution.resolvedTypeParameters,
+                      resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters,
+                      sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  );
+                  ^ValueCompileResult(
+                      values = [$m3Fi],
+                      openVariables = $openVars
+                  );
             );,
             
         l:meta::pure::protocol::grammar::function::LambdaFunction[1] |

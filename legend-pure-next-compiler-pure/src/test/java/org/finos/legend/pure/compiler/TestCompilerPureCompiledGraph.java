@@ -125,6 +125,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("function/native/simple_E_unknownTypeParam.pure") &&
                                   !testName.contains("function/userDefined/simple.pure") &&
                                   !testName.contains("function/userDefined/simple_E_dupParamName.pure") &&
+                                  !testName.contains("function/userDefined/simple_E_unknownVariable.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure"))
                               {
