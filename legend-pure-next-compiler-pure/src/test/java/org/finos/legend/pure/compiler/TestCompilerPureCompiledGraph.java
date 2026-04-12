@@ -93,43 +93,21 @@ public class TestCompilerPureCompiledGraph
                               String testName = finalStart.relativize(p).toString();
                               String sourceId = testName.replace(".pure", "");
 
-                              if (!testName.contains("association/property/simple.pure") &&
-                                  !testName.contains("association/property/simple_E_unknownTypeInProperty.pure") &&
-                                  !testName.contains("association/property/simple_E_multipleUnknownTypes.pure") &&
-                                  !testName.contains("association/property/simple_E_ambiguousType.pure") &&
-                                  !testName.contains("association/property/typeArguments.pure") &&
-                                  !testName.contains("association/property/typeArguments_E_Unknown.pure") &&
-                                  !testName.contains("class/inheritance/simple.pure") &&
-                                  !testName.contains("class/inheritance/simple_E_unknownTypeInGeneralization.pure") &&
-                                  !testName.contains("class/inheritance/simple_E_multipleUnknownTypes.pure") &&
-                                  !testName.contains("class/inheritance/typeArguments.pure") &&
-                                  !testName.contains("class/inheritance/typeArguments_E_Unknown.pure") &&
-                                  !testName.contains("class/profile/profile.pure") &&
-                                  !testName.contains("class/profile/profile_E_unknownProfile.pure") &&
-                                  !testName.contains("class/profile/profile_E_unknownStereotype.pure") &&
-                                  !testName.contains("class/profile/profile_E_unknownTag.pure") &&
+                              if (!testName.contains("association/property/") &&
+                                  !testName.contains("class/constraints/simple.pure") &&
+                                  !testName.contains("class/constraints/advanced.pure") &&
+                                  !testName.contains("class/inheritance/") &&
+                                  !testName.contains("class/profile/") &&
                                   !testName.contains("class/property/simple.pure") &&
                                   !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
                                   !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
                                   !testName.contains("class/property/typeArguments.pure") &&
                                   !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
-                                  !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
-                                  !testName.contains("enumeration/simple.pure") &&
-                                  !testName.contains("function/lambda/lambda_E_dupParamName.pure") &&
-                                  !testName.contains("function/lambda/lambda_E_NoInference.pure") &&
-                                  !testName.contains("function/lambda/lambda_E_VarConflicts.pure") &&
-                                  !testName.contains("function/lambda/openVariables.pure") &&
-                                  !testName.contains("function/native/simple.pure") &&
-                                  !testName.contains("function/native/simple_E_dupParamName.pure") &&
-                                  !testName.contains("function/native/simple_E_unknownParameterType.pure") &&
-                                  !testName.contains("function/native/simple_E_unknownReturnType.pure") &&
-                                  !testName.contains("function/native/simple_E_unknownTypeParam.pure") &&
-                                  !testName.contains("function/userDefined/simple.pure") &&
-                                  !testName.contains("function/userDefined/simple_E_dupParamName.pure") &&
-                                  !testName.contains("function/userDefined/simple_E_unknownVariable.pure") &&
-                                  !testName.contains("primitive/simple.pure") &&
-                                  !testName.contains("primitive/simple_E_wrongSuperType.pure") &&
-                                  !testName.contains("primitive/typeVariable.pure"))
+                                  !testName.contains("class/typeAndMulParam/") &&
+                                  !testName.contains("enumeration/") &&
+                                  !testName.contains("function/") &&
+                                  !testName.contains("primitive/") &&
+                                  !testName.contains("valueSpecification/primitive/"))
                               {
                                   return;
                               }

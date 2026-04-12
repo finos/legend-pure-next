@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::generalizationCompiler::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>[1]
@@ -38,11 +39,16 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
         )
     );
 
+    let ownerGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $skeleton);
+    let constraintAccum = compileConstraints($protocolPrimitive.constraints, $ownerGenericType, $typeVariables, $ctx1);
+    let ctx2 = $constraintAccum.context;
+
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>(
         value = ^$skeleton(
             typeVariables = $typeVariables,
-            generalizations = $genAccum.values->map(g | ^$g(specific = ~.~))
+            generalizations = $genAccum.values->map(g | ^$g(specific = ~.~)),
+            constraints = $constraintAccum.values
         ),
-        context = $ctx1
+        context = $ctx2
     );
 }

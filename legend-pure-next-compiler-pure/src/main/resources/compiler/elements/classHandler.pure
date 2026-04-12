@@ -19,6 +19,8 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::structural::generalizationCompiler::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>[1]
@@ -52,14 +54,20 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledTaggedValues = $tvAccum.values;
     let ctx4 = $tvAccum.context;
 
+    let ownerGenericType = $skeleton.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
+    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $ctx4);
+    let compiledConstraints = $constraintAccum.values;
+    let ctx5 = $constraintAccum.context;
+
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>(
         value = ^$skeleton(
             stereotypes = $compiledStereotypes,
             taggedValues = $compiledTaggedValues,
             generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
-            properties = $compiledProperties->map(p | ^$p(owner = ~.~))
+            properties = $compiledProperties->map(p | ^$p(owner = ~.~)),
+            constraints = $compiledConstraints
         ),
-        context = $ctx4
+        context = $ctx5
     );
 }
 

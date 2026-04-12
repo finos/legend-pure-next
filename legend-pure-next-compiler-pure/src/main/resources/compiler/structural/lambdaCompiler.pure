@@ -62,6 +62,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
 
           let innerScope = $scope->concatenate($compiledParams);
           let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx3, $innerScope);
+          let ctx4 = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctx3);
 
           let openVariables = $compiledSequence.openVariables->filter(var |
               $innerScope->filter(s | $s.name == $var.name)->isEmpty()
@@ -110,7 +111,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           ^ValueCompileResult(
               values = [$m3Lambda],
               openVariables = $openVariables,
-              context = $ctx3
+              context = $ctx4
           );
     );
 }
