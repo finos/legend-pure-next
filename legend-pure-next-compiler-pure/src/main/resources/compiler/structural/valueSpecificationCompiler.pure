@@ -19,6 +19,7 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::helper::function::*;
@@ -85,11 +86,13 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
                       ),
                   a:Any[1] | $acc.scope
               ]);
+              let finalCtx = checkLetDuplicate($expr, $acc.scope, $currentCtx, $updatedCtx);
+
               ^SequenceCompileResult(
                   specs = $acc.specs->concatenate($m3Expr),
                   scope = $newScope,
                   openVariables = $acc.openVariables->concatenate($exprOpenVars)->removeDuplicatesBy({v | $v.name->toOne()}),
-                  context = $updatedCtx
+                  context = $finalCtx
               );
         );
     }, ^SequenceCompileResult(specs=[], scope=$scope, openVariables=[]));
@@ -168,3 +171,4 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
             )
     ]);
 }
+

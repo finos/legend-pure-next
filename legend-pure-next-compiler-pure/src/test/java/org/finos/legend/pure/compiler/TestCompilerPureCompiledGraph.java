@@ -108,6 +108,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("function/") &&
                                   !testName.contains("primitive/") &&
                                   !testName.contains("valueSpecification/collection/") &&
+                                  !testName.contains("valueSpecification/copy/") &&
+                                  !testName.contains("valueSpecification/let/") &&
                                   !testName.contains("valueSpecification/element/") &&
                                   !testName.contains("valueSpecification/primitive/"))
                               {
