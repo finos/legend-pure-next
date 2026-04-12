@@ -24,7 +24,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
     // Compile parameters
     let compiledParams = $l.parameters->map(p | 
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let pmGenType = if($pType.type->isEmpty(), | [], | $pType->compileGenericType($ctx, '', []));
+        let pmGenType = if($pType.type->isEmpty(), | [], | $pType->compileGenericType($ctx, '', []).value);
         
         let pmMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
         

@@ -21,7 +21,27 @@ import meta::pure::compiler::*;
 
 Class meta::pure::compiler::CompilerContext
 {
+    sourceId : String[0..1];
     elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
+    errors : String[*];
+}
+
+Class meta::pure::compiler::CompilationResult
+{
+    elements : meta::pure::metamodel::PackageableElement[*];
+    errors : String[*];
+}
+
+Class meta::pure::compiler::CompilerResult<T>
+{
+    value : T[0..1];
+    context : CompilerContext[1];
+}
+
+Class meta::pure::compiler::CompilerListResult<T>
+{
+    values : T[*];
+    context : CompilerContext[1];
 }
 
 native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];

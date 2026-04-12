@@ -58,5 +58,5 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
         )
     );
     
-    ^CompilerContext(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
+    ^$ctx(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
 }

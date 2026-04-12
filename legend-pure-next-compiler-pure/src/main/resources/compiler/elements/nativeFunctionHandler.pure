@@ -44,7 +44,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
         ))
     );
     
-    ^CompilerContext(elementMap=$ctx.elementMap->put($fName, $skeleton));
+    ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
 function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::function::NativeFunction<Any>[1]
@@ -59,7 +59,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     // Compile parameters
     let compiledParams = $fn.parameters->map(p | 
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let mGenType = $pType->compileGenericType($ctx, $packagePath, []);
+        let mGenType = $pType->compileGenericType($ctx, $packagePath, []).value->toOne();
         
         let pMult = $p.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
         let mMult = if($pMult.upperBound->isEmpty(),
@@ -89,7 +89,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     
     // Compile return type
     let rTypeStr = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let rMGenType = $rTypeStr->compileGenericType($ctx, $packagePath, []);
+    let rMGenType = $rTypeStr->compileGenericType($ctx, $packagePath, []).value->toOne();
     
     let rPMult = $fn.returnMultiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
     let rMMult = if($rPMult.upperBound->isEmpty(),

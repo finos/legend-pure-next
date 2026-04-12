@@ -34,54 +34,64 @@ import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>[1]
 {
     let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let mGenType = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
-
-    // Default implementation maps Protocol Multiplicity to Metamodel Multiplicity bounds
-    let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-
-    let mMult = if($pMult.upperBound->isEmpty(),
-                    | if($pMult.lowerBound.value == 0,
-                          | meta::pure::metamodel::multiplicity::ZeroMany,
-                          | meta::pure::metamodel::multiplicity::OneMany
-                      ),
-                    | let upper = $pMult.upperBound->toOne().value;
-                      if($pMult.lowerBound.value == 1 && $upper == 1,
-                          | meta::pure::metamodel::multiplicity::PureOne,
-                          | if($pMult.lowerBound.value == 0 && $upper == 1,
-                                | meta::pure::metamodel::multiplicity::ZeroOne,
-                                | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                                      lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                                      upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                                  )
-                            )
-                      );
-                );
-
-    let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::property::Property,
-        typeArguments = [
-            $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
-            $mGenType
-        ],
-        multiplicityArguments = [$mMult]
+    let typeSourceInfo = if($protocolType.type->isNotEmpty() && $protocolType.type->toOne().sourceInformation->isNotEmpty(),
+        | $protocolType.type->toOne().sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation),
+        | $protocolProperty.sourceInformation
     );
+    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), $protocolProperty.name, $packagePath + '::' + $owner.name->toOne(), $typeSourceInfo);
+    let mGenType = $gtResult.value;
+    let updatedContext = $gtResult.context;
 
-    // Create property with correct classifierGenericType via new(GenericType)
-    let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    ^$prop(
-        name = $protocolProperty.name,
-        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = $mGenType,
-        multiplicity = $mMult,
-        sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
+    if($updatedContext.errors->size() > $context.errors->size(),
+        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(context = $updatedContext),
+        | let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
+
+          let mMult = if($pMult.upperBound->isEmpty(),
+                          | if($pMult.lowerBound.value == 0,
+                                | meta::pure::metamodel::multiplicity::ZeroMany,
+                                | meta::pure::metamodel::multiplicity::OneMany
+                            ),
+                          | let upper = $pMult.upperBound->toOne().value;
+                            if($pMult.lowerBound.value == 1 && $upper == 1,
+                                | meta::pure::metamodel::multiplicity::PureOne,
+                                | if($pMult.lowerBound.value == 0 && $upper == 1,
+                                      | meta::pure::metamodel::multiplicity::ZeroOne,
+                                      | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
+                                            lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
+                                            upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+                                        )
+                                  )
+                            );
+                      );
+
+          let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+              type = meta::pure::metamodel::function::property::Property,
+              typeArguments = [
+                  $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
+                  $mGenType
+              ],
+              multiplicityArguments = [$mMult]
+          );
+
+          let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(
+              value = ^$prop(
+                  name = $protocolProperty.name,
+                  aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+                  genericType = $mGenType,
+                  multiplicity = $mMult,
+                  sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                      sourceId = $si.sourceId,
+                      startLine = $si.startLine,
+                      startColumn = $si.startColumn,
+                      endLine = $si.endLine,
+                      endColumn = $si.endColumn
+                  ))
+              ),
+              context = $updatedContext
+          );
     );
 }

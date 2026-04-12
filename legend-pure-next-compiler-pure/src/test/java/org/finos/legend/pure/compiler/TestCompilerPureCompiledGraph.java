@@ -62,9 +62,9 @@ public class TestCompilerPureCompiledGraph
                 .withParserExtensions(List.of(new org.finos.legend.pure.m3.localModule.compiledgraph.CompiledGraphLanguageExtension()))
                 .build();
 
-        assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_");
+        assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__String_1__Boolean_1_");
         if (assertCompiledGraph == null) {
-            throw new RuntimeException("Could not find meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_ in compiler execution.");
+            throw new RuntimeException("Could not find meta::pure::compiler::test::assertCompiledGraph_String_1__String_1__Boolean_1_ in compiler execution.");
         }
     }
 
@@ -83,17 +83,19 @@ public class TestCompilerPureCompiledGraph
         {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(".pure"))
-                  .forEach(p -> 
+                  .forEach(p ->
                   {
                       try
                       {
                           String content = Files.readString(p);
-                          if (content.contains("###CompiledGraph"))
+                          if (content.contains("###CompiledGraph") || content.contains("###Error"))
                           {
                               String testName = finalStart.relativize(p).toString();
-                              
+                              String sourceId = testName.replace(".pure", "");
+
                               if (!testName.contains("class/property/simple.pure") &&
                                   !testName.contains("class/property/typeArguments.pure") &&
+                                  !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
                                   !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
                                   !testName.contains("class/inheritance/typeArguments.pure") &&
@@ -104,15 +106,16 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
-                                  !testName.contains("primitive/typeVariable.pure")) {
+                                  !testName.contains("primitive/typeVariable.pure"))
+                              {
                                   return;
                               }
-                              
-                              tests.add(DynamicTest.dynamicTest(testName, () -> 
+
+                              tests.add(DynamicTest.dynamicTest(testName, () ->
                               {
                                   try
                                   {
-                                      execution.execute(assertCompiledGraph, content);
+                                      execution.execute(assertCompiledGraph, content, sourceId);
                                   }
                                   catch (PureAssertionError e)
                                   {

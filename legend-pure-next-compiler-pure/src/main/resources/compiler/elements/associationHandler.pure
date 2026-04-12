@@ -29,8 +29,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
     let p2Protocol = $protocolAssoc.properties->at(1);
     
     // Resolve return types
-    let mGenType1 = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []);
-    let mGenType2 = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []);
+    let mGenType1 = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []).value->toOne();
+    let mGenType2 = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []).value->toOne();
     
     let mMult1 = meta::pure::compiler::compileLocalMultiplicity($p1Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
     let mMult2 = meta::pure::compiler::compileLocalMultiplicity($p2Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
