@@ -397,13 +397,13 @@ public class RdfJavaGenerator
                 sb.append("    public ").append(classInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
                 sb.append("    {\n");
                 sb.append("        this._classifierGenericType(\n");
-                sb.append("            (meta.pure.metamodel.type.generics.GenericType) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
+                sb.append("            (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(\"meta::pure::metamodel::type::generics::optimization::GenericType_").append(classInfo.name).append("\"));\n");
             }
             else
             {
                 // Parameterized types: typeArguments/multiplicityArguments are instance-specific,
                 // so the caller must provide the fully-built classifierGenericType
-                sb.append("    public ").append(classInfo.name).append("Impl(meta.pure.metamodel.type.generics.GenericType classifierGenericType)\n");
+                sb.append("    public ").append(classInfo.name).append("Impl(meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType)\n");
                 sb.append("    {\n");
                 sb.append("        this._classifierGenericType(classifierGenericType);\n");
             }

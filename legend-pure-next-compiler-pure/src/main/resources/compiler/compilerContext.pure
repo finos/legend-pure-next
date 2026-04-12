@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
 Class meta::pure::compiler::CompilerContext
@@ -19,20 +24,24 @@ Class meta::pure::compiler::CompilerContext
     elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
 }
 
-native function meta::pure::compiler::getPackageableElement(path:String[1]):meta::pure::metamodel::PackageableElement[0..1];
+native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];
 
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):meta::pure::metamodel::PackageableElement[0..1]
 {
     let localResolution = $context.elementMap->get($path);
     if($localResolution->isNotEmpty(),
         | $localResolution,
-        | let nativeAttempt = meta::pure::compiler::getPackageableElement($path);
-          if($nativeAttempt->isNotEmpty(),
-              | $nativeAttempt,
-              | if(['String', 'Integer', 'Float', 'Boolean', 'Date', 'StrictDate', 'DateTime', 'LatestDate', 'Number', 'Any', 'Nil']->contains($path),
-                    | ^meta::pure::metamodel::type::PrimitiveType(name=$path),
-                    | meta::pure::compiler::getPackageableElement('meta::pure::metamodel::type::' + $path)
-                )
+        | let shortNameMatch = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
+          if($shortNameMatch->isNotEmpty(),
+              | $context.elementMap->get($shortNameMatch->at(0)),
+              | let nativeAttempt = $path->lenientPathToElement();
+                if($nativeAttempt->isNotEmpty(),
+                    | $nativeAttempt,
+                    | if(['String', 'Integer', 'Float', 'Boolean', 'Date', 'StrictDate', 'DateTime', 'LatestDate', 'Number', 'Any', 'Nil']->contains($path),
+                          | ^meta::pure::metamodel::type::PrimitiveType(name=$path),
+                          | ('meta::pure::metamodel::type::' + $path)->lenientPathToElement()
+                      )
+                );
           );
     );
 }

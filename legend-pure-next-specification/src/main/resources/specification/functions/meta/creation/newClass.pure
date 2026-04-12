@@ -15,10 +15,10 @@
 import meta::pure::metamodel::type::*;
 import meta::pure::test::pct::*;
 
-native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::creation::newClass(): Class<Any>[1];
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::creation::newClass(typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], multiplicityParameters:meta::pure::metamodel::multiplicity::MultiplicityParameter[*]): Class<Any>[1];
 
 function <<test.Test>> meta::pure::functions::lang::tests::meta::creation::testClassifierGenericType():Boolean[1]
 {
-    let x = meta::pure::functions::meta::creation::newClass();
+    let x = meta::pure::functions::meta::creation::newClass([], []);
     assertIs ($x, $x.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
 }

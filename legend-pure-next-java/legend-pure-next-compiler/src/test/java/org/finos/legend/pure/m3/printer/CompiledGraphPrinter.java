@@ -363,6 +363,7 @@ public final class CompiledGraphPrinter
     {
         sb.append("profile ").append(fullPath(p));
         appendClassifierGenericType(sb, p);
+        appendSourceInfo(sb, p._sourceInformation());
         sb.append('\n');
         if (p._p_stereotypes() != null)
         {
@@ -515,7 +516,7 @@ public final class CompiledGraphPrinter
         {
             if (qp._owner() != null)
             {
-                sb.append(fullPath(qp._owner())).append('.').append(qp._name());
+                sb.append(fullPath((PackageableElement) qp._owner())).append('.').append(qp._name());
             }
             else
             {
@@ -543,7 +544,7 @@ public final class CompiledGraphPrinter
         {
             if (prop._owner() != null)
             {
-                sb.append(fullPath(prop._owner())).append('.').append(prop._name());
+                sb.append(fullPath((PackageableElement) prop._owner())).append('.').append(prop._name());
             }
             else
             {

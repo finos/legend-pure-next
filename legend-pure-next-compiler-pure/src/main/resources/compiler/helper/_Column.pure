@@ -1,8 +1,27 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
 // Column helpers
 
-function meta::pure::compiler::helper::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
+function meta::pure::compiler::helper::column::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
 {
     let cgtype = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = Column,
@@ -21,11 +40,11 @@ function meta::pure::compiler::helper::buildColumn(name:String[1], owner:Generic
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::tests::column::testBuildColumn():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::column::tests::testBuildColumn():Boolean[1]
 {
     let ownerGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type=String);
     let valueGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer);
-    let col = meta::pure::compiler::helper::buildColumn('age', $ownerGT, $valueGT, PureOne, false);
+    let col = buildColumn('age', $ownerGT, $valueGT, PureOne, false);
 
     assertEquals('age', $col.name);
     assertEquals(false, $col.nameWildCard);
@@ -33,14 +52,14 @@ function <<test.Test>> meta::pure::compiler::helper::tests::column::testBuildCol
     assertEquals(PureOne, $col.multiplicity);
     
     let cgt = $col.classifierGenericType->toOne();
-    assertEquals(Column, $cgt->meta::pure::compiler::helper::genericTypeRawType()->toOne());
+    assertEquals(Column, $cgt->genericTypeRawType()->toOne());
     
-    let ta = $cgt->meta::pure::compiler::helper::genericTypeTypeArguments();
+    let ta = $cgt->genericTypeTypeArguments();
     assertEquals(2, $ta->size());
     assertEquals($ownerGT, $ta->at(0));
     assertEquals($valueGT, $ta->at(1));
     
-    let ma = $cgt->meta::pure::compiler::helper::genericTypeMultiplicityArguments();
+    let ma = $cgt->genericTypeMultiplicityArguments();
     assertEquals(1, $ma->size());
     assertEquals(PureOne, $ma->at(0));
 }

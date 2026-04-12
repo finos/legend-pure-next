@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::compiler::elements::*;
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::metamodel::PackageableElement[*]
 {
@@ -25,10 +31,14 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 let packagePath = $c.package->toOne().pointerValue;
                 let className = $packagePath + '::' + $c.name;
                 let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-                let emptyClass = meta::pure::functions::meta::creation::newClass();
+                let typeParams = $c.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+                let mulParams = $c.multiplicityParameters->map(mp | ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name)->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter));
+                let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
                 let skeleton = ^$emptyClass(
                     name = $c.name,
                     package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+                    typeParameters = $typeParams,
+                    multiplicityParameters = $mulParams,
                     sourceInformation = $c.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
@@ -38,6 +48,57 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                     ))
                 );
                 ^CompilerContext(elementMap=$ctx.elementMap->put($className, $skeleton));,
+            a:meta::pure::protocol::grammar::relationship::Association[1] |
+                let packagePath = $a.package->toOne().pointerValue;
+                let aName = $packagePath + '::' + $a.name;
+                let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+                let emptyAssoc = meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::relationship::Association)
+                )->cast(@meta::pure::metamodel::relationship::Association);
+                let assocSkeleton = ^$emptyAssoc(
+                    name = $a.name,
+                    package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+                    sourceInformation = $a.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                        sourceId = $si.sourceId,
+                        startLine = $si.startLine,
+                        startColumn = $si.startColumn,
+                        endLine = $si.endLine,
+                        endColumn = $si.endColumn
+                    ))
+                );
+                ^CompilerContext(elementMap=$ctx.elementMap->put($aName, $assocSkeleton));,
+            en:meta::pure::protocol::grammar::type::Enumeration[1] |
+                let packagePath = $en.package->toOne().pointerValue;
+                let enName = $packagePath + '::' + $en.name;
+                let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
+                let emptyEnum = meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Enumeration)
+                )->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+                let enumSkeletonInt = ^$emptyEnum(
+                    name = $en.name,
+                    package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+                    sourceInformation = $en.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                        sourceId = $si.sourceId,
+                        startLine = $si.startLine,
+                        startColumn = $si.startColumn,
+                        endLine = $si.endLine,
+                        endColumn = $si.endColumn
+                    ))
+                );
+                let selfGenType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $enumSkeletonInt);
+                let enumSkeleton = ^$enumSkeletonInt(
+                    classifierGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+                        type = meta::pure::metamodel::type::Enumeration,
+                        typeArguments = [$selfGenType]
+                    )
+                );
+                ^CompilerContext(elementMap=$ctx.elementMap->put($enName, $enumSkeleton));,
+            pr:meta::pure::protocol::grammar::extension::Profile[1] |
+                $pr->compileProfilePass1($ctx);,
+            fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
+                $fn->compileNativeFunctionPass1($ctx);,
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                $fd->compileFunctionDefinitionPass1($ctx);,
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
                 let packagePath = $p.package->toOne().pointerValue;
                 let pName = $packagePath + '::' + $p.name;
@@ -65,12 +126,46 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
     $allElements->map(e |
         $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
-                $c->meta::pure::compiler::compileClass($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                $c->compileClass($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-                $p->meta::pure::compiler::compilePrimitive($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                $p->compilePrimitive($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            assoc:meta::pure::protocol::grammar::relationship::Association[1] |
+                $assoc->compileAssociation($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            en:meta::pure::protocol::grammar::type::Enumeration[1] |
+                $en->compileEnumeration($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
+                $fn->compileNativeFunctionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                $fd->compileFunctionDefinitionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+            pr:meta::pure::protocol::grammar::extension::Profile[1] |
+                let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
+                let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
+                $pass1Context.elementMap->get($prName)->toOne()->cast(@meta::pure::metamodel::PackageableElement);,
             a:meta::pure::protocol::grammar::PackageableElement[1] |
                 []->cast(@meta::pure::metamodel::PackageableElement)
         ]);
+    );
+}
+
+function meta::pure::compiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+{
+    let pMult = $m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
+    if($pMult.upperBound->isEmpty(),
+        | if($pMult.lowerBound.value == 0,
+              | meta::pure::metamodel::multiplicity::ZeroMany,
+              | meta::pure::metamodel::multiplicity::OneMany
+          ),
+        | let upper = $pMult.upperBound->toOne().value;
+          if($pMult.lowerBound.value == 1 && $upper == 1,
+              | meta::pure::metamodel::multiplicity::PureOne,
+              | if($pMult.lowerBound.value == 0 && $upper == 1,
+                    | meta::pure::metamodel::multiplicity::ZeroOne,
+                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
+                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
+                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+                      )
+                )
+          );
     );
 }
 

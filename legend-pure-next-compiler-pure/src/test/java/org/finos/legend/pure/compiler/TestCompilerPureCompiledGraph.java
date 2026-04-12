@@ -58,7 +58,8 @@ public class TestCompilerPureCompiledGraph
         
         execution = PureExecution.builder()
                 .withResolver(resolver)
-                .withNativeExtensions(Lists.mutable.with(new TestCompilerNatives()))
+                .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
+                .withParserExtensions(List.of(new org.finos.legend.pure.m3.localModule.compiledgraph.CompiledGraphLanguageExtension()))
                 .build();
 
         assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_");
@@ -91,8 +92,17 @@ public class TestCompilerPureCompiledGraph
                           {
                               String testName = finalStart.relativize(p).toString();
                               
-                              if (!testName.contains("class/property/simple.pure") && 
+                              if (!testName.contains("class/property/simple.pure") &&
+                                  !testName.contains("class/property/typeArguments.pure") &&
+                                  !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
+                                  !testName.contains("class/inheritance/typeArguments.pure") &&
+                                  !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
+                                  !testName.contains("enumeration/simple.pure") &&
+                                  !testName.contains("association/property/simple.pure") &&
+                                  !testName.contains("association/property/typeArguments.pure") &&
+                                  !testName.contains("function/native/simple.pure") &&
+                                  !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure")) {
                                   return;

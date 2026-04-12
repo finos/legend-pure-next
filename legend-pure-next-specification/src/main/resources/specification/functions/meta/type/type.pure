@@ -17,7 +17,7 @@ import meta::pure::test::pct::*;
 
 function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::type(any:Any[*]):Type[1]
 {
-    $any->genericType()->cast(@GenericTypeValue).type->toOne()
+    $any->genericType().type->toOne()
 }
 
 

@@ -40,6 +40,8 @@ public class CompilationContext
 
     private final MutableList<CompilationError> errors = Lists.mutable.empty();
     private final MutableList<CompilationError> currentErrors = Lists.mutable.empty();
+    private int inferenceRollbackCount;
+    private int candidateEvaluationCount;
     private String sourceId;
     private MutableList<String> imports = Lists.mutable.empty();
 
@@ -210,6 +212,7 @@ public class CompilationContext
     public void rollbackErrorsTo(int checkpoint)
     {
         this.debug(() -> "ERRORS ROLLED BACK from " + this.currentErrors.size() + " to " + checkpoint);
+        this.inferenceRollbackCount++;
         while (this.currentErrors.size() > checkpoint)
         {
             this.currentErrors.remove(this.currentErrors.size() - 1);
@@ -222,6 +225,34 @@ public class CompilationContext
     public MutableList<CompilationError> errors()
     {
         return this.errors;
+    }
+
+    // ========================================================================
+    // Statistics counters
+    // ========================================================================
+
+    /**
+     * Increment the number of function candidates evaluated during resolution.
+     */
+    public void incrementCandidateEvaluationCount()
+    {
+        this.candidateEvaluationCount++;
+    }
+
+    /**
+     * Return the number of inference rollbacks that occurred.
+     */
+    public int inferenceRollbackCount()
+    {
+        return this.inferenceRollbackCount;
+    }
+
+    /**
+     * Return the number of function candidates evaluated.
+     */
+    public int candidateEvaluationCount()
+    {
+        return this.candidateEvaluationCount;
     }
 
     // ========================================================================

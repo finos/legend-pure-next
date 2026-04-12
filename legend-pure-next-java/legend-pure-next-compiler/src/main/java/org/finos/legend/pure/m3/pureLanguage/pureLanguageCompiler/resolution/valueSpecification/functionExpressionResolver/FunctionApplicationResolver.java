@@ -6,6 +6,7 @@ import meta.pure.metamodel.function.LambdaFunctionImpl;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.ResolvedMultiplicityParameterImpl;
 import meta.pure.metamodel.type.generics.ResolvedTypeParameterImpl;
 import meta.pure.metamodel.type.generics.TypeParameter;
@@ -71,17 +72,34 @@ public class FunctionApplicationResolver
         {
             // Single candidate — resolve directly, errors are legitimate
             FunctionIndexEntry entry = candidates.getFirst();
+            context.incrementCandidateEvaluationCount();
             return (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, entry, model, context);
         }
         else
         {
+            // Pre-resolve non-lambda parameter values once to avoid exponential
+            // re-resolution across candidate attempts.  The resolved type of a
+            // sub-expression (e.g. plus('@', toString(42)) → String[1]) is
+            // independent of the parent candidate's expected type.  Lambdas are
+            // excluded because their parameter types depend on the candidate's
+            // type-parameter bindings.
+            int preResolveCheckpoint = context.currentErrorCount();
+            FunctionApplication preResolvedExpr = (FunctionApplication)
+                    ((FunctionApplication) expr._copy())._parametersValues(
+                            expr._parametersValues().collect(
+                            pv -> (pv instanceof AtomicValue av && av._value() instanceof LambdaFunction)
+                                    ? pv
+                                    : ValueSpecificationResolver.resolve(pv, model, context))
+                    );
+            context.rollbackErrorsTo(preResolveCheckpoint);
+
             // Multiple candidates (most-specific-first) — try each with rollback.
             MutableList<CompilationError> bestCandidateErrors = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {
                 int errorCheckpoint = context.currentErrorCount();
-
-                FunctionApplication resolved = (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(expr, candidateEntry, model, context);
+                context.incrementCandidateEvaluationCount();
+                FunctionApplication resolved = (FunctionApplication) resolveFunctionApplicationUsingTemplateFunctionForInference(preResolvedExpr, candidateEntry, model, context);
 
                 if (context.currentErrorCount() == errorCheckpoint)
                 {
@@ -333,7 +351,7 @@ public class FunctionApplicationResolver
             {
                 // ^$lambda(parameters = reconciledFT._parameters())
                 LambdaFunctionImpl newLambda = new LambdaFunctionImpl()
-                        ._classifierGenericType(reconciledGT)
+                        ._classifierGenericType((GenericTypeValue) reconciledGT)
                         ._parameters(reconciledFT._parameters())
                         ._expressionSequence(lambda._expressionSequence())
                         ._openVariables(lambda._openVariables());
@@ -397,7 +415,14 @@ public class FunctionApplicationResolver
     {
         int checkpoint = context.currentErrorCount();
 
-        ValueSpecification processed = ValueSpecificationResolver.resolve(arg, model, context);
+        // If the argument already carries a concrete type and multiplicity
+        // (e.g. pre-resolved before the candidate loop), skip the expensive
+        // recursive ValueSpecificationResolver.resolve() and proceed directly
+        // to binding collection.
+        ValueSpecification processed = (arg._genericType() != null && _GenericType.isConcrete(arg._genericType())
+                && arg._multiplicity() != null && _Multiplicity.isConcrete(arg._multiplicity()))
+                ? arg
+                : ValueSpecificationResolver.resolve(arg, model, context);
 
         if (isConcreteInContext(processed._genericType(), processed._multiplicity(), scopeTypeParams, scopeMulParams))
         {

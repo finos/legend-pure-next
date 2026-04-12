@@ -261,8 +261,8 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType()->cast(@GenericTypeValue).type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType()->cast(@GenericTypeValue).typeArguments->size());
+    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
 }
 
 function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::functions::lang::tests::copy::testFunctionDefinitionWithInstanceCopy():Boolean[1]
@@ -273,8 +273,8 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 
     let f2 = ^$f1();
     assertIsNot($f1, $f2);
-    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType()->cast(@GenericTypeValue).type);
-    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType()->cast(@GenericTypeValue).typeArguments->size());
+    assertEquals($type->cast(@GenericTypeValue).type, $f2->genericType().type);
+    assertEquals($type->cast(@GenericTypeValue).typeArguments->size(), $f2->genericType().typeArguments->size());
 }
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySubClass():Boolean[1]
@@ -291,11 +291,18 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySubClas
 
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testSelfPointerStability():Boolean[1]
 {
-    let x = meta::pure::functions::meta::creation::newClass();
+    let x = meta::pure::functions::meta::creation::newClass(^TypeParameter(contravariant=false, name='T'), []);
     let z = ^$x();
+
+    // classifierGenericType — auto-fixed to point to the copy
     assertIsNot ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
     assertIs ($z, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).type->toOne());
 
+    // Type Param owner — auto-fixed as part of classifierGenericType fix
+    assertIsNot ($x, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
+    assertIs ($z, $z.classifierGenericType->cast(@GenericTypeValue).typeArguments->cast(@GenericTypeValue).typeArguments->toOne()->cast(@GenericTypeValue).type->cast(@TypeParameter).owner->toOne());
+
+    // Properties — use ~.~ to wire the property's owner back to the copy
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
@@ -305,15 +312,25 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testSelfPointer
         multiplicityArguments = [PureOne]
     );
     let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    ^$prop(
+    let builtProp = ^$prop(
         name = 'test',
         aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
         genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = String),
         multiplicity = PureOne
     );
 
-    let n = ^$z(properties = $prop);
-    assertIs($n, $n.properties->at(0).classifierGenericType->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type);
+    let n = ^$z(properties = ^$builtProp(owner = ~.~));
+    assertIs($n, $n.properties->at(0).owner);
+
+    // Inheritance — use ~.~ to wire specific back to the copy
+    let m = ^$n(generalizations = ^meta::pure::metamodel::relationship::Generalization(specific = ~.~, general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=Any)));
+    assertIs($m, $m.generalizations->at(0).specific);
 }
 
-
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySelfReferenceLoop():Boolean[1]
+{
+    let n = ^LA_Node(value=1);
+    let c = ^$n(next=~);
+    assertEquals(1, $c.value);
+    assertIs($c, $c.next->toOne());
+}

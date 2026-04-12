@@ -77,6 +77,8 @@ public class CompilerBinaryBuilder
             throw new RuntimeException("Pure compilation failed with " + result.errors().size() + " error(s)");
         }
 
+        System.out.println(result.statistics().summary());
+
         // Collect elements from the local module only
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
         for (String path : localModule.elementPaths())

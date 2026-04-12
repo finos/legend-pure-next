@@ -28,6 +28,7 @@ import meta.pure.metamodel.type.ElementOverride;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.TypeParameterImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
@@ -188,7 +189,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     // ========================================================================
 
     @Override
-    public GenericType _classifierGenericType()
+    public GenericTypeValue _classifierGenericType()
     {
         // Build PackageableFunction<{FunctionType}> from the stored FunctionType
         Type pfType = model != null ? (Type) model.getElement("meta::pure::metamodel::function::PackageableFunction") : null;
@@ -345,7 +346,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
     }
 
     @Override
-    public meta.pure.metamodel.type.Any _classifierGenericType(GenericType value)
+    public meta.pure.metamodel.type.Any _classifierGenericType(GenericTypeValue value)
     {
         throw new UnsupportedOperationException("FunctionIndexEntry is read-only");
     }

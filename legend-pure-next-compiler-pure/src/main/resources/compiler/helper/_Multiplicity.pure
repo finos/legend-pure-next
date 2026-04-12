@@ -12,12 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
 
 // Multiplicity bounds
 
-function meta::pure::compiler::helper::multiplicityLowerBound(m:Multiplicity[1]):Integer[1]
+function meta::pure::compiler::helper::multiplicity::multiplicityLowerBound(m:Multiplicity[1]):Integer[1]
 {
     $m->match(
         [
@@ -28,7 +47,7 @@ function meta::pure::compiler::helper::multiplicityLowerBound(m:Multiplicity[1])
     )
 }
 
-function meta::pure::compiler::helper::multiplicityUpperBound(m:Multiplicity[1]):Integer[1]
+function meta::pure::compiler::helper::multiplicity::multiplicityUpperBound(m:Multiplicity[1]):Integer[1]
 {
     $m->match(
         [
@@ -42,7 +61,7 @@ function meta::pure::compiler::helper::multiplicityUpperBound(m:Multiplicity[1])
 
 // Multiplicity printing
 
-function meta::pure::compiler::helper::printMultiplicity(m:Multiplicity[1]):String[1]
+function meta::pure::compiler::helper::multiplicity::printMultiplicity(m:Multiplicity[1]):String[1]
 {
     $m->match(
         [
@@ -62,7 +81,7 @@ function meta::pure::compiler::helper::printMultiplicity(m:Multiplicity[1]):Stri
     )
 }
 
-function meta::pure::compiler::helper::printMultiplicityBare(m:Multiplicity[1]):String[1]
+function meta::pure::compiler::helper::multiplicity::printMultiplicityBare(m:Multiplicity[1]):String[1]
 {
     $m->match(
         [
@@ -85,12 +104,12 @@ function meta::pure::compiler::helper::printMultiplicityBare(m:Multiplicity[1]):
 
 // Multiplicity checks
 
-function meta::pure::compiler::helper::isConcreteMultiplicity(m:Multiplicity[1]):Boolean[1]
+function meta::pure::compiler::helper::multiplicity::isConcreteMultiplicity(m:Multiplicity[1]):Boolean[1]
 {
     !$m->instanceOf(MultiplicityParameter)
 }
 
-function meta::pure::compiler::helper::isUniversalMultiplicity(m:Multiplicity[1]):Boolean[1]
+function meta::pure::compiler::helper::multiplicity::isUniversalMultiplicity(m:Multiplicity[1]):Boolean[1]
 {
     $m->instanceOf(ConcreteMultiplicity) && ($m->multiplicityLowerBound() == 0) && ($m->multiplicityUpperBound() == -1)
 }
@@ -98,7 +117,7 @@ function meta::pure::compiler::helper::isUniversalMultiplicity(m:Multiplicity[1]
 
 // Multiplicity subsumption
 
-function meta::pure::compiler::helper::multiplicitySubsumes(general:Multiplicity[1], specific:Multiplicity[1]):Boolean[1]
+function meta::pure::compiler::helper::multiplicity::multiplicitySubsumes(general:Multiplicity[1], specific:Multiplicity[1]):Boolean[1]
 {
     if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter),
         | true,
@@ -131,7 +150,7 @@ function meta::pure::compiler::helper::multiplicitySubsumes(general:Multiplicity
 
 // Multiplicity compatibility (variance-aware)
 
-function meta::pure::compiler::helper::isCompatibleMultiplicity(declared:Multiplicity[1], actual:Multiplicity[1], contravariant:Boolean[1]):Boolean[1]
+function meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity(declared:Multiplicity[1], actual:Multiplicity[1], contravariant:Boolean[1]):Boolean[1]
 {
     if($contravariant,
         | $actual->multiplicitySubsumes($declared),
@@ -142,7 +161,7 @@ function meta::pure::compiler::helper::isCompatibleMultiplicity(declared:Multipl
 
 // Multiplicity concreteness in context
 
-function meta::pure::compiler::helper::isConcreteMultiplicityInContext(m:Multiplicity[1], scopeMulParams:String[*]):Boolean[1]
+function meta::pure::compiler::helper::multiplicity::isConcreteMultiplicityInContext(m:Multiplicity[1], scopeMulParams:String[*]):Boolean[1]
 {
     $m->match(
         [
@@ -155,7 +174,7 @@ function meta::pure::compiler::helper::isConcreteMultiplicityInContext(m:Multipl
 
 // Find common (widest) multiplicity
 
-function meta::pure::compiler::helper::findCommonMultiplicity(multiplicities:Multiplicity[*]):Multiplicity[0..1]
+function meta::pure::compiler::helper::multiplicity::findCommonMultiplicity(multiplicities:Multiplicity[*]):Multiplicity[0..1]
 {
     if($multiplicities->isEmpty(),
         | [],
@@ -180,49 +199,49 @@ function meta::pure::compiler::helper::findCommonMultiplicity(multiplicities:Mul
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityLowerBound():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testMultiplicityLowerBound():Boolean[1]
 {
     assertEquals(1, PureOne->multiplicityLowerBound());
     assertEquals(0, ZeroOne->multiplicityLowerBound());
     assertEquals(0, ZeroMany->multiplicityLowerBound());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicityUpperBound():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testMultiplicityUpperBound():Boolean[1]
 {
     assertEquals(1, PureOne->multiplicityUpperBound());
     assertEquals(1, ZeroOne->multiplicityUpperBound());
     assertEquals(-1, ZeroMany->multiplicityUpperBound());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testPrintMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testPrintMultiplicity():Boolean[1]
 {
     assertEquals('[1]', PureOne->printMultiplicity());
     assertEquals('[0..1]', ZeroOne->printMultiplicity());
     assertEquals('[*]', ZeroMany->printMultiplicity());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testPrintMultiplicityBare():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testPrintMultiplicityBare():Boolean[1]
 {
     assertEquals('1', PureOne->printMultiplicityBare());
     assertEquals('0..1', ZeroOne->printMultiplicityBare());
     assertEquals('*', ZeroMany->printMultiplicityBare());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsConcreteMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testIsConcreteMultiplicity():Boolean[1]
 {
     assert(PureOne->isConcreteMultiplicity());
     assert(ZeroOne->isConcreteMultiplicity());
     assert(ZeroMany->isConcreteMultiplicity());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsUniversalMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testIsUniversalMultiplicity():Boolean[1]
 {
     assertFalse(PureOne->isUniversalMultiplicity());
     assertFalse(ZeroOne->isUniversalMultiplicity());
     assert(ZeroMany->isUniversalMultiplicity());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMultiplicitySubsumes():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testMultiplicitySubsumes():Boolean[1]
 {
     assert(ZeroMany->multiplicitySubsumes(PureOne));
     assert(ZeroMany->multiplicitySubsumes(ZeroOne));
@@ -235,7 +254,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testMu
     assertFalse(PureOne->multiplicitySubsumes(ZeroMany));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsCompatibleMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testIsCompatibleMultiplicity():Boolean[1]
 {
     // Covariant (default): declared subsumes actual
     assert(ZeroMany->isCompatibleMultiplicity(PureOne, false));
@@ -247,14 +266,14 @@ function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIs
     assertFalse(ZeroMany->isCompatibleMultiplicity(PureOne, true));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testIsConcreteMultiplicityInContext():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testIsConcreteMultiplicityInContext():Boolean[1]
 {
     // Concrete multiplicities are always concrete in any context
     assert(PureOne->isConcreteMultiplicityInContext([]));
     assert(ZeroMany->isConcreteMultiplicityInContext([]));
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testFindCommonMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::multiplicity::tests::testFindCommonMultiplicity():Boolean[1]
 {
     // Single multiplicity returns itself
     let single = [PureOne]->findCommonMultiplicity();
@@ -279,7 +298,7 @@ function <<test.Test>> meta::pure::compiler::helper::tests::multiplicity::testFi
     assert($empty->isEmpty());
 }
 
-function meta::pure::compiler::helper::collectMultiplicityParameterBindings(paramMul:Multiplicity[1], argMul:Multiplicity[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::multiplicity::collectMultiplicityParameterBindings(paramMul:Multiplicity[1], argMul:Multiplicity[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
     $paramMul->match([
         mp : MultiplicityParameter[1] | $bindings->addMultiplicityBinding($mp, $argMul),
@@ -287,7 +306,7 @@ function meta::pure::compiler::helper::collectMultiplicityParameterBindings(para
     ])
 }
 
-function meta::pure::compiler::helper::makeAsConcreteAsPossible(multiplicity:Multiplicity[1], bindings:ParametersBinding[1]):Multiplicity[1]
+function meta::pure::compiler::helper::multiplicity::makeAsConcreteAsPossible(multiplicity:Multiplicity[1], bindings:ParametersBinding[1]):Multiplicity[1]
 {
     $multiplicity->match([
         mp : MultiplicityParameter[1] |

@@ -19,16 +19,21 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.impl.factory.Maps;
 import org.eclipse.collections.impl.list.mutable.ListAdapter;
 import org.finos.legend.pure.m3.LanguageExtension;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.CompilationStatistics;
+import org.finos.legend.pure.m3.module.ElementStatistics;
 import org.finos.legend.pure.m3.module.MetadataAccessExtension;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerExtension;
+import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
 import org.finos.legend.pure.m3.module.localModule.topLevel.TopLevelCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.next.parser.PureParser;
@@ -152,19 +157,96 @@ public class LocalModule implements Module
     @Override
     public Set<String> sourceFiles()
     {
-        if (state == null)
-        {
-            return Set.of();
-        }
         Set<String> files = new java.util.LinkedHashSet<>();
-        state.elementIndex().forEachValue(entry ->
+        try
         {
-            if (entry.sourceId() != null)
+            for (PureContent c : collectSources())
             {
-                files.add(entry.sourceId());
+                files.add(c.sourceId());
             }
-        });
+        }
+        catch (Exception e)
+        {
+            // fallback if IO fails
+            if (state != null)
+            {
+                state.elementIndex().forEachValue(entry ->
+                {
+                    if (entry.sourceId() != null)
+                    {
+                        files.add(entry.sourceId());
+                    }
+                });
+            }
+        }
         return files;
+    }
+
+    public String getSourceIdForElement(String elementPath)
+    {
+        if (state != null && state.elementIndex().containsKey(elementPath))
+        {
+            return state.elementIndex().get(elementPath).sourceId();
+        }
+        return null;
+    }
+
+    public String getSourceText(String sourceId)
+    {
+        if (sources != null)
+        {
+            for (PureContent c : sources)
+            {
+                if (sourceId.equals(c.sourceId()))
+                {
+                    return c.content();
+                }
+            }
+        }
+        if (sourceFolders != null)
+        {
+            for (Path folder : sourceFolders)
+            {
+                Path file = folder.resolve(sourceId);
+                if (Files.exists(file))
+                {
+                    try
+                    {
+                        return Files.readString(file, StandardCharsets.UTF_8);
+                    }
+                    catch (IOException e)
+                    {
+                        // ignore and try next
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+
+    public boolean saveSourceText(String sourceId, String content)
+    {
+        if (sourceFolders != null)
+        {
+            for (Path folder : sourceFolders)
+            {
+                Path file = folder.resolve(sourceId);
+                if (Files.exists(file))
+                {
+                    try
+                    {
+                        Files.writeString(file, content, StandardCharsets.UTF_8);
+                        return true;
+                    }
+                    catch (IOException e)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -174,6 +256,11 @@ public class LocalModule implements Module
      */
     public CompilationResult compile()
     {
+        long compileStart = System.nanoTime();
+        Runtime runtime = Runtime.getRuntime();
+        runtime.gc();
+        long memBefore = runtime.totalMemory() - runtime.freeMemory();
+
         // Collect raw sources
         List<PureContent> rawSources = collectSources();
 
@@ -181,9 +268,11 @@ public class LocalModule implements Module
         List<LanguageExtension> extensions = pureModel.extensions();
 
         // Parse
+        long parseStart = System.nanoTime();
         PureParser parser = PureParser.builder().withExtensions(extensions).build();
         MutableList<PureFile> files = ListAdapter.adapt(rawSources)
                 .collect(source -> parser.parse(source.sourceId(), source.content()));
+        long parsingDurationNanos = System.nanoTime() - parseStart;
 
         // Compile
         this.compilationContext = new CompilationContext(pureModel.extensions().collect(CompilerExtension::buildCompilerContextExtension).select(Objects::nonNull));
@@ -191,10 +280,36 @@ public class LocalModule implements Module
         this.state.compile(this, files, packagePattern, new ScopedMetadataAccess(this, pureModel), compilationContext);
         validateNonDuplicateElements(this.state);
 
-        List<CompilationError> errors = compilationContext.errors().stream()
-                .map(e -> new CompilationError(e.formatMessage(), e.sourceInformation()))
-                .toList();
-        return new CompilationResult(errors);
+        // Build per-element statistics
+        MutableMap<String, ElementStatistics> elementStats = Maps.mutable.empty();
+        state.elementTimings().forEach((path, timings) ->
+        {
+            IndexEntry entry = state.elementIndex().get(path);
+            String elementType = entry != null && entry.element() != null
+                    ? entry.element().getClass().getSimpleName().replace("Impl", "")
+                    : "Unknown";
+            elementStats.put(path, new ElementStatistics(path, elementType, timings[0], timings[1], timings[2], (int) timings[3], (int) timings[4]));
+        });
+
+        long memAfter = runtime.totalMemory() - runtime.freeMemory();
+        long totalDurationNanos = System.nanoTime() - compileStart;
+
+        CompilationStatistics statistics = new CompilationStatistics(
+                totalDurationNanos,
+                parsingDurationNanos,
+                state.firstPassDurationNanos(),
+                state.secondPassDurationNanos(),
+                state.thirdPassDurationNanos(),
+                state.elementIndex().size(),
+                rawSources.size(),
+                memAfter - memBefore,
+                compilationContext.inferenceRollbackCount(),
+                compilationContext.candidateEvaluationCount(),
+                elementStats);
+
+        List<CompilationError> errors = compilationContext.errors().collect(
+                e -> new CompilationError(e.formatMessage(), e.sourceInformation())).toList();
+        return new CompilationResult(errors, statistics);
     }
 
     private List<PureContent> collectSources()

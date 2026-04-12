@@ -1,0 +1,3533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure IDE</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d2d;
+            --border: #3c3c3c;
+            --text-primary: #cccccc;
+            --text-secondary: #969696;
+            --accent: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.15);
+            --success: #89d185;
+            --error: #f48771;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+            --sidebar-width: 280px;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            min-height: 44px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #58a6ff, #a371f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .file-tabs-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            max-width: 100%;
+            scrollbar-width: none;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px 0 12px;
+        }
+        .file-tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+        .file-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .file-tab:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .file-tab.active {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            color: var(--text-primary);
+            position: relative;
+        }
+        .file-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--bg-primary);
+        }
+        .file-tab .close-tab {
+            margin-left: 2px;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 4px;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+        .file-tab .close-tab:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--error);
+        }
+        .file-icon { color: var(--accent); font-size: 14px; }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            transition: background 0.3s ease;
+        }
+        .status-dot.connected { background: var(--success); box-shadow: 0 0 6px rgba(63, 185, 80, 0.5); }
+        .status-dot.error { background: var(--error); }
+
+        .run-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .run-btn:hover {
+            background: linear-gradient(135deg, #2ea043, #3fb950);
+            box-shadow: 0 0 12px rgba(46, 160, 67, 0.3);
+            transform: translateY(-1px);
+        }
+        .run-btn:active { transform: translateY(0); }
+        .run-btn .shortcut {
+            font-size: 11px;
+            opacity: 0.7;
+            padding: 1px 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+        }
+
+        /* Main layout: sidebar + editor */
+        .main-area {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: 200px;
+            max-width: 500px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+        .sidebar-tab {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .sidebar-tab:hover {
+            color: var(--text-primary);
+            background: rgba(88, 166, 255, 0.05);
+        }
+        .sidebar-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .sidebar-tab .tab-icon {
+            font-size: 13px;
+        }
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .tree-panel {
+            display: none;
+        }
+        .tree-panel.active {
+            display: block;
+        }
+        .tree-loading {
+            padding: 16px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Search panel */
+        .search-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+        }
+        .search-input-row {
+            display: flex;
+            position: relative;
+            align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            padding: 5px 28px 5px 8px;
+            font-size: 12px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+        }
+        .search-input:focus {
+            border-color: var(--accent);
+        }
+        .search-case-btn {
+            position: absolute;
+            right: 5px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 1px 3px;
+            line-height: 1;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .search-case-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .search-case-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: rgba(88, 166, 255, 0.12);
+        }
+        .search-results {
+            margin-top: 4px;
+            font-size: 12px;
+        }
+        .search-file-group {
+            margin-bottom: 4px;
+        }
+        .search-file-header {
+            padding: 3px 4px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .search-file-header:hover {
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .search-match {
+            padding: 2px 8px 2px 16px;
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-secondary);
+        }
+        .search-match:hover {
+            background: rgba(88, 166, 255, 0.08);
+            color: var(--text-primary);
+        }
+        .search-match .match-line {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-right: 6px;
+        }
+        .search-match mark {
+            background: rgba(255, 200, 0, 0.3);
+            color: inherit;
+            border-radius: 2px;
+        }
+        .search-summary {
+            padding: 4px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        /* Tree nodes */
+        .tree-node {
+            user-select: none;
+        }
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            padding-left: calc(8px + var(--depth, 0) * 16px);
+            font-size: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0 4px;
+            transition: background 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-item:hover {
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .tree-item .chevron {
+            width: 16px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            text-align: center;
+            transition: transform 0.15s ease;
+        }
+        .tree-item .chevron.expanded {
+            transform: rotate(90deg);
+        }
+        .tree-item .chevron.leaf {
+            visibility: hidden;
+        }
+        .tree-item .node-icon {
+            font-size: 13px;
+            flex-shrink: 0;
+            width: 16px;
+            text-align: center;
+        }
+        .tree-item .node-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-children {
+            display: none;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* Type-specific icons */
+        .icon-package { color: #d2a8ff; }
+        .icon-class { color: #79c0ff; }
+        .icon-enum { color: #ffa657; }
+        .icon-function { color: #7ee787; }
+        .icon-association { color: #f778ba; }
+        .icon-profile { color: #ff7b72; }
+        .icon-measure { color: #a5d6ff; }
+        .icon-default { color: var(--text-secondary); }
+        .icon-file { color: var(--text-secondary); }
+        .icon-folder { color: #d2a8ff; }
+
+        /* Resize handle */
+        .resize-handle {
+            width: 4px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+        .resize-handle:hover,
+        .resize-handle.active {
+            background: var(--accent);
+        }
+        
+        .resize-handle-horizontal {
+            height: 4px;
+            cursor: row-resize;
+            background: transparent;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .resize-handle-horizontal:hover,
+        .resize-handle-horizontal.active {
+            background: var(--accent);
+        }
+
+        /* Editor + result container */
+        .editor-result-area {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Editor area */
+        .editor-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        #editor { flex: 1; width: 100%; min-height: 0; }
+        .editor-statusbar {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 2px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+            font-family: var(--font-mono);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .result-panel {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            height: 250px;
+            min-height: 40px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: min-height 0.3s ease;
+        }
+        .result-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+        .bottom-tab {
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .bottom-tab:hover {
+            color: var(--text-primary);
+            background: rgba(88, 166, 255, 0.05);
+        }
+        .bottom-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(88, 166, 255, 0.08);
+        }
+        .result-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .result-badge.success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+        .result-badge.error { background: rgba(248, 81, 73, 0.15); color: var(--error); }
+        .bottom-content-panel {
+            flex: 1;
+            display: none;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .bottom-content-panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .result-content {
+            flex: 1;
+            padding: 12px 16px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+        .result-content.error { color: var(--error); }
+        .result-content.success { color: var(--success); }
+        .result-content .placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .test-split-view {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .test-tree-side {
+            width: 300px;
+            min-width: 200px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .test-output-side {
+            flex: 1;
+            padding: 12px 16px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding: 4px 0;
+            z-index: 1000;
+            font-size: 12px;
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+        .context-menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+        .context-menu-item:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        /* Spinner */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+
+        .diagram-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            display: none;
+            background: #0d1117;
+        }
+        .diagram-container.active {
+            display: block;
+        }
+        .diagram-container canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        .diagram-container canvas.dragging {
+            cursor: grabbing;
+        }
+        .diagram-container canvas.moving {
+            cursor: move;
+        }
+        .diagram-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-style: italic;
+        }
+        .diagram-toolbar {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        .diagram-toolbar button {
+            padding: 4px 8px;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .diagram-toolbar button:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+        .diagram-zoom-label {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 8px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <span class="logo">◆ Pure IDE</span>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <button class="run-btn" id="runBtn" onclick="executeCode()">
+                ▶ Run <span class="shortcut">F9</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main area: sidebar + editor -->
+    <div class="main-area">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" id="tabElements" onclick="switchTab('elements')">
+                    <span class="tab-icon">◇</span> Elements
+                </button>
+                <button class="sidebar-tab" id="tabFiles" onclick="switchTab('files')">
+                    <span class="tab-icon">▤</span> Files
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="tree-panel active" id="panelElements">
+                    <div class="tree-loading"><span class="spinner"></span> Loading elements...</div>
+                </div>
+                <div class="tree-panel" id="panelFiles">
+                    <div class="tree-loading"><span class="spinner"></span> Loading files...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resize Handle -->
+        <div class="resize-handle" id="resizeHandle"></div>
+
+        <!-- Editor + Result -->
+        <div class="editor-result-area">
+            <!-- File tabs -->
+            <div class="file-tabs-container" id="fileTabsContainer">
+            </div>
+
+            <!-- Editor -->
+            <div class="editor-container" id="editorPanel">
+                <div id="editor"></div>
+                <div class="editor-statusbar">
+                    <span id="cursorPosition">Ln 1, Col 1</span>
+                </div>
+            </div>
+
+            <!-- Diagram -->
+            <div class="diagram-container" id="diagramPanel">
+                <div class="diagram-toolbar">
+                    <button onclick="diagramZoomIn()" title="Zoom In">+</button>
+                    <button onclick="diagramZoomOut()" title="Zoom Out">−</button>
+                    <button onclick="diagramFitToScreen()" title="Fit to Screen">⊞</button>
+                </div>
+                <canvas id="diagramCanvas"></canvas>
+                <div class="diagram-zoom-label" id="diagramZoomLabel">100%</div>
+            </div>
+
+            <!-- Horizontal Resize Handle -->
+            <div class="resize-handle-horizontal" id="resizeHandleHorizontal"></div>
+
+            <!-- Result Panel -->
+            <div class="result-panel" id="resultPanel">
+                <div class="result-tabs">
+                    <button id="bottomTabOutput" class="bottom-tab active" onclick="switchBottomTab('output')"><span class="icon">◉</span> Output <span class="result-badge" id="resultBadge" style="display:none"></span></button>
+                    <button id="bottomTabTests" class="bottom-tab" onclick="switchBottomTab('tests')"><span class="icon">✔</span> Tests</button>
+                    <button id="bottomTabSearch" class="bottom-tab" onclick="switchBottomTab('search')"><span class="icon">⌕</span> Search</button>
+                </div>
+                
+                <div class="bottom-content-panel active" id="bottomPanelOutput">
+                    <div class="result-content" id="resultContent">
+                        <span class="placeholder">Press F9 or click Run to compile and execute go():Any[*]</span>
+                    </div>
+                </div>
+                
+                <div class="bottom-content-panel" id="bottomPanelTests">
+                    <div class="test-split-view">
+                        <div class="test-tree-side">
+                            <div style="padding: 10px; border-bottom: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div id="testModeStatus" style="font-weight: bold; font-size: 13px; color: var(--accent);">No Tests Loaded</div>
+                                    <button onclick="reRunLastTests()" title="Re-run tests" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-primary); transition: all 0.2s;">
+                                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M8 2.5a5.487 5.487 0 00-4.131 1.869l1.204 1.204A.25.25 0 014.896 6H1.25A.25.25 0 011 5.75V2.104a.25.25 0 01.427-.177l1.38 1.38A7.001 7.001 0 0114.95 7.16a.75.75 0 11-1.49.178A5.501 5.501 0 008 2.5zM1.705 8.005a.75.75 0 511.474-.272 5.5 5.5 0 0010.72-2.866V6.104a.25.25 0 01.427-.177l1.38 1.38A7.002 7.002 0 011.05 8.84a.75.75 0 01.656-.835z"></path></svg>
+                                    </button>
+                                </div>
+                                <div id="pctAdapterContainer" style="margin-bottom: 4px; display: none;">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">PCT Adapter (for PCT runs):</label>
+                                    <select id="pctAdapterSelect" style="width: 100%; padding: 4px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px;">
+                                        <option value="">Default / Auto</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; margin-top: 8px;">
+                                    <button onclick="toggleAllTestNodes(true)" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Expand</button>
+                                    <button onclick="toggleAllTestNodes(false)" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Close</button>
+                                    <div style="flex: 1;"></div>
+                                    <button onclick="filterTestNodes('passed')" id="btnFilterPassed" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">✓ Pass</button>
+                                    <button onclick="filterTestNodes('failed')" id="btnFilterFailed" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">✗ Fail</button>
+                                    <button onclick="filterTestNodes('all')" id="btnFilterAll" style="padding: 2px 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-weight: bold;">All</button>
+                                </div>
+                            </div>
+                            <div id="testTreeContainer" style="padding: 8px 0; overflow-y: auto; font-size: 12px; flex: 1;">
+                                <div style="padding: 0 16px; color: var(--text-secondary); font-style: italic;">No tests loaded.</div>
+                            </div>
+                        </div>
+                        <div class="resize-handle" id="resizeHandleTestTree"></div>
+                        <div class="test-output-side" id="testSpecificOutput">
+                            <div class="placeholder" style="color: var(--text-secondary); font-style: italic;">Select a test to view console output</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-content-panel" id="bottomPanelSearch">
+                    <div class="search-panel">
+                        <div class="search-input-row">
+                            <input type="text" id="searchInput" class="search-input" placeholder="Search in files…" oninput="onSearchInput()" onkeydown="onSearchKeyDown(event)" />
+                            <button id="searchCaseBtn" class="search-case-btn" title="Match case" onclick="toggleSearchCase()">Aa</button>
+                        </div>
+                        <div id="searchResults" class="search-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+    <script>
+        let editor;
+        let ws;
+        let requestId = 0;
+        let pendingRequests = {};
+        let initialized = false;
+        let documentVersion = 0;
+        const DOC_URI = 'file:///welcome.pure';
+
+        let openFiles = [];
+        let activeFile = null;
+
+        // =================================================================
+        // Sidebar Tab Switching
+        // =================================================================
+        function switchTab(tab) {
+            document.getElementById('tabElements').classList.toggle('active', tab === 'elements');
+            document.getElementById('tabFiles').classList.toggle('active', tab === 'files');
+            document.getElementById('panelElements').classList.toggle('active', tab === 'elements');
+            document.getElementById('panelFiles').classList.toggle('active', tab === 'files');
+        }
+
+        // =================================================================
+        // Search
+        // =================================================================
+        let searchDebounceTimer = null;
+
+        function onSearchInput() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(triggerSearch, 300);
+        }
+
+        function onSearchKeyDown(e) {
+            if (e.key === 'Enter') { triggerSearch(); }
+        }
+
+        let searchCaseSensitive = false;
+
+        function toggleSearchCase() {
+            searchCaseSensitive = !searchCaseSensitive;
+            document.getElementById('searchCaseBtn').classList.toggle('active', searchCaseSensitive);
+            triggerSearch();
+        }
+
+        function triggerSearch() {
+            const query = document.getElementById('searchInput').value;
+            const resultsEl = document.getElementById('searchResults');
+            if (!query) { resultsEl.innerHTML = ''; return; }
+            resultsEl.innerHTML = '<div class="search-summary">Searching…</div>';
+            sendRequest('workspace/executeCommand', { command: 'pure/search', arguments: [query, searchCaseSensitive] })
+                .then(results => renderSearchResults(results, query, searchCaseSensitive))
+                .catch(() => { resultsEl.innerHTML = '<div class="search-summary">Search failed.</div>'; });
+        }
+
+        function renderSearchResults(results, query, caseSensitive) {
+            const resultsEl = document.getElementById('searchResults');
+            if (!results || results.length === 0) {
+                resultsEl.innerHTML = '<div class="search-summary">No results found.</div>';
+                return;
+            }
+
+            // Group by sourceId
+            const grouped = {};
+            for (const r of results) {
+                if (!grouped[r.sourceId]) { grouped[r.sourceId] = []; }
+                grouped[r.sourceId].push(r);
+            }
+
+            const totalMatches = results.length;
+            const fileCount = Object.keys(grouped).length;
+            let html = `<div class="search-summary">${totalMatches} result${totalMatches !== 1 ? 's' : ''} in ${fileCount} file${fileCount !== 1 ? 's' : ''}</div>`;
+
+            const flags = caseSensitive ? 'g' : 'gi';
+            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(escapedQuery, flags);
+
+            for (const [sourceId, matches] of Object.entries(grouped)) {
+                const shortName = sourceId.split('/').pop();
+                html += `<div class="search-file-group">`;
+                html += `<div class="search-file-header" title="${sourceId}" onclick="openSearchFile('${sourceId.replace(/'/g, "\\'")}')">${shortName} <span style="font-weight:normal;opacity:0.6">(${matches.length})</span></div>`;
+                for (const m of matches) {
+                    const highlighted = m.text.replace(re, match => `<mark>${match}</mark>`);
+                    html += `<div class="search-match" onclick="openSearchMatch('${sourceId.replace(/'/g, "\\'")}',${m.line},${m.col})"><span class="match-line">${m.line}</span>${highlighted}</div>`;
+                }
+                html += `</div>`;
+            }
+            resultsEl.innerHTML = html;
+        }
+
+        function openSearchFile(sourceId) {
+            sendRequest('workspace/executeCommand', { command: 'pure/openFile', arguments: [sourceId] });
+        }
+
+        function openSearchMatch(sourceId, line, col) {
+            pendingJumpLine = line;
+            pendingJumpCol = col;
+            sendRequest('workspace/executeCommand', { command: 'pure/openFile', arguments: [sourceId] });
+        }
+
+        // =================================================================
+        // Bottom Tab Switching
+        // =================================================================
+        function switchBottomTab(tab) {
+            document.getElementById('bottomTabOutput').classList.toggle('active', tab === 'output');
+            document.getElementById('bottomTabTests').classList.toggle('active', tab === 'tests');
+            document.getElementById('bottomTabSearch').classList.toggle('active', tab === 'search');
+            document.getElementById('bottomPanelOutput').classList.toggle('active', tab === 'output');
+            document.getElementById('bottomPanelTests').classList.toggle('active', tab === 'tests');
+            document.getElementById('bottomPanelSearch').classList.toggle('active', tab === 'search');
+            if (tab === 'search') { document.getElementById('searchInput').focus(); }
+        }
+
+        // =================================================================
+        // Test Runner
+        // =================================================================
+        
+        let availablePCTAdapters = [];
+        let discoveredTests = [];
+        
+        function updatePCTAdapters(adapters) {
+            availablePCTAdapters = adapters || [];
+            const select = document.getElementById('pctAdapterSelect');
+            select.innerHTML = '';
+            if (availablePCTAdapters.length === 0) {
+                select.innerHTML = '<option value="">No adapters found</option>';
+            } else {
+                availablePCTAdapters.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a.split('::').pop() || a;
+                    select.appendChild(opt);
+                });
+            }
+        }
+        
+        let testResultsMap = {};
+        
+        function renderDiscoveredTests(tests, mode) {
+            discoveredTests = tests || [];
+            testResultsMap = {}; // clear results
+            document.getElementById('testSpecificOutput').innerHTML = '<div class="placeholder" style="color: var(--text-secondary); font-style: italic;">Select a test to view console output</div>';
+            
+            const container = document.getElementById('testTreeContainer');
+            if (!tests || tests.length === 0) {
+                container.innerHTML = '<div style="padding: 0 16px; color: var(--text-secondary); font-style: italic;">No tests found.</div>';
+                return;
+            }
+            
+            // Build tree structure
+            const root = { children: {} };
+            tests.forEach(t => {
+                const parts = t.split('::');
+                const name = parts.pop();
+                let current = root;
+                parts.forEach(p => {
+                    if (!current.children[p]) {
+                        current.children[p] = { type: 'Package', children: {} };
+                    } else if (!current.children[p].children) {
+                        current.children[p].children = {};
+                    }
+                    current = current.children[p];
+                });
+                
+                if (!current.children[name]) {
+                    current.children[name] = { type: 'Test', id: t, name: name };
+                } else {
+                    current.children[name].type = 'Test';
+                    current.children[name].id = t;
+                    current.children[name].name = name;
+                }
+            });
+
+            function renderTreeNodes(nodeDict, depth) {
+                let html = '';
+                const keys = Object.keys(nodeDict);
+                const packages = keys.filter(k => nodeDict[k].type === 'Package').sort();
+                const tests = keys.filter(k => nodeDict[k].type !== 'Package').sort();
+                const sortedKeys = packages.concat(tests);
+                
+                sortedKeys.forEach(k => {
+                    const node = nodeDict[k];
+                    if (node.type === 'Package') {
+                        html += `
+                        <div class="tree-node" data-type="Package">
+                            <div class="tree-item" style="--depth: ${depth};" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('.chevron').classList.toggle('expanded');">
+                                <span class="chevron expanded">▶</span>
+                                <span class="node-icon icon-package material-symbols-outlined">folder</span>
+                                <span class="node-name">${k}</span>
+                            </div>
+                            <div class="tree-children" style="display:block;">
+                                ${renderTreeNodes(node.children, depth + 1)}
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `
+                        <div class="tree-node" data-type="Test" data-id="${node.id}" style="margin-bottom: 2px;">
+                            <div class="tree-item" style="--depth: ${depth}; cursor: pointer;" onclick="showTestOutput('${node.id}')">
+                                <span class="chevron leaf"></span>
+                                <span class="node-icon icon-function material-symbols-outlined" id="test-icon-${node.id}">adjust</span>
+                                <span class="node-name" style="color: var(--text-primary);">${node.name}</span>
+                            </div>
+                        </div>`;
+                    }
+                });
+                return html;
+            }
+            
+            container.innerHTML = renderTreeNodes(root.children, 0);
+        }
+        
+        function showTestOutput(testId) {
+            const outContainer = document.getElementById('testSpecificOutput');
+            const res = testResultsMap[testId];
+            if (!res) {
+                outContainer.innerHTML = `<div style="color: var(--text-secondary); font-style: italic;">No execution results available for ${testId}</div>`;
+                return;
+            }
+            let html = `<div style="font-weight:bold; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">${testId}</div>`;
+            if (res.status === 'failed') {
+                html += `<div style="color: var(--error); margin-bottom: 12px;"><strong>Error:</strong> ${res.error}</div>`;
+            } else if (res.status === 'passed') {
+                html += `<div style="color: var(--success); margin-bottom: 12px;"><strong>Status:</strong> Passed</div>`;
+            }
+            
+            if (res.output) {
+                html += `<div><strong>Console Output:</strong></div><pre style="white-space: pre-wrap; font-size: 12px; font-family: var(--font-mono); margin-top: 4px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px;">${res.output}</pre>`;
+            } else {
+                html += `<div style="color: var(--text-secondary); font-style: italic;">No console output</div>`;
+            }
+            outContainer.innerHTML = html;
+        }
+        
+        function triggerRunTestsForPackage(mode, pkg) {
+            switchBottomTab('tests');
+            document.querySelector('.result-panel').style.minHeight = '350px'; 
+            
+            lastTestMode = mode;
+            lastTestPkg = pkg;
+            
+            if (mode === 'pct') {
+                document.getElementById('pctAdapterContainer').style.display = 'block';
+                document.getElementById('testModeStatus').textContent = 'PCT Tests - ' + pkg;
+            } else {
+                document.getElementById('pctAdapterContainer').style.display = 'none';
+                document.getElementById('testModeStatus').textContent = 'Simple Tests - ' + pkg;
+            }
+            
+            if (mode === 'pct' && availablePCTAdapters.length === 0) {
+                sendRequest('workspace/executeCommand', { command: 'pure/getPCTAdapters' })
+                    .then(result => {
+                        updatePCTAdapters(result);
+                        _triggerDiscoverAndRun(mode, pkg);
+                    }).catch(console.error);
+            } else {
+                _triggerDiscoverAndRun(mode, pkg);
+            }
+        }
+        
+        function reRunLastTests() {
+            if (lastTestMode && lastTestPkg) {
+                triggerRunTestsForPackage(lastTestMode, lastTestPkg);
+            } else {
+                alert('No tests have been executed yet to re-run.');
+            }
+        }
+        
+        function _triggerDiscoverAndRun(mode, pkg) {
+            const container = document.getElementById('testTreeContainer');
+            container.innerHTML = '<div style="padding: 0 16px; color: var(--text-secondary);"><span class="spinner"></span> Discovering ' + mode + ' tests...</div>';
+            
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/discoverTests',
+                arguments: [mode]
+            }).then(result => {
+                const tests = result || [];
+                const filtered = tests.filter(t => t.startsWith(pkg + '::'));
+                renderDiscoveredTests(filtered, mode);
+                if (filtered.length > 0) {
+                    runSelectedTests(mode, filtered);
+                } else {
+                    document.getElementById('testSpecificOutput').innerHTML = `<div style="color: var(--text-secondary); padding: 12px;">No tests found in package: ${pkg} (Mode: ${mode})</div>`;
+                }
+            }).catch(err => {
+                console.error(err);
+                container.innerHTML = `<div style="color: var(--error); padding: 16px;">Failed to discover tests: ${err && err.message ? err.message : err}</div>`;
+            });
+        }
+
+        function runSelectedTests(mode, tests) {
+            let adapter = null;
+            if (mode === 'pct') {
+                const selectElement = document.getElementById('pctAdapterSelect');
+                if (selectElement) {
+                    adapter = selectElement.value;
+                }
+                if (!adapter && availablePCTAdapters.length > 0) {
+                    adapter = availablePCTAdapters[0]; // pick first if dropdown wasn't manually selected
+                }
+                if (!adapter) {
+                    alert('Please select a PCT adapter first.');
+                    return;
+                }
+            }
+            
+            tests.forEach(t => {
+                const icon = document.getElementById(`test-icon-${t}`);
+                if (icon) {
+                    icon.innerHTML = '<span class="spinner" style="width:10px;height:10px;border-width:1px;"></span>';
+                    icon.style.color = 'var(--text-secondary)';
+                }
+            });
+            
+            document.getElementById('testSpecificOutput').innerHTML = '<div style="color: var(--text-secondary); padding: 12px;"><span class="spinner"></span> Running tests...</div>';
+            
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/runTests',
+                arguments: [mode, adapter, tests]
+            }).then(result => applyTestResults(result))
+              .catch(err => {
+                  document.getElementById('testSpecificOutput').innerHTML = '<div style="color: var(--error); padding: 12px;">Error executing tests: ' + err + '</div>';
+              });
+        }
+        
+        function applyTestResults(results) {
+            let passedCount = 0;
+            let failedCount = 0;
+            
+            results.forEach(res => {
+                testResultsMap[res.test] = res;
+                
+                const isPassed = res.status === 'passed';
+                const iconElem = document.getElementById(`test-icon-${res.test}`);
+                if (iconElem) {
+                    iconElem.textContent = isPassed ? '✅' : '❌';
+                    iconElem.style.color = isPassed ? 'var(--success)' : 'var(--error)';
+                }
+                
+                if (isPassed) { passedCount++; } else { failedCount++; }
+            });
+            
+            document.getElementById('testSpecificOutput').innerHTML = `
+                <div style="margin-bottom: 12px; font-weight: bold; font-size: 14px; padding: 12px;">
+                    Test Run Finished! <br/>
+                    <span style="font-size: 11px; font-weight: normal; color: var(--text-secondary);">
+                        Total Ran: ${results.length} | Passed: <span style="color:var(--success)">${passedCount}</span> | Failed: <span style="color:var(--error)">${failedCount}</span>
+                    </span>
+                </div>
+                <div style="color: var(--text-secondary); font-style: italic; padding: 0 12px;">Select a test from the left to view output details</div>
+            `;
+            
+            const badge = document.getElementById('resultBadge');
+            badge.style.display = 'inline-block';
+            badge.className = failedCount === 0 ? 'result-badge success' : 'result-badge error';
+            badge.textContent = failedCount === 0 ? 'TESTS PASSED' : 'TESTS FAILED';
+            
+            applyTestFilters(); // re-evaluate filter
+        }
+        
+        let currentTestFilter = 'all';
+
+        function toggleAllTestNodes(expand) {
+            const panels = document.querySelectorAll('#testTreeContainer .tree-children');
+            const chevrons = document.querySelectorAll('#testTreeContainer .chevron.expanded, #testTreeContainer .chevron:not(.expanded):not(.leaf)');
+            panels.forEach(p => p.style.display = expand ? 'block' : 'none');
+            chevrons.forEach(c => {
+                if (expand) c.classList.add('expanded');
+                else c.classList.remove('expanded');
+            });
+        }
+
+        function filterTestNodes(filter) {
+            currentTestFilter = filter;
+            document.getElementById('btnFilterPassed').style.fontWeight = filter === 'passed' ? 'bold' : 'normal';
+            document.getElementById('btnFilterPassed').style.color = filter === 'passed' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            document.getElementById('btnFilterFailed').style.fontWeight = filter === 'failed' ? 'bold' : 'normal';
+            document.getElementById('btnFilterFailed').style.color = filter === 'failed' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            document.getElementById('btnFilterAll').style.fontWeight = filter === 'all' ? 'bold' : 'normal';
+            document.getElementById('btnFilterAll').style.color = filter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)';
+            applyTestFilters();
+        }
+
+        function applyTestFilters() {
+            const rootNodes = document.querySelectorAll('#testTreeContainer > .tree-node');
+            rootNodes.forEach(rn => updateNodeVisibility(rn));
+        }
+
+        function updateNodeVisibility(nodeElem) {
+            if (nodeElem.dataset.type === 'Test') {
+                const id = nodeElem.dataset.id;
+                const res = testResultsMap[id];
+                const status = res ? res.status : 'none';
+                
+                if (currentTestFilter === 'all') {
+                    nodeElem.style.display = 'block';
+                    return true;
+                } else {
+                    const isVisible = (status === currentTestFilter);
+                    nodeElem.style.display = isVisible ? 'block' : 'none';
+                    return isVisible;
+                }
+            } else if (nodeElem.dataset.type === 'Package') {
+                const childrenContainer = nodeElem.querySelector(':scope > .tree-children');
+                let hasVisibleChild = false;
+                if (childrenContainer) {
+                    // recursively check children
+                    const children = childrenContainer.querySelectorAll(':scope > .tree-node');
+                    for (let child of children) {
+                        if (updateNodeVisibility(child)) {
+                            hasVisibleChild = true;
+                        }
+                    }
+                }
+                nodeElem.style.display = (hasVisibleChild || currentTestFilter === 'all') ? 'block' : 'none';
+                return hasVisibleChild;
+            }
+            return true;
+        }
+
+        // =================================================================
+        // Tree Rendering
+        // =================================================================
+        const TYPE_ICONS = {
+            'Package':              { icon: 'folder',  cls: 'icon-package material-symbols-outlined' },
+            'Class':                { icon: 'data_object',  cls: 'icon-class material-symbols-outlined' },
+            'Enumeration':          { icon: 'list',  cls: 'icon-enum material-symbols-outlined' },
+            'PrimitiveType':        { icon: 'category',  cls: 'icon-primitive material-symbols-outlined' },
+            'FunctionDefinition':   { icon: 'function',   cls: 'icon-function material-symbols-outlined' },
+            'ConcreteFunctionDefinition': { icon: 'function', cls: 'icon-function material-symbols-outlined' },
+            'NativeFunction':       { icon: 'bolt',  cls: 'icon-native material-symbols-outlined' },
+            'Association':          { icon: 'link',  cls: 'icon-association material-symbols-outlined' },
+            'Profile':              { icon: 'label',  cls: 'icon-profile material-symbols-outlined' },
+            'Measure':              { icon: 'straighten',  cls: 'icon-measure material-symbols-outlined' },
+            'UserDefinedFunction':  { icon: 'function',  cls: 'icon-function material-symbols-outlined' },
+            'File':                 { icon: 'description',  cls: 'icon-file material-symbols-outlined' },
+        };
+
+        function getIcon(type, hasChildren) {
+            if (hasChildren) return TYPE_ICONS['Package'];
+            return TYPE_ICONS[type] || { icon: 'adjust', cls: 'icon-default material-symbols-outlined' };
+        }
+
+        function renderTree(nodes, container, treeId, depth, parentPath) {
+            depth = depth || 0;
+            parentPath = parentPath || '';
+            
+            const sortedNodes = [...nodes].sort((a, b) => {
+                const aHasChildren = a.children && a.children.length > 0;
+                const bHasChildren = b.children && b.children.length > 0;
+                
+                if (aHasChildren && !bHasChildren) return -1;
+                if (!aHasChildren && bHasChildren) return 1;
+                
+                if (!aHasChildren && !bHasChildren) {
+                    const aType = a.type || '';
+                    const bType = b.type || '';
+                    if (aType !== bType) {
+                        return aType.localeCompare(bType);
+                    }
+                }
+                
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            for (const node of sortedNodes) {
+                const hasChildren = node.children && node.children.length > 0;
+                const iconInfo = getIcon(node.type, hasChildren);
+                const separator = treeId === 'packageTree' ? '::' : '/';
+                const currentPath = parentPath ? parentPath + separator + node.name : node.name;
+
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'tree-node';
+
+                const item = document.createElement('div');
+                item.className = 'tree-item';
+                item.style.setProperty('--depth', depth);
+                item.title = node.name + (node.type && node.type !== 'Package' ? ' (' + node.type + ')' : '');
+
+                const chevron = document.createElement('span');
+                chevron.className = 'chevron' + (hasChildren ? '' : ' leaf');
+                chevron.textContent = '▶';
+
+                const icon = document.createElement('span');
+                icon.className = 'node-icon ' + iconInfo.cls;
+                icon.textContent = iconInfo.icon;
+
+                const name = document.createElement('span');
+                name.className = 'node-name';
+                name.textContent = node.name;
+
+                item.appendChild(chevron);
+                item.appendChild(icon);
+                item.appendChild(name);
+                nodeDiv.appendChild(item);
+
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'tree-children';
+                    renderTree(node.children, childrenDiv, treeId, depth + 1, currentPath);
+                    nodeDiv.appendChild(childrenDiv);
+
+                    item.addEventListener('click', () => {
+                        const isExpanded = childrenDiv.classList.contains('expanded');
+                        childrenDiv.classList.toggle('expanded');
+                        chevron.classList.toggle('expanded');
+                    });
+                    
+                    if (treeId === 'packageTree' && node.type === 'Package') {
+                        item.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            showContextMenu(e.pageX, e.pageY, currentPath);
+                        });
+                    }
+                } else {
+                    item.addEventListener('click', () => {
+                        if (treeId === 'packageTree') {
+                            if (node.type !== 'Package') {
+                                sendRequest('workspace/executeCommand', {
+                                    command: 'pure/jumpToElement',
+                                    arguments: [currentPath]
+                                });
+                            }
+                        } else if (treeId === 'fileTree') {
+                            if (node.type === 'File') {
+                                sendRequest('workspace/executeCommand', {
+                                    command: 'pure/openFile',
+                                    arguments: [currentPath]
+                                });
+                            }
+                        }
+                    });
+                }
+
+                container.appendChild(nodeDiv);
+            }
+        }
+
+        // =================================================================
+        // Context Menu
+        // =================================================================
+        function showContextMenu(x, y, pkg) {
+            let menu = document.getElementById('treeContextMenu');
+            if (menu) {
+                menu.remove();
+            }
+            menu = document.createElement('div');
+            menu.id = 'treeContextMenu';
+            menu.className = 'context-menu';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            
+            const runSimple = document.createElement('div');
+            runSimple.className = 'context-menu-item';
+            runSimple.textContent = 'Run Simple Tests';
+            runSimple.onclick = () => {
+                triggerRunTestsForPackage('simple', pkg);
+                menu.remove();
+            };
+            
+            const runPCT = document.createElement('div');
+            runPCT.className = 'context-menu-item';
+            runPCT.textContent = 'Run PCT Tests';
+            runPCT.onclick = () => {
+                triggerRunTestsForPackage('pct', pkg);
+                menu.remove();
+            };
+            
+            menu.appendChild(runSimple);
+            menu.appendChild(runPCT);
+            document.body.appendChild(menu);
+            
+            // clear click
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 0);
+        }
+
+        let knownFiles = new Set();
+
+        function populateTree(treeId, jsonStr) {
+            try {
+                const nodes = JSON.parse(jsonStr);
+                const panelId = treeId === 'packageTree' ? 'panelElements' : 'panelFiles';
+                const panel = document.getElementById(panelId);
+                panel.innerHTML = '';
+                
+                if (treeId === 'fileTree') {
+                    knownFiles.clear();
+                    function extractPaths(nList, parent) {
+                        for (const n of nList) {
+                            const current = parent ? parent + '/' + n.name : n.name;
+                            if (n.type === 'File') {
+                                knownFiles.add(current);
+                            }
+                            if (n.children && Array.isArray(n.children)) {
+                                extractPaths(n.children, current);
+                            }
+                        }
+                    }
+                    extractPaths(nodes, '');
+                }
+
+                renderTree(nodes, panel, treeId, 0, '');
+            } catch (e) {
+                console.error('Failed to parse tree data:', e);
+            }
+        }
+
+        // =================================================================
+        // Sidebar Resize
+        // =================================================================
+        (function() {
+            const handle = document.getElementById('resizeHandle');
+            const sidebar = document.getElementById('sidebar');
+            let isResizing = false;
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = Math.min(Math.max(e.clientX, 200), 500);
+                sidebar.style.width = newWidth + 'px';
+                if (editor) editor.layout();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // =================================================================
+        // Horizontal Resize
+        // =================================================================
+        (function() {
+            const handleH = document.getElementById('resizeHandleHorizontal');
+            const resultPanel = document.getElementById('resultPanel');
+            let isResizingH = false;
+
+            handleH.addEventListener('mousedown', (e) => {
+                isResizingH = true;
+                handleH.classList.add('active');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizingH) return;
+                const newHeight = Math.min(Math.max(window.innerHeight - e.clientY, 40), window.innerHeight * 0.8);
+                resultPanel.style.height = newHeight + 'px';
+                if (editor) editor.layout();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizingH) {
+                    isResizingH = false;
+                    handleH.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
+
+        // =================================================================
+        // Test Tree Resize
+        // =================================================================
+        (function() {
+            const handleT = document.getElementById('resizeHandleTestTree');
+            const testTreeSide = document.querySelector('.test-tree-side');
+            let isResizingT = false;
+
+            if (handleT) {
+                handleT.addEventListener('mousedown', (e) => {
+                    isResizingT = true;
+                    handleT.classList.add('active');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizingT || !testTreeSide) return;
+                    const rect = testTreeSide.getBoundingClientRect();
+                    const newWidth = Math.min(Math.max(e.clientX - rect.left, 150), window.innerWidth * 0.7);
+                    testTreeSide.style.width = newWidth + 'px';
+                    testTreeSide.style.flex = 'none'; // prevent flex overriding width
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizingT) {
+                        isResizingT = false;
+                        handleT.classList.remove('active');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            }
+        })();
+
+        // =================================================================
+        // Monaco setup
+        // =================================================================
+        require.config({
+            paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }
+        });
+
+        require(['vs/editor/editor.main'], function () {
+            // Register Pure language
+            monaco.languages.register({ id: 'pure' });
+
+            monaco.languages.setMonarchTokensProvider('pure', {
+                keywords: [
+                    'function', 'let', 'if', 'else', 'true', 'false',
+                    'import', 'Class', 'Enum', 'Association', 'Profile',
+                    'Measure', 'native', 'extends', 'new', 'cast',
+                    'instanceof', 'not', 'and', 'or'
+                ],
+                typeKeywords: [
+                    'String', 'Integer', 'Float', 'Boolean', 'Date',
+                    'StrictDate', 'DateTime', 'Number', 'Decimal',
+                    'Any', 'Nil', 'Byte'
+                ],
+                operators: [
+                    '->', '+', '-', '*', '/', '==', '!=', '<', '>', '<=', '>=',
+                    '&&', '||', '!', '|', '=', ';', ',', '.', '::', '~'
+                ],
+                symbols: /[=><~?:&|+\-*\/\^%]+/,
+                escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4})/,
+
+                tokenizer: {
+                    root: [
+                        // Comments
+                        [/\/\/.*$/, 'comment'],
+                        [/\/\*/, 'comment', '@comment'],
+
+                        // Strings
+                        [/'/, 'string', '@string_single'],
+
+                        // Numbers
+                        [/\d+\.\d*/, 'number.float'],
+                        [/\d+/, 'number'],
+
+                        // Multiplicity brackets
+                        [/\[/, 'delimiter.bracket', '@multiplicity'],
+
+                        // Variable references
+                        [/\$[a-zA-Z_]\w*/, 'variable'],
+
+                        // Identifiers and keywords
+                        [/[a-zA-Z_]\w*/, {
+                            cases: {
+                                '@keywords': 'keyword',
+                                '@typeKeywords': 'type',
+                                '@default': 'identifier'
+                            }
+                        }],
+
+                        // Operators
+                        [/@symbols/, {
+                            cases: {
+                                '@operators': 'operator',
+                                '@default': ''
+                            }
+                        }],
+
+                        // Delimiters
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/[;,.]/, 'delimiter'],
+                    ],
+                    comment: [
+                        [/[^\/*]+/, 'comment'],
+                        [/\*\//, 'comment', '@pop'],
+                        [/[\/*]/, 'comment']
+                    ],
+                    string_single: [
+                        [/[^'\\]+/, 'string'],
+                        [/@escapes/, 'string.escape'],
+                        [/\\./, 'string.escape.invalid'],
+                        [/'/, 'string', '@pop']
+                    ],
+                    multiplicity: [
+                        [/\*/, 'keyword'],
+                        [/\d+/, 'number'],
+                        [/\.\./, 'operator'],
+                        [/\]/, 'delimiter.bracket', '@pop'],
+                    ]
+                }
+            });
+
+            // Custom theme
+            monaco.editor.defineTheme('pure-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: '569cd6' },
+                    { token: 'type', foreground: '3dc9b0' },
+                    { token: 'variable', foreground: '4fc1ff' },
+                    { token: 'string', foreground: 'ce9178' },
+                    { token: 'number', foreground: 'b5cea8' },
+                    { token: 'comment', foreground: '6a9955' },
+                    { token: 'operator', foreground: 'd4d4d4' },
+                    { token: 'identifier', foreground: 'dcdcaa' },
+                    { token: 'delimiter', foreground: 'd4d4d4' },
+                ],
+                colors: {}
+            });
+
+            // Create initial model with the welcome URI
+            // Create editor — starts empty, server pushes initial file via openFile
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '',
+                language: 'pure',
+                theme: 'pure-dark',
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                scrollBeyondLastLine: false,
+                padding: { top: 12 },
+                smoothScrolling: false,
+                cursorBlinking: 'blink',
+                cursorSmoothCaretAnimation: 'off',
+                bracketPairColorization: { enabled: true },
+                automaticLayout: true,
+                tabSize: 3,
+                insertSpaces: true,
+            });
+
+            // F9 keybinding (editor-scoped)
+            editor.addCommand(monaco.KeyCode.F9, executeCode);
+
+            // Option+/ (Alt+/) → toggle line comment on selection
+            editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Slash, () => {
+                editor.getAction('editor.action.commentLine').run();
+            });
+
+            // Handle save command (Cmd+S / Ctrl+S)
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                if (activeFile && initialized && ws && ws.readyState === WebSocket.OPEN) {
+                    sendRequest('workspace/executeCommand', {
+                        command: 'pure/saveFile',
+                        arguments: [activeFile, editor.getValue()]
+                    }).catch(console.error);
+                }
+            });
+
+            // Global F9 keybinding (works even when editor doesn't have focus)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F9') {
+                    e.preventDefault();
+                    executeCode();
+                }
+                // Ctrl+Shift+F / Cmd+Shift+F → open search tab
+                if (e.key === 'f' && e.shiftKey && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    switchBottomTab('search');
+                }
+            });
+
+            // Update cursor position in status bar
+            editor.onDidChangeCursorPosition((e) => {
+                const pos = e.position;
+                const cursorPositionEl = document.getElementById('cursorPosition');
+                if (cursorPositionEl) {
+                    cursorPositionEl.textContent = `Ln ${pos.lineNumber}, Col ${pos.column}`;
+                }
+            });
+
+            // Notify LSP on content change
+            editor.onDidChangeModelContent(() => {
+                // Only send didChange if the active model is the welcome scratch pad
+                // We keep the LSP single source context pinned to it for execution.
+                if (initialized && ws && ws.readyState === WebSocket.OPEN) {
+                    const currentUri = editor.getModel().uri.toString();
+                    if (currentUri === DOC_URI) {
+                        documentVersion++;
+                        sendNotification('textDocument/didChange', {
+                            textDocument: { uri: DOC_URI, version: documentVersion },
+                            contentChanges: [{ text: editor.getValue() }]
+                        });
+                    }
+                }
+            });
+
+            // Connect to LSP
+            connectLSP();
+
+            // Connect diagram sync
+            setupDiagramSync();
+        });
+
+        // =================================================================
+        // LSP WebSocket client
+        // =================================================================
+        function connectLSP() {
+            ws = new WebSocket('ws://localhost:9091');
+
+            ws.onopen = () => {
+                setStatus('connected', 'Connected');
+                // Send initialize
+                sendRequest('initialize', {
+                    processId: null,
+                    capabilities: {},
+                    rootUri: null,
+                }).then(result => {
+                    // Send initialized notification
+                    sendNotification('initialized', {});
+                    initialized = true;
+
+                    // Send didOpen
+                    sendNotification('textDocument/didOpen', {
+                        textDocument: {
+                            uri: DOC_URI,
+                            languageId: 'pure',
+                            version: documentVersion,
+                            text: editor ? editor.getValue() : ''
+                        }
+                    });
+
+                    // Request trees
+                    requestTrees();
+                });
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleLSPMessage(msg);
+                } catch (e) {
+                    console.error('Failed to parse LSP message:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                setStatus('', 'Disconnected');
+                initialized = false;
+                // Reconnect after delay
+                setTimeout(connectLSP, 3000);
+            };
+
+            ws.onerror = (err) => {
+                setStatus('error', 'Connection error');
+                console.error('WebSocket error:', err);
+            };
+        }
+
+        function sendRequest(method, params) {
+            return new Promise((resolve, reject) => {
+                const id = ++requestId;
+                pendingRequests[id] = { resolve, reject };
+                const msg = JSON.stringify({ jsonrpc: '2.0', id, method, params });
+                ws.send(msg);
+            });
+        }
+
+        function sendNotification(method, params) {
+            const msg = JSON.stringify({ jsonrpc: '2.0', method, params });
+            ws.send(msg);
+        }
+
+        function handleLSPMessage(msg) {
+            // Response to a request
+            if (msg.id !== undefined && pendingRequests[msg.id]) {
+                const { resolve, reject } = pendingRequests[msg.id];
+                delete pendingRequests[msg.id];
+                if (msg.error) { reject(msg.error); }
+                else { resolve(msg.result); }
+                return;
+            }
+
+            // Notification from server
+            if (msg.method === 'textDocument/publishDiagnostics') {
+                handleDiagnostics(msg.params);
+            }
+            else if (msg.method === 'pure/executeResult') {
+                handleExecuteResult(msg.params);
+            }
+            else if (msg.method === 'pure/treeData') {
+                handleTreeData(msg.params);
+            }
+            else if (msg.method === 'pure/openFile') {
+                handleOpenFile(msg.params);
+            }
+            else if (msg.method === 'window/showMessage') {
+                if (msg.params && msg.params.message) {
+                    alert(msg.params.message);
+                }
+            }
+        }
+
+        function handleOpenFile(params) {
+            if (!params || !params.sourceId) return;
+
+            if (pendingJumpLine !== null) {
+                params.line = pendingJumpLine;
+                params.column = pendingJumpCol;
+                pendingJumpLine = null;
+                pendingJumpCol = null;
+            }
+
+            const uriStr = 'file:///' + params.sourceId.replace(/\\/g, '/');
+            const uri = monaco.Uri.parse(uriStr);
+            let model = monaco.editor.getModel(uri);
+            const content = params.content || '';
+
+            if (!model) {
+                model = monaco.editor.createModel(content, 'pure', uri);
+            } else if (model.getValue() !== content) {
+                model.setValue(content);
+            }
+
+            if (!openFiles.find(f => f.sourceId === params.sourceId)) {
+                openFiles.push({ sourceId: params.sourceId });
+            }
+
+            switchToFile(params.sourceId);
+
+            // Sync the server if this file is the execution target
+            if (uriStr === DOC_URI && initialized && ws && ws.readyState === WebSocket.OPEN) {
+                documentVersion++;
+                sendNotification('textDocument/didChange', {
+                    textDocument: { uri: DOC_URI, version: documentVersion },
+                    contentChanges: [{ text: content }]
+                });
+            }
+
+            if (params.line && editor) {
+                setTimeout(() => {
+                    const line = params.line;
+                    const column = params.column || 1;
+                    editor.setPosition({ lineNumber: line, column: column });
+                    editor.revealLineInCenter(line);
+                    editor.focus();
+                }, 10);
+            }
+        }
+
+        function switchToFile(sourceId) {
+            activeFile = sourceId;
+
+            const uriStr = 'file:///' + sourceId.replace(/\\/g, '/');
+            const uri = monaco.Uri.parse(uriStr);
+            const model = monaco.editor.getModel(uri);
+
+            if (model && editor) {
+                editor.setModel(model);
+                editor.updateOptions({ readOnly: false });
+            }
+
+            renderFileTabs();
+        }
+
+        function closeFile(e, sourceId) {
+            if (e) e.stopPropagation();
+            openFiles = openFiles.filter(f => f.sourceId !== sourceId);
+            
+            if (activeFile === sourceId) {
+                if (openFiles.length > 0) {
+                    switchToFile(openFiles[0].sourceId);
+                } else {
+                    activeFile = null;
+                    renderFileTabs();
+                }
+            } else {
+                renderFileTabs();
+            }
+        }
+
+        function renderFileTabs() {
+            const container = document.getElementById('fileTabsContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            openFiles.forEach(f => {
+                const tab = document.createElement('div');
+                tab.className = 'file-tab' + (f.sourceId === activeFile ? ' active' : '');
+                tab.onclick = () => switchToFile(f.sourceId);
+                
+                const icon = document.createElement('span');
+                icon.className = 'file-icon';
+                icon.textContent = '📄';
+                
+                const name = document.createElement('span');
+                name.textContent = f.sourceId.split('/').pop();
+                name.title = f.sourceId;
+
+                tab.appendChild(icon);
+                tab.appendChild(name);
+
+                const closeBtn = document.createElement('span');
+                closeBtn.className = 'close-tab';
+                closeBtn.innerHTML = '&times;';
+                closeBtn.onclick = (e) => closeFile(e, f.sourceId);
+                tab.appendChild(closeBtn);
+
+                container.appendChild(tab);
+            });
+        }
+
+        // =================================================================
+        // Tree Data
+        // =================================================================
+        function requestTrees() {
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/packageTree', arguments: []
+            }).catch(e => console.error('packageTree request failed:', e));
+
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/fileTree', arguments: []
+            }).catch(e => console.error('fileTree request failed:', e));
+        }
+
+        function handleTreeData(params) {
+            if (params && params.treeId && params.json) {
+                populateTree(params.treeId, params.json);
+            }
+        }
+
+        // =================================================================
+        // Diagnostics → Monaco markers
+        // =================================================================
+        function handleDiagnostics(params) {
+            if (!editor) return;
+            const model = editor.getModel();
+            if (!model) return;
+
+            const markers = (params.diagnostics || []).map(d => ({
+                severity: d.severity === 1
+                    ? monaco.MarkerSeverity.Error
+                    : d.severity === 2
+                        ? monaco.MarkerSeverity.Warning
+                        : monaco.MarkerSeverity.Info,
+                startLineNumber: d.range.start.line + 1,
+                startColumn: d.range.start.character + 1,
+                endLineNumber: d.range.end.line + 1,
+                endColumn: d.range.end.character + 1,
+                message: d.message,
+                source: d.source || 'pure',
+            }));
+
+            monaco.editor.setModelMarkers(model, 'pure', markers);
+        }
+
+        // =================================================================
+        // Execute
+        // =================================================================
+        function saveAllOpenFiles() {
+            if (!initialized || !ws || ws.readyState !== WebSocket.OPEN) return Promise.resolve();
+
+            const savePromises = openFiles.map(f => {
+                const uriStr = 'file:///' + f.sourceId.replace(/\\/g, '/');
+                const uri = monaco.Uri.parse(uriStr);
+                const model = monaco.editor.getModel(uri);
+                if (model) {
+                    return sendRequest('workspace/executeCommand', {
+                        command: 'pure/saveFile',
+                        arguments: [f.sourceId, model.getValue(), true]
+                    }).catch(e => console.error("Error saving " + f.sourceId, e));
+                }
+                return Promise.resolve();
+            });
+            return Promise.all(savePromises);
+        }
+
+        function executeCode() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showResult('Not connected to LSP server', true);
+                return;
+            }
+
+            // Show spinner
+            const content = document.getElementById('resultContent');
+            content.className = 'result-content';
+            content.innerHTML = '<span class="spinner"></span> Saving and executing...';
+
+            const badge = document.getElementById('resultBadge');
+            badge.style.display = 'none';
+
+            saveAllOpenFiles().then(() => {
+                sendRequest('workspace/executeCommand', {
+                    command: 'pure/execute',
+                    arguments: []
+                }).then(() => {
+                    // Result comes via pure/executeResult notification
+                }).catch(err => {
+                    showResult('Command failed: ' + (err.message || JSON.stringify(err)), true);
+                });
+            }).catch(e => {
+                showResult('Save failed: ' + e, true);
+            });
+        }
+
+        function handleExecuteResult(params) {
+            showResult(params.result, params.isError || params.error);
+        }
+
+        let pendingJumpLine = null;
+        let pendingJumpCol = null;
+
+        window.openFileAndJump = function(sourceId, line, col) {
+            pendingJumpLine = parseInt(line) || 1;
+            pendingJumpCol = parseInt(col) || 1;
+            sendRequest('workspace/executeCommand', {
+                command: 'pure/openFile',
+                arguments: [sourceId]
+            });
+        };
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function showResult(text, isError) {
+            const content = document.getElementById('resultContent');
+            const badge = document.getElementById('resultBadge');
+
+            let safeText = escapeHtml(text || '');
+            
+            // Invert the stack trace if present
+            const stackParts = safeText.split("Pure stack trace:\n");
+            if (stackParts.length > 1) {
+                let lines = stackParts[1].split('\n');
+                let stackLines = [];
+                let restLines = [];
+                let inStack = true;
+                for (let line of lines) {
+                    if (inStack && line.trim().startsWith('at ')) {
+                        stackLines.push(line);
+                    } else if (inStack && line.trim() === '') {
+                        // ignore empty lines in stack region
+                    } else {
+                        inStack = false;
+                        restLines.push(line);
+                    }
+                }
+                stackLines.reverse();
+                safeText = stackParts[0] + "Pure stack trace:\n" + stackLines.join('\n') + (restLines.length > 0 ? '\n' + restLines.join('\n') : '');
+            }
+
+            // Create links only for known files
+            safeText = safeText.replace(/at (.*?) \(([^:]+):(\d+)(c(\d+))?\)/g, (match, funcName, sourceId, line, cGroup, col) => {
+                if (!knownFiles.has(sourceId)) {
+                    return match;
+                }
+                const c = col || 1;
+                return `at ${funcName} (<a href="#" onclick="openFileAndJump('${sourceId}', ${line}, ${c}); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">${sourceId}:${line}${cGroup || ''}</a>)`;
+            });
+
+            content.innerHTML = safeText;
+            content.className = 'result-content ' + (isError ? 'error' : 'success');
+
+            badge.style.display = 'inline';
+            badge.textContent = isError ? 'ERROR' : 'SUCCESS';
+            badge.className = 'result-badge ' + (isError ? 'error' : 'success');
+        }
+
+        // =================================================================
+        // Status
+        // =================================================================
+        function setStatus(state, text) {
+            document.getElementById('statusDot').className = 'status-dot ' + state;
+            document.getElementById('statusText').textContent = text;
+        }
+
+        // =================================================================
+        // Diagram DSL Parser (no regex — uses indexOf + character scanning)
+        // =================================================================
+
+        function isWordChar(ch) {
+            return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+                   (ch >= '0' && ch <= '9') || ch === '_';
+        }
+
+        function isWhitespace(ch) {
+            return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r';
+        }
+
+        function isNumberChar(ch) {
+            return (ch >= '0' && ch <= '9') || ch === '.' || ch === '+' || ch === '-';
+        }
+
+        function skipWs(str, pos) {
+            while (pos < str.length && isWhitespace(str[pos])) pos++;
+            return pos;
+        }
+
+        function scanWord(str, pos) {
+            let end = pos;
+            while (end < str.length && (isWordChar(str[end]) || str[end] === ':')) end++;
+            return { value: str.substring(pos, end), end };
+        }
+
+        function scanNumber(str, pos) {
+            let end = pos;
+            while (end < str.length && isNumberChar(str[end])) end++;
+            return { value: str.substring(pos, end), end };
+        }
+
+        function findAllOccurrences(text, keyword) {
+            const indices = [];
+            let pos = 0;
+            while (true) {
+                const idx = text.indexOf(keyword, pos);
+                if (idx === -1) break;
+                indices.push(idx);
+                pos = idx + keyword.length;
+            }
+            return indices;
+        }
+
+        function parseDiagramSource(text) {
+            const diagrams = [];
+            // Find ###Diagram sections using indexOf
+            const sectionTag = '###Diagram';
+            const sectionIndices = findAllOccurrences(text, sectionTag);
+            if (sectionIndices.length === 0) return diagrams;
+
+            for (let si = 0; si < sectionIndices.length; si++) {
+                const sectionHeaderStart = sectionIndices[si];
+                const sectionContentStart = sectionHeaderStart + sectionTag.length;
+                // Section extends to the next ### section or end of text
+                let sectionEnd = text.length;
+                const nextSection = text.indexOf('###', sectionContentStart);
+                if (nextSection !== -1) sectionEnd = nextSection;
+
+                const sectionText = text.substring(sectionContentStart, sectionEnd);
+
+                // Find Diagram blocks using indexOf
+                let searchPos = 0;
+                while (true) {
+                    const dIdx = sectionText.indexOf('Diagram', searchPos);
+                    if (dIdx === -1) break;
+                    // Make sure 'Diagram' is preceded by whitespace/start and followed by whitespace
+                    if (dIdx > 0 && isWordChar(sectionText[dIdx - 1])) {
+                        searchPos = dIdx + 7;
+                        continue;
+                    }
+                    let pos = skipWs(sectionText, dIdx + 7);
+                    if (pos >= sectionText.length || !isWordChar(sectionText[pos])) {
+                        searchPos = pos;
+                        continue;
+                    }
+                    // Scan diagram name (qualified name with ::)
+                    const nameResult = scanWord(sectionText, pos);
+                    const diagramName = nameResult.value;
+                    pos = skipWs(sectionText, nameResult.end);
+
+                    // Optionally skip (width=..., height=...) block
+                    if (pos < sectionText.length && sectionText[pos] === '(') {
+                        // Find matching close paren
+                        let depth = 1;
+                        let pp = pos + 1;
+                        while (pp < sectionText.length && depth > 0) {
+                            if (sectionText[pp] === '(') depth++;
+                            else if (sectionText[pp] === ')') depth--;
+                            pp++;
+                        }
+                        pos = skipWs(sectionText, pp);
+                    }
+
+                    // Expect '{'
+                    if (pos >= sectionText.length || sectionText[pos] !== '{') {
+                        searchPos = pos;
+                        continue;
+                    }
+
+                    const bodyStart = pos + 1;
+                    const bodyEnd = findMatchingBrace(sectionText, pos);
+                    if (bodyEnd === -1) { searchPos = bodyStart; continue; }
+                    const body = sectionText.substring(bodyStart, bodyEnd);
+
+                    // Track section boundaries in original text for serializer
+                    const diagramBlockStart = sectionContentStart + dIdx;
+                    const diagramBlockEnd = sectionContentStart + bodyEnd + 1;
+
+                    const diagram = {
+                        name: diagramName,
+                        typeViews: [],
+                        generalizationViews: [],
+                        associationViews: [],
+                        propertyViews: [],
+                        _sectionStart: sectionHeaderStart,
+                        _diagramStart: diagramBlockStart,
+                        _diagramEnd: diagramBlockEnd,
+                    };
+
+                    // Parse TypeViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'TypeView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.typeViews.push({
+                            id,
+                            type: props['type'] || '',
+                            position: parsePoint(props['position']),
+                            width: parseFloat(props['width']) || 150,
+                            height: parseFloat(props['height']) || 60,
+                            color: props['color'] || '#FFFFCC',
+                            stereotypesVisible: props['stereotypesVisible'] === 'true',
+                            attributesVisible: props['attributesVisible'] === 'true',
+                        });
+                    }
+
+                    // Parse GeneralizationViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'GeneralizationView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.generalizationViews.push({
+                            id,
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                        });
+                    }
+
+                    // Parse AssociationViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'AssociationView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.associationViews.push({
+                            id,
+                            association: props['association'] || '',
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                            label: props['label'] || '',
+                        });
+                    }
+
+                    // Parse PropertyViews
+                    for (const { id, propsStr } of findViewBlocks(body, 'PropertyView')) {
+                        const props = parseViewProperties(propsStr);
+                        diagram.propertyViews.push({
+                            id,
+                            property: props['property'] || '',
+                            source: props['source'] || '',
+                            target: props['target'] || '',
+                            points: parsePoints(props['points']),
+                            color: props['color'] || '#000000',
+                            lineWidth: parseFloat(props['lineWidth']) || 1,
+                            label: props['label'] || '',
+                        });
+                    }
+
+                    diagrams.push(diagram);
+                    searchPos = bodyEnd + 1;
+                }
+            }
+            return diagrams;
+        }
+
+        function findMatchingBrace(text, openIndex) {
+            let depth = 0;
+            for (let i = openIndex; i < text.length; i++) {
+                if (text[i] === '{') depth++;
+                else if (text[i] === '}') { depth--; if (depth === 0) return i; }
+            }
+            return -1;
+        }
+
+        // Find all view blocks of a given type using indexOf + paren-matching
+        function findViewBlocks(body, viewType) {
+            const results = [];
+            let searchPos = 0;
+            while (true) {
+                const idx = body.indexOf(viewType, searchPos);
+                if (idx === -1) break;
+                // Ensure not part of a longer word
+                if (idx > 0 && isWordChar(body[idx - 1])) {
+                    searchPos = idx + viewType.length;
+                    continue;
+                }
+                let pos = idx + viewType.length;
+                // Skip whitespace
+                pos = skipWs(body, pos);
+                // Scan identifier (id)
+                if (pos >= body.length || !isWordChar(body[pos])) {
+                    searchPos = pos;
+                    continue;
+                }
+                const idResult = scanWord(body, pos);
+                const id = idResult.value;
+                pos = skipWs(body, idResult.end);
+                // Expect '('
+                if (pos >= body.length || body[pos] !== '(') {
+                    searchPos = pos;
+                    continue;
+                }
+                const openIdx = pos;
+                let depth = 1;
+                let i = openIdx + 1;
+                while (i < body.length && depth > 0) {
+                    if (body[i] === '(' || body[i] === '[') depth++;
+                    else if (body[i] === ')' || body[i] === ']') depth--;
+                    i++;
+                }
+                const propsStr = body.substring(openIdx + 1, i - 1);
+                results.push({ id, propsStr });
+                searchPos = i;
+            }
+            return results;
+        }
+
+        function parseViewProperties(propsStr) {
+            const result = {};
+            // Scan for key=value pairs using character scanning
+            const keys = [];
+            let pos = 0;
+            while (pos < propsStr.length) {
+                pos = skipWs(propsStr, pos);
+                if (pos >= propsStr.length) break;
+                // Try to scan an identifier
+                if (!isWordChar(propsStr[pos])) { pos++; continue; }
+                const wordStart = pos;
+                const wordResult = scanWord(propsStr, pos);
+                // Skip past :: in qualified names that are values, not keys
+                pos = skipWs(propsStr, wordResult.end);
+                if (pos < propsStr.length && propsStr[pos] === '=') {
+                    keys.push({ key: wordResult.value, valueStart: pos + 1 });
+                    pos = pos + 1;
+                } else {
+                    pos = wordResult.end + 1;
+                }
+            }
+            for (let i = 0; i < keys.length; i++) {
+                const start = keys[i].valueStart;
+                const end = i < keys.length - 1
+                    ? findCommaBeforeKey(propsStr, keys[i + 1].key, start)
+                    : propsStr.length;
+                let value = propsStr.substring(start, end).trim();
+                if (value.endsWith(',')) value = value.slice(0, -1).trim();
+                result[keys[i].key] = value;
+            }
+            return result;
+        }
+
+        function findCommaBeforeKey(str, key, afterPos) {
+            const keyIdx = str.indexOf(key + '=', afterPos);
+            if (keyIdx === -1) {
+                // try with space before =
+                const keyIdx2 = str.indexOf(key + ' =', afterPos);
+                if (keyIdx2 === -1) return str.length;
+                for (let i = keyIdx2 - 1; i >= afterPos; i--) {
+                    if (str[i] === ',') return i;
+                }
+                return keyIdx2;
+            }
+            for (let i = keyIdx - 1; i >= afterPos; i--) {
+                if (str[i] === ',') return i;
+            }
+            return keyIdx;
+        }
+
+        function parsePoint(str) {
+            if (!str) return { x: 0, y: 0 };
+            const open = str.indexOf('(');
+            if (open === -1) return { x: 0, y: 0 };
+            const comma = str.indexOf(',', open + 1);
+            if (comma === -1) return { x: 0, y: 0 };
+            const close = str.indexOf(')', comma + 1);
+            if (close === -1) return { x: 0, y: 0 };
+            const x = parseFloat(str.substring(open + 1, comma).trim());
+            const y = parseFloat(str.substring(comma + 1, close).trim());
+            return { x: isNaN(x) ? 0 : x, y: isNaN(y) ? 0 : y };
+        }
+
+        function parsePoints(str) {
+            if (!str) return [];
+            const points = [];
+            let pos = 0;
+            while (true) {
+                const open = str.indexOf('(', pos);
+                if (open === -1) break;
+                const comma = str.indexOf(',', open + 1);
+                if (comma === -1) break;
+                const close = str.indexOf(')', comma + 1);
+                if (close === -1) break;
+                const x = parseFloat(str.substring(open + 1, comma).trim());
+                const y = parseFloat(str.substring(comma + 1, close).trim());
+                if (!isNaN(x) && !isNaN(y)) {
+                    points.push({ x, y });
+                }
+                pos = close + 1;
+            }
+            return points;
+        }
+
+        // =================================================================
+        // Diagram DSL Serializer
+        // =================================================================
+
+        function serializePoint(p) {
+            return '(' + p.x.toFixed(1) + ', ' + p.y.toFixed(1) + ')';
+        }
+
+        function serializePoints(pts) {
+            return '[' + pts.map(serializePoint).join(', ') + ']';
+        }
+
+        function serializeViewProps(props) {
+            return Object.entries(props)
+                .map(([k, v]) => '      ' + k + '=' + v)
+                .join(',\n');
+        }
+
+        function serializeDiagram(diagram) {
+            const lines = [];
+            lines.push('Diagram ' + diagram.name);
+            lines.push('{');
+
+            for (const tv of diagram.typeViews) {
+                lines.push('   TypeView ' + tv.id);
+                lines.push('   (');
+                const props = [
+                    '      type=' + tv.type,
+                    '      stereotypesVisible=' + tv.stereotypesVisible,
+                    '      attributesVisible=' + tv.attributesVisible,
+                    '      attributeStereotype=none',
+                    '      attributeTypes=none',
+                    '      color=' + tv.color,
+                    '      lineWidth=-1.0',
+                    '      position=' + serializePoint(tv.position),
+                    '      width=' + tv.width.toFixed(1),
+                    '      height=' + tv.height.toFixed(1),
+                ];
+                lines.push(props.join(',\n'));
+                lines.push('   )');
+            }
+
+            function serializeRelationshipView(viewTypeName, rv, extraProps) {
+                lines.push('   ' + viewTypeName + ' ' + rv.id);
+                lines.push('   (');
+                const tvLookup = {};
+                if (diagram) diagram.typeViews.forEach(t => { tvLookup[t.id] = t; });
+                rebuildViewPoints(rv, tvLookup);
+                const props = [
+                    ...(extraProps || []),
+                    '      source=' + rv.source,
+                    '      target=' + rv.target,
+                    '      points=' + serializePoints(rv.points || []),
+                ];
+                if (rv.color && rv.color !== '#000000') props.push('      color=' + rv.color);
+                if (rv.lineWidth && rv.lineWidth !== 1) props.push('      lineWidth=' + rv.lineWidth.toFixed(1));
+                if (rv.label) props.push('      label=' + rv.label);
+                lines.push(props.join(',\n'));
+                lines.push('   )');
+            }
+
+            for (const gv of diagram.generalizationViews) {
+                serializeRelationshipView('GeneralizationView', gv);
+            }
+            for (const av of diagram.associationViews) {
+                serializeRelationshipView('AssociationView', av, [
+                    '      association=' + av.association,
+                ]);
+            }
+            for (const pv of diagram.propertyViews) {
+                serializeRelationshipView('PropertyView', pv, [
+                    '      property=' + pv.property,
+                ]);
+            }
+
+            lines.push('}');
+            return lines.join('\n');
+        }
+
+        // Replace the diagram block in the editor source with re-serialized text
+        function updateDiagramInSource() {
+            if (!diagramData || !editor) return;
+            const source = editor.getValue();
+            const serialized = serializeDiagram(diagramData);
+            const newSource = source.substring(0, diagramData._diagramStart)
+                + serialized
+                + source.substring(diagramData._diagramEnd);
+            // Update boundary for next edit
+            const lengthDelta = serialized.length - (diagramData._diagramEnd - diagramData._diagramStart);
+            diagramData._diagramEnd = diagramData._diagramStart + serialized.length;
+            editor.setValue(newSource);
+        }
+
+        // =================================================================
+        // Diagram Renderer (Canvas 2D, inspired by legend-studio)
+        // =================================================================
+        let diagramData = null;
+        let diagramZoom = 1.0;
+        let diagramOffsetX = 0;
+        let diagramOffsetY = 0;
+        let diagramDragging = null; // { viewIndex, startX, startY, origX, origY }
+        let diagramPanning = null;  // { startX, startY, origOffX, origOffY }
+        let diagramLineDragging = null; // { viewType, viewIndex, pointIndex, isNew }
+        let selectedRelationship = null; // { viewType, viewIndex }
+        let diagramAnchorDragging = null; // { viewType, viewIndex, anchorEnd: 'source'|'target' }
+
+        // Colors (dark theme matching legend-studio)
+        const DG = {
+            bg: '#0d1117',
+            classViewFill: '#1c2333',
+            classViewHeaderBg: '#252d3a',
+            classViewStroke: '#58a6ff',
+            classViewHeaderText: '#e6edf3',
+            classViewPropertyText: '#8b949e',
+            lineColor: '#8b949e',
+            genTriangleFill: '#0d1117',
+            genTriangleStroke: '#8b949e',
+            diamondFill: '#0d1117',
+            diamondStroke: '#8b949e',
+            selectedStroke: '#58a6ff',
+            fontFamily: "'Segoe UI', Helvetica, Arial, sans-serif",
+            fontSize: 12,
+            lineHeight: 16,
+            headerPadding: 8,
+            propPaddingX: 10,
+            propPaddingY: 4,
+            triangleSize: 10,
+            diamondSize: 8,
+        };
+
+        let diagramClassDefs = {}; // { 'test::A': { name, properties: [{name, type, multiplicity}] } }
+
+        function parseClassDefinitions(text) {
+            const classes = {};
+            // Find Class blocks using indexOf
+            let searchPos = 0;
+            while (true) {
+                const classIdx = text.indexOf('Class ', searchPos);
+                if (classIdx === -1) break;
+                // Ensure word boundary: not preceded by a word char
+                if (classIdx > 0 && isWordChar(text[classIdx - 1])) {
+                    searchPos = classIdx + 6;
+                    continue;
+                }
+                let pos = skipWs(text, classIdx + 6);
+                if (pos >= text.length || !isWordChar(text[pos])) {
+                    searchPos = pos;
+                    continue;
+                }
+                // Scan qualified name
+                const nameResult = scanWord(text, pos);
+                const qualifiedName = nameResult.value;
+                pos = skipWs(text, nameResult.end);
+                // Optionally skip 'extends QualifiedName'
+                if (pos + 7 < text.length && text.substring(pos, pos + 7) === 'extends') {
+                    pos = skipWs(text, pos + 7);
+                    const extResult = scanWord(text, pos);
+                    pos = skipWs(text, extResult.end);
+                }
+                // Expect '{'
+                if (pos >= text.length || text[pos] !== '{') {
+                    searchPos = pos;
+                    continue;
+                }
+                const bodyStart = pos + 1;
+                const bodyEnd = findMatchingBrace(text, pos);
+                if (bodyEnd === -1) { searchPos = bodyStart; continue; }
+                const body = text.substring(bodyStart, bodyEnd);
+                const properties = parseClassProperties(body);
+                classes[qualifiedName] = { name: qualifiedName.split('::').pop(), properties };
+                searchPos = bodyEnd + 1;
+            }
+            return classes;
+        }
+
+        // Parse property definitions: name : Type[multiplicity]
+        function parseClassProperties(body) {
+            const properties = [];
+            let pos = 0;
+            while (pos < body.length) {
+                pos = skipWs(body, pos);
+                if (pos >= body.length) break;
+                if (!isWordChar(body[pos])) { pos++; continue; }
+                // Scan potential property name
+                const nameResult = scanWord(body, pos);
+                const name = nameResult.value;
+                pos = skipWs(body, nameResult.end);
+                // Expect ':'
+                if (pos >= body.length || body[pos] !== ':') {
+                    // Not a property line, skip to next line
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                pos = skipWs(body, pos + 1); // skip ':'
+                // Scan type
+                if (pos >= body.length || !isWordChar(body[pos])) {
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                const typeResult = scanWord(body, pos);
+                const type = typeResult.value;
+                pos = skipWs(body, typeResult.end);
+                // Expect '['
+                if (pos >= body.length || body[pos] !== '[') {
+                    const nl = body.indexOf('\n', pos);
+                    pos = nl === -1 ? body.length : nl + 1;
+                    continue;
+                }
+                const bracketClose = body.indexOf(']', pos + 1);
+                if (bracketClose === -1) { pos++; continue; }
+                const multiplicity = body.substring(pos + 1, bracketClose).trim();
+                properties.push({ name, type, multiplicity });
+                pos = bracketClose + 1;
+            }
+            return properties;
+        }
+
+        function updateDiagram() {
+            if (currentEditorTab !== 'diagram') return;
+            const text = editor ? editor.getValue() : '';
+            const diagrams = parseDiagramSource(text);
+            diagramData = diagrams.length > 0 ? diagrams[0] : null;
+            diagramClassDefs = parseClassDefinitions(text);
+            // Compute anchor offsets from stored points (like legend-studio's _offsetX/_offsetY)
+            if (diagramData) initRelationshipOffsets(diagramData);
+
+            const canvas = document.getElementById('diagramCanvas');
+            const container = document.getElementById('diagramPanel');
+            if (!canvas || !container) return;
+
+            // Resize canvas to container
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+
+            drawDiagram();
+        }
+
+        function drawDiagram() {
+            const canvas = document.getElementById('diagramCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const w = canvas.width / dpr;
+            const h = canvas.height / dpr;
+
+            // Clear
+            ctx.fillStyle = DG.bg;
+            ctx.fillRect(0, 0, w, h);
+
+            if (!diagramData || diagramData.typeViews.length === 0) {
+                ctx.fillStyle = '#8b949e';
+                ctx.font = `italic 14px ${DG.fontFamily}`;
+                ctx.textAlign = 'center';
+                ctx.fillText('No diagram found. Add a ###Diagram section to your Pure source.', w / 2, h / 2);
+                ctx.textAlign = 'left';
+                return;
+            }
+
+            ctx.save();
+            ctx.translate(diagramOffsetX, diagramOffsetY);
+            ctx.scale(diagramZoom, diagramZoom);
+
+            // Build typeView lookup
+            const tvLookup = {};
+            diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+
+            // Draw relationship lines first (behind class boxes)
+            // Generalization views
+            diagramData.generalizationViews.forEach(gv => {
+                drawRelationshipLine(ctx, gv, tvLookup, 'generalization');
+            });
+            // Association views
+            diagramData.associationViews.forEach(av => {
+                drawRelationshipLine(ctx, av, tvLookup, 'association');
+            });
+            // Property views
+            diagramData.propertyViews.forEach(pv => {
+                drawRelationshipLine(ctx, pv, tvLookup, 'property');
+            });
+
+            // Draw class views
+            diagramData.typeViews.forEach(tv => {
+                drawClassView(ctx, tv);
+            });
+
+            ctx.restore();
+
+            // Update zoom label
+            const lbl = document.getElementById('diagramZoomLabel');
+            if (lbl) lbl.textContent = Math.round(diagramZoom * 100) + '%';
+        }
+
+        function drawClassView(ctx, tv) {
+            const x = tv.position.x;
+            const y = tv.position.y;
+            const w = tv.width;
+            const h = tv.height;
+            const r = 4; // corner radius
+
+            // Parse color from DSL (e.g., #FFFFCC)
+            let fillColor = DG.classViewFill;
+            if (tv.color && tv.color.startsWith('#')) {
+                // Blend the DSL color with our dark theme (darken it)
+                fillColor = blendDiagramColor(tv.color);
+            }
+
+            // Box shadow (subtle glow)
+            ctx.save();
+            ctx.shadowColor = 'rgba(88, 166, 255, 0.1)';
+            ctx.shadowBlur = 8;
+
+            // Rounded rect
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            ctx.restore();
+
+            // Border
+            ctx.strokeStyle = DG.classViewStroke;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Header background
+            const headerH = DG.lineHeight + DG.headerPadding * 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + headerH);
+            ctx.lineTo(x, y + headerH);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fillStyle = DG.classViewHeaderBg;
+            ctx.fill();
+            ctx.restore();
+
+            // Header separator
+            ctx.beginPath();
+            ctx.moveTo(x, y + headerH);
+            ctx.lineTo(x + w, y + headerH);
+            ctx.strokeStyle = DG.classViewStroke;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+
+            // Class name (short name from qualified path)
+            const className = tv.type.split('::').pop() || tv.type;
+            ctx.font = `bold ${DG.fontSize}px ${DG.fontFamily}`;
+            ctx.fillStyle = DG.classViewHeaderText;
+            ctx.textBaseline = 'middle';
+            const textW = ctx.measureText(className).width;
+            ctx.fillText(className, x + (w - textW) / 2, y + headerH / 2);
+
+            // Draw properties (if class definition is available)
+            const classDef = diagramClassDefs[tv.type];
+            if (classDef && classDef.properties.length > 0) {
+                const primitiveTypes = new Set([
+                    'String', 'Integer', 'Float', 'Boolean', 'Date',
+                    'StrictDate', 'DateTime', 'Number', 'Decimal', 'Binary',
+                ]);
+                // Collect property names that have a PropertyView (rendered as lines)
+                const propertyViewNames = new Set();
+                if (diagramData) {
+                    diagramData.propertyViews.forEach(pv => {
+                        // property= is typically 'ClassName.propName' or 'package::ClassName.propName'
+                        const dotIdx = (pv.property || '').lastIndexOf('.');
+                        if (dotIdx !== -1) propertyViewNames.add(pv.property.substring(dotIdx + 1));
+                    });
+                    diagramData.associationViews.forEach(av => {
+                        // association views might reference properties too
+                        const dotIdx = (av.association || '').lastIndexOf('.');
+                        if (dotIdx !== -1) propertyViewNames.add(av.association.substring(dotIdx + 1));
+                    });
+                }
+
+                ctx.textBaseline = 'top';
+                ctx.font = `${DG.fontSize - 1}px ${DG.fontFamily}`;
+                let propY = y + headerH + DG.propPaddingY;
+                for (const prop of classDef.properties) {
+                    const typeName = prop.type.split('::').pop();
+                    const isPrimitive = primitiveTypes.has(typeName);
+                    // Show property inside box if primitive, or if complex but no PropertyView for it
+                    if (isPrimitive || !propertyViewNames.has(prop.name)) {
+                        const propText = `${prop.name} : ${typeName}[${prop.multiplicity}]`;
+                        ctx.fillStyle = isPrimitive ? '#79c0ff' : DG.classViewPropertyText;
+                        ctx.fillText(propText, x + DG.propPaddingX, propY);
+                        propY += DG.lineHeight;
+                    }
+                }
+            }
+
+            ctx.textBaseline = 'top';
+        }
+
+        function blendDiagramColor(hex) {
+            // Convert #RRGGBB to darkened version for dark theme
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            // Dark blend: mix with dark bg
+            const dr = Math.round(r * 0.15 + 28);
+            const dg = Math.round(g * 0.15 + 35);
+            const db = Math.round(b * 0.15 + 51);
+            return `rgb(${dr}, ${dg}, ${db})`;
+        }
+
+        // Point-to-line-segment distance
+        function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+            let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+        }
+
+        // Find which relationship line segment is near a point
+        function findRelationshipNearPoint(mx, my, threshold) {
+            if (!diagramData) return null;
+            const allViews = [
+                { type: 'generalization', views: diagramData.generalizationViews },
+                { type: 'association', views: diagramData.associationViews },
+                { type: 'property', views: diagramData.propertyViews },
+            ];
+            const tvLookup = {};
+            diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+
+            for (const { type, views } of allViews) {
+                for (let vi = 0; vi < views.length; vi++) {
+                    const view = views[vi];
+                    const fullPath = buildViewFullPath(view, tvLookup);
+                    if (fullPath.length < 2) continue;
+                    const sourceTV = tvLookup[view.source];
+                    const targetTV = tvLookup[view.target];
+
+                    // Check edge anchors first (source and target intersection points)
+                    if (sourceTV && targetTV) {
+                        const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+                        const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+                        const sourceEdge = lineBoxIntersection(sourceAnchor, fullPath[1], sourceTV);
+                        const targetEdge = lineBoxIntersection(targetAnchor, fullPath[fullPath.length - 2], targetTV);
+                        if (Math.hypot(mx - sourceEdge.x, my - sourceEdge.y) < threshold) {
+                            return { viewType: type, viewIndex: vi, isAnchor: true, anchorEnd: 'source' };
+                        }
+                        if (Math.hypot(mx - targetEdge.x, my - targetEdge.y) < threshold) {
+                            return { viewType: type, viewIndex: vi, isAnchor: true, anchorEnd: 'target' };
+                        }
+                    }
+
+                    // Check existing waypoints (for dragging existing points)
+                    const path = view.path || [];
+                    for (let pi = 0; pi < path.length; pi++) {
+                        const d = Math.hypot(mx - path[pi].x, my - path[pi].y);
+                        if (d < threshold) {
+                            return { viewType: type, viewIndex: vi, pointIndex: pi, isExisting: true };
+                        }
+                    }
+                    // Check line segments
+                    for (let i = 0; i < fullPath.length - 1; i++) {
+                        const d = pointToSegmentDist(mx, my, fullPath[i].x, fullPath[i].y, fullPath[i+1].x, fullPath[i+1].y);
+                        if (d < threshold) {
+                            return { viewType: type, viewIndex: vi, segmentIndex: i };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Initialize anchor offsets from stored points (like legend-studio's _offsetX/_offsetY)
+        function initRelationshipOffsets(diagram) {
+            const tvLookup = {};
+            diagram.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+            const allViews = [
+                ...diagram.generalizationViews,
+                ...diagram.associationViews,
+                ...diagram.propertyViews,
+            ];
+            for (const view of allViews) {
+                const sourceTV = tvLookup[view.source];
+                const targetTV = tvLookup[view.target];
+                if (!sourceTV || !targetTV || !view.points || view.points.length < 2) {
+                    view.sourceOffset = { x: 0, y: 0 };
+                    view.targetOffset = { x: 0, y: 0 };
+                    // Store only intermediate waypoints in view.path (like legend-studio)
+                    view.path = (view.points && view.points.length > 2)
+                        ? view.points.slice(1, -1) : [];
+                    continue;
+                }
+                const sc = { x: sourceTV.position.x + sourceTV.width / 2, y: sourceTV.position.y + sourceTV.height / 2 };
+                const tc = { x: targetTV.position.x + targetTV.width / 2, y: targetTV.position.y + targetTV.height / 2 };
+                view.sourceOffset = { x: view.points[0].x - sc.x, y: view.points[0].y - sc.y };
+                view.targetOffset = { x: view.points[view.points.length - 1].x - tc.x, y: view.points[view.points.length - 1].y - tc.y };
+                // Store only intermediate waypoints (like legend-studio's path)
+                view.path = view.points.length > 2 ? view.points.slice(1, -1) : [];
+            }
+        }
+
+        // Compute anchor endpoint (like legend-studio's computeEdgeEndpoint)
+        function computeEdgeEndpoint(view, tvLookup, isSource) {
+            const tvId = isSource ? view.source : view.target;
+            const tv = tvLookup[tvId];
+            if (!tv) return { x: 0, y: 0 };
+            const center = {
+                x: tv.position.x + tv.width / 2,
+                y: tv.position.y + tv.height / 2,
+            };
+            const offset = isSource ? view.sourceOffset : view.targetOffset;
+            if (!offset) return center;
+            const anchor = { x: center.x + offset.x, y: center.y + offset.y };
+            // If anchor is inside box, use it; otherwise reset to center
+            if (pointInsideBox(anchor, tv)) {
+                return anchor;
+            }
+            // Reset offset
+            if (isSource) { view.sourceOffset = { x: 0, y: 0 }; }
+            else { view.targetOffset = { x: 0, y: 0 }; }
+            return center;
+        }
+
+        // Build the full path for a view (like legend-studio's buildFullPath)
+        function buildViewFullPath(view, tvLookup) {
+            const sourceTV = tvLookup[view.source];
+            const targetTV = tvLookup[view.target];
+            if (!sourceTV || !targetTV) return [];
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+            // Filter out intermediate waypoints inside boxes
+            const path = (view.path || []).filter(p =>
+                !pointInsideBox(p, sourceTV) && !pointInsideBox(p, targetTV)
+            );
+            return [sourceAnchor, ...path, targetAnchor];
+        }
+
+        function drawRelationshipLine(ctx, view, tvLookup, type) {
+            const sourceTV = tvLookup[view.source];
+            const targetTV = tvLookup[view.target];
+            if (!sourceTV || !targetTV) return;
+
+            // Compute anchors from center + offset (like legend-studio)
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+
+            // Filter intermediates (like legend-studio's manageInsidePointsDynamically)
+            const intermediatePoints = (view.path || []).filter(p =>
+                !pointInsideBox(p, sourceTV) && !pointInsideBox(p, targetTV)
+            );
+            const fullPath = [sourceAnchor, ...intermediatePoints, targetAnchor];
+
+            // Clip at box edges
+            const n = fullPath.length;
+            const sourceEdge = lineBoxIntersection(sourceAnchor, fullPath[1], sourceTV);
+            const targetEdge = lineBoxIntersection(targetAnchor, fullPath[n - 2], targetTV);
+
+            // Build edge-clipped path
+            const clippedPath = [sourceEdge, ...intermediatePoints, targetEdge];
+
+            // Draw polyline
+            ctx.beginPath();
+            ctx.strokeStyle = DG.lineColor;
+            ctx.lineWidth = Math.max(view.lineWidth || 1, 1);
+            for (let i = 0; i < clippedPath.length; i++) {
+                if (i === 0) ctx.moveTo(clippedPath[i].x, clippedPath[i].y);
+                else ctx.lineTo(clippedPath[i].x, clippedPath[i].y);
+            }
+            ctx.stroke();
+
+            // Draw arrowhead/diamond
+            if (clippedPath.length >= 2) {
+                const cp = clippedPath;
+                if (type === 'generalization') {
+                    drawTriangleAtEdge(ctx, cp[cp.length - 2], cp[cp.length - 1], targetEdge, targetTV);
+                } else if (type === 'association' || type === 'property') {
+                    drawArrow(ctx, cp[cp.length - 2], targetEdge);
+                    drawDiamond(ctx, cp[1], sourceEdge);
+                }
+            }
+
+            // Draw waypoint handles on selected line
+            if (selectedRelationship &&
+                selectedRelationship.viewType === type &&
+                diagramData) {
+                const views = type === 'generalization' ? diagramData.generalizationViews
+                    : type === 'association' ? diagramData.associationViews
+                    : diagramData.propertyViews;
+                if (views[selectedRelationship.viewIndex] === view) {
+                    ctx.fillStyle = '#58a6ff';
+                    for (const pt of intermediatePoints) {
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 4 / diagramZoom, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = 'rgba(88, 166, 255, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(sourceEdge.x, sourceEdge.y, 3 / diagramZoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(targetEdge.x, targetEdge.y, 3 / diagramZoom, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Prune points that lie inside class view boxes
+        function pruneInsidePoints(path, sourceTV, targetTV) {
+            if (path.length < 2) return path;
+            let start = 0;
+            while (start < path.length - 1 && pointInsideBox(path[start], sourceTV)) start++;
+            let end = path.length - 1;
+            while (end > 0 && pointInsideBox(path[end], targetTV)) end--;
+            // Keep one point inside at each end for proper line direction
+            start = Math.max(0, start - 1);
+            end = Math.min(path.length - 1, end + 1);
+            const result = path.slice(start, end + 1);
+            return result.length >= 2 ? result : [path[0], path[path.length - 1]];
+        }
+
+        function pointInsideBox(p, tv) {
+            return p.x >= tv.position.x && p.x <= tv.position.x + tv.width &&
+                   p.y >= tv.position.y && p.y <= tv.position.y + tv.height;
+        }
+
+        // Compute intersection of line segment (from→to) with box edges
+        function lineBoxIntersection(from, to, tv) {
+            const bx = tv.position.x, by = tv.position.y;
+            const bw = tv.width, bh = tv.height;
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            if (dx === 0 && dy === 0) return to;
+
+            let bestT = 1;
+            // Left edge
+            if (dx !== 0) { const t = (bx - from.x) / dx; const yy = from.y + t * dy; if (t > 0 && t <= 1 && yy >= by && yy <= by + bh && t < bestT) bestT = t; }
+            // Right edge
+            if (dx !== 0) { const t = (bx + bw - from.x) / dx; const yy = from.y + t * dy; if (t > 0 && t <= 1 && yy >= by && yy <= by + bh && t < bestT) bestT = t; }
+            // Top edge
+            if (dy !== 0) { const t = (by - from.y) / dy; const xx = from.x + t * dx; if (t > 0 && t <= 1 && xx >= bx && xx <= bx + bw && t < bestT) bestT = t; }
+            // Bottom edge
+            if (dy !== 0) { const t = (by + bh - from.y) / dy; const xx = from.x + t * dx; if (t > 0 && t <= 1 && xx >= bx && xx <= bx + bw && t < bestT) bestT = t; }
+
+            return { x: from.x + bestT * dx, y: from.y + bestT * dy };
+        }
+
+        // Draw generalization triangle at box edge (matching legend-studio's drawInheritance)
+        function drawTriangleAtEdge(ctx, fromPt, toPt, intersection, targetTV) {
+            const startX = fromPt.x, startY = fromPt.y;
+            const endX = toPt.x, endY = toPt.y;
+
+            // Compute angle using atan (not atan2) + PI correction, matching legend-studio
+            let angle = Math.atan((endY - startY) / (endX - startX));
+            angle = endX >= startX ? angle : angle + Math.PI;
+
+            const size = DG.triangleSize;
+            // Triangle points relative to origin, then rotated
+            const pts = [
+                { x: 0, y: 0 },
+                { x: -size, y: -size / 2 },
+                { x: -size, y: size / 2 },
+            ];
+
+            ctx.beginPath();
+            for (let i = 0; i < pts.length; i++) {
+                const rx = intersection.x + (pts[i].x * Math.cos(angle) - pts[i].y * Math.sin(angle));
+                const ry = intersection.y + (pts[i].x * Math.sin(angle) + pts[i].y * Math.cos(angle));
+                if (i === 0) ctx.moveTo(rx, ry);
+                else ctx.lineTo(rx, ry);
+            }
+            ctx.closePath();
+            ctx.fillStyle = DG.genTriangleFill;
+            ctx.fill();
+            ctx.strokeStyle = DG.genTriangleStroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+
+        function drawArrow(ctx, from, to) {
+            const size = 8;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.translate(to.x, to.y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, -size / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, size / 3);
+            ctx.strokeStyle = DG.lineColor;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawDiamond(ctx, from, to) {
+            const size = DG.diamondSize;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.translate(to.x, to.y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, -size / 2);
+            ctx.lineTo(-size * 2, 0);
+            ctx.lineTo(-size, size / 2);
+            ctx.closePath();
+            ctx.fillStyle = DG.diamondFill;
+            ctx.fill();
+            ctx.strokeStyle = DG.diamondStroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // =================================================================
+        // Diagram Interaction (drag, pan, zoom)
+        // =================================================================
+        (function() {
+            const canvas = document.getElementById('diagramCanvas');
+            if (!canvas) return;
+
+            canvas.addEventListener('mousedown', (e) => {
+                if (!diagramData) return;
+                const { mx, my } = canvasMouseToModel(e);
+
+                // Check if clicking on a TypeView
+                for (let i = diagramData.typeViews.length - 1; i >= 0; i--) {
+                    const tv = diagramData.typeViews[i];
+                    if (mx >= tv.position.x && mx <= tv.position.x + tv.width &&
+                        my >= tv.position.y && my <= tv.position.y + tv.height) {
+                        diagramDragging = {
+                            viewIndex: i,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            origX: tv.position.x,
+                            origY: tv.position.y,
+                        };
+                        canvas.classList.add('moving');
+                        e.preventDefault();
+                        return;
+                    }
+                }
+
+                // Check if clicking on a relationship line
+                const lineHit = findRelationshipNearPoint(mx, my, 8 / diagramZoom);
+                if (lineHit) {
+                    const views = lineHit.viewType === 'generalization' ? diagramData.generalizationViews
+                        : lineHit.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[lineHit.viewIndex];
+                    selectedRelationship = { viewType: lineHit.viewType, viewIndex: lineHit.viewIndex };
+
+                    if (lineHit.isAnchor) {
+                        // Drag edge anchor to reposition offset (like legend-studio)
+                        diagramAnchorDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            anchorEnd: lineHit.anchorEnd,
+                        };
+                    } else if (lineHit.isExisting) {
+                        // Drag existing waypoint in view.path
+                        diagramLineDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            pointIndex: lineHit.pointIndex, // index in view.path
+                        };
+                    } else {
+                        // Insert new waypoint into view.path
+                        if (!view.path) view.path = [];
+                        // segmentIndex refers to fullPath [anchor, ...path, anchor]
+                        const insertIdx = lineHit.segmentIndex;
+                        view.path.splice(insertIdx, 0, { x: mx, y: my });
+                        diagramLineDragging = {
+                            viewType: lineHit.viewType,
+                            viewIndex: lineHit.viewIndex,
+                            pointIndex: insertIdx,
+                        };
+                    }
+                    canvas.classList.add('moving');
+                    e.preventDefault();
+                    drawDiagram();
+                    return;
+                }
+
+                // Click on empty space deselects
+                selectedRelationship = null;
+
+                // Pan
+                diagramPanning = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    origOffX: diagramOffsetX,
+                    origOffY: diagramOffsetY,
+                };
+                canvas.classList.add('dragging');
+                e.preventDefault();
+                drawDiagram();
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (diagramDragging) {
+                    const tv = diagramData.typeViews[diagramDragging.viewIndex];
+                    const dx = (e.clientX - diagramDragging.startX) / diagramZoom;
+                    const dy = (e.clientY - diagramDragging.startY) / diagramZoom;
+                    tv.position.x = diagramDragging.origX + dx;
+                    tv.position.y = diagramDragging.origY + dy;
+                    // Remove intermediate waypoints that ended up inside the moved box
+                    // (like legend-studio's manageInsidePointsDynamically)
+                    manageInsidePointsDynamically(tv);
+                    drawDiagram();
+                } else if (diagramAnchorDragging) {
+                    // Continuous anchor drag within box (like legend-studio)
+                    const { mx, my } = canvasMouseToModel(e);
+                    const views = diagramAnchorDragging.viewType === 'generalization' ? diagramData.generalizationViews
+                        : diagramAnchorDragging.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[diagramAnchorDragging.viewIndex];
+                    const tvLookup = {};
+                    diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+                    const tvId = diagramAnchorDragging.anchorEnd === 'source' ? view.source : view.target;
+                    const tv = tvLookup[tvId];
+                    if (tv) {
+                        const center = {
+                            x: tv.position.x + tv.width / 2,
+                            y: tv.position.y + tv.height / 2,
+                        };
+                        if (diagramAnchorDragging.anchorEnd === 'source') {
+                            view.sourceOffset = { x: mx - center.x, y: my - center.y };
+                        } else {
+                            view.targetOffset = { x: mx - center.x, y: my - center.y };
+                        }
+                    }
+                    drawDiagram();
+                } else if (diagramLineDragging) {
+                    const { mx, my } = canvasMouseToModel(e);
+                    const views = diagramLineDragging.viewType === 'generalization' ? diagramData.generalizationViews
+                        : diagramLineDragging.viewType === 'association' ? diagramData.associationViews
+                        : diagramData.propertyViews;
+                    const view = views[diagramLineDragging.viewIndex];
+                    if (view.path && view.path[diagramLineDragging.pointIndex]) {
+                        const tvLookup = {};
+                        diagramData.typeViews.forEach(tv => { tvLookup[tv.id] = tv; });
+                        const sourceTV = tvLookup[view.source];
+                        const targetTV = tvLookup[view.target];
+                        const dragPt = { x: mx, y: my };
+
+                        // If dragged point enters source box → transition to anchor drag
+                        if (sourceTV && pointInsideBox(dragPt, sourceTV)) {
+                            const center = {
+                                x: sourceTV.position.x + sourceTV.width / 2,
+                                y: sourceTV.position.y + sourceTV.height / 2,
+                            };
+                            view.sourceOffset = { x: mx - center.x, y: my - center.y };
+                            view.path.splice(diagramLineDragging.pointIndex, 1);
+                            // Transition to anchor dragging (continue within box)
+                            diagramAnchorDragging = {
+                                viewType: diagramLineDragging.viewType,
+                                viewIndex: diagramLineDragging.viewIndex,
+                                anchorEnd: 'source',
+                            };
+                            diagramLineDragging = null;
+                        }
+                        // If dragged point enters target box → transition to anchor drag
+                        else if (targetTV && pointInsideBox(dragPt, targetTV)) {
+                            const center = {
+                                x: targetTV.position.x + targetTV.width / 2,
+                                y: targetTV.position.y + targetTV.height / 2,
+                            };
+                            view.targetOffset = { x: mx - center.x, y: my - center.y };
+                            view.path.splice(diagramLineDragging.pointIndex, 1);
+                            // Transition to anchor dragging (continue within box)
+                            diagramAnchorDragging = {
+                                viewType: diagramLineDragging.viewType,
+                                viewIndex: diagramLineDragging.viewIndex,
+                                anchorEnd: 'target',
+                            };
+                            diagramLineDragging = null;
+                        }
+                        // Normal drag: just update position
+                        else {
+                            view.path[diagramLineDragging.pointIndex].x = mx;
+                            view.path[diagramLineDragging.pointIndex].y = my;
+                        }
+                    }
+                    drawDiagram();
+                } else if (diagramPanning) {
+                    diagramOffsetX = diagramPanning.origOffX + (e.clientX - diagramPanning.startX);
+                    diagramOffsetY = diagramPanning.origOffY + (e.clientY - diagramPanning.startY);
+                    drawDiagram();
+                }
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                diagramUpdateSuppressed = true;
+                try {
+                    if (diagramDragging) {
+                        pruneWaypointsInsideMovedBox(diagramDragging.viewIndex);
+                        updateDiagramInSource();
+                        diagramDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramAnchorDragging) {
+                        updateDiagramInSource();
+                        diagramAnchorDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramLineDragging) {
+                        updateDiagramInSource();
+                        diagramLineDragging = null;
+                        canvas.classList.remove('moving');
+                    } else if (diagramPanning) {
+                        diagramPanning = null;
+                        canvas.classList.remove('dragging');
+                    }
+                } finally {
+                    diagramUpdateSuppressed = false;
+                }
+            });
+
+            canvas.addEventListener('mouseleave', (e) => {
+                diagramUpdateSuppressed = true;
+                try {
+                    if (diagramDragging) {
+                        updateDiagramInSource();
+                        diagramDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramAnchorDragging) {
+                        updateDiagramInSource();
+                        diagramAnchorDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramLineDragging) {
+                        updateDiagramInSource();
+                        diagramLineDragging = null;
+                        canvas.classList.remove('moving');
+                    }
+                    if (diagramPanning) {
+                        diagramPanning = null;
+                        canvas.classList.remove('dragging');
+                    }
+                } finally {
+                    diagramUpdateSuppressed = false;
+                }
+            });
+
+            // Zoom with mouse wheel
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newZoom = Math.max(0.1, Math.min(4, diagramZoom * zoomFactor));
+
+                // Zoom toward mouse position
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                diagramOffsetX = mx - (mx - diagramOffsetX) * (newZoom / diagramZoom);
+                diagramOffsetY = my - (my - diagramOffsetY) * (newZoom / diagramZoom);
+                diagramZoom = newZoom;
+                drawDiagram();
+            }, { passive: false });
+        })();
+
+        function canvasMouseToModel(e) {
+            const canvas = document.getElementById('diagramCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            return {
+                mx: (cx - diagramOffsetX) / diagramZoom,
+                my: (cy - diagramOffsetY) / diagramZoom,
+            };
+        }
+
+        // Remove intermediate waypoints inside a class box (like legend-studio's manageInsidePointsDynamically)
+        // When a dot is consumed, update the offset so the anchor moves to where the dot was
+        function manageInsidePointsDynamically(tv) {
+            if (!diagramData) return;
+            const center = {
+                x: tv.position.x + tv.width / 2,
+                y: tv.position.y + tv.height / 2,
+            };
+            const allViews = [
+                ...diagramData.generalizationViews,
+                ...diagramData.associationViews,
+                ...diagramData.propertyViews,
+            ];
+            for (const view of allViews) {
+                if (view.source !== tv.id && view.target !== tv.id) continue;
+                if (!view.path) view.path = [];
+                const consumed = view.path.filter(p => pointInsideBox(p, tv));
+                if (consumed.length > 0) {
+                    // Use consumed point as new anchor offset
+                    const pick = view.source === tv.id ? consumed[0] : consumed[consumed.length - 1];
+                    const offset = { x: pick.x - center.x, y: pick.y - center.y };
+                    if (view.source === tv.id) {
+                        view.sourceOffset = offset;
+                    } else {
+                        view.targetOffset = offset;
+                    }
+                    view.path = view.path.filter(p => !pointInsideBox(p, tv));
+                }
+            }
+        }
+
+        // After dragging a box, prune waypoints that ended up inside the moved box
+        function pruneWaypointsInsideMovedBox(viewIndex) {
+            if (!diagramData) return;
+            const tv = diagramData.typeViews[viewIndex];
+            const tvLookup = {};
+            diagramData.typeViews.forEach(t => { tvLookup[t.id] = t; });
+
+            const allViews = [
+                ...diagramData.generalizationViews,
+                ...diagramData.associationViews,
+                ...diagramData.propertyViews,
+            ];
+
+            for (const view of allViews) {
+                if (view.source !== tv.id && view.target !== tv.id) continue;
+                rebuildViewPoints(view, tvLookup);
+            }
+            drawDiagram();
+        }
+
+        // Rebuild view.points from current offsets and path (for serialization)
+        function rebuildViewPoints(view, tvLookup) {
+            const sourceAnchor = computeEdgeEndpoint(view, tvLookup, true);
+            const targetAnchor = computeEdgeEndpoint(view, tvLookup, false);
+            view.points = [sourceAnchor, ...(view.path || []), targetAnchor];
+        }
+
+        let diagramUpdateSuppressed = false;
+        let diagramUpdateTimer = null;
+
+        // Hook into editor changes to update diagram
+        function setupDiagramSync() {
+            if (!editor) return;
+            editor.onDidChangeModelContent(() => {
+                if (diagramUpdateSuppressed) return;
+                if (currentEditorTab === 'diagram') {
+                    clearTimeout(diagramUpdateTimer);
+                    diagramUpdateTimer = setTimeout(updateDiagram, 300);
+                }
+            });
+        }
+
+        // Zoom controls
+        function diagramZoomIn() {
+            diagramZoom = Math.min(4, diagramZoom * 1.2);
+            drawDiagram();
+        }
+        function diagramZoomOut() {
+            diagramZoom = Math.max(0.1, diagramZoom / 1.2);
+            drawDiagram();
+        }
+        function diagramFitToScreen() {
+            if (!diagramData || diagramData.typeViews.length === 0) return;
+            const canvas = document.getElementById('diagramCanvas');
+            const dpr = window.devicePixelRatio || 1;
+            const cw = canvas.width / dpr;
+            const ch = canvas.height / dpr;
+
+            // Compute bounding box of all type views
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            diagramData.typeViews.forEach(tv => {
+                minX = Math.min(minX, tv.position.x);
+                minY = Math.min(minY, tv.position.y);
+                maxX = Math.max(maxX, tv.position.x + tv.width);
+                maxY = Math.max(maxY, tv.position.y + tv.height);
+            });
+
+            const padding = 40;
+            const dw = maxX - minX + padding * 2;
+            const dh = maxY - minY + padding * 2;
+            diagramZoom = Math.min(cw / dw, ch / dh, 2);
+            diagramOffsetX = (cw - dw * diagramZoom) / 2 - (minX - padding) * diagramZoom;
+            diagramOffsetY = (ch - dh * diagramZoom) / 2 - (minY - padding) * diagramZoom;
+            drawDiagram();
+        }
+
+        // ResizeObserver for diagram resizing
+        const diagramResizeObserver = new ResizeObserver(() => {
+            if (currentEditorTab === 'diagram') updateDiagram();
+        });
+        const diagPanel = document.getElementById('diagramPanel');
+        if (diagPanel) diagramResizeObserver.observe(diagPanel);
+    </script>
+</body>
+</html>

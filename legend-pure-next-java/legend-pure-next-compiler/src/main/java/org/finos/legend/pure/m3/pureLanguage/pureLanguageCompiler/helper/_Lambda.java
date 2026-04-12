@@ -19,6 +19,7 @@ import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
@@ -63,12 +64,11 @@ public final class _Lambda
         return ft;
     }
 
-    public static GenericType getLambdaClassifierGenericType(MetadataAccess model, LambdaFunction lambda)
+    public static InferredGenericTypeImpl getLambdaClassifierGenericType(MetadataAccess model, LambdaFunction lambda)
     {
-        GenericType lambdaGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
+        return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
                 ._type((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"))
                 ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
                         new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(buildFunctionType(lambda, model))));
-        return lambdaGT;
     }
 }

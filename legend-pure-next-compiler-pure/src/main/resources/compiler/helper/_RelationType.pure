@@ -1,14 +1,33 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::metamodel::relation::*;
 
 // RelationType printing
 
-function meta::pure::compiler::helper::printRelationType(rt:RelationType<Any>[1]):String[1]
+function meta::pure::compiler::helper::relationType::printRelationType(rt:RelationType<Any>[1]):String[1]
 {
     $rt->printRelationType(true)
 }
 
-function meta::pure::compiler::helper::printRelationType(rt:RelationType<Any>[1], fullPath:Boolean[1]):String[1]
+function meta::pure::compiler::helper::relationType::printRelationType(rt:RelationType<Any>[1], fullPath:Boolean[1]):String[1]
 {
     let cols = $rt.columns->cast(@Column<Any,Any|*>)->map(col |
         let name = if($col.nameWildCard == true, | '?', | $col.name->toOne());
@@ -22,7 +41,7 @@ function meta::pure::compiler::helper::printRelationType(rt:RelationType<Any>[1]
 
 // RelationType concreteness
 
-function meta::pure::compiler::helper::isConcreteRelationType(rt:RelationType<Any>[1]):Boolean[1]
+function meta::pure::compiler::helper::relationType::isConcreteRelationType(rt:RelationType<Any>[1]):Boolean[1]
 {
     $rt.columns->cast(@Column<Any,Any|*>)->filter(col | if($col.genericType->isEmpty(), | false, | !$col.genericType->toOne()->isConcreteGenericType()))->isEmpty()
 }
@@ -30,7 +49,7 @@ function meta::pure::compiler::helper::isConcreteRelationType(rt:RelationType<An
 
 // RelationType referenced parameter names
 
-function meta::pure::compiler::helper::collectRelationTypeReferencedTypeParameterNames(rt:RelationType<Any>[1]):String[*]
+function meta::pure::compiler::helper::relationType::collectRelationTypeReferencedTypeParameterNames(rt:RelationType<Any>[1]):String[*]
 {
     $rt.columns->cast(@Column<Any,Any|*>)
         ->filter(col | $col.genericType->isNotEmpty())
@@ -38,7 +57,7 @@ function meta::pure::compiler::helper::collectRelationTypeReferencedTypeParamete
         ->removeDuplicates()
 }
 
-function meta::pure::compiler::helper::collectRelationTypeReferencedMultiplicityParameterNames(rt:RelationType<Any>[1]):String[*]
+function meta::pure::compiler::helper::relationType::collectRelationTypeReferencedMultiplicityParameterNames(rt:RelationType<Any>[1]):String[*]
 {
     $rt.columns->cast(@Column<Any,Any|*>)->map(col |
         let gtNames = if($col.genericType->isEmpty(),
@@ -55,23 +74,23 @@ function meta::pure::compiler::helper::collectRelationTypeReferencedMultiplicity
     )->removeDuplicates()
 }
 
-function meta::pure::compiler::helper::findCommonRelationType(relationTypes:RelationType<Any>[*]):Type[0..1]
+function meta::pure::compiler::helper::relationType::findCommonRelationType(relationTypes:RelationType<Any>[*]):Type[0..1]
 {
-    meta::pure::compiler::helper::findCommonRelationType($relationTypes, false);
+    findCommonRelationType($relationTypes, false);
 }
 
-function meta::pure::compiler::helper::findCommonRelationType(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
+function meta::pure::compiler::helper::relationType::findCommonRelationType(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
 {
     if($relationTypes->isEmpty(),
         | [],
         | if($relationTypes->size() == 1,
               | $relationTypes->at(0),
-              | meta::pure::compiler::helper::findCommonRelationType_build($relationTypes, $contravariant)
+              | findCommonRelationType_build($relationTypes, $contravariant)
           )
     );
 }
 
-function meta::pure::compiler::helper::findCommonRelationType_build(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
+function meta::pure::compiler::helper::relationType::findCommonRelationType_build(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
 {
     // Find common column names (intersection)
     let firstNames = $relationTypes->at(0).columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
@@ -88,14 +107,14 @@ function meta::pure::compiler::helper::findCommonRelationType_build(relationType
                   $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $colName)->map(c | $c.genericType)
               )->filter(gt | $gt->isNotEmpty())->map(gt | $gt->toOne());
               let commonType = if($colTypes->isNotEmpty(),
-                  | meta::pure::compiler::helper::findCommonGenericType($colTypes, false),
+                  | findCommonGenericType($colTypes, false),
                   | []
               );
               let colMuls = $relationTypes->map(rt |
                   $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $colName)->map(c | $c.multiplicity)
               );
               let commonMul = if($colMuls->isNotEmpty(),
-                  | meta::pure::compiler::helper::findCommonMultiplicity($colMuls),
+                  | findCommonMultiplicity($colMuls),
                   | []
               );
               ^Column<Any,Any|*>(
@@ -109,7 +128,7 @@ function meta::pure::compiler::helper::findCommonRelationType_build(relationType
     );
 }
 
-function meta::pure::compiler::helper::isCompatibleRelationType(declared:RelationType<Any>[1], actual:RelationType<Any>[1], contravariant:Boolean[1]):Boolean[1]
+function meta::pure::compiler::helper::relationType::isCompatibleRelationType(declared:RelationType<Any>[1], actual:RelationType<Any>[1], contravariant:Boolean[1]):Boolean[1]
 {
     let declaredCols = $declared.columns->cast(@Column<Any,Any|*>);
     let actualCols = $actual.columns->cast(@Column<Any,Any|*>);
@@ -121,11 +140,11 @@ function meta::pure::compiler::helper::isCompatibleRelationType(declared:Relatio
                   | false,
                   | let ac = $matchingCol->at(0);
                     let typeOk = if($dc.genericType->isNotEmpty() && $ac.genericType->isNotEmpty(),
-                        | meta::pure::compiler::helper::isCompatibleGenericType($dc.genericType->toOne(), $ac.genericType->toOne(), $contravariant),
+                        | isCompatibleGenericType($dc.genericType->toOne(), $ac.genericType->toOne(), $contravariant),
                         | true
                     );
                     let mulOk = if($dc.multiplicity->isNotEmpty() && $ac.multiplicity->isNotEmpty(),
-                        | meta::pure::compiler::helper::multiplicitySubsumes($dc.multiplicity, $ac.multiplicity),
+                        | multiplicitySubsumes($dc.multiplicity, $ac.multiplicity),
                         | true
                     );
                     $typeOk && $mulOk;
@@ -134,7 +153,7 @@ function meta::pure::compiler::helper::isCompatibleRelationType(declared:Relatio
     });
 }
 
-function meta::pure::compiler::helper::evaluateRelationTypeOperation(leftRT:RelationType<Any>[1], rightRT:RelationType<Any>[1], opType:GenericTypeOperationType[1]):RelationType<Any>[0..1]
+function meta::pure::compiler::helper::relationType::evaluateRelationTypeOperation(leftRT:RelationType<Any>[1], rightRT:RelationType<Any>[1], opType:GenericTypeOperationType[1]):RelationType<Any>[0..1]
 {
     $opType->match([
         op : GenericTypeOperationType[1] |
@@ -160,7 +179,7 @@ function meta::pure::compiler::helper::evaluateRelationTypeOperation(leftRT:Rela
 
 // Collect type and multiplicity parameter bindings from matching two RelationTypes.
 // Matches wildcard columns (?:K[m]) in the parameter side against concrete columns in the argument side.
-function meta::pure::compiler::helper::collectRelationTypeParameterBindings(paramRT:RelationType<Any>[1], argRT:RelationType<Any>[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::relationType::collectRelationTypeParameterBindings(paramRT:RelationType<Any>[1], argRT:RelationType<Any>[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
     let paramCols = $paramRT.columns->cast(@Column<Any,Any|*>);
     let argCols = $argRT.columns->cast(@Column<Any,Any|*>);
@@ -169,10 +188,10 @@ function meta::pure::compiler::helper::collectRelationTypeParameterBindings(para
             | // Wildcard column (?:K[m]): bind K and m from the first arg column
               let argCol = $argCols->at(0);
               let b1 = if($paramCol.genericType->isNotEmpty() && $argCol.genericType->isNotEmpty(),
-                    | meta::pure::compiler::helper::collectTypeParameterBindings($paramCol.genericType->toOne(), $argCol.genericType->toOne(), $b),
+                    | collectTypeParameterBindings($paramCol.genericType->toOne(), $argCol.genericType->toOne(), $b),
                     | $b
                 );
-              meta::pure::compiler::helper::collectMultiplicityParameterBindings($paramCol.multiplicity->toOne(), $argCol.multiplicity->toOne(), $b1);,
+              collectMultiplicityParameterBindings($paramCol.multiplicity->toOne(), $argCol.multiplicity->toOne(), $b1);,
             | $b
         )
     }, $bindings);
@@ -180,7 +199,7 @@ function meta::pure::compiler::helper::collectRelationTypeParameterBindings(para
 
 // Resolve type parameter references in RelationType column types.
 // Returns a new GenericType wrapping the resolved RelationType if anything changed, or empty if unchanged.
-function meta::pure::compiler::helper::makeRelationTypeAsConcreteAsPossible(rt:RelationType<Any>[1], bindings:ParametersBinding[1]):GenericType[0..1]
+function meta::pure::compiler::helper::relationType::makeRelationTypeAsConcreteAsPossible(rt:RelationType<Any>[1], bindings:ParametersBinding[1]):GenericType[0..1]
 {
     let cols = $rt.columns->cast(@Column<Any,Any|*>);
     if($cols->isEmpty(),
@@ -188,12 +207,12 @@ function meta::pure::compiler::helper::makeRelationTypeAsConcreteAsPossible(rt:R
         | let resolvedPairs = $cols->map(col |
               let colGT = $col.genericType;
               let resolvedColGT = if($colGT->isNotEmpty(),
-                  | meta::pure::compiler::helper::makeAsConcreteAsPossible($colGT->toOne(), $bindings),
+                  | makeAsConcreteAsPossible($colGT->toOne(), $bindings),
                   | []
               );
               let colMul = $col.multiplicity;
               let resolvedColMul = if($colMul->isNotEmpty(),
-                  | meta::pure::compiler::helper::makeAsConcreteAsPossible($colMul->toOne(), $bindings),
+                  | makeAsConcreteAsPossible($colMul->toOne(), $bindings),
                   | []
               );
               let changed = ($resolvedColGT->isNotEmpty() && $resolvedColGT->toOne() != $colGT->toOne()) || ($resolvedColMul->isNotEmpty() && $resolvedColMul->toOne() != $colMul->toOne());
@@ -218,7 +237,7 @@ function meta::pure::compiler::helper::makeRelationTypeAsConcreteAsPossible(rt:R
 // Native pure tests for RelationType matching Java implementation parity
 // --------------------------------------------------------------------------------------------------------------------------------
 
-Class <<test.TestCollection>> meta::pure::compiler::helper::tests::relationType::RelClass<T>
+Class <<test.TestCollection>> meta::pure::compiler::helper::relationType::tests::RelClass<T>
 {
     emptyRt: meta::pure::metamodel::relation::Relation<Any>[1];
     simpleRt: meta::pure::metamodel::relation::Relation<(col1:String, col2:Integer)>[1];
@@ -228,91 +247,91 @@ Class <<test.TestCollection>> meta::pure::compiler::helper::tests::relationType:
     otherRt2: meta::pure::metamodel::relation::Relation<(col3:Float)>[1];
 }
 
-function meta::pure::compiler::helper::tests::relationType::getPropRT(name:String[1]):RelationType<Any>[1]
+function meta::pure::compiler::helper::relationType::tests::getPropRT(name:String[1]):RelationType<Any>[1]
 {
-    let cl = meta::pure::compiler::helper::tests::relationType::RelClass;
+    let cl = meta::pure::compiler::helper::relationType::tests::RelClass;
     $cl.properties->filter(p | $p.name == $name)->toOne().genericType->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->cast(@RelationType<Any>);
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testPrintRelationType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testPrintRelationType():Boolean[1]
 {
-    let simpleRt = meta::pure::compiler::helper::tests::relationType::getPropRT('simpleRt');
-    assert('(col1:String[1], col2:Integer[1])' == $simpleRt->meta::pure::compiler::helper::printRelationType(false), |'');
-    assert('(col1:String[1], col2:Integer[1])' == $simpleRt->meta::pure::compiler::helper::printRelationType(true), |'');
+    let simpleRt = meta::pure::compiler::helper::relationType::tests::getPropRT('simpleRt');
+    assert('(col1:String[1], col2:Integer[1])' == $simpleRt->printRelationType(false), |'');
+    assert('(col1:String[1], col2:Integer[1])' == $simpleRt->printRelationType(true), |'');
     
-    let wildcardRt = meta::pure::compiler::helper::tests::relationType::getPropRT('wildcardRt');
-    assert('(?:T[1])' == $wildcardRt->meta::pure::compiler::helper::printRelationType(false), |'');
+    let wildcardRt = meta::pure::compiler::helper::relationType::tests::getPropRT('wildcardRt');
+    assert('(?:T[1])' == $wildcardRt->printRelationType(false), |'');
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testIsConcreteRelationType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testIsConcreteRelationType():Boolean[1]
 {
-    let simpleRt = meta::pure::compiler::helper::tests::relationType::getPropRT('simpleRt');
-    assert(meta::pure::compiler::helper::isConcreteRelationType($simpleRt), |'');
+    let simpleRt = meta::pure::compiler::helper::relationType::tests::getPropRT('simpleRt');
+    assert(isConcreteRelationType($simpleRt), |'');
 
-    let wildcardRt = meta::pure::compiler::helper::tests::relationType::getPropRT('wildcardRt');
-    assert(!meta::pure::compiler::helper::isConcreteRelationType($wildcardRt), |'');
+    let wildcardRt = meta::pure::compiler::helper::relationType::tests::getPropRT('wildcardRt');
+    assert(!isConcreteRelationType($wildcardRt), |'');
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testCollectReferencedTypeParameterNames():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testCollectReferencedTypeParameterNames():Boolean[1]
 {
-    let simpleRt = meta::pure::compiler::helper::tests::relationType::getPropRT('simpleRt');
-    assert(meta::pure::compiler::helper::collectRelationTypeReferencedTypeParameterNames($simpleRt)->isEmpty(), |'');
+    let simpleRt = meta::pure::compiler::helper::relationType::tests::getPropRT('simpleRt');
+    assert(collectRelationTypeReferencedTypeParameterNames($simpleRt)->isEmpty(), |'');
 
-    let wildcardRt = meta::pure::compiler::helper::tests::relationType::getPropRT('wildcardRt');
-    let names = meta::pure::compiler::helper::collectRelationTypeReferencedTypeParameterNames($wildcardRt);
+    let wildcardRt = meta::pure::compiler::helper::relationType::tests::getPropRT('wildcardRt');
+    let names = collectRelationTypeReferencedTypeParameterNames($wildcardRt);
     assert(1 == $names->size(), |'');
     assert($names->contains('T'), |'');
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testIsCompatibleRelationType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testIsCompatibleRelationType():Boolean[1]
 {
-    let simpleRt = meta::pure::compiler::helper::tests::relationType::getPropRT('simpleRt');
-    let subRt = meta::pure::compiler::helper::tests::relationType::getPropRT('subRt');
-    let otherRt = meta::pure::compiler::helper::tests::relationType::getPropRT('otherRt');
+    let simpleRt = meta::pure::compiler::helper::relationType::tests::getPropRT('simpleRt');
+    let subRt = meta::pure::compiler::helper::relationType::tests::getPropRT('subRt');
+    let otherRt = meta::pure::compiler::helper::relationType::tests::getPropRT('otherRt');
 
-    assert(meta::pure::compiler::helper::isCompatibleRelationType($simpleRt, $simpleRt, false), |'');
-    assert(meta::pure::compiler::helper::isCompatibleRelationType($simpleRt, $subRt, false), |'');
-    assert(!meta::pure::compiler::helper::isCompatibleRelationType($subRt, $simpleRt, false), |'');
-    assert(!meta::pure::compiler::helper::isCompatibleRelationType($simpleRt, $otherRt, false), |'');
+    assert(isCompatibleRelationType($simpleRt, $simpleRt, false), |'');
+    assert(isCompatibleRelationType($simpleRt, $subRt, false), |'');
+    assert(!isCompatibleRelationType($subRt, $simpleRt, false), |'');
+    assert(!isCompatibleRelationType($simpleRt, $otherRt, false), |'');
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testFindCommonRelationType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testFindCommonRelationType():Boolean[1]
 {
-    let simpleRt = meta::pure::compiler::helper::tests::relationType::getPropRT('simpleRt');
-    let otherRt = meta::pure::compiler::helper::tests::relationType::getPropRT('otherRt');
+    let simpleRt = meta::pure::compiler::helper::relationType::tests::getPropRT('simpleRt');
+    let otherRt = meta::pure::compiler::helper::relationType::tests::getPropRT('otherRt');
 
-    let commonType = meta::pure::compiler::helper::findCommonRelationType([$simpleRt, $otherRt]);
+    let commonType = findCommonRelationType([$simpleRt, $otherRt]);
     assert($commonType->isNotEmpty(), |'');
     assert($commonType->toOne()->instanceOf(RelationType), |'');
-    assert('(col2:Integer[1])' == $commonType->toOne()->cast(@RelationType<Any>)->meta::pure::compiler::helper::printRelationType(false), |'');
+    assert('(col2:Integer[1])' == $commonType->toOne()->cast(@RelationType<Any>)->printRelationType(false), |'');
     
-    let otherRt2 = meta::pure::compiler::helper::tests::relationType::getPropRT('otherRt2');
-    let noCommon = meta::pure::compiler::helper::findCommonRelationType([$simpleRt, $otherRt2]);
+    let otherRt2 = meta::pure::compiler::helper::relationType::tests::getPropRT('otherRt2');
+    let noCommon = findCommonRelationType([$simpleRt, $otherRt2]);
     assert($noCommon->isNotEmpty(), |'');
     assert('Any' == $noCommon->toOne()->cast(@PackageableElement).name->toOne(), |'');
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::relationType::testEvaluateRelationTypeOperation():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testEvaluateRelationTypeOperation():Boolean[1]
 {
     let rt1 = ^RelationType<Any>(
         columns = [
-            meta::pure::compiler::helper::buildColumn('age', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer), meta::pure::metamodel::multiplicity::PureOne, false)
+            buildColumn('age', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer), meta::pure::metamodel::multiplicity::PureOne, false)
         ]
     );
     let rt2 = ^RelationType<Any>(
         columns = [
-            meta::pure::compiler::helper::buildColumn('name', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=String), meta::pure::metamodel::multiplicity::PureOne, false)
+            buildColumn('name', ^meta::pure::metamodel::type::generics::InferredGenericType(type=RelationType), ^meta::pure::metamodel::type::generics::InferredGenericType(type=String), meta::pure::metamodel::multiplicity::PureOne, false)
         ]
     );
 
-    let unionResult = meta::pure::compiler::helper::evaluateRelationTypeOperation($rt1, $rt2, GenericTypeOperationType.Union);
+    let unionResult = evaluateRelationTypeOperation($rt1, $rt2, GenericTypeOperationType.Union);
     assert($unionResult->isNotEmpty());
     let unionCols = $unionResult->toOne().columns;
     assert($unionCols->size() == 2);
     assert($unionCols->at(0).name == 'age');
     assert($unionCols->at(1).name == 'name');
 
-    let diffResult = meta::pure::compiler::helper::evaluateRelationTypeOperation($unionResult->toOne(), $rt2, GenericTypeOperationType.Difference);
+    let diffResult = evaluateRelationTypeOperation($unionResult->toOne(), $rt2, GenericTypeOperationType.Difference);
     assert($diffResult->isNotEmpty());
     let diffCols = $diffResult->toOne().columns;
     assert($diffCols->size() == 1);

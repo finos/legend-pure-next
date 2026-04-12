@@ -1,0 +1,97 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]): ValueCompileResult[1]
+{
+    // Compile parameters
+    let compiledParams = $l.parameters->map(p | 
+        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+        let pmGenType = if($pType.type->isEmpty(), | [], | $pType->compileGenericType($ctx, '', []));
+        
+        let pmMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
+        
+        ^meta::pure::metamodel::valuespecification::VariableExpression(
+            name = $p.name,
+            genericType = $pmGenType,
+            multiplicity = $pmMult
+        )->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    );
+    
+    let innerScope = $scope->concatenate($compiledParams);
+    
+    // Compile block sequence
+    let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx, $innerScope);
+    
+    // Any open variable detected in the sequence that isn't in innerScope is an open variable
+    let openVariables = $compiledSequence.openVariables->filter(var | 
+        $innerScope->filter(s | $s.name == $var.name)->isEmpty()
+    );
+    
+    // Determine the lambda body's return type from the last expression in the sequence
+    let bodyReturnGT = if($compiledSequence.specs->isEmpty(),
+        | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
+          asInferredGenericType($lastExpr.genericType->toOne());
+    );
+    let bodyReturnMul = if($compiledSequence.specs->isEmpty(),
+        | meta::pure::metamodel::multiplicity::PureOne,
+        | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
+          asInferredMultiplicity($lastExpr.multiplicity->toOne());
+    );
+    
+    // Build FunctionType from params + inferred return type
+    let lambdaFunctionType = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
+    )->cast(@meta::pure::metamodel::type::FunctionType);
+    
+    let ft = ^$lambdaFunctionType(
+        parameters = $compiledParams,
+        returnType = $bodyReturnGT,
+        returnMultiplicity = $bodyReturnMul
+    );
+    
+    // Build LambdaFunction<{FunctionType}> classifier generic type
+    let lambdaCGT = ^meta::pure::metamodel::type::generics::InferredGenericType(
+        type = meta::pure::metamodel::function::LambdaFunction,
+        typeArguments = [
+            ^meta::pure::metamodel::type::generics::InferredGenericType(
+                type = $ft
+            )
+        ]
+    );
+    
+    let emptyLambda = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::LambdaFunction)
+    )->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+    
+    let m3Lambda = ^$emptyLambda(
+        parameters = $compiledParams,
+        expressionSequence = $compiledSequence.specs,
+        openVariables = $openVariables,
+        classifierGenericType = $lambdaCGT,
+        sourceInformation = $l.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+    );
+    
+    ^ValueCompileResult(
+        values = [$m3Lambda],
+        openVariables = $openVariables
+    );
+}

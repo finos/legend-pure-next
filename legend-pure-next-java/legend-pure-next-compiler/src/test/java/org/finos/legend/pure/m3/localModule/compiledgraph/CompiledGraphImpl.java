@@ -20,7 +20,7 @@ import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.extension.TaggedValue;
 import meta.pure.metamodel.type.ElementOverride;
-import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.eclipse.collections.api.list.MutableList;
 
 /**
@@ -117,13 +117,13 @@ public class CompiledGraphImpl implements PackageableElement
     }
 
     @Override
-    public GenericType _classifierGenericType()
+    public GenericTypeValue _classifierGenericType()
     {
         return null;
     }
 
     @Override
-    public PackageableElement _classifierGenericType(GenericType value)
+    public PackageableElement _classifierGenericType(GenericTypeValue value)
     {
         return this;
     }

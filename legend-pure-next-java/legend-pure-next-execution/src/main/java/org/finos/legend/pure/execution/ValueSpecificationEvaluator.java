@@ -53,6 +53,7 @@ public class ValueSpecificationEvaluator
     private final NativeRepository natives;
     private final Deque<String> callStack = new ArrayDeque<>();
     private final Deque<Map<String, ValueSpecification>> varStack = new ArrayDeque<>();
+    private final Deque<Object> constructionStack = new ArrayDeque<>();
 
     public ValueSpecificationEvaluator(NativeRepository natives)
     {
@@ -85,6 +86,44 @@ public class ValueSpecificationEvaluator
     public void popScope()
     {
         varStack.pop();
+    }
+
+    /**
+     * Push an instance onto the construction stack.
+     * Used by {@code new} and {@code copy} natives to track the instance hierarchy
+     * during construction, enabling parent-reference ({@code ~}) resolution.
+     */
+    public void pushConstruction(Object instance)
+    {
+        constructionStack.push(instance);
+    }
+
+    /**
+     * Pop the top instance from the construction stack.
+     */
+    public void popConstruction()
+    {
+        constructionStack.pop();
+    }
+
+    /**
+     * Peek at the construction stack at the given depth.
+     * Depth 0 = top of stack (self), depth 1 = parent, etc.
+     *
+     * @return the instance at the given depth, or null if out of bounds
+     */
+    public Object peekConstruction(int depth)
+    {
+        int i = 0;
+        for (Object obj : constructionStack)
+        {
+            if (i == depth)
+            {
+                return obj;
+            }
+            i++;
+        }
+        return null;
     }
 
     /**

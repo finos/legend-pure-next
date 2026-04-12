@@ -32,7 +32,7 @@ native function
 function <<test.Test>> meta::pure::functions::lang::tests::new::testDynamicInstance():Boolean[1]
 {
     let p = ^LA_Person(firstName='first', lastName='last');
-    assertIs(LA_Person, $p->genericType()->cast(@GenericTypeValue).type->toOne());
+    assertIs(LA_Person, $p->genericType().type->toOne());
     assertEquals('last', $p.lastName);
     assertEquals('first', $p.firstName);
     assertEquals('last, first', $p.fullName(true));
@@ -58,8 +58,8 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testWithToManyPr
 function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGeneric():Boolean[1]
 {
     let l = ^LA_List<String>(values=['a', 'b', 'c']);
-    assertIs(LA_List, $l->genericType()->cast(@GenericTypeValue).type->toOne());
-    assertIs(String, $l->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    assertIs(LA_List, $l->genericType().type->toOne());
+    assertIs(String, $l->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
     assertEquals(['a', 'b', 'c'], $l.values);
 }
 
@@ -67,13 +67,13 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
 {
     let l1 = ^LA_List<String>(values=['a', 'b', 'c']);
     assertIs(LA_List, $l1->type()->toOne());
-    assertIs(String, $l1->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    assertIs(String, $l1->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l1->id()->startsWith('Anonymous_') || $l1->id()->startsWith('@_'));
     assertEquals(['a', 'b', 'c'], $l1.values);
 
     let l2 = new($l1->genericTypeHolder(), []);
     assertIs(LA_List, $l2->type()->toOne());
-    assertIs(String, $l2->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    assertIs(String, $l2->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l2->id()->startsWith('Anonymous_') || $l2->id()->startsWith('@_'));
     assertEmpty($l2->cast(@LA_List<String>).values);
 
@@ -86,7 +86,7 @@ function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::func
                                    ]
             );
     assertIs(LA_List, $l3->type()->toOne());
-    assertIs(String, $l3->genericType()->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+    assertIs(String, $l3->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
 //    assert($l3->id()->startsWith('Anonymous_') || $l3->id()->startsWith('@_'));
     assertEquals(['a', 'b', 'c'], $l3->cast(@LA_List<String>).values);
     assertEquals($l1.values, $l3.values);
@@ -158,4 +158,21 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testCantSetClass
 {
     assertError(|^LA_Person(classifierGenericType = ^UserDefinedGenericType(type=Any), firstName='Pierre', lastName='Doe')
                 , 'Cannot set \'classifierGenericType\' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.');
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewSelfReferenceLoop():Boolean[1]
+{
+    let n = ^LA_Node(value=1, next=~);
+    assertEquals(1, $n.value);
+    assertIs($n, $n.next->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewNestedBackReference():Boolean[1]
+{
+    // Outer node's next is an inner node whose next points back to the outer via ~.~
+    let outer = ^LA_Node(value=1, next=^LA_Node(value=2, next=~.~));
+    assertEquals(1, $outer.value);
+    let inner = $outer.next->toOne();
+    assertEquals(2, $inner.value);
+    assertIs($outer, $inner.next->toOne());
 }

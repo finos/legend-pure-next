@@ -52,10 +52,10 @@ public class PureLanguageExtension implements LanguageExtension
 
     private PureLanguageMetadata buildFromPDB(PDBModule pdb)
     {
-        if (pdb.mode() != PDBModule.Mode.COMPILATION)
-        {
-            return new PureLanguageMetadata();
-        }
+//        if (pdb.mode() != PDBModule.Mode.COMPILATION)
+//        {
+//            return new PureLanguageMetadata();
+//        }
         byte[] sectionData = pdb.archive().readSection("functionIndex");
         if (sectionData == null)
         {

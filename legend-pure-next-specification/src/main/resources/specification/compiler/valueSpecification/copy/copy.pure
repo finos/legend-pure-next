@@ -7,6 +7,7 @@ function test::new::testNew(): Any[*]
   let n = ^$c(name = 'bla');
   let z = $n.name;
   let a = ^$c(names += 'added');
+  let x = meta::pure::functions::meta::creation::newClass(^meta::pure::metamodel::type::generics::TypeParameter(contravariant=false, name='T'), []);
 }
 
 Class test::new::support::MyClass
@@ -58,8 +59,24 @@ function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}
           AtomicValue  'names' :String[1]  ~AtomicValue  @9:15-9:30
           AtomicValue  'added' :String[1]  ~AtomicValue  @9:24-9:30
           AtomicValue  true :Boolean[1]  ~AtomicValue  @9:15-9:30
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<Any>##[1]#  ~FunctionInvocation  @10:3-10:147
+    typeParam T -> #Class<Any>#
+    mulParam m -> #[1]#
+    AtomicValue  'x' :String[1]  ~AtomicValue  @10:7-10:7
+    FunctionInvocation newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_ :#Class<Any>##[1]#  ~FunctionInvocation  @10:11-10:147
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#TypeParameter##[1]#  ~FunctionInvocation  @10:59-10:142
+        typeParam T -> TypeParameter
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<TypeParameter|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<TypeParameter|1>  @10:59-10:142
+        Collection :#KeyExpression#[2]  ~Collection  @10:59-10:142
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @10:113-10:131
+            AtomicValue  'contravariant' :String[1]  ~AtomicValue  @10:113-10:131
+            AtomicValue  false :Boolean[1]  ~AtomicValue  @10:127-10:131
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @10:134-10:141
+            AtomicValue  'name' :String[1]  ~AtomicValue  @10:134-10:141
+            AtomicValue  'T' :String[1]  ~AtomicValue  @10:139-10:141
+      Collection :#Nil#[0]  ~Collection  @10:145-10:146
 
-class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClass>  @12:1-17:1
+class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClass>  @13:1-18:1
   property name :String[1]  ~Property<test::new::support::MyClass, String|1>
   property value :Integer[0..1]  ~Property<test::new::support::MyClass, Integer|0..1>
   property names :String[*]  ~Property<test::new::support::MyClass, String|*>

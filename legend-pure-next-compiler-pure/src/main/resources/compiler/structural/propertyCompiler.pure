@@ -12,24 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
 {
-    let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
-    let resolvedType = $protocolType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
-
-    let resolvedOpt = $context->resolveElement($resolvedType);
-    let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-        | $context->resolveElement($packagePath + '::' + $resolvedType),
-        | $resolvedOpt
-    );
-
-    let debug = if($resolvedOptWithPackage->isEmpty(),
-        | println('FAILED RESOLUTION FOR: ' + $resolvedType),
-        | []
-    );
-    let metamodelType = $resolvedOptWithPackage->toOne()->cast(@meta::pure::metamodel::type::Type);
+    let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let mGenType = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
 
     // Default implementation maps Protocol Multiplicity to Metamodel Multiplicity bounds
     let pMult = $protocolProperty.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
@@ -55,8 +63,8 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $owner),
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType)
+            $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
+            $mGenType
         ],
         multiplicityArguments = [$mMult]
     );
@@ -66,7 +74,7 @@ function meta::pure::compiler::compileProperty(protocolProperty:meta::pure::prot
     ^$prop(
         name = $protocolProperty.name,
         aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $metamodelType),
+        genericType = $mGenType,
         multiplicity = $mMult,
         sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
             sourceId = $si.sourceId,

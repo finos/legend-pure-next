@@ -17,7 +17,7 @@ lexer grammar TopLexer;
 // ==========================================================================
 
 SECTION_HEADER
-    : '###' IDENTIFIER
+    : {getCharPositionInLine() == 0}? '###' IDENTIFIER
     ;
 
 IMPORT_STATEMENT

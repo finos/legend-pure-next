@@ -1,6 +1,25 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
-function meta::pure::compiler::helper::extractResolvedParametersBinding(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::functionExpression::extractResolvedParametersBinding(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1]):ParametersBinding[1]
 {
     let emptyBindings = newPlainParametersBinding();
     
@@ -17,12 +36,12 @@ function meta::pure::compiler::helper::extractResolvedParametersBinding(expr:met
     $withMultiplicities;
 }
 
-function meta::pure::compiler::helper::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
 {
-    meta::pure::compiler::helper::populateResolvedParameters($expr, $bindings, [], []);
+    populateResolvedParameters($expr, $bindings, [], []);
 }
 
-function meta::pure::compiler::helper::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
 {
     let doFilterType = $ownTypeParams->isNotEmpty();
     let tbKeys = $bindings.typeBindings->keys();
@@ -33,7 +52,7 @@ function meta::pure::compiler::helper::populateResolvedParameters(expr:meta::pur
             | if($vals.values->size() == 1,
                   | $resolved->concatenate(^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name=$k, value=$vals.values->at(0))),
                   | if($vals.values->size() > 1,
-                        | let common = meta::pure::compiler::helper::findCommonGenericType($vals.values, false);
+                        | let common = findCommonGenericType($vals.values, false);
                           if($common->isNotEmpty(),
                               | $resolved->concatenate(^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name=$k, value=$common->toOne())),
                               | $resolved
@@ -74,8 +93,8 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
         multiplicity = PureOne
     );
     
-    let bindings = meta::pure::compiler::helper::extractResolvedParametersBinding($expr);
-    assertEquals('', meta::pure::compiler::helper::toString($bindings));
+    let bindings = extractResolvedParametersBinding($expr);
+    assertEquals('', toString($bindings));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::testPopulateAndExtract():Boolean[1]
@@ -95,7 +114,7 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
         multiplicity = PureOne
     );
     
-    let populated = meta::pure::compiler::helper::populateResolvedParameters($expr, $bindings); // no filter
+    let populated = populateResolvedParameters($expr, $bindings); // no filter
     
     assertEquals(2, $populated.resolvedTypeParameters->size());
     assert($populated.resolvedTypeParameters->filter(t | $t.name == 'T')->isNotEmpty());
@@ -104,8 +123,8 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
     assertEquals(1, $populated.resolvedMultiplicityParameters->size());
     assertEquals('m', $populated.resolvedMultiplicityParameters->at(0).name);
     
-    let extracted = meta::pure::compiler::helper::extractResolvedParametersBinding($populated);
-    assertEquals('{T=String, Z=String | m=[1]}', meta::pure::compiler::helper::toString($extracted));
+    let extracted = extractResolvedParametersBinding($populated);
+    assertEquals('{T=String, Z=String | m=[1]}', toString($extracted));
 }
 
 function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::testPopulateWithOwnership():Boolean[1]
@@ -126,7 +145,7 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
         multiplicity = PureOne
     );
     
-    let populated = meta::pure::compiler::helper::populateResolvedParameters($expr, $bindings, ['T'], ['m']);
+    let populated = populateResolvedParameters($expr, $bindings, ['T'], ['m']);
     
     assertEquals(1, $populated.resolvedTypeParameters->size());
     assertEquals('T', $populated.resolvedTypeParameters->at(0).name);

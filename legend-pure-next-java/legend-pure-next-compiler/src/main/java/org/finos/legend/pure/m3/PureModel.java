@@ -19,7 +19,11 @@ import meta.pure.metamodel.PackageImpl;
 import meta.pure.metamodel.PackageableElement;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.MutableMap;
+import org.eclipse.collections.impl.factory.Maps;
 import org.finos.legend.pure.m3.module.CompilationResult;
+import org.finos.legend.pure.m3.module.CompilationStatistics;
+import org.finos.legend.pure.m3.module.ElementStatistics;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
@@ -206,6 +210,18 @@ public class PureModel
         FunctionIndexEntry.setFailOnResolve(true);
         try
         {
+            long totalStart = System.nanoTime();
+            long parsingTotal = 0;
+            long firstPassTotal = 0;
+            long secondPassTotal = 0;
+            long thirdPassTotal = 0;
+            int elementTotal = 0;
+            int sourceFileTotal = 0;
+            long memoryDeltaTotal = 0;
+            int rollbackTotal = 0;
+            int candidateTotal = 0;
+            MutableMap<String, ElementStatistics> allElementStats = Maps.mutable.empty();
+
             // Compile each module in dependency order
             for (Module module : modules)
             {
@@ -214,13 +230,32 @@ public class PureModel
                 {
                     return result;
                 }
+                CompilationStatistics s = result.statistics();
+                if (s != null)
+                {
+                    parsingTotal += s.parsingDurationNanos();
+                    firstPassTotal += s.firstPassDurationNanos();
+                    secondPassTotal += s.secondPassDurationNanos();
+                    thirdPassTotal += s.thirdPassDurationNanos();
+                    elementTotal += s.elementCount();
+                    sourceFileTotal += s.sourceFileCount();
+                    memoryDeltaTotal += s.memoryDeltaBytes();
+                    rollbackTotal += s.inferenceRollbackCount();
+                    candidateTotal += s.candidateEvaluationCount();
+                    allElementStats.putAll(s.elementStatistics());
+                }
             }
 
             // Set classifierGenericType on Root package (and any in-memory packages)
             // now that the Package type is available from PDB
             setPackageClassifierGenericType();
 
-            return new CompilationResult(List.of());
+            long totalDuration = System.nanoTime() - totalStart;
+            CompilationStatistics aggregated = new CompilationStatistics(
+                    totalDuration, parsingTotal, firstPassTotal, secondPassTotal, thirdPassTotal,
+                    elementTotal, sourceFileTotal, memoryDeltaTotal, rollbackTotal, candidateTotal,
+                    allElementStats);
+            return new CompilationResult(List.of(), aggregated);
         }
         finally
         {

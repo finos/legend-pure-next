@@ -82,6 +82,8 @@ public class SpecificationBinaryBuilder
             throw new RuntimeException("Pure compilation failed with " + result.errors().size() + " error(s)");
         }
 
+        System.out.println(result.statistics().summary());
+
         // --- Collect elements from the index (all modules), deduplicated by path ---
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
         for (Module module : modules)

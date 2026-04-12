@@ -1,10 +1,29 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
 // Lambda helpers
 
-function meta::pure::compiler::helper::buildFunctionType(lambda:LambdaFunction<Any>[1]):FunctionType[1]
+function meta::pure::compiler::helper::lambda::buildFunctionType(lambda:LambdaFunction<Any>[1]):FunctionType[1]
 {
-    let ft = meta::pure::compiler::helper::newFunctionType();
+    let ft = newFunctionType();
     let ftWithParams = if($lambda.parameters->isNotEmpty(),
                           | ^$ft(parameters=$lambda.parameters),
                           | $ft
@@ -19,36 +38,36 @@ function meta::pure::compiler::helper::buildFunctionType(lambda:LambdaFunction<A
     );
 }
 
-function meta::pure::compiler::helper::getLambdaClassifierGenericType(lambda:LambdaFunction<Any>[1]):GenericType[1]
+function meta::pure::compiler::helper::lambda::getLambdaClassifierGenericType(lambda:LambdaFunction<Any>[1]):GenericType[1]
 {
     ^meta::pure::metamodel::type::generics::InferredGenericType(
         type = LambdaFunction,
-        typeArguments = [^meta::pure::metamodel::type::generics::InferredGenericType(type = $lambda->meta::pure::compiler::helper::buildFunctionType())]
+        typeArguments = [^meta::pure::metamodel::type::generics::InferredGenericType(type = $lambda->buildFunctionType())]
     );
 }
 
 // Tests
 
-function <<test.Test>> meta::pure::compiler::helper::tests::lambda::testBuildFunctionType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::lambda::tests::testBuildFunctionType():Boolean[1]
 {
     let lambda = {a:String[1]| $a + 'ok'};
-    let ft = $lambda->meta::pure::compiler::helper::buildFunctionType();
+    let ft = $lambda->buildFunctionType();
     
     assert($ft.parameters->isNotEmpty());
     assertEquals('a', $ft.parameters->at(0).name);
-    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->meta::pure::compiler::helper::genericTypeRawType()->toOne());
+    assertEquals(String, $ft.parameters->at(0).genericType->toOne()->genericTypeRawType()->toOne());
     assertEquals($lambda.expressionSequence->last()->toOne().genericType, $ft.returnType);
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityLowerBound());
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityUpperBound());
 }
 
-function <<test.Test>> meta::pure::compiler::helper::tests::lambda::testGetLambdaClassifierGenericType():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::lambda::tests::testGetLambdaClassifierGenericType():Boolean[1]
 {
     let lambda = {a:String[1]| $a + 'ok'};
-    let gto = $lambda->meta::pure::compiler::helper::getLambdaClassifierGenericType();
+    let gto = $lambda->getLambdaClassifierGenericType();
     
-    assertEquals(LambdaFunction, $gto->meta::pure::compiler::helper::genericTypeRawType()->toOne());
-    let ta = $gto->meta::pure::compiler::helper::genericTypeTypeArguments();
+    assertEquals(LambdaFunction, $gto->genericTypeRawType()->toOne());
+    let ta = $gto->genericTypeTypeArguments();
     assertEquals(1, $ta->size());
-    assert($ta->at(0)->meta::pure::compiler::helper::genericTypeRawType()->toOne()->instanceOf(FunctionType));
+    assert($ta->at(0)->genericTypeRawType()->toOne()->instanceOf(FunctionType));
 }

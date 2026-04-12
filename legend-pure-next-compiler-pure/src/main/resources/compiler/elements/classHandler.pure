@@ -12,29 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Class<Any>[1]
+function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Class<Any>[1]
 {
     let packagePath = $protocolClass.package->toOne().pointerValue;
     let className = $packagePath + '::' + $protocolClass.name;
     let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
 
-    let superTypes = if($protocolClass.generalizations->isEmpty(),
-        | [meta::pure::metamodel::type::Any],
+    // Compile properties and generalizations (they reference $skeleton for now)
+    let compiledProperties = $protocolClass.properties->map(p | $p->compileProperty($context, $packagePath, $skeleton));
+
+    let compiledGeneralizations = if($protocolClass.generalizations->isEmpty(),
+        | [^meta::pure::metamodel::relationship::Generalization(
+              general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+              specific = $skeleton
+          )],
         | $protocolClass.generalizations->map(g |
-            let genType = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne();
-            $context->resolveElement($genType->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue)->toOne()->cast(@meta::pure::metamodel::type::Type);
+            ^meta::pure::metamodel::relationship::Generalization(
+                general = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter)),
+                specific = $skeleton
+            )
         )
     );
 
-    let generalizations = $superTypes->map(s | ^meta::pure::metamodel::relationship::Generalization(
-        general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $s),
-        specific = $skeleton
-    ));
+    let compiledStereotypes = $protocolClass.stereotypes->map(s |
+        let profile = $context->resolveElement($s.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        let stereotypeName = $s.extraPointerValues->at(0).value;
+        $profile.p_stereotypes->filter(x | $x.value == $stereotypeName)->toOne();
+    );
 
+    let compiledTaggedValues = $protocolClass.taggedValues->map(t |
+        let profile = $context->resolveElement($t.tag.pointerValue)->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        let tagName = $t.tag.extraPointerValues->at(0).value;
+        let pTag = $profile.p_tags->filter(x | $x.value == $tagName)->toOne();
+        let tvGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::TaggedValue);
+        let inst = meta::pure::functions::lang::new($tvGT)->cast(@meta::pure::metamodel::extension::TaggedValue);
+        ^$inst(
+            tag = $pTag,
+            value = $t.value
+        );
+    );
+
+    // Use ~.~ to wire specific and owner back to the copy
     ^$skeleton(
-        generalizations = $generalizations,
-        properties = $protocolClass.properties->map(p | $p->meta::pure::compiler::compileProperty($context, $packagePath, $skeleton))
+        stereotypes = $compiledStereotypes,
+        taggedValues = $compiledTaggedValues,
+        generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
+        properties = $compiledProperties->map(p | ^$p(owner = ~.~))
     );
 }

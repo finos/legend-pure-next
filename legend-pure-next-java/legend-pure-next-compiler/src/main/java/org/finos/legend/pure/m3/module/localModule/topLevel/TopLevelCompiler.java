@@ -20,6 +20,7 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import org.eclipse.collections.api.factory.Lists;
@@ -33,7 +34,9 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCo
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -90,6 +93,12 @@ public class TopLevelCompiler
     private final PureLanguageCompilerExtension pureLanguageCompilerExtension;
     private final List<CompilerExtension> extensions;
 
+    /** Per-element timing: elementPath → [firstPassNanos, secondPassNanos, thirdPassNanos, rollbacks, candidateEvals] */
+    private final Map<String, long[]> elementTimings = new LinkedHashMap<>();
+    private long firstPassDurationNanos;
+    private long secondPassDurationNanos;
+    private long thirdPassDurationNanos;
+
     public TopLevelCompiler(Package root, List<? extends CompilerExtension> extensions)
     {
         this.root = root;
@@ -114,7 +123,9 @@ public class TopLevelCompiler
      */
     public boolean compile(LocalModule localModule, MutableList<PureFile> files, String packagePattern, MetadataAccess model, CompilationContext context)
     {
+        long t0 = System.nanoTime();
         firstPass(files, model);
+        this.firstPassDurationNanos = System.nanoTime() - t0;
 
         validatePathForModulePattern(packagePattern, context);
         if (context.errors().notEmpty())
@@ -122,7 +133,9 @@ public class TopLevelCompiler
             return false;
         }
 
+        t0 = System.nanoTime();
         secondPass(model, context);
+        this.secondPassDurationNanos = System.nanoTime() - t0;
 
         if (context.errors().notEmpty())
         {
@@ -130,7 +143,11 @@ public class TopLevelCompiler
         }
 
         updatePackageTree(model);
+
+        t0 = System.nanoTime();
         thirdPass(localModule, model, context);
+        this.thirdPassDurationNanos = System.nanoTime() - t0;
+
         return context.errors().isEmpty();
     }
 
@@ -187,6 +204,30 @@ public class TopLevelCompiler
         return elementIndex.keySet();
     }
 
+    /**
+     * Per-element timing data collected during compilation.
+     * Key: element path, Value: [firstPassNanos, secondPassNanos, thirdPassNanos]
+     */
+    public Map<String, long[]> elementTimings()
+    {
+        return elementTimings;
+    }
+
+    public long firstPassDurationNanos()
+    {
+        return firstPassDurationNanos;
+    }
+
+    public long secondPassDurationNanos()
+    {
+        return secondPassDurationNanos;
+    }
+
+    public long thirdPassDurationNanos()
+    {
+        return thirdPassDurationNanos;
+    }
+
     // -----------------------------------------------------------------------
     // First pass
     // -----------------------------------------------------------------------
@@ -211,7 +252,10 @@ public class TopLevelCompiler
                             meta.pure.protocol.grammar.SourceInformation si = grammarElement._sourceInformation();
                             throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + " " + si._startLine() + ":" + si._startColumn());
                         }
+                        long t0 = System.nanoTime();
                         PackageableElement element = firstPassElement(grammarElement, model);
+                        long elapsed = System.nanoTime() - t0;
+                        elementTimings.computeIfAbsent(fullPath, k -> new long[5])[0] = elapsed;
                         elementIndex.put(fullPath, new IndexEntry(element, grammarElement, section, fileSourceId));
                     }));
         });
@@ -246,7 +290,10 @@ public class TopLevelCompiler
                 {
                     context.setImports(resolveImports(entry.section()));
                 }
+                long t0 = System.nanoTime();
                 PackageableElement updated = secondPassEntry(entry, model, context);
+                long elapsed = System.nanoTime() - t0;
+                elementTimings.computeIfAbsent(fullPath, k -> new long[5])[1] = elapsed;
                 context.flushCurrentErrors();
                 elementIndex.put(fullPath, new IndexEntry(updated, entry.grammarElement(), entry.section(), entry.sourceId()));
             }
@@ -291,7 +338,15 @@ public class TopLevelCompiler
             {
                 context.setImports(resolveImports(entry.section()));
             }
+            int rollbacksBefore = context.inferenceRollbackCount();
+            int candidatesBefore = context.candidateEvaluationCount();
+            long t0 = System.nanoTime();
             PackageableElement updated = thirdPassEntry(entry, model, context);
+            long elapsed = System.nanoTime() - t0;
+            long[] timings = elementTimings.computeIfAbsent(fullPath, k -> new long[5]);
+            timings[2] = elapsed;
+            timings[3] = context.inferenceRollbackCount() - rollbacksBefore;
+            timings[4] = context.candidateEvaluationCount() - candidatesBefore;
             elementIndex.put(fullPath, new IndexEntry(updated, entry.grammarElement(), entry.section(), entry.sourceId()));
             context.flushCurrentErrors();
         });
@@ -348,7 +403,7 @@ public class TopLevelCompiler
         return allImports;
     }
 
-    private Package getOrCreatePackage(Package root, String packagePath, GenericType packageGT, MetadataAccess model)
+    private Package getOrCreatePackage(Package root, String packagePath, GenericTypeValue packageGT, MetadataAccess model)
     {
         Package current = root;
         StringBuilder currentPath = new StringBuilder();

@@ -1,8 +1,27 @@
-import meta::pure::compiler::helper::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::lambda::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
 
 // FunctionType printing
 
-function meta::pure::compiler::helper::newFunctionType():FunctionType[1]
+function meta::pure::compiler::helper::functionType::newFunctionType():FunctionType[1]
 {
     ^FunctionType(
         returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any),
@@ -11,12 +30,12 @@ function meta::pure::compiler::helper::newFunctionType():FunctionType[1]
 }
 
 
-function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1]):String[1]
+function meta::pure::compiler::helper::functionType::printFunctionType(ft:FunctionType[1]):String[1]
 {
     $ft->printFunctionType(true)
 }
 
-function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1], fullPath:Boolean[1]):String[1]
+function meta::pure::compiler::helper::functionType::printFunctionType(ft:FunctionType[1], fullPath:Boolean[1]):String[1]
 {
     let params = $ft.parameters;
     let paramStr = $params->map(p |
@@ -41,7 +60,7 @@ function meta::pure::compiler::helper::printFunctionType(ft:FunctionType[1], ful
 
 // FunctionType concreteness
 
-function meta::pure::compiler::helper::isConcreteFunctionType(ft:FunctionType[1]):Boolean[1]
+function meta::pure::compiler::helper::functionType::isConcreteFunctionType(ft:FunctionType[1]):Boolean[1]
 {
     let paramsOk = $ft.parameters->filter(p | !$p.genericType->toOne()->isConcreteGenericType())->isEmpty();
     if(!$paramsOk,
@@ -56,7 +75,7 @@ function meta::pure::compiler::helper::isConcreteFunctionType(ft:FunctionType[1]
 
 // FunctionType referenced parameter names
 
-function meta::pure::compiler::helper::collectFunctionTypeReferencedTypeParameterNames(ft:FunctionType[1]):String[*]
+function meta::pure::compiler::helper::functionType::collectFunctionTypeReferencedTypeParameterNames(ft:FunctionType[1]):String[*]
 {
     let paramNames = $ft.parameters
         ->filter(p | $p.genericType->isNotEmpty())
@@ -68,7 +87,7 @@ function meta::pure::compiler::helper::collectFunctionTypeReferencedTypeParamete
     $paramNames->concatenate($returnNames)->removeDuplicates();
 }
 
-function meta::pure::compiler::helper::collectFunctionTypeReferencedMultiplicityParameterNames(ft:FunctionType[1]):String[*]
+function meta::pure::compiler::helper::functionType::collectFunctionTypeReferencedMultiplicityParameterNames(ft:FunctionType[1]):String[*]
 {
     let paramNames = $ft.parameters->map(p |
         let mulNames = $p.multiplicity->match(
@@ -99,7 +118,7 @@ function meta::pure::compiler::helper::collectFunctionTypeReferencedMultiplicity
     $paramNames->concatenate($returnMulNames)->concatenate($returnGtNames)->removeDuplicates();
 }
 
-function meta::pure::compiler::helper::collectTypeParameterBindings(paramFT:FunctionType[1], argFT:FunctionType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::functionType::collectTypeParameterBindings(paramFT:FunctionType[1], argFT:FunctionType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
     // Match parameters positionally
     let b1 = if($paramFT.parameters->isNotEmpty() && $argFT.parameters->isNotEmpty(),
@@ -122,18 +141,18 @@ function meta::pure::compiler::helper::collectTypeParameterBindings(paramFT:Func
     );
 }
 
-function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:GenericType[1], ft:FunctionType[1], bindings:ParametersBinding[1]):GenericType[0..1]
+function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(genericType:GenericType[1], ft:FunctionType[1], bindings:ParametersBinding[1]):GenericType[0..1]
 {
     let newParams = $ft.parameters->map(p | 
-        let rGT = meta::pure::compiler::helper::makeAsConcreteAsPossible($p.genericType, $bindings);
-        let rMul = meta::pure::compiler::helper::makeAsConcreteAsPossible($p.multiplicity, $bindings);
+        let rGT = makeAsConcreteAsPossible($p.genericType, $bindings);
+        let rMul = makeAsConcreteAsPossible($p.multiplicity, $bindings);
         if($rGT == $p.genericType && $rMul == $p.multiplicity,
             | $p,
             | ^$p(genericType = $rGT, multiplicity = $rMul)
         );
     );
-    let rRetGT = if($ft.returnType->isEmpty(), | [], | meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings));
-    let rRetMul = if($ft.returnMultiplicity->isEmpty(), | [], | meta::pure::compiler::helper::makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings));
+    let rRetGT = if($ft.returnType->isEmpty(), | [], | makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings));
+    let rRetMul = if($ft.returnMultiplicity->isEmpty(), | [], | makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings));
     
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
@@ -145,7 +164,7 @@ function meta::pure::compiler::helper::makeAsConcreteAsPossible(genericType:Gene
     );
 }
 
-function meta::pure::compiler::helper::findCommonFunctionType(functionTypes:FunctionType[*]):FunctionType[0..1]
+function meta::pure::compiler::helper::functionType::findCommonFunctionType(functionTypes:FunctionType[*]):FunctionType[0..1]
 {
     if($functionTypes->isEmpty(),
         | [],
@@ -155,28 +174,28 @@ function meta::pure::compiler::helper::findCommonFunctionType(functionTypes:Func
                 let allSame = $functionTypes->forAll(ft | $ft.parameters->size() == $paramCount);
                 if(!$allSame,
                     | [],
-                    | meta::pure::compiler::helper::findCommonFunctionType_build($functionTypes, $paramCount)
+                    | findCommonFunctionType_build($functionTypes, $paramCount)
                 );
           )
     );
 }
 
-function meta::pure::compiler::helper::findCommonFunctionType_build(functionTypes:FunctionType[*], paramCount:Integer[1]):FunctionType[0..1]
+function meta::pure::compiler::helper::functionType::findCommonFunctionType_build(functionTypes:FunctionType[*], paramCount:Integer[1]):FunctionType[0..1]
 {
     let commonParams = if($paramCount > 0,
-        | meta::pure::compiler::helper::range($paramCount)->map({i |
+        | range($paramCount)->map({i |
               let paramTypesAtPos = $functionTypes
                   ->filter(ft | $ft.parameters->at($i).genericType->isNotEmpty())
                   ->map(ft | $ft.parameters->at($i).genericType->toOne());
               let commonParamType = if($paramTypesAtPos->isNotEmpty(),
-                  | meta::pure::compiler::helper::findCommonGenericType($paramTypesAtPos, true),
+                  | findCommonGenericType($paramTypesAtPos, true),
                   | []
               );
               let paramMulsAtPos = $functionTypes
                   ->filter(ft | $ft.parameters->at($i).multiplicity->isNotEmpty())
                   ->map(ft | $ft.parameters->at($i).multiplicity);
               let commonParamMul = if($paramMulsAtPos->isNotEmpty(),
-                  | meta::pure::compiler::helper::findCommonMultiplicity($paramMulsAtPos),
+                  | findCommonMultiplicity($paramMulsAtPos),
                   | []
               );
               let pName = $functionTypes->at(0).parameters->at($i).name;
@@ -191,12 +210,12 @@ function meta::pure::compiler::helper::findCommonFunctionType_build(functionType
 
     let returnTypes = $functionTypes->filter(ft | $ft.returnType->isNotEmpty())->map(ft | $ft.returnType->toOne());
     let commonReturnType = if($returnTypes->isNotEmpty(),
-        | meta::pure::compiler::helper::findCommonGenericType($returnTypes, false),
+        | findCommonGenericType($returnTypes, false),
         | []
     );
     let returnMuls = $functionTypes->filter(ft | $ft.returnMultiplicity->isNotEmpty())->map(ft | $ft.returnMultiplicity->toOne());
     let commonReturnMul = if($returnMuls->isNotEmpty(),
-        | meta::pure::compiler::helper::findCommonMultiplicity($returnMuls),
+        | findCommonMultiplicity($returnMuls),
         | []
     );
 
@@ -207,21 +226,21 @@ function meta::pure::compiler::helper::findCommonFunctionType_build(functionType
     );
 }
 
-function meta::pure::compiler::helper::isCompatibleFunctionType(declared:FunctionType[1], actual:FunctionType[1], contravariant:Boolean[1]):Boolean[1]
+function meta::pure::compiler::helper::functionType::isCompatibleFunctionType(declared:FunctionType[1], actual:FunctionType[1], contravariant:Boolean[1]):Boolean[1]
 {
     let declaredParamCount = $declared.parameters->size();
     let actualParamCount = $actual.parameters->size();
     if($declaredParamCount != $actualParamCount,
         | false,
         | let paramsOk = if($declaredParamCount > 0,
-              | meta::pure::compiler::helper::range($declaredParamCount)->forAll({i |
+              | range($declaredParamCount)->forAll({i |
                     let dp = $declared.parameters->at($i);
                     let ap = $actual.parameters->at($i);
                     let typeOk = if($dp.genericType->isNotEmpty() && $ap.genericType->isNotEmpty(),
-                        | meta::pure::compiler::helper::isCompatibleGenericType($dp.genericType->toOne(), $ap.genericType->toOne(), !$contravariant),
+                        | isCompatibleGenericType($dp.genericType->toOne(), $ap.genericType->toOne(), !$contravariant),
                         | true
                     );
-                    let mulOk = meta::pure::compiler::helper::isCompatibleMultiplicity($dp.multiplicity, $ap.multiplicity, !$contravariant);
+                    let mulOk = isCompatibleMultiplicity($dp.multiplicity, $ap.multiplicity, !$contravariant);
                     $typeOk && $mulOk;
                 }),
               | true
@@ -229,11 +248,11 @@ function meta::pure::compiler::helper::isCompatibleFunctionType(declared:Functio
           if(!$paramsOk,
               | false,
               | let returnTypeOk = if($declared.returnType->isNotEmpty() && $actual.returnType->isNotEmpty(),
-                    | meta::pure::compiler::helper::isCompatibleGenericType($declared.returnType->toOne(), $actual.returnType->toOne(), $contravariant),
+                    | isCompatibleGenericType($declared.returnType->toOne(), $actual.returnType->toOne(), $contravariant),
                     | true
                 );
                 let returnMulOk = if($declared.returnMultiplicity->isNotEmpty() && $actual.returnMultiplicity->isNotEmpty(),
-                    | meta::pure::compiler::helper::isCompatibleMultiplicity($declared.returnMultiplicity->toOne(), $actual.returnMultiplicity->toOne(), $contravariant),
+                    | isCompatibleMultiplicity($declared.returnMultiplicity->toOne(), $actual.returnMultiplicity->toOne(), $contravariant),
                     | true
                 );
                 $returnTypeOk && $returnMulOk;
