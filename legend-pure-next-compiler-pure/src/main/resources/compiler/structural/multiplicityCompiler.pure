@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::multiplicityCompiler::*;
+
 function meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
 {
-    let pMult = $m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
+    if($m->instanceOf(meta::pure::protocol::grammar::multiplicity::MultiplicityParameter),
+        | ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $m->cast(@meta::pure::protocol::grammar::multiplicity::MultiplicityParameter).name),
+        | compileConcreteMultiplicity($m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity))
+    );
+}
+
+function meta::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+{
     if($pMult.upperBound->isEmpty(),
         | if($pMult.lowerBound.value == 0,
               | meta::pure::metamodel::multiplicity::ZeroMany,

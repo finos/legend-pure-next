@@ -1,0 +1,50 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], protocolExprs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    if($specs->isEmpty() || $protocolExprs->isEmpty() || $specs->size() != $protocolExprs->size(),
+        | $context,
+        | $specs->size()->meta::pure::compiler::helper::genericType::range()->fold({i, ctx |
+              resolveValueSpecification($specs->at($i), $protocolExprs->at($i), $ctx);
+          }, $context)
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(spec:Any[1], protocolExpr:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    $spec->match([
+        fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+            resolveFunctionExpression($fi, $protocolExpr, $context),
+        a:Any[1] | $context
+    ]);
+}
+
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], protocolExpr:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    $protocolExpr->match([
+        pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            if($pfi.functionName == 'new',
+                | validateNewFromFI($pfi, $fi, $context),
+                | $context
+            ),
+        a:Any[1] | $context
+    ]);
+}
