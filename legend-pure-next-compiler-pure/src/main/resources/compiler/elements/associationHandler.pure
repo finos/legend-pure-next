@@ -19,7 +19,7 @@ import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::relationship::Association[1]
+function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>[1]
 {
     let packagePath = $protocolAssoc.package->toOne().pointerValue;
     let assocName = $packagePath + '::' + $protocolAssoc.name;
@@ -27,61 +27,73 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
 
     let p1Protocol = $protocolAssoc.properties->at(0);
     let p2Protocol = $protocolAssoc.properties->at(1);
-    
-    // Resolve return types
-    let mGenType1 = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []).value->toOne();
-    let mGenType2 = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, []).value->toOne();
-    
-    let mMult1 = meta::pure::compiler::compileLocalMultiplicity($p1Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
-    let mMult2 = meta::pure::compiler::compileLocalMultiplicity($p2Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
 
-    // For property 1 (a), owner=MyAssociation, source=mGenType2, target=mGenType1
-    let propClassifierGT1 = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::property::Property,
-        typeArguments = [$mGenType2, $mGenType1],
-        multiplicityArguments = [$mMult1]
-    );
-    let prop1 = meta::pure::functions::lang::new($propClassifierGT1)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    let builtProp1 = ^$prop1(
-        name = $p1Protocol.name,
-        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = $mGenType1,
-        multiplicity = $mMult1,
-        sourceInformation = $p1Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
-    );
+    let ownerCtx = 'association \'' + $assocName + '\'';
 
-    // For property 2 (b), owner=MyAssociation, source=mGenType1, target=mGenType2
-    let propClassifierGT2 = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::property::Property,
-        typeArguments = [$mGenType1, $mGenType2],
-        multiplicityArguments = [$mMult2]
-    );
-    let prop2 = meta::pure::functions::lang::new($propClassifierGT2)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    let builtProp2 = ^$prop2(
-        name = $p2Protocol.name,
-        aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-        genericType = $mGenType2,
-        multiplicity = $mMult2,
-        sourceInformation = $p2Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
-    );
+    let gt1Result = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+                        ->compileGenericType($context, $packagePath, [], $p1Protocol.name, $ownerCtx);
+    let mGenType1 = $gt1Result.value->toOne();
 
-    ^$skeleton(
-        properties = [
-            ^$builtProp1(owner = ~.~),
-            ^$builtProp2(owner = ~.~)
-        ]
+    let gt2Result = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
+                        ->compileGenericType($gt1Result.context, $packagePath, [], $p2Protocol.name, $ownerCtx);
+    let mGenType2 = $gt2Result.value->toOne();
+
+    let ctx1 = $gt2Result.context;
+
+    if($ctx1.errors->size() > $context.errors->size(),
+        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>(value = $skeleton, context = $ctx1),
+        | let mMult1 = meta::pure::compiler::compileLocalMultiplicity($p1Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
+          let mMult2 = meta::pure::compiler::compileLocalMultiplicity($p2Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
+
+          let propClassifierGT1 = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+              type = meta::pure::metamodel::function::property::Property,
+              typeArguments = [$mGenType2, $mGenType1],
+              multiplicityArguments = [$mMult1]
+          );
+          let prop1 = meta::pure::functions::lang::new($propClassifierGT1)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+          let builtProp1 = ^$prop1(
+              name = $p1Protocol.name,
+              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              genericType = $mGenType1,
+              multiplicity = $mMult1,
+              sourceInformation = $p1Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                  sourceId = $si.sourceId,
+                  startLine = $si.startLine,
+                  startColumn = $si.startColumn,
+                  endLine = $si.endLine,
+                  endColumn = $si.endColumn
+              ))
+          );
+
+          let propClassifierGT2 = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+              type = meta::pure::metamodel::function::property::Property,
+              typeArguments = [$mGenType1, $mGenType2],
+              multiplicityArguments = [$mMult2]
+          );
+          let prop2 = meta::pure::functions::lang::new($propClassifierGT2)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+          let builtProp2 = ^$prop2(
+              name = $p2Protocol.name,
+              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              genericType = $mGenType2,
+              multiplicity = $mMult2,
+              sourceInformation = $p2Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                  sourceId = $si.sourceId,
+                  startLine = $si.startLine,
+                  startColumn = $si.startColumn,
+                  endLine = $si.endLine,
+                  endColumn = $si.endColumn
+              ))
+          );
+
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>(
+              value = ^$skeleton(
+                  properties = [
+                      ^$builtProp1(owner = ~.~),
+                      ^$builtProp2(owner = ~.~)
+                  ]
+              ),
+              context = $ctx1
+          );
     );
 }
 

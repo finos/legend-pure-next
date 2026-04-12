@@ -104,6 +104,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("enumeration/simple.pure") &&
                                   !testName.contains("association/property/simple.pure") &&
                                   !testName.contains("association/property/typeArguments.pure") &&
+                                  !testName.contains("association/property/simple_E_unknownTypeInProperty.pure") &&
+                                  !testName.contains("association/property/simple_E_multipleUnknownTypes.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&

@@ -21,10 +21,10 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
 {
-    compileGenericType($protocolGT, $context, $packagePath, $typeParameters, '', '', []);
+    compileGenericType($protocolGT, $context, $packagePath, $typeParameters, '', '');
 }
 
-function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], propertyName:String[1], ownerPath:String[1], sourceInfo:meta::pure::protocol::grammar::SourceInformation[0..1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], propertyName:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
 {
     let protocolType = $protocolGT.type->toOne();
     let result = $protocolType->match([
@@ -36,9 +36,10 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             );
             if($resolvedOptWithPackage->isEmpty(),
                 | let propCtx = if($propertyName->length() > 0, | ' in property \'' + $propertyName + '\'', | '');
-                  let ownerCtx = if($ownerPath->length() > 0, | ' in class \'' + $ownerPath + '\'', | '');
+                  let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+                  let sourceInfo = $p.sourceInformation;
                   let siCtx = if($sourceInfo->isNotEmpty(),
-                      | let si = $sourceInfo->toOne();
+                      | let si = $sourceInfo->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation);
                         let siSourceId = if($si.sourceId->isNotEmpty(), | $si.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
                         if($siSourceId->length() > 0,
                             | ' (at ' + $siSourceId + ' ' + $si.startLine->toOne()->toString() + ':' + $si.startColumn->toOne()->toString() + '-' + $si.endLine->toOne()->toString() + ':' + $si.endColumn->toOne()->toString() + ')',
