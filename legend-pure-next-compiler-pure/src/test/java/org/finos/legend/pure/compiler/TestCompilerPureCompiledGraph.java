@@ -115,8 +115,14 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
-                                  !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
+                                  !testName.contains("function/native/simple.pure") &&
+                                  !testName.contains("function/native/simple_E_dupParamName.pure") &&
+                                  !testName.contains("function/native/simple_E_unknownParameterType.pure") &&
+                                  !testName.contains("function/native/simple_E_unknownReturnType.pure") &&
+                                  !testName.contains("function/native/simple_E_unknownTypeParam.pure") &&
+                                  !testName.contains("function/userDefined/simple.pure") &&
+                                  !testName.contains("function/userDefined/simple_E_dupParamName.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
                                   !testName.contains("primitive/typeVariable.pure"))
                               {

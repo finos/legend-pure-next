@@ -23,8 +23,8 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>[1]
 {
-    let packagePath = $protocolClass.package->toOne().pointerValue;
-    let className = $packagePath + '::' + $protocolClass.name;
+    let packagePath = if($protocolClass.package->isEmpty(), | '', | $protocolClass.package->toOne().pointerValue);
+    let className = if($packagePath == '', | $protocolClass.name, | $packagePath + '::' + $protocolClass.name);
     let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
 
     let propertyAccum = $protocolClass.properties->fold({p, acc |
