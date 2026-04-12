@@ -13,10 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
@@ -29,35 +26,37 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     let protocolType = $protocolGT.type->toOne();
     let result = $protocolType->match([
         p:meta::pure::protocol::grammar::type::Type_Pointer[1] |
-            let resolvedOpt = $context->resolveElement($p.pointerValue);
-            let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-                | $context->resolveElement($packagePath + '::' + $p.pointerValue),
-                | $resolvedOpt
+            let allMatches = $context->resolveAllElements($p.pointerValue);
+            let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
+            let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+            let siCtx = if($p.sourceInformation->isNotEmpty(),
+                | formatSourceInfo($p.sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                | ''
             );
-            if($resolvedOptWithPackage->isEmpty(),
-                | let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
-                  let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
-                  let sourceInfo = $p.sourceInformation;
-                  let siCtx = if($sourceInfo->isNotEmpty(),
-                      | let si = $sourceInfo->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation);
-                        let siSourceId = if($si.sourceId->isNotEmpty(), | $si.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
-                        if($siSourceId->length() > 0,
-                            | ' (at ' + $siSourceId + ' ' + $si.startLine->toOne()->toString() + ':' + $si.startColumn->toOne()->toString() + '-' + $si.endLine->toOne()->toString() + ':' + $si.endColumn->toOne()->toString() + ')',
-                            | ''
-                        );,
-                      | ''
-                  );
-                  let errorMsg = 'The type \'' + $p.pointerValue + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+            if($allMatches->size() > 1,
+                | let errorMsg = 'The element \'' + $p.pointerValue + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
                   ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
                       value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
                       context = ^$context(errors += $errorMsg)
                   );,
-                | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-                      value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                          type = $resolvedOptWithPackage->toOne()->cast(@meta::pure::metamodel::type::Type)
-                      ),
-                      context = $context
-                  )
+                | let resolvedOpt = $context->resolveElement($p.pointerValue);
+                  let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
+                      | $context->resolveElement($packagePath + '::' + $p.pointerValue),
+                      | $resolvedOpt
+                  );
+                  if($resolvedOptWithPackage->isEmpty(),
+                      | let errorMsg = 'The type \'' + $p.pointerValue + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+                        ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                            value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+                            context = ^$context(errors += $errorMsg)
+                        );,
+                      | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                            value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+                                type = $resolvedOptWithPackage->toOne()->cast(@meta::pure::metamodel::type::Type)
+                            ),
+                            context = $context
+                        )
+                  );
             );,
         t:meta::pure::protocol::grammar::type::generics::TypeParameter[1] |
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(

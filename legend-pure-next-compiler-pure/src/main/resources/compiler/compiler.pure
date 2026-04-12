@@ -24,6 +24,30 @@ import meta::pure::compiler::elements::*;
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::compiler::CompilationResult[1]
 {
     let allElements = $file.sections.elements;
+    let defaultImports = [
+        'meta::pure::metamodel::type::primitives',
+        'meta::pure::metamodel',
+        'meta::pure::metamodel::function::property',
+        'meta::pure::metamodel::type',
+        'meta::pure::metamodel::type::generics',
+        'meta::pure::metamodel::function',
+        'meta::pure::metamodel::multiplicity',
+        'meta::pure::metamodel::relation',
+        'meta::pure::metamodel::valuespecification',
+        'meta::pure::functions::math',
+        'meta::pure::functions::lang',
+        'meta::pure::functions::string',
+        'meta::pure::functions::collection',
+        'meta::pure::functions::boolean',
+        'meta::pure::functions::relation',
+        'meta::pure::functions::multiplicity',
+        'meta::pure::functions::asserts',
+        'meta::pure::functions::meta',
+        'meta::pure::functions::io',
+        'meta::pure::profiles'
+    ];
+    let fileImports = $file.sections.imports->map(i | if($i->endsWith('::*'), | $i->substring(0, $i->length() - 3), | $i));
+    let allImports = $defaultImports->concatenate($fileImports)->removeDuplicates();
 
     // Pass 1: Build structural scaffolding
     let pass1Context = $allElements->fold({e, ctx |
@@ -121,7 +145,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 ^$ctx(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
-    }, ^meta::pure::compiler::CompilerContext(sourceId = $file.sourceId, elementMap=newMap([])));
+    }, ^meta::pure::compiler::CompilerContext(sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([])));
 
     // Pass 2: Compile elements (threading context for error collection)
     let pass2 = $allElements->fold({e, acc |

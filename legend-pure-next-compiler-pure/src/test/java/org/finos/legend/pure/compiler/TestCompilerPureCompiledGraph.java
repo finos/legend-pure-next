@@ -55,7 +55,7 @@ public class TestCompilerPureCompiledGraph
         model.compile();
 
         resolver = new ScopedMetadataAccess(compilerModule, model);
-        
+
         execution = PureExecution.builder()
                 .withResolver(resolver)
                 .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
@@ -75,10 +75,10 @@ public class TestCompilerPureCompiledGraph
         if (!Files.exists(start)) {
             start = Path.of("../legend-pure-next-specification/src/main/resources/specification/compiler");
         }
-        
+
         final Path finalStart = start;
         List<DynamicTest> tests = new ArrayList<>();
-        
+
         try (Stream<Path> stream = Files.walk(finalStart))
         {
             stream.filter(Files::isRegularFile)
@@ -93,27 +93,28 @@ public class TestCompilerPureCompiledGraph
                               String testName = finalStart.relativize(p).toString();
                               String sourceId = testName.replace(".pure", "");
 
-                              if (!testName.contains("class/property/simple.pure") &&
-                                  !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
-                                  !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
-                                  !testName.contains("class/property/typeArguments.pure") &&
-                                  !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
+                              if (!testName.contains("association/property/simple.pure") &&
+                                  !testName.contains("association/property/simple_E_unknownTypeInProperty.pure") &&
+                                  !testName.contains("association/property/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("association/property/simple_E_ambiguousType.pure") &&
+                                  !testName.contains("association/property/typeArguments.pure") &&
+                                  !testName.contains("association/property/typeArguments_E_Unknown.pure") &&
+                                  !testName.contains("class/inheritance/simple.pure") &&
+                                  !testName.contains("class/inheritance/simple_E_unknownTypeInGeneralization.pure") &&
+                                  !testName.contains("class/inheritance/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("class/inheritance/typeArguments.pure") &&
+                                  !testName.contains("class/inheritance/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/profile/profile_E_unknownProfile.pure") &&
                                   !testName.contains("class/profile/profile_E_unknownStereotype.pure") &&
                                   !testName.contains("class/profile/profile_E_unknownTag.pure") &&
-                                  !testName.contains("class/inheritance/simple.pure") &&
-                                  !testName.contains("class/inheritance/typeArguments.pure") &&
-                                  !testName.contains("class/inheritance/typeArguments_E_Unknown.pure") &&
-                                  !testName.contains("class/inheritance/simple_E_unknownTypeInGeneralization.pure") &&
-                                  !testName.contains("class/inheritance/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("class/property/simple.pure") &&
+                                  !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
+                                  !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("class/property/typeArguments.pure") &&
+                                  !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
-                                  !testName.contains("association/property/simple.pure") &&
-                                  !testName.contains("association/property/simple_E_unknownTypeInProperty.pure") &&
-                                  !testName.contains("association/property/simple_E_multipleUnknownTypes.pure") &&
-                                  !testName.contains("association/property/typeArguments.pure") &&
-                                  !testName.contains("association/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&
@@ -141,9 +142,9 @@ public class TestCompilerPureCompiledGraph
                       }
                   });
         }
-        
+
         assertFalse(tests.isEmpty(), "Should discover at least one specification file");
-        
+
         return tests;
     }
 }

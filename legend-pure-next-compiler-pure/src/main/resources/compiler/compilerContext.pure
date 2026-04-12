@@ -12,16 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::*;
 
 Class meta::pure::compiler::CompilerContext
 {
     sourceId : String[0..1];
+    imports : String[*];
     elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
     errors : String[*];
 }
@@ -62,6 +59,20 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
                           | ('meta::pure::metamodel::type::' + $path)->lenientPathToElement()
                       )
                 );
+          );
+    );
+}
+
+function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
+{
+    let localResolution = $context.elementMap->get($path);
+    if($localResolution->isNotEmpty(),
+        | [$path],
+        | if($path->contains('::'),
+              | if($path->lenientPathToElement()->isNotEmpty(), | [$path], | []),
+              | let shortNameMatches = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
+                let importMatches = $context.imports->map(imp | $imp + '::' + $path)->filter(candidate | $candidate->lenientPathToElement()->isNotEmpty());
+                $importMatches->concatenate($shortNameMatches)->removeDuplicates();
           );
     );
 }
