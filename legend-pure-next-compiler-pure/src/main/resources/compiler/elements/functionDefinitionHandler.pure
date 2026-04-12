@@ -61,7 +61,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
         let mGenType = $pType->compileGenericType($ctx, $packagePath, []).value->toOne();
         
-        let mMult = $p.multiplicity->meta::pure::compiler::compileMultiplicity();
+        let mMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
         
         ^meta::pure::metamodel::valuespecification::VariableExpression(
             name = $p.name,
@@ -74,7 +74,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
     let rType = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let rGenType = $rType->compileGenericType($ctx, $packagePath, []).value->toOne();
     
-    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::compileMultiplicity();
+    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
     
     // FunctionType
     let functionType = meta::pure::functions::lang::new(

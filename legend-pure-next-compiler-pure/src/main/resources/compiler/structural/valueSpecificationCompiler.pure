@@ -88,7 +88,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification(vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]): ValueCompileResult[1]
 {
     let mGenType = if($vs.genericType->isEmpty(), | [], | $vs.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value);
-    let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->meta::pure::compiler::compileMultiplicity());
+    let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
     
     match($vs, [
         a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] |

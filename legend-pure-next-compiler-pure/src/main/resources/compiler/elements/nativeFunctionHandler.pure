@@ -61,24 +61,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
         let mGenType = $pType->compileGenericType($ctx, $packagePath, []).value->toOne();
         
-        let pMult = $p.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-        let mMult = if($pMult.upperBound->isEmpty(),
-                        | if($pMult.lowerBound.value == 0,
-                              | meta::pure::metamodel::multiplicity::ZeroMany,
-                              | meta::pure::metamodel::multiplicity::OneMany
-                          ),
-                        | let upper = $pMult.upperBound->toOne().value;
-                          if($pMult.lowerBound.value == 1 && $upper == 1,
-                              | meta::pure::metamodel::multiplicity::PureOne,
-                              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                                      )
-                                )
-                          );
-                    );
+        let mMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
                     
         ^meta::pure::metamodel::valuespecification::VariableExpression(
             name = $p.name,
@@ -91,24 +74,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     let rTypeStr = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let rMGenType = $rTypeStr->compileGenericType($ctx, $packagePath, []).value->toOne();
     
-    let rPMult = $fn.returnMultiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-    let rMMult = if($rPMult.upperBound->isEmpty(),
-                    | if($rPMult.lowerBound.value == 0,
-                          | meta::pure::metamodel::multiplicity::ZeroMany,
-                          | meta::pure::metamodel::multiplicity::OneMany
-                      ),
-                    | let upper = $rPMult.upperBound->toOne().value;
-                      if($rPMult.lowerBound.value == 1 && $upper == 1,
-                          | meta::pure::metamodel::multiplicity::PureOne,
-                          | if($rPMult.lowerBound.value == 0 && $upper == 1,
-                                | meta::pure::metamodel::multiplicity::ZeroOne,
-                                | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                                      lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $rPMult.lowerBound.value),
-                                      upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                                  )
-                            )
-                      );
-                );
+    let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
     // Compute FunctionType
     let functionType = meta::pure::functions::lang::new(

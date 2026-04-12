@@ -18,6 +18,7 @@ import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::structural::generalizationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>[1]
@@ -33,29 +34,11 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledProperties = $propertyAccum.values;
     let ctx1 = $propertyAccum.context;
 
-    let genAccum = if($protocolClass.generalizations->isEmpty(),
-        | ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(
-              values = [^meta::pure::metamodel::relationship::Generalization(
-                  general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
-                  specific = $skeleton
-              )],
-              context = $ctx1
-          ),
-        | $protocolClass.generalizations->fold({g, acc |
-              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'super type', 'class \'' + $className + '\'');
-              ^$acc(
-                  values += ^meta::pure::metamodel::relationship::Generalization(
-                      general = $gtResult.value->toOne(),
-                      specific = $skeleton
-                  ),
-                  context = $gtResult.context
-              );
-          }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(context = $ctx1))
-    );
+    let ownerCtx = 'class \'' + $className + '\'';
+
+    let genAccum = compileGeneralizations($protocolClass.generalizations, $skeleton, $ctx1, $packagePath, $ownerCtx);
     let compiledGeneralizations = $genAccum.values;
     let ctx2 = $genAccum.context;
-
-    let ownerCtx = 'class \'' + $className + '\'';
 
     let stereoAccum = $protocolClass.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);

@@ -17,6 +17,7 @@ import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::multiplicityCompiler::*;
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
 
@@ -150,25 +151,4 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
     ^CompilationResult(elements = $pass2.values, errors = $pass2.context.errors);
 }
 
-function meta::pure::compiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
-{
-    let pMult = $m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-    if($pMult.upperBound->isEmpty(),
-        | if($pMult.lowerBound.value == 0,
-              | meta::pure::metamodel::multiplicity::ZeroMany,
-              | meta::pure::metamodel::multiplicity::OneMany
-          ),
-        | let upper = $pMult.upperBound->toOne().value;
-          if($pMult.lowerBound.value == 1 && $upper == 1,
-              | meta::pure::metamodel::multiplicity::PureOne,
-              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                      )
-                )
-          );
-    );
-}
 

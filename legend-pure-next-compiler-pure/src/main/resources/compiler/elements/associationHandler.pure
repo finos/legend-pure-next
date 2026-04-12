@@ -42,8 +42,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
 
     if($ctx1.errors->size() > $context.errors->size(),
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>(value = $skeleton, context = $ctx1),
-        | let mMult1 = meta::pure::compiler::compileLocalMultiplicity($p1Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
-          let mMult2 = meta::pure::compiler::compileLocalMultiplicity($p2Protocol.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity));
+        | let mMult1 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p1Protocol.multiplicity);
+          let mMult2 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p2Protocol.multiplicity);
 
           let propClassifierGT1 = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
               type = meta::pure::metamodel::function::property::Property,
@@ -93,27 +93,6 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
                   ]
               ),
               context = $ctx1
-          );
-    );
-}
-
-function meta::pure::compiler::elements::compileLocalMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
-{
-    if($pMult.upperBound->isEmpty(),
-        | if($pMult.lowerBound.value == 0,
-              | meta::pure::metamodel::multiplicity::ZeroMany,
-              | meta::pure::metamodel::multiplicity::OneMany
-          ),
-        | let upper = $pMult.upperBound->toOne().value;
-          if($pMult.lowerBound.value == 1 && $upper == 1,
-              | meta::pure::metamodel::multiplicity::PureOne,
-              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                      )
-                )
           );
     );
 }

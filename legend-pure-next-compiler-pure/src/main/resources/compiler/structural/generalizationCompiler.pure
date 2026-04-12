@@ -1,0 +1,39 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>[1]
+{
+    if($protocolGeneralizations->isEmpty(),
+        | ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(
+              values = [^meta::pure::metamodel::relationship::Generalization(
+                  general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+                  specific = $skeleton
+              )],
+              context = $context
+          ),
+        | $protocolGeneralizations->fold({g, acc |
+              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'super type', $ownerContext);
+              ^$acc(
+                  values += ^meta::pure::metamodel::relationship::Generalization(
+                      general = $gtResult.value->toOne(),
+                      specific = $skeleton
+                  ),
+                  context = $gtResult.context
+              );
+          }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(context = $context))
+    );
+}
