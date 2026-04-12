@@ -13,38 +13,49 @@
 // limitations under the License.
 
 import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], protocolExprs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
-{
-    if($specs->isEmpty() || $protocolExprs->isEmpty() || $specs->size() != $protocolExprs->size(),
-        | $context,
-        | $specs->size()->meta::pure::compiler::helper::genericType::range()->fold({i, ctx |
-              resolveValueSpecification($specs->at($i), $protocolExprs->at($i), $ctx);
-          }, $context)
-    );
-}
-
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(spec:Any[1], protocolExpr:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(spec:Any[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     $spec->match([
+        // Metamodel types (from compiled expression sequence)
         fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-            resolveFunctionExpression($fi, $protocolExpr, $context),
+            resolveFunctionExpression($fi, $protocolExpr, $scope, $context),
+        col:meta::pure::metamodel::valuespecification::Collection[1] |
+            resolveCollection($col, $protocolExpr, $scope, $context),
+        ve:meta::pure::metamodel::valuespecification::VariableExpression[1] |
+            resolveVariableExpression($ve, $protocolExpr, $scope, $context),
+        av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
+            resolveAtomicValueSpec($av, $protocolExpr, $scope, $context),
+        // Protocol types (from recursive traversal via protocol params)
+        pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
+            resolveProtocolFunctionInvocation($pfi, $scope, $context),
+        pve:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
+            resolveProtocolVariableExpression($pve, $scope, $context),
         a:Any[1] | $context
     ]);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], protocolExpr:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveProtocolFunctionInvocation(pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    $protocolExpr->match([
-        pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-            if($pfi.functionName == 'new',
-                | validateNewFromFI($pfi, $fi, $context),
-                | $context
-            ),
-        a:Any[1] | $context
-    ]);
+    $pfi.parametersValues->fold({param, ctx |
+        resolveValueSpecification($param, $param, $scope, $ctx);
+    }, $context);
+}
+
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveProtocolVariableExpression(pve:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let inScope = $scope->filter(s | $s.name == $pve.name);
+    if($inScope->isEmpty(),
+        | let siCtx = if($pve.sourceInformation->isNotEmpty(),
+              | meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo($pve.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+              | ''
+          );
+          ^$context(errors += 'The variable \'' + $pve.name + '\' is unknown!' + $siCtx);,
+        | $context
+    );
 }

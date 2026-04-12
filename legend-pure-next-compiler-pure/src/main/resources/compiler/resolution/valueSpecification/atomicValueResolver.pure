@@ -12,78 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
-import meta::pure::compiler::structural::functionResolution::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::structural::sourceInformationCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]):ValueCompileResult[1]
+function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValueSpec(av:meta::pure::metamodel::valuespecification::AtomicValue[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    let rawValue = $a.value->toOne();
-    if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
-        | processLambda($rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction), $vs, $ctx, $scope, $mGenType, $mMult),
-        | if($rawValue->instanceOf(meta::pure::protocol::grammar::Package_Pointer),
-              | processPackagePointer($rawValue->cast(@meta::pure::protocol::grammar::Package_Pointer), $vs, $ctx),
-              | processLiteral($rawValue, $vs, $ctx, $mGenType, $mMult)
-          )
-    );
-}
-
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::processLambda(lambda:meta::pure::protocol::grammar::function::LambdaFunction[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]):ValueCompileResult[1]
-{
-    let lambdaResult = $lambda->compileLambda($ctx, $scope, $mGenType, $mMult);
-    if($lambdaResult.values->isEmpty(),
-        | $lambdaResult,
-        | let compiledVal = $lambdaResult.values->at(0);
-          let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne());
-          ^ValueCompileResult(
-              values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                  value = $compiledVal,
-                  genericType = $inferredGT,
-                  multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                  sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-              )],
-              openVariables = $lambdaResult.openVariables,
-              context = $lambdaResult.context
-          );
-    );
-}
-
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::processPackagePointer(pp:meta::pure::protocol::grammar::Package_Pointer[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1]):ValueCompileResult[1]
-{
-    let resolved = $ctx->resolveElement($pp.pointerValue);
-    if($resolved->isEmpty(),
-        | let siCtx = if($vs.sourceInformation->isNotEmpty(), | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
-          ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.pointerValue + '\' can\'t be found' + $siCtx));,
-        | let element = $resolved->toOne();
-          ^ValueCompileResult(
-              values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                  value = $element,
-                  genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $element->type()),
-                  multiplicity = meta::pure::metamodel::multiplicity::PureOne,
-                  sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-              )],
-              openVariables = []
-          );
-    );
-}
-
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::processLiteral(rawValue:Any[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]):ValueCompileResult[1]
-{
-    let literalGT = inferLiteralType($rawValue, $ctx);
-    let inferredGT = if($literalGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-        | if($mGenType->isEmpty(), | $literalGT, | $mGenType->toOne()),
-        | $literalGT
-    );
-    ^ValueCompileResult(
-        values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-            value = $rawValue,
-            genericType = $inferredGT,
-            multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-            sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-        )],
-        openVariables = []
-    );
+    $context;
 }
