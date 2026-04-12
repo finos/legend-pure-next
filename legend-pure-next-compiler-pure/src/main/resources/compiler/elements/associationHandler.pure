@@ -31,11 +31,11 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
     let ownerCtx = 'association \'' + $assocName + '\'';
 
     let gt1Result = $p1Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
-                        ->compileGenericType($context, $packagePath, [], $p1Protocol.name, $ownerCtx);
+                        ->compileGenericType($context, $packagePath, [], 'property \'' + $p1Protocol.name + '\'', $ownerCtx);
     let mGenType1 = $gt1Result.value->toOne();
 
     let gt2Result = $p2Protocol.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)
-                        ->compileGenericType($gt1Result.context, $packagePath, [], $p2Protocol.name, $ownerCtx);
+                        ->compileGenericType($gt1Result.context, $packagePath, [], 'property \'' + $p2Protocol.name + '\'', $ownerCtx);
     let mGenType2 = $gt2Result.value->toOne();
 
     let ctx1 = $gt2Result.context;

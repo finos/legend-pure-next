@@ -94,18 +94,23 @@ public class TestCompilerPureCompiledGraph
                               String sourceId = testName.replace(".pure", "");
 
                               if (!testName.contains("class/property/simple.pure") &&
-                                  !testName.contains("class/property/typeArguments.pure") &&
                                   !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
                                   !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("class/property/typeArguments.pure") &&
+                                  !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("class/profile/profile.pure") &&
                                   !testName.contains("class/inheritance/simple.pure") &&
                                   !testName.contains("class/inheritance/typeArguments.pure") &&
+                                  !testName.contains("class/inheritance/typeArguments_E_Unknown.pure") &&
+                                  !testName.contains("class/inheritance/simple_E_unknownTypeInGeneralization.pure") &&
+                                  !testName.contains("class/inheritance/simple_E_multipleUnknownTypes.pure") &&
                                   !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
                                   !testName.contains("enumeration/simple.pure") &&
                                   !testName.contains("association/property/simple.pure") &&
-                                  !testName.contains("association/property/typeArguments.pure") &&
                                   !testName.contains("association/property/simple_E_unknownTypeInProperty.pure") &&
                                   !testName.contains("association/property/simple_E_multipleUnknownTypes.pure") &&
+                                  !testName.contains("association/property/typeArguments.pure") &&
+                                  !testName.contains("association/property/typeArguments_E_Unknown.pure") &&
                                   !testName.contains("function/native/simple.pure") &&
                                   !testName.contains("function/lambda/openVariables.pure") &&
                                   !testName.contains("primitive/simple.pure") &&

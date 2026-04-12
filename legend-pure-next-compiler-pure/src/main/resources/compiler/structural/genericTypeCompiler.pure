@@ -24,7 +24,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     compileGenericType($protocolGT, $context, $packagePath, $typeParameters, '', '');
 }
 
-function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], propertyName:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], elementContext:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
 {
     let protocolType = $protocolGT.type->toOne();
     let result = $protocolType->match([
@@ -35,7 +35,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                 | $resolvedOpt
             );
             if($resolvedOptWithPackage->isEmpty(),
-                | let propCtx = if($propertyName->length() > 0, | ' in property \'' + $propertyName + '\'', | '');
+                | let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
                   let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
                   let sourceInfo = $p.sourceInformation;
                   let siCtx = if($sourceInfo->isNotEmpty(),
@@ -47,7 +47,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                         );,
                       | ''
                   );
-                  let errorMsg = 'The type \'' + $p.pointerValue + '\' can\'t be found' + $propCtx + $ownerCtx + $siCtx;
+                  let errorMsg = 'The type \'' + $p.pointerValue + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
                   ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
                       value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
                       context = ^$context(errors += $errorMsg)
@@ -69,7 +69,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     ]);
 
     let typeArgResult = $protocolGT.typeArguments->fold({a, acc |
-        let argResult = $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters);
+        let argResult = $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
         ^$acc(values += $argResult.value, context = $argResult.context);
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::type::generics::GenericType>(context = $result.context));
 

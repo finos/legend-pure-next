@@ -37,7 +37,7 @@ import meta::pure::compiler::*;
 function meta::pure::compiler::structural::propertyCompiler::compileProperty(protocolProperty:meta::pure::protocol::grammar::function::property::Property[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>[1]
 {
     let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), $protocolProperty.name, 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'');
+    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'property \'' + $protocolProperty.name + '\'', 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'');
     let mGenType = $gtResult.value;
     let updatedContext = $gtResult.context;
 

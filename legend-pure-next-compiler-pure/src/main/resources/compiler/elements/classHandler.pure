@@ -41,7 +41,7 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
               context = $ctx1
           ),
         | $protocolClass.generalizations->fold({g, acc |
-              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+              let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $skeleton.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'super type', 'class \'' + $className + '\'');
               ^$acc(
                   values += ^meta::pure::metamodel::relationship::Generalization(
                       general = $gtResult.value->toOne(),
