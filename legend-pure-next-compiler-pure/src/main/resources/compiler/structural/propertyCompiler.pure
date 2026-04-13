@@ -55,20 +55,30 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
           );
 
           let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+          let builtProp = ^$prop(
+              name = $protocolProperty.name,
+              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              genericType = $mGenType,
+              multiplicity = $mMult,
+              sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+                  sourceId = $si.sourceId,
+                  startLine = $si.startLine,
+                  startColumn = $si.startColumn,
+                  endLine = $si.endLine,
+                  endColumn = $si.endColumn
+              ))
+          );
+          let finalProp = if($protocolProperty.defaultValue->isEmpty(),
+              | $builtProp,
+              | let defaultLambda = $protocolProperty.defaultValue->toOne()->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+                let defaultResult = $defaultLambda->compileLambda($updatedContext, [], [], []);
+                if($defaultResult.values->isEmpty(),
+                    | $builtProp,
+                    | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>))
+                );
+          );
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(
-              value = ^$prop(
-                  name = $protocolProperty.name,
-                  aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
-                  genericType = $mGenType,
-                  multiplicity = $mMult,
-                  sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
-                      sourceId = $si.sourceId,
-                      startLine = $si.startLine,
-                      startColumn = $si.startColumn,
-                      endLine = $si.endLine,
-                      endColumn = $si.endColumn
-                  ))
-              ),
+              value = $finalProp,
               context = $updatedContext
           );
     );

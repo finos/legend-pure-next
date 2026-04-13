@@ -23,42 +23,29 @@ Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccum
     context: meta::pure::compiler::CompilerContext[1];
 }
 
-function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], protocolExprs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    if($specs->isEmpty() || $protocolExprs->isEmpty() || $specs->size() != $protocolExprs->size(),
-        | $context,
-        | let result = $specs->size()->meta::pure::compiler::helper::genericType::range()->fold({i, acc |
-              let spec = $specs->at($i);
-              let protocolExpr = $protocolExprs->at($i);
-              let ctx1 = resolveValueSpecification($spec, $protocolExpr, $acc.scope, $acc.context);
-              let ctx2 = $spec->match([
-                  fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-                      $protocolExpr->match([
-                          pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-                              checkLetDuplicate($fi, $pfi, $acc.scope, $ctx1),
-                          a:Any[1] | $ctx1
-                      ]),
-                  a:Any[1] | $ctx1
-              ]);
-              let newScope = $spec->match([
-                  fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-                      $protocolExpr->match([
-                          pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-                              if($pfi.functionName == 'letFunction' && $fi.parametersValues->size() >= 1,
-                                  | let varName = $fi.parametersValues->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
-                                    $acc.scope->concatenate(^meta::pure::metamodel::valuespecification::VariableExpression(
-                                        name = $varName,
-                                        genericType = $fi.genericType,
-                                        multiplicity = $fi.multiplicity
-                                    ));,
-                                  | $acc.scope
-                              ),
-                          a:Any[1] | $acc.scope
-                      ]),
-                  a:Any[1] | $acc.scope
-              ]);
-              ^ResolveAccumulator(scope = $newScope, context = $ctx2);
-          }, ^ResolveAccumulator(scope = $params, context = $context));
-          $result.context;
-    );
+    let result = $specs->fold({spec, acc |
+        let ctx1 = resolveValueSpecification($spec, $acc.scope, $acc.context);
+        let ctx2 = $spec->match([
+            fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                checkLetDuplicate($fi, $acc.scope, $ctx1),
+            a:Any[1] | $ctx1
+        ]);
+        let newScope = $spec->match([
+            fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 1,
+                    | let varName = $fi.parametersValues->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
+                      $acc.scope->concatenate(^meta::pure::metamodel::valuespecification::VariableExpression(
+                          name = $varName,
+                          genericType = $fi.genericType,
+                          multiplicity = $fi.multiplicity
+                      ));,
+                    | $acc.scope
+                ),
+            a:Any[1] | $acc.scope
+        ]);
+        ^ResolveAccumulator(scope = $newScope, context = $ctx2);
+    }, ^ResolveAccumulator(scope = $params, context = $context));
+    $result.context;
 }

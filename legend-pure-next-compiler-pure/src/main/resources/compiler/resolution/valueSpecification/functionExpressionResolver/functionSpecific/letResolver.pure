@@ -15,17 +15,14 @@
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::checkLetDuplicate(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], protocolFI:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::checkLetDuplicate(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    if($protocolFI.functionName != 'letFunction',
+    if(!$fi.functionName->toOne()->startsWith('letFunction'),
         | $context,
         | let varName = $fi.parametersValues->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
           if($scope->filter(s | $s.name == $varName)->isEmpty(),
               | $context,
-              | let siCtx = if($protocolFI.sourceInformation->isNotEmpty(),
-                    | formatSourceInfo($protocolFI.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
-                    | ''
-                );
+              | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
                 ^$context(errors += 'Variable \'' + $varName + '\' is already defined' + $siCtx);
           );
     );

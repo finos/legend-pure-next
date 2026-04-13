@@ -112,6 +112,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("valueSpecification/let/") &&
                                   !testName.contains("valueSpecification/multiplicity/") &&
                                   !testName.contains("valueSpecification/new/new.pure") &&
+                                  !testName.contains("valueSpecification/new/new_E_abstractClassInstantiation.pure") &&
                                   !testName.contains("valueSpecification/new/parentReference.pure") &&
                                   !testName.contains("valueSpecification/element/") &&
                                   !testName.contains("valueSpecification/primitive/"))

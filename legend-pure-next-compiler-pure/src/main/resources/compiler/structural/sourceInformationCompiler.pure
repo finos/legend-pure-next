@@ -26,3 +26,16 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
           );
     );
 }
+
+function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:meta::pure::metamodel::SourceInformation[0..1], context:meta::pure::compiler::CompilerContext[1]):String[1]
+{
+    if($si->isEmpty(),
+        | '',
+        | let msi = $si->toOne();
+          let sid = if($msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
+          if($sid->length() > 0,
+              | ' (at ' + $sid + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
+              | ''
+          );
+    );
+}

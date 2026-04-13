@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::*;
-
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValueSpec(av:meta::pure::metamodel::valuespecification::AtomicValue[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
-{
-    $context;
-}
+// AtomicValue resolution is handled by the Java compiler's AtomicValueResolver.
+// In the Pure compiler, AtomicValue resolution (lambda body resolution,
+// package pointer resolution) happens during the compilation phase.
+// This file is a placeholder for future migration.

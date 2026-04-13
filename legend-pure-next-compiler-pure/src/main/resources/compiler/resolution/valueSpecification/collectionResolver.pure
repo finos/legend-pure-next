@@ -15,13 +15,9 @@
 import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::collectionResolver::resolveCollection(col:meta::pure::metamodel::valuespecification::Collection[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::collectionResolver::resolveCollection(col:meta::pure::metamodel::valuespecification::Collection[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    if($protocolExpr->instanceOf(meta::pure::protocol::grammar::valuespecification::Collection),
-        | let protocolCol = $protocolExpr->cast(@meta::pure::protocol::grammar::valuespecification::Collection);
-          $protocolCol.values->fold({v, ctx |
-              resolveValueSpecification($v, $v, $scope, $ctx);
-          }, $context);,
-        | $context
-    );
+    $col.values->fold({v, ctx |
+        resolveValueSpecification($v, $scope, $ctx);
+    }, $context);
 }

@@ -64,7 +64,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           let innerScope = $scope->concatenate($compiledParams);
           let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx3, $innerScope);
           let ctx4Pre = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctx3);
-          let ctx4 = resolveExpressionSequence($compiledSequence.specs, $l.expressionSequence, $innerScope, $ctx4Pre);
+          let ctx4 = resolveExpressionSequence($compiledSequence.specs, $innerScope, $ctx4Pre);
 
           let openVariables = $compiledSequence.openVariables->filter(var |
               $innerScope->filter(s | $s.name == $var.name)->isEmpty()

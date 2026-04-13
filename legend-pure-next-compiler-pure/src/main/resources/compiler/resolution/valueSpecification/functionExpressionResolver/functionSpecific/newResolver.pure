@@ -17,61 +17,70 @@ import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(protocolFI:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], compiledFI:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    // Extract class from resolved type parameters (T → actual class)
-    let cls = if($compiledFI.resolvedTypeParameters->isNotEmpty(),
-        | $compiledFI.resolvedTypeParameters->at(0).value->match([
-              gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
-                  $gtv.type->match([
-                      c:meta::pure::metamodel::type::Class<Any>[1] | $c,
-                      a:Any[1] | []->cast(@meta::pure::metamodel::type::Class<Any>)
-                  ]),
-              a:Any[1] | []->cast(@meta::pure::metamodel::type::Class<Any>)
-          ]),
-        | []->cast(@meta::pure::metamodel::type::Class<Any>)
-    );
-    // Extract provided property names from key expressions
-    let providedNames = $protocolFI.parametersValues->tail()->map(p |
-        $p->match([
-            kfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-                if($kfi.functionName == 'keyExpression' && $kfi.parametersValues->isNotEmpty(),
-                    | $kfi.parametersValues->at(0)->match([
-                          av:meta::pure::protocol::grammar::valuespecification::AtomicValue[1] | $av.value->cast(@String),
+    // Extract class from return type (like Java: fe._genericType())
+    let cls = extractClassFromGenericType($fi.genericType);
+    // Extract provided property names from key expressions (second param is a Collection of keyExpression FIs)
+    let providedNames = if($fi.parametersValues->size() >= 2,
+        | $fi.parametersValues->at(1)->match([
+              col:meta::pure::metamodel::valuespecification::Collection[1] |
+                  $col.values->map(v |
+                      $v->match([
+                          kfi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                              if($kfi.parametersValues->isNotEmpty(),
+                                  | $kfi.parametersValues->at(0)->match([
+                                        av:meta::pure::metamodel::valuespecification::AtomicValue[1] | $av.value->cast(@String),
+                                        a:Any[1] | []->cast(@String)
+                                    ]),
+                                  | []->cast(@String)
+                              ),
                           a:Any[1] | []->cast(@String)
-                      ]),
-                    | []->cast(@String)
-                ),
-            a:Any[1] | []->cast(@String)
-        ])
+                      ])
+                  ),
+              a:Any[1] | []->cast(@String)
+          ]),
+        | []->cast(@String)
     );
-    validateNew($protocolFI, $cls, $providedNames, $context);
+    validateNew($fi, $cls, $providedNames, $context);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fe:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], compiledClass:meta::pure::metamodel::type::Class<Any>[0..1], providedPropertyNames:String[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:meta::pure::metamodel::type::generics::GenericType[0..1]):meta::pure::metamodel::type::Class<Any>[0..1]
+{
+    if($gt->isNotEmpty() && $gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+        | let t = $gt->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
+          if($t->isNotEmpty() && $t->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+              | $t->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
+              | []
+          );,
+        | []
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], compiledClass:meta::pure::metamodel::type::Class<Any>[0..1], providedPropertyNames:String[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     if($compiledClass->isEmpty(),
         | $context,
         | let cls = $compiledClass->toOne();
-          let ctx1 = checkAbstract($cls, $fe, $context);
+          let ctx1 = checkAbstract($cls, $fi, $context);
           if($ctx1.errors->size() > $context.errors->size(),
               | $ctx1,
-              | checkMissingProperties($cls, $providedPropertyNames, $fe, $ctx1)
+              | checkMissingProperties($cls, $providedPropertyNames, $fi, $ctx1)
           );
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:meta::pure::metamodel::type::Class<Any>[1], fe:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:meta::pure::metamodel::type::Class<Any>[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let isAbstract = $cls.stereotypes->exists(s | $s.value == 'abstract' && $s.profile->toOne()->fullPath() == 'meta::pure::profiles::typemodifiers');
     if($isAbstract,
-        | let siCtx = if($fe.sourceInformation->isNotEmpty(), | formatSourceInfo($fe.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context), | '');
+        | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
           ^$context(errors += 'Cannot instantiate abstract class \'' + $cls->fullPath() + '\'' + $siCtx);,
         | $context
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fe:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let requiredProps = $cls.properties
         ->filter(p | $p.multiplicity == meta::pure::metamodel::multiplicity::PureOne || $p.multiplicity == meta::pure::metamodel::multiplicity::OneMany)
@@ -79,7 +88,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         ->filter(p | !$p.stereotypes->exists(s | $s.value == 'inferred' || $s.value == 'excluded' || $s.value == 'pointer'))
         ->filter(p | !$providedNames->contains($p.name));
     $requiredProps->fold({p, ctx |
-        let siCtx = if($fe.sourceInformation->isNotEmpty(), | formatSourceInfo($fe.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+        let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
         let typeName = if($p.genericType->isNotEmpty() && $p.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
             | let gt = $p.genericType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
               if($gt.type->isNotEmpty(), | $gt.type->toOne()->elementToPath(), | 'Unknown');,

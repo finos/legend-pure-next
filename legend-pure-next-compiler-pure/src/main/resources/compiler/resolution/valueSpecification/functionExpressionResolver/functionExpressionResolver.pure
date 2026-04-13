@@ -14,21 +14,28 @@
 
 import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    $protocolExpr->match([
-        pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-            // Recurse into parameters
-            let ctx1 = $pfi.parametersValues->fold({param, ctx |
-                resolveValueSpecification($param, $param, $scope, $ctx);
-            }, $context);
-            // Function-specific validation
-            if($pfi.functionName == 'new',
-                | validateNewFromFI($pfi, $fi, $ctx1),
-                | $ctx1
-            );,
-        a:Any[1] | $context
-    ]);
+    // Recurse into parameters
+    let ctx1 = $fi.parametersValues->fold({param, ctx |
+        resolveValueSpecification($param, $scope, $ctx);
+    }, $context);
+
+    // Finalize: compute resolved return type using bindings (like Java's finalizeFunctionExpression)
+    let bindings = extractResolvedParametersBinding($fi);
+    let resolvedReturnGT = makeAsConcreteAsPossible($fi.genericType->toOne(), $bindings);
+
+    // Function-specific validation
+    let fnName = $fi.functionName->toOne();
+    if($fnName == 'new' || $fnName->startsWith('new_'),
+        | let resolvedFI = ^$fi(genericType = $resolvedReturnGT);
+          validateNewFromFI($resolvedFI, $ctx1);,
+        | $ctx1
+    );
 }

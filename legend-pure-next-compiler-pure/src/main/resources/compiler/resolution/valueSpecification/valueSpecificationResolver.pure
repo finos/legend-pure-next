@@ -12,50 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(spec:Any[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    $spec->match([
-        // Metamodel types (from compiled expression sequence)
+    $vs->match([
         fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-            resolveFunctionExpression($fi, $protocolExpr, $scope, $context),
+            resolveFunctionExpression($fi, $scope, $context),
         col:meta::pure::metamodel::valuespecification::Collection[1] |
-            resolveCollection($col, $protocolExpr, $scope, $context),
+            resolveCollection($col, $scope, $context),
         ve:meta::pure::metamodel::valuespecification::VariableExpression[1] |
-            resolveVariableExpression($ve, $protocolExpr, $scope, $context),
-        av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
-            resolveAtomicValueSpec($av, $protocolExpr, $scope, $context),
-        // Protocol types (from recursive traversal via protocol params)
-        pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1] |
-            resolveProtocolFunctionInvocation($pfi, $scope, $context),
-        pve:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
-            resolveProtocolVariableExpression($pve, $scope, $context),
+            resolveVariableExpression($ve, $scope, $context),
         a:Any[1] | $context
     ]);
-}
-
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveProtocolFunctionInvocation(pfi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
-{
-    $pfi.parametersValues->fold({param, ctx |
-        resolveValueSpecification($param, $param, $scope, $ctx);
-    }, $context);
-}
-
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveProtocolVariableExpression(pve:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
-{
-    let inScope = $scope->filter(s | $s.name == $pve.name);
-    if($inScope->isEmpty(),
-        | let siCtx = if($pve.sourceInformation->isNotEmpty(),
-              | meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo($pve.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
-              | ''
-          );
-          ^$context(errors += 'The variable \'' + $pve.name + '\' is unknown!' + $siCtx);,
-        | $context
-    );
 }

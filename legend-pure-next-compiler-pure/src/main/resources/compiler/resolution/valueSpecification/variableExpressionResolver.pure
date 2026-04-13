@@ -15,19 +15,12 @@
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::resolveVariableExpression(ve:meta::pure::metamodel::valuespecification::VariableExpression[1], protocolExpr:Any[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::resolveVariableExpression(ve:meta::pure::metamodel::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let inScope = $scope->filter(s | $s.name == $ve.name);
-    if($inScope->isEmpty(),
-        | $protocolExpr->match([
-              pve:meta::pure::protocol::grammar::valuespecification::VariableExpression[1] |
-                  let siCtx = if($pve.sourceInformation->isNotEmpty(),
-                      | formatSourceInfo($pve.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
-                      | ''
-                  );
-                  ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx);,
-              a:Any[1] | $context
-          ]),
+    if($inScope->isEmpty() && $ve.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+        | let siCtx = formatMetamodelSourceInfo($ve.sourceInformation, $context);
+          ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx);,
         | $context
     );
 }

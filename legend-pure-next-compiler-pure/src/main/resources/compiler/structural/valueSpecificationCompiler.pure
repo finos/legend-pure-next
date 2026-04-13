@@ -123,6 +123,9 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
         c:meta::pure::protocol::grammar::valuespecification::Collection[1] |
             compileCollection($c, $ctx, $scope),
 
+        gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+            compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctx),
+
         any:Any[1] |
             ^ValueCompileResult(values = [], openVariables = [])
     ]);
@@ -273,5 +276,36 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
               )],
               openVariables = []
           );
+    );
+}
+
+// ============================================================================
+// GenericTypeAndMultiplicityHolder compilation
+// ============================================================================
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1]):ValueCompileResult[1]
+{
+    let heldGT = if($gmh.genericType->isNotEmpty(),
+        | $gmh.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value->toOne(),
+        | []->cast(@meta::pure::metamodel::type::generics::GenericType)
+    );
+    let heldMul = if($gmh.multiplicity->isNotEmpty(),
+        | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
+        | []->cast(@meta::pure::metamodel::multiplicity::Multiplicity)
+    );
+    let classifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder,
+        typeArguments = $heldGT,
+        multiplicityArguments = $heldMul
+    );
+    let holder = meta::pure::functions::lang::new($classifierGT)->cast(@meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder);
+    let holderWithProps = ^$holder(
+        genericType = $classifierGT,
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne,
+        sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+    );
+    ^ValueCompileResult(
+        values = [$holderWithProps],
+        openVariables = []
     );
 }
