@@ -17,7 +17,6 @@ package org.finos.legend.pure.execution.natives.meta;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.valuespecification.Collection;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
@@ -535,54 +534,40 @@ public class MetaNatives
         // cast(Any[m], T[1]) : T[m]
         natives.put("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_", (args, eval, genericType, multiplicity) ->
         {
-            // cast is purely a type assertion — never changes the value structure.
-            // Return the input VS directly if it's a Collection (unwrap would yield a raw List).
             ValueSpecification inputVs = args.get(0);
-            if (inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
-            {
-                return inputVs;
-            }
-
-            Object value = _E_ValueSpecification.unwrap(inputVs);
-            if (value == null)
-            {
-                return null;
-            }
-
             ValueSpecification targetVs = args.get(1);
+
+            // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
+            meta.pure.metamodel.type.generics.GenericType targetGT = null;
             meta.pure.metamodel.type.Type targetType = null;
-            Object targetValue = _E_ValueSpecification.unwrap(targetVs);
-            if (targetValue instanceof meta.pure.metamodel.type.Type t)
-            {
-                targetType = t;
-            }
-            else if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh
+            if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh
                     && gtmh._genericType() != null
                     && _GenericType.typeArguments(gtmh._genericType()) != null
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
-                targetType = _GenericType.type(_GenericType.typeArguments(gtmh._genericType()).getFirst());
+                targetGT = _GenericType.typeArguments(gtmh._genericType()).getFirst();
+                targetType = _GenericType.type(targetGT);
             }
             else if (targetVs._genericType() != null)
             {
-                targetType = _GenericType.type(targetVs._genericType());
+                targetGT = targetVs._genericType();
+                targetType = _GenericType.type(targetGT);
             }
 
-            if (targetType instanceof PackageableElement targetPe)
+            // Validate type compatibility for scalar values.
+            // Skip Collections — their common element type is lossy and cast is per-element.
+            Object value = _E_ValueSpecification.unwrap(inputVs);
+            if (value != null
+                    && !(inputVs instanceof meta.pure.metamodel.valuespecification.Collection)
+                    && targetType instanceof PackageableElement targetPe
+                    && !(value instanceof meta.pure.metamodel.type.generics.TypeParameter)
+                    && !(value instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter))
             {
                 String targetPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(targetPe);
-
                 if (!"meta::pure::metamodel::type::Any".equals(targetPath))
                 {
-                    meta.pure.metamodel.type.Type sourceType = _E_ValueSpecification.getValueOriginalType(args.get(0));
-                    // TypeParameter/MultiplicityParameter values are compiler-resolved generics;
-                    // skip runtime cast validation since the compiler already verified compatibility
-                    if (value instanceof meta.pure.metamodel.type.generics.TypeParameter
-                            || value instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter)
-                    {
-                        // pass through — compiler already validated
-                    }
-                    else if (sourceType instanceof PackageableElement sourcePe)
+                    meta.pure.metamodel.type.Type sourceType = _E_ValueSpecification.getValueOriginalType(inputVs, resolver);
+                    if (sourceType instanceof PackageableElement sourcePe)
                     {
                         String sourcePath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(sourcePe);
                         if (!"meta::pure::metamodel::type::Nil".equals(sourcePath))
@@ -599,21 +584,23 @@ public class MetaNatives
             }
 
             // Validate constraints on the target type
-            if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
+            if (value != null && targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
             {
-                meta.pure.metamodel.type.generics.GenericType heldGT = null;
-                if (targetVs instanceof GenericTypeAndMultiplicityHolder gtmh2
-                        && gtmh2._genericType() != null
-                        && _GenericType.typeArguments(gtmh2._genericType()) != null
-                        && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
-                {
-                    heldGT = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
-                }
-                validateConstraints(targetType, heldGT, value, eval, resolver);
+                validateConstraints(targetType, targetGT, value, eval, resolver);
             }
 
-            // Return the original VS — cast is a type assertion, not a value transform.
-            return inputVs;
+            // Restamp the wrapper's genericType to the target type
+            if (targetGT == null)
+            {
+                return inputVs;
+            }
+            if (inputVs instanceof meta.pure.metamodel.valuespecification.CollectionImpl col)
+            {
+                meta.pure.metamodel.valuespecification.CollectionImpl result = col._copy();
+                result._genericType(targetGT);
+                return result;
+            }
+            return _E_ValueSpecification.wrap(value, targetGT, inputVs._multiplicity(), resolver);
         });
 
         // evaluateAndDeactivate — passthrough

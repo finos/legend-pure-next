@@ -156,6 +156,21 @@ public class _E_ValueSpecification
     public static Type getValueOriginalType(ValueSpecification vs, MetadataAccess resolver)
     {
         Object value = (vs instanceof AtomicValue av) ? av._value() : vs;
+        // Collection — compute common type from actual elements
+        if (vs instanceof Collection col)
+        {
+            if (col._values().isEmpty())
+            {
+                return resolver != null ? (Type) resolver.getElement("meta::pure::metamodel::type::Nil") : null;
+            }
+            org.eclipse.collections.api.list.MutableList<GenericType> elementTypes =
+                    col._values().collect(ValueSpecification::_genericType).select(gt -> gt != null);
+            if (elementTypes.notEmpty() && resolver != null)
+            {
+                return _GenericType.type(_GenericType.findCommonGenericType(elementTypes, resolver));
+            }
+            return col._genericType() != null ? _GenericType.type(col._genericType()) : null;
+        }
         // DynamicInstance — use classifierGenericType
         if (value instanceof DynamicInstance di)
         {
