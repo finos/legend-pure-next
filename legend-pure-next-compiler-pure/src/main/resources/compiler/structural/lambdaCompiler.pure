@@ -18,6 +18,7 @@ import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::resolution::functionDefinitionResolver::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]): ValueCompileResult[1]
@@ -62,7 +63,8 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
 
           let innerScope = $scope->concatenate($compiledParams);
           let compiledSequence = compileExpressionSequence($l.expressionSequence, $ctx3, $innerScope);
-          let ctx4 = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctx3);
+          let ctx4Pre = if($compiledSequence.context->isNotEmpty(), | $compiledSequence.context->toOne(), | $ctx3);
+          let ctx4 = resolveExpressionSequence($compiledSequence.specs, $l.expressionSequence, $innerScope, $ctx4Pre);
 
           let openVariables = $compiledSequence.openVariables->filter(var |
               $innerScope->filter(s | $s.name == $var.name)->isEmpty()

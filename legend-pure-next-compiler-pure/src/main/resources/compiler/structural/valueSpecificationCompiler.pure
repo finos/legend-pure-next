@@ -195,8 +195,15 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 {
     let inScope = $scope->filter(s | $s.name == $v.name);
     if($inScope->isEmpty(),
-        | let siCtx = if($vs.sourceInformation->isNotEmpty(), | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
-          ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The variable \'' + $v.name + '\' is unknown!' + $siCtx));,
+        | ^ValueCompileResult(
+              values = [^meta::pure::metamodel::valuespecification::VariableExpression(
+                  name = $v.name,
+                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  multiplicity = meta::pure::metamodel::multiplicity::PureOne,
+                  sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+              )],
+              openVariables = []
+          ),
         | let varGT = $inScope->at(0).genericType->toOne();
           let varMul = $inScope->at(0).multiplicity->toOne();
           ^ValueCompileResult(
