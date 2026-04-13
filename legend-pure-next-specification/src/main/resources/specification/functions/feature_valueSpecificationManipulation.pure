@@ -125,6 +125,22 @@ function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::te
     assertEquals(1, $result->size());
 }
 
+// Verifies that a meta-level AtomicValue created via ^AtomicValue(...) is treated
+// as data, not as an execution-level wrapper. If wrap() short-circuited on AtomicValue
+// (returning av as-is instead of wrapping it), the meta AV would lose its object identity:
+// instanceOf would see Integer instead of AtomicValue, and .value would fail.
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testMetaAtomicValueIsNavigable():Boolean[1]
+{
+    let av = ^meta::pure::metamodel::valuespecification::AtomicValue(
+        value = 42,
+        genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    assert($av->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue));
+    assertEquals(42, $av.value);
+    true;
+}
+
 function meta::pure::functions::valueSpecificationManipulation::sampleFunction():Any[*]
 {
     1;
