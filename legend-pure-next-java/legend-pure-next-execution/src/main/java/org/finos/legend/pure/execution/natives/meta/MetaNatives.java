@@ -1276,18 +1276,15 @@ public class MetaNatives
             }
         }
 
-        // Build flat list — unwrap existing items for consistency
+        // Existing items are already at the right level from previous appends — don't re-unwrap
         List<Object> list = new ArrayList<>();
         if (existing instanceof java.util.List<?> l)
         {
-            for (Object item : l)
-            {
-                list.add(_E_ValueSpecification.unwrap(item));
-            }
+            list.addAll(l);
         }
         else if (existing != null)
         {
-            list.add(_E_ValueSpecification.unwrap(existing));
+            list.add(existing);
         }
 
         Object unwrappedValue = _E_ValueSpecification.unwrap(value);

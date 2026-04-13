@@ -123,6 +123,12 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
         c:meta::pure::protocol::grammar::valuespecification::Collection[1] |
             compileCollection($c, $ctx, $scope),
 
+        arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1] |
+            compileArrowInvocation($arrow, $vs, $ctx, $scope),
+
+        dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1] |
+            compileDotApplication($dot, $vs, $ctx, $scope),
+
         gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1] |
             compileGenericTypeAndMultiplicityHolder($gmh, $vs, $ctx),
 
@@ -249,6 +255,63 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
               )],
               openVariables = $openVars
           );
+    );
+}
+
+// ============================================================================
+// ArrowInvocation compilation (same as FunctionInvocation but preserves type)
+// ============================================================================
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::compileArrowInvocation(arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]):ValueCompileResult[1]
+{
+    let paramsCompilation = $arrow.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
+    let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
+    if($errorContexts->isNotEmpty(),
+        | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
+        | let paramValues = $paramsCompilation.values;
+          let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
+          let argTypes = $paramValues->map(pv | $pv.genericType->toOne());
+          let argMuls = $paramValues->map(pv | $pv.multiplicity->toOne());
+          let resolution = resolveFunctionInvocation($arrow.functionName, $argTypes, $argMuls);
+          ^ValueCompileResult(
+              values = [^meta::pure::metamodel::valuespecification::FunctionInvocation(
+                  functionName = $resolution.resolvedName,
+                  parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
+                  genericType = $resolution.returnGenericType,
+                  multiplicity = $resolution.returnMultiplicity,
+                  resolvedTypeParameters = $resolution.resolvedTypeParameters,
+                  resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters,
+                  sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+              )],
+              openVariables = $openVars
+          );
+    );
+}
+
+// ============================================================================
+// DotApplication compilation (pass 2 — structural only, resolution in pass 3)
+// ============================================================================
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::compileDotApplication(dot:meta::pure::protocol::grammar::valuespecification::DotApplication[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]):ValueCompileResult[1]
+{
+    let paramResults = $dot.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
+    let compiledParams = $paramResults->filter(r | $r.values->isNotEmpty())->map(r | $r.values->at(0))->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->list();
+    let newErrors = $paramResults.context->map(ec | $ec.errors)->filter(e | !$ctx.errors->contains($e));
+    let updatedCtx = if($newErrors->isNotEmpty(), | ^$ctx(errors += $newErrors), | $ctx);
+
+    let m3Dot = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::valuespecification::DotApplication)
+    )->cast(@meta::pure::metamodel::valuespecification::DotApplication);
+    ^ValueCompileResult(
+        values = [^$m3Dot(
+            functionName = $dot.functionName,
+            parametersValues = $compiledParams.values,
+            genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+            multiplicity = meta::pure::metamodel::multiplicity::PureOne,
+            sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+        )],
+        openVariables = $paramResults->map(r | $r.openVariables),
+        context = $updatedCtx
     );
 }
 

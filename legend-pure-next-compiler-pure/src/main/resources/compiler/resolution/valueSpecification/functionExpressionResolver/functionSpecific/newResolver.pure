@@ -19,8 +19,21 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    // Extract class from return type (like Java: fe._genericType())
-    let cls = extractClassFromGenericType($fi.genericType);
+    // Extract class from the first argument (GenericTypeAndMultiplicityHolder), then look up
+    // the fully compiled class from the context (the GTMH references the pass 1 skeleton)
+    let skeletonCls = if($fi.parametersValues->isNotEmpty(),
+        | extractClassFromGTMH($fi.parametersValues->at(0)),
+        | extractClassFromGenericType($fi.genericType)
+    );
+    let cls = if($skeletonCls->isNotEmpty(),
+        | let path = $skeletonCls->toOne()->fullPath();
+          let resolved = $context->resolveElement($path);
+          if($resolved->isNotEmpty() && $resolved->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+              | $resolved->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
+              | $skeletonCls
+          );,
+        | $skeletonCls
+    );
     // Extract provided property names from key expressions (second param is a Collection of keyExpression FIs)
     let providedNames = if($fi.parametersValues->size() >= 2,
         | $fi.parametersValues->at(1)->match([
@@ -43,6 +56,25 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | []->cast(@String)
     );
     validateNew($fi, $cls, $providedNames, $context);
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1]):meta::pure::metamodel::type::Class<Any>[0..1]
+{
+    // The GTMH's genericType has typeArguments where the first one is the target class's GenericType
+    if($vs->instanceOf(meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder),
+        | let gtmh = $vs->cast(@meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder);
+          let gtmhGT = $gtmh.genericType;
+          if($gtmhGT->isNotEmpty() && $gtmhGT->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+              | let gtv = $gtmhGT->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
+                let typeArgs = $gtv.typeArguments;
+                if($typeArgs->isNotEmpty(),
+                    | extractClassFromGenericType($typeArgs->at(0)),
+                    | []
+                );,
+              | []
+          );,
+        | []
+    );
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:meta::pure::metamodel::type::generics::GenericType[0..1]):meta::pure::metamodel::type::Class<Any>[0..1]

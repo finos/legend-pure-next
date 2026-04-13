@@ -78,7 +78,6 @@ function meta::pure::compiler::structural::functionResolution::resolveFunctionIn
                     let bindings = range($argTypes->size())->fold({i, b |
                         let paramGT = $params->at($i).genericType->toOne();
                         let argGT = $argTypes->at($i);
-                        let _dbg = println('  BIND[' + $i->toString() + '] paramGT=' + $paramGT->type()->elementToPath() + ' argGT=' + $argGT->type()->elementToPath() + if($argGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | ' argGT.type=' + if($argGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isEmpty(), |'NONE', | $argGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath()), |' argGT-not-GTV'));
                         let b2 = collectTypeParameterBindings($paramGT, $argGT, $b);
                         let paramMul = $params->at($i).multiplicity->toOne();
                         let argMul = $argMuls->at($i);
@@ -108,11 +107,7 @@ function meta::pure::compiler::structural::functionResolution::resolveFunctionIn
                             value = asInferredMultiplicity($vals->at(0))
                         );
                     );
-                    
-                    let _d1 = println('  RESOLVED: name=' + $candidate.name->toOne());
-                    let _d2 = println('    returnGT class=' + $inferredReturnGT->type()->elementToPath());
-                    let _d3 = if($inferredReturnGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue), | println('    returnGT.type=' + if($inferredReturnGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isEmpty(), |'NONE', | $inferredReturnGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::PackageableElement)->fullPath())), | println('    returnGT not GTV'));
-                    
+
                     ^FunctionResolutionResult(
                         resolvedFunction = $candidate,
                         resolvedName = $candidate.name->toOne(),

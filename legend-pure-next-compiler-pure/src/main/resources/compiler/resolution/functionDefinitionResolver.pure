@@ -17,35 +17,43 @@ import meta::pure::compiler::resolution::valueSpecification::valueSpecificationR
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
 import meta::pure::compiler::*;
 
+Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveResult
+{
+    resolvedSpecs: meta::pure::metamodel::valuespecification::ValueSpecification[*];
+    context: meta::pure::compiler::CompilerContext[1];
+}
+
 Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccumulator
 {
     scope: meta::pure::metamodel::valuespecification::VariableExpression[*];
     context: meta::pure::compiler::CompilerContext[1];
+    resolvedSpecs: meta::pure::metamodel::valuespecification::ValueSpecification[*];
 }
 
-function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):ResolveResult[1]
 {
     let result = $specs->fold({spec, acc |
         let r = resolveValueSpecification($spec, $acc.scope, $acc.context);
+        let resolved = if($r.value->isEmpty(), | $spec, | $r.value->toOne());
         let ctx2 = $spec->match([
             fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
                 checkLetDuplicate($fi, $acc.scope, $r.context),
             a:Any[1] | $r.context
         ]);
-        let newScope = $spec->match([
+        let newScope = $resolved->match([
             fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
                 if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 1,
                     | let varName = $fi.parametersValues->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
                       $acc.scope->concatenate(^meta::pure::metamodel::valuespecification::VariableExpression(
                           name = $varName,
-                          genericType = $fi.genericType,
-                          multiplicity = $fi.multiplicity
+                          genericType = $resolved.genericType,
+                          multiplicity = $resolved.multiplicity
                       ));,
                     | $acc.scope
                 ),
             a:Any[1] | $acc.scope
         ]);
-        ^ResolveAccumulator(scope = $newScope, context = $ctx2);
-    }, ^ResolveAccumulator(scope = $params, context = $context));
-    $result.context;
+        ^ResolveAccumulator(scope = $newScope, context = $ctx2, resolvedSpecs = $acc.resolvedSpecs->concatenate($resolved));
+    }, ^ResolveAccumulator(scope = $params, context = $context, resolvedSpecs = []));
+    ^ResolveResult(resolvedSpecs = $result.resolvedSpecs, context = $result.context);
 }

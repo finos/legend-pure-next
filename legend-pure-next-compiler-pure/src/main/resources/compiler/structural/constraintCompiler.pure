@@ -98,7 +98,7 @@ function meta::pure::compiler::structural::constraintCompiler::resolveConstraint
                   $lambda.expressionSequence,
                   $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
                   $cCtx
-              );
+              ).context;
         );
     }, $context);
 }

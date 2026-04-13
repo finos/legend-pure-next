@@ -16,12 +16,13 @@ import meta::pure::compiler::resolution::valueSpecification::functionExpressionR
 import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     $vs->match([
-        fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+        fi:meta::pure::metamodel::valuespecification::FunctionExpression[1] |
             resolveFunctionExpression($fi, $scope, $context),
         col:meta::pure::metamodel::valuespecification::Collection[1] |
             resolveCollection($col, $scope, $context),

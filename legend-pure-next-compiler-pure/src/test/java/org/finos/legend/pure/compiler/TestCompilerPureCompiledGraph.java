@@ -94,11 +94,11 @@ public class TestCompilerPureCompiledGraph
                               String sourceId = testName.replace(".pure", "");
 
                               if (!testName.contains("association/property/") &&
-                                  !testName.contains("class/constraints/simple.pure") &&
-                                  !testName.contains("class/constraints/advanced.pure") &&
+                                  !testName.contains("class/constraints/") &&
                                   !testName.contains("class/inheritance/") &&
                                   !testName.contains("class/profile/") &&
                                   !testName.contains("class/property/") &&
+                                  !testName.contains("class/qualifiedProperty/") &&
                                   !testName.contains("class/typeAndMulParam/") &&
                                   !testName.contains("enumeration/") &&
                                   !testName.contains("function/") &&
@@ -107,9 +107,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("valueSpecification/copy/") &&
                                   !testName.contains("valueSpecification/let/") &&
                                   !testName.contains("valueSpecification/multiplicity/") &&
-                                  !testName.contains("valueSpecification/new/new.pure") &&
-                                  !testName.contains("valueSpecification/new/new_E_abstractClassInstantiation.pure") &&
-                                  !testName.contains("valueSpecification/new/parentReference.pure") &&
+                                  !testName.contains("valueSpecification/new/") &&
                                   !testName.contains("valueSpecification/element/") &&
                                   !testName.contains("valueSpecification/primitive/"))
                               {

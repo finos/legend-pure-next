@@ -100,13 +100,14 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
               let lambda = $prop.defaultValue->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
               if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $pCtx.errors->size(),
                   | $ctx1,
-                  | let ctx2 = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                         $lambda.expressionSequence,
                         $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
                         $ctx1
                     );
+                    let ctx2 = $resolveResult.context;
                     // Validate type and multiplicity of the resolved default value
-                    let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
+                    let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
                     // For Collections, compute the actual element type (resolver can't propagate it back)
                     let exprGT = if($lastExpr->instanceOf(meta::pure::metamodel::valuespecification::Collection) && $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->isNotEmpty(),
                         | let elemTypes = $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType))->map(gt | $gt->toOne());

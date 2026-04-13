@@ -166,6 +166,30 @@ function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::te
     true;
 }
 
+// Reproduces the appendToProperty re-unwrap bug: when folding AtomicValues
+// into a holder with +=, the first element gets its AtomicValue wrapper stripped
+// on the second append (appendToProperty re-unwraps existing items).
+Class meta::pure::functions::valueSpecificationManipulation::AVHolder
+{
+    items: meta::pure::metamodel::valuespecification::AtomicValue[*];
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testFoldPlusEqualsPreservesAllElements():Boolean[1]
+{
+    let av1 = ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne);
+    let av2 = ^meta::pure::metamodel::valuespecification::AtomicValue(value = 2, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne);
+    let result = [$av1, $av2]->fold({e, acc |
+        ^$acc(items += $e);
+    }, ^meta::pure::functions::valueSpecificationManipulation::AVHolder());
+    assertEquals(2, $result.items->size());
+    // Both elements must retain their AtomicValue type AND their Integer genericType
+    assert($result.items->at(0)->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue));
+    assert($result.items->at(1)->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue));
+    assertEquals(Integer, $result.items->at(0).genericType->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne());
+    assertEquals(Integer, $result.items->at(1).genericType->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne());
+    true;
+}
+
 function meta::pure::functions::valueSpecificationManipulation::sampleFunction():Any[*]
 {
     1;

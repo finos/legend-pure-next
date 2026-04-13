@@ -16,10 +16,14 @@ import meta::pure::compiler::structural::multiplicityCompiler::*;
 
 function meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
 {
-    if($m->instanceOf(meta::pure::protocol::grammar::multiplicity::MultiplicityParameter),
-        | ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $m->cast(@meta::pure::protocol::grammar::multiplicity::MultiplicityParameter).name),
-        | compileConcreteMultiplicity($m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity))
-    );
+    $m->match([
+        mp:meta::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] |
+            ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name),
+        cm:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] |
+            compileConcreteMultiplicity($cm),
+        u:Any[1] |
+            meta::pure::metamodel::multiplicity::PureOne
+    ]);
 }
 
 function meta::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]

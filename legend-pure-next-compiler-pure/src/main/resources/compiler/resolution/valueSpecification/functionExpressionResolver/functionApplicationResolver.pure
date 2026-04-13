@@ -1,0 +1,26 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplication(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+{
+    // Recurse into parameters
+    let ctx1 = $fi.parametersValues->fold({param, ctx |
+        resolveValueSpecification($param, $scope, $ctx).context;
+    }, $context);
+
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $fi, context = $ctx1);
+}

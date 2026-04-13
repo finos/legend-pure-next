@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
 import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::genericType::*;
@@ -20,24 +21,40 @@ import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
-    // Recurse into parameters
-    let ctx1 = $fi.parametersValues->fold({param, ctx |
-        resolveValueSpecification($param, $scope, $ctx).context;
-    }, $context);
+    let checkpoint = $context.errors->size();
+    if($fi->instanceOf(meta::pure::metamodel::valuespecification::DotApplication) && $fi.parametersValues->isNotEmpty(),
+        | let dotResult = resolveDotApplication($fi->cast(@meta::pure::metamodel::valuespecification::DotApplication), $scope, $context);
+          // Enum value resolution returns an AtomicValue, not a FunctionExpression — finalize only FEs
+          if($dotResult.value->isNotEmpty() && $dotResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
+              | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($dotResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $dotResult.context),
+              | $dotResult
+          );,
+        | let appResult = resolveFunctionApplication($fi->cast(@FunctionInvocation), $scope, $context);
+          if($appResult.value->isNotEmpty() && $appResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
+              | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($appResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $appResult.context),
+              | $appResult
+          );
+    );
+}
 
-    // Finalize: compute resolved return type using bindings (like Java's finalizeFunctionExpression)
-    let bindings = extractResolvedParametersBinding($fi);
-    let resolvedReturnGT = makeAsConcreteAsPossible($fi.genericType->toOne(), $bindings);
-    let resolvedFI = ^$fi(genericType = $resolvedReturnGT);
-
-    // Function-specific validation
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], checkpoint:Integer[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+{
+    // Function-specific validation BEFORE type rewriting (uses original pass 2 types)
     let fnName = $fi.functionName->toOne();
-    let ctx2 = if($fnName == 'new' || $fnName->startsWith('new_'),
-        | validateNewFromFI($resolvedFI, $ctx1),
-        | $ctx1
+    let ctx1 = if($context.errors->size() > $checkpoint,
+        | $context,
+        | if($fnName == 'new' || $fnName->startsWith('new_'),
+              | validateNewFromFI($fi, $context),
+              | $context
+          )
     );
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $resolvedFI, context = $ctx2);
+    // Compute resolved return type using bindings
+    let bindings = extractResolvedParametersBinding($fi);
+    let resolvedReturnGT = makeAsConcreteAsPossible($fi.genericType->toOne(), $bindings);
+    let finalFI = ^$fi(genericType = $resolvedReturnGT);
+
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $finalFI, context = $ctx1);
 }

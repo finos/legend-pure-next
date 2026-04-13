@@ -21,7 +21,7 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
         | let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
           let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
           let innerScope = $scope->concatenate($lambdaParams);
-          let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context);
+          let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context).context;
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $ctx1);,
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $context)
     );

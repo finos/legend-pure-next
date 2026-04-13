@@ -202,13 +202,14 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamode
 {
     if($fn.expressionSequence->isEmpty(),
         | $context,
-        | meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $context)
+        | meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $context).context
     );
 }
 
 function meta::pure::compiler::resolveClass(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let ctx1 = meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties($cls.qualifiedProperties, $context);
-    let ctx2 = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls, $ctx1);
-    meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $ctx2);
+    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides($cls, $ctx1);
+    let ctx3 = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls, $ctx2);
+    meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $ctx3);
 }
