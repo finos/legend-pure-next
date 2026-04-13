@@ -15,6 +15,7 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
@@ -59,15 +60,24 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledConstraints = $constraintAccum.values;
     let ctx5 = $constraintAccum.context;
 
+    // Compile qualified properties
+    let qpAccum = $protocolClass.qualifiedProperties->fold({qp, acc |
+        let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $skeleton);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>(context = $ctx5));
+    let compiledQPs = $qpAccum.values;
+    let ctx6 = $qpAccum.context;
+
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>(
         value = ^$skeleton(
             stereotypes = $compiledStereotypes,
             taggedValues = $compiledTaggedValues,
             generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
             properties = $compiledProperties->map(p | ^$p(owner = ~.~)),
+            qualifiedProperties = $compiledQPs->map(qp | ^$qp(owner = ~.~)),
             constraints = $compiledConstraints
         ),
-        context = $ctx5
+        context = $ctx6
     );
 }
 

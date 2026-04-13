@@ -28,6 +28,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
@@ -517,10 +518,6 @@ public class ValueSpecificationEvaluator
                                                   GenericType genericType,
                                                   meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
-        if (result instanceof ValueSpecification vs)
-        {
-            return vs;
-        }
         if (result instanceof java.util.List<?> resultList)
         {
             List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());

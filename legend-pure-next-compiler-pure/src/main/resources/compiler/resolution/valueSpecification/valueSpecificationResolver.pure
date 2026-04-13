@@ -18,7 +18,7 @@ import meta::pure::compiler::resolution::valueSpecification::variableExpressionR
 import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     $vs->match([
         fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
@@ -29,6 +29,6 @@ function meta::pure::compiler::resolution::valueSpecification::valueSpecificatio
             resolveVariableExpression($ve, $scope, $context),
         av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
             resolveAtomicValue($av, $scope, $context),
-        a:Any[1] | $context
+        a:Any[1] | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $context)
     ]);
 }

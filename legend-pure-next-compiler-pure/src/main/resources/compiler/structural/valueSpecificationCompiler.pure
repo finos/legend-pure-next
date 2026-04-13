@@ -172,10 +172,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           openVariables = []
                       );
                 );,
-              | let literalGT = inferLiteralType($rawValue, $ctx);
-                let inferredGT = if($literalGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                    | if($mGenType->isEmpty(), | $literalGT, | $mGenType->toOne()),
-                    | $literalGT
+              | let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+                let compiledGT = $parserGT->compileGenericType($ctx, '', []);
+                let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                    | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne()),
+                    | $compiledGT.value->toOne()
                 );
                 ^ValueCompileResult(
                     values = [^meta::pure::metamodel::valuespecification::AtomicValue(

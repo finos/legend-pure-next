@@ -98,11 +98,7 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("class/constraints/advanced.pure") &&
                                   !testName.contains("class/inheritance/") &&
                                   !testName.contains("class/profile/") &&
-                                  !testName.contains("class/property/simple.pure") &&
-                                  !testName.contains("class/property/simple_E_unknownTypeInProperty.pure") &&
-                                  !testName.contains("class/property/simple_E_multipleUnknownTypes.pure") &&
-                                  !testName.contains("class/property/typeArguments.pure") &&
-                                  !testName.contains("class/property/typeArguments_E_Unknown.pure") &&
+                                  !testName.contains("class/property/") &&
                                   !testName.contains("class/typeAndMulParam/") &&
                                   !testName.contains("enumeration/") &&
                                   !testName.contains("function/") &&

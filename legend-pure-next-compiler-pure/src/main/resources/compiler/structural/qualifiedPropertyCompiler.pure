@@ -1,0 +1,113 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperty(qp:meta::pure::protocol::grammar::function::property::QualifiedProperty[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>[1]
+{
+    let ownerCtx = 'qualified property \'' + $qp.name + '\'';
+
+    // Compile return type
+    let protocolType = $qp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'return type', $ownerCtx);
+    let returnGenType = $gtResult.value->toOne();
+    let ctx1 = $gtResult.context;
+    let returnMult = $qp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+
+    // Compile explicit parameters
+    let paramAccum = $qp.parameters->fold({p, acc |
+        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+        let pGtResult = $pType->compileGenericType($acc.context, $packagePath, [], 'parameter \'' + $p.name + '\'', $ownerCtx);
+        let pMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+        ^$acc(
+            values += ^meta::pure::metamodel::valuespecification::VariableExpression(
+                name = $p.name,
+                genericType = $pGtResult.value->toOne(),
+                multiplicity = $pMult
+            ),
+            context = $pGtResult.context
+        );
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1));
+    let ctx2 = $paramAccum.context;
+
+    // Prepend implicit $this parameter
+    let ownerGenericType = $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
+    let thisParam = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        name = 'this',
+        genericType = $ownerGenericType,
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    let allParams = $thisParam->concatenate($paramAccum.values);
+
+    // Compile expression sequence
+    let bodyResult = compileExpressionSequence($qp.expressionSequence, $ctx2, $allParams);
+    let ctx3 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx2);
+
+    // Build FunctionType and classifierGenericType
+    let functionType = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
+    )->cast(@meta::pure::metamodel::type::FunctionType);
+    let ft = ^$functionType(
+        parameters = $allParams,
+        returnType = $returnGenType,
+        returnMultiplicity = $returnMult
+    );
+    let qpClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+        type = meta::pure::metamodel::function::property::QualifiedProperty,
+        typeArguments = [
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ft)
+        ]
+    );
+
+    let emptyQP = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::property::QualifiedProperty)
+    )->cast(@meta::pure::metamodel::function::property::QualifiedProperty<Any>);
+    let compiledQP = ^$emptyQP(
+        name = $qp.name,
+        genericType = $returnGenType,
+        multiplicity = $returnMult,
+        parameters = $allParams,
+        expressionSequence = $bodyResult.specs,
+        classifierGenericType = $qpClassifierGT,
+        sourceInformation = $qp.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        ))
+    );
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>(
+        value = $compiledQP,
+        context = $ctx3
+    );
+}
+
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties(qualifiedProperties:meta::pure::metamodel::function::property::QualifiedProperty<Any>[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    $qualifiedProperties->fold({qp, qCtx |
+        if($qp.expressionSequence->isEmpty(),
+            | $qCtx,
+            | meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $qp.expressionSequence,
+                  $qp.parameters,
+                  $qCtx
+              )
+        );
+    }, $context);
+}

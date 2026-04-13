@@ -83,3 +83,51 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
           );
     );
 }
+
+function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues(properties:meta::pure::metamodel::function::property::Property<Nil, Any|*>[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    $properties->fold({prop, pCtx |
+        if($prop.defaultValue->isEmpty(),
+            | $pCtx,
+            | let siCtx = if($prop.sourceInformation->isEmpty(), | '', | meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $pCtx));
+              // Validate: lower bound must be >= 1 for properties with defaults
+              let lowerBound = meta::pure::compiler::helper::multiplicity::multiplicityLowerBound($prop.multiplicity->toOne());
+              let ctx1 = if($lowerBound == 0,
+                  | ^$pCtx(errors += 'Property with a default value cannot have a multiplicity with a lower bound of 0' + $siCtx),
+                  | $pCtx
+              );
+              // Resolve the default value lambda
+              let lambda = $prop.defaultValue->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+              if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $pCtx.errors->size(),
+                  | $ctx1,
+                  | let ctx2 = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                        $lambda.expressionSequence,
+                        $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
+                        $ctx1
+                    );
+                    // Validate type and multiplicity of the resolved default value
+                    let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
+                    // For Collections, compute the actual element type (resolver can't propagate it back)
+                    let exprGT = if($lastExpr->instanceOf(meta::pure::metamodel::valuespecification::Collection) && $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->isNotEmpty(),
+                        | let elemTypes = $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType))->map(gt | $gt->toOne());
+                          if($elemTypes->isNotEmpty(), | meta::pure::compiler::helper::genericType::findCommonGenericType($elemTypes), | $lastExpr.genericType);,
+                        | $lastExpr.genericType
+                    );
+                    let ctx3 = if($exprGT->isEmpty() || $prop.genericType->isEmpty() || $exprGT->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                        | $ctx2,
+                        | if(meta::pure::compiler::helper::genericType::isCompatibleGenericType($prop.genericType->toOne(), $exprGT->toOne()),
+                              | $ctx2,
+                              | ^$ctx2(errors += 'Default value type mismatch: expected ' + meta::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne()) + ' but got ' + meta::pure::compiler::helper::genericType::printGenericType($exprGT->toOne()) + $siCtx)
+                          )
+                    );
+                    if($lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
+                        | $ctx3,
+                        | if(meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($prop.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                              | $ctx3,
+                              | ^$ctx3(errors += 'Default value multiplicity mismatch: expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne()) + ' but got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
+                          )
+                    );
+              );
+        );
+    }, $context);
+}

@@ -141,6 +141,34 @@ function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::te
     true;
 }
 
+// Reproduces the Collection-in-property issue: when a class property of type
+// ValueSpecification[0..1] holds a Collection, accessing that property should
+// return the Collection as a single value (size == 1), not unwrap it to its
+// elements (size == N). This tests the execution engine's handling of meta
+// Collections stored in user-defined class properties.
+Class meta::pure::functions::valueSpecificationManipulation::VSResult
+{
+    resolved: meta::pure::metamodel::valuespecification::ValueSpecification[0..1];
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionStoredInPropertyIsNotUnwrapped():Boolean[1]
+{
+    let col = ^meta::pure::metamodel::valuespecification::Collection(
+        values = [
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 2, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+        ],
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let result = ^meta::pure::functions::valueSpecificationManipulation::VSResult(resolved = $col);
+    // $result.resolved should return 1 element (the Collection itself), not 2 (its elements)
+    assert($result.resolved->isNotEmpty());
+    assert($result.resolved->size() == 1);
+    assert($result.resolved->toOne()->instanceOf(meta::pure::metamodel::valuespecification::Collection));
+    true;
+}
+
 function meta::pure::functions::valueSpecificationManipulation::sampleFunction():Any[*]
 {
     1;

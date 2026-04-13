@@ -13,11 +13,28 @@
 // limitations under the License.
 
 import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::structural::functionResolution::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::collectionResolver::resolveCollection(col:meta::pure::metamodel::valuespecification::Collection[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::collectionResolver::resolveCollection(col:meta::pure::metamodel::valuespecification::Collection[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
-    $col.values->fold({v, ctx |
-        resolveValueSpecification($v, $scope, $ctx);
-    }, $context);
+    // Resolve each element and collect the resolved values
+    let result = $col.values->fold({v, acc |
+        let r = resolveValueSpecification($v, $scope, $acc.context);
+        ^$acc(values += if($r.value->isEmpty(), | $v, | $r.value->at(0)), context = $r.context);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $context));
+
+    // Compute common genericType from resolved elements
+    let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType))->map(gt | $gt->toOne());
+    let foundGT = if($elementTypes->isNotEmpty(), | findCommonGenericType($elementTypes), | []);
+    let commonGT = if($foundGT->isNotEmpty(),
+        | asInferredGenericType($foundGT->toOne()),
+        | $col.genericType->toOne()
+    );
+
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+        value = ^$col(values = $result.values, genericType = $commonGT),
+        context = $result.context
+    );
 }

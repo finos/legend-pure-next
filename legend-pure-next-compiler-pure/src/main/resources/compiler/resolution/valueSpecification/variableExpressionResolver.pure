@@ -15,12 +15,15 @@
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::resolveVariableExpression(ve:meta::pure::metamodel::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::resolveVariableExpression(ve:meta::pure::metamodel::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     let inScope = $scope->filter(s | $s.name == $ve.name);
     if($inScope->isEmpty() && $ve.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
         | let siCtx = formatMetamodelSourceInfo($ve.sourceInformation, $context);
-          ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx);,
-        | $context
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+              value = $ve,
+              context = ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx)
+          );,
+        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $ve, context = $context)
     );
 }

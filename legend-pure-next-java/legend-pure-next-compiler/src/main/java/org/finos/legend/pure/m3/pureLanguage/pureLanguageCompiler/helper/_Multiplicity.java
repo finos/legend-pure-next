@@ -136,6 +136,15 @@ public final class _Multiplicity
     }
 
     /**
+     * Check if a multiplicity is singular (upper bound is 1).
+     */
+    public static boolean isSingular(Multiplicity m)
+    {
+        Long upper = upperBound(m);
+        return upper != null && upper <= 1;
+    }
+
+    /**
      * Format a multiplicity for display in error messages.
      */
     public static String print(Multiplicity m)

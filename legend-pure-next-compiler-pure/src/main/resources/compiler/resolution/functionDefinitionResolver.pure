@@ -26,11 +26,11 @@ Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccum
 function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let result = $specs->fold({spec, acc |
-        let ctx1 = resolveValueSpecification($spec, $acc.scope, $acc.context);
+        let r = resolveValueSpecification($spec, $acc.scope, $acc.context);
         let ctx2 = $spec->match([
             fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-                checkLetDuplicate($fi, $acc.scope, $ctx1),
-            a:Any[1] | $ctx1
+                checkLetDuplicate($fi, $acc.scope, $r.context),
+            a:Any[1] | $r.context
         ]);
         let newScope = $spec->match([
             fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
