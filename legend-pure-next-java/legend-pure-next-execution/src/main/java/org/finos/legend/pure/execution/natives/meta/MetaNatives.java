@@ -1482,6 +1482,10 @@ public class MetaNatives
         // Compiled Java targets: unwrap and set via reflection
         if (value instanceof meta.pure.metamodel.valuespecification.Collection col)
         {
+            if (col._values().isEmpty())
+            {
+                return; // empty collection = no value
+            }
             org.eclipse.collections.api.list.MutableList<Object> items = col._values().collect(_E_ValueSpecification::unwrap);
             setPropertyViaReflection(instance, key, items);
             return;

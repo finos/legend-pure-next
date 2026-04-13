@@ -28,7 +28,6 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
-import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
@@ -518,12 +517,23 @@ public class ValueSpecificationEvaluator
                                                   GenericType genericType,
                                                   meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
     {
+        // No value → empty collection typed to the property's declared type (Pure has no null)
+        if (result == null)
+        {
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(this.natives.resolver())
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
+                    ._genericType(genericType)
+                    ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
+                            this.natives.resolver().getElement("meta::pure::metamodel::multiplicity::PureZero"));
+        }
         if (result instanceof java.util.List<?> resultList)
         {
             List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
             for (Object item : resultList)
             {
-                vsItems.add(_E_ValueSpecification.wrap(item, genericType, null, this.natives.resolver()));
+                vsItems.add(_E_ValueSpecification.wrap(item, genericType,
+                        (meta.pure.metamodel.multiplicity.Multiplicity) this.natives.resolver().getElement("meta::pure::metamodel::multiplicity::PureOne"),
+                        this.natives.resolver()));
             }
             return CollectionNatives.makeCollection(vsItems, this.natives.resolver());
         }
