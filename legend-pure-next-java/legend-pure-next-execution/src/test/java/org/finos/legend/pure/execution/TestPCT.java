@@ -17,7 +17,6 @@ package org.finos.legend.pure.execution;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
@@ -78,10 +77,7 @@ class TestPCT
         }
 
         assertNotNull(adapterFd, "Should find a <<PCT.adapter>> function in core.pdb");
-
-        // Wrap the adapter as a ValueSpecification to pass as argument
-        ValueSpecification adapterArg = _E_ValueSpecification.wrap(
-                adapterFd, adapterFd._classifierGenericType(), null, coreModule);
+        FunctionDefinition adapter = adapterFd;
 
         for (String path : coreModule.elementPaths())
         {
@@ -92,7 +88,7 @@ class TestPCT
                 {
                     try
                     {
-                        execution.execute(fd, adapterArg);
+                        execution.execute(fd, adapter);
                     }
                     catch (PureAssertionError e)
                     {

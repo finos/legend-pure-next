@@ -115,23 +115,22 @@ public class _E_ValueSpecification
     }
 
     /**
-     * Wrap a single raw Java scalar value in an AtomicValueImpl with the given type info.
-     * Do NOT pass a List here — build a CollectionImpl directly instead.
+     * Wrap a raw Java value in a ValueSpecification.
+     * Scalars become AtomicValues; Lists become Collections.
      */
     public static ValueSpecification wrap(Object value,
                                    meta.pure.metamodel.type.generics.GenericType genericType,
                                    meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
                                    MetadataAccess resolver)
     {
-        if (value instanceof AtomicValue av)
+        if (value instanceof List<?> list)
         {
-            return av;
-        }
-        if (value instanceof List<?>)
-        {
-            throw new IllegalArgumentException(
-                "wrap() does not accept raw List values — use makeCollection() or CollectionImpl directly "
-                + "to preserve per-element ValueSpecification types.");
+            java.util.List<ValueSpecification> items = new java.util.ArrayList<>(list.size());
+            for (Object item : list)
+            {
+                items.add(wrap(item, genericType, null, resolver));
+            }
+            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(items, resolver);
         }
         return new AtomicValueImpl(resolver)
                 ._value(value)

@@ -181,7 +181,33 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 $acc
         ]);
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass1Context));
+
     ^CompilationResult(elements = $pass2.values, errors = $pass2.context.errors);
 }
 
+function meta::pure::compiler::resolveConstraints(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    resolveElementConstraints($cls, $context);
+}
 
+function meta::pure::compiler::resolveElementConstraints(elem:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let constraints = if($elem->instanceOf(meta::pure::metamodel::type::Class),
+        | $elem->cast(@meta::pure::metamodel::type::Class<Any>).constraints,
+        | if($elem->instanceOf(meta::pure::metamodel::type::PrimitiveType),
+              | $elem->cast(@meta::pure::metamodel::type::PrimitiveType).constraints,
+              | []
+          )
+    );
+    $constraints->fold({constraint, cCtx |
+        if($constraint.functionDefinition->isEmpty(),
+            | $cCtx,
+            | let lambda = $constraint.functionDefinition->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+              meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $lambda.expressionSequence,
+                  $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
+                  $cCtx
+              );
+        );
+    }, $context);
+}

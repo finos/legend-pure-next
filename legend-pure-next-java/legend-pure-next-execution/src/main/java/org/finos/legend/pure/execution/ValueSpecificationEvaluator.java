@@ -159,8 +159,6 @@ public class ValueSpecificationEvaluator
                         ._genericType(vs._genericType())
                         ._multiplicity(vs._multiplicity());
             }
-            // Lambda functions in parameter position — pass through as-is
-            case FunctionDefinition fd -> (ValueSpecification) fd;
             // GenericTypeAndMultiplicityHolder (and subtypes) carry type annotations — pass through as-is
             case GenericTypeAndMultiplicityHolder gmh -> (ValueSpecification) gmh;
             case FunctionExpression fe -> evaluateFunctionExpression(fe);

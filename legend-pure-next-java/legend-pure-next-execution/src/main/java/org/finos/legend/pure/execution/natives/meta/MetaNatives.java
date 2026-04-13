@@ -285,12 +285,12 @@ public class MetaNatives
                     {
                         for (Object ke : keyExprs)
                         {
-                            processKeyExpression(ke, instance, keyValues);
+                            processKeyExpression(ke, instance, keyValues, resolver);
                         }
                     }
                     else
                     {
-                        processKeyExpression(keyExprsRaw, instance, keyValues);
+                        processKeyExpression(keyExprsRaw, instance, keyValues, resolver);
                     }
 
                     // Set reverse association pointers
@@ -946,20 +946,6 @@ public class MetaNatives
         }
     }
 
-    /**
-     * Unwrap preserving metamodel types. Standard unwrap converts Collection to List
-     * and AtomicValue to raw value, which loses the ability to copy/instanceof them.
-     * This returns the original VS when unwrap gives a non-metamodel primitive.
-     */
-    private static Object unwrapPreservingMetamodel(ValueSpecification vs)
-    {
-        Object unwrapped = _E_ValueSpecification.unwrap(vs);
-        if (unwrapped instanceof DynamicInstance || unwrapped instanceof PackageableElement || unwrapped instanceof Any)
-        {
-            return unwrapped;
-        }
-        return vs;
-    }
 
     /**
      * Derive the class path from a classifierGenericType.
@@ -1181,7 +1167,8 @@ public class MetaNatives
     }
 
     static void processKeyExpression(Object ke, Object instance,
-                                     List<Map.Entry<String, Object>> keyValues)
+                                     List<Map.Entry<String, Object>> keyValues,
+                                     MetadataAccess resolver)
     {
         if (ke instanceof DynamicInstance di)
         {
@@ -1189,8 +1176,8 @@ public class MetaNatives
             Object nameVS = di.get("name");
             Object nameObj = _E_ValueSpecification.unwrap(nameVS);
             String key = nameObj != null ? nameObj.toString() : null;
-            // expression is an Object
-            Object value = di.get("expression");
+            // DI stores raw values; wrap back for the execution stack
+            Object value = _E_ValueSpecification.wrap(di.get("expression"), null, null, resolver);
 
             if (key != null)
             {
@@ -1217,7 +1204,8 @@ public class MetaNatives
         Object nameVS = keyExpr.get("name");
         Object nameObj = _E_ValueSpecification.unwrap(nameVS);
         String fullKey = nameObj != null ? nameObj.toString() : null;
-        Object value = keyExpr.get("expression");
+        // DI stores raw values; wrap back for the execution stack
+        Object value = _E_ValueSpecification.wrap(keyExpr.get("expression"), null, null, resolver);
         if (fullKey == null)
         {
             return;
