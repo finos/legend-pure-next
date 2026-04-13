@@ -12,7 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// AtomicValue resolution is handled by the Java compiler's AtomicValueResolver.
-// In the Pure compiler, AtomicValue resolution (lambda body resolution,
-// package pointer resolution) happens during the compilation phase.
-// This file is a placeholder for future migration.
+import meta::pure::compiler::resolution::functionDefinitionResolver::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(av:meta::pure::metamodel::valuespecification::AtomicValue[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    if($av.value->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+        | let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+          let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+          let innerScope = $scope->concatenate($lambdaParams);
+          resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context);,
+        | $context
+    );
+}

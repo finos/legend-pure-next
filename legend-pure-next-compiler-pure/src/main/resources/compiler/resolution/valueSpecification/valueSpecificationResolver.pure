@@ -15,6 +15,7 @@
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::resolveValueSpecification(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
@@ -26,6 +27,8 @@ function meta::pure::compiler::resolution::valueSpecification::valueSpecificatio
             resolveCollection($col, $scope, $context),
         ve:meta::pure::metamodel::valuespecification::VariableExpression[1] |
             resolveVariableExpression($ve, $scope, $context),
+        av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
+            resolveAtomicValue($av, $scope, $context),
         a:Any[1] | $context
     ]);
 }

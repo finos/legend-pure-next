@@ -182,12 +182,28 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
         ]);
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass1Context));
 
-    ^CompilationResult(elements = $pass2.values, errors = $pass2.context.errors);
+    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties
+    let pass3Ctx = $pass2.values->fold({elem, ctx |
+        $elem->match([
+            fn:meta::pure::metamodel::function::UserDefinedFunction<Any>[1] |
+                resolveFunctionDefinition($fn, $ctx);,
+            cls:meta::pure::metamodel::type::Class<Any>[1] |
+                resolveElementConstraints($cls, $ctx);,
+            pt:meta::pure::metamodel::type::PrimitiveType[1] |
+                resolveElementConstraints($pt, $ctx);,
+            a:Any[1] | $ctx
+        ]);
+    }, $pass2.context);
+
+    ^CompilationResult(elements = $pass2.values, errors = $pass3Ctx.errors);
 }
 
-function meta::pure::compiler::resolveConstraints(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamodel::function::UserDefinedFunction<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    resolveElementConstraints($cls, $context);
+    if($fn.expressionSequence->isEmpty(),
+        | $context,
+        | meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters, $context)
+    );
 }
 
 function meta::pure::compiler::resolveElementConstraints(elem:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
