@@ -141,17 +141,14 @@ function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::te
     true;
 }
 
-// Reproduces the Collection-in-property issue: when a class property of type
-// ValueSpecification[0..1] holds a Collection, accessing that property should
-// return the Collection as a single value (size == 1), not unwrap it to its
-// elements (size == N). This tests the execution engine's handling of meta
-// Collections stored in user-defined class properties.
+// Tests that a Collection stored in a property is treated as multiple values,
+// not as a single Collection value. In Pure, a Collection IS multiple values.
 Class meta::pure::functions::valueSpecificationManipulation::VSResult
 {
-    resolved: meta::pure::metamodel::valuespecification::ValueSpecification[0..1];
+    resolved: meta::pure::metamodel::valuespecification::ValueSpecification[*];
 }
 
-function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionStoredInPropertyIsNotUnwrapped():Boolean[1]
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionStoredInPropertyIsMultipleValues():Boolean[1]
 {
     let col = ^meta::pure::metamodel::valuespecification::Collection(
         values = [

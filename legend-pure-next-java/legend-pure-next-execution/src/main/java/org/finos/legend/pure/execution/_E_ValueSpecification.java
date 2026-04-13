@@ -115,14 +115,26 @@ public class _E_ValueSpecification
     }
 
     /**
-     * Wrap a raw Java value in a ValueSpecification.
-     * Scalars become AtomicValues; Lists become Collections.
+     * Ensure a value is a ValueSpecification.
+     * - null → empty Collection
+     * - List → Collection (each element wrapped recursively)
+     * - raw Java value → AtomicValue
      */
     public static ValueSpecification wrap(Object value,
                                    meta.pure.metamodel.type.generics.GenericType genericType,
                                    meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
                                    MetadataAccess resolver)
     {
+        if (value == null)
+        {
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
+                    ._genericType(genericType != null ? genericType
+                            : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                    "meta::pure::metamodel::type::generics::optimization::GenericType_Nil"))
+                    ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
+                            resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
+        }
         if (value instanceof List<?> list)
         {
             java.util.List<ValueSpecification> items = new java.util.ArrayList<>(list.size());

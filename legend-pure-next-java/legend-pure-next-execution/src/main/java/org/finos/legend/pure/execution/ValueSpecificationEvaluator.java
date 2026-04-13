@@ -420,7 +420,7 @@ public class ValueSpecificationEvaluator
         if (target instanceof DynamicInstance di)
         {
             Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
-            return wrapPropertyResult(propertyValueRaw, genericType, multiplicity);
+            return _E_ValueSpecification.wrap(propertyValueRaw, genericType, multiplicity, this.natives.resolver());
         }
 
         // For metamodel objects, use reflection to find _<propertyName>() accessor
@@ -456,7 +456,7 @@ public class ValueSpecificationEvaluator
                     + (effectiveTarget == null ? "null" : effectiveTarget.getClass().getSimpleName()));
         }
 
-        return wrapPropertyResult(result, genericType, multiplicity);
+        return _E_ValueSpecification.wrap(result, genericType, multiplicity, this.natives.resolver());
     }
 
     /**
@@ -507,37 +507,6 @@ public class ValueSpecificationEvaluator
                 return null;
             }
         });
-    }
-
-    /**
-     * Wrap a raw property result into a {@link ValueSpecification}.
-     * Handles null, {@link ValueSpecification}, {@link java.util.List}, and scalar values.
-     */
-    private ValueSpecification wrapPropertyResult(Object result,
-                                                  GenericType genericType,
-                                                  meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
-    {
-        // No value → empty collection typed to the property's declared type (Pure has no null)
-        if (result == null)
-        {
-            return new meta.pure.metamodel.valuespecification.CollectionImpl(this.natives.resolver())
-                    ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
-                    ._genericType(genericType)
-                    ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
-                            this.natives.resolver().getElement("meta::pure::metamodel::multiplicity::PureZero"));
-        }
-        if (result instanceof java.util.List<?> resultList)
-        {
-            List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
-            for (Object item : resultList)
-            {
-                vsItems.add(_E_ValueSpecification.wrap(item, genericType,
-                        (meta.pure.metamodel.multiplicity.Multiplicity) this.natives.resolver().getElement("meta::pure::metamodel::multiplicity::PureOne"),
-                        this.natives.resolver()));
-            }
-            return CollectionNatives.makeCollection(vsItems, this.natives.resolver());
-        }
-        return _E_ValueSpecification.wrap(result, genericType, multiplicity, this.natives.resolver());
     }
 
     /**
