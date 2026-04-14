@@ -147,11 +147,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
         | let lambdaResult = $rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction)->compileLambda($ctx, $scope, $mGenType, $mMult);
           if($lambdaResult.values->isEmpty(),
               | $lambdaResult,
-              | let compiledVal = $lambdaResult.values->at(0);
+              | // Lambda is already wrapped in AtomicValue by compileLambda
+                let wrappedLambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
                 let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne());
                 ^ValueCompileResult(
-                    values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                        value = $compiledVal,
+                    values = [^$wrappedLambda(
                         genericType = $inferredGT,
                         multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
                         sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))

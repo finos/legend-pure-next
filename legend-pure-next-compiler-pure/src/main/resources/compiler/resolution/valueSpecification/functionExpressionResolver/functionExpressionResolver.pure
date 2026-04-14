@@ -69,7 +69,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               | $context,
               | if($fnName == 'new' || $fnName->startsWith('new_'),
                     | validateNewFromFI($updated, $context),
-                    | $context
+                    | if($fnName == 'copy' || $fnName->startsWith('copy_'),
+                          | validateCopyFromFI($updated, $context),
+                          | $context
+                      )
                 )
           );
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $updated, context = $ctx1);,

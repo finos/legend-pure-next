@@ -112,7 +112,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         );
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::type::generics::GenericType>(context = $result.context));
 
-    let resultValue = $result.value->toOne();
+    let resultValue = $result.value->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
         value = ^$resultValue(typeArguments = $typeArgResult.values),
         context = $typeArgResult.context

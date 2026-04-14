@@ -37,7 +37,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
 {
     let protocolType = $protocolProperty.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'property \'' + $protocolProperty.name + '\'', 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'');
-    let mGenType = $gtResult.value;
+    let mGenType = $gtResult.value->toOne();
     let updatedContext = $gtResult.context;
 
     if($updatedContext.errors->size() > $context.errors->size(),
@@ -73,7 +73,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
                 let defaultResult = $defaultLambda->compileLambda($updatedContext, [], [], []);
                 if($defaultResult.values->isEmpty(),
                     | $builtProp,
-                    | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@meta::pure::metamodel::function::FunctionDefinition<Any>))
+                    | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>))
                 );
           );
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(

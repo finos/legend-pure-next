@@ -22,7 +22,7 @@ import meta::pure::compiler::elements::*;
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::compiler::CompilationResult[1]
 {
-    let debug = ^meta::pure::compiler::DebugState(debug = true, space = '');
+    let debug = ^meta::pure::compiler::DebugState(debug = false, space = '');
 
     let allElements = $file.sections.elements;
     let defaultImports = [

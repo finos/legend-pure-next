@@ -50,7 +50,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
 
     if($lambdaResult.values->isEmpty(),
         | ^meta::pure::compiler::CompilerResult<Any>(value = $emptyConstraint, context = $ctx1),
-        | let lambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+        | let lambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
           let compiledLambda = ^$lambda(parameters = $thisScope->concatenate($lambda.parameters));
 
           let msgResult = if($pc.messageFunction->isEmpty(),
@@ -60,7 +60,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
                 let mCtx = if($mr.context->isNotEmpty(), | $mr.context->toOne(), | $ctx1);
                 if($mr.values->isEmpty(),
                     | ^meta::pure::compiler::CompilerResult<Any>(context = $mCtx),
-                    | let ml = $mr.values->at(0)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+                    | let ml = $mr.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
                       ^meta::pure::compiler::CompilerResult<Any>(value = ^$ml(parameters = $thisScope->concatenate($ml.parameters)), context = $mCtx);
                 );
           );

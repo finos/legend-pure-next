@@ -111,8 +111,13 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               sourceInformation = $l.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
           );
 
+          let wrappedLambda = ^meta::pure::metamodel::valuespecification::AtomicValue(
+              value = $m3Lambda,
+              genericType = $lambdaCGT,
+              multiplicity = meta::pure::metamodel::multiplicity::PureOne
+          );
           ^ValueCompileResult(
-              values = [$m3Lambda],
+              values = [$wrappedLambda],
               openVariables = $openVariables,
               context = $ctx4
           );

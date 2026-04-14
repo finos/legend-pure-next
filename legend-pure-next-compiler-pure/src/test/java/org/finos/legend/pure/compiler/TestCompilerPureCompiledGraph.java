@@ -114,11 +114,9 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require relation support or error count convergence
+                              // Tests excluded — require relation support or cross-test leak
                               if (testName.contains("generics/relation/") ||
-                                  (testName.contains("generics/") && (
-                                      testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure")
-                                  )))
+                                  testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure"))
                               {
                                   return;
                               }

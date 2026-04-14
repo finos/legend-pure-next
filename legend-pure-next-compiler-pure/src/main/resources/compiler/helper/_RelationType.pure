@@ -119,7 +119,7 @@ function meta::pure::compiler::helper::relationType::findCommonRelationType_buil
               ^Column<Any,Any|*>(
                   name = $colName,
                   nameWildCard = false,
-                  genericType = if($commonType->isEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(rawType=Any), | $commonType->toOne()),
+                  genericType = if($commonType->isEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any), | $commonType->toOne()),
                   multiplicity = if($commonMul->isEmpty(), | PureOne, | $commonMul->toOne())
               );
           });
@@ -223,7 +223,7 @@ function meta::pure::compiler::helper::relationType::makeRelationTypeAsConcreteA
                     let origCol = $p.values->at(0)->cast(@Column<Any,Any|*>);
                     let gt = $p.values->at(2)->cast(@GenericType);
                     let mul = $p.values->at(3)->cast(@Multiplicity);
-                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | ^meta::pure::metamodel::type::generics::InferredGenericType(rawType=Any)), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | PureOne));
+                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any)), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | PureOne));
                 );
                 let newRT = ^RelationType<Any>(columns = $newCols);
                 ^meta::pure::metamodel::type::generics::InferredGenericType(type = $newRT);,

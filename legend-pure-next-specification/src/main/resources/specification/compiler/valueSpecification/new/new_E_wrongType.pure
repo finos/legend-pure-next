@@ -1,0 +1,16 @@
+###Error
+Type mismatch for property 'name': expected String, got Integer (at valueSpecification/new/new_E_wrongType 8:3-8:31)
+Type mismatch for property 'value': expected Integer, got String (at valueSpecification/new/new_E_wrongType 9:3-9:48)
+
+###Pure
+function test::new::testNew(): Any[*]
+{
+  ^test::new::Holder(name = 42);
+  ^test::new::Holder(name = 'ok', value = 'bad');
+}
+
+Class test::new::Holder
+{
+  name: String[1];
+  value: Integer[0..1];
+}

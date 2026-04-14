@@ -567,8 +567,9 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
                     findCommonGenericType($argsAtPos, $argContravariant);
                 })->filter(a | $a->isNotEmpty())->map(a | $a->toOne());
                 
-                if($commonArgs->size() == $argCount,
-                    | ^$resultType(typeArguments = $commonArgs),
+                if($commonArgs->size() == $argCount && $resultType->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+                    | let rtv = $resultType->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
+                      ^$rtv(typeArguments = $commonArgs);,
                     | $resultType
                 );,
               | $resultType

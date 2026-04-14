@@ -443,7 +443,7 @@ public class RdfJavaGenerator
             sb.append("    {\n");
             if (prop.isMany)
             {
-                sb.append("        return this.frozen ? this.").append(fieldName).append(".asUnmodifiable() : this.").append(fieldName).append(";\n");
+                sb.append("        return this.frozen && this.").append(fieldName).append(" != null ? this.").append(fieldName).append(".asUnmodifiable() : this.").append(fieldName).append(";\n");
             }
             else
             {

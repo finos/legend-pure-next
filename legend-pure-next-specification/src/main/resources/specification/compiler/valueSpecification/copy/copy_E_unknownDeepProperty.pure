@@ -1,0 +1,20 @@
+###Error
+Unknown deep property path 'address.city' in class 'test::copy::Person': property 'city' not found in class 'test::copy::Address' (at valueSpecification/copy/copy_E_unknownDeepProperty 8:11-8:37)
+
+###Pure
+function test::copy::testCopy(): Any[*]
+{
+  let p = ^test::copy::Person(name='Pierre', address=^test::copy::Address(name='NYC'));
+  let q = ^$p(address.city = 'Paris');
+}
+
+Class test::copy::Person
+{
+  name: String[1];
+  address: test::copy::Address[1];
+}
+
+Class test::copy::Address
+{
+  name: String[1];
+}

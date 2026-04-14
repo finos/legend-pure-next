@@ -15,7 +15,11 @@
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
@@ -98,8 +102,48 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let ctx1 = checkAbstract($cls, $fi, $context);
           if($ctx1.errors->size() > $context.errors->size(),
               | $ctx1,
-              | checkMissingProperties($cls, $providedPropertyNames, $fi, $ctx1)
+              | let ctx2 = checkMissingProperties($cls, $providedPropertyNames, $fi, $ctx1);
+                checkKeyExpressions($cls, $providedPropertyNames, $fi, $ctx2);
           );
+    );
+}
+
+// Matches Java NewResolver.validateCopyProperties — copy only checks key expressions, not abstract/missing
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateCopyFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let cls = extractClassFromGenericType($fi.genericType);
+    let compiledCls = if($cls->isNotEmpty(),
+        | let path = $cls->toOne()->fullPath();
+          let resolved = $context->resolveElement($path);
+          if($resolved->isNotEmpty() && $resolved->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+              | $resolved->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
+              | $cls
+          );,
+        | $cls
+    );
+    let providedNames = if($fi.parametersValues->size() >= 2,
+        | $fi.parametersValues->at(1)->match([
+              col:meta::pure::metamodel::valuespecification::Collection[1] |
+                  $col.values->map(v |
+                      $v->match([
+                          kfi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                              if($kfi.parametersValues->isNotEmpty(),
+                                  | $kfi.parametersValues->at(0)->match([
+                                        av:meta::pure::metamodel::valuespecification::AtomicValue[1] | $av.value->cast(@String),
+                                        a:Any[1] | []->cast(@String)
+                                    ]),
+                                  | []->cast(@String)
+                              ),
+                          a:Any[1] | []->cast(@String)
+                      ])
+                  ),
+              a:Any[1] | []->cast(@String)
+          ]),
+        | []->cast(@String)
+    );
+    if($compiledCls->isEmpty(),
+        | $context,
+        | checkKeyExpressions($compiledCls->toOne(), $providedNames, $fi, $context)
     );
 }
 
@@ -128,4 +172,137 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         );
         ^$ctx(errors += 'Missing required property \'' + $p.name->toOne() + '\' of type ' + $typeName + ' in new expression' + $siCtx);
     }, $context);
+}
+
+// Matches Java NewResolver.checkKeyExpressions — validates unknown properties, multiplicity, type, and deep paths
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    // Build class type parameter bindings from the new/copy expression's return type
+    let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+        | $cls->buildBindingsFromGenericType($fi.genericType->toOne()),
+        | newPlainParametersBinding()->cast(@ParametersBinding)
+    );
+
+    // Check unknown properties (including deep paths)
+    let ctx1 = $providedNames->fold({name, ctx |
+        if($name->contains('.'),
+            | validateDeepPropertyPath($cls, $name, $fi, $ctx),
+            | if(findPropertyOnClass($cls, $name)->isEmpty(),
+                  | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
+                    ^$ctx(errors += 'Unknown property \'' + $name + '\' in class \'' + $cls->fullPath() + '\'' + $siCtx);,
+                  | $ctx
+              )
+        );
+    }, $context);
+
+    // Check multiplicity and type for each key expression value
+    if($fi.parametersValues->size() < 2,
+        | $ctx1,
+        | let keyParam = $fi.parametersValues->at(1);
+          if(!$keyParam->instanceOf(meta::pure::metamodel::valuespecification::Collection),
+              | $ctx1,
+              | let col = $keyParam->cast(@meta::pure::metamodel::valuespecification::Collection);
+                $col.values->fold({v, ctx |
+                    if(!$v->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation) || $v->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).parametersValues->size() < 2,
+                        | $ctx,
+                        | let keyExpr = $v->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
+                          let keyNameVS = $keyExpr.parametersValues->at(0);
+                          let keyValueVS = $keyExpr.parametersValues->at(1);
+                          if(!$keyNameVS->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue),
+                              | $ctx,
+                              | let propName = $keyNameVS->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->toString();
+                                let prop = findPropertyOnClass($cls, $propName);
+                                if($prop->isEmpty(),
+                                    | $ctx, // unknown — already reported above
+                                    | let p = $prop->toOne();
+                                      // Multiplicity check
+                                      let ctx2 = if($p.multiplicity->isNotEmpty() && $keyValueVS.multiplicity->isNotEmpty() && !multiplicitySubsumes($p.multiplicity->toOne(), $keyValueVS.multiplicity->toOne()),
+                                          | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
+                                            ^$ctx(errors += 'Multiplicity mismatch for property \'' + $propName + '\': expected ' + printMultiplicity($p.multiplicity->toOne()) + ', got ' + printMultiplicity($keyValueVS.multiplicity->toOne()) + $siCtx);,
+                                          | $ctx
+                                      );
+                                      // Type check — resolve property type through class bindings (e.g., Z → String)
+                                      if($p.genericType->isNotEmpty() && $keyValueVS.genericType->isNotEmpty(),
+                                          | let resolvedPropGT = makeAsConcreteAsPossible($p.genericType->toOne(), $classBindings);
+                                            let propType = $resolvedPropGT->genericTypeRawType();
+                                            let valType = $keyValueVS.genericType->toOne()->genericTypeRawType();
+                                            if($propType->isNotEmpty() && $valType->isNotEmpty(),
+                                                | let pName = $propType->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOne();
+                                                  let vName = $valType->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOne();
+                                                  let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil' || $pName == $vName
+                                                      || $propType->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter)
+                                                      || $valType->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
+                                                  if(!$skip && !isCompatibleType($resolvedPropGT, $keyValueVS.genericType->toOne()),
+                                                      | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx2);
+                                                        ^$ctx2(errors += 'Type mismatch for property \'' + $propName + '\': expected ' + $pName + ', got ' + $vName + $siCtx);,
+                                                      | $ctx2
+                                                  );,
+                                                | $ctx2
+                                            );,
+                                          | $ctx2
+                                      );
+                                );
+                          );
+                    );
+                }, $ctx1);
+          );
+    );
+}
+
+// Find property on class including association properties and inherited properties
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::findPropertyOnClass(cls:meta::pure::metamodel::type::Class<Any>[1], name:String[1]):meta::pure::metamodel::function::property::Property<Nil,Any|*>[0..1]
+{
+    let direct = $cls.properties->filter(p | $p.name == $name)->head();
+    if($direct->isNotEmpty(),
+        | $direct,
+        | let assoc = $cls.propertiesFromAssociations->filter(p | $p.name == $name)->head();
+          if($assoc->isNotEmpty(),
+              | $assoc,
+              | // Check inherited
+                let supertypes = $cls.generalizations->filter(g | $g.general->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue))
+                    ->map(g | $g.general->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type)
+                    ->filter(t | $t->isNotEmpty())->map(t | $t->toOne())
+                    ->filter(t | $t->instanceOf(meta::pure::metamodel::type::Class));
+                $supertypes->map(st | findPropertyOnClass($st->cast(@meta::pure::metamodel::type::Class<Any>), $name))->head();
+          );
+    );
+}
+
+// Validate deep property path like 'address.name' by traversing each segment
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:meta::pure::metamodel::type::Class<Any>[1], fullPath:String[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    let segments = $fullPath->split('.');
+    validateDeepPropertyPathSegments($cls, $cls, $segments, 0, $fullPath, $fi, $context);
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPathSegments(rootCls:meta::pure::metamodel::type::Class<Any>[1], currentType:meta::pure::metamodel::type::Class<Any>[1], segments:String[*], index:Integer[1], fullPath:String[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    if($index >= $segments->size(),
+        | $context,
+        | let segment = $segments->at($index);
+          let prop = findPropertyOnClass($currentType, $segment);
+          if($prop->isEmpty(),
+              | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+                ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $currentType->fullPath() + '\'' + $siCtx);,
+              | if($index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(),
+                    | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
+                      if($nextType->isNotEmpty() && $nextType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+                          | validateDeepPropertyPathSegments($rootCls, $nextType->toOne()->cast(@meta::pure::metamodel::type::Class<Any>), $segments, $index + 1, $fullPath, $fi, $context),
+                          | $context
+                      );,
+                    | $context
+                )
+          );
+    );
+}
+
+// Simple type compatibility check: is actual a subtype of declared?
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:meta::pure::metamodel::type::generics::GenericType[1], actual:meta::pure::metamodel::type::generics::GenericType[1]):Boolean[1]
+{
+    let declaredType = $declared->genericTypeRawType();
+    let actualType = $actual->genericTypeRawType();
+    if($declaredType->isEmpty() || $actualType->isEmpty(),
+        | true,
+        | $actualType->toOne()->linearize()->contains($declaredType->toOne())
+    );
 }

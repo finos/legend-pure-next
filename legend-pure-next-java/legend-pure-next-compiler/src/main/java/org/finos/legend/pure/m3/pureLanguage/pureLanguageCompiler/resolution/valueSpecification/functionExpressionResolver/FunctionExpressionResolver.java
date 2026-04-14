@@ -98,10 +98,17 @@ public final class FunctionExpressionResolver
                     ._genericType(returnGT)
                     ._multiplicity(returnMul);
 
-            // Validate required properties for new expressions
-            if (updated._functionName() != null && updated._functionName().equals("new"))
+            // Validate properties for new and copy expressions
+            if (updated._functionName() != null)
             {
-                NewResolver.validateNewRequiredProperties(updated, model, context);
+                if (updated._functionName().equals("new"))
+                {
+                    NewResolver.validateNewRequiredProperties(updated, model, context);
+                }
+                else if (updated._functionName().equals("copy"))
+                {
+                    NewResolver.validateCopyProperties(updated, model, context);
+                }
             }
             registerLetVariable(updated, model, context);
             return updated;
