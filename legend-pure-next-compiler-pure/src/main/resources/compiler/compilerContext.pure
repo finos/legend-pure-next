@@ -102,8 +102,16 @@ function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elem
 
 function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
 {
-    let all = findAllFunctionsByNameAndArityUnfiltered($context, $name, $arity);
-    $all->filter(f | $context->isElementVisible($f->elementToPath()));
+    // Handle qualified names like 'test::if' — strip package for lookup, filter by prefix (like Java findCandidates)
+    let isQualified = $name->contains('::');
+    let lookupName = if($isQualified, | $name->split('::')->last()->toOne(), | $name);
+    let all = findAllFunctionsByNameAndArityUnfiltered($context, $lookupName, $arity);
+    if($isQualified,
+        | let parts = $name->split('::');
+          let prefix = $parts->init()->joinStrings('::');
+          $all->filter(f | $f->elementToPath()->startsWith($prefix + '::'));,
+        | $all->filter(f | $context->isElementVisible($f->elementToPath()))
+    );
 }
 
 function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
