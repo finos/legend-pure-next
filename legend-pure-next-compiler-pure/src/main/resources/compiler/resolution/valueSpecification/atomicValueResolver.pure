@@ -40,8 +40,35 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                 );,
               | let _d = debug($context, | 'resolveAtomicValue: LAMBDA resolving body');
                 let innerScope = $scope->concatenate($lambdaParams);
-                let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context).context;
-                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $ctx1);
+                let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context);
+                let ctx1 = $resolveResult.context;
+                // Compute lambda genericType from body return type (like Java processLambda lines 114-121)
+                let bodyReturnGT = if($resolveResult.resolvedSpecs->isEmpty(),
+                    | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                    | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
+                      if($lastExpr.genericType->isEmpty() || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                          | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                          | asInferredGenericType($lastExpr.genericType->toOne())
+                      );
+                );
+                let bodyReturnMul = if($resolveResult.resolvedSpecs->isEmpty(),
+                    | meta::pure::metamodel::multiplicity::PureOne,
+                    | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
+                      if($lastExpr.multiplicity->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | asInferredMultiplicity($lastExpr.multiplicity->toOne()));
+                );
+                let lambdaFT = meta::pure::functions::lang::new(
+                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
+                )->cast(@meta::pure::metamodel::type::FunctionType);
+                let ft = ^$lambdaFT(parameters = $lambdaParams, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
+                let lambdaGT = ^meta::pure::metamodel::type::generics::InferredGenericType(
+                    type = meta::pure::metamodel::function::LambdaFunction,
+                    typeArguments = [^meta::pure::metamodel::type::generics::InferredGenericType(type = $ft)]
+                );
+                let _d2 = debug($context, | 'resolveAtomicValue: LAMBDA gt=' + printGenericType($lambdaGT));
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = ^$av(genericType = $lambdaGT),
+                    context = $ctx1
+                );
           );,
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $context)
     );

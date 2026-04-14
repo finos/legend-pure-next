@@ -210,8 +210,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               value = ^$fi(func = $entry, parametersValues = $resolvedParams),
               context = $ctx2),
         | // All resolved — validate arg types against param types (like Java validateParameterValuesToFunctionType)
+          // Skip validation if fixpoint already produced errors (body resolution errors are the right errors)
           let fiSrcInfo = $fi.sourceInformation;
-          let validationCtx = validateParameterTypes($fi.functionName->toOne(), $resolvedParams, $funcParams, $bindings, $fiSrcInfo, $ctx2);
+          let fixpointProducedErrors = $ctx2.errors->size() > $context.errors->size();
+          let validationCtx = if($fixpointProducedErrors, | $ctx2, | validateParameterTypes($fi.functionName->toOne(), $resolvedParams, $funcParams, $bindings, $fiSrcInfo, $ctx2));
           if($validationCtx.errors->size() > $ctx2.errors->size(),
               | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                     value = ^$fi(parametersValues = $resolvedParams),
@@ -271,13 +273,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             | $acc,
             | let argGT = $resolvedParams->at($i).genericType->toOne();
               let argMul = $resolvedParams->at($i).multiplicity->toOne();
-              let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $bindings);
-              let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $bindings);
-              let typeOk = isCompatibleGenericType($expectedGT, $argGT) || isCompatibleGenericType($argGT, $expectedGT) || (printGenericType($expectedGT) == printGenericType($argGT));
-              let mulOk = multiplicitySubsumes($expectedMul, $argMul);
-              if(!$typeOk || !$mulOk,
-                  | ^$acc(failed = true);,
-                  | $acc
+              // Skip validation if arg type is UndefinedGenericType (like Java line 318: if argGT == null, skip)
+              if($argGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                  | $acc,
+                  | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $bindings);
+                    let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $bindings);
+                    let typeOk = isCompatibleGenericType($expectedGT, $argGT) || isCompatibleGenericType($argGT, $expectedGT) || (printGenericType($expectedGT) == printGenericType($argGT));
+                    let mulOk = multiplicitySubsumes($expectedMul, $argMul);
+                    if(!$typeOk || !$mulOk,
+                        | ^$acc(failed = true);,
+                        | $acc
+                    );
               );
         );
     }, ^ValidationAccumulator(failed = false));
@@ -432,8 +438,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     let lambdaParam = $pair.second;
                     let resolvedType = makeAsConcreteAsPossible($ftParam.genericType->toOne(), $bindings);
                     let resolvedMul = makeAsConcreteAsPossible($ftParam.multiplicity->toOne(), $bindings);
-                    let newGT = if(!$lambdaParam.genericType->toOne()->isConcreteGenericType(), | asInferredGenericType($resolvedType), | $lambdaParam.genericType->toOne());
-                    let newMul = if(!$lambdaParam.multiplicity->toOne()->isConcreteMultiplicity(), | asInferredMultiplicity($resolvedMul), | $lambdaParam.multiplicity->toOne());
+                    // Replace if param type is not concrete (UndefinedGenericType = Java null = not concrete)
+                    let lambdaGT = $lambdaParam.genericType->toOne();
+                    let newGT = if($lambdaGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType) || !$lambdaGT->isConcreteGenericType(), | asInferredGenericType($resolvedType), | $lambdaGT);
+                    let lambdaMul = $lambdaParam.multiplicity->toOne();
+                    let newMul = if(!$lambdaMul->isConcreteMultiplicity(), | asInferredMultiplicity($resolvedMul), | $lambdaMul);
                     ^$lambdaParam(genericType = $newGT, multiplicity = $newMul);
                 });
                 ^$lambda(parameters = $newParams);,
