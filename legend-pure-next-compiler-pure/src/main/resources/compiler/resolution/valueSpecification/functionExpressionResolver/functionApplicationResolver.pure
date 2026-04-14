@@ -175,8 +175,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 let resolvedResult = $tryResult.result->toOne();
                 let resolvedCtx = $resolvedResult.context;
                 let _damb = debug($deepCtx, | 'AMBIGUOUS: ' + $signatures + $siCtx + ' (errors before=' + $resolvedCtx.errors->size()->toString() + ')');
-                // Clear func to mark as unresolved — matches Java's resolved._func(null)
-                let ambiguousValue = ^$fi(parametersValues = $resolvedResult.value->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).parametersValues);
+                // Return unresolved expression with resolved parametersValues — matches Java's resolved._func(null)
+                // In Java (mutable), func is set to null on the resolved expression.
+                // In Pure (immutable), we create from the original $fi (which has no func, no genericType)
+                // and copy the resolved parametersValues. This ensures the expression gets re-resolved in candidate attempts.
+                let resolvedFI = $resolvedResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
+                let ambiguousValue = ^$fi(parametersValues = $resolvedFI.parametersValues);
                 ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                     value = $ambiguousValue,
                     context = ^$resolvedCtx(errors += 'Ambiguous function call: multiple equally-specific matches found [' + $signatures + ']' + $siCtx));,
@@ -402,7 +406,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               let paramMul = $funcParams->at($i).multiplicity->toOne();
 
               let _dp = debug($acc.context, | 'parameterValue[' + $i->toString() + '] class=' + $parameterValue->type()->toOne()->elementToPath()
-                  + ' paramGT=' + printGenericType($paramGT));
+                  + ' paramGT=' + printGenericType($paramGT)
+                  + ' bindings={' + $acc.bindings->meta::pure::compiler::helper::parametersBinding::toString() + '}');
 
               let resolveResult = resolveOneParam($parameterValue, $paramGT, $paramMul, $acc.bindings, $scope, $acc.context);
 
@@ -490,7 +495,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings);
                 let av = $processed->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
                 let withReprocessedLambda = ^$av(value = $reprocessedLambda);
-                finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $withReprocessedLambda);,
+                let fpResult = finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $withReprocessedLambda);
+                // If finishProcessing produced errors (e.g. lambda params still not concrete after setMissing),
+                // treat as NOT RESOLVED — matches Java where isSuccessfullyProcessed returns false and errors are rolled back
+                if($fpResult.context.errors->size() > $checkpoint && !$fpResult.resolved,
+                    | let savedErrors = $fpResult.context->snapshotErrors($checkpoint);
+                      let rolledBackCtx = $fpResult.context->rollbackErrors($checkpoint);
+                      ^ResolveOneParamResult(resolved = false, newParam = $fpResult.newParam, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);,
+                    | $fpResult
+                );,
               | // Check if REVERSE_MATCH: FunctionInvocation with func set (Java line 450-454)
                 let isReverseMatch = $processed->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation)
                     && $processed->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).func->isNotEmpty();

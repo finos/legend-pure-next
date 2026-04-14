@@ -222,16 +222,23 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamode
     if($fn.expressionSequence->isEmpty(),
         | $context,
         | let _d = debug($context, | 'resolveAndValidate: function \'' + $fn.functionName->toOne() + '\'');
-          let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $context->debugSpaceInc());
+          // Set ownerTypeParams for pass 3 — matches Java UserDefinedFunctionHandler.thirdPass setEnclosingOwner
+          let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+          let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $ctxWithOwner->debugSpaceInc());
           let resultCtx = $result.context;
-          ^$resultCtx(debugState = $context.debugState);
+          // Clear ownerTypeParams — matches Java clearEnclosingOwner
+          ^$resultCtx(debugState = $context.debugState, ownerTypeParams = []);
     );
 }
 
 function meta::pure::compiler::resolveClass(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    let ctx1 = meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties($cls.qualifiedProperties, $context);
+    // Set ownerTypeParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
+    let ctxWithOwner = ^$context(ownerTypeParams = $cls.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let ctx1 = meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties($cls.qualifiedProperties, $ctxWithOwner);
     let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides($cls, $ctx1);
     let ctx3 = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls, $ctx2);
-    meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $ctx3);
+    let ctx4 = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $ctx3);
+    // Clear ownerTypeParams — matches Java clearEnclosingOwner
+    ^$ctx4(ownerTypeParams = []);
 }
