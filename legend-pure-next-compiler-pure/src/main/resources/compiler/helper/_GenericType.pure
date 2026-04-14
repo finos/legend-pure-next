@@ -384,6 +384,79 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testIsC
     assertFalse($nestedTpProp->isConcreteGenericTypeInContext([]));
 }
 
+// ============================================================================
+// findCommonGenericType tests
+// ============================================================================
+
+function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_sameType():Boolean[1]
+{
+    let intGT1 = ^InferredGenericType(type = Integer);
+    let intGT2 = ^InferredGenericType(type = Integer);
+    let result = findCommonGenericType([$intGT1, $intGT2]);
+    assert($result->isNotEmpty());
+    assertEquals('Integer', $result->toOne()->printGenericType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_subtypes():Boolean[1]
+{
+    let intGT = ^InferredGenericType(type = Integer);
+    let floatGT = ^InferredGenericType(type = Float);
+    let result = findCommonGenericType([$intGT, $floatGT]);
+    assert($result->isNotEmpty());
+    assertEquals('Number', $result->toOne()->printGenericType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithSameFunctionType():Boolean[1]
+{
+    // LambdaFunction<{Integer[1]->Boolean[1]}> for both
+    let ft = meta::pure::functions::lang::new(
+        ^UserDefinedGenericType(type = FunctionType)
+    )->cast(@FunctionType);
+    let concretesFT = ^$ft(
+        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        returnType = ^InferredGenericType(type = Boolean),
+        returnMultiplicity = PureOne
+    );
+    let lambdaGT1 = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $concretesFT)]);
+    let lambdaGT2 = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $concretesFT)]);
+    let result = findCommonGenericType([$lambdaGT1, $lambdaGT2]);
+    assert($result->isNotEmpty());
+    // The common type should preserve the FunctionType type argument
+    let resultStr = $result->toOne()->printGenericType();
+    assert($resultStr->startsWith('LambdaFunction'), | 'Expected LambdaFunction but got: ' + $resultStr);
+    assert($resultStr->contains('Integer'), | 'Expected Integer in type args but got: ' + $resultStr);
+    assert($resultStr->contains('Boolean'), | 'Expected Boolean in type args but got: ' + $resultStr);
+}
+
+function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithDifferentFunctionTypeInstances():Boolean[1]
+{
+    // Two LambdaFunction<{Integer[1]->Integer[1]}> with DIFFERENT FunctionType objects
+    let ft1 = meta::pure::functions::lang::new(
+        ^UserDefinedGenericType(type = FunctionType)
+    )->cast(@FunctionType);
+    let concreteFT1 = ^$ft1(
+        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        returnType = ^InferredGenericType(type = Integer),
+        returnMultiplicity = PureOne
+    );
+    let ft2 = meta::pure::functions::lang::new(
+        ^UserDefinedGenericType(type = FunctionType)
+    )->cast(@FunctionType);
+    let concreteFT2 = ^$ft2(
+        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        returnType = ^InferredGenericType(type = Integer),
+        returnMultiplicity = PureOne
+    );
+    let lambdaGT1 = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $concreteFT1)]);
+    let lambdaGT2 = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $concreteFT2)]);
+    let result = findCommonGenericType([$lambdaGT1, $lambdaGT2]);
+    assert($result->isNotEmpty());
+    let resultStr = $result->toOne()->printGenericType();
+    // Should preserve the common FunctionType structure, not collapse to Any
+    assert($resultStr->startsWith('LambdaFunction'), | 'Expected LambdaFunction but got: ' + $resultStr);
+    assert($resultStr->contains('Integer'), | 'Expected Integer in type args but got: ' + $resultStr);
+}
+
 function meta::pure::compiler::helper::genericType::collectTypeParameterBindings(paramGT:GenericType[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
     $paramGT->match([
@@ -533,7 +606,13 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
               | let rawTypes = $nonNullValues->filter(gt | $gt.type->isNotEmpty() && !$gt.type->toOne()->instanceOf(TypeParameter))->map(gt | $gt.type->toOne());
                 if($rawTypes->isEmpty(),
                     | [],
-                    | let commonType = findCommonType($rawTypes, $contravariant);
+                    | // If all raw types are FunctionType instances, use structural unification (like Java lines 177-184)
+                      let rawFunctionTypes = $rawTypes->filter(t | $t->instanceOf(FunctionType))->cast(@FunctionType);
+                      if($rawFunctionTypes->size() == $rawTypes->size() && $rawFunctionTypes->isNotEmpty(),
+                          | let common = findCommonFunctionType($rawFunctionTypes);
+                            if($common->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common->toOne()), | []);,
+                          |
+                      let commonType = findCommonType($rawTypes, $contravariant);
                       if($commonType->isEmpty(),
                           | [],
                           | let common = $commonType->toOne();
@@ -549,6 +628,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                             
                             findCommonGenericType_Args($resultType, $projectedValues, $withArgs, $common, $contravariant);
                       );
+                      ); // end FunctionType check
                 );
           );
     );
