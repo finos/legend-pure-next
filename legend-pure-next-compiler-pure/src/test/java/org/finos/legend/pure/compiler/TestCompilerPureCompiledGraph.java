@@ -114,13 +114,9 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require relation support, ambiguity detection, or further error propagation
+                              // Tests excluded — require relation support, further error propagation, or variance checking
                               if (testName.contains("generics/relation/") ||
-                                  testName.contains("match_E_ambiguousFunction.pure") ||
-                                  testName.contains("if_E_multipleMatch.pure") ||
                                   (testName.contains("generics/") && (
-                                      testName.contains("cast.pure") ||
-                                      testName.contains("classTypeParam.pure") ||
                                       testName.contains("classTypeParam_E_wrongType.pure") ||
                                       testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure")

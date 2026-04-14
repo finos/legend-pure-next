@@ -60,8 +60,9 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
         ^$c(errors += 'Duplicate parameter name \'' + $d + '\' in ' + $ownerCtx + $siCtx);
     }, $ctx);
 
-    // Compile type parameters
+    // Compile type parameters and register them in the context (matches Java setEnclosingOwner)
     let fnTypeParams = $fn.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let ctx1b = ^$ctx1(ownerTypeParams = $fnTypeParams);
 
     // Compile parameters with context threading
     let paramAccum = $fn.parameters->fold({p, acc |
@@ -76,7 +77,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
             ),
             context = $gtResult.context
         );
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1));
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1b));
     let compiledParams = $paramAccum.values;
     let ctx2 = $paramAccum.context;
 

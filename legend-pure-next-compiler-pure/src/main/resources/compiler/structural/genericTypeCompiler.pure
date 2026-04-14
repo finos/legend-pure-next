@@ -59,9 +59,15 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                   );
             );,
         t:meta::pure::protocol::grammar::type::generics::TypeParameter[1] |
+            let matched = $typeParameters->filter(tp | $tp.name == $t.name);
+            let resolved = if($matched->isNotEmpty(), | $matched, | $context.ownerTypeParams->filter(tp | $tp.name == $t.name));
+            let resolvedTP = if($resolved->isNotEmpty(),
+                | $resolved->toOne(),
+                | ^meta::pure::metamodel::type::generics::TypeParameter(name = $t.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter)
+            );
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
                 value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                    type = $typeParameters->filter(tp | $tp.name == $t.name)->toOne()
+                    type = $resolvedTP
                 ),
                 context = $context
             );,
@@ -98,8 +104,12 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     ]);
 
     let typeArgResult = $protocolGT.typeArguments->fold({a, acc |
-        let argResult = $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
-        ^$acc(values += $argResult.value, context = $argResult.context);
+        if($a->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
+            | let argResult = $a->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
+              ^$acc(values += $argResult.value, context = $argResult.context);,
+            | // UndefinedGenericType or other — matches Java's compile() handling
+              ^$acc(values += ^meta::pure::metamodel::type::generics::UndefinedGenericType());
+        );
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::type::generics::GenericType>(context = $result.context));
 
     let resultValue = $result.value->toOne();

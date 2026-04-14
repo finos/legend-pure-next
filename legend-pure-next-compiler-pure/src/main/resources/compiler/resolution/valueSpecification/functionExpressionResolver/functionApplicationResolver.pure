@@ -21,6 +21,7 @@ import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::functionType::*;
+import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::*;
 
 // ============================================================================
@@ -64,6 +65,8 @@ Class meta::pure::compiler::resolution::valueSpecification::functionExpressionRe
 {
     resolved : Boolean[1];
     result : meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[0..1];
+    resolvedCandidate : meta::pure::metamodel::function::PackageableFunction<Any>[0..1];
+    tiedCandidates : meta::pure::metamodel::function::PackageableFunction<Any>[*];
     context : meta::pure::compiler::CompilerContext[1];
     firstErrors : String[*];
 }
@@ -95,7 +98,6 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Find visible candidates by name and arity
     let candidates = $context->findAllFunctionsByNameAndArity($functionName, $paramCount);
-
     if($candidates->isEmpty(),
         | // No visible candidates — build error with suggestions
           let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
@@ -123,6 +125,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 {
     // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94)
     // Lambdas are excluded because their param types depend on the candidate's type-parameter bindings.
+    // Errors from pre-resolution are discarded (matching Java rollbackErrorsTo behavior).
+    // Ambiguous sub-expressions return unresolved values (func cleared), which get re-resolved in candidate attempts.
     let preResolvedParams = $fi.parametersValues->map(pv |
         if($pv->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $pv->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
             | $pv,
@@ -144,7 +148,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               if($resultCtx->errorCheckpoint() == $checkpoint,
                   | // Clean resolution — success
                     let _ds = debug($deepCtx, | 'candidate resolved cleanly');
-                    ^$acc(resolved = true, result = $result);,
+                    ^$acc(resolved = true, result = $result, resolvedCandidate = $candidate);,
                   | // Resolution produced errors — save first candidate's errors, try next
                     let _df = debug($deepCtx, | 'candidate produced errors, trying next');
                     let savedErrors = if($acc.firstErrors->isEmpty(), | $resultCtx->snapshotErrors($checkpoint), | $acc.firstErrors);
@@ -155,7 +159,29 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Step 3: Return result or restore first candidate's errors (like Java lines 127-133)
     if($tryResult.resolved,
-        | $tryResult.result->toOne(),
+        | // Check for equally-specific ties (ambiguity detection — matches Java lines 104-115)
+          // Use normalized function type comparison (ignores TypeParameter name differences between PDB and local functions)
+          let resolvedCandidate = $tryResult.resolvedCandidate->toOne();
+          let resolvedFT = $resolvedCandidate->getFunctionType();
+          let resolvedNorm = normalizeFunctionTypeForComparison($resolvedFT);
+          let tied = $candidates->filter(c |
+              normalizeFunctionTypeForComparison($c->getFunctionType()) == $resolvedNorm
+          );
+          let _dtied = debug($deepCtx, | 'ambiguity check: tied=' + $tied->size()->toString() + ' for ' + $fi.functionName->toOne());
+          if($tied->size() > 1,
+              | // Ambiguous — multiple equally-specific candidates
+                let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+                let signatures = $tied->map(t | functionSignature($t))->sort()->joinStrings(', ');
+                let resolvedResult = $tryResult.result->toOne();
+                let resolvedCtx = $resolvedResult.context;
+                let _damb = debug($deepCtx, | 'AMBIGUOUS: ' + $signatures + $siCtx + ' (errors before=' + $resolvedCtx.errors->size()->toString() + ')');
+                // Clear func to mark as unresolved — matches Java's resolved._func(null)
+                let ambiguousValue = ^$fi(parametersValues = $resolvedResult.value->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).parametersValues);
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $ambiguousValue,
+                    context = ^$resolvedCtx(errors += 'Ambiguous function call: multiple equally-specific matches found [' + $signatures + ']' + $siCtx));,
+              | $tryResult.result->toOne()
+          );,
         | // No candidate resolved cleanly — restore first candidate's errors
           if($tryResult.firstErrors->isNotEmpty(),
               | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
@@ -751,4 +777,83 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         ->concatenate(if($outOfScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) not in scope:\n    ' + $outOfScope->map(f | functionSignature($f))->joinStrings('\n    '), | []))
         ->concatenate(if($diffArity->isNotEmpty(), | '. Possible matches with different number of parameters:\n    ' + $diffArity->map(f | functionSignature($f))->joinStrings('\n    '), | []));
     $parts->joinStrings('');
+}
+
+// Normalizes a FunctionType to a canonical string for comparison.
+// TypeParameter names are replaced with positional names (P0, P1, ...) so that
+// functions with identical structure but different TypeParameter objects compare equal.
+// This avoids false negatives from PDB-loaded vs locally-compiled TypeParameter name differences.
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::normalizeFunctionTypeForComparison(ft:meta::pure::metamodel::type::FunctionType[1]):String[1]
+{
+    // Collect all type parameter names and assign canonical names
+    let allTpNames = collectFunctionTypeReferencedTypeParameterNames($ft)->sort();
+    let allMpNames = collectFunctionTypeReferencedMultiplicityParameterNames($ft)->sort();
+    // Build the canonical FunctionType string using printFunctionType(false) then replace type param names
+    let raw = printFunctionType($ft, false);
+    // Replace each type parameter name with a canonical version
+    let withTp = $allTpNames->fold({n, acc |
+        let idx = $allTpNames->indexOf($n);
+        $acc->replace($n, '_TP' + $idx->toString());
+    }, $raw);
+    let withMp = $allMpNames->fold({n, acc |
+        let idx = $allMpNames->indexOf($n);
+        $acc->replace($n, '_MP' + $idx->toString());
+    }, $withTp);
+    $withMp;
+}
+
+// Matches Java FunctionIndexEntry.compareFunctionTypes + mostSpecificFirst comparator
+// Returns: -1 if f1 more specific, 1 if f2 more specific, 0 if equally specific
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::compareFunctionTypeSpecificity(f1:meta::pure::metamodel::type::FunctionType[1], f2:meta::pure::metamodel::type::FunctionType[1]):Integer[1]
+{
+    let params1 = $f1.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    let params2 = $f2.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    let count = if($params1->size() < $params2->size(), | $params1->size(), | $params2->size());
+    // Compare parameter types pairwise
+    let paramCmp = range($count)->fold({i, acc |
+        if($acc != 0,
+            | $acc,
+            | let gt1 = $params1->at($i).genericType->toOne();
+              let gt2 = $params2->at($i).genericType->toOne();
+              // Extract raw type — null (empty) for non-GenericTypeValue or empty type field
+              let t1 = if($gt1->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $gt1->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isNotEmpty(), | $gt1->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type, | []);
+              let t2 = if($gt2->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $gt2->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isNotEmpty(), | $gt2->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type, | []);
+              let t1IsTp = $t1->isNotEmpty() && $t1->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
+              let t2IsTp = $t2->isNotEmpty() && $t2->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
+              if($t1->isNotEmpty() && $t2->isEmpty(),
+                  | if(isTopType($t1->toOne()), | 1, | -1),
+                  | if($t1->isEmpty() && $t2->isNotEmpty(),
+                      | if(isTopType($t2->toOne()), | -1, | 1),
+                      | if($t1IsTp && !$t2IsTp,
+                          | if(isTopType($t2->toOne()), | -1, | 1),
+                          | if(!$t1IsTp && $t2IsTp,
+                              | if(isTopType($t1->toOne()), | 1, | -1),
+                              | if($t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && $t1->toOne() != $t2->toOne(),
+                                  | let lin1 = linearize($t1->toOne());
+                                    if($lin1->contains($t2->toOne()),
+                                        | -1,
+                                        | let lin2 = linearize($t2->toOne());
+                                          if($lin2->contains($t1->toOne()), | 1, | 0);
+                                    );,
+                                  | 0
+                              );
+                          );
+                      );
+                  );
+              );
+        );
+    }, 0);
+    if($paramCmp != 0,
+        | $paramCmp,
+        | // Tiebreaker: fewer type parameters = more constrained = more specific
+          let tp1 = collectFunctionTypeReferencedTypeParameterNames($f1)->size();
+          let tp2 = collectFunctionTypeReferencedTypeParameterNames($f2)->size();
+          if($tp1 != $tp2,
+              | if($tp1 < $tp2, | -1, | 1),
+              | // Tiebreaker: fewer multiplicity parameters
+                let mp1 = collectFunctionTypeReferencedMultiplicityParameterNames($f1)->size();
+                let mp2 = collectFunctionTypeReferencedMultiplicityParameterNames($f2)->size();
+                if($mp1 != $mp2, | if($mp1 < $mp2, | -1, | 1), | 0);
+          );
+    );
 }

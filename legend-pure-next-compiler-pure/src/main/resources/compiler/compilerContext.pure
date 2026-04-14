@@ -52,6 +52,8 @@ Class meta::pure::compiler::CompilerContext
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
+    ownerTypeParams : meta::pure::metamodel::type::generics::TypeParameter[*];
+    ownerMulParams : meta::pure::metamodel::multiplicity::MultiplicityParameter[*];
 }
 
 function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
