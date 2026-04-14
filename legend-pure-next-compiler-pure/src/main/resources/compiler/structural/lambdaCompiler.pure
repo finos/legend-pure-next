@@ -53,8 +53,10 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
                   | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value,
                   | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
               );
+              // For untyped lambda params, use UndefinedMultiplicity (matching Java null).
+              // setMissingLambdaParameterInformation will fill the actual multiplicity from bindings.
               let pmMult = if($p.multiplicity->isEmpty(),
-                  | meta::pure::metamodel::multiplicity::PureOne,
+                  | ^meta::pure::metamodel::multiplicity::UndefinedMultiplicity(),
                   | $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
               );
               ^meta::pure::metamodel::valuespecification::VariableExpression(

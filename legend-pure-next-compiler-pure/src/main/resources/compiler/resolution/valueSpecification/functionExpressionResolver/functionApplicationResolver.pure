@@ -405,14 +405,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
-    // Check if concrete in context (like Java isConcreteInContext — allows in-scope type params)
-    // NOTE: UndefinedGenericType is "concrete" per isConcreteGenericType but represents
-    // unresolved types (Java returns null instead). Exclude it from the concrete check.
+    // Check if concrete — like Java isConcreteInContext with inScopeTypeParamNames() which
+    // returns only the ENCLOSING OWNER's type params, not the current function's pushed params.
+    // Using isConcreteGenericType/isConcreteMultiplicity (not InContext) matches this behavior.
+    // NOTE: UndefinedGenericType represents unresolved (Java null). Exclude it.
     let isConcrete = $processed.genericType->isNotEmpty()
         && !$processed.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
-        && $processed.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
+        && $processed.genericType->toOne()->isConcreteGenericType()
         && $processed.multiplicity->isNotEmpty()
-        && $processed.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams);
+        && $processed.multiplicity->toOne()->isConcreteMultiplicity();
 
     if($isConcrete,
         | // CONCRETE: collect bindings (Java resolveParameterValue line 427-440)
@@ -515,9 +516,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     let isResolved = $resolved.genericType->isNotEmpty()
-        && $resolved.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
+        && !$resolved.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
+        && $resolved.genericType->toOne()->isConcreteGenericType()
         && $resolved.multiplicity->isNotEmpty()
-        && $resolved.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams);
+        && $resolved.multiplicity->toOne()->isConcreteMultiplicity();
 
     ^ResolveOneParamResult(resolved = $isResolved, newParam = $resolved, bindings = $b2, context = $ctx1, savedErrors = []);
 }
@@ -542,7 +544,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let b2 = collectMultiplicityParameterBindings($childExpr.multiplicity->toOne(), $resolvedParamMul, $b1);
 
     // Make child bindings concrete using parent bindings, then push into child expr
-    let concreteChildBindings = $b2.typeBindings->keys()->fold({k, acc |
+    let concreteChildTypeBindings = $b2.typeBindings->keys()->fold({k, acc |
         let vals = $b2.typeBindings->get($k)->toOne().values;
         let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings)));
         collectTypeParameterBindings(
@@ -551,6 +553,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             $acc
         );
     }, newPlainParametersBinding()->cast(@ParametersBinding));
+    // Also push multiplicity bindings
+    let concreteChildBindings = $b2.multiplicityBindings->keys()->fold({k, acc |
+        let vals = $b2.multiplicityBindings->get($k)->toOne().values;
+        let concreteVals = $vals->map(m | asInferredMultiplicity(makeAsConcreteAsPossible($m, $bindings)));
+        collectMultiplicityParameterBindings(
+            ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $k),
+            $concreteVals->at(0),
+            $acc
+        );
+    }, $concreteChildTypeBindings);
 
     populateResolvedParameters($childExpr, $concreteChildBindings)->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
 }
