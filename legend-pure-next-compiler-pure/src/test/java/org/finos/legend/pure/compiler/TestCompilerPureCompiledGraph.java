@@ -114,11 +114,10 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require further fixpoint/error work
+                              // Tests excluded — require relation support, ambiguity detection, or further error propagation
                               if (testName.contains("generics/relation/") ||
-                                  testName.contains("if_E_multipleMatch.pure") ||
                                   testName.contains("match_E_ambiguousFunction.pure") ||
-                                  testName.contains("match_E_wrongParameterCount.pure") ||
+                                  testName.contains("if_E_multipleMatch.pure") ||
                                   (testName.contains("generics/") && (
                                       testName.contains("cast.pure") ||
                                       testName.contains("classTypeParam.pure") ||
@@ -130,7 +129,6 @@ public class TestCompilerPureCompiledGraph
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_noMatch.pure") ||
                                       testName.contains("lambdaReturnfunctionTypeInference_E_error.pure") ||
-                                      testName.contains("lambdaWithParamTypeAndMul.pure") ||
                                       testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure") ||
                                       testName.contains("pushDown_E_errorInBody.pure") ||
                                       testName.contains("pushDownMultiplicity_E_errorInBody.pure")

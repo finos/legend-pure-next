@@ -337,6 +337,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 // Single parameter resolution
 // ============================================================================
 
+// Mirrors Java resolveParameterValue — dispatches by resolved value type
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveOneParam(
     parameterValue:meta::pure::metamodel::valuespecification::ValueSpecification[1],
     paramGT:meta::pure::metamodel::type::generics::GenericType[1],
@@ -348,29 +349,107 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 {
     let checkpoint = $context->errorCheckpoint();
 
-    // Resolve the parameter value
+    // Resolve the parameter value via VSR
     let r = resolveValueSpecification($parameterValue, $scope, $context);
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
-    // Check if resolved: has concrete genericType and multiplicity
-    let isResolved = $processed.genericType->isNotEmpty()
+    // Check if concrete
+    let isConcrete = $processed.genericType->isNotEmpty()
         && !$processed.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
         && $processed.multiplicity->isNotEmpty();
 
-    if($isResolved,
-        | // Collect bindings from resolved arg type
+    if($isConcrete,
+        | // CONCRETE: collect bindings (Java resolveParameterValue line 427-440)
           let _dc = debug($context, | 'resolveArg: CONCRETE gt=' + printGenericType($processed.genericType->toOne()));
           let argGT = $processed.genericType->toOne();
           let argMul = $processed.multiplicity->toOne();
           let b1 = collectTypeParameterBindings($paramGT, $argGT, $bindings);
           let b2 = collectMultiplicityParameterBindings($paramMul, $argMul, $b1);
           ^ResolveOneParamResult(resolved = true, newParam = $processed, bindings = $b2, context = $ctx1, savedErrors = []);,
-        | // Not resolved — save errors and rollback
-          let savedErrors = $ctx1->snapshotErrors($checkpoint);
-          let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
-          ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+        | // Check if LAMBDA: AtomicValue wrapping a LambdaFunction (Java line 442-448)
+          let isLambda = $processed->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue)
+              && $processed->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction);
+          if($isLambda,
+              | let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                let _dl = debug($context, | 'resolveArg: LAMBDA');
+                let lambda = $processed->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+                let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings);
+                let av = $processed->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
+                let withReprocessedLambda = ^$av(value = $reprocessedLambda);
+                finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $withReprocessedLambda);,
+              | // NOT RESOLVED — save errors and rollback (Java line 486-487)
+                let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
+                let savedErrors = $ctx1->snapshotErrors($checkpoint);
+                let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
+                ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+          );
     );
+}
+
+// Mirrors Java setMissingLambdaParameterInformation (lines 523-556)
+// Sets lambda param types from the function parameter's expected type using current bindings
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::setMissingLambdaParameterInformation(
+    lambda:meta::pure::metamodel::function::LambdaFunction<Any>[1],
+    paramGT:meta::pure::metamodel::type::generics::GenericType[1],
+    bindings:ParametersBinding[1]
+):meta::pure::metamodel::function::LambdaFunction<Any>[1]
+{
+    // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
+    // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
+    let concreteGT = makeAsConcreteAsPossible($paramGT, $bindings);
+    if($concreteGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $concreteGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->isNotEmpty(),
+        | let innerGT = $concreteGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0);
+          if($innerGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $innerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isNotEmpty() && $innerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::type::FunctionType),
+              | let ft = $innerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::type::FunctionType);
+                let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+                let newParams = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->zip($lambdaParams)->map({pair |
+                    let ftParam = $pair.first;
+                    let lambdaParam = $pair.second;
+                    let resolvedType = makeAsConcreteAsPossible($ftParam.genericType->toOne(), $bindings);
+                    let resolvedMul = makeAsConcreteAsPossible($ftParam.multiplicity->toOne(), $bindings);
+                    let newGT = if(!$lambdaParam.genericType->toOne()->isConcreteGenericType(), | asInferredGenericType($resolvedType), | $lambdaParam.genericType->toOne());
+                    let newMul = if(!$lambdaParam.multiplicity->toOne()->isConcreteMultiplicity(), | asInferredMultiplicity($resolvedMul), | $lambdaParam.multiplicity->toOne());
+                    ^$lambdaParam(genericType = $newGT, multiplicity = $newMul);
+                });
+                ^$lambda(parameters = $newParams);,
+              | $lambda
+          );,
+        | $lambda
+    );
+}
+
+// Mirrors Java finishProcessing (lines 490-517)
+// Re-resolve via VSR, then collect bindings
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::finishProcessing(
+    paramGT:meta::pure::metamodel::type::generics::GenericType[1],
+    paramMul:meta::pure::metamodel::multiplicity::Multiplicity[1],
+    bindings:ParametersBinding[1],
+    scope:meta::pure::metamodel::valuespecification::VariableExpression[*],
+    context:meta::pure::compiler::CompilerContext[1],
+    vs:meta::pure::metamodel::valuespecification::ValueSpecification[1]
+):ResolveOneParamResult[1]
+{
+    // Re-resolve via VSR (now lambda has concrete param types)
+    let r = resolveValueSpecification($vs, $scope, $context);
+    let resolved = if($r.value->isEmpty(), | $vs, | $r.value->toOne());
+    let ctx1 = $r.context;
+
+    // Collect bindings from the re-resolved type
+    let b1 = if($resolved.genericType->isNotEmpty(),
+        | collectTypeParameterBindings($paramGT, $resolved.genericType->toOne(), $bindings),
+        | $bindings
+    );
+    let b2 = if($resolved.multiplicity->isNotEmpty(),
+        | collectMultiplicityParameterBindings($paramMul, $resolved.multiplicity->toOne(), $b1),
+        | $b1
+    );
+
+    let isResolved = $resolved.genericType->isNotEmpty()
+        && !$resolved.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
+        && $resolved.multiplicity->isNotEmpty();
+
+    ^ResolveOneParamResult(resolved = $isResolved, newParam = $resolved, bindings = $b2, context = $ctx1, savedErrors = []);
 }
 
 // ============================================================================
