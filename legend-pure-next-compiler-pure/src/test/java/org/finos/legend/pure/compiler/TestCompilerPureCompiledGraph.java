@@ -119,12 +119,6 @@ public class TestCompilerPureCompiledGraph
                                   testName.contains("match_E_ambiguousFunction.pure") ||
                                   testName.contains("if_E_multipleMatch.pure") ||
                                   testName.contains("lambda_E_NoInference.pure") ||
-                                  // Scope-aware concreteness causes extra validation errors for sub-expression failures
-                                  testName.contains("constraints_E_wrongVariable.pure") ||
-                                  testName.contains("simple_E_unknownVariable.pure") ||
-                                  testName.contains("if_E_notFound.pure") ||
-                                  testName.contains("property_E_unknownProperty.pure") ||
-                                  testName.contains("simple_E_UnkownProperty.pure") ||
                                   (testName.contains("generics/") && (
                                       testName.contains("cast.pure") ||
                                       testName.contains("classTypeParam.pure") ||
