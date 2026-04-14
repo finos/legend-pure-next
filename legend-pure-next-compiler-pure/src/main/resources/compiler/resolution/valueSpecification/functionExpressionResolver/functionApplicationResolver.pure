@@ -106,62 +106,63 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               value = $fi,
               context = ^$context(errors += $errorLines)
           );,
-        | // Resolve params, then match against candidates
-          let _d2 = debug($deepCtx, | $candidates->size()->toString() + ' candidate(s)');
-          resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
+        | if($candidates->size() == 1,
+              | // Single candidate — resolve directly, errors are legitimate
+                let _d2 = debug($deepCtx, | '1 candidate');
+                resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);,
+              | // Multiple candidates — pre-resolve non-lambda params, then try each candidate
+                let _d2 = debug($deepCtx, | $candidates->size()->toString() + ' candidates, pre-resolving non-lambda params');
+                resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
+          );
     );
 }
 
+// Mirrors Java resolveFunctionApplication multi-candidate path
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], candidates:meta::pure::metamodel::function::PackageableFunction<Any>[*], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], deepCtx:meta::pure::compiler::CompilerContext[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
-    let functionName = $fi.functionName->toOne();
-    let _d = debug($deepCtx, | 'multiple candidates (' + $candidates->size()->toString() + '), resolving params first');
+    // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94)
+    // Lambdas are excluded because their param types depend on the candidate's type-parameter bindings.
+    let preResolvedParams = $fi.parametersValues->map(pv |
+        if($pv->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $pv->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::function::LambdaFunction),
+            | $pv,
+            | let r = resolveValueSpecification($pv, $scope, $context);
+              if($r.value->isEmpty(), | $pv, | $r.value->toOne());
+        )
+    );
+    let preResolvedFI = ^$fi(parametersValues = $preResolvedParams);
 
-    // Resolve params first, then match against candidates
-    let paramResult = $fi.parametersValues->fold({param, acc |
-        let r = resolveValueSpecification($param, $scope, $acc.context);
-        ^$acc(values += if($r.value->isEmpty(), | $param, | $r.value->toOne()), context = $r.context);
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $deepCtx));
-    let resolvedParams = $paramResult.values;
-    let ctx1 = $paramResult.context;
-    if($ctx1.errors->size() > $context.errors->size(),
-        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-              value = ^$fi(parametersValues = $resolvedParams),
-              context = $ctx1),
-        | let argTypes = $resolvedParams->map(pv | $pv.genericType->toOne());
-          let argMuls = $resolvedParams->map(pv | $pv.multiplicity->toOne());
-          let allMatches = findAllMatchingCandidates($candidates, $fi.functionName->toOne(), $argTypes, $argMuls);
-          if($allMatches->isEmpty(),
-              | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
-                let argDesc = $resolvedParams->map(vs | if($vs.genericType->isEmpty(), |'?', |printGenericType($vs.genericType->toOne())) + if($vs.multiplicity->isEmpty(), |'', |printMultiplicity($vs.multiplicity->toOne())))->joinStrings(', ');
-                let _d3 = debug($deepCtx, | 'no matching candidate for (' + $argDesc + ')');
-                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                    value = ^$fi(parametersValues = $resolvedParams),
-                    context = ^$ctx1(errors += 'No matching function \'' + $fi.functionName->toOne() + '\' found for argument types (' + $argDesc + ')' + $siCtx)
-                );,
-              | if($allMatches->size() > 1,
-                    | // Ambiguous — multiple equally-specific matches
-                      let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
-                      let signatures = $allMatches->map(r | functionSignature($r.resolvedFunction->toOne()))->sort()->joinStrings(', ');
-                      ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                          value = ^$fi(parametersValues = $resolvedParams),
-                          context = ^$ctx1(errors += 'Ambiguous function call: multiple equally-specific matches found [' + $signatures + ']' + $siCtx)
-                      );,
-                    | let resolution = $allMatches->at(0);
-                      let _d3 = debug($deepCtx, | 'resolved to ' + $resolution.resolvedName);
-                      ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                          value = ^$fi(
-                              functionName = $resolution.resolvedName,
-                              func = $resolution.resolvedFunction,
-                              parametersValues = $resolvedParams,
-                              genericType = $resolution.returnGenericType,
-                              multiplicity = $resolution.returnMultiplicity,
-                              resolvedTypeParameters = $resolution.resolvedTypeParameters,
-                              resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters
-                          ),
-                          context = $ctx1
-                      );
-                );
+    // Step 2: Try each candidate with the fixpoint — first clean resolution wins (like Java lines 97-126)
+    let tryResult = $candidates->fold({candidate, acc |
+        if($acc.resolved,
+            | $acc,
+            | let _dc = debug($deepCtx, | 'trying candidate: ' + $candidate->elementToPath());
+              let checkpoint = $context->errorCheckpoint();
+              // Pass ORIGINAL context (not accumulated) — each candidate attempt is independent
+              let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $context);
+              let resultCtx = $result.context;
+              if($resultCtx->errorCheckpoint() == $checkpoint,
+                  | // Clean resolution — success
+                    let _ds = debug($deepCtx, | 'candidate resolved cleanly');
+                    ^$acc(resolved = true, result = $result);,
+                  | // Resolution produced errors — save first candidate's errors, try next
+                    let _df = debug($deepCtx, | 'candidate produced errors, trying next');
+                    let savedErrors = if($acc.firstErrors->isEmpty(), | $resultCtx->snapshotErrors($checkpoint), | $acc.firstErrors);
+                    ^$acc(firstErrors = $savedErrors);
+              );
+        );
+    }, ^CandidateTryAccumulator(resolved = false, context = $context));
+
+    // Step 3: Return result or restore first candidate's errors (like Java lines 127-133)
+    if($tryResult.resolved,
+        | $tryResult.result->toOne(),
+        | // No candidate resolved cleanly — restore first candidate's errors
+          if($tryResult.firstErrors->isNotEmpty(),
+              | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $fi,
+                    context = ^$context(errors += $tryResult.firstErrors));,
+              | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $fi,
+                    context = $context);
           );
     );
 }
