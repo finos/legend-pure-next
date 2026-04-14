@@ -103,12 +103,34 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("valueSpecification/element/") &&
                                   !testName.contains("valueSpecification/functionApplication/dot") &&
                                   !testName.contains("valueSpecification/functionApplication/simple") &&
+                                  !testName.contains("valueSpecification/functionApplication/generics/") &&
                                   !testName.contains("valueSpecification/let/") &&
                                   !testName.contains("valueSpecification/multiplicity/") &&
                                   !testName.contains("valueSpecification/new/") &&
                                   !testName.contains("valueSpecification/package/") &&
                                   !testName.contains("valueSpecification/primitive/")
                               )
+                              {
+                                  return;
+                              }
+
+                              // Generics tests that require fixpoint lambda inference / error propagation (not yet ported)
+                              if (testName.contains("generics/") && (
+                                  testName.contains("cast.pure") ||
+                                  testName.contains("classTypeParam.pure") ||
+                                  testName.contains("classTypeParam_E_wrongType.pure") ||
+                                  testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
+                                  testName.contains("if_E_wrongMul.pure") ||
+                                  testName.contains("if_E_wrongOperation.pure") ||
+                                  testName.contains("lambda_E_errorInBody.pure") ||
+                                  testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
+                                  testName.contains("lambdaCollectionAsParameters_E_noMatch.pure") ||
+                                  testName.contains("lambdaReturnfunctionTypeInference_E_error.pure") ||
+                                  testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure") ||
+                                  testName.contains("pushDown_E_errorInBody.pure") ||
+                                  testName.contains("pushDownMultiplicity_E_errorInBody.pure") ||
+                                  testName.contains("relation/")
+                              ))
                               {
                                   return;
                               }
