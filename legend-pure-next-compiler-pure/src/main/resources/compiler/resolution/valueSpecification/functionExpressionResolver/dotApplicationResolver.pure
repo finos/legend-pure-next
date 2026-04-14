@@ -26,22 +26,55 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let functionName = $dot.functionName->toOne();
     let siCtx = formatMetamodelSourceInfo($dot.sourceInformation, $context);
 
-    // Resolve receiver parameters
-    let resolvedParams = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
-    let ctx1 = $resolvedParams->fold({r, c | $r.context}, $context);
+    // Resolve receiver parameters — use resolved types for property lookup
+    let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
+    let ctx1 = $resolvedParamResults->fold({r, c | $r.context}, $context);
+    let resolvedParams = $resolvedParamResults->map(r | if($r.value->isEmpty(), | [], | $r.value->toOne()));
 
-    if($dot.parametersValues->isEmpty(),
+    if($resolvedParams->isEmpty(),
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
               value = $dot,
               context = ^$ctx1(errors += 'DotApplication has no parameters' + $siCtx)
           ),
-        | let receiver = $dot.parametersValues->at(0);
+        | let receiver = $resolvedParams->at(0);
+          let _d = debug($context, | 'resolveDotApplication: .' + $functionName
+              + ' receiverGT=' + if($receiver.genericType->isEmpty(), | '?', | printGenericType($receiver.genericType->toOne()))
+              + ' receiverMul=' + if($receiver.multiplicity->isEmpty(), | '?', | printMultiplicity($receiver.multiplicity->toOne()))
+              + ' additionalParams=' + $resolvedParams->size()->toString());
           if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
               | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                     value = $dot,
                     context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
                 ),
               | let ownerType = $receiver.genericType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne();
+                // Handle Enumeration value access: check if the receiver's value IS an Enumeration
+                let isEnum = $receiver->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration);
+                if($isEnum,
+                    | let enumeration = $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+                      let enumPath = $enumeration->meta::pure::functions::meta::elementToPath();
+                      let resolvedEnum = $context->resolveElement($enumPath);
+                      let enumOwner = if($resolvedEnum->isNotEmpty() && $resolvedEnum->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration),
+                          | $resolvedEnum->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>),
+                          | $enumeration
+                      );
+                      let matchedProp = $enumOwner.properties->filter(p | $p.name == $functionName);
+                      if($matchedProp->isEmpty(),
+                          | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = $dot,
+                                context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
+                            ),
+                          | let _de = debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
+                            let enumGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $enumeration);
+                            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = ^$dot(
+                                    func = $matchedProp->at(0),
+                                    genericType = $enumGT,
+                                    multiplicity = meta::pure::metamodel::multiplicity::PureOne
+                                ),
+                                context = $ctx1
+                            );
+                      );,
+                    |
                 // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
                 let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
                     | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
@@ -62,13 +95,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                           value = $dot,
                           context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + if($resolvedOwner->isNotEmpty(), |$resolvedOwner->toOne()->meta::pure::functions::meta::elementToPath(), |$ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath()) + '\'' + $siCtx)
                       ),
-                    | let resolvedProp = $prop->toOne();
+                    | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
+                      let resolvedProp = $prop->toOne();
                       let propGT = resolvePropertyReturnType($resolvedProp, $receiver.genericType->toOne());
                       let propMul = $resolvedProp.multiplicity->toOne();
                       let receiverMul = $receiver.multiplicity;
                       // Check if automap needed: receiver multiplicity is NOT [1]
                       if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                           | // Direct access — receiver is [1]
+                            let _dd = debug($context, | '  direct access [1]');
                             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                                 value = ^$dot(
                                     func = $resolvedProp,
@@ -76,11 +111,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                     multiplicity = $propMul
                                 ),
                                 context = $ctx1
-                            ),
+                            );,
                           | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
-                            buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1)
+                            let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                            buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
                       );
                 );
+                ); // end enum if
           );
     );
 }
@@ -145,6 +182,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     // Resolve the map expression to bind the function
-    let mapResult = resolveValueSpecification($mapFI, $scope, $context);
-    $mapResult;
+    let _d = debug($context, | '  automap: resolving map() expression');
+    let mapResult = resolveValueSpecification($mapFI, $scope, $context->debugSpaceInc());
+    let resolved = if($mapResult.value->isEmpty(), | $mapFI, | $mapResult.value->toOne());
+    let _d2 = debug($context, | '  automap: map() resolved gt=' + if($resolved.genericType->isEmpty(), | '?', | printGenericType($resolved.genericType->toOne()))
+        + ' mul=' + if($resolved.multiplicity->isEmpty(), | '?', | printMultiplicity($resolved.multiplicity->toOne())));
+    // Restore debug space — mapResult.context carries deeper space from resolveValueSpecification
+    let mapCtx = $mapResult.context;
+    let restoredCtx = ^$mapCtx(debugState = $context.debugState);
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $mapResult.value, context = $restoredCtx);
 }

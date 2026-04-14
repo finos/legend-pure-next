@@ -15,8 +15,37 @@
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::*;
 
+Class meta::pure::compiler::DebugState
+{
+    debug : Boolean[1];
+    space : String[1];
+}
+
+function meta::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefinition<{->String[1]}>[1]):Any[*]
+{
+    if($context.debugState.debug,
+        | println($context.debugState.space + $fn->eval()),
+        | []
+    );
+}
+
+function meta::pure::compiler::debugSpaceInc(context:CompilerContext[1]):CompilerContext[1]
+{
+    let ds = $context.debugState;
+    let newDs = ^$ds(space = $ds.space + '\t');
+    ^$context(debugState = $newDs);
+}
+
+function meta::pure::compiler::debugSpaceDec(context:CompilerContext[1]):CompilerContext[1]
+{
+    let ds = $context.debugState;
+    let newDs = ^$ds(space = $ds.space->substring(1));
+    ^$context(debugState = $newDs);
+}
+
 Class meta::pure::compiler::CompilerContext
 {
+    debugState : DebugState[1];
     sourceId : String[0..1];
     imports : String[*];
     elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
@@ -42,6 +71,18 @@ Class meta::pure::compiler::CompilerListResult<T>
 }
 
 native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];
+
+function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
+{
+    // Union: native index + locally-defined functions from context elementMap
+    let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
+    let localCandidates = $context.elementMap->values()
+        ->filter(e | $e->instanceOf(meta::pure::metamodel::function::PackageableFunction))
+        ->cast(@meta::pure::metamodel::function::PackageableFunction<Any>)
+        ->filter(f | $f.functionName->isNotEmpty() && ($f.functionName->toOne()->startsWith($name + '_') || $f.functionName == $name)
+                     && $f.parameters->size() == $arity);
+    $nativeCandidates->concatenate($localCandidates);
+}
 
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):meta::pure::metamodel::PackageableElement[0..1]
 {

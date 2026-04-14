@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
@@ -234,23 +233,19 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileFunctionInvocation(fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]):ValueCompileResult[1]
 {
+    // Structural compilation only — function resolution happens in pass 3
     let paramsCompilation = $fi.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
     let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
     if($errorContexts->isNotEmpty(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
         | let paramValues = $paramsCompilation.values;
           let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
-          let argTypes = $paramValues->map(pv | $pv.genericType->toOne());
-          let argMuls = $paramValues->map(pv | $pv.multiplicity->toOne());
-          let resolution = resolveFunctionInvocation($fi.functionName, $argTypes, $argMuls);
           ^ValueCompileResult(
               values = [^meta::pure::metamodel::valuespecification::FunctionInvocation(
-                  functionName = $resolution.resolvedName,
+                  functionName = $fi.functionName,
                   parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
-                  genericType = $resolution.returnGenericType,
-                  multiplicity = $resolution.returnMultiplicity,
-                  resolvedTypeParameters = $resolution.resolvedTypeParameters,
-                  resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters,
+                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  multiplicity = meta::pure::metamodel::multiplicity::PureOne,
                   sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = $openVars
@@ -264,23 +259,19 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileArrowInvocation(arrow:meta::pure::protocol::grammar::valuespecification::ArrowInvocation[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]):ValueCompileResult[1]
 {
+    // Structural compilation only — function resolution happens in pass 3
     let paramsCompilation = $arrow.parametersValues->map(p | $p->compileValueSpecification($ctx, $scope));
     let errorContexts = $paramsCompilation.context->filter(c | $c.errors->size() > $ctx.errors->size());
     if($errorContexts->isNotEmpty(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
         | let paramValues = $paramsCompilation.values;
           let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
-          let argTypes = $paramValues->map(pv | $pv.genericType->toOne());
-          let argMuls = $paramValues->map(pv | $pv.multiplicity->toOne());
-          let resolution = resolveFunctionInvocation($arrow.functionName, $argTypes, $argMuls);
           ^ValueCompileResult(
               values = [^meta::pure::metamodel::valuespecification::FunctionInvocation(
-                  functionName = $resolution.resolvedName,
+                  functionName = $arrow.functionName,
                   parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
-                  genericType = $resolution.returnGenericType,
-                  multiplicity = $resolution.returnMultiplicity,
-                  resolvedTypeParameters = $resolution.resolvedTypeParameters,
-                  resolvedMultiplicityParameters = $resolution.resolvedMultiplicityParameters,
+                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  multiplicity = meta::pure::metamodel::multiplicity::PureOne,
                   sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = $openVars

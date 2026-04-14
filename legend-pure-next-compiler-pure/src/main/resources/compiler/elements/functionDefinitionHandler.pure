@@ -60,10 +60,13 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
         ^$c(errors += 'Duplicate parameter name \'' + $d + '\' in ' + $ownerCtx + $siCtx);
     }, $ctx);
 
+    // Compile type parameters
+    let fnTypeParams = $fn.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+
     // Compile parameters with context threading
     let paramAccum = $fn.parameters->fold({p, acc |
         let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let gtResult = $pType->compileGenericType($acc.context, $packagePath, [], 'parameter \'' + $p.name + '\'', $ownerCtx);
+        let gtResult = $pType->compileGenericType($acc.context, $packagePath, $fnTypeParams, 'parameter \'' + $p.name + '\'', $ownerCtx);
         let mMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
         ^$acc(
             values += ^meta::pure::metamodel::valuespecification::VariableExpression(
@@ -79,7 +82,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
 
     // Compile return type
     let rType = $fn.returnGenericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let rResult = $rType->compileGenericType($ctx2, $packagePath, []);
+    let rResult = $rType->compileGenericType($ctx2, $packagePath, $fnTypeParams);
     let rGenType = $rResult.value->toOne();
     let ctx3 = $rResult.context;
 

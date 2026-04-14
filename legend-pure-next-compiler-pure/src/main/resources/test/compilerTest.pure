@@ -43,6 +43,8 @@ function meta::pure::compiler::test::assertCompilationError(content:String[1], s
     let parsedFile = meta::pure::compiler::parse($sourceId, $pureContent);
     let result = meta::pure::compiler::compile($parsedFile);
     assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
+    if($expectedMessages->size() != $result.errors->size(), |println('EXPECTED: ' + $expectedMessages->joinStrings(' | ')), |[]);
+    if($expectedMessages->size() != $result.errors->size(), |println('ACTUAL:   ' + $result.errors->joinStrings(' | ')), |[]);
     assertEquals($expectedMessages->size(), $result.errors->size());
     assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
 }

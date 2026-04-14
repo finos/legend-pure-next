@@ -93,23 +93,22 @@ public class TestCompilerPureCompiledGraph
                               String testName = finalStart.relativize(p).toString();
                               String sourceId = testName.replace(".pure", "");
 
-                              if (!testName.contains("association/property/") &&
-                                  !testName.contains("class/constraints/") &&
-                                  !testName.contains("class/inheritance/") &&
-                                  !testName.contains("class/profile/") &&
-                                  !testName.contains("class/property/") &&
-                                  !testName.contains("class/qualifiedProperty/") &&
-                                  !testName.contains("class/typeAndMulParam/") &&
+                              if (!testName.contains("association/") &&
+                                  !testName.contains("class/") &&
                                   !testName.contains("enumeration/") &&
                                   !testName.contains("function/") &&
                                   !testName.contains("primitive/") &&
                                   !testName.contains("valueSpecification/collection/") &&
                                   !testName.contains("valueSpecification/copy/") &&
+                                  !testName.contains("valueSpecification/element/") &&
+                                  !testName.contains("valueSpecification/functionApplication/dot") &&
+//                                  !testName.contains("valueSpecification/functionApplication/simple") &&
                                   !testName.contains("valueSpecification/let/") &&
                                   !testName.contains("valueSpecification/multiplicity/") &&
                                   !testName.contains("valueSpecification/new/") &&
-                                  !testName.contains("valueSpecification/element/") &&
-                                  !testName.contains("valueSpecification/primitive/"))
+                                  !testName.contains("valueSpecification/package/") &&
+                                  !testName.contains("valueSpecification/primitive/")
+                              )
                               {
                                   return;
                               }

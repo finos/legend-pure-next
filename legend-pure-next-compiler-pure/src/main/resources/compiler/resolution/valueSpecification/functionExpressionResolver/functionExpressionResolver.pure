@@ -23,15 +23,17 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:meta::pure::metamodel::valuespecification::FunctionExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
+    let _d = debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
+    let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
     if($fi->instanceOf(meta::pure::metamodel::valuespecification::DotApplication) && $fi.parametersValues->isNotEmpty(),
-        | let dotResult = resolveDotApplication($fi->cast(@meta::pure::metamodel::valuespecification::DotApplication), $scope, $context);
+        | let dotResult = resolveDotApplication($fi->cast(@meta::pure::metamodel::valuespecification::DotApplication), $scope, $deepCtx);
           // Enum value resolution returns an AtomicValue, not a FunctionExpression — finalize only FEs
           if($dotResult.value->isNotEmpty() && $dotResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
               | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($dotResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $dotResult.context),
               | $dotResult
           );,
-        | let appResult = resolveFunctionApplication($fi->cast(@FunctionInvocation), $scope, $context);
+        | let appResult = resolveFunctionApplication($fi->cast(@FunctionInvocation), $scope, $deepCtx);
           if($appResult.value->isNotEmpty() && $appResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
               | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($appResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $appResult.context),
               | $appResult

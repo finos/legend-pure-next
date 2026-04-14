@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
@@ -23,6 +22,8 @@ import meta::pure::compiler::elements::*;
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::compiler::CompilationResult[1]
 {
+    let debug = ^meta::pure::compiler::DebugState(debug = false, space = '');
+
     let allElements = $file.sections.elements;
     let defaultImports = [
         'meta::pure::metamodel::type::primitives',
@@ -145,7 +146,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 ^$ctx(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
-    }, ^meta::pure::compiler::CompilerContext(sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([])));
+    }, ^meta::pure::compiler::CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([])));
 
     // Pass 2: Compile elements (threading context for error collection)
     let pass2 = $allElements->fold({e, acc |
@@ -169,10 +170,22 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 ^$acc(values += $en->compileEnumeration($acc.context)->cast(@meta::pure::metamodel::PackageableElement)),
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
                 let r = $fn->compileNativeFunctionPass2($acc.context);
-                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
+                let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+                let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
+                let fnRCtx = $r.context;
+                let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
+                let fnCtx = ^$fnRCtx(elementMap = $fnNewMap);
+                ^$acc(values += $compiledFn, context = $fnCtx);,
             fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
                 let r = $fd->compileFunctionDefinitionPass2($acc.context);
-                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
+                let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().pointerValue);
+                let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
+                let fdRCtx = $r.context;
+                let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
+                let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
+                ^$acc(values += $compiledFd, context = $fdCtx);,
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
                 let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
                 let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
@@ -202,7 +215,10 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamode
 {
     if($fn.expressionSequence->isEmpty(),
         | $context,
-        | meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $context).context
+        | let _d = debug($context, | 'resolveAndValidate: function \'' + $fn.functionName->toOne() + '\'');
+          let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $context->debugSpaceInc());
+          let resultCtx = $result.context;
+          ^$resultCtx(debugState = $context.debugState);
     );
 }
 

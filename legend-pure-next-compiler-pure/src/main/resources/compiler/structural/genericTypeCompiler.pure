@@ -64,6 +64,36 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                     type = $typeParameters->filter(tp | $tp.name == $t.name)->toOne()
                 ),
                 context = $context
+            );,
+        ft:meta::pure::protocol::grammar::type::FunctionType[1] |
+            let ftParams = $ft.parameters->map(fp |
+                let fpType = $fp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+                let fpGtResult = $fpType->compileGenericType($context, $packagePath, $typeParameters);
+                let fpMult = $fp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+                ^meta::pure::metamodel::valuespecification::VariableExpression(
+                    name = $fp.name,
+                    genericType = $fpGtResult.value->toOne(),
+                    multiplicity = $fpMult
+                );
+            );
+            let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters);
+            let ftReturnMul = $ft.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            let functionType = meta::pure::functions::lang::new(
+                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
+            )->cast(@meta::pure::metamodel::type::FunctionType);
+            let compiledFT = ^$functionType(
+                parameters = $ftParams,
+                returnType = $ftReturnGT.value->toOne(),
+                returnMultiplicity = $ftReturnMul
+            );
+            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledFT),
+                context = $context
+            );,
+        a:Any[1] |
+            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                value = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                context = $context
             );
     ]);
 

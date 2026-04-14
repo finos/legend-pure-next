@@ -18,7 +18,8 @@ import meta::pure::compiler::*;
 function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(av:meta::pure::metamodel::valuespecification::AtomicValue[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     if($av.value->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-        | let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+        | let _d = debug($context, | 'resolveAtomicValue: LAMBDA resolving body');
+          let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
           let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
           let innerScope = $scope->concatenate($lambdaParams);
           let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context).context;
