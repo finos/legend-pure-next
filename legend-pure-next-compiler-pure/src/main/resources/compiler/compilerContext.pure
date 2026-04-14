@@ -52,6 +52,21 @@ Class meta::pure::compiler::CompilerContext
     errors : String[*];
 }
 
+function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
+{
+    $context.errors->size();
+}
+
+function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1]):CompilerContext[1]
+{
+    ^$context(errors = $context.errors->take($checkpoint));
+}
+
+function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]
+{
+    $context.errors->drop($checkpoint);
+}
+
 Class meta::pure::compiler::CompilationResult
 {
     elements : meta::pure::metamodel::PackageableElement[*];

@@ -37,11 +37,35 @@ Class meta::pure::compiler::resolution::valueSpecification::functionExpressionRe
     resolvedMultiplicityParameters: meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter[*];
 }
 
-Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ParameterResolutionAccumulator
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ParameterInfo
 {
-    values : meta::pure::metamodel::valuespecification::ValueSpecification[*];
-    context : meta::pure::compiler::CompilerContext[1];
+    resolved : Boolean[1];
+    newParam : meta::pure::metamodel::valuespecification::ValueSpecification[1];
+    savedErrors : String[*];
+}
+
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::FixpointAccumulator
+{
+    infos : ParameterInfo[*];
     bindings : ParametersBinding[1];
+    context : meta::pure::compiler::CompilerContext[1];
+    madeProgress : Boolean[1];
+}
+
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::FixpointResult
+{
+    infos : ParameterInfo[*];
+    bindings : ParametersBinding[1];
+    context : meta::pure::compiler::CompilerContext[1];
+}
+
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ResolveOneParamResult
+{
+    resolved : Boolean[1];
+    newParam : meta::pure::metamodel::valuespecification::ValueSpecification[1];
+    bindings : ParametersBinding[1];
+    context : meta::pure::compiler::CompilerContext[1];
+    savedErrors : String[*];
 }
 
 // ============================================================================
@@ -127,7 +151,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // ============================================================================
-// Template function resolution (single candidate)
+// Template function resolution with fixpoint
 // ============================================================================
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplicationUsingTemplateFunction(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], entry:meta::pure::metamodel::function::PackageableFunction<Any>[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
@@ -135,73 +159,157 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let ft = $entry->getFunctionType();
     let funcParams = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
 
-    // Resolve each parameter value, collecting bindings
-    let paramResolution = range($fi.parametersValues->size())->fold({i, acc |
-        let parameterValue = $fi.parametersValues->at($i);
-        let paramGT = $funcParams->at($i).genericType->toOne();
-        let paramMul = $funcParams->at($i).multiplicity->toOne();
+    let _d = debug($context, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entry->elementToPath() + ' (' + $fi.parametersValues->size()->toString() + ' args)');
+    let deepCtx = $context->debugSpaceInc();
 
-        let _d = debug($acc.context, | 'parameterValue[' + $i->toString() + '] class=' + $parameterValue->type()->toOne()->elementToPath()
-            + ' paramGT=' + printGenericType($paramGT));
+    // Initialize: all params start unresolved
+    let initInfos = $fi.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
 
-        let r = resolveValueSpecification($parameterValue, $scope, $acc.context);
-        let resolved = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
+    // Fixpoint: resolve params iteratively until no more progress
+    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, newPlainParametersBinding()->cast(@ParametersBinding), $scope, $deepCtx, 1);
+    let resolvedInfos = $fixpointResult.infos;
+    let bindings = $fixpointResult.bindings;
+    let ctx1 = $fixpointResult.context;
 
-        // Collect bindings from resolved arg type
-        let argGT = $resolved.genericType->toOne();
-        let argMul = $resolved.multiplicity;
-        let b1 = collectTypeParameterBindings($paramGT, $argGT, $acc.bindings);
-        let b2 = if($argMul->isNotEmpty(), | collectMultiplicityParameterBindings($paramMul, $argMul->toOne(), $b1), | $b1);
+    // Push back saved errors from all unresolved args
+    let unresolvedErrors = $resolvedInfos->filter(info | !$info.resolved)->map(info | $info.savedErrors);
+    let ctx2 = ^$ctx1(errors += $unresolvedErrors);
 
-        let _d2 = debug($acc.context, | '=> RESOLVED gt=' + printGenericType($resolved.genericType->toOne())
-            + if($resolved.multiplicity->isEmpty(), | '', | ' mul=' + printMultiplicity($resolved.multiplicity->toOne())));
+    // Assemble result
+    let resolvedParams = $resolvedInfos->map(info | $info.newParam);
+    let hasUnresolved = $resolvedInfos->exists(info | !$info.resolved);
 
-        ^$acc(values += $resolved, context = $r.context, bindings = $b2);
-    }, ^ParameterResolutionAccumulator(context = $context, bindings = newPlainParametersBinding()->cast(@ParametersBinding)));
-
-    let resolvedParams = $paramResolution.values;
-    let bindings = $paramResolution.bindings;
-    let ctx1 = $paramResolution.context;
-
-    // Skip function resolution if sub-expression resolution produced errors
-    if($ctx1.errors->size() > $context.errors->size(),
+    if($hasUnresolved,
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-              value = ^$fi(parametersValues = $resolvedParams),
-              context = $ctx1),
-        |
-    // Resolve return type using bindings
-    let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
-    let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
-    let inferredReturnGT = asInferredGenericType($returnGT);
-    let inferredReturnMul = asInferredMultiplicity($returnMul);
+              value = ^$fi(func = $entry, parametersValues = $resolvedParams),
+              context = $ctx2),
+        | // All resolved — build return type using bindings
+          let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
+          let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
+          let inferredReturnGT = asInferredGenericType($returnGT);
+          let inferredReturnMul = asInferredMultiplicity($returnMul);
 
-    // Build resolved type/multiplicity parameters
-    let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
-        let vals = $bindings.typeBindings->get($k)->toOne().values;
-        ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(
-            name = $k,
-            value = asInferredGenericType($vals->at(0))
-        );
-    );
-    let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
-        let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
-        ^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(
-            name = $k,
-            value = asInferredMultiplicity($vals->at(0))
-        );
-    );
+          // Build resolved type/multiplicity parameters
+          let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
+              let vals = $bindings.typeBindings->get($k)->toOne().values;
+              ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(
+                  name = $k,
+                  value = asInferredGenericType($vals->at(0))
+              );
+          );
+          let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
+              let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
+              ^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(
+                  name = $k,
+                  value = asInferredMultiplicity($vals->at(0))
+              );
+          );
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-        value = ^$fi(
-            func = $entry,
-            parametersValues = $resolvedParams,
-            genericType = $inferredReturnGT,
-            multiplicity = $inferredReturnMul,
-            resolvedTypeParameters = $resolvedTypeParams,
-            resolvedMultiplicityParameters = $resolvedMulParams
-        ),
-        context = $ctx1
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+              value = ^$fi(
+                  func = $entry,
+                  parametersValues = $resolvedParams,
+                  genericType = $inferredReturnGT,
+                  multiplicity = $inferredReturnMul,
+                  resolvedTypeParameters = $resolvedTypeParams,
+                  resolvedMultiplicityParameters = $resolvedMulParams
+              ),
+              context = $ctx2
+          );
     );
+}
+
+// ============================================================================
+// Fixpoint iteration
+// ============================================================================
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::fixpointResolveParams(
+    infos:ParameterInfo[*],
+    expr:meta::pure::metamodel::valuespecification::FunctionInvocation[1],
+    funcParams:meta::pure::metamodel::valuespecification::VariableExpression[*],
+    bindings:ParametersBinding[1],
+    scope:meta::pure::metamodel::valuespecification::VariableExpression[*],
+    context:meta::pure::compiler::CompilerContext[1],
+    iteration:Integer[1]
+):FixpointResult[1]
+{
+    let _d = debug($context, | '--- fixpoint iteration ' + $iteration->toString() + ' ---');
+
+    // One pass: try to resolve each unresolved param
+    let passResult = range($infos->size())->fold({i, acc |
+        let info = $infos->at($i);
+        if($info.resolved,
+            | ^$acc(infos += $info),
+            | let parameterValue = $info.newParam;
+              let paramGT = $funcParams->at($i).genericType->toOne();
+              let paramMul = $funcParams->at($i).multiplicity->toOne();
+
+              let _dp = debug($acc.context, | 'parameterValue[' + $i->toString() + '] class=' + $parameterValue->type()->toOne()->elementToPath()
+                  + ' paramGT=' + printGenericType($paramGT));
+
+              let resolveResult = resolveOneParam($parameterValue, $paramGT, $paramMul, $acc.bindings, $scope, $acc.context);
+
+              if($resolveResult.resolved,
+                  | let _dr = debug($acc.context, | '=> RESOLVED gt=' + printGenericType($resolveResult.newParam.genericType->toOne())
+                        + if($resolveResult.newParam.multiplicity->isEmpty(), | '', | ' mul=' + printMultiplicity($resolveResult.newParam.multiplicity->toOne())));
+                    ^$acc(infos += ^ParameterInfo(resolved = true, newParam = $resolveResult.newParam, savedErrors = []),
+                          bindings = $resolveResult.bindings,
+                          context = $resolveResult.context,
+                          madeProgress = true);,
+                  | let _dr = debug($acc.context, | '=> NOT RESOLVED');
+                    ^$acc(infos += ^ParameterInfo(resolved = false, newParam = $resolveResult.newParam, savedErrors = $resolveResult.savedErrors),
+                          context = $resolveResult.context);
+              );
+        );
+    }, ^FixpointAccumulator(bindings = $bindings, context = $context, madeProgress = false));
+
+    let updatedInfos = $passResult.infos;
+    let updatedBindings = $passResult.bindings;
+    let updatedCtx = $passResult.context;
+
+    if($passResult.madeProgress,
+        | fixpointResolveParams($updatedInfos, $expr, $funcParams, $updatedBindings, $scope, $updatedCtx, $iteration + 1),
+        | ^FixpointResult(infos = $updatedInfos, bindings = $updatedBindings, context = $updatedCtx)
+    );
+}
+
+// ============================================================================
+// Single parameter resolution
+// ============================================================================
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveOneParam(
+    parameterValue:meta::pure::metamodel::valuespecification::ValueSpecification[1],
+    paramGT:meta::pure::metamodel::type::generics::GenericType[1],
+    paramMul:meta::pure::metamodel::multiplicity::Multiplicity[1],
+    bindings:ParametersBinding[1],
+    scope:meta::pure::metamodel::valuespecification::VariableExpression[*],
+    context:meta::pure::compiler::CompilerContext[1]
+):ResolveOneParamResult[1]
+{
+    let checkpoint = $context->errorCheckpoint();
+
+    // Resolve the parameter value
+    let r = resolveValueSpecification($parameterValue, $scope, $context);
+    let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
+    let ctx1 = $r.context;
+
+    // Check if resolved: has concrete genericType and multiplicity
+    let isResolved = $processed.genericType->isNotEmpty()
+        && !$processed.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
+        && $processed.multiplicity->isNotEmpty();
+
+    if($isResolved,
+        | // Collect bindings from resolved arg type
+          let _dc = debug($context, | 'resolveArg: CONCRETE gt=' + printGenericType($processed.genericType->toOne()));
+          let argGT = $processed.genericType->toOne();
+          let argMul = $processed.multiplicity->toOne();
+          let b1 = collectTypeParameterBindings($paramGT, $argGT, $bindings);
+          let b2 = collectMultiplicityParameterBindings($paramMul, $argMul, $b1);
+          ^ResolveOneParamResult(resolved = true, newParam = $processed, bindings = $b2, context = $ctx1, savedErrors = []);,
+        | // Not resolved — save errors and rollback
+          let savedErrors = $ctx1->snapshotErrors($checkpoint);
+          let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
+          ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
     );
 }
 

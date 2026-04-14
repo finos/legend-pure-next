@@ -114,23 +114,23 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Generics tests that require fixpoint lambda inference / error propagation (not yet ported)
-                              if (testName.contains("generics/") && (
-                                  testName.contains("cast.pure") ||
-                                  testName.contains("classTypeParam.pure") ||
-                                  testName.contains("classTypeParam_E_wrongType.pure") ||
-                                  testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
-                                  testName.contains("if_E_wrongMul.pure") ||
-                                  testName.contains("if_E_wrongOperation.pure") ||
-                                  testName.contains("lambda_E_errorInBody.pure") ||
-                                  testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
-                                  testName.contains("lambdaCollectionAsParameters_E_noMatch.pure") ||
-                                  testName.contains("lambdaReturnfunctionTypeInference_E_error.pure") ||
-                                  testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure") ||
-                                  testName.contains("pushDown_E_errorInBody.pure") ||
-                                  testName.contains("pushDownMultiplicity_E_errorInBody.pure") ||
-                                  testName.contains("relation/")
-                              ))
+                              // Generics tests excluded — require lambda type inference, error propagation, or relation support
+                              if (testName.contains("generics/relation/") ||
+                                  testName.contains("generics/") && (
+                                      testName.contains("cast.pure") ||
+                                      testName.contains("classTypeParam.pure") ||
+                                      testName.contains("classTypeParam_E_wrongType.pure") ||
+                                      testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
+                                      testName.contains("if_E_wrongMul.pure") ||
+                                      testName.contains("if_E_wrongOperation.pure") ||
+                                      testName.contains("lambda_E_errorInBody.pure") ||
+                                      testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
+                                      testName.contains("lambdaCollectionAsParameters_E_noMatch.pure") ||
+                                      testName.contains("lambdaReturnfunctionTypeInference_E_error.pure") ||
+                                      testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure") ||
+                                      testName.contains("pushDown_E_errorInBody.pure") ||
+                                      testName.contains("pushDownMultiplicity_E_errorInBody.pure")
+                                  ))
                               {
                                   return;
                               }
