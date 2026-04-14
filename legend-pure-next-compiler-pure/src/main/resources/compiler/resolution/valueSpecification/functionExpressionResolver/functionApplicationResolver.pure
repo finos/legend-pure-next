@@ -475,11 +475,28 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                           + ' childGT=' + if($childExpr.genericType->isEmpty(), | '?', | printGenericType($childExpr.genericType->toOne())));
                       let reversedChild = reverseMatch($childExpr, $paramGT, $paramMul, $bindings);
                       finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $reversedChild);,
-                    | // NOT RESOLVED — save errors and rollback (Java line 486-487)
-                      let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
-                      let savedErrors = $ctx1->snapshotErrors($checkpoint);
-                      let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
-                      ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+                    | // Check if COLLECTION (Java line 456-484)
+                      let isCollection = $processed->instanceOf(meta::pure::metamodel::valuespecification::Collection);
+                      if($isCollection,
+                          | let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                            let col = $processed->cast(@meta::pure::metamodel::valuespecification::Collection);
+                            let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+                            let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
+                            let _dcol = debug($context, | 'resolveArg: COLLECTION (' + $col.values->size()->toString() + ' elements) resolvedParamGT=' + printGenericType($resolvedParamGT));
+                            // Resolve each element recursively (Java line 468-482)
+                            // Each element resolves against the resolved param type, threading context for errors
+                            let colResult = $col.values->fold({element, acc |
+                                let elementResult = resolveOneParam($element, $resolvedParamGT, $resolvedParamMul, $bindings, $scope, $acc.context);
+                                ^$acc(values += $elementResult.newParam, context = $elementResult.context);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $ctx2));
+                            let newCol = ^$col(values = $colResult.values);
+                            finishProcessing($paramGT, $paramMul, $bindings, $scope, $colResult.context, $newCol);,
+                          | // NOT RESOLVED — save errors and rollback (Java line 486-487)
+                            let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
+                            let savedErrors = $ctx1->snapshotErrors($checkpoint);
+                            let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
+                            ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+                      );
                 );
           );
     );

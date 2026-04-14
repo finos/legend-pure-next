@@ -123,7 +123,6 @@ public class TestCompilerPureCompiledGraph
                                       testName.contains("classTypeParam.pure") ||
                                       testName.contains("classTypeParam_E_wrongType.pure") ||
                                       testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
-                                      // testName.contains("if_E_wrongMul.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_noMatch.pure")
                                   )))
