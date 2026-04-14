@@ -126,12 +126,12 @@ public class TestCompilerPureCompiledGraph
                                       testName.contains("if_E_wrongMul.pure") ||
                                       testName.contains("if_E_wrongOperation.pure") ||
                                       testName.contains("lambda_E_errorInBody.pure") ||
+                                      testName.contains("pushDown_E_errorInBody.pure") ||
+                                      testName.contains("pushDownMultiplicity_E_errorInBody.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_noMatch.pure") ||
                                       testName.contains("lambdaReturnfunctionTypeInference_E_error.pure") ||
-                                      testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure") ||
-                                      testName.contains("pushDown_E_errorInBody.pure") ||
-                                      testName.contains("pushDownMultiplicity_E_errorInBody.pure")
+                                      testName.contains("lambdaWithParamTypeAndMul_E_wrongVarType.pure")
                                   )))
                               {
                                   return;
