@@ -361,6 +361,18 @@ public class RdfJavaGenerator
         sb.append(" implements ").append(classInfo.name);
         sb.append("\n{\n");
 
+        // Freeze support: once frozen, setters throw. Excluded from serialization.
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    private boolean frozen;\n\n");
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    public void freeze() { this.frozen = true; }\n\n");
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    public boolean isFrozen() { return this.frozen; }\n\n");
+        sb.append("    private void checkNotFrozen()\n");
+        sb.append("    {\n");
+        sb.append("        if (this.frozen) throw new UnsupportedOperationException(\"").append(classInfo.name).append("Impl is frozen (immutable)\");\n");
+        sb.append("    }\n\n");
+
         // Generate private fields for all properties
         allProperties.forEach(prop ->
         {
@@ -421,7 +433,7 @@ public class RdfJavaGenerator
             String fieldName = escapeFieldName(prop.name);
             String getterName = "_" + prop.name;
 
-            // Getter
+            // Getter (returns unmodifiable list view when frozen)
             appendPureAnnotations(sb, prop.stereotypes, prop.taggedValues, "    ");
             sb.append("    @JsonProperty(\"")
                 .append(prop.name).append("\")\n");
@@ -429,19 +441,27 @@ public class RdfJavaGenerator
             sb.append("    public ").append(javaType).append(" ");
             sb.append(getterName).append("()\n");
             sb.append("    {\n");
-            sb.append("        return this.").append(fieldName).append(";\n");
+            if (prop.isMany)
+            {
+                sb.append("        return this.frozen ? this.").append(fieldName).append(".asUnmodifiable() : this.").append(fieldName).append(";\n");
+            }
+            else
+            {
+                sb.append("        return this.").append(fieldName).append(";\n");
+            }
             sb.append("    }\n\n");
 
-            // Fluent setter
+            // Fluent setter (throws if frozen)
             sb.append("    public ").append(classInfo.name).append("Impl _");
             sb.append(prop.name).append("(");
             sb.append(javaType).append(" value)\n");
             sb.append("    {\n");
+            sb.append("        checkNotFrozen();\n");
             sb.append("        this.").append(fieldName).append(" = value;\n");
             sb.append("        return this;\n");
             sb.append("    }\n\n");
         });
-        // Generate _copy() method
+        // Generate _copy() method — always returns an unfrozen (mutable) copy
         sb.append("    @Override\n");
         sb.append("    public ").append(classInfo.name).append("Impl _copy()\n");
         sb.append("    {\n");

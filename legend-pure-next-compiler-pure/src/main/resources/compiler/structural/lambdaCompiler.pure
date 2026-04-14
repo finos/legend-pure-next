@@ -31,18 +31,9 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
         ^$c(errors += 'Duplicate parameter name \'' + $d + '\'' + $siCtx);
     }, $ctx);
 
-    // Check for variable conflicts with outer scope
-    // NOTE: Unresolved param types are NOT checked here (pass 2).
-    // They're handled in pass 3 by resolveAtomicValue, which defers
-    // lambda body resolution when params aren't concrete — matching Java.
-    let ctx3 = $l.parameters->fold({p, c |
-        let conflict = $scope->filter(s | $s.name == $p.name);
-        if($conflict->isNotEmpty(),
-            | let pSiCtx = if($l.sourceInformation->isNotEmpty(), | formatSourceInfo($l.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $c), | '');
-              ^$c(errors += 'Variable \'' + $p.name + '\' is already defined' + $pSiCtx);,
-            | $c
-        );
-    }, $ctx1);
+    // NOTE: Java LambdaCompiler does NOT check for variable conflicts with outer scope.
+    // Lambda parameters are allowed to shadow outer variables — the inner scope takes precedence.
+    let ctx3 = $ctx1;
 
     if($ctx3.errors->size() > $ctx.errors->size(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $ctx3),

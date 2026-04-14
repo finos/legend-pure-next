@@ -51,6 +51,75 @@ public class BootstrapModule implements Module
         this.root = new PackageImpl()._name("::");
         this.index = Maps.mutable.empty();
         M3BootstrapReader.bootstrap(this.root, this.index);
+        // Freeze all bootstrap elements to prevent mutation via shared references
+        freezeAll();
+    }
+
+    /**
+     * Recursively freeze all elements in the index to make them immutable.
+     * This prevents cross-compilation leaks where shared type hierarchy objects
+     * (e.g., GenericType objects in generalizations) get mutated.
+     */
+    private void freezeAll()
+    {
+        java.util.Set<Object> visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        this.index.forEachValue(element -> deepFreeze(element, visited));
+    }
+
+    private static void deepFreeze(Object obj, java.util.Set<Object> visited)
+    {
+        if (obj == null || !visited.add(obj))
+        {
+            return;
+        }
+        // Freeze the object if it has a freeze() method (generated Impl classes)
+        try
+        {
+            java.lang.reflect.Method freezeMethod = obj.getClass().getMethod("freeze");
+            freezeMethod.invoke(obj);
+        }
+        catch (NoSuchMethodException ignored)
+        {
+            // Not a freezable Impl class
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Failed to freeze " + obj.getClass().getSimpleName(), e);
+        }
+        // Recurse into all getter results that are Impl instances or lists of them
+        for (java.lang.reflect.Method method : obj.getClass().getMethods())
+        {
+            if (method.getName().startsWith("_") && method.getParameterCount() == 0
+                    && !method.getName().equals("_copy")
+                    && method.getReturnType() != void.class
+                    && method.getReturnType() != boolean.class
+                    && method.getReturnType() != int.class
+                    && method.getReturnType() != long.class
+                    && method.getReturnType() != double.class
+                    && method.getReturnType() != float.class
+                    && method.getReturnType() != String.class)
+            {
+                try
+                {
+                    Object value = method.invoke(obj);
+                    if (value instanceof Iterable<?> iterable)
+                    {
+                        for (Object item : iterable)
+                        {
+                            deepFreeze(item, visited);
+                        }
+                    }
+                    else if (value != null && value.getClass().getName().endsWith("Impl"))
+                    {
+                        deepFreeze(value, visited);
+                    }
+                }
+                catch (Exception ignored)
+                {
+                    // Skip inaccessible properties
+                }
+            }
+        }
     }
 
     @Override

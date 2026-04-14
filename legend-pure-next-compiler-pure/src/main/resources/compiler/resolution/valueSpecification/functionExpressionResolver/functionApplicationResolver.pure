@@ -464,6 +464,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $parameterValue, context = $context),
         | resolveValueSpecification($parameterValue, $scope, $context)
     );
+    let _dval = if($r.value->size() > 1, |println('DEBUG r.value has ' + $r.value->size()->toString() + ' elements: ' + $r.value->map(v | $v->type()->toOne()->elementToPath())->joinStrings(', ')), |[]);
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
@@ -529,7 +530,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 ^$acc(values += $elementResult.newParam, context = $elementResult.context);
                             }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $ctx2));
                             let newCol = ^$col(values = $colResult.values);
-                            finishProcessing($paramGT, $paramMul, $bindings, $scope, $colResult.context, $newCol);,
+                            // Prevent finishProcessing's VSR.resolve from re-producing errors for
+                            // already-processed elements (matches Java COLLECTION path fix)
+                            let preFinishCheckpoint = $colResult.context->errorCheckpoint();
+                            let fpResult = finishProcessing($paramGT, $paramMul, $bindings, $scope, $colResult.context, $newCol);
+                            if($fpResult.context->errorCheckpoint() > $preFinishCheckpoint,
+                                | let rolledBackCtx = $fpResult.context->rollbackErrors($preFinishCheckpoint);
+                                  ^$fpResult(context = $rolledBackCtx);,
+                                | $fpResult
+                            );,
                           | // NOT RESOLVED — save errors and rollback (Java line 486-487)
                             let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
                             let savedErrors = $ctx1->snapshotErrors($checkpoint);

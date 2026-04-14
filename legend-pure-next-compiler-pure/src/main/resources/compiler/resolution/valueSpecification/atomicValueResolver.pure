@@ -40,9 +40,18 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                     value = $av,
                     context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
                 );,
-              | let _d = debug($context, | 'resolveAtomicValue: LAMBDA resolving body');
+              | // Check for lambda param names that conflict with existing scope variables (matches Java AtomicValueResolver line 91)
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($av.sourceInformation, $context);
+                let conflictCtx = $lambdaParams->fold({p, c |
+                    let conflict = $scope->filter(s | $s.name == $p.name);
+                    if($conflict->isNotEmpty(),
+                        | ^$c(errors += 'Variable \'' + $p.name + '\' is already defined' + $siCtx),
+                        | $c
+                    );
+                }, $context);
+                let _d = debug($conflictCtx, | 'resolveAtomicValue: LAMBDA resolving body');
                 let innerScope = $scope->concatenate($lambdaParams);
-                let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context);
+                let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $conflictCtx);
                 let ctx1 = $resolveResult.context;
                 // Compute lambda genericType from body return type (like Java processLambda lines 114-121)
                 let bodyReturnGT = if($resolveResult.resolvedSpecs->isEmpty(),
