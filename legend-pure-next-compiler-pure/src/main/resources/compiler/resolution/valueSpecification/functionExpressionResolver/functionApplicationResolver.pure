@@ -200,8 +200,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Initialize: all params start unresolved
     let initInfos = $fi.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
 
+    // Seed initial bindings from pre-resolved type/multiplicity parameters (like Java pushBindingNode line 148)
+    let seedBindings = $fi.resolvedTypeParameters->fold({rtp, b |
+        collectTypeParameterBindings(
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = ^meta::pure::metamodel::type::generics::TypeParameter(name = $rtp.name)),
+            $rtp.value,
+            $b
+        );
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+    let seedBindings2 = $fi.resolvedMultiplicityParameters->fold({rmp, b |
+        collectMultiplicityParameterBindings(
+            ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $rmp.name),
+            $rmp.value,
+            $b
+        );
+    }, $seedBindings);
+
     // Fixpoint: resolve params iteratively until no more progress
-    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, newPlainParametersBinding()->cast(@ParametersBinding), $scope, $deepCtx, 1);
+    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, $seedBindings2, $scope, $deepCtx, 1);
     let resolvedInfos = $fixpointResult.infos;
     let bindings = $fixpointResult.bindings;
     let ctx1 = $fixpointResult.context;
@@ -417,11 +433,22 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 let av = $processed->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
                 let withReprocessedLambda = ^$av(value = $reprocessedLambda);
                 finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $withReprocessedLambda);,
-              | // NOT RESOLVED — save errors and rollback (Java line 486-487)
-                let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
-                let savedErrors = $ctx1->snapshotErrors($checkpoint);
-                let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
-                ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+              | // Check if REVERSE_MATCH: FunctionInvocation with func set (Java line 450-454)
+                let isReverseMatch = $processed->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation)
+                    && $processed->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).func->isNotEmpty();
+                if($isReverseMatch,
+                    | let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                      let childExpr = $processed->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
+                      let _drm = debug($context, | 'resolveArg: REVERSE_MATCH func=' + $childExpr.functionName->toOne()
+                          + ' childGT=' + if($childExpr.genericType->isEmpty(), | '?', | printGenericType($childExpr.genericType->toOne())));
+                      let reversedChild = reverseMatch($childExpr, $paramGT, $paramMul, $bindings);
+                      finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $reversedChild);,
+                    | // NOT RESOLVED — save errors and rollback (Java line 486-487)
+                      let _dn = debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
+                      let savedErrors = $ctx1->snapshotErrors($checkpoint);
+                      let rolledBackCtx = $ctx1->rollbackErrors($checkpoint);
+                      ^ResolveOneParamResult(resolved = false, newParam = $processed, bindings = $bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
+                );
           );
     );
 }
@@ -493,6 +520,39 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         && $resolved.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams);
 
     ^ResolveOneParamResult(resolved = $isResolved, newParam = $resolved, bindings = $b2, context = $ctx1, savedErrors = []);
+}
+
+// ============================================================================
+// Reverse match — push parent bindings into child (Java lines 562-583)
+// ============================================================================
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::reverseMatch(
+    childExpr:meta::pure::metamodel::valuespecification::FunctionInvocation[1],
+    paramGT:meta::pure::metamodel::type::generics::GenericType[1],
+    paramMul:meta::pure::metamodel::multiplicity::Multiplicity[1],
+    bindings:ParametersBinding[1]
+):meta::pure::metamodel::valuespecification::FunctionInvocation[1]
+{
+    // Collect child bindings: child's return type → parent's resolved param type
+    let argGT = $childExpr.genericType->toOne();
+    let childBindings = newPlainParametersBinding()->cast(@ParametersBinding);
+    let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+    let b1 = collectTypeParameterBindings($argGT, $resolvedParamGT, $childBindings);
+    let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
+    let b2 = collectMultiplicityParameterBindings($childExpr.multiplicity->toOne(), $resolvedParamMul, $b1);
+
+    // Make child bindings concrete using parent bindings, then push into child expr
+    let concreteChildBindings = $b2.typeBindings->keys()->fold({k, acc |
+        let vals = $b2.typeBindings->get($k)->toOne().values;
+        let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings)));
+        collectTypeParameterBindings(
+            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = ^meta::pure::metamodel::type::generics::TypeParameter(name = $k)),
+            $concreteVals->at(0),
+            $acc
+        );
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+
+    populateResolvedParameters($childExpr, $concreteChildBindings)->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation);
 }
 
 // ============================================================================

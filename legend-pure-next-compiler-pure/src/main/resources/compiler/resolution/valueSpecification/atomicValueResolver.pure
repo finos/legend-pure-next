@@ -23,13 +23,15 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
         | let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
           let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
           // Skip body resolution if lambda params don't have concrete types (like Java processLambda lines 79-88)
-          // Use isConcreteInContext to allow in-scope type params (e.g., fold's T and V)
+          // Java uses inScopeTypeParamNames() which returns only the ENCLOSING OWNER's type params,
+          // NOT the current function's type params pushed by the fixpoint. Use isConcreteGenericType
+          // (not InContext) to match Java's behavior — the fixpoint's LAMBDA dispatch will fill
+          // param types from bindings via setMissingLambdaParameterInformation.
           // NOTE: UndefinedGenericType means "no type set" (Java equivalent: null genericType).
-          // It must NOT be treated as concrete here, despite isConcreteGenericType returning true.
           let paramsAreConcrete = $lambdaParams->forAll(p |
               !$p.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
-              && $p.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
-              && $p.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams)
+              && $p.genericType->toOne()->isConcreteGenericType()
+              && $p.multiplicity->toOne()->isConcreteMultiplicity()
           );
           if(!$paramsAreConcrete,
               | let _d = debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
