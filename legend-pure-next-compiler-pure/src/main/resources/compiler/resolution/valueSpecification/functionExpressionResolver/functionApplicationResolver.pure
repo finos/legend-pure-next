@@ -219,7 +219,38 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Fixpoint: resolve params iteratively until no more progress
     let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, $seedBindings2, $scope, $deepCtx, 1);
     let resolvedInfos = $fixpointResult.infos;
-    let bindings = $fixpointResult.bindings;
+    // Unify: reduce multi-valued bindings to single values (like Java unify() common-type reduction)
+    let rawBindings = $fixpointResult.bindings;
+    let unifiedTypeBindings = $rawBindings.typeBindings->keys()->fold({k, acc |
+        let vals = $rawBindings.typeBindings->get($k)->toOne().values;
+        if($vals->size() <= 1,
+            | collectTypeParameterBindings(
+                  ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = ^meta::pure::metamodel::type::generics::TypeParameter(name = $k)),
+                  $vals->at(0), $acc),
+            | let common = findCommonGenericType($vals);
+              if($common->isNotEmpty(),
+                  | collectTypeParameterBindings(
+                        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = ^meta::pure::metamodel::type::generics::TypeParameter(name = $k)),
+                        $common->toOne(), $acc),
+                  | $acc
+              );
+        );
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+    let bindings = $rawBindings.multiplicityBindings->keys()->fold({k, acc |
+        let vals = $rawBindings.multiplicityBindings->get($k)->toOne().values;
+        if($vals->size() <= 1,
+            | collectMultiplicityParameterBindings(
+                  ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $k),
+                  $vals->at(0), $acc),
+            | let common = findCommonMultiplicity($vals);
+              if($common->isNotEmpty(),
+                  | collectMultiplicityParameterBindings(
+                        ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $k),
+                        $common->toOne(), $acc),
+                  | $acc
+              );
+        );
+    }, $unifiedTypeBindings);
     let ctx1 = $fixpointResult.context;
 
     // Push back saved errors from all unresolved args
