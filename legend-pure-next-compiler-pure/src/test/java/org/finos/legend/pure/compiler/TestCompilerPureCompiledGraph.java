@@ -125,7 +125,6 @@ public class TestCompilerPureCompiledGraph
                                       testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
                                       testName.contains("if_E_wrongMul.pure") ||
                                       testName.contains("if_E_wrongOperation.pure") ||
-                                      testName.contains("lambda_E_errorInBody.pure") ||
                                       testName.contains("pushDown_E_errorInBody.pure") ||
                                       testName.contains("pushDownMultiplicity_E_errorInBody.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure") ||

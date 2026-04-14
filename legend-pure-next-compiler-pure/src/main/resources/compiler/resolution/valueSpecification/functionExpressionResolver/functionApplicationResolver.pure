@@ -20,6 +20,7 @@ import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::functionType::*;
 import meta::pure::compiler::*;
 
 // ============================================================================
@@ -173,14 +174,22 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplicationUsingTemplateFunction(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], entry:meta::pure::metamodel::function::PackageableFunction<Any>[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
-    let ft = $entry->getFunctionType();
+    // Get the fully-compiled function from context (all PackageableElements should be resolved from context)
+    let entryPath = $entry->elementToPath();
+    let fromContext = $context->resolveElement($entryPath);
+    let resolvedEntry = if($fromContext->isNotEmpty() && $fromContext->toOne()->instanceOf(meta::pure::metamodel::function::Function),
+        | $fromContext->toOne()->cast(@meta::pure::metamodel::function::Function<Any>),
+        | $entry
+    );
+    let ft = $resolvedEntry->getFunctionType();
     let funcParams = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
 
-    let _d = debug($context, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entry->elementToPath() + ' (' + $fi.parametersValues->size()->toString() + ' args)');
+    let _d = debug($context, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entryPath + ' (' + $fi.parametersValues->size()->toString() + ' args)');
 
-    // Push entry's type/multiplicity param names into scope (like Java pushBindingNode)
-    let entryTypeParams = $entry.typeParameters->map(tp | $tp->cast(@meta::pure::metamodel::type::generics::TypeParameter).name->toOne());
-    let entryMulParams = $entry.multiplicityParameters->map(mp | $mp->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter).name->toOne());
+    // Push entry's type/multiplicity param names into scope (like Java FunctionIndexEntry constructor lines 95-102)
+    // Extract referenced type param names from the FunctionType of the resolved function
+    let entryTypeParams = $ft->collectFunctionTypeReferencedTypeParameterNames();
+    let entryMulParams = $ft->collectFunctionTypeReferencedMultiplicityParameterNames();
     let _ds = debug($context, | 'scope: pushing typeParams=[' + $entryTypeParams->joinStrings(',') + '] mulParams=[' + $entryMulParams->joinStrings(',') + ']');
     let scopedCtx = ^$context(
         scopeTypeParams = $context.scopeTypeParams->concatenate($entryTypeParams),

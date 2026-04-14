@@ -15,15 +15,28 @@
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
+// Mirrors Java VariableExpressionResolver.resolveVariableExpression (lines 14-31)
 function meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::resolveVariableExpression(ve:meta::pure::metamodel::valuespecification::VariableExpression[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
-    let inScope = $scope->filter(s | $s.name == $ve.name);
-    if($inScope->isEmpty() && $ve.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-        | let siCtx = formatMetamodelSourceInfo($ve.sourceInformation, $context);
-          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-              value = $ve,
-              context = ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx)
+    // If genericType is UndefinedGenericType (= Java null), look up in scope (like Java line 16-23)
+    if($ve.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+        | let inScope = $scope->filter(s | $s.name == $ve.name);
+          if($inScope->isNotEmpty(),
+              | // Found in scope — update genericType and multiplicity from the scope match
+                let match = $inScope->at($inScope->size() - 1);
+                let updatedVE = ^$ve(
+                    genericType = meta::pure::compiler::helper::genericType::asInferredGenericType($match.genericType->toOne()),
+                    multiplicity = meta::pure::compiler::helper::multiplicity::asInferredMultiplicity($match.multiplicity->toOne())
+                );
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $updatedVE, context = $context);,
+              | // Not found — error
+                let siCtx = formatMetamodelSourceInfo($ve.sourceInformation, $context);
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $ve,
+                    context = ^$context(errors += 'The variable \'' + $ve.name + '\' is unknown!' + $siCtx)
+                );
           );,
-        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $ve, context = $context)
+        | // Already has a concrete type — return as-is
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $ve, context = $context)
     );
 }
