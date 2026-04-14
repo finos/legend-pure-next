@@ -177,7 +177,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let funcParams = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
 
     let _d = debug($context, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entry->elementToPath() + ' (' + $fi.parametersValues->size()->toString() + ' args)');
-    let deepCtx = $context->debugSpaceInc();
+
+    // Push entry's type/multiplicity param names into scope (like Java pushBindingNode)
+    let entryTypeParams = $entry.typeParameters->map(tp | $tp->cast(@meta::pure::metamodel::type::generics::TypeParameter).name->toOne());
+    let entryMulParams = $entry.multiplicityParameters->map(mp | $mp->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter).name->toOne());
+    let _ds = debug($context, | 'scope: pushing typeParams=[' + $entryTypeParams->joinStrings(',') + '] mulParams=[' + $entryMulParams->joinStrings(',') + ']');
+    let scopedCtx = ^$context(
+        scopeTypeParams = $context.scopeTypeParams->concatenate($entryTypeParams),
+        scopeMulParams = $context.scopeMulParams->concatenate($entryMulParams)
+    );
+    let deepCtx = $scopedCtx->debugSpaceInc();
 
     // Initialize: all params start unresolved
     let initInfos = $fi.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
@@ -354,10 +363,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
-    // Check if concrete
+    // Check if concrete in context (like Java isConcreteInContext — allows in-scope type params)
     let isConcrete = $processed.genericType->isNotEmpty()
-        && !$processed.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
-        && $processed.multiplicity->isNotEmpty();
+        && $processed.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
+        && $processed.multiplicity->isNotEmpty()
+        && $processed.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams);
 
     if($isConcrete,
         | // CONCRETE: collect bindings (Java resolveParameterValue line 427-440)
@@ -446,8 +456,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     let isResolved = $resolved.genericType->isNotEmpty()
-        && !$resolved.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
-        && $resolved.multiplicity->isNotEmpty();
+        && $resolved.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
+        && $resolved.multiplicity->isNotEmpty()
+        && $resolved.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams);
 
     ^ResolveOneParamResult(resolved = $isResolved, newParam = $resolved, bindings = $b2, context = $ctx1, savedErrors = []);
 }

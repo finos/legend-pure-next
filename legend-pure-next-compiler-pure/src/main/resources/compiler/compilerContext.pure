@@ -50,6 +50,8 @@ Class meta::pure::compiler::CompilerContext
     imports : String[*];
     elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
     errors : String[*];
+    scopeTypeParams : String[*];
+    scopeMulParams : String[*];
 }
 
 function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]

@@ -1,4 +1,15 @@
+import meta::pure::compiler::*;
+
 function go():Any[*]
 {
-     let x = [1,2,3];
+     let f = parse('', 'import test::*;\n'+
+      'function test::tst():Any[*]\n'+
+      '{\n'+
+      '    ^MyClass(name=\'ok\').name + 1;\n'+
+      '}\n'+
+      'Class test::MyClass\n'+
+      '{\n'+
+      '    name : String[1];\n'+
+      '}');
+      compile($f);               
 }

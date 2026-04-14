@@ -31,14 +31,10 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
         ^$c(errors += 'Duplicate parameter name \'' + $d + '\'' + $siCtx);
     }, $ctx);
 
-    // Check for unresolved parameter types
-    let hasUnresolvedParams = $l.parameters->exists(p | $p.genericType->isEmpty() || $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isEmpty());
-    let ctx2 = if($hasUnresolvedParams,
-        | ^$ctx1(errors += 'Can\'t resolve lambda parameter types' + $siCtx),
-        | $ctx1
-    );
-
     // Check for variable conflicts with outer scope
+    // NOTE: Unresolved param types are NOT checked here (pass 2).
+    // They're handled in pass 3 by resolveAtomicValue, which defers
+    // lambda body resolution when params aren't concrete — matching Java.
     let ctx3 = $l.parameters->fold({p, c |
         let conflict = $scope->filter(s | $s.name == $p.name);
         if($conflict->isNotEmpty(),
@@ -46,14 +42,21 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               ^$c(errors += 'Variable \'' + $p.name + '\' is already defined' + $pSiCtx);,
             | $c
         );
-    }, $ctx2);
+    }, $ctx1);
 
     if($ctx3.errors->size() > $ctx.errors->size(),
         | ^ValueCompileResult(values = [], openVariables = [], context = $ctx3),
-        | let compiledParams = $l.parameters->map(p |
-              let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-              let pmGenType = if($pType.type->isEmpty(), | [], | $pType->compileGenericType($ctx3, '', []).value);
-              let pmMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+        | // Compile params — match Java LambdaCompiler.compileParameter: only set genericType if present
+          let compiledParams = $l.parameters->map(p |
+              let hasType = $p.genericType->isNotEmpty() && $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
+              let pmGenType = if($hasType,
+                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value,
+                  | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+              );
+              let pmMult = if($p.multiplicity->isEmpty(),
+                  | meta::pure::metamodel::multiplicity::PureOne,
+                  | $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
+              );
               ^meta::pure::metamodel::valuespecification::VariableExpression(
                   name = $p.name,
                   genericType = $pmGenType,

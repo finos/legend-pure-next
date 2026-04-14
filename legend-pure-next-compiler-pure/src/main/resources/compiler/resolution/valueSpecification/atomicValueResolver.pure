@@ -13,17 +13,33 @@
 // limitations under the License.
 
 import meta::pure::compiler::resolution::functionDefinitionResolver::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(av:meta::pure::metamodel::valuespecification::AtomicValue[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     if($av.value->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-        | let _d = debug($context, | 'resolveAtomicValue: LAMBDA resolving body');
-          let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+        | let lambda = $av.value->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
           let lambdaParams = $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
-          let innerScope = $scope->concatenate($lambdaParams);
-          let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context).context;
-          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $ctx1);,
+          // Skip body resolution if lambda params don't have concrete types (like Java processLambda lines 79-88)
+          // Use isConcreteInContext to allow in-scope type params (e.g., fold's T and V)
+          let paramsAreConcrete = $lambdaParams->forAll(p |
+              $p.genericType->toOne()->isConcreteGenericTypeInContext($context.scopeTypeParams)
+              && $p.multiplicity->toOne()->isConcreteMultiplicityInContext($context.scopeMulParams)
+          );
+          if(!$paramsAreConcrete,
+              | let _d = debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($av.sourceInformation, $context);
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $av,
+                    context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
+                );,
+              | let _d = debug($context, | 'resolveAtomicValue: LAMBDA resolving body');
+                let innerScope = $scope->concatenate($lambdaParams);
+                let ctx1 = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $context).context;
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $ctx1);
+          );,
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $av, context = $context)
     );
 }
