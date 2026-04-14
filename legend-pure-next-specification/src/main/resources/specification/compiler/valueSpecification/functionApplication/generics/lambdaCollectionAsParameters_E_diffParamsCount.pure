@@ -1,8 +1,6 @@
 ###Error
-Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:16-20:18)
-Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:21-20:27)
-Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:16-20:18)
-Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 20:21-20:27)
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 18:16-18:18)
+Can't resolve lambda parameter types (at valueSpecification/functionApplication/generics/lambdaCollectionAsParameters_E_diffParamsCount 18:21-18:27)
 
 ###Pure
 Class Person

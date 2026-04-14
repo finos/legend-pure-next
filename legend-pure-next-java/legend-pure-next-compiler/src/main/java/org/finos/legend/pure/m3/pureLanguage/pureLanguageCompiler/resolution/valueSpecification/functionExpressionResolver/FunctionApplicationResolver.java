@@ -481,7 +481,16 @@ public class FunctionApplicationResolver
                     })
             );
             context.debugDepthDec();
-            return finishProcessing(paramGT, paramMul, bindings, model, context, newCollection);
+            // Prevent finishProcessing's VSR.resolve from re-producing errors for
+            // already-processed elements (e.g., unresolved lambdas would produce
+            // duplicate "Can't resolve lambda parameter types" errors).
+            int preFinishCheckpoint = context.currentErrorCount();
+            ValueSpecification finished = finishProcessing(paramGT, paramMul, bindings, model, context, newCollection);
+            if (context.currentErrorCount() > preFinishCheckpoint)
+            {
+                context.rollbackErrorsTo(preFinishCheckpoint);
+            }
+            return finished;
         }
         context.debug("resolveArg: NO_MATCH class=%s gt=%s", arg.getClass().getSimpleName(), lazy(() -> _GenericType.print(arg._genericType())));
         return processed;
