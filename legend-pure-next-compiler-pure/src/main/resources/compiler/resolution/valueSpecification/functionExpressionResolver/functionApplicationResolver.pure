@@ -59,6 +59,19 @@ Class meta::pure::compiler::resolution::valueSpecification::functionExpressionRe
     context : meta::pure::compiler::CompilerContext[1];
 }
 
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::CandidateTryAccumulator
+{
+    resolved : Boolean[1];
+    result : meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[0..1];
+    context : meta::pure::compiler::CompilerContext[1];
+    firstErrors : String[*];
+}
+
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ValidationAccumulator
+{
+    failed : Boolean[1];
+}
+
 Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ResolveOneParamResult
 {
     resolved : Boolean[1];
@@ -102,6 +115,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], candidates:meta::pure::metamodel::function::PackageableFunction<Any>[*], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], deepCtx:meta::pure::compiler::CompilerContext[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
     let functionName = $fi.functionName->toOne();
+    let _d = debug($deepCtx, | 'multiple candidates (' + $candidates->size()->toString() + '), resolving params first');
+
+    // Resolve params first, then match against candidates
     let paramResult = $fi.parametersValues->fold({param, acc |
         let r = resolveValueSpecification($param, $scope, $acc.context);
         ^$acc(values += if($r.value->isEmpty(), | $param, | $r.value->toOne()), context = $r.context);
@@ -114,14 +130,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               context = $ctx1),
         | let argTypes = $resolvedParams->map(pv | $pv.genericType->toOne());
           let argMuls = $resolvedParams->map(pv | $pv.multiplicity->toOne());
-          let allMatches = findAllMatchingCandidates($candidates, $functionName, $argTypes, $argMuls);
+          let allMatches = findAllMatchingCandidates($candidates, $fi.functionName->toOne(), $argTypes, $argMuls);
           if($allMatches->isEmpty(),
               | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
                 let argDesc = $resolvedParams->map(vs | if($vs.genericType->isEmpty(), |'?', |printGenericType($vs.genericType->toOne())) + if($vs.multiplicity->isEmpty(), |'', |printMultiplicity($vs.multiplicity->toOne())))->joinStrings(', ');
                 let _d3 = debug($deepCtx, | 'no matching candidate for (' + $argDesc + ')');
                 ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                     value = ^$fi(parametersValues = $resolvedParams),
-                    context = ^$ctx1(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx)
+                    context = ^$ctx1(errors += 'No matching function \'' + $fi.functionName->toOne() + '\' found for argument types (' + $argDesc + ')' + $siCtx)
                 );,
               | if($allMatches->size() > 1,
                     | // Ambiguous — multiple equally-specific matches
@@ -183,7 +199,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
               value = ^$fi(func = $entry, parametersValues = $resolvedParams),
               context = $ctx2),
-        | // All resolved — build return type using bindings
+        | // All resolved — validate arg types against param types (like Java validateParameterValuesToFunctionType)
+          let fiSrcInfo = $fi.sourceInformation;
+          let validationCtx = validateParameterTypes($fi.functionName->toOne(), $resolvedParams, $funcParams, $bindings, $fiSrcInfo, $ctx2);
+          if($validationCtx.errors->size() > $ctx2.errors->size(),
+              | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = ^$fi(parametersValues = $resolvedParams),
+                    context = $validationCtx);,
+              |
+          // Build return type using bindings
           let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
           let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
           let inferredReturnGT = asInferredGenericType($returnGT);
@@ -214,8 +238,43 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   resolvedTypeParameters = $resolvedTypeParams,
                   resolvedMultiplicityParameters = $resolvedMulParams
               ),
-              context = $ctx2
+              context = $validationCtx
           );
+          ); // end validation check
+    );
+}
+
+// Mirrors Java validateParameterValuesToFunctionType
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::validateParameterTypes(
+    functionName:String[1],
+    resolvedParams:meta::pure::metamodel::valuespecification::ValueSpecification[*],
+    funcParams:meta::pure::metamodel::valuespecification::VariableExpression[*],
+    bindings:ParametersBinding[1],
+    sourceInfo:meta::pure::metamodel::SourceInformation[0..1],
+    context:meta::pure::compiler::CompilerContext[1]
+):meta::pure::compiler::CompilerContext[1]
+{
+    let siCtx = formatMetamodelSourceInfo($sourceInfo, $context);
+    // Check each arg against expected type/multiplicity — report first mismatch only
+    let mismatch = range($resolvedParams->size())->fold({i, acc |
+        if($acc.failed,
+            | $acc,
+            | let argGT = $resolvedParams->at($i).genericType->toOne();
+              let argMul = $resolvedParams->at($i).multiplicity->toOne();
+              let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $bindings);
+              let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $bindings);
+              let typeOk = isCompatibleGenericType($expectedGT, $argGT) || isCompatibleGenericType($argGT, $expectedGT) || (printGenericType($expectedGT) == printGenericType($argGT));
+              let mulOk = multiplicitySubsumes($expectedMul, $argMul);
+              if(!$typeOk || !$mulOk,
+                  | ^$acc(failed = true);,
+                  | $acc
+              );
+        );
+    }, ^ValidationAccumulator(failed = false));
+    if($mismatch.failed,
+        | let argDesc = $resolvedParams->map(vs | printGenericType($vs.genericType->toOne()) + printMultiplicity($vs.multiplicity->toOne()))->joinStrings(', ');
+          ^$context(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx);,
+        | $context
     );
 }
 
