@@ -114,10 +114,9 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require relation support, further error propagation, or variance checking
+                              // Tests excluded — require relation support, variance detection, or error count convergence
                               if (testName.contains("generics/relation/") ||
                                   (testName.contains("generics/") && (
-                                      testName.contains("classTypeParam_E_wrongType.pure") ||
                                       testName.contains("foldSubtypeInit_E_varianceMismatch.pure") ||
                                       testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure")
                                   )))

@@ -19,6 +19,7 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:meta::pure::metamodel::valuespecification::DotApplication[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
@@ -96,8 +97,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             ),
                           | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
                             let resolvedProp = $prop->toOne();
-                            let propGT = resolvePropertyReturnType($resolvedProp, $receiver.genericType->toOne());
-                            let propMul = $resolvedProp.multiplicity->toOne();
+                            let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
+                            let propGT = $propResolved.first;
+                            let propMul = $propResolved.second;
                             let receiverMul = $receiver.multiplicity;
                             // Check if automap needed: receiver multiplicity is NOT [1]
                             if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
@@ -121,11 +123,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnType(prop:meta::pure::metamodel::function::property::AbstractProperty<Any>[1], ownerGT:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::GenericType[1]
+// Matches Java DotApplicationResolver lines 106-113: apply class type bindings to property type and multiplicity
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:meta::pure::metamodel::function::property::AbstractProperty<Any>[1], ownerGT:meta::pure::metamodel::type::generics::GenericType[1]):Pair<meta::pure::metamodel::type::generics::GenericType, meta::pure::metamodel::multiplicity::Multiplicity>[1]
 {
-    // For now, return the property's declared genericType
-    // TODO: apply class type bindings for generic classes
-    $prop.genericType->toOne();
+    let rawGT = $prop.genericType->toOne();
+    let rawMul = $prop.multiplicity->toOne();
+    let ownerType = if($ownerGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+        | $ownerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type,
+        | []
+    );
+    if($ownerType->isNotEmpty() && $ownerType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+        | let ownerClass = $ownerType->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          let bindings = $ownerClass->buildBindingsFromGenericType($ownerGT);
+          if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
+              | pair($rawGT, $rawMul),
+              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
+          );,
+        | pair($rawGT, $rawMul)
+    );
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:meta::pure::metamodel::valuespecification::DotApplication[1], receiver:meta::pure::metamodel::valuespecification::ValueSpecification[1], functionName:String[1], propGT:meta::pure::metamodel::type::generics::GenericType[1], propMul:meta::pure::metamodel::multiplicity::Multiplicity[1], prop:meta::pure::metamodel::function::property::AbstractProperty<Any>[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
