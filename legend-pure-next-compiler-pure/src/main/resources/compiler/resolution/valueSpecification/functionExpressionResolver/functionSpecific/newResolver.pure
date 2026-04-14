@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::*;
 
@@ -121,9 +122,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         ->filter(p | !$providedNames->contains($p.name));
     $requiredProps->fold({p, ctx |
         let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
-        let typeName = if($p.genericType->isNotEmpty() && $p.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-            | let gt = $p.genericType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
-              if($gt.type->isNotEmpty(), | $gt.type->toOne()->elementToPath(), | 'Unknown');,
+        let typeName = if($p.genericType->isNotEmpty(),
+            | printGenericType($p.genericType->toOne()),
             | 'Unknown'
         );
         ^$ctx(errors += 'Missing required property \'' + $p.name->toOne() + '\' of type ' + $typeName + ' in new expression' + $siCtx);

@@ -72,7 +72,24 @@ Class meta::pure::compiler::CompilerListResult<T>
 
 native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];
 
+function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
+{
+    if(!$elementPath->contains('::'),
+        | true,
+        | // Extract package path: everything before the last '::'
+          let parts = $elementPath->split('::');
+          let pkgPath = $parts->init()->joinStrings('::');
+          $context.imports->exists(imp | $imp == $pkgPath);
+    );
+}
+
 function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
+{
+    let all = findAllFunctionsByNameAndArityUnfiltered($context, $name, $arity);
+    $all->filter(f | $context->isElementVisible($f->elementToPath()));
+}
+
+function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
 {
     // Union: native index + locally-defined functions from context elementMap
     let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
@@ -95,10 +112,12 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
               | let nativeAttempt = $path->lenientPathToElement();
                 if($nativeAttempt->isNotEmpty(),
                     | $nativeAttempt,
-                    | if(['String', 'Integer', 'Float', 'Boolean', 'Date', 'StrictDate', 'DateTime', 'LatestDate', 'Number', 'Any', 'Nil']->contains($path),
-                          | ^meta::pure::metamodel::type::PrimitiveType(name=$path),
+                    | // Try resolving through imports (e.g., String -> meta::pure::metamodel::type::primitives::String)
+                      let importMatch = $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head();
+                      if($importMatch->isNotEmpty(),
+                          | $importMatch,
                           | ('meta::pure::metamodel::type::' + $path)->lenientPathToElement()
-                      )
+                      );
                 );
           );
     );

@@ -39,14 +39,17 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
         )
     );
 
-    let ownerGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $skeleton);
+    // Build the compiled type with generalizations first, so constraints see the full type
+    let compiledPrim = ^$skeleton(
+        typeVariables = $typeVariables,
+        generalizations = $genAccum.values->map(g | ^$g(specific = ~.~))
+    );
+    let ownerGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledPrim);
     let constraintAccum = compileConstraints($protocolPrimitive.constraints, $ownerGenericType, $typeVariables, $ctx1);
     let ctx2 = $constraintAccum.context;
 
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>(
-        value = ^$skeleton(
-            typeVariables = $typeVariables,
-            generalizations = $genAccum.values->map(g | ^$g(specific = ~.~)),
+        value = ^$compiledPrim(
             constraints = $constraintAccum.values
         ),
         context = $ctx2

@@ -55,47 +55,60 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let _d = debug($context, | 'resolveFunctionApplication: ' + $functionName + ' (' + $paramCount->toString() + ' args)');
     let deepCtx = $context->debugSpaceInc();
 
-    // Find candidates by name and arity
+    // Find visible candidates by name and arity
     let candidates = $context->findAllFunctionsByNameAndArity($functionName, $paramCount);
 
     if($candidates->isEmpty(),
-        | // No candidates found
+        | // No visible candidates — build error with suggestions
           let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
           let _d2 = debug($deepCtx, | 'no candidates found');
+          let suggestions = buildFunctionSuggestions($context, $functionName, $paramCount);
+          let mainError = 'The function \'' + $functionName + '\' with ' + $paramCount->toString() + ' parameter(s) can\'t be found' + $suggestions + $siCtx;
+          let errorLines = $mainError->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
               value = $fi,
-              context = ^$context(errors += 'The function \'' + $functionName + '\' with ' + $paramCount->toString() + ' parameter(s) can\'t be found' + $siCtx)
+              context = ^$context(errors += $errorLines)
           );,
-        | if($candidates->size() == 1,
-              | // Single candidate — resolve directly
-                let entry = $candidates->at(0);
-                let _d2 = debug($deepCtx, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entry->elementToPath() + ' (' + $paramCount->toString() + ' args)');
-                resolveFunctionApplicationUsingTemplateFunction($fi, $entry, $scope, $deepCtx);,
-              | // Multiple candidates — resolve params first, then pick best match
-                let _d2 = debug($deepCtx, | 'multiple candidates (' + $candidates->size()->toString() + '), resolving params first');
-                let paramResult = $fi.parametersValues->fold({param, acc |
-                    let r = resolveValueSpecification($param, $scope, $acc.context);
-                    ^$acc(values += if($r.value->isEmpty(), | $param, | $r.value->toOne()), context = $r.context);
-                }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $deepCtx));
-                let resolvedParams = $paramResult.values;
-                let ctx1 = $paramResult.context;
-                if($ctx1.errors->size() > $context.errors->size(),
-                    | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                          value = ^$fi(parametersValues = $resolvedParams),
-                          context = $ctx1),
-                    |
-                let argTypes = $resolvedParams->map(pv | $pv.genericType->toOne());
-                let argMuls = $resolvedParams->map(pv | $pv.multiplicity->toOne());
-                let resolution = findBestCandidate($candidates, $functionName, $argTypes, $argMuls);
-                if($resolution.resolvedFunction->isEmpty(),
-                    | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
-                      let argDesc = $resolvedParams->map(vs | if($vs.genericType->isEmpty(), |'?', |printGenericType($vs.genericType->toOne())) + if($vs.multiplicity->isEmpty(), |'', |printMultiplicity($vs.multiplicity->toOne())))->joinStrings(', ');
-                      let _d3 = debug($deepCtx, | 'no matching candidate for (' + $argDesc + ')');
+        | // Resolve params, then match against candidates
+          let _d2 = debug($deepCtx, | $candidates->size()->toString() + ' candidate(s)');
+          resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], candidates:meta::pure::metamodel::function::PackageableFunction<Any>[*], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], deepCtx:meta::pure::compiler::CompilerContext[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+{
+    let functionName = $fi.functionName->toOne();
+    let paramResult = $fi.parametersValues->fold({param, acc |
+        let r = resolveValueSpecification($param, $scope, $acc.context);
+        ^$acc(values += if($r.value->isEmpty(), | $param, | $r.value->toOne()), context = $r.context);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $deepCtx));
+    let resolvedParams = $paramResult.values;
+    let ctx1 = $paramResult.context;
+    if($ctx1.errors->size() > $context.errors->size(),
+        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+              value = ^$fi(parametersValues = $resolvedParams),
+              context = $ctx1),
+        | let argTypes = $resolvedParams->map(pv | $pv.genericType->toOne());
+          let argMuls = $resolvedParams->map(pv | $pv.multiplicity->toOne());
+          let allMatches = findAllMatchingCandidates($candidates, $functionName, $argTypes, $argMuls);
+          if($allMatches->isEmpty(),
+              | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
+                let argDesc = $resolvedParams->map(vs | if($vs.genericType->isEmpty(), |'?', |printGenericType($vs.genericType->toOne())) + if($vs.multiplicity->isEmpty(), |'', |printMultiplicity($vs.multiplicity->toOne())))->joinStrings(', ');
+                let _d3 = debug($deepCtx, | 'no matching candidate for (' + $argDesc + ')');
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = ^$fi(parametersValues = $resolvedParams),
+                    context = ^$ctx1(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx)
+                );,
+              | if($allMatches->size() > 1,
+                    | // Ambiguous — multiple equally-specific matches
+                      let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx1);
+                      let signatures = $allMatches->map(r | functionSignature($r.resolvedFunction->toOne()))->sort()->joinStrings(', ');
                       ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                           value = ^$fi(parametersValues = $resolvedParams),
-                          context = ^$ctx1(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx)
+                          context = ^$ctx1(errors += 'Ambiguous function call: multiple equally-specific matches found [' + $signatures + ']' + $siCtx)
                       );,
-                    | let _d3 = debug($deepCtx, | 'resolved to ' + $resolution.resolvedName);
+                    | let resolution = $allMatches->at(0);
+                      let _d3 = debug($deepCtx, | 'resolved to ' + $resolution.resolvedName);
                       ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                           value = ^$fi(
                               functionName = $resolution.resolvedName,
@@ -108,7 +121,6 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                           ),
                           context = $ctx1
                       );
-                );
                 );
           );
     );
@@ -197,84 +209,136 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 // Candidate matching (multiple candidates)
 // ============================================================================
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::findBestCandidate(
-    candidates:meta::pure::metamodel::function::PackageableFunction<Any>[*],
-    functionName:String[1],
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::isCandidateCompatible(
+    candidate:meta::pure::metamodel::function::PackageableFunction<Any>[1],
+    argTypes:meta::pure::metamodel::type::generics::GenericType[*],
+    argMuls:meta::pure::metamodel::multiplicity::Multiplicity[*]
+):Boolean[1]
+{
+    let ft = $candidate->getFunctionType();
+    let params = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+
+    // Collect bindings from arg types against param types
+    let bindings = range($argTypes->size())->fold({i, b |
+        let paramGT = $params->at($i).genericType->toOne();
+        let argGT = $argTypes->at($i);
+        let b2 = collectTypeParameterBindings($paramGT, $argGT, $b);
+        let paramMul = $params->at($i).multiplicity->toOne();
+        let argMul = $argMuls->at($i);
+        collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
+
+    // Check arg type and multiplicity compatibility
+    $argTypes->zip($params)->forAll({pair |
+        let argGT = $pair.first;
+        let paramGT = $pair.second.genericType->toOne();
+        let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+        let isUndefined = $resolvedParamGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType) || $argGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType);
+        let isTypeParam = $resolvedParamGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $resolvedParamGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isNotEmpty() && $resolvedParamGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
+        if($isUndefined || $isTypeParam,
+            | true,
+            | let paramStr = printGenericType($resolvedParamGT);
+              let argStr = printGenericType($argGT);
+              isCompatibleGenericType($resolvedParamGT, $argGT) || isCompatibleGenericType($argGT, $resolvedParamGT) || ($paramStr == $argStr);
+        );
+    }) && $argMuls->zip($params)->forAll({pair |
+        let argMul = $pair.first;
+        let paramMul = $pair.second.multiplicity->toOne();
+        let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
+        multiplicitySubsumes($resolvedParamMul, $argMul);
+    });
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::buildResolutionResult(
+    candidate:meta::pure::metamodel::function::PackageableFunction<Any>[1],
     argTypes:meta::pure::metamodel::type::generics::GenericType[*],
     argMuls:meta::pure::metamodel::multiplicity::Multiplicity[*]
 ):FunctionResolutionResult[1]
 {
-    let emptyResult = ^FunctionResolutionResult(
-        resolvedName = $functionName,
-        returnGenericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
-        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne,
-        bindings = newPlainParametersBinding()
-    );
-    // Try each candidate — pick first where ALL arg types are compatible
-    $candidates->fold({candidate, best |
-        if($best.resolvedFunction->isNotEmpty(),
-            | $best,
-            | let ft = $candidate->getFunctionType();
-              let params = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    let ft = $candidate->getFunctionType();
+    let params = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    let bindings = range($argTypes->size())->fold({i, b |
+        let paramGT = $params->at($i).genericType->toOne();
+        let argGT = $argTypes->at($i);
+        let b2 = collectTypeParameterBindings($paramGT, $argGT, $b);
+        let paramMul = $params->at($i).multiplicity->toOne();
+        let argMul = $argMuls->at($i);
+        collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
+    }, newPlainParametersBinding()->cast(@ParametersBinding));
 
-              // Collect bindings from arg types against param types
-              let bindings = range($argTypes->size())->fold({i, b |
-                  let paramGT = $params->at($i).genericType->toOne();
-                  let argGT = $argTypes->at($i);
-                  let b2 = collectTypeParameterBindings($paramGT, $argGT, $b);
-                  let paramMul = $params->at($i).multiplicity->toOne();
-                  let argMul = $argMuls->at($i);
-                  collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
-              }, newPlainParametersBinding()->cast(@ParametersBinding));
+    let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
+    let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
 
-              // Check arg type compatibility — skip this candidate if any arg doesn't match
-              let compatible = $argTypes->zip($params)->forAll({pair |
-                  let argGT = $pair.first;
-                  let paramGT = $pair.second.genericType->toOne();
-                  let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
-                  let isUndefined = $resolvedParamGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType) || $argGT->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType);
-                  let isTypeParam = $resolvedParamGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue) && $resolvedParamGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->isNotEmpty() && $resolvedParamGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
-                  if($isUndefined || $isTypeParam,
-                      | true,
-                      | // Compare by printed representation to handle InferredGenericType vs UserDefinedGenericType
-                        let paramStr = printGenericType($resolvedParamGT);
-                        let argStr = printGenericType($argGT);
-                        isCompatibleGenericType($resolvedParamGT, $argGT) || isCompatibleGenericType($argGT, $resolvedParamGT) || ($paramStr == $argStr);
-                  );
-              });
-              if(!$compatible, | $best, |
-              // Resolve return type using bindings
-              let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
-              let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
-              let inferredReturnGT = asInferredGenericType($returnGT);
-              let inferredReturnMul = asInferredMultiplicity($returnMul);
-
-              // Build resolved type/multiplicity parameters
-              let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
-                  let vals = $bindings.typeBindings->get($k)->toOne().values;
-                  ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(
-                      name = $k,
-                      value = asInferredGenericType($vals->at(0))
-                  );
-              );
-              let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
-                  let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
-                  ^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(
-                      name = $k,
-                      value = asInferredMultiplicity($vals->at(0))
-                  );
-              );
-
-              ^FunctionResolutionResult(
-                  resolvedFunction = $candidate,
-                  resolvedName = $candidate.name->toOne(),
-                  returnGenericType = $inferredReturnGT,
-                  returnMultiplicity = $inferredReturnMul,
-                  bindings = $bindings,
-                  resolvedTypeParameters = $resolvedTypeParams,
-                  resolvedMultiplicityParameters = $resolvedMulParams
-              );
-              ); // end compatible check
+    let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
+        let vals = $bindings.typeBindings->get($k)->toOne().values;
+        ^meta::pure::metamodel::type::generics::ResolvedTypeParameter(
+            name = $k,
+            value = asInferredGenericType($vals->at(0))
         );
-    }, $emptyResult);
+    );
+    let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
+        let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
+        ^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(
+            name = $k,
+            value = asInferredMultiplicity($vals->at(0))
+        );
+    );
+
+    ^FunctionResolutionResult(
+        resolvedFunction = $candidate,
+        resolvedName = $candidate.name->toOne(),
+        returnGenericType = asInferredGenericType($returnGT),
+        returnMultiplicity = asInferredMultiplicity($returnMul),
+        bindings = $bindings,
+        resolvedTypeParameters = $resolvedTypeParams,
+        resolvedMultiplicityParameters = $resolvedMulParams
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::findAllMatchingCandidates(
+    candidates:meta::pure::metamodel::function::PackageableFunction<Any>[*],
+    functionName:String[1],
+    argTypes:meta::pure::metamodel::type::generics::GenericType[*],
+    argMuls:meta::pure::metamodel::multiplicity::Multiplicity[*]
+):FunctionResolutionResult[*]
+{
+    $candidates
+        ->filter(c | isCandidateCompatible($c, $argTypes, $argMuls))
+        ->map(c | buildResolutionResult($c, $argTypes, $argMuls));
+}
+
+// ============================================================================
+// Error suggestions
+// ============================================================================
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::functionSignature(f:meta::pure::metamodel::function::PackageableFunction<Any>[1]):String[1]
+{
+    let ft = $f->getFunctionType();
+    let params = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+    let paramDesc = $params->map(p | $p.name + ': ' + printGenericType($p.genericType->toOne()) + printMultiplicity($p.multiplicity->toOne()))->joinStrings(', ');
+    let retDesc = printGenericType($ft.returnType->toOne()) + printMultiplicity($ft.returnMultiplicity->toOne());
+    // Build path with short name: extract package from path, short name from mangled name
+    let fullPath = $f->elementToPath();
+    let mangledName = $f.name->toOne();
+    // Short name is the part before the first '_' (type suffix)
+    let shortName = if($mangledName->contains('_'), | $mangledName->substring(0, $mangledName->indexOf('_')), | $mangledName);
+    let pkgPath = if($fullPath->contains('::'), | $fullPath->split('::')->init()->joinStrings('::') + '::', | '');
+    $pkgPath + $shortName + '(' + $paramDesc + '): ' + $retDesc;
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::buildFunctionSuggestions(context:meta::pure::compiler::CompilerContext[1], functionName:String[1], paramCount:Integer[1]):String[1]
+{
+    // Look for functions with same name but different arity or visibility
+    let allSameArity = findAllFunctionsByNameAndArityUnfiltered($context, $functionName, $paramCount);
+    let inScope = $allSameArity->filter(f | $context->isElementVisible($f->elementToPath()));
+    let outOfScope = $allSameArity->filter(f | !$context->isElementVisible($f->elementToPath()));
+
+    // Functions with different arity (check a few common arities)
+    let diffArity = range(5)->filter(a | $a != $paramCount)->map(a | findAllFunctionsByNameAndArityUnfiltered($context, $functionName, $a))->filter(f | $context->isElementVisible($f->elementToPath()));
+
+    let parts = []
+        ->concatenate(if($inScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) in scope:\n    ' + $inScope->map(f | functionSignature($f))->joinStrings('\n    '), | []))
+        ->concatenate(if($outOfScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) not in scope:\n    ' + $outOfScope->map(f | functionSignature($f))->joinStrings('\n    '), | []))
+        ->concatenate(if($diffArity->isNotEmpty(), | '. Possible matches with different number of parameters:\n    ' + $diffArity->map(f | functionSignature($f))->joinStrings('\n    '), | []));
+    $parts->joinStrings('');
 }

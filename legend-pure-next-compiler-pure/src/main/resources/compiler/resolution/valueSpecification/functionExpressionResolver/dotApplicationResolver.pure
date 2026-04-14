@@ -74,49 +74,48 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 context = $ctx1
                             );
                       );,
-                    |
-                // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
-                let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
-                    | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
-                      let fromCtx = $context->resolveElement($path);
-                      if($fromCtx->isNotEmpty() && $fromCtx->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-                          | $fromCtx->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
-                          | $ownerType->cast(@meta::pure::metamodel::type::Class<Any>)
-                      );,
-                    | []
-                );
-                // Look up property on the owner type
-                let prop = if($resolvedOwner->isNotEmpty(),
-                    | findProperty($resolvedOwner->toOne(), $functionName),
-                    | []
-                );
-                if($prop->isEmpty(),
-                    | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                          value = $dot,
-                          context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + if($resolvedOwner->isNotEmpty(), |$resolvedOwner->toOne()->meta::pure::functions::meta::elementToPath(), |$ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath()) + '\'' + $siCtx)
-                      ),
-                    | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
-                      let resolvedProp = $prop->toOne();
-                      let propGT = resolvePropertyReturnType($resolvedProp, $receiver.genericType->toOne());
-                      let propMul = $resolvedProp.multiplicity->toOne();
-                      let receiverMul = $receiver.multiplicity;
-                      // Check if automap needed: receiver multiplicity is NOT [1]
-                      if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
-                          | // Direct access — receiver is [1]
-                            let _dd = debug($context, | '  direct access [1]');
-                            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                                value = ^$dot(
-                                    func = $resolvedProp,
-                                    genericType = $propGT,
-                                    multiplicity = $propMul
-                                ),
-                                context = $ctx1
+                    | // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
+                      let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
+                          | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
+                            let fromCtx = $context->resolveElement($path);
+                            if($fromCtx->isNotEmpty() && $fromCtx->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+                                | $fromCtx->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
+                                | $ownerType->cast(@meta::pure::metamodel::type::Class<Any>)
                             );,
-                          | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
-                            let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
-                            buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                          | []
                       );
-                );
+                      // Look up property on the owner type
+                      let prop = if($resolvedOwner->isNotEmpty(),
+                          | findProperty($resolvedOwner->toOne(), $functionName),
+                          | []
+                      );
+                      if($prop->isEmpty(),
+                          | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = $dot,
+                                context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + if($resolvedOwner->isNotEmpty(), |$resolvedOwner->toOne()->meta::pure::functions::meta::elementToPath(), |$ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath()) + '\'' + $siCtx)
+                            ),
+                          | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
+                            let resolvedProp = $prop->toOne();
+                            let propGT = resolvePropertyReturnType($resolvedProp, $receiver.genericType->toOne());
+                            let propMul = $resolvedProp.multiplicity->toOne();
+                            let receiverMul = $receiver.multiplicity;
+                            // Check if automap needed: receiver multiplicity is NOT [1]
+                            if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
+                                | // Direct access — receiver is [1]
+                                  let _dd = debug($context, | '  direct access [1]');
+                                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = ^$dot(
+                                          func = $resolvedProp,
+                                          genericType = $propGT,
+                                          multiplicity = $propMul
+                                      ),
+                                      context = $ctx1
+                                  );,
+                                | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
+                                  let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                                  buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                            );
+                      );
                 ); // end enum if
           );
     );
