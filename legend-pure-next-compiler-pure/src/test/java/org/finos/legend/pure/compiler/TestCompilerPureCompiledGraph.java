@@ -118,7 +118,6 @@ public class TestCompilerPureCompiledGraph
                               if (testName.contains("generics/relation/") ||
                                   testName.contains("match_E_ambiguousFunction.pure") ||
                                   testName.contains("if_E_multipleMatch.pure") ||
-                                  testName.contains("lambda_E_NoInference.pure") ||
                                   (testName.contains("generics/") && (
                                       testName.contains("cast.pure") ||
                                       testName.contains("classTypeParam.pure") ||
