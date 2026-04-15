@@ -284,7 +284,26 @@ public class NativeRepository
             return pureEquals(a, listB.get(0));
         }
 
-        // Enum values — compare by name AND owning enumeration
+
+        // ----- TO DELETE WHEN WE CLEAN ENUM IN THE GRAPH -------
+        // Java enum vs Pure Enum — compare by name
+        if (a instanceof java.lang.Enum<?> enumA && b instanceof meta.pure.metamodel.type.Enum enumB)
+        {
+            return ((java.lang.Enum<?>) a).name().equalsIgnoreCase(enumB._name());
+        }
+        if (a instanceof meta.pure.metamodel.type.Enum enumA2 && b instanceof java.lang.Enum<?> enumB2)
+        {
+            return enumA2._name().equalsIgnoreCase(((java.lang.Enum<?>) b).name());
+        }
+        // Java enum values — direct identity comparison
+        if (a instanceof java.lang.Enum<?> enumA && b instanceof java.lang.Enum<?> enumB)
+        {
+            return enumA == enumB;
+        }
+        // ----- TO DELETE WHEN WE CLEAN ENUM IN THE GRAPH -------
+
+
+        // Pure Enum values — compare by name AND owning enumeration
         if (a instanceof meta.pure.metamodel.type.Enum enumA && b instanceof meta.pure.metamodel.type.Enum enumB)
         {
             if (!Objects.equals(enumA._name(), enumB._name()))

@@ -305,7 +305,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               context = $ctx2),
         | // Compiler-tracked enrichment: for relation column functions, the TypeHolder's RelationType
           // can't be inferred from bindings alone — mirrors Java RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions
-          let enrichResult = enrichRelationTypeHolderForMagicalFunctions($fi.functionName->toOne(), $resolvedParams, $ft, $bindings, $ctx2);
+          let enrichResult = enrichRelationTypeHolderForMagicalFunctions($fi.functionName->toOne(), $resolvedParams, $ft, $bindings, $ctx2, $fi.sourceInformation);
           let enrichedParams = $enrichResult.resolvedParams;
           let enrichedBindings = $enrichResult.bindings;
           let enrichedCtx = $enrichResult.context;

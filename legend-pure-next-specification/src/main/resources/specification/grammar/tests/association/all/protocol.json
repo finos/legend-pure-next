@@ -46,7 +46,7 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "SHARED",
+        "aggregation" : "Shared",
         "defaultValue" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {

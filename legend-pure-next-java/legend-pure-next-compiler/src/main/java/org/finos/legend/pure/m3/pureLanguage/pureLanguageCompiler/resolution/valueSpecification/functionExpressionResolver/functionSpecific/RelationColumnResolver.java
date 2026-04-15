@@ -161,13 +161,13 @@ public final class RelationColumnResolver
         GenericType boundGT = boundTypes.getAny();
 
         // Case 1: T bound to SUBSET operation (Z=(?:K)⊆referenceRelation) — look up columns
-        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.SUBSET)
+        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.Subset)
         {
             return resolveFromSubset(expr, gto, paramValues, bindings, model, context);
         }
 
         // Case 2: T bound to EQUAL with wildcard (V=(?:K)) — resolve K from bindings
-        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.EQUAL)
+        if (boundGT instanceof GenericTypeOperation gto && gto._operationType() == GenericTypeOperationType.Equal)
         {
             return resolveFromEqualWithWildcard(expr, gto, paramValues, bindings, model, context);
         }

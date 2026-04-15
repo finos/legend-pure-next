@@ -58,6 +58,7 @@ public class _GenericType
         {
             case CompilerNotSetGenericType notSet -> null;
             case UndefinedGenericType undefined -> null;
+            case GenericTypeOperation gto -> null;
             case GenericTypeValue gtv -> gtv._type();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -88,6 +89,7 @@ public class _GenericType
         {
             case CompilerNotSetGenericType notSet -> Lists.mutable.empty();
             case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeOperation gto -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._typeArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -102,6 +104,7 @@ public class _GenericType
         {
             case CompilerNotSetGenericType notSet -> Lists.mutable.empty();
             case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeOperation gto -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._multiplicityArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -948,6 +951,7 @@ public class _GenericType
             }
             case CompilerNotSetGenericType notSet -> null;
             case UndefinedGenericType undefined -> null;
+            case GenericTypeOperation gto -> null;
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + sourceGenericType.getClass());
         };
     }

@@ -98,7 +98,7 @@ public final class _GenericTypeOperation
     {
         return switch (opType)
         {
-            case UNION ->
+            case Union ->
             {
                 RelationTypeImpl result = new RelationTypeImpl();
                 GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
@@ -125,7 +125,7 @@ public final class _GenericTypeOperation
                                         ._typeArguments(Lists.mutable.with(ownerGT))
                         );
             }
-            case DIFFERENCE ->
+            case Difference ->
             {
                 MutableSet<String> rightNames = Sets.mutable.empty();
                 if (rightRT._columns() != null)
@@ -153,7 +153,7 @@ public final class _GenericTypeOperation
                                         ._typeArguments(Lists.mutable.with(ownerGT))
                         );
             }
-            case EQUAL, SUBSET -> null;
+            case Equal, Subset -> null;
         };
     }
 
@@ -170,11 +170,11 @@ public final class _GenericTypeOperation
      */
     public static void collectTypeParameterBindings(GenericTypeOperation gto, GenericType argGT, ParametersBinding bindings)
     {
-        if (gto._operationType() == GenericTypeOperationType.SUBSET)
+        if (gto._operationType() == GenericTypeOperationType.Subset)
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
         }
-        else if (gto._operationType() == GenericTypeOperationType.EQUAL)
+        else if (gto._operationType() == GenericTypeOperationType.Equal)
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
             _GenericType.collectTypeParameterBindings(gto._right(), argGT, bindings);
@@ -190,7 +190,7 @@ public final class _GenericTypeOperation
      */
     public static boolean isConcrete(GenericTypeOperation gto)
     {
-        if (gto._operationType() == GenericTypeOperationType.SUBSET || gto._operationType() == GenericTypeOperationType.EQUAL)
+        if (gto._operationType() == GenericTypeOperationType.Subset || gto._operationType() == GenericTypeOperationType.Equal)
         {
             return _GenericType.isConcrete(gto._right());
         }
@@ -205,10 +205,10 @@ public final class _GenericTypeOperation
         _GenericType.printTo(gto._left(), fullPath, sb);
         sb.append(switch (gto._operationType())
         {
-            case UNION -> "+";
-            case DIFFERENCE -> "-";
-            case EQUAL -> "=";
-            case SUBSET -> "⊆";
+            case Union -> "+";
+            case Difference -> "-";
+            case Equal -> "=";
+            case Subset -> "⊆";
         });
         _GenericType.printTo(gto._right(), fullPath, sb);
     }
@@ -235,11 +235,11 @@ public final class _GenericTypeOperation
     public static boolean isCompatible(GenericTypeOperation gto, GenericType other, boolean contravariant, MetadataAccess model)
     {
         GenericType right = gto._right();
-        if (gto._operationType() == GenericTypeOperationType.EQUAL)
+        if (gto._operationType() == GenericTypeOperationType.Equal)
         {
             return _GenericType.isCompatible(right, other, contravariant, model);
         }
-        if (gto._operationType() == GenericTypeOperationType.SUBSET)
+        if (gto._operationType() == GenericTypeOperationType.Subset)
         {
             // Actual must be a subset of the superset T: every column in actual must be in T
             return _GenericType.isCompatible(other, right, contravariant, model);

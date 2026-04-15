@@ -964,14 +964,16 @@ public class RdfFbsJavaGenerator
             sb.append("        for (int i = 0; i < len; i++)\n");
             sb.append("        {\n");
             sb.append("            String v = fb.").append(fbField).append("(i);\n");
-            sb.append("            if (v != null) { result.add(").append(enumType).append(".valueOf(v)); }\n");
+            sb.append("            if (v != null) { for (").append(enumType).append(" e : ").append(enumType).append(".values()) { if (e.name().equalsIgnoreCase(v)) { result.add(e); break; } } }\n");
             sb.append("        }\n");
             sb.append("        return result;\n");
         }
         else
         {
             sb.append("        String v = fb.").append(fbField).append("();\n");
-            sb.append("        return v != null ? ").append(enumType).append(".valueOf(v) : null;\n");
+            sb.append("        if (v == null) return null;\n");
+            sb.append("        for (").append(enumType).append(" e : ").append(enumType).append(".values()) { if (e.name().equalsIgnoreCase(v)) return e; }\n");
+            sb.append("        return ").append(enumType).append(".valueOf(v);\n");
         }
     }
 

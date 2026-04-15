@@ -424,7 +424,7 @@
       },
       "properties" : [ {
         "_type" : "Property",
-        "aggregation" : "COMPOSITE",
+        "aggregation" : "Composite",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -554,7 +554,7 @@
         } ]
       }, {
         "_type" : "Property",
-        "aggregation" : "SHARED",
+        "aggregation" : "Shared",
         "defaultValue" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {

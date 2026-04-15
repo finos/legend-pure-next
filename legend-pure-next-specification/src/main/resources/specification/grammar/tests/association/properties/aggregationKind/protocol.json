@@ -46,7 +46,7 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "COMPOSITE",
+        "aggregation" : "Composite",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {

@@ -25,7 +25,7 @@ import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichRelationTypeHolderForMagicalFunctions(funcName:String[1], resolvedParams:meta::pure::metamodel::valuespecification::ValueSpecification[*], ft:meta::pure::metamodel::type::FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):EnrichResult[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichRelationTypeHolderForMagicalFunctions(funcName:String[1], resolvedParams:meta::pure::metamodel::valuespecification::ValueSpecification[*], ft:meta::pure::metamodel::type::FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1], exprSourceInformation:meta::pure::metamodel::SourceInformation[0..1]):EnrichResult[1]
 {
     let _d = debug($context, | 'enrichRelationTypeHolder: ' + $funcName);
     let paramCount = $resolvedParams->size();
@@ -46,7 +46,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             let updatedBindings = updateTypeHolderBinding($ft, $enriched, 1, $bindings);
                             ^EnrichResult(resolvedParams = $enriched, bindings = $updatedBindings, context = $context);,
                           | if(($funcName == 'colSpecArray' || $funcName == 'colSpec') && $paramCount >= 2,
-                                | let result = tryResolveSubsetForTypeHolder($resolvedParams, $ft, $bindings, $context);
+                                | let result = tryResolveSubsetForTypeHolder($resolvedParams, $ft, $bindings, $context, $exprSourceInformation);
                                   let updatedBindings = updateTypeHolderBinding($ft, $result.resolvedParams, 1, $result.bindings);
                                   ^$result(bindings = $updatedBindings);,
                                 | ^EnrichResult(resolvedParams = $resolvedParams, bindings = $bindings, context = $context)
@@ -89,7 +89,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     [$paramValues->at(0), ^$val(genericType = $typeHolderGT)];
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::tryResolveSubsetForTypeHolder(paramValues:meta::pure::metamodel::valuespecification::ValueSpecification[*], ft:meta::pure::metamodel::type::FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):EnrichResult[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::tryResolveSubsetForTypeHolder(paramValues:meta::pure::metamodel::valuespecification::ValueSpecification[*], ft:meta::pure::metamodel::type::FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1], exprSourceInformation:meta::pure::metamodel::SourceInformation[0..1]):EnrichResult[1]
 {
     let typeHolderParamGT = $ft.parameters->at(1)->cast(@meta::pure::metamodel::valuespecification::VariableExpression).genericType->toOne();
     let typeArgs = $typeHolderParamGT->genericTypeTypeArguments();
@@ -104,7 +104,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
                     | let boundGT = $boundTypes->toOne().values->at(0);
                       if($boundGT->instanceOf(meta::pure::metamodel::relation::GenericTypeOperation) && $boundGT->cast(@meta::pure::metamodel::relation::GenericTypeOperation).operationType == meta::pure::metamodel::relation::GenericTypeOperationType.Subset,
-                          | resolveFromSubset($paramValues, $boundGT->cast(@meta::pure::metamodel::relation::GenericTypeOperation), $bindings, $context),
+                          | resolveFromSubset($paramValues, $boundGT->cast(@meta::pure::metamodel::relation::GenericTypeOperation), $bindings, $context, $exprSourceInformation),
                           | if($boundGT->instanceOf(meta::pure::metamodel::relation::GenericTypeOperation) && $boundGT->cast(@meta::pure::metamodel::relation::GenericTypeOperation).operationType == meta::pure::metamodel::relation::GenericTypeOperationType.Equal,
                                 | resolveFromEqualWithWildcard($paramValues, $boundGT->cast(@meta::pure::metamodel::relation::GenericTypeOperation), $bindings, $context),
                                 | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context)
@@ -115,7 +115,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:meta::pure::metamodel::valuespecification::ValueSpecification[*], subsetOp:meta::pure::metamodel::relation::GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):EnrichResult[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:meta::pure::metamodel::valuespecification::ValueSpecification[*], subsetOp:meta::pure::metamodel::relation::GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1], exprSourceInformation:meta::pure::metamodel::SourceInformation[0..1]):EnrichResult[1]
 {
     let resolvedRight = makeAsConcreteAsPossible($subsetOp.right, $bindings);
     let referenceType = $resolvedRight->genericTypeRawType();
@@ -123,7 +123,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
         | let referenceRT = $referenceType->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
           let columnNames = extractColumnNames($paramValues->at(0));
-          let siCtx = formatMetamodelSourceInfo($paramValues->at(0)->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation).sourceInformation, $context);
+          let siCtx = formatMetamodelSourceInfo($exprSourceInformation, $context);
           let lookupResult = $columnNames->fold({colName, acc |
               let foundCol = $referenceRT.columns->cast(@meta::pure::metamodel::relation::Column<Nil, Any|*>)->filter(c | $c.name == $colName);
               if($foundCol->isEmpty(),
@@ -182,7 +182,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     | []->cast(@String)
                 )
           );,
-        | []->cast(@String)
+        | // Direct Collection or AtomicValue (when called with resolved params instead of FunctionInvocation)
+          if($arg->instanceOf(meta::pure::metamodel::valuespecification::Collection),
+              | $arg->cast(@meta::pure::metamodel::valuespecification::Collection).values->filter(v | $v->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue))->map(v | $v->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@String));,
+              | if($arg->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue),
+                    | [$arg->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@String)],
+                    | []->cast(@String)
+                )
+          )
     );
 }
 

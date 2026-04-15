@@ -48,7 +48,7 @@ public class _Property
         }
 
         return new PropertyImpl((GenericTypeValue) resolvedClassifierGenericType)
-                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.None)
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)
                 ._multiplicity(resolvedMultiplicity)

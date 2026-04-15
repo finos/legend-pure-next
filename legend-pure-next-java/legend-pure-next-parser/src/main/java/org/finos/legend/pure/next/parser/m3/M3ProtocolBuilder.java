@@ -320,7 +320,7 @@ public class M3ProtocolBuilder
             String aggText = ctx.aggregation().getText();
             // Remove parentheses: (none) -> none
             aggText = aggText.substring(1, aggText.length() - 1);
-            prop._aggregation(AggregationKind.valueOf(aggText.toUpperCase()));
+            prop._aggregation(AggregationKind.valueOf(aggText.substring(0, 1).toUpperCase() + aggText.substring(1)));
         }
 
         // Parse default value
@@ -1986,7 +1986,7 @@ public class M3ProtocolBuilder
         if (ctx.equalType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._operationType(GenericTypeOperationType.EQUAL)
+                    ._operationType(GenericTypeOperationType.Equal)
                     ._left(result)
                     ._right(buildGenericType(ctx.equalType().type(), typeParamNames, multParamNames));
         }
@@ -1997,14 +1997,14 @@ public class M3ProtocolBuilder
             if (opCtx.addType() != null)
             {
                 result = new GenericTypeOperationImpl()
-                        ._operationType(GenericTypeOperationType.UNION)
+                        ._operationType(GenericTypeOperationType.Union)
                         ._left(result)
                         ._right(buildGenericType(opCtx.addType().type(), typeParamNames, multParamNames));
             }
             else
             {
                 result = new GenericTypeOperationImpl()
-                        ._operationType(GenericTypeOperationType.DIFFERENCE)
+                        ._operationType(GenericTypeOperationType.Difference)
                         ._left(result)
                         ._right(buildGenericType(opCtx.subType().type(), typeParamNames, multParamNames));
             }
@@ -2014,7 +2014,7 @@ public class M3ProtocolBuilder
         if (ctx.subsetType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._operationType(GenericTypeOperationType.SUBSET)
+                    ._operationType(GenericTypeOperationType.Subset)
                     ._left(result)
                     ._right(buildGenericType(ctx.subsetType().type(), typeParamNames, multParamNames));
         }

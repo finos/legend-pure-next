@@ -645,6 +645,25 @@ function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(gen
     $genericType->match([
         ns : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | $genericType,
         undefined : UndefinedGenericType[1] | $genericType,
+        gto : meta::pure::metamodel::relation::GenericTypeOperation[1] |
+            let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings);
+            let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings);
+            // If both sides are concrete RelationTypes, evaluate the operation (like Java _GenericTypeOperation.makeAsConcreteAsPossible)
+            let evaluated = if($resolvedLeft->instanceOf(GenericTypeValue) && $resolvedLeft->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedLeft->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType)
+                               && $resolvedRight->instanceOf(GenericTypeValue) && $resolvedRight->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedRight->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType),
+                | let leftRT = $resolvedLeft->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
+                  let rightRT = $resolvedRight->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
+                  let result = evaluateRelationTypeOperation($leftRT, $rightRT, $gto.operationType);
+                  if($result->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $result->toOne()), | []);,
+                | []
+            );
+            if($evaluated->isNotEmpty(),
+                | $evaluated->toOne(),
+                | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
+                      | ^$gto(left = $resolvedLeft, right = $resolvedRight),
+                      | $genericType
+                  )
+            );,
         gtv : GenericTypeValue[1] |
             if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(TypeParameter),
                 | let name = $gtv.type->toOne()->cast(@TypeParameter).name;

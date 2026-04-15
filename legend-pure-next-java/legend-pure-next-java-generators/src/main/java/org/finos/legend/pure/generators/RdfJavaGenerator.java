@@ -668,18 +668,9 @@ public class RdfJavaGenerator
 
     private String toEnumConstant(String value)
     {
-        // Convert camelCase or spaces to UPPER_SNAKE_CASE
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < value.length(); i++)
-        {
-            char c = value.charAt(i);
-            if (Character.isUpperCase(c) && i > 0)
-            {
-                sb.append('_');
-            }
-            sb.append(Character.toUpperCase(c));
-        }
-        return sb.toString();
+        // Use the original case from the metamodel (e.g., "Composite", "Subset")
+        // so that Java enum name() matches the metamodel element name.
+        return value;
     }
 
     /**

@@ -708,10 +708,10 @@ public final class CompiledGraphPrinter
         {
             String op = switch (gto._operationType())
             {
-                case UNION -> "+";
-                case DIFFERENCE -> "-";
-                case EQUAL -> "=";
-                case SUBSET -> "⊆";
+                case Union -> "+";
+                case Difference -> "-";
+                case Equal -> "=";
+                case Subset -> "⊆";
             };
             return printType(gto._left()) + op + printType(gto._right());
         }

@@ -115,12 +115,6 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Excluded — requires RelationColumnResolver subset validation (colSpecArray with ⊆ constraint)
-                              if (testName.contains("distinct_E_columnIsNotSubset.pure"))
-                              {
-                                  return;
-                              }
-
                               tests.add(DynamicTest.dynamicTest(testName, () ->
                               {
                                   try

@@ -96,10 +96,10 @@ public final class GenericTypeCompiler
         GenericType right = compile(gto._right(), imports, model, context);
         GenericTypeOperationType opType = switch (gto._operationType())
         {
-            case UNION -> GenericTypeOperationType.UNION;
-            case DIFFERENCE -> GenericTypeOperationType.DIFFERENCE;
-            case SUBSET -> GenericTypeOperationType.SUBSET;
-            case EQUAL -> GenericTypeOperationType.EQUAL;
+            case Union -> GenericTypeOperationType.Union;
+            case Difference -> GenericTypeOperationType.Difference;
+            case Subset -> GenericTypeOperationType.Subset;
+            case Equal -> GenericTypeOperationType.Equal;
         };
         return new GenericTypeOperationImpl(model)
                 ._left(left)

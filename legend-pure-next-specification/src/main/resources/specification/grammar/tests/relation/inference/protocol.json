@@ -78,7 +78,7 @@
                   "name" : "Z"
                 }
               },
-              "operationType" : "EQUAL",
+              "operationType" : "Equal",
               "right" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
@@ -104,7 +104,7 @@
                 }
               }
             },
-            "operationType" : "SUBSET",
+            "operationType" : "Subset",
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -157,7 +157,7 @@
                 "name" : "V"
               }
             },
-            "operationType" : "EQUAL",
+            "operationType" : "Equal",
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -228,7 +228,7 @@
                 "name" : "T"
               }
             },
-            "operationType" : "DIFFERENCE",
+            "operationType" : "Difference",
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -237,7 +237,7 @@
               }
             }
           },
-          "operationType" : "UNION",
+          "operationType" : "Union",
           "right" : {
             "_type" : "UserDefinedGenericType",
             "type" : {

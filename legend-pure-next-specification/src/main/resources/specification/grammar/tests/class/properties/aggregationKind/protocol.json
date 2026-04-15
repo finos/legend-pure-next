@@ -11,7 +11,7 @@
       },
       "properties" : [ {
         "_type" : "Property",
-        "aggregation" : "NONE",
+        "aggregation" : "None",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -47,7 +47,7 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "COMPOSITE",
+        "aggregation" : "Composite",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
@@ -83,7 +83,7 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "SHARED",
+        "aggregation" : "Shared",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {

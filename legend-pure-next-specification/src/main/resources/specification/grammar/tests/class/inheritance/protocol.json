@@ -159,7 +159,7 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "NONE",
+        "aggregation" : "None",
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {

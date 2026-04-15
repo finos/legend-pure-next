@@ -557,11 +557,11 @@ public class M3BootstrapReader
                     String uri = aggStmt.getObject().asResource().getURI();
                     aggName = uri.substring(uri.lastIndexOf('_') + 1);
                 }
-                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.valueOf(aggName.toUpperCase()));
+                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.valueOf(aggName));
             }
             else
             {
-                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE);
+                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.None);
             }
 
             // Wire stereotypes (e.g., ProtocolInfo.inferred, ProtocolInfo.excluded)
@@ -757,7 +757,7 @@ public class M3BootstrapReader
                 propCGT._classifierGenericType(propCGT);
 
                 PropertyImpl prop = new PropertyImpl()
-                        ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                        ._aggregation(meta.pure.metamodel.function.property.AggregationKind.None)
                         ._name(valName)
                         ._owner(enumeration)
                         ._genericType(enumGT)

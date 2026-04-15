@@ -102,7 +102,7 @@ public final class EnumerationHandler
                             _GenericType.buildUserDefinedGenericType(propertyType, model)
                             ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                             ._multiplicityArguments(Lists.mutable.with(pureOne))
-                        )._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                        )._aggregation(meta.pure.metamodel.function.property.AggregationKind.None)
                          ._name(grammarProp._name())
                          ._owner(result)
                          ._genericType(enumGT)

@@ -904,16 +904,16 @@ public class M3ProtocolSerializer
         serializeGenericType(sb, op._left());
         switch (op._operationType())
         {
-            case EQUAL:
+            case Equal:
                 sb.append("=");
                 break;
-            case UNION:
+            case Union:
                 sb.append("+");
                 break;
-            case DIFFERENCE:
+            case Difference:
                 sb.append("-");
                 break;
-            case SUBSET:
+            case Subset:
                 sb.append("⊆");
                 break;
             default:
