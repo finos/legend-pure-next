@@ -46,7 +46,14 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "Composite",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "Composite"
+          } ],
+          "pointerValue" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {

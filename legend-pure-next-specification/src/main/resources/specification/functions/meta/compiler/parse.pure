@@ -42,7 +42,9 @@ function <<test.Test>> meta::pure::compiler::testParseEnumPropertyValues() : Boo
     let file = meta::pure::compiler::parse('testSource', $content);
     let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
 
-    // The composite property should have AggregationKind == Composite
+    // The composite property's aggregation should be an Enum_Pointer referencing the metamodel enum
     let compositeProp = $cls.properties->filter(p | $p.name == 'child')->at(0);
-    assertEquals(meta::pure::protocol::grammar::function::property::AggregationKind.Composite, $compositeProp.aggregation);
+    let enumPtr = $compositeProp.aggregation->cast(@meta::pure::protocol::grammar::Enum_Pointer);
+    assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.pointerValue);
+    assertEquals('Composite', $enumPtr.extraPointerValues->at(0).value);
 }

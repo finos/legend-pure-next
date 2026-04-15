@@ -706,12 +706,14 @@ public final class CompiledGraphPrinter
         // Handle GenericTypeOperation (type algebra: T+R, T-R, T=R, T⊆R)
         if (gt instanceof GenericTypeOperation gto)
         {
-            String op = switch (gto._operationType())
+            String opName = gto._operationType()._name();
+            String op = switch (opName)
             {
-                case Union -> "+";
-                case Difference -> "-";
-                case Equal -> "=";
-                case Subset -> "⊆";
+                case "Union" -> "+";
+                case "Difference" -> "-";
+                case "Equal" -> "=";
+                case "Subset" -> "⊆";
+                default -> "?";
             };
             return printType(gto._left()) + op + printType(gto._right());
         }

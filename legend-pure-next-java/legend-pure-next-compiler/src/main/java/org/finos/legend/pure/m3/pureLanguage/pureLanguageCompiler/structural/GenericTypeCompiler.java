@@ -17,7 +17,6 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.SourceInformation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;
-import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
@@ -31,6 +30,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
@@ -94,13 +94,9 @@ public final class GenericTypeCompiler
     {
         GenericType left = compile(gto._left(), imports, model, context);
         GenericType right = compile(gto._right(), imports, model, context);
-        GenericTypeOperationType opType = switch (gto._operationType())
-        {
-            case Union -> GenericTypeOperationType.Union;
-            case Difference -> GenericTypeOperationType.Difference;
-            case Subset -> GenericTypeOperationType.Subset;
-            case Equal -> GenericTypeOperationType.Equal;
-        };
+        // Read enum value from Enum_Pointer and resolve from graph
+        String opName = gto._operationType()._extraPointerValues().getFirst()._value();
+        meta.pure.metamodel.relation.GenericTypeOperationType opType = (meta.pure.metamodel.relation.GenericTypeOperationType) _Enumeration.resolveEnumValue("meta::pure::metamodel::relation::GenericTypeOperationType", opName, model);
         return new GenericTypeOperationImpl(model)
                 ._left(left)
                 ._right(right)

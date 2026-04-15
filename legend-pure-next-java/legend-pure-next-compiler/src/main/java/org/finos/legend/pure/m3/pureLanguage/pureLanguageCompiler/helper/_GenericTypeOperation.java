@@ -17,7 +17,6 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 import meta.pure.metamodel.relation.Column;
 import meta.pure.metamodel.relation.GenericTypeOperation;
 import meta.pure.metamodel.relation.GenericTypeOperationImpl;
-import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.Type;
@@ -42,6 +41,9 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBind
  *   <li>{@code T=R} — EQUAL: type equality constraint</li>
  *   <li>{@code T⊆R} — SUBSET: subset constraint</li>
  * </ul>
+ *
+ * <p>Operation types are compared by {@code _name()} since enum values
+ * can be either generated Impl instances or graph-loaded Enum instances.</p>
  */
 public final class _GenericTypeOperation
 {
@@ -49,12 +51,20 @@ public final class _GenericTypeOperation
     {
     }
 
+    /** Get the operation name from a GenericTypeOperationType enum instance. */
+    private static String opName(GenericTypeOperation gto)
+    {
+        return gto._operationType()._name();
+    }
+
+    private static boolean isUnion(GenericTypeOperation gto) { return "Union".equals(opName(gto)); }
+    private static boolean isDifference(GenericTypeOperation gto) { return "Difference".equals(opName(gto)); }
+    private static boolean isSubset(GenericTypeOperation gto) { return "Subset".equals(opName(gto)); }
+    private static boolean isEqual(GenericTypeOperation gto) { return "Equal".equals(opName(gto)); }
+
     /**
      * Resolve a {@link GenericTypeOperation} by recursing into left and right,
      * and evaluating the operation if both sides become concrete RelationTypes.
-     *
-     * @return the resolved GenericType, which may be a concrete RelationType,
-     * a partially-resolved GenericTypeOperation, or the original if unchanged
      */
     public static GenericType makeAsConcreteAsPossible(GenericTypeOperation gto, ParametersBinding bindings, MetadataAccess model)
     {
@@ -65,7 +75,7 @@ public final class _GenericTypeOperation
         if (resolvedLeft instanceof GenericTypeValue && _GenericType.type(resolvedLeft) instanceof RelationType leftRT
                 && resolvedRight instanceof GenericTypeValue && _GenericType.type(resolvedRight) instanceof RelationType rightRT)
         {
-            RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, gto._operationType(), model);
+            RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, opName(gto), model);
             if (resultRT != null)
             {
                 return new InferredGenericTypeImpl(model)._type(resultRT);
@@ -83,98 +93,84 @@ public final class _GenericTypeOperation
     }
 
     /**
-     * Evaluate a {@link GenericTypeOperationType} on two concrete {@link RelationType}s.
-     * <ul>
-     *   <li><b>UNION</b>: concatenate columns from left and right</li>
-     *   <li><b>DIFFERENCE</b>: remove columns from left whose names appear in right</li>
-     *   <li><b>EQUAL / SUBSET</b>: not evaluated (returns null)</li>
-     * </ul>
+     * Evaluate a relation type operation on two concrete {@link RelationType}s.
+     * Package-visible for testing.
      */
-    public static RelationType evaluateRelationTypeOperation(
+    static RelationType evaluateRelationTypeOperation(
             RelationType leftRT,
             RelationType rightRT,
-            GenericTypeOperationType opType,
+            String operationName,
             MetadataAccess model)
     {
-        return switch (opType)
+        if ("Union".equals(operationName))
         {
-            case Union ->
+            RelationTypeImpl result = new RelationTypeImpl();
+            GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
+            MutableList<Column> columns = Lists.mutable.empty();
+            if (leftRT._columns() != null)
             {
-                RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
-                MutableList<Column> columns = Lists.mutable.empty();
-                if (leftRT._columns() != null)
+                for (Column col : leftRT._columns())
                 {
-                    for (Column col : leftRT._columns())
+                    columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
+                }
+            }
+            if (rightRT._columns() != null)
+            {
+                for (Column col : rightRT._columns())
+                {
+                    columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
+                }
+            }
+            return result
+                    ._columns(columns)
+                    ._classifierGenericType(
+                            new UserDefinedGenericTypeImpl(model)
+                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                    ._typeArguments(Lists.mutable.with(ownerGT))
+                    );
+        }
+        else if ("Difference".equals(operationName))
+        {
+            MutableSet<String> rightNames = Sets.mutable.empty();
+            if (rightRT._columns() != null)
+            {
+                rightRT._columns().forEach(c -> rightNames.add(c._name()));
+            }
+            RelationTypeImpl result = new RelationTypeImpl();
+            GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
+            MutableList<Column> columns = Lists.mutable.empty();
+            if (leftRT._columns() != null)
+            {
+                for (Column col : leftRT._columns())
+                {
+                    if (!rightNames.contains(col._name()))
                     {
                         columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
                     }
                 }
-                if (rightRT._columns() != null)
-                {
-                    for (Column col : rightRT._columns())
-                    {
-                        columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
-                    }
-                }
-                yield result
-                        ._columns(columns)
-                        ._classifierGenericType(
-                                new UserDefinedGenericTypeImpl(model)
-                                        ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
-                                        ._typeArguments(Lists.mutable.with(ownerGT))
-                        );
             }
-            case Difference ->
-            {
-                MutableSet<String> rightNames = Sets.mutable.empty();
-                if (rightRT._columns() != null)
-                {
-                    rightRT._columns().forEach(c -> rightNames.add(c._name()));
-                }
-                RelationTypeImpl result = new RelationTypeImpl();
-                GenericType ownerGT = _GenericType.buildUserDefinedGenericType(result, model);
-                MutableList<Column> columns = Lists.mutable.empty();
-                if (leftRT._columns() != null)
-                {
-                    for (Column col : leftRT._columns())
-                    {
-                        if (!rightNames.contains(col._name()))
-                        {
-                            columns.add(_Column.build(col._name(), ownerGT, col._genericType(), col._multiplicity(), col._nameWildCard() != null && col._nameWildCard(), model));
-                        }
-                    }
-                }
-                yield result
-                        ._columns(columns)
-                        ._classifierGenericType(
-                                new UserDefinedGenericTypeImpl(model)
-                                        ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
-                                        ._typeArguments(Lists.mutable.with(ownerGT))
-                        );
-            }
-            case Equal, Subset -> null;
-        };
+            return result
+                    ._columns(columns)
+                    ._classifierGenericType(
+                            new UserDefinedGenericTypeImpl(model)
+                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                                    ._typeArguments(Lists.mutable.with(ownerGT))
+                    );
+        }
+        // EQUAL, SUBSET → not evaluated
+        return null;
     }
 
     /**
      * Decompose a GenericTypeOperation for type parameter binding.
-     * <ul>
-     *   <li><b>SUBSET</b> {@code (Z⊆T)}: bind only the left side (Z) to the arg</li>
-     *   <li><b>EQUAL</b> {@code (Z=(?:K))}: bind both sides to the arg</li>
-     * </ul>
-     *
-     * @param gto      the operation on the parameter side
-     * @param argGT    the concrete argument type
-     * @param bindings the bindings to populate
      */
     public static void collectTypeParameterBindings(GenericTypeOperation gto, GenericType argGT, ParametersBinding bindings)
     {
-        if (gto._operationType() == GenericTypeOperationType.Subset)
+        if (isSubset(gto))
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
         }
-        else if (gto._operationType() == GenericTypeOperationType.Equal)
+        else if (isEqual(gto))
         {
             _GenericType.collectTypeParameterBindings(gto._left(), argGT, bindings);
             _GenericType.collectTypeParameterBindings(gto._right(), argGT, bindings);
@@ -183,14 +179,10 @@ public final class _GenericTypeOperation
 
     /**
      * Check whether a GenericTypeOperation is concrete enough to use.
-     * <p>
-     * For SUBSET {@code (Z⊆T)} and EQUAL {@code (V=(?:K))}, only the right side
-     * needs to be concrete — the left side is a derived type parameter.
-     * For other operations (UNION, DIFFERENCE), both sides must be concrete.
      */
     public static boolean isConcrete(GenericTypeOperation gto)
     {
-        if (gto._operationType() == GenericTypeOperationType.Subset || gto._operationType() == GenericTypeOperationType.Equal)
+        if (isSubset(gto) || isEqual(gto))
         {
             return _GenericType.isConcrete(gto._right());
         }
@@ -203,13 +195,13 @@ public final class _GenericTypeOperation
     public static void printTo(GenericTypeOperation gto, boolean fullPath, StringBuilder sb)
     {
         _GenericType.printTo(gto._left(), fullPath, sb);
-        sb.append(switch (gto._operationType())
-        {
-            case Union -> "+";
-            case Difference -> "-";
-            case Equal -> "=";
-            case Subset -> "⊆";
-        });
+        String opStr;
+        if (isUnion(gto)) opStr = "+";
+        else if (isDifference(gto)) opStr = "-";
+        else if (isEqual(gto)) opStr = "=";
+        else if (isSubset(gto)) opStr = "⊆";
+        else opStr = "?";
+        sb.append(opStr);
         _GenericType.printTo(gto._right(), fullPath, sb);
     }
 
@@ -224,24 +216,16 @@ public final class _GenericTypeOperation
 
     /**
      * Check compatibility of a GenericTypeOperation against a concrete GenericType.
-     * <p>
-     * EQUAL ({@code V=(?:K)}): the right side is the structural constraint —
-     * check {@code isCompatible(right, other)}.
-     * <p>
-     * SUBSET ({@code Z⊆T}): the right side T is the superset —
-     * check {@code isCompatible(other, right)}, i.e. every column in actual
-     * must exist in the superset T.
      */
     public static boolean isCompatible(GenericTypeOperation gto, GenericType other, boolean contravariant, MetadataAccess model)
     {
         GenericType right = gto._right();
-        if (gto._operationType() == GenericTypeOperationType.Equal)
+        if (isEqual(gto))
         {
             return _GenericType.isCompatible(right, other, contravariant, model);
         }
-        if (gto._operationType() == GenericTypeOperationType.Subset)
+        if (isSubset(gto))
         {
-            // Actual must be a subset of the superset T: every column in actual must be in T
             return _GenericType.isCompatible(other, right, contravariant, model);
         }
         return true;
@@ -249,9 +233,6 @@ public final class _GenericTypeOperation
 
     /**
      * Reconcile inferred types in matching GenericTypeOperations.
-     * Returns a new GenericTypeOperation if either side changed,
-     * or the same {@code actual} reference if nothing changed.
-     * Pure functional — no in-place mutation.
      */
     public static GenericTypeOperation reconcileInferred(GenericTypeOperation expected, GenericTypeOperation actual, MetadataAccess model)
     {

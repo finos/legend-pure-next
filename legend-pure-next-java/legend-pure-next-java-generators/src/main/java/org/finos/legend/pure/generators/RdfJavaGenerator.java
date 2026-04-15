@@ -103,7 +103,7 @@ public class RdfJavaGenerator
         generateAnnotations(outputDir);
         generateClassInterfaces(outputDir);
         generateClassImplementations(outputDir);
-        generateEnums(outputDir);
+        generateEnumInterfaces(outputDir);
 
         System.out.println("\nGeneration complete. Output: " + outputDir);
     }
@@ -483,7 +483,7 @@ public class RdfJavaGenerator
     // Code Generation - Enums
     // =========================================================================
 
-    private void generateEnums(Path outputDir) throws IOException
+    private void generateEnumInterfaces(Path outputDir) throws IOException
     {
         for (EnumInfo enumInfo : m3Model.enumInfoMap().valuesView())
         {
@@ -491,47 +491,57 @@ public class RdfJavaGenerator
             Path packageDir = outputDir.resolve(javaPackage.replace('.', '/'));
             Files.createDirectories(packageDir);
 
-            String javaCode = generateEnumCode(enumInfo);
-            Path filePath = packageDir.resolve(enumInfo.name + ".java");
-            Files.write(filePath, javaCode.getBytes(StandardCharsets.UTF_8));
-            System.out.println("  Generated: " + enumInfo.name + ".java");
+            // Generate interface
+            String interfaceCode = generateEnumInterfaceCode(enumInfo);
+            Path interfacePath = packageDir.resolve(enumInfo.name + ".java");
+            Files.write(interfacePath, interfaceCode.getBytes(StandardCharsets.UTF_8));
+
+            // Generate implementation
+            String implCode = generateEnumImplCode(enumInfo);
+            Path implPath = packageDir.resolve(enumInfo.name + "Impl.java");
+            Files.write(implPath, implCode.getBytes(StandardCharsets.UTF_8));
+
+            System.out.println("  Generated: " + enumInfo.name + ".java + Impl");
         }
     }
 
-    private String generateEnumCode(EnumInfo enumInfo)
+    private String generateEnumInterfaceCode(EnumInfo enumInfo)
     {
         StringBuilder sb = new StringBuilder();
         String thisPackage = toJavaPackage(enumInfo.packagePath);
 
-        // Package declaration
         sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n");
         sb.append("package ").append(thisPackage).append(";\n\n");
-
-        // JavaDoc
         sb.append("/**\n");
-        sb.append(" * Generated enum for M3 enumeration: ").append(enumInfo.name).append("\n");
+        sb.append(" * Generated interface for M3 enumeration: ").append(enumInfo.name).append("\n");
         if (enumInfo.packagePath != null)
         {
             sb.append(" * Pure package: ").append(enumInfo.packagePath).append("\n");
         }
         sb.append(" */\n");
+        sb.append("public interface ").append(enumInfo.name).append(" extends meta.pure.metamodel.type.Enum\n{\n");
+        sb.append("}\n");
 
-        // Enum declaration
-        sb.append("public enum ").append(enumInfo.name).append("\n{\n");
+        return sb.toString();
+    }
 
-        // Enum values
-        if (!enumInfo.values.isEmpty())
-        {
-            for (int i = 0; i < enumInfo.values.size(); i++)
-            {
-                String value = enumInfo.values.get(i);
-                String enumConstant = toEnumConstant(value);
-                sb.append("    ").append(enumConstant);
-                sb.append(i < enumInfo.values.size() - 1 ? "," : ";");
-                sb.append("  // ").append(value).append("\n");
-            }
-        }
+    private String generateEnumImplCode(EnumInfo enumInfo)
+    {
+        StringBuilder sb = new StringBuilder();
+        String thisPackage = toJavaPackage(enumInfo.packagePath);
 
+        sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n");
+        sb.append("package ").append(thisPackage).append(";\n\n");
+        sb.append("/**\n");
+        sb.append(" * Generated implementation for M3 enumeration: ").append(enumInfo.name).append("\n");
+        sb.append(" * <p>Extends EnumImpl and implements the typed interface.</p>\n");
+        sb.append(" */\n");
+        sb.append("public class ").append(enumInfo.name).append("Impl extends meta.pure.metamodel.type.EnumImpl implements ").append(enumInfo.name).append("\n{\n");
+        sb.append("    public ").append(enumInfo.name).append("Impl() {}\n\n");
+        sb.append("    public ").append(enumInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
+        sb.append("    {\n");
+        sb.append("        super(model);\n");
+        sb.append("    }\n");
         sb.append("}\n");
 
         return sb.toString();

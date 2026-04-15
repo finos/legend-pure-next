@@ -58,3 +58,28 @@
     :owner :PureFile ;
     :genericType [ :type :String ] ;
     :multiplicity :ZeroOne .
+
+# --- Enum_Pointer ---
+# Protocol pointer for Enumeration values. pointerValue is the Enumeration path,
+# extraPointerValues[0].value is the enum value name.
+# Example: pointerValue="AggregationKind", extraPointerValues=[PointerValue("Composite")]
+
+:Enum_Pointer a :Class ;
+    :name [ :classifierGenericType :GenericType_String ; :data "Enum_Pointer" ] ;
+    :classifierGenericType [ :type :Class ; :typeArguments [ :type :Enum_Pointer ] ] ;
+    :package :meta_pure_protocol_grammar ;
+    :generalizations [ :general [ :type :Any ] ] .
+
+:Enum_Pointer_pointerValue a :Property ;
+    :name [ :classifierGenericType :GenericType_String ; :data "pointerValue" ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Enum_Pointer ] [ :type :String ] ) ; :multiplicityArguments :PureOne ] ;
+    :owner :Enum_Pointer ;
+    :genericType [ :type :String ] ;
+    :multiplicity :PureOne .
+
+:Enum_Pointer_extraPointerValues a :Property ;
+    :name [ :classifierGenericType :GenericType_String ; :data "extraPointerValues" ] ;
+    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Enum_Pointer ] [ :type :PointerValue ] ) ; :multiplicityArguments :ZeroMany ] ;
+    :owner :Enum_Pointer ;
+    :genericType [ :type :PointerValue ] ;
+    :multiplicity :ZeroMany .

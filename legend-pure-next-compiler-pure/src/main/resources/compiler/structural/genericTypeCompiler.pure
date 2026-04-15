@@ -156,9 +156,11 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
 {
     let leftResult = compileGenericTypeArg($gto.left, $context, $packagePath, $typeParameters, $ownerContext);
     let rightResult = compileGenericTypeArg($gto.right, $leftResult.context, $packagePath, $typeParameters, $ownerContext);
-    let opType = if($gto.operationType == meta::pure::protocol::grammar::relation::GenericTypeOperationType.Union, | meta::pure::metamodel::relation::GenericTypeOperationType.Union,
-                 | if($gto.operationType == meta::pure::protocol::grammar::relation::GenericTypeOperationType.Difference, | meta::pure::metamodel::relation::GenericTypeOperationType.Difference,
-                 | if($gto.operationType == meta::pure::protocol::grammar::relation::GenericTypeOperationType.Subset, | meta::pure::metamodel::relation::GenericTypeOperationType.Subset,
+    // Read enum value from Enum_Pointer and map to metamodel enum
+    let opName = $gto.operationType->cast(@meta::pure::protocol::grammar::Enum_Pointer).extraPointerValues->at(0).value;
+    let opType = if($opName == 'Union', | meta::pure::metamodel::relation::GenericTypeOperationType.Union,
+                 | if($opName == 'Difference', | meta::pure::metamodel::relation::GenericTypeOperationType.Difference,
+                 | if($opName == 'Subset', | meta::pure::metamodel::relation::GenericTypeOperationType.Subset,
                  | meta::pure::metamodel::relation::GenericTypeOperationType.Equal)));
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
         value = ^meta::pure::metamodel::relation::GenericTypeOperation(left = $leftResult.value->toOne(), right = $rightResult.value->toOne(), operationType = $opType),

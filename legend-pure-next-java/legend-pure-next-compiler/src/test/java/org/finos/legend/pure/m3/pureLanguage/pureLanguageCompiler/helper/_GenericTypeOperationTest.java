@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
-import meta.pure.metamodel.relation.GenericTypeOperationType;
 import meta.pure.metamodel.relation.RelationType;
 import meta.pure.metamodel.relation.RelationTypeImpl;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -67,14 +66,14 @@ public class _GenericTypeOperationTest
             _Column.build("name", gt2, _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) metadataAccess.getElement("String"), metadataAccess), (meta.pure.metamodel.multiplicity.Multiplicity) metadataAccess.getElement("meta::pure::metamodel::multiplicity::PureOne"), false, metadataAccess)
         ));
 
-        RelationType unionResult = _GenericTypeOperation.evaluateRelationTypeOperation(rt1, rt2, GenericTypeOperationType.Union, metadataAccess);
+        RelationType unionResult = _GenericTypeOperation.evaluateRelationTypeOperation(rt1, rt2, "Union", metadataAccess);
         assertNotNull(unionResult);
         MutableList<? extends meta.pure.metamodel.relation.Column> unionCols = unionResult._columns().toList();
         assertEquals(2, unionCols.size());
         assertEquals("age", unionCols.get(0)._name());
         assertEquals("name", unionCols.get(1)._name());
 
-        RelationType diffResult = _GenericTypeOperation.evaluateRelationTypeOperation(unionResult, rt2, GenericTypeOperationType.Difference, metadataAccess);
+        RelationType diffResult = _GenericTypeOperation.evaluateRelationTypeOperation(unionResult, rt2, "Difference", metadataAccess);
         assertNotNull(diffResult);
         MutableList<? extends meta.pure.metamodel.relation.Column> diffCols = diffResult._columns().toList();
         assertEquals(1, diffCols.size());

@@ -80,12 +80,6 @@ public class ProtocolToDynamicInstance
             return null;
         }
 
-        // Java enums (from protocol POJOs) → resolve to metamodel Enum instances
-        if (javaPOJO instanceof java.lang.Enum<?> javaEnum)
-        {
-            return resolveJavaEnumToMetamodelEnum(javaEnum);
-        }
-
         if (javaPOJO instanceof Collection)
         {
             List<Object> results = Lists.mutable.empty();
@@ -137,47 +131,6 @@ public class ProtocolToDynamicInstance
         }
 
         return javaPOJO;
-    }
-
-    /**
-     * Resolve a Java enum value (from a protocol POJO) to the corresponding
-     * metamodel Enum instance so that Pure == comparison works.
-     * <p>
-     * Protocol Java enums (e.g., {@code AggregationKind.Composite}) are matched
-     * by name to metamodel Enum instances (e.g., {@code AggregationKind_Composite}).
-     */
-    private Object resolveJavaEnumToMetamodelEnum(java.lang.Enum<?> javaEnum)
-    {
-        // Map protocol class name to metamodel path
-        // e.g., meta.pure.protocol.grammar.function.property.AggregationKind → meta::pure::metamodel::function::property::AggregationKind
-        String protoClassName = javaEnum.getDeclaringClass().getName();
-
-        // Try protocol → metamodel mapping
-        String metamodelPath;
-        if (protoClassName.startsWith("meta.pure.protocol.grammar."))
-        {
-            metamodelPath = "meta::pure::metamodel::" + protoClassName.substring("meta.pure.protocol.grammar.".length()).replace(".", "::");
-        }
-        else if (protoClassName.startsWith("meta.pure.metamodel."))
-        {
-            metamodelPath = protoClassName.replace(".", "::");
-        }
-        else
-        {
-            // Unknown enum type — return as-is (will become a DynamicInstance)
-            return javaEnum;
-        }
-
-        // Java enum constant name matches the metamodel element name (PascalCase)
-        String elementPath = metamodelPath + "_" + javaEnum.name();
-        meta.pure.metamodel.PackageableElement element = resolver.getElement(elementPath);
-        if (element instanceof meta.pure.metamodel.type.Enum enumInstance)
-        {
-            return enumInstance;
-        }
-
-        // Fallback: return the Java enum as-is
-        return javaEnum;
     }
 
     private static List<Method> getPropertyMethods(Class<?> cls)

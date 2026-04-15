@@ -102,7 +102,7 @@ public final class EnumerationHandler
                             _GenericType.buildUserDefinedGenericType(propertyType, model)
                             ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                             ._multiplicityArguments(Lists.mutable.with(pureOne))
-                        )._aggregation(meta.pure.metamodel.function.property.AggregationKind.None)
+                        )._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue("meta::pure::metamodel::function::property::AggregationKind", "None", model))
                          ._name(grammarProp._name())
                          ._owner(result)
                          ._genericType(enumGT)

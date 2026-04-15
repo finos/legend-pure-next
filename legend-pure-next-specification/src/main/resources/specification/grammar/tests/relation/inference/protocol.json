@@ -78,7 +78,14 @@
                   "name" : "Z"
                 }
               },
-              "operationType" : "Equal",
+              "operationType" : {
+                "_type" : "Enum_Pointer",
+                "extraPointerValues" : [ {
+                  "_type" : "PointerValue",
+                  "value" : "Equal"
+                } ],
+                "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+              },
               "right" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
@@ -104,7 +111,14 @@
                 }
               }
             },
-            "operationType" : "Subset",
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Subset"
+              } ],
+              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -157,7 +171,14 @@
                 "name" : "V"
               }
             },
-            "operationType" : "Equal",
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Equal"
+              } ],
+              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -228,7 +249,14 @@
                 "name" : "T"
               }
             },
-            "operationType" : "Difference",
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Difference"
+              } ],
+              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
             "right" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
@@ -237,7 +265,14 @@
               }
             }
           },
-          "operationType" : "Union",
+          "operationType" : {
+            "_type" : "Enum_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "value" : "Union"
+            } ],
+            "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+          },
           "right" : {
             "_type" : "UserDefinedGenericType",
             "type" : {
