@@ -1,21 +1,9 @@
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::metamodel::type::generics::*;
 import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
 
 // Function helpers
 
@@ -68,8 +56,8 @@ function <<test.Test>> meta::pure::compiler::helper::function::tests::testGetFun
 function <<test.Test>> meta::pure::compiler::helper::function::tests::testValidateFunctionParameters():Boolean[1]
 {
     let params = [
-        ^VariableExpression(name='a', genericType=^meta::pure::metamodel::type::generics::InferredGenericType(type=String), multiplicity=PureOne),
-        ^VariableExpression(name='b', genericType=^meta::pure::metamodel::type::generics::InferredGenericType(type=Integer), multiplicity=PureOne)
+        ^VariableExpression(name='a', genericType=^InferredGenericType(type=String), multiplicity=PureOne),
+        ^VariableExpression(name='b', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)
     ];
     assert(validateFunctionParameters($params));
 }

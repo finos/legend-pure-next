@@ -13,25 +13,13 @@
 // limitations under the License.
 
 
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::printer::*;
 import meta::pure::metamodel::*;
+import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::functions::collection::*;
 import meta::pure::functions::string::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::printer::*;
 
 function meta::pure::compiler::printer::primitive::printPrimitive(p:PrimitiveType[1]):String[1]
 {
@@ -40,7 +28,7 @@ function meta::pure::compiler::printer::primitive::printPrimitive(p:PrimitiveTyp
         $p.classifierGenericType->printClassifierGenericType(),
         $p.sourceInformation->printSourceInfo(),
         if($p.typeVariables->isEmpty(), | '', 
-            | [ '\n', $p.typeVariables->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(tv2 | 
+            | [ '\n', $p.typeVariables->cast(@VariableExpression)->map(tv2 |
                 [ '  typeVariable ', $tv2.name->toOne(), ' :', $tv2.genericType->toOne()->printType(), $tv2.multiplicity->toOne()->printMul() ]->joinStrings('');
               )->joinStrings('\n') ]->joinStrings('')
         )

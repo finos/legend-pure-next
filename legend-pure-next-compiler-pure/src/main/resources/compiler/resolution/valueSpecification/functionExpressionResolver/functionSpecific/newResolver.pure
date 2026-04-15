@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
@@ -22,7 +28,7 @@ import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNewFromFI(fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     // Extract class from the first argument (GenericTypeAndMultiplicityHolder), then look up
     // the fully compiled class from the context (the GTMH references the pass 1 skeleton)
@@ -35,7 +41,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let resolved = $context->resolveElement($path);
           if($resolved->isNotEmpty(),
               | $resolved->toOne()->match([
-                    c:meta::pure::metamodel::type::Class<Any>[1] | $c,
+                    c:Class<Any>[1] | $c,
                     a:Any[1] | $skeletonCls
                 ]),
               | $skeletonCls
@@ -45,13 +51,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Extract provided property names from key expressions (second param is a Collection of keyExpression FIs)
     let providedNames = if($fi.parametersValues->size() >= 2,
         | $fi.parametersValues->at(1)->match([
-              col:meta::pure::metamodel::valuespecification::Collection[1] |
+              col:Collection[1] |
                   $col.values->map(v |
                       $v->match([
-                          kfi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                          kfi:FunctionInvocation[1] |
                               if($kfi.parametersValues->isNotEmpty(),
                                   | $kfi.parametersValues->at(0)->match([
-                                        av:meta::pure::metamodel::valuespecification::AtomicValue[1] | $av.value->cast(@String),
+                                        av:AtomicValue[1] | $av.value->cast(@String),
                                         a:Any[1] | []->cast(@String)
                                     ]),
                                   | []->cast(@String)
@@ -66,15 +72,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     validateNew($fi, $cls, $providedNames, $context);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:meta::pure::metamodel::valuespecification::ValueSpecification[1]):meta::pure::metamodel::type::Class<Any>[0..1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGTMH(vs:ValueSpecification[1]):Class<Any>[0..1]
 {
     // The GTMH's genericType has typeArguments where the first one is the target class's GenericType
     $vs->match([
-        gtmh:meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+        gtmh:GenericTypeAndMultiplicityHolder[1] |
           let gtmhGT = $gtmh.genericType;
           if($gtmhGT->isNotEmpty(),
               | $gtmhGT->toOne()->match([
-                    gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+                    gtv:GenericTypeValue[1] |
                         let typeArgs = $gtv.typeArguments;
                         if($typeArgs->isNotEmpty(),
                             | extractClassFromGenericType($typeArgs->at(0)),
@@ -88,14 +94,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     ]);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:meta::pure::metamodel::type::generics::GenericType[0..1]):meta::pure::metamodel::type::Class<Any>[0..1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::extractClassFromGenericType(gt:GenericType[0..1]):Class<Any>[0..1]
 {
     if($gt->isNotEmpty(),
         | $gt->toOne()->match([
-              gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+              gtv:GenericTypeValue[1] |
                   if($gtv.type->isNotEmpty(),
                       | $gtv.type->toOne()->match([
-                            c:meta::pure::metamodel::type::Class<Any>[1] | $c,
+                            c:Class<Any>[1] | $c,
                             a:Any[1] | []
                         ]),
                       | []
@@ -106,7 +112,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], compiledClass:meta::pure::metamodel::type::Class<Any>[0..1], providedPropertyNames:String[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateNew(fi:FunctionInvocation[1], compiledClass:Class<Any>[0..1], providedPropertyNames:String[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     if($compiledClass->isEmpty(),
         | $context,
@@ -121,7 +127,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java NewResolver.validateCopyProperties — copy only checks key expressions, not abstract/missing
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateCopyFromFI(fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateCopyFromFI(fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let cls = extractClassFromGenericType($fi.genericType);
     let compiledCls = if($cls->isNotEmpty(),
@@ -129,7 +135,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let resolved = $context->resolveElement($path);
           if($resolved->isNotEmpty(),
               | $resolved->toOne()->match([
-                    c:meta::pure::metamodel::type::Class<Any>[1] | $c,
+                    c:Class<Any>[1] | $c,
                     a:Any[1] | $cls
                 ]),
               | $cls
@@ -138,13 +144,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
     let providedNames = if($fi.parametersValues->size() >= 2,
         | $fi.parametersValues->at(1)->match([
-              col:meta::pure::metamodel::valuespecification::Collection[1] |
+              col:Collection[1] |
                   $col.values->map(v |
                       $v->match([
-                          kfi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                          kfi:FunctionInvocation[1] |
                               if($kfi.parametersValues->isNotEmpty(),
                                   | $kfi.parametersValues->at(0)->match([
-                                        av:meta::pure::metamodel::valuespecification::AtomicValue[1] | $av.value->cast(@String),
+                                        av:AtomicValue[1] | $av.value->cast(@String),
                                         a:Any[1] | []->cast(@String)
                                     ]),
                                   | []->cast(@String)
@@ -162,7 +168,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:meta::pure::metamodel::type::Class<Any>[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkAbstract(cls:Class<Any>[1], fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let isAbstract = $cls.stereotypes->exists(s | $s.value == 'abstract' && $s.profile->toOne()->fullPath() == 'meta::pure::profiles::typemodifiers');
     if($isAbstract,
@@ -172,10 +178,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:Class<Any>[1], providedNames:String[*], fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let requiredProps = $cls.properties
-        ->filter(p | $p.multiplicity == meta::pure::metamodel::multiplicity::PureOne || $p.multiplicity == meta::pure::metamodel::multiplicity::OneMany)
+        ->filter(p | $p.multiplicity == PureOne || $p.multiplicity == OneMany)
         ->filter(p | $p.defaultValue->isEmpty())
         ->filter(p | !$p.stereotypes->exists(s | $s.value == 'inferred' || $s.value == 'excluded' || $s.value == 'pointer'))
         ->filter(p | !$providedNames->contains($p.name));
@@ -190,10 +196,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java NewResolver.checkKeyExpressions — validates unknown properties, multiplicity, type, and deep paths
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:Class<Any>[1], providedNames:String[*], fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     // Build class type parameter bindings from the new/copy expression's return type
-    let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType) && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
+    let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(UndefinedGenericType) && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
         | $cls->buildBindingsFromGenericType($fi.genericType->toOne()),
         | newPlainParametersBinding()->cast(@ParametersBinding)
     );
@@ -212,16 +218,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | $ctx1,
         | let keyParam = $fi.parametersValues->at(1);
           $keyParam->match([
-              col:meta::pure::metamodel::valuespecification::Collection[1] |
+              col:Collection[1] |
                 $col.values->fold({v, ctx |
                     $v->match([
-                        keyExpr:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+                        keyExpr:FunctionInvocation[1] |
                           if($keyExpr.parametersValues->size() < 2,
                               | $ctx,
                               | let keyNameVS = $keyExpr.parametersValues->at(0);
                                 let keyValueVS = $keyExpr.parametersValues->at(1);
                                 $keyNameVS->match([
-                                    keyNameAV:meta::pure::metamodel::valuespecification::AtomicValue[1] |
+                                    keyNameAV:AtomicValue[1] |
                                         let propName = $keyNameAV.value->toOne()->toString();
                                         let prop = findPropertyOnClass($cls, $propName);
                                         if($prop->isEmpty(),
@@ -239,11 +245,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                     let propType = $resolvedPropGT->genericTypeRawType();
                                                     let valType = $keyValueVS.genericType->toOne()->genericTypeRawType();
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
-                                                        | let pName = $propType->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOne();
-                                                          let vName = $valType->toOne()->cast(@meta::pure::metamodel::PackageableElement).name->toOne();
+                                                        | let pName = $propType->toOne()->cast(@PackageableElement).name->toOne();
+                                                          let vName = $valType->toOne()->cast(@PackageableElement).name->toOne();
                                                           let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil' || $pName == $vName
-                                                              || $propType->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter)
-                                                              || $valType->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
+                                                              || $propType->toOne()->instanceOf(TypeParameter)
+                                                              || $valType->toOne()->instanceOf(TypeParameter);
                                                           if(!$skip && !isCompatibleType($resolvedPropGT, $keyValueVS.genericType->toOne()),
                                                               | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx2);
                                                                 ^$ctx2(errors += 'Type mismatch for property \'' + $propName + '\': expected ' + $pName + ', got ' + $vName + $siCtx);,
@@ -266,7 +272,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Find property on class including association properties and inherited properties
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::findPropertyOnClass(cls:meta::pure::metamodel::type::Class<Any>[1], name:String[1]):meta::pure::metamodel::function::property::Property<Nil,Any|*>[0..1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::findPropertyOnClass(cls:Class<Any>[1], name:String[1]):Property<Nil,Any|*>[0..1]
 {
     let direct = $cls.properties->filter(p | $p.name == $name)->head();
     if($direct->isNotEmpty(),
@@ -277,10 +283,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               | // Check inherited
                 let supertypes = $cls.generalizations->map(g |
                     $g.general->match([
-                        gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+                        gtv:GenericTypeValue[1] |
                             if($gtv.type->isNotEmpty(),
                                 | $gtv.type->toOne()->match([
-                                      c:meta::pure::metamodel::type::Class<Any>[1] | $c,
+                                      c:Class<Any>[1] | $c,
                                       a:Any[1] | []
                                   ]),
                                 | []
@@ -294,13 +300,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Validate deep property path like 'address.name' by traversing each segment
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:meta::pure::metamodel::type::Class<Any>[1], fullPath:String[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPath(cls:Class<Any>[1], fullPath:String[1], fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let segments = $fullPath->split('.');
     validateDeepPropertyPathSegments($cls, $cls, $segments, 0, $fullPath, $fi, $context);
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPathSegments(rootCls:meta::pure::metamodel::type::Class<Any>[1], currentType:meta::pure::metamodel::type::Class<Any>[1], segments:String[*], index:Integer[1], fullPath:String[1], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::validateDeepPropertyPathSegments(rootCls:Class<Any>[1], currentType:Class<Any>[1], segments:String[*], index:Integer[1], fullPath:String[1], fi:FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     if($index >= $segments->size(),
         | $context,
@@ -311,7 +317,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
                       if($nextType->isNotEmpty(),
                           | $nextType->toOne()->match([
-                                c:meta::pure::metamodel::type::Class<Any>[1] | validateDeepPropertyPathSegments($rootCls, $c, $segments, $index + 1, $fullPath, $fi, $context),
+                                c:Class<Any>[1] | validateDeepPropertyPathSegments($rootCls, $c, $segments, $index + 1, $fullPath, $fi, $context),
                                 a:Any[1] | $context
                             ]),
                           | $context
@@ -322,7 +328,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Simple type compatibility check: is actual a subtype of declared?
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:meta::pure::metamodel::type::generics::GenericType[1], actual:meta::pure::metamodel::type::generics::GenericType[1]):Boolean[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1]):Boolean[1]
 {
     let declaredType = $declared->genericTypeRawType();
     let actualType = $actual->genericTypeRawType();

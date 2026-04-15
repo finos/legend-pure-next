@@ -1,26 +1,17 @@
 import meta::pure::compiler::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::type::*;
-
 import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::genericTypeOperation::*;
-import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::functions::lang::*;
 
 // GenericType helpers
 
@@ -33,7 +24,7 @@ function meta::pure::compiler::helper::genericType::printGenericType(genericType
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | 'NotSet',
+            ns  : CompilerNotSetGenericType[1] | 'NotSet',
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
@@ -59,7 +50,7 @@ function meta::pure::compiler::helper::genericType::printGenericTypeValue(gtv:Ge
               [
                   tp : TypeParameter[1] | if($tp.name->isEmpty(), | '?', | $tp.name->toOne()),
                   ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
-                  rt : meta::pure::metamodel::relation::RelationType<Any>[1] | $rt->printRelationType($fullPath),
+                  rt : RelationType<Any>[1] | $rt->printRelationType($fullPath),
                   pe : PackageableElement[1] |
                       let typeName = if($fullPath,
                           | let pPath = $pe->fullPath();
@@ -113,7 +104,7 @@ function meta::pure::compiler::helper::genericType::isConcreteGenericType(generi
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | false,
+            ns  : CompilerNotSetGenericType[1] | false,
             ugt : UndefinedGenericType[1] | true,
             gto : GenericTypeOperation[1] | $gto->isConcreteGenericTypeOperation(),
             gtv : GenericTypeValue[1]     | $gtv->isConcreteGenericTypeValue(),
@@ -159,7 +150,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedTypeParamet
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
+            ns  : CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
                 $gto->collectGenericTypeOperationReferencedTypeParameterNames(),
@@ -186,7 +177,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedMultiplicit
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
+            ns  : CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
                 $gto.left->collectReferencedMultiplicityParameterNames()
@@ -385,11 +376,11 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithSameFunctionType():Boolean[1]
 {
     // LambdaFunction<{Integer[1]->Boolean[1]}> for both
-    let ft = meta::pure::functions::lang::new(
+    let ft = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concretesFT = ^$ft(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Boolean),
         returnMultiplicity = PureOne
     );
@@ -407,19 +398,19 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithDifferentFunctionTypeInstances():Boolean[1]
 {
     // Two LambdaFunction<{Integer[1]->Integer[1]}> with DIFFERENT FunctionType objects
-    let ft1 = meta::pure::functions::lang::new(
+    let ft1 = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concreteFT1 = ^$ft1(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Integer),
         returnMultiplicity = PureOne
     );
-    let ft2 = meta::pure::functions::lang::new(
+    let ft2 = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concreteFT2 = ^$ft2(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Integer),
         returnMultiplicity = PureOne
     );
@@ -554,7 +545,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
                 
                 if($commonArgs->size() == $argCount,
                     | $resultType->match([
-                          rtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] | ^$rtv(typeArguments = $commonArgs),
+                          rtv : GenericTypeValue[1] | ^$rtv(typeArguments = $commonArgs),
                           other : GenericType[1] | $resultType
                       ]),
                     | $resultType
@@ -578,7 +569,7 @@ function meta::pure::compiler::helper::genericType::range(start:Integer[1], end:
 function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1]):GenericType[0..1]
 {
     if($genericTypes->isEmpty(),
-        | ^meta::pure::metamodel::type::generics::InferredGenericType(type = Nil),
+        | ^InferredGenericType(type = Nil),
         | let nonNullValues = $genericTypes->filter(gt | $gt->instanceOf(GenericTypeValue))->cast(@GenericTypeValue);
           
           let firstName = if($nonNullValues->isNotEmpty() && $nonNullValues->at(0).type->isNotEmpty() && $nonNullValues->at(0).type->toOne()->instanceOf(TypeParameter),
@@ -598,13 +589,13 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                       let rawFunctionTypes = $rawTypes->filter(t | $t->instanceOf(FunctionType))->cast(@FunctionType);
                       if($rawFunctionTypes->size() == $rawTypes->size() && $rawFunctionTypes->isNotEmpty(),
                           | let common = findCommonFunctionType($rawFunctionTypes);
-                            if($common->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common->toOne()), | []);,
+                            if($common->isNotEmpty(), | ^InferredGenericType(type = $common->toOne()), | []);,
                           |
                       let commonType = findCommonType($rawTypes, $contravariant);
                       if($commonType->isEmpty(),
                           | [],
                           | let common = $commonType->toOne();
-                            let resultType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common);
+                            let resultType = ^InferredGenericType(type = $common);
                             
                             let projected = if($rawTypes->forAll(t | $t == $common),
                                 | $nonNullValues,
@@ -625,9 +616,9 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
 function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(genericType:GenericType[1], bindings:ParametersBinding[1]):GenericType[1]
 {
     $genericType->match([
-        ns : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | $genericType,
+        ns : CompilerNotSetGenericType[1] | $genericType,
         undefined : UndefinedGenericType[1] | $genericType,
-        gto : meta::pure::metamodel::relation::GenericTypeOperation[1] |
+        gto : GenericTypeOperation[1] |
             $gto->makeGenericTypeOperationAsConcreteAsPossible($bindings),
         gtv : GenericTypeValue[1] |
             if($gtv.type->isEmpty(),
@@ -675,7 +666,7 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericType(decl
 {
     $declared->match([
         declaredOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($declaredOp, $actual, $contravariant),
-        declaredNotSet : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | true,
+        declaredNotSet : CompilerNotSetGenericType[1] | true,
         declaredUndef : UndefinedGenericType[1] |
             $actual->match([
                 au : UndefinedGenericType[1] | true,
@@ -684,7 +675,7 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericType(decl
         declaredV : GenericTypeValue[1] |
             $actual->match([
                 actualOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($actualOp, $declared, !$contravariant),
-                actualNotSet : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | true,
+                actualNotSet : CompilerNotSetGenericType[1] | true,
                 actualUndef : UndefinedGenericType[1] | false,
                 actualV : GenericTypeValue[1] | isCompatibleGenericTypeValue($declaredV, $actualV, $contravariant),
                 other : GenericType[1] | false
@@ -692,7 +683,7 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericType(decl
         other : GenericType[1] |
             $actual->match([
                 actualOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($actualOp, $declared, !$contravariant),
-                actualNotSet : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | true,
+                actualNotSet : CompilerNotSetGenericType[1] | true,
                 other2 : GenericType[1] | false
             ])
     ]);
@@ -792,26 +783,26 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue
 }
 
 
-function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:GenericType[1]):GenericType[1]
 {
     $gt->match([
-        igt : meta::pure::metamodel::type::generics::InferredGenericType[1] | $igt,
-        gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] |
-            ^meta::pure::metamodel::type::generics::InferredGenericType(
+        igt : InferredGenericType[1] | $igt,
+        gtv : GenericTypeValue[1] |
+            ^InferredGenericType(
                 type = $gtv.type,
                 typeArguments = $gtv.typeArguments,
                 multiplicityArguments = $gtv.multiplicityArguments
             ),
-        other : meta::pure::metamodel::type::generics::GenericType[1] | $gt
+        other : GenericType[1] | $gt
     ]);
 }
 
-function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):GenericType[1]
 {
     let pureName = $value->genericType().type->cast(@NamedType).name;
     if($pureName->isNotEmpty(),
-        | let resolved = $ctx->resolveElement($pureName->toOne())->toOne()->cast(@meta::pure::metamodel::type::Type);
-          ^meta::pure::metamodel::type::generics::InferredGenericType(type = $resolved);,
-        | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+        | let resolved = $ctx->resolveElement($pureName->toOne())->toOne()->cast(@Type);
+          ^InferredGenericType(type = $resolved);,
+        | ^UndefinedGenericType()
     );
 }

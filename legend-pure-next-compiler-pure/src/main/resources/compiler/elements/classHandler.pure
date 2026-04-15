@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::structural::generalizationCompiler::*;
 import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::extension::*;
 
-function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>[1]
+function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:CompilerContext[1]):CompilerResult<Class<Any>>[1]
 {
     let packagePath = if($protocolClass.package->isEmpty(), | '', | $protocolClass.package->toOne().pointerValue);
     let className = if($packagePath == '', | $protocolClass.name, | $packagePath + '::' + $protocolClass.name);
-    let skeleton = $context->resolveElement($className)->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+    let skeleton = $context->resolveElement($className)->toOne()->cast(@Class<Any>);
 
     let propertyAccum = $protocolClass.properties->fold({p, acc |
         let result = $p->compileProperty($acc.context, $packagePath, $skeleton);
         ^$acc(values += $result.value, context = $result.context);
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(context = $context));
+    }, ^CompilerListResult<Property<Nil, Any|*>>(context = $context));
     let compiledProperties = $propertyAccum.values;
     let ctx1 = $propertyAccum.context;
 
@@ -44,13 +44,13 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
 
     let stereoAccum = $protocolClass.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx2));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx2));
     let compiledStereotypes = $stereoAccum.values;
     let ctx3 = $stereoAccum.context;
 
     let tvAccum = $protocolClass.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $ctx3));
+                            }, ^CompilerListResult<TaggedValue>(context = $ctx3));
     let compiledTaggedValues = $tvAccum.values;
     let ctx4 = $tvAccum.context;
 
@@ -63,11 +63,11 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let qpAccum = $protocolClass.qualifiedProperties->fold({qp, acc |
         let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $skeleton);
         ^$acc(values += $result.value, context = $result.context);
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>(context = $ctx5));
+    }, ^CompilerListResult<QualifiedProperty<Any>>(context = $ctx5));
     let compiledQPs = $qpAccum.values;
     let ctx6 = $qpAccum.context;
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Class<Any>>(
+    ^CompilerResult<Class<Any>>(
         value = ^$skeleton(
             stereotypes = $compiledStereotypes,
             taggedValues = $compiledTaggedValues,

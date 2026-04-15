@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::valuespecification::*;
 import meta::pure::compiler::helper::enumeration::*;
 
-function meta::pure::compiler::helper::enumeration::resolveEnumValue(enumeration:meta::pure::metamodel::type::Enumeration<Any>[1], valueName:String[1]):meta::pure::metamodel::type::Enum[0..1]
+function meta::pure::compiler::helper::enumeration::resolveEnumValue(enumeration:Enumeration<Any>[1], valueName:String[1]):Enum[0..1]
 {
     let matched = $enumeration.properties->filter(p | $p.name == $valueName);
     if($matched->isEmpty(),
@@ -22,15 +25,15 @@ function meta::pure::compiler::helper::enumeration::resolveEnumValue(enumeration
         | let prop = $matched->toOne();
           if($prop.defaultValue->isEmpty(),
               | [],
-              | let lambda = $prop.defaultValue->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+              | let lambda = $prop.defaultValue->toOne()->cast(@LambdaFunction<Any>);
                 if($lambda.expressionSequence->isEmpty(),
                     | [],
                     | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
                       $lastExpr->match([
-                          av : meta::pure::metamodel::valuespecification::AtomicValue[1] |
+                          av : AtomicValue[1] |
                               if($av.value->isNotEmpty(),
                                   | $av.value->toOne()->match([
-                                        e : meta::pure::metamodel::type::Enum[1] | $e,
+                                        e : Enum[1] | $e,
                                         other : Any[1] | []
                                     ]);,
                                   | []

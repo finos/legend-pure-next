@@ -21,24 +21,30 @@ import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
 
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
 
-    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-    let emptyFunc = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::UserDefinedFunction)
-    )->cast(@meta::pure::metamodel::function::UserDefinedFunction<Any>);
+    let rootPkg = ^Package(name = 'Root');
+    let emptyFunc = new(
+        ^UserDefinedGenericType(type = UserDefinedFunction)
+    )->cast(@UserDefinedFunction<Any>);
 
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = $fn.name,
-        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
-        sourceInformation = $fn.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+        package = ^Package(name = $packagePath, package = $rootPkg),
+        sourceInformation = $fn.sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -50,12 +56,12 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
     ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>[1]
+function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:CompilerContext[1]):CompilerResult<UserDefinedFunction<Any>>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@meta::pure::metamodel::function::UserDefinedFunction<Any>);
+    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@UserDefinedFunction<Any>);
     let ownerCtx = 'function \'' + $fName + '\'';
     let siCtx = if($fn.sourceInformation->isNotEmpty(), | formatSourceInfo($fn.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
@@ -79,7 +85,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
 
     let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-    let finalGenType = compileFunctionClassifierGenericType(meta::pure::metamodel::function::UserDefinedFunction, $compiledParams, $rGenType, $rMMult);
+    let finalGenType = compileFunctionClassifierGenericType(UserDefinedFunction, $compiledParams, $rGenType, $rMMult);
 
     let bodyResult = compileExpressionSequence($fn.expressionSequence, $ctx3, $compiledParams);
     let ctx4 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx3);
@@ -87,10 +93,10 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     // Compile stereotypes and tagged values
     let stereoAccum = $fn.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx4));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx4));
     let tvAccum = $fn.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
     let ctx5 = $tvAccum.context;
 
     // Compile pre-constraints (scope: function parameters)
@@ -98,7 +104,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     let ctx6 = $preConstraintAccum.context;
 
     // Compile post-constraints (scope: function parameters + $return)
-    let returnVar = ^meta::pure::metamodel::valuespecification::VariableExpression(
+    let returnVar = ^VariableExpression(
         name = 'return',
         genericType = $rGenType,
         multiplicity = $rMMult
@@ -106,7 +112,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     let postConstraintAccum = compileFunctionConstraints($fn.postConstraints, $compiledParams->concatenate($returnVar), $ctx6);
     let ctx7 = $postConstraintAccum.context;
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>(
+    ^CompilerResult<UserDefinedFunction<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,

@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::generics::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::multiplicityCompiler::*;
 import meta::pure::compiler::structural::variableCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::variableCompiler::compileParameter(p:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], ownerContext:String[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::VariableExpression>[1]
+function meta::pure::compiler::structural::variableCompiler::compileParameter(p:meta::pure::protocol::grammar::valuespecification::VariableExpression[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<VariableExpression>[1]
 {
     let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
     let gtResult = $pType->compileGenericType($context, $packagePath, $typeParameters, 'parameter \'' + $p.name + '\'', $ownerContext);
     let mMult = $p.multiplicity->compileMultiplicity();
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::VariableExpression>(
-        value = ^meta::pure::metamodel::valuespecification::VariableExpression(
+    ^CompilerResult<VariableExpression>(
+        value = ^VariableExpression(
             name = $p.name,
             genericType = $gtResult.value->toOne(),
             multiplicity = $mMult
@@ -32,7 +34,7 @@ function meta::pure::compiler::structural::variableCompiler::compileParameter(p:
     );
 }
 
-function meta::pure::compiler::structural::variableCompiler::compileParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>[1]
+function meta::pure::compiler::structural::variableCompiler::compileParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerListResult<VariableExpression>[1]
 {
     $parameters->fold({p, acc |
         let result = compileParameter($p, $acc.context, $packagePath, $typeParameters, $ownerContext);
@@ -40,5 +42,5 @@ function meta::pure::compiler::structural::variableCompiler::compileParameters(p
             values += $result.value->toOne(),
             context = $result.context
         );
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $context));
+    }, ^CompilerListResult<VariableExpression>(context = $context));
 }

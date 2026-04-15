@@ -19,24 +19,29 @@ import meta::pure::compiler::structural::variableCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
-    
+
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    
-    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-    let emptyFunc = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::NativeFunction)
-    )->cast(@meta::pure::metamodel::function::NativeFunction<Any>);
-    
+
+    let rootPkg = ^Package(name = 'Root');
+    let emptyFunc = new(
+        ^UserDefinedGenericType(type = NativeFunction)
+    )->cast(@NativeFunction<Any>);
+
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = $fn.name,
-        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
-        sourceInformation = $fn.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+        package = ^Package(name = $packagePath, package = $rootPkg),
+        sourceInformation = $fn.sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -44,16 +49,16 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
             endColumn = $si.endColumn
         ))
     );
-    
+
     ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::NativeFunction<Any>>[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@meta::pure::metamodel::function::NativeFunction<Any>);
+    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@NativeFunction<Any>);
     let ownerCtx = 'native function \'' + $fName + '\'';
     let siCtx = if($fn.sourceInformation->isNotEmpty(), | formatSourceInfo($fn.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
@@ -76,18 +81,18 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
 
     let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-    let classifierGT = compileFunctionClassifierGenericType(meta::pure::metamodel::function::NativeFunction, $compiledParams, $rMGenType, $rMMult);
+    let classifierGT = compileFunctionClassifierGenericType(NativeFunction, $compiledParams, $rMGenType, $rMMult);
 
     // Compile stereotypes and tagged values
     let stereoAccum = $fn.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx3));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx3));
     let tvAccum = $fn.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
     let ctx4 = $tvAccum.context;
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::NativeFunction<Any>>(
+    ^CompilerResult<NativeFunction<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,

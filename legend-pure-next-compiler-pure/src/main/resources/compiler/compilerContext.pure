@@ -14,6 +14,9 @@
 
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
 
 Class meta::pure::compiler::DebugState
 {
@@ -48,12 +51,12 @@ Class meta::pure::compiler::CompilerContext
     debugState : DebugState[1];
     sourceId : String[0..1];
     imports : String[*];
-    elementMap : Map<String, meta::pure::metamodel::PackageableElement>[1];
+    elementMap : Map<String, PackageableElement>[1];
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
-    ownerTypeParams : meta::pure::metamodel::type::generics::TypeParameter[*];
-    ownerMulParams : meta::pure::metamodel::multiplicity::MultiplicityParameter[*];
+    ownerTypeParams : TypeParameter[*];
+    ownerMulParams : MultiplicityParameter[*];
 }
 
 function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
@@ -73,7 +76,7 @@ function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkp
 
 Class meta::pure::compiler::CompilationResult
 {
-    elements : meta::pure::metamodel::PackageableElement[*];
+    elements : PackageableElement[*];
     errors : String[*];
 }
 
@@ -89,7 +92,7 @@ Class meta::pure::compiler::CompilerListResult<T>
     context : CompilerContext[1];
 }
 
-native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*];
+native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
 
 function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
 {
@@ -102,7 +105,7 @@ function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elem
     );
 }
 
-function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
+function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Handle qualified names like 'test::if' — strip package for lookup, filter by prefix (like Java findCandidates)
     let isQualified = $name->contains('::');
@@ -116,19 +119,19 @@ function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerCo
     );
 }
 
-function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):meta::pure::metamodel::function::PackageableFunction<Any>[*]
+function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Union: native index + locally-defined functions from context elementMap
     let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
     let localCandidates = $context.elementMap->values()
-        ->filter(e | $e->instanceOf(meta::pure::metamodel::function::PackageableFunction))
-        ->cast(@meta::pure::metamodel::function::PackageableFunction<Any>)
+        ->filter(e | $e->instanceOf(PackageableFunction))
+        ->cast(@PackageableFunction<Any>)
         ->filter(f | $f.functionName->isNotEmpty() && ($f.functionName->toOne()->startsWith($name + '_') || $f.functionName == $name)
                      && $f.parameters->size() == $arity);
     $nativeCandidates->concatenate($localCandidates);
 }
 
-function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):meta::pure::metamodel::PackageableElement[0..1]
+function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
     let localResolution = $context.elementMap->get($path);
     if([pair(| $localResolution->isNotEmpty(), | $localResolution),

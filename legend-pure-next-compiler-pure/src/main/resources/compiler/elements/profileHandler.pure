@@ -12,37 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
     let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
-    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-    let emptyProfile = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Profile)
-    )->cast(@meta::pure::metamodel::extension::Profile);
-    
+    let rootPkg = ^Package(name = 'Root');
+    let emptyProfile = new(
+        ^UserDefinedGenericType(type = Profile)
+    )->cast(@Profile);
+
     let profileSkeletonInt = ^$emptyProfile(
         name = $pr.name,
-        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
+        package = ^Package(name = $packagePath, package = $rootPkg),
         p_stereotypes = $pr.p_stereotypes->map(s |
-            let stInst = meta::pure::functions::lang::new(
-                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Stereotype)
-            )->cast(@meta::pure::metamodel::extension::Stereotype);
+            let stInst = new(
+                ^UserDefinedGenericType(type = Stereotype)
+            )->cast(@Stereotype);
             ^$stInst(value = $s.value, profile = ~.~);
         ),
         p_tags = $pr.p_tags->map(t |
-            let tagInst = meta::pure::functions::lang::new(
-                ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::Tag)
-            )->cast(@meta::pure::metamodel::extension::Tag);
+            let tagInst = new(
+                ^UserDefinedGenericType(type = Tag)
+            )->cast(@Tag);
             ^$tagInst(value = $t.value, profile = ~.~);
         ),
-        sourceInformation = $pr.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+        sourceInformation = $pr.sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -50,12 +50,12 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
             endColumn = $si.endColumn
         ))
     );
-    
+
     let profileSkeleton = ^$profileSkeletonInt(
-        classifierGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-            type = meta::pure::metamodel::extension::Profile
+        classifierGenericType = ^UserDefinedGenericType(
+            type = Profile
         )
     );
-    
+
     ^$ctx(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
 }

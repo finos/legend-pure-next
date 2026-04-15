@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:meta::pure::compiler::CompilerContext[1]):String[1]
+function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',
@@ -29,7 +30,7 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
     );
 }
 
-function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:meta::pure::metamodel::SourceInformation[0..1], context:meta::pure::compiler::CompilerContext[1]):String[1]
+function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',

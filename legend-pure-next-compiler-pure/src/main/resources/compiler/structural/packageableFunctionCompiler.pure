@@ -12,29 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
 import meta::pure::compiler::structural::packageableFunctionCompiler::*;
 import meta::pure::compiler::structural::functionTypeCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::packageableFunctionCompiler::compileTypeParameters(typeParameters:meta::pure::protocol::grammar::type::generics::TypeParameter[*]):meta::pure::metamodel::type::generics::TypeParameter[*]
+function meta::pure::compiler::structural::packageableFunctionCompiler::compileTypeParameters(typeParameters:meta::pure::protocol::grammar::type::generics::TypeParameter[*]):TypeParameter[*]
 {
-    $typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    $typeParameters->map(tp | ^TypeParameter(name = $tp.name, contravariant = false)->cast(@TypeParameter));
 }
 
-function meta::pure::compiler::structural::packageableFunctionCompiler::compileFunctionClassifierGenericType(functionMetaType:meta::pure::metamodel::type::Type[1], parameters:meta::pure::metamodel::valuespecification::VariableExpression[*], returnGenericType:meta::pure::metamodel::type::generics::GenericType[1], returnMultiplicity:Multiplicity[1]):meta::pure::metamodel::type::generics::UserDefinedGenericType[1]
+function meta::pure::compiler::structural::packageableFunctionCompiler::compileFunctionClassifierGenericType(functionMetaType:Type[1], parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):UserDefinedGenericType[1]
 {
     let funcType = compileFunctionType($parameters, $returnGenericType, $returnMultiplicity);
-    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+    ^UserDefinedGenericType(
         type = $functionMetaType,
         typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+            ^UserDefinedGenericType(
                 type = $funcType
             )
         ]
     );
 }
 
-function meta::pure::compiler::structural::packageableFunctionCompiler::validateDuplicateParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1], siCtx:String[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::structural::packageableFunctionCompiler::validateDuplicateParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], ownerCtx:String[1], siCtx:String[1]):CompilerContext[1]
 {
     let dupNames = $parameters->map(p | $p.name)->filter(n | $parameters->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
     $dupNames->fold({d, c |

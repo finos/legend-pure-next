@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
@@ -19,14 +27,14 @@ import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperty(qp:meta::pure::protocol::grammar::function::property::QualifiedProperty[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], owner:meta::pure::metamodel::type::Class<Any>[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperty(qp:meta::pure::protocol::grammar::function::property::QualifiedProperty[1], context:CompilerContext[1], packagePath:String[1], owner:Class<Any>[1]):CompilerResult<QualifiedProperty<Any>>[1]
 {
     let className = if($packagePath == '', | $owner.name->toOne(), | $packagePath + '::' + $owner.name->toOne());
     let classCtx = 'class \'' + $className + '\'';
 
     // Compile return type
     let protocolType = $qp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter), 'qualified property \'' + $qp.name + '\'', $classCtx);
+    let gtResult = $protocolType->compileGenericType($context, $packagePath, $owner.typeParameters->cast(@TypeParameter), 'qualified property \'' + $qp.name + '\'', $classCtx);
     let returnGenType = $gtResult.value->toOne();
     let ctx1 = $gtResult.context;
     let returnMult = $qp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
@@ -37,27 +45,27 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
         let pGtResult = $pType->compileGenericType($acc.context, $packagePath, [], 'parameter \'' + $p.name + '\'', $classCtx);
         let pMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
         ^$acc(
-            values += ^meta::pure::metamodel::valuespecification::VariableExpression(
+            values += ^VariableExpression(
                 name = $p.name,
                 genericType = $pGtResult.value->toOne(),
                 multiplicity = $pMult
             ),
             context = $pGtResult.context
         );
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1));
+    }, ^CompilerListResult<VariableExpression>(context = $ctx1));
     let ctx2 = $paramAccum.context;
 
     // If type or parameter compilation produced errors, skip body compilation to avoid cascading errors
     if($ctx2.errors->size() > $context.errors->size(),
-        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>(context = $ctx2),
+        | ^CompilerResult<QualifiedProperty<Any>>(context = $ctx2),
         |
 
     // Prepend implicit $this parameter
     let ownerGenericType = $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
-    let thisParam = ^meta::pure::metamodel::valuespecification::VariableExpression(
+    let thisParam = ^VariableExpression(
         name = 'this',
         genericType = $ownerGenericType,
-        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+        multiplicity = PureOne
     );
     let allParams = $thisParam->concatenate($paramAccum.values);
 
@@ -66,32 +74,32 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     let ctx3 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx2);
 
     // Build FunctionType and classifierGenericType
-    let functionType = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
-    )->cast(@meta::pure::metamodel::type::FunctionType);
+    let functionType = new(
+        ^UserDefinedGenericType(type = FunctionType)
+    )->cast(@FunctionType);
     let ft = ^$functionType(
         parameters = $allParams,
         returnType = $returnGenType,
         returnMultiplicity = $returnMult
     );
-    let qpClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::property::QualifiedProperty,
+    let qpClassifierGT = ^UserDefinedGenericType(
+        type = QualifiedProperty,
         typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ft)
+            ^UserDefinedGenericType(type = $ft)
         ]
     );
 
-    let emptyQP = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::property::QualifiedProperty)
-    )->cast(@meta::pure::metamodel::function::property::QualifiedProperty<Any>);
+    let emptyQP = new(
+        ^UserDefinedGenericType(type = QualifiedProperty)
+    )->cast(@QualifiedProperty<Any>);
     // Compile stereotypes and tagged values
     let qpCtx = 'qualified property \'' + $qp.name + '\' in ' + $classCtx;
     let stereoAccum = $qp.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $qpCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx3));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx3));
     let tvAccum = $qp.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $qpCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
 
     let compiledQP = ^$emptyQP(
         name = $qp.name,
@@ -102,7 +110,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
         taggedValues = $tvAccum.values,
         expressionSequence = $bodyResult.specs,
         classifierGenericType = $qpClassifierGT,
-        sourceInformation = $qp.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+        sourceInformation = $qp.sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -110,14 +118,14 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
             endColumn = $si.endColumn
         ))
     );
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::QualifiedProperty<Any>>(
+    ^CompilerResult<QualifiedProperty<Any>>(
         value = $compiledQP,
         context = $ctx3
     );
     );
 }
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties(qualifiedProperties:meta::pure::metamodel::function::property::QualifiedProperty<Any>[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerContext[1]
 {
     $qualifiedProperties->fold({qp, qCtx |
         if($qp.expressionSequence->isEmpty(),
@@ -136,7 +144,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQua
                     let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $ctx1);
                     // Type validation
                     let ctx2 = if([pair(| $lastExpr.genericType->isEmpty() || $qp.genericType->isEmpty()
-                                         || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                                         || $lastExpr.genericType->toOne()->instanceOf(UndefinedGenericType),
                                        | $ctx1),
                                   pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($qp.genericType->toOne(), $lastExpr.genericType->toOne()),
                                        | $ctx1)],
@@ -154,7 +162,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQua
     }, $context);
 }
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
 {
     if($cls.qualifiedProperties->isEmpty() || $cls.generalizations->isEmpty(),
         | $context,
@@ -165,17 +173,17 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQu
                   if($superType->isEmpty(),
                       | $gCtx,
                       | match($superType->toOne(), [
-                            gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+                            gtv:GenericTypeValue[1] |
                                 let superTypeValue = $gtv.type;
                                 if($superTypeValue->isEmpty(),
                                     | $gCtx,
                                     | match($superTypeValue->toOne(), [
-                                          superClass:meta::pure::metamodel::type::Class<Any>[1] |
+                                          superClass:Class<Any>[1] |
                                               // Look up the fully compiled superclass from the context
                                               let resolvedSuper = $gCtx->resolveElement($superClass->meta::pure::functions::meta::elementToPath());
                                               let superQPs = if($resolvedSuper->isNotEmpty(),
                                                   | match($resolvedSuper->toOne(), [
-                                                        sc:meta::pure::metamodel::type::Class<Any>[1] | $sc.qualifiedProperties->filter(sqp | $sqp.name == $qp.name && $sqp.parameters->size() == $qp.parameters->size()),
+                                                        sc:Class<Any>[1] | $sc.qualifiedProperties->filter(sqp | $sqp.name == $qp.name && $sqp.parameters->size() == $qp.parameters->size()),
                                                         a:Any[1] | []
                                                     ]),
                                                   | []

@@ -16,8 +16,9 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::genericTypeOperation::*;
 import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relation::*;
 
 function meta::pure::compiler::helper::genericTypeOperation::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
 {
@@ -67,11 +68,11 @@ function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOper
                 rightV : GenericTypeValue[1] |
                     if($leftV.type->isNotEmpty() && $rightV.type->isNotEmpty(),
                         | $leftV.type->toOne()->match([
-                              leftRT : meta::pure::metamodel::relation::RelationType<Any>[1] |
+                              leftRT : RelationType<Any>[1] |
                                   $rightV.type->toOne()->match([
-                                      rightRT : meta::pure::metamodel::relation::RelationType<Any>[1] |
+                                      rightRT : RelationType<Any>[1] |
                                           let result = evaluateRelationTypeOperation($leftRT, $rightRT, $gto.operationType);
-                                          if($result->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $result->toOne()), | []);,
+                                          if($result->isNotEmpty(), | ^InferredGenericType(type = $result->toOne()), | []);,
                                       other : Type[1] | []
                                   ]);,
                               other : Type[1] | []

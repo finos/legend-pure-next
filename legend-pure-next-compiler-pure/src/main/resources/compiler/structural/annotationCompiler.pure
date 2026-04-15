@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1]
+function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
     let ctx = $acc.context;
     let profileOpt = $ctx->resolveElement($s.pointerValue);
@@ -24,7 +27,7 @@ function meta::pure::compiler::structural::annotationCompiler::compileStereotype
         | let siCtx = formatSourceInfo($s->cast(@meta::pure::protocol::grammar::type::Any).sourceInformation, $ctx);
           let newCtx = ^$ctx(errors += 'The profile \'' + $s.pointerValue + '\' can\'t be found in ' + $ownerCtx + $siCtx);
           ^$acc(context = $newCtx);,
-        | let profile = $profileOpt->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        | let profile = $profileOpt->toOne()->cast(@Profile);
           let stereotypeName = $s.extraPointerValues->at(0).value;
           let matched = $profile.p_stereotypes->filter(x | $x.value == $stereotypeName);
           if($matched->isEmpty(),
@@ -36,37 +39,37 @@ function meta::pure::compiler::structural::annotationCompiler::compileStereotype
     );
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1]
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
     let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
     $p.stereotypes->fold({s, acc |
         compileStereotype($s, $acc, $propCtx);
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx));
+    }, ^CompilerListResult<Stereotype>(context = $ctx));
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1]
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
     let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
     $p.taggedValues->fold({t, acc |
         compileTaggedValue($t, $acc, $propCtx);
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $ctx));
+    }, ^CompilerListResult<TaggedValue>(context = $ctx));
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1]
+function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
     let ctx = $acc.context;
     let profileOpt = $ctx->resolveElement($t.tag.pointerValue);
     if($profileOpt->isEmpty(),
         | $acc,
-        | let profile = $profileOpt->toOne()->cast(@meta::pure::metamodel::extension::Profile);
+        | let profile = $profileOpt->toOne()->cast(@Profile);
           let tagName = $t.tag.extraPointerValues->at(0).value;
           let matched = $profile.p_tags->filter(x | $x.value == $tagName);
           if($matched->isEmpty(),
               | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
                 let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.pointerValue + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
-              | let tvGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::extension::TaggedValue);
-                let inst = meta::pure::functions::lang::new($tvGT)->cast(@meta::pure::metamodel::extension::TaggedValue);
+              | let tvGT = ^UserDefinedGenericType(type = TaggedValue);
+                let inst = new($tvGT)->cast(@TaggedValue);
                 ^$acc(values += ^$inst(tag = $matched->toOne(), value = $t.value));
           );
     );

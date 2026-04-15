@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
@@ -21,7 +28,7 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]): ValueCompileResult[1]
+function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:CompilerContext[1], scope:VariableExpression[*], mGenType:GenericType[0..1], mMult:Multiplicity[0..1]): ValueCompileResult[1]
 {
     let siCtx = if($l.sourceInformation->isNotEmpty(), | formatSourceInfo($l.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
@@ -42,19 +49,19 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               let hasType = $p.genericType->isNotEmpty() && $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
               let pmGenType = if($hasType,
                   | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value,
-                  | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()
+                  | ^CompilerNotSetGenericType()
               );
               // For untyped lambda params, use CompilerNotSetMultiplicity (matching Java null).
               // setMissingLambdaParameterInformation will fill the actual multiplicity from bindings.
               let pmMult = if($p.multiplicity->isEmpty(),
-                  | ^meta::pure::metamodel::multiplicity::CompilerNotSetMultiplicity(),
+                  | ^CompilerNotSetMultiplicity(),
                   | $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
               );
-              ^meta::pure::metamodel::valuespecification::VariableExpression(
+              ^VariableExpression(
                   name = $p.name,
                   genericType = $pmGenType,
                   multiplicity = $pmMult
-              )->cast(@meta::pure::metamodel::valuespecification::VariableExpression);
+              )->cast(@VariableExpression);
           );
 
           let innerScope = $scope->concatenate($compiledParams);
@@ -66,55 +73,55 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           );
 
           let bodyReturnGT = if($compiledSequence.specs->isEmpty(),
-              | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+              | ^CompilerNotSetGenericType(),
               | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
                 if($lastExpr.genericType->isEmpty(),
-                    | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+                    | ^CompilerNotSetGenericType(),
                     | asInferredGenericType($lastExpr.genericType->toOne())
                 );
           );
           let bodyReturnMul = if($compiledSequence.specs->isEmpty(),
-              | meta::pure::metamodel::multiplicity::PureOne,
+              | PureOne,
               | let lastExpr = $compiledSequence.specs->at($compiledSequence.specs->size() - 1);
                 if($lastExpr.multiplicity->isEmpty(),
-                    | meta::pure::metamodel::multiplicity::PureOne,
+                    | PureOne,
                     | asInferredMultiplicity($lastExpr.multiplicity->toOne())
                 );
           );
 
-          let lambdaFunctionType = meta::pure::functions::lang::new(
-              ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
-          )->cast(@meta::pure::metamodel::type::FunctionType);
+          let lambdaFunctionType = new(
+              ^UserDefinedGenericType(type = FunctionType)
+          )->cast(@FunctionType);
           let ft = ^$lambdaFunctionType(
               parameters = $compiledParams,
               returnType = $bodyReturnGT,
               returnMultiplicity = $bodyReturnMul
           );
 
-          let lambdaCGT = ^meta::pure::metamodel::type::generics::InferredGenericType(
-              type = meta::pure::metamodel::function::LambdaFunction,
+          let lambdaCGT = ^InferredGenericType(
+              type = LambdaFunction,
               typeArguments = [
-                  ^meta::pure::metamodel::type::generics::InferredGenericType(
+                  ^InferredGenericType(
                       type = $ft
                   )
               ]
           );
 
-          let emptyLambda = meta::pure::functions::lang::new(
-              ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::LambdaFunction)
-          )->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+          let emptyLambda = new(
+              ^UserDefinedGenericType(type = LambdaFunction)
+          )->cast(@LambdaFunction<Any>);
           let m3Lambda = ^$emptyLambda(
               parameters = $compiledParams,
               expressionSequence = $compiledSequence.specs,
               openVariables = $openVariables,
               classifierGenericType = $lambdaCGT,
-              sourceInformation = $l.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+              sourceInformation = $l.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
           );
 
-          let wrappedLambda = ^meta::pure::metamodel::valuespecification::AtomicValue(
+          let wrappedLambda = ^AtomicValue(
               value = $m3Lambda,
               genericType = $lambdaCGT,
-              multiplicity = meta::pure::metamodel::multiplicity::PureOne
+              multiplicity = PureOne
           );
           ^ValueCompileResult(
               values = [$wrappedLambda],
