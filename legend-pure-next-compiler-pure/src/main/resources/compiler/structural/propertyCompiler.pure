@@ -132,10 +132,16 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
                     // Validate type and multiplicity of the resolved default value
                     let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
                     // For Collections, compute the actual element type (resolver can't propagate it back)
-                    let exprGT = if($lastExpr->instanceOf(meta::pure::metamodel::valuespecification::Collection) && $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->isNotEmpty(),
-                        | let elemTypes = $lastExpr->cast(@meta::pure::metamodel::valuespecification::Collection).values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType))->map(gt | $gt->toOne());
-                          if($elemTypes->isNotEmpty(), | meta::pure::compiler::helper::genericType::findCommonGenericType($elemTypes), | $lastExpr.genericType);,
-                        | $lastExpr.genericType
+                    let exprGT = $lastExpr->match(
+                        [
+                            coll : meta::pure::metamodel::valuespecification::Collection[1] |
+                                if($coll.values->isNotEmpty(),
+                                    | let elemTypes = $coll.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType))->map(gt | $gt->toOne());
+                                      if($elemTypes->isNotEmpty(), | meta::pure::compiler::helper::genericType::findCommonGenericType($elemTypes), | $lastExpr.genericType);,
+                                    | $lastExpr.genericType
+                                ),
+                            a : Any[1] | $lastExpr.genericType
+                        ]
                     );
                     let ctx3 = if($exprGT->isEmpty() || $prop.genericType->isEmpty() || $exprGT->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
                         | $ctx2,

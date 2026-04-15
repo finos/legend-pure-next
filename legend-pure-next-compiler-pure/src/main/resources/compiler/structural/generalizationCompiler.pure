@@ -17,9 +17,11 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:meta::pure::metamodel::type::Type[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>[1]
 {
-    let typeParams = if($skeleton->instanceOf(meta::pure::metamodel::type::Class),
-        | $skeleton->cast(@meta::pure::metamodel::type::Class<Any>).typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter),
-        | []->cast(@meta::pure::metamodel::type::generics::TypeParameter)
+    let typeParams = $skeleton->match(
+        [
+            c : meta::pure::metamodel::type::Class<Any>[1] | $c.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter),
+            a : Any[1]                                     | []->cast(@meta::pure::metamodel::type::generics::TypeParameter)
+        ]
     );
     if($protocolGeneralizations->isEmpty(),
         | ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(

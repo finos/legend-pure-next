@@ -51,13 +51,23 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 ),
               | let ownerType = $receiver.genericType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne();
                 // Handle Enumeration value access: check if the receiver's value IS an Enumeration
-                let isEnum = $receiver->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration);
-                if($isEnum,
-                    | let enumeration = $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+                let maybeEnumeration = $receiver->match([
+                    av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
+                        $av.value->toOne()->match([
+                            e:meta::pure::metamodel::type::Enumeration<Any>[1] | $e,
+                            a:Any[1] | []
+                        ]),
+                    a:Any[1] | []
+                ]);
+                if($maybeEnumeration->isNotEmpty(),
+                    | let enumeration = $maybeEnumeration->toOne();
                       let enumPath = $enumeration->meta::pure::functions::meta::elementToPath();
                       let resolvedEnum = $context->resolveElement($enumPath);
-                      let enumOwner = if($resolvedEnum->isNotEmpty() && $resolvedEnum->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration),
-                          | $resolvedEnum->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>),
+                      let enumOwner = if($resolvedEnum->isNotEmpty(),
+                          | $resolvedEnum->toOne()->match([
+                                re:meta::pure::metamodel::type::Enumeration<Any>[1] | $re,
+                                a:Any[1] | $enumeration
+                            ]),
                           | $enumeration
                       );
                       let matchedProp = $enumOwner.properties->filter(p | $p.name == $functionName);
@@ -78,9 +88,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             );
                       );,
                     | // Column access on a RelationType — mirrors Java DotApplicationResolver.lookupFunction lines 300-313
-                      let isRelationType = $ownerType->instanceOf(RelationType);
-                      if($isRelationType,
-                          | let rt = $ownerType->cast(@RelationType<Any>);
+                      $ownerType->match([
+                          rt:RelationType<Any>[1] |
                             let col = $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $functionName);
                             let _dc = debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
                             if($col->isNotEmpty(),
@@ -100,50 +109,53 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       context = ^$ctx1(errors += 'Can\'t find column \'' + $functionName + '\' in relation type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
                                   )
                             );,
-                          | // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
-                      let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
-                          | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
+                          cls:meta::pure::metamodel::type::Class<Any>[1] |
+                            // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
+                            let path = $cls->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
                             let fromCtx = $context->resolveElement($path);
-                            if($fromCtx->isNotEmpty() && $fromCtx->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-                                | $fromCtx->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
-                                | $ownerType->cast(@meta::pure::metamodel::type::Class<Any>)
-                            );,
-                          | []
-                      );
-                      // Look up property on the owner type
-                      let prop = if($resolvedOwner->isNotEmpty(),
-                          | findProperty($resolvedOwner->toOne(), $functionName),
-                          | []
-                      );
-                      if($prop->isEmpty(),
-                          | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                                value = $dot,
-                                context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + if($resolvedOwner->isNotEmpty(), |$resolvedOwner->toOne()->meta::pure::functions::meta::elementToPath(), |$ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath()) + '\'' + $siCtx)
-                            ),
-                          | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
-                            let resolvedProp = $prop->toOne();
-                            let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
-                            let propGT = $propResolved.first;
-                            let propMul = $propResolved.second;
-                            let receiverMul = $receiver.multiplicity;
-                            // Check if automap needed: receiver multiplicity is NOT [1]
-                            if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
-                                | // Direct access — receiver is [1]
-                                  let _dd = debug($context, | '  direct access [1]');
-                                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                                      value = ^$dot(
-                                          func = $resolvedProp,
-                                          genericType = $propGT,
-                                          multiplicity = $propMul
-                                      ),
-                                      context = $ctx1
-                                  );,
-                                | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
-                                  let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
-                                  buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                            let resolvedOwner = if($fromCtx->isNotEmpty(),
+                                | $fromCtx->toOne()->match([
+                                      c:meta::pure::metamodel::type::Class<Any>[1] | $c,
+                                      a:Any[1] | $cls
+                                  ]),
+                                | $cls
                             );
-                      );
-                      ); // end RelationType if
+                            // Look up property on the owner type
+                            let prop = findProperty($resolvedOwner, $functionName);
+                            if($prop->isEmpty(),
+                                | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = $dot,
+                                      context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + $resolvedOwner->meta::pure::functions::meta::elementToPath() + '\'' + $siCtx)
+                                  ),
+                                | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
+                                  let resolvedProp = $prop->toOne();
+                                  let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
+                                  let propGT = $propResolved.first;
+                                  let propMul = $propResolved.second;
+                                  let receiverMul = $receiver.multiplicity;
+                                  // Check if automap needed: receiver multiplicity is NOT [1]
+                                  if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
+                                      | // Direct access — receiver is [1]
+                                        let _dd = debug($context, | '  direct access [1]');
+                                        ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                            value = ^$dot(
+                                                func = $resolvedProp,
+                                                genericType = $propGT,
+                                                multiplicity = $propMul
+                                            ),
+                                            context = $ctx1
+                                        );,
+                                      | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
+                                        let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                                        buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                                  );
+                            );,
+                          a:Any[1] |
+                            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = $dot,
+                                context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath() + '\'' + $siCtx)
+                            )
+                      ]); // end ownerType match
                 ); // end enum if
           );
     );
@@ -154,17 +166,20 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 {
     let rawGT = $prop.genericType->toOne();
     let rawMul = $prop.multiplicity->toOne();
-    let ownerType = if($ownerGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-        | $ownerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type,
-        | []
-    );
-    if($ownerType->isNotEmpty() && $ownerType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-        | let ownerClass = $ownerType->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
-          let bindings = $ownerClass->buildBindingsFromGenericType($ownerGT);
-          if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
-              | pair($rawGT, $rawMul),
-              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
-          );,
+    let ownerType = $ownerGT->match([
+        gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] | $gtv.type,
+        a:Any[1] | []
+    ]);
+    if($ownerType->isNotEmpty(),
+        | $ownerType->toOne()->match([
+              ownerClass:meta::pure::metamodel::type::Class<Any>[1] |
+                  let bindings = $ownerClass->buildBindingsFromGenericType($ownerGT);
+                  if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
+                      | pair($rawGT, $rawMul),
+                      | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
+                  );,
+              a:Any[1] | pair($rawGT, $rawMul)
+          ]),
         | pair($rawGT, $rawMul)
     );
 }

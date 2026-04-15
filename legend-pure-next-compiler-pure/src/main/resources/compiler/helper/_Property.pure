@@ -25,20 +25,22 @@ function meta::pure::compiler::helper::property::resolveProperty(prop:Property<N
     let resolvedMultiplicity = $prop.multiplicity;
     let resolvedClassifierGenericType = $prop.classifierGenericType;
     
-    let resolvedTuple = if($receiverType->genericTypeRawType()->toOne()->instanceOf(Class),
-       | let ownerClass = $receiverType->genericTypeRawType()->toOne()->cast(@Class<Any>);
-         let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
-         if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
-            | pair(
-                $resolvedGenericType->makeAsConcreteAsPossible($bindings),
-                pair(
-                    $resolvedMultiplicity->makeAsConcreteAsPossible($bindings),
-                    $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings)
-                )
-              ),
-            | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
-         );,
-       | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+    let resolvedTuple = $receiverType->genericTypeRawType()->toOne()->match(
+        [
+            ownerClass : Class<Any>[1] |
+                let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
+                if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
+                    | pair(
+                        $resolvedGenericType->makeAsConcreteAsPossible($bindings),
+                        pair(
+                            $resolvedMultiplicity->makeAsConcreteAsPossible($bindings),
+                            $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings)
+                        )
+                      ),
+                    | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+                );,
+            a : Any[1] | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+        ]
     );
     
     let resolvedProp = meta::pure::functions::lang::new($resolvedTuple.second.second)->cast(@Property<Nil,Any|*>);

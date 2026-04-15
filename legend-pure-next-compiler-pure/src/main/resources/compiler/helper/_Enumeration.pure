@@ -26,10 +26,17 @@ function meta::pure::compiler::helper::enumeration::resolveEnumValue(enumeration
                 if($lambda.expressionSequence->isEmpty(),
                     | [],
                     | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
-                      if($lastExpr->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $lastExpr->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->isNotEmpty() && $lastExpr->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::type::Enum),
-                          | $lastExpr->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::type::Enum),
-                          | []
-                      );
+                      $lastExpr->match([
+                          av : meta::pure::metamodel::valuespecification::AtomicValue[1] |
+                              if($av.value->isNotEmpty(),
+                                  | $av.value->toOne()->match([
+                                        e : meta::pure::metamodel::type::Enum[1] | $e,
+                                        other : Any[1] | []
+                                    ]);,
+                                  | []
+                              );,
+                          other : Any[1] | []
+                      ]);
                 );
           );
     );

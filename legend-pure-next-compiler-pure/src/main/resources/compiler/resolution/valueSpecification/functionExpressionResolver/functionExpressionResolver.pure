@@ -27,18 +27,22 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let _d = debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
     let deepCtx = $context->debugSpaceInc();
     let checkpoint = $context.errors->size();
-    if($fi->instanceOf(meta::pure::metamodel::valuespecification::DotApplication) && $fi.parametersValues->isNotEmpty(),
-        | let dotResult = resolveDotApplication($fi->cast(@meta::pure::metamodel::valuespecification::DotApplication), $scope, $deepCtx);
-          // Enum value resolution returns an AtomicValue, not a FunctionExpression — finalize only FEs
-          if($dotResult.value->isNotEmpty() && $dotResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
-              | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($dotResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $dotResult.context),
-              | $dotResult
-          );,
-        | let appResult = resolveFunctionApplication($fi->cast(@FunctionInvocation), $scope, $deepCtx);
-          if($appResult.value->isNotEmpty() && $appResult.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::FunctionInvocation),
-              | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($appResult.value->toOne()->cast(@meta::pure::metamodel::valuespecification::FunctionInvocation), $checkpoint, $appResult.context),
-              | $appResult
-          );
+    let result = match($fi, [
+        dot:meta::pure::metamodel::valuespecification::DotApplication[1] |
+            if($dot.parametersValues->isNotEmpty(),
+                | resolveDotApplication($dot, $scope, $deepCtx),
+                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $deepCtx)
+            );,
+        inv:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+            resolveFunctionApplication($inv, $scope, $deepCtx)
+    ]);
+    // Enum value resolution returns an AtomicValue, not a FunctionExpression — finalize only FEs
+    if($result.value->isNotEmpty(),
+        | match($result.value->toOne(), [
+              fInv:meta::pure::metamodel::valuespecification::FunctionInvocation[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fInv, $checkpoint, $result.context),
+              a:Any[1] | $result
+          ]),
+        | $result
     );
 }
 
@@ -50,8 +54,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // Get the fully-compiled function from the context if available
           let funcPath = $fi.func->toOne()->elementToPath();
           let fromContext = $context->resolveElement($funcPath);
-          let resolvedFunc = if($fromContext->isNotEmpty() && $fromContext->toOne()->instanceOf(meta::pure::metamodel::function::Function),
-              | $fromContext->toOne()->cast(@meta::pure::metamodel::function::Function<Any>),
+          let resolvedFunc = if($fromContext->isNotEmpty(),
+              | match($fromContext->toOne(), [f:meta::pure::metamodel::function::Function<Any>[1] | $f, a:Any[1] | $fi.func->toOne()]),
               | $fi.func->toOne()
           );
           let ft = $resolvedFunc->getFunctionType();

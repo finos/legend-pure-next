@@ -150,17 +150,20 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::type::generics::GenericType>(context = $result.context));
 
     let resultGT = $result.value->toOne();
-    if($resultGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-        | let resultValue = $resultGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
-          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-              value = ^$resultValue(typeArguments = $typeArgResult.values),
-              context = $typeArgResult.context
-          );,
-        | // UndefinedGenericType or other non-GenericTypeValue — return as-is
-          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-              value = $resultGT,
-              context = $typeArgResult.context
-          );
+    $resultGT->match(
+        [
+            resultValue : meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                    value = ^$resultValue(typeArguments = $typeArgResult.values),
+                    context = $typeArgResult.context
+                ),
+            a : Any[1] |
+                // UndefinedGenericType or other non-GenericTypeValue — return as-is
+                ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                    value = $resultGT,
+                    context = $typeArgResult.context
+                )
+        ]
     );
 }
 

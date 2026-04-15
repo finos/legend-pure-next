@@ -164,37 +164,47 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQu
               // Walk generalizations to find superclass QPs with same name
               $cls.generalizations->fold({gen, gCtx |
                   let superType = $gen.general;
-                  if($superType->isEmpty() || !$superType->toOne()->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+                  if($superType->isEmpty(),
                       | $gCtx,
-                      | let superTypeValue = $superType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type;
-                        if($superTypeValue->isEmpty() || !$superTypeValue->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-                            | $gCtx,
-                            | let superClass = $superTypeValue->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
-                              // Look up the fully compiled superclass from the context
-                              let resolvedSuper = $gCtx->resolveElement($superClass->meta::pure::functions::meta::elementToPath());
-                              let superQPs = if($resolvedSuper->isNotEmpty() && $resolvedSuper->toOne()->instanceOf(meta::pure::metamodel::type::Class),
-                                  | $resolvedSuper->toOne()->cast(@meta::pure::metamodel::type::Class<Any>).qualifiedProperties->filter(sqp | $sqp.name == $qp.name && $sqp.parameters->size() == $qp.parameters->size()),
-                                  | []
-                              );
-                              if($superQPs->isEmpty(),
-                                  | $gCtx,
-                                  | let superProp = $superQPs->at(0);
-                                    let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($qp.sourceInformation, $gCtx);
-                                    let clsName = $cls.name->toOne();
-                                    // Check return type covariance
-                                    let gCtx2 = if($qp.genericType->isNotEmpty() && $superProp.genericType->isNotEmpty()
-                                                    && !meta::pure::compiler::helper::genericType::isCompatibleGenericType($superProp.genericType->toOne(), $qp.genericType->toOne()),
-                                        | ^$gCtx(errors += 'Qualified property override variance mismatch for \'' + $qp.name->toOne() + '\' in class \'' + $clsName + '\'. Return type is not covariant. Overridden property has return type \'' + printGenericType($superProp.genericType->toOne()) + '\', but overriding property has return type \'' + printGenericType($qp.genericType->toOne()) + '\'.' + $siCtx),
-                                        | $gCtx
-                                    );
-                                    // Check return multiplicity subsumption
-                                    if($qp.multiplicity->isNotEmpty() && $superProp.multiplicity->isNotEmpty()
-                                        && !meta::pure::compiler::helper::multiplicity::multiplicitySubsumes($superProp.multiplicity->toOne(), $qp.multiplicity->toOne()),
-                                        | ^$gCtx2(errors += 'Qualified property override variance mismatch for \'' + $qp.name->toOne() + '\' in class \'' + $clsName + '\'. Return multiplicity is not subsumed. Overridden property has return multiplicity \'' + meta::pure::compiler::helper::multiplicity::printMultiplicity($superProp.multiplicity->toOne()) + '\', but overriding property has return multiplicity \'' + meta::pure::compiler::helper::multiplicity::printMultiplicity($qp.multiplicity->toOne()) + '\'.' + $siCtx),
-                                        | $gCtx2
-                                    );
-                              );
-                        );
+                      | match($superType->toOne(), [
+                            gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
+                                let superTypeValue = $gtv.type;
+                                if($superTypeValue->isEmpty(),
+                                    | $gCtx,
+                                    | match($superTypeValue->toOne(), [
+                                          superClass:meta::pure::metamodel::type::Class<Any>[1] |
+                                              // Look up the fully compiled superclass from the context
+                                              let resolvedSuper = $gCtx->resolveElement($superClass->meta::pure::functions::meta::elementToPath());
+                                              let superQPs = if($resolvedSuper->isNotEmpty(),
+                                                  | match($resolvedSuper->toOne(), [
+                                                        sc:meta::pure::metamodel::type::Class<Any>[1] | $sc.qualifiedProperties->filter(sqp | $sqp.name == $qp.name && $sqp.parameters->size() == $qp.parameters->size()),
+                                                        a:Any[1] | []
+                                                    ]),
+                                                  | []
+                                              );
+                                              if($superQPs->isEmpty(),
+                                                  | $gCtx,
+                                                  | let superProp = $superQPs->at(0);
+                                                    let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($qp.sourceInformation, $gCtx);
+                                                    let clsName = $cls.name->toOne();
+                                                    // Check return type covariance
+                                                    let gCtx2 = if($qp.genericType->isNotEmpty() && $superProp.genericType->isNotEmpty()
+                                                                    && !meta::pure::compiler::helper::genericType::isCompatibleGenericType($superProp.genericType->toOne(), $qp.genericType->toOne()),
+                                                        | ^$gCtx(errors += 'Qualified property override variance mismatch for \'' + $qp.name->toOne() + '\' in class \'' + $clsName + '\'. Return type is not covariant. Overridden property has return type \'' + printGenericType($superProp.genericType->toOne()) + '\', but overriding property has return type \'' + printGenericType($qp.genericType->toOne()) + '\'.' + $siCtx),
+                                                        | $gCtx
+                                                    );
+                                                    // Check return multiplicity subsumption
+                                                    if($qp.multiplicity->isNotEmpty() && $superProp.multiplicity->isNotEmpty()
+                                                        && !meta::pure::compiler::helper::multiplicity::multiplicitySubsumes($superProp.multiplicity->toOne(), $qp.multiplicity->toOne()),
+                                                        | ^$gCtx2(errors += 'Qualified property override variance mismatch for \'' + $qp.name->toOne() + '\' in class \'' + $clsName + '\'. Return multiplicity is not subsumed. Overridden property has return multiplicity \'' + meta::pure::compiler::helper::multiplicity::printMultiplicity($superProp.multiplicity->toOne()) + '\', but overriding property has return multiplicity \'' + meta::pure::compiler::helper::multiplicity::printMultiplicity($qp.multiplicity->toOne()) + '\'.' + $siCtx),
+                                                        | $gCtx2
+                                                    );
+                                              );,
+                                          a:Any[1] | $gCtx
+                                      ])
+                                );,
+                            a:Any[1] | $gCtx
+                        ])
                   );
               }, $qCtx);
           }, $context)

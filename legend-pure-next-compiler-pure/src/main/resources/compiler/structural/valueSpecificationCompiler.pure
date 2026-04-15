@@ -102,7 +102,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileEx
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification(vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*]): ValueCompileResult[1]
 {
-    let mGenType = if($vs.genericType->isEmpty() || !$vs.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue), | [], | $vs.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value);
+    let mGenType = if($vs.genericType->isEmpty(), | [], | match($vs.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value, a:Any[1] | []]));
     let mMult = if($vs.multiplicity->isEmpty(), | [], | $vs.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
 
     match($vs, [
@@ -142,57 +142,57 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileAtomicValue(a:meta::pure::protocol::grammar::valuespecification::AtomicValue[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], mGenType:meta::pure::metamodel::type::generics::GenericType[0..1], mMult:meta::pure::metamodel::multiplicity::Multiplicity[0..1]):ValueCompileResult[1]
 {
     let rawValue = $a.value->toOne();
-    if($rawValue->instanceOf(meta::pure::protocol::grammar::function::LambdaFunction),
-        | let lambdaResult = $rawValue->cast(@meta::pure::protocol::grammar::function::LambdaFunction)->compileLambda($ctx, $scope, $mGenType, $mMult);
-          if($lambdaResult.values->isEmpty(),
-              | $lambdaResult,
-              | // Lambda is already wrapped in AtomicValue by compileLambda
-                let wrappedLambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
-                let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne());
-                ^ValueCompileResult(
-                    values = [^$wrappedLambda(
-                        genericType = $inferredGT,
-                        multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                        sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                    )],
-                    openVariables = $lambdaResult.openVariables,
-                    context = $lambdaResult.context
-                );
-          );,
-        | if($rawValue->instanceOf(meta::pure::protocol::grammar::Package_Pointer),
-              | let pp = $rawValue->cast(@meta::pure::protocol::grammar::Package_Pointer);
-                let resolved = $ctx->resolveElement($pp.pointerValue);
-                if($resolved->isEmpty(),
-                    | let siCtx = if($vs.sourceInformation->isNotEmpty(), | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
-                      ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.pointerValue + '\' can\'t be found' + $siCtx));,
-                    | let element = $resolved->toOne();
-                      ^ValueCompileResult(
-                          values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                              value = $element,
-                              genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $element->type()),
-                              multiplicity = meta::pure::metamodel::multiplicity::PureOne,
-                              sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                          )],
-                          openVariables = []
-                      );
-                );,
-              | let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-                let compiledGT = $parserGT->compileGenericType($ctx, '', []);
-                let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                    | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne()),
-                    | $compiledGT.value->toOne()
-                );
-                ^ValueCompileResult(
-                    values = [^meta::pure::metamodel::valuespecification::AtomicValue(
-                        value = $rawValue,
-                        genericType = $inferredGT,
-                        multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
-                        sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-                    )],
-                    openVariables = []
-                );
-          )
-    );
+    match($rawValue, [
+        lf:meta::pure::protocol::grammar::function::LambdaFunction[1] |
+            let lambdaResult = $lf->compileLambda($ctx, $scope, $mGenType, $mMult);
+            if($lambdaResult.values->isEmpty(),
+                | $lambdaResult,
+                | // Lambda is already wrapped in AtomicValue by compileLambda
+                  let wrappedLambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
+                  let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne());
+                  ^ValueCompileResult(
+                      values = [^$wrappedLambda(
+                          genericType = $inferredGT,
+                          multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
+                          sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                      )],
+                      openVariables = $lambdaResult.openVariables,
+                      context = $lambdaResult.context
+                  );
+            );,
+        pp:meta::pure::protocol::grammar::Package_Pointer[1] |
+            let resolved = $ctx->resolveElement($pp.pointerValue);
+            if($resolved->isEmpty(),
+                | let siCtx = if($vs.sourceInformation->isNotEmpty(), | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+                  ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.pointerValue + '\' can\'t be found' + $siCtx));,
+                | let element = $resolved->toOne();
+                  ^ValueCompileResult(
+                      values = [^meta::pure::metamodel::valuespecification::AtomicValue(
+                          value = $element,
+                          genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $element->type()),
+                          multiplicity = meta::pure::metamodel::multiplicity::PureOne,
+                          sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                      )],
+                      openVariables = []
+                  );
+            );,
+        any:Any[1] |
+            let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
+            let compiledGT = $parserGT->compileGenericType($ctx, '', []);
+            let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne()),
+                | $compiledGT.value->toOne()
+            );
+            ^ValueCompileResult(
+                values = [^meta::pure::metamodel::valuespecification::AtomicValue(
+                    value = $rawValue,
+                    genericType = $inferredGT,
+                    multiplicity = if($mMult->isEmpty(), | meta::pure::metamodel::multiplicity::PureOne, | $mMult->toOne()),
+                    sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                )],
+                openVariables = []
+            );
+    ]);
 }
 
 // ============================================================================
@@ -339,10 +339,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:meta::pure::compiler::CompilerContext[1]):ValueCompileResult[1]
 {
-    let heldGT = if($gmh.genericType->isNotEmpty() && $gmh.genericType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
-        | $gmh.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value->toOne(),
-        | []->cast(@meta::pure::metamodel::type::generics::GenericType)
-    );
+    let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@meta::pure::metamodel::type::generics::GenericType), | match($gmh.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(), a:Any[1] | []->cast(@meta::pure::metamodel::type::generics::GenericType)]));
     let heldMul = if($gmh.multiplicity->isNotEmpty(),
         | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
         | []->cast(@meta::pure::metamodel::multiplicity::Multiplicity)

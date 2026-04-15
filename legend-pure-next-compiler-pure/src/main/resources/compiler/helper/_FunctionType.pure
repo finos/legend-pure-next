@@ -154,11 +154,13 @@ function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(ge
     
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
-        | ^meta::pure::metamodel::type::generics::InferredGenericType(
+        | let typeArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.typeArguments, a : Any[1] | []]);
+          let mulArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.multiplicityArguments, a : Any[1] | []]);
+          ^meta::pure::metamodel::type::generics::InferredGenericType(
               type = ^$ft(parameters = $newParams, returnType = $rRetGT->toOne(), returnMultiplicity = $rRetMul->toOne()),
-              typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
-              multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])
-          )
+              typeArguments = $typeArgs,
+              multiplicityArguments = $mulArgs
+          );
     );
 }
 

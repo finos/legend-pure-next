@@ -106,12 +106,12 @@ function meta::pure::compiler::structural::constraintCompiler::resolveFunctionCo
 
 function meta::pure::compiler::structural::constraintCompiler::resolveConstraints(elem:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    let constraints = if($elem->instanceOf(meta::pure::metamodel::type::Class),
-        | $elem->cast(@meta::pure::metamodel::type::Class<Any>).constraints,
-        | if($elem->instanceOf(meta::pure::metamodel::type::PrimitiveType),
-              | $elem->cast(@meta::pure::metamodel::type::PrimitiveType).constraints,
-              | []
-          )
+    let constraints = $elem->match(
+        [
+            c : meta::pure::metamodel::type::Class<Any>[1]   | $c.constraints,
+            p : meta::pure::metamodel::type::PrimitiveType[1] | $p.constraints,
+            a : Any[1]                                        | []
+        ]
     );
     $constraints->fold({constraint, cCtx |
         if($constraint.functionDefinition->isEmpty(),
