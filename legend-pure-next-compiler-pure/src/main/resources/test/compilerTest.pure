@@ -23,12 +23,9 @@ import meta::pure::test::pct::*;
 // Harness
 function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
 {
-    if(contains($content, '###' + 'Error'),
-       | assertCompilationError($content, $sourceId),
-       | if(contains($content, '###' + 'CompiledGraph'),
-            | assertCompiledGraphContent($content, $sourceId),
-            | true
-         )
+    if([pair(| contains($content, '###' + 'Error'), | assertCompilationError($content, $sourceId)),
+        pair(| contains($content, '###' + 'CompiledGraph'), | assertCompiledGraphContent($content, $sourceId))],
+       | true
     );
 }
 

@@ -106,25 +106,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Find visible candidates by name and arity
     let candidates = $context->findAllFunctionsByNameAndArity($functionName, $paramCount);
-    if($candidates->isEmpty(),
-        | // No visible candidates — build error with suggestions
-          let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
-          let _d2 = debug($deepCtx, | 'no candidates found');
-          let suggestions = buildFunctionSuggestions($context, $functionName, $paramCount);
-          let mainError = 'The function \'' + $functionName + '\' with ' + $paramCount->toString() + ' parameter(s) can\'t be found' + $suggestions + $siCtx;
-          let errorLines = $mainError->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
-          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-              value = $fi,
-              context = ^$context(errors += $errorLines)
-          );,
-        | if($candidates->size() == 1,
-              | // Single candidate — resolve directly, errors are legitimate
-                let _d2 = debug($deepCtx, | '1 candidate');
-                resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);,
-              | // Multiple candidates — pre-resolve non-lambda params, then try each candidate
-                let _d2 = debug($deepCtx, | $candidates->size()->toString() + ' candidates, pre-resolving non-lambda params');
-                resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
-          );
+    if([pair(| $candidates->isEmpty(),
+             | // No visible candidates — build error with suggestions
+               let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+               let _d2 = debug($deepCtx, | 'no candidates found');
+               let suggestions = buildFunctionSuggestions($context, $functionName, $paramCount);
+               let mainError = 'The function \'' + $functionName + '\' with ' + $paramCount->toString() + ' parameter(s) can\'t be found' + $suggestions + $siCtx;
+               let errorLines = $mainError->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
+               ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                   value = $fi,
+                   context = ^$context(errors += $errorLines)
+               );),
+        pair(| $candidates->size() == 1,
+             | // Single candidate — resolve directly, errors are legitimate
+               let _d2 = debug($deepCtx, | '1 candidate');
+               resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);)],
+       | // Multiple candidates — pre-resolve non-lambda params, then try each candidate
+         let _d2 = debug($deepCtx, | $candidates->size()->toString() + ' candidates, pre-resolving non-lambda params');
+         resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
     );
 }
 
@@ -879,26 +878,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               let t2 = $gt2->match([gtv2 : meta::pure::metamodel::type::generics::GenericTypeValue[1] | if($gtv2.type->isNotEmpty(), | $gtv2.type, | []), other : Any[1] | []]);
               let t1IsTp = $t1->isNotEmpty() && $t1->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
               let t2IsTp = $t2->isNotEmpty() && $t2->toOne()->instanceOf(meta::pure::metamodel::type::generics::TypeParameter);
-              if($t1->isNotEmpty() && $t2->isEmpty(),
-                  | if(isTopType($t1->toOne()), | 1, | -1),
-                  | if($t1->isEmpty() && $t2->isNotEmpty(),
-                      | if(isTopType($t2->toOne()), | -1, | 1),
-                      | if($t1IsTp && !$t2IsTp,
-                          | if(isTopType($t2->toOne()), | -1, | 1),
-                          | if(!$t1IsTp && $t2IsTp,
-                              | if(isTopType($t1->toOne()), | 1, | -1),
-                              | if($t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && $t1->toOne() != $t2->toOne(),
-                                  | let lin1 = linearize($t1->toOne());
-                                    if($lin1->contains($t2->toOne()),
-                                        | -1,
-                                        | let lin2 = linearize($t2->toOne());
-                                          if($lin2->contains($t1->toOne()), | 1, | 0);
-                                    );,
-                                  | 0
-                              );
-                          );
-                      );
-                  );
+              if([pair(| $t1->isNotEmpty() && $t2->isEmpty(), | if(isTopType($t1->toOne()), | 1, | -1)),
+                  pair(| $t1->isEmpty() && $t2->isNotEmpty(), | if(isTopType($t2->toOne()), | -1, | 1)),
+                  pair(| $t1IsTp && !$t2IsTp, | if(isTopType($t2->toOne()), | -1, | 1)),
+                  pair(| !$t1IsTp && $t2IsTp, | if(isTopType($t1->toOne()), | 1, | -1)),
+                  pair(| $t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && $t1->toOne() != $t2->toOne(),
+                       | let lin1 = linearize($t1->toOne());
+                         if($lin1->contains($t2->toOne()),
+                             | -1,
+                             | let lin2 = linearize($t2->toOne());
+                               if($lin2->contains($t1->toOne()), | 1, | 0);
+                         );)],
+                 | 0
               );
         );
     }, 0);

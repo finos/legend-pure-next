@@ -640,13 +640,10 @@ function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(gen
                 | $gtv.type->toOne()->match([
                       tp : TypeParameter[1] |
                           let boundTypes = $bindings.typeBindings->get($tp.name);
-                          if($boundTypes->isEmpty(),
-                              | $genericType,
-                              | if($boundTypes->toOne().values->size() == 1,
-                                    | $boundTypes->toOne().values->at(0),
-                                    | let common = findCommonGenericType($boundTypes->toOne().values);
-                                      if($common->isEmpty(), | $genericType, | $common->toOne());
-                                )
+                          if([pair(| $boundTypes->isEmpty(), | $genericType),
+                              pair(| $boundTypes->toOne().values->size() == 1, | $boundTypes->toOne().values->at(0))],
+                             | let common = findCommonGenericType($boundTypes->toOne().values);
+                               if($common->isEmpty(), | $genericType, | $common->toOne());
                           );,
                       ft : FunctionType[1] |
                           let ftResolved = makeAsConcreteAsPossible($genericType, $ft, $bindings);

@@ -135,21 +135,19 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQua
                     let qpName = $qp.name->toOne();
                     let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $ctx1);
                     // Type validation
-                    let ctx2 = if($lastExpr.genericType->isEmpty() || $qp.genericType->isEmpty()
-                                  || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                        | $ctx1,
-                        | if(meta::pure::compiler::helper::genericType::isCompatibleGenericType($qp.genericType->toOne(), $lastExpr.genericType->toOne()),
-                              | $ctx1,
-                              | ^$ctx1(errors += 'Return type error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($qp.genericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
-                          )
+                    let ctx2 = if([pair(| $lastExpr.genericType->isEmpty() || $qp.genericType->isEmpty()
+                                         || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                                       | $ctx1),
+                                  pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($qp.genericType->toOne(), $lastExpr.genericType->toOne()),
+                                       | $ctx1)],
+                                 | ^$ctx1(errors += 'Return type error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($qp.genericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
                     );
                     // Multiplicity validation
-                    if($lastExpr.multiplicity->isEmpty() || $qp.multiplicity->isEmpty(),
-                        | $ctx2,
-                        | if(meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($qp.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
-                              | $ctx2,
-                              | ^$ctx2(errors += 'Return multiplicity error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($qp.multiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
-                          )
+                    if([pair(| $lastExpr.multiplicity->isEmpty() || $qp.multiplicity->isEmpty(),
+                             | $ctx2),
+                        pair(| meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($qp.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                             | $ctx2)],
+                       | ^$ctx2(errors += 'Return multiplicity error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($qp.multiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
                     );
               );
         );

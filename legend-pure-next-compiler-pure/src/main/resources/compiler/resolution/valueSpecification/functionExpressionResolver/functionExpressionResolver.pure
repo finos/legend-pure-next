@@ -69,16 +69,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
           // Validate required properties for new expressions
           let fnName = $fi.functionName->toOne();
-          let ctx1 = if($context.errors->size() > $checkpoint,
-              | $context,
-              | if($fnName == 'new' || $fnName->startsWith('new_'),
-                    | validateNewFromFI($updated, $context),
-                    | if($fnName == 'copy' || $fnName->startsWith('copy_'),
-                          | validateCopyFromFI($updated, $context),
-                          | $context
-                      )
-                )
-          );
+          let ctx1 = if([pair(| $context.errors->size() > $checkpoint, | $context),
+                         pair(| $fnName == 'new' || $fnName->startsWith('new_'), | validateNewFromFI($updated, $context)),
+                         pair(| $fnName == 'copy' || $fnName->startsWith('copy_'), | validateCopyFromFI($updated, $context))],
+                        | $context
+                     );
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $updated, context = $ctx1);,
         | // func not resolved — set genericType to undefined, report error if none yet (like Java lines 109-123)
           let updated = ^$fi(genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType());

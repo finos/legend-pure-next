@@ -167,12 +167,9 @@ function meta::pure::compiler::printer::printType(gt:GenericType[1]):String[1]
                             pe:PackageableElement[1] |
                                 if($pe.name->isEmpty(), | '?', |
                                     let path = $pe->fullPath();
-                                    if($path->startsWith('meta::pure::metamodel::type::primitives::'),
-                                       | $path->substring(41),
-                                       | if($path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'),
-                                            | $pe.name->toOne(),
-                                            | $path
-                                         )
+                                    if([pair(| $path->startsWith('meta::pure::metamodel::type::primitives::'), | $path->substring(41)),
+                                        pair(| $path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'), | $pe.name->toOne())],
+                                       | $path
                                     );
                                 ),
                             a:Any[1] | '?'
@@ -201,25 +198,17 @@ function meta::pure::compiler::printer::printMul(mul:Multiplicity[1]):String[1]
             let strip1 = if($path->startsWith('meta::pure::metamodel::multiplicity::'), | $path->substring(37), | $path);
             let strip2 = if($strip1->startsWith('Inferred'), | $strip1->substring(8), | $strip1);
             
-            if($strip2 == 'PureOne', | '[1]',
-               | if($strip2 == 'ZeroOne', | '[0..1]',
-                    | if($strip2 == 'ZeroMany', | '[*]',
-                         | if($strip2 == 'OneMany', | '[1..*]',
-                              | '[' + $strip2 + ']'
-                           )
-                      )
-                 )
+            if([pair(| $strip2 == 'PureOne', | '[1]'),
+                pair(| $strip2 == 'ZeroOne', | '[0..1]'),
+                pair(| $strip2 == 'ZeroMany', | '[*]'),
+                pair(| $strip2 == 'OneMany', | '[1..*]')],
+               | '[' + $strip2 + ']'
             );,
         cm:ConcreteMultiplicity[1] |
-            if($cm.upperBound->isEmpty(),
-               | if($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0,
-                    | '[*]',
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'
-                 ),
-               | if($cm.lowerBound.value == $cm.upperBound.value,
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + ']',
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
-                 )
+            if([pair(| $cm.upperBound->isEmpty() && ($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0), | '[*]'),
+                pair(| $cm.upperBound->isEmpty(), | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'),
+                pair(| $cm.lowerBound.value == $cm.upperBound.value, | '[' + $cm.lowerBound.value->toOne()->toString() + ']')],
+               | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
             );,
         mp:meta::pure::metamodel::multiplicity::MultiplicityParameter[1] |
             '[' + $mp.name + if($mp.owner->isEmpty(), | '', | '~' + $mp.owner->toOne()->match([ pe:PackageableElement[1] | if($pe.name->isEmpty(), | '?', | $pe->fullPath()), a:Any[1] | '?' ])) + ']'

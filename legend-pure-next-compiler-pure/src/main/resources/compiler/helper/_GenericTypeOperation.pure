@@ -23,9 +23,10 @@ function meta::pure::compiler::helper::genericTypeOperation::printGenericTypeOpe
 {
     let left = $gto.left->printGenericType($fullPath);
     let opName = $gto.operationType->toString();
-    let op = if($opName == 'Union', | '+',
-             | if($opName == 'Difference', | '-',
-               | if($opName == 'Equal', | '=', | '⊆')));
+    let op = if([pair(| $opName == 'Union', | '+'),
+                 pair(| $opName == 'Difference', | '-'),
+                 pair(| $opName == 'Equal', | '=')],
+                | '⊆');
     let right = $gto.right->printGenericType($fullPath);
     $left + $op + $right;
 }
@@ -47,13 +48,11 @@ function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeO
 
 function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationTypeParameterBindings(gto:GenericTypeOperation[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
 {
-    if($gto.operationType == GenericTypeOperationType.Subset,
-        | collectTypeParameterBindings($gto.left, $argGT, $bindings),
-        | if($gto.operationType == GenericTypeOperationType.Equal,
-              | let b1 = collectTypeParameterBindings($gto.left, $argGT, $bindings);
-                collectTypeParameterBindings($gto.right, $argGT, $b1);,
-              | $bindings
-          )
+    if([pair(| $gto.operationType == GenericTypeOperationType.Subset, | collectTypeParameterBindings($gto.left, $argGT, $bindings)),
+        pair(| $gto.operationType == GenericTypeOperationType.Equal,
+             | let b1 = collectTypeParameterBindings($gto.left, $argGT, $bindings);
+               collectTypeParameterBindings($gto.right, $argGT, $b1);)],
+       | $bindings
     );
 }
 
@@ -83,23 +82,17 @@ function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOper
             ]);,
         other : GenericType[1] | []
     ]);
-    if($evaluated->isNotEmpty(),
-        | $evaluated->toOne(),
-        | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
-              | ^$gto(left = $resolvedLeft, right = $resolvedRight),
-              | $gto
-          )
+    if([pair(| $evaluated->isNotEmpty(), | $evaluated->toOne()),
+        pair(| $resolvedLeft != $gto.left || $resolvedRight != $gto.right, | ^$gto(left = $resolvedLeft, right = $resolvedRight))],
+       | $gto
     );
 }
 
 function meta::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
 {
     let right = $gto.right;
-    if($gto.operationType == GenericTypeOperationType.Equal,
-        | isCompatibleGenericType($right, $other, $contravariant),
-        | if($gto.operationType == GenericTypeOperationType.Subset,
-              | isCompatibleGenericType($other, $right, $contravariant),
-              | true
-          )
+    if([pair(| $gto.operationType == GenericTypeOperationType.Equal, | isCompatibleGenericType($right, $other, $contravariant)),
+        pair(| $gto.operationType == GenericTypeOperationType.Subset, | isCompatibleGenericType($other, $right, $contravariant))],
+       | true
     );
 }

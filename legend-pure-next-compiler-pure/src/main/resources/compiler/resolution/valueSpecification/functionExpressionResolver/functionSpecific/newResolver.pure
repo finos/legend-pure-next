@@ -200,13 +200,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Check unknown properties (including deep paths)
     let ctx1 = $providedNames->fold({name, ctx |
-        if($name->contains('.'),
-            | validateDeepPropertyPath($cls, $name, $fi, $ctx),
-            | if(findPropertyOnClass($cls, $name)->isEmpty(),
-                  | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
-                    ^$ctx(errors += 'Unknown property \'' + $name + '\' in class \'' + $cls->fullPath() + '\'' + $siCtx);,
-                  | $ctx
-              )
+        if([pair(| $name->contains('.'), | validateDeepPropertyPath($cls, $name, $fi, $ctx)),
+            pair(| findPropertyOnClass($cls, $name)->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
+                    ^$ctx(errors += 'Unknown property \'' + $name + '\' in class \'' + $cls->fullPath() + '\'' + $siCtx);)],
+           | $ctx
         );
     }, $context);
 
@@ -309,20 +306,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | $context,
         | let segment = $segments->at($index);
           let prop = findPropertyOnClass($currentType, $segment);
-          if($prop->isEmpty(),
-              | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
-                ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $currentType->fullPath() + '\'' + $siCtx);,
-              | if($index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(),
-                    | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
+          if([pair(| $prop->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+                ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $currentType->fullPath() + '\'' + $siCtx);),
+              pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
                       if($nextType->isNotEmpty(),
                           | $nextType->toOne()->match([
                                 c:meta::pure::metamodel::type::Class<Any>[1] | validateDeepPropertyPathSegments($rootCls, $c, $segments, $index + 1, $fullPath, $fi, $context),
                                 a:Any[1] | $context
                             ]),
                           | $context
-                      );,
-                    | $context
-                )
+                      );)],
+             | $context
           );
     );
 }

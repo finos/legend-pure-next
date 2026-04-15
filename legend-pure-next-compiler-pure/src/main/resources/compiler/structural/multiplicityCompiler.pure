@@ -36,15 +36,12 @@ function meta::pure::compiler::structural::multiplicityCompiler::compileConcrete
               | meta::pure::metamodel::multiplicity::OneMany
           ),
         | let upper = $pMult.upperBound->toOne().value;
-          if($pMult.lowerBound.value == 1 && $upper == 1,
-              | meta::pure::metamodel::multiplicity::PureOne,
-              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                      )
-                )
+          if([pair(| $pMult.lowerBound.value == 1 && $upper == 1, | meta::pure::metamodel::multiplicity::PureOne),
+              pair(| $pMult.lowerBound.value == 0 && $upper == 1, | meta::pure::metamodel::multiplicity::ZeroOne)],
+             | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
+                   lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
+                   upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+               )
           );
     );
 }

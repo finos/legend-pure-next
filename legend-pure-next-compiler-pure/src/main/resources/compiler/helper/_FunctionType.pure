@@ -61,12 +61,9 @@ function meta::pure::compiler::helper::functionType::printFunctionType(ft:Functi
 function meta::pure::compiler::helper::functionType::isConcreteFunctionType(ft:FunctionType[1]):Boolean[1]
 {
     let paramsOk = $ft.parameters->filter(p | !$p.genericType->toOne()->isConcreteGenericType())->isEmpty();
-    if(!$paramsOk,
-        | false,
-        | if($ft.returnType->isEmpty(),
-              | true,
-              | $ft.returnType->toOne()->isConcreteGenericType()
-          )
+    if([pair(| !$paramsOk, | false),
+        pair(| $ft.returnType->isEmpty(), | true)],
+       | $ft.returnType->toOne()->isConcreteGenericType()
     );
 }
 
@@ -166,17 +163,14 @@ function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(ge
 
 function meta::pure::compiler::helper::functionType::findCommonFunctionType(functionTypes:FunctionType[*]):FunctionType[0..1]
 {
-    if($functionTypes->isEmpty(),
-        | [],
-        | if($functionTypes->size() == 1,
-              | $functionTypes->at(0),
-              | let paramCount = $functionTypes->at(0).parameters->size();
-                let allSame = $functionTypes->forAll(ft | $ft.parameters->size() == $paramCount);
-                if(!$allSame,
-                    | [],
-                    | findCommonFunctionType_build($functionTypes, $paramCount)
-                );
-          )
+    if([pair(| $functionTypes->isEmpty(), | []),
+        pair(| $functionTypes->size() == 1, | $functionTypes->at(0))],
+       | let paramCount = $functionTypes->at(0).parameters->size();
+         let allSame = $functionTypes->forAll(ft | $ft.parameters->size() == $paramCount);
+         if(!$allSame,
+             | [],
+             | findCommonFunctionType_build($functionTypes, $paramCount)
+         );
     );
 }
 

@@ -68,12 +68,9 @@ function meta::pure::compiler::helper::multiplicity::printMultiplicity(m:Multipl
             a  : Any[1] |
                 let lower = $m->multiplicityLowerBound();
                 let upper = $m->multiplicityUpperBound();
-                if($upper == -1,
-                    | if($lower == 0, | '[*]', | '[' + $lower->toString() + '..*]'),
-                    | if($lower == $upper,
-                        | '[' + $lower->toString() + ']',
-                        | '[' + $lower->toString() + '..' + $upper->toString() + ']'
-                      )
+                if([pair(| $upper == -1, | if($lower == 0, | '[*]', | '[' + $lower->toString() + '..*]')),
+                    pair(| $lower == $upper, | '[' + $lower->toString() + ']')],
+                   | '[' + $lower->toString() + '..' + $upper->toString() + ']'
                 );
         ]
     )
@@ -88,12 +85,9 @@ function meta::pure::compiler::helper::multiplicity::printMultiplicityBare(m:Mul
             a  : Any[1] |
                 let lower = $m->multiplicityLowerBound();
                 let upper = $m->multiplicityUpperBound();
-                if($upper == -1,
-                    | if($lower == 0, | '*', | $lower->toString() + '..*'),
-                    | if($lower == $upper,
-                        | $lower->toString(),
-                        | $lower->toString() + '..' + $upper->toString()
-                      )
+                if([pair(| $upper == -1, | if($lower == 0, | '*', | $lower->toString() + '..*')),
+                    pair(| $lower == $upper, | $lower->toString())],
+                   | $lower->toString() + '..' + $upper->toString()
                 );
         ]
     )
@@ -129,17 +123,10 @@ function meta::pure::compiler::helper::multiplicity::multiplicitySubsumes(genera
             let sLower = $specific->multiplicityLowerBound();
             let gUpper = $general->multiplicityUpperBound();
             let sUpper = $specific->multiplicityUpperBound();
-            if($gLower > $sLower,
-                | false,
-                |
-                if($gUpper == -1,
-                    | true,
-                    |
-                    if($sUpper == -1,
-                        | false,
-                        | $gUpper >= $sUpper
-                    )
-                )
+            if([pair(| $gLower > $sLower, | false),
+                pair(| $gUpper == -1, | true),
+                pair(| $sUpper == -1, | false)],
+               | $gUpper >= $sUpper
             );
         );
     )
@@ -174,23 +161,20 @@ function meta::pure::compiler::helper::multiplicity::isConcreteMultiplicityInCon
 
 function meta::pure::compiler::helper::multiplicity::findCommonMultiplicity(multiplicities:Multiplicity[*]):Multiplicity[0..1]
 {
-    if($multiplicities->isEmpty(),
-        | [],
-        | if($multiplicities->size() == 1,
-              | $multiplicities->at(0),
-              | let bounds = $multiplicities->map(m | pair($m->multiplicityLowerBound(), $m->multiplicityUpperBound()));
-                let minLower = $bounds->map(p | $p.first)->sort()->at(0);
-                let uppers = $bounds->map(p | $p.second);
-                let maxUpper = if($uppers->filter(u | $u == -1)->isNotEmpty(),
-                    | -1,
-                    | $uppers->sort()->reverse()->at(0)
-                );
-                // Build a concrete multiplicity using ^ConcreteMultiplicity
-                if($maxUpper == -1,
-                    | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower)),
-                    | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower), upperBound = ^MultiplicityValue(value = $maxUpper))
-                );
-          )
+    if([pair(| $multiplicities->isEmpty(), | []),
+        pair(| $multiplicities->size() == 1, | $multiplicities->at(0))],
+       | let bounds = $multiplicities->map(m | pair($m->multiplicityLowerBound(), $m->multiplicityUpperBound()));
+         let minLower = $bounds->map(p | $p.first)->sort()->at(0);
+         let uppers = $bounds->map(p | $p.second);
+         let maxUpper = if($uppers->filter(u | $u == -1)->isNotEmpty(),
+             | -1,
+             | $uppers->sort()->reverse()->at(0)
+         );
+         // Build a concrete multiplicity using ^ConcreteMultiplicity
+         if($maxUpper == -1,
+             | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower)),
+             | ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(lowerBound = ^MultiplicityValue(value = $minLower), upperBound = ^MultiplicityValue(value = $maxUpper))
+         );
     )
 }
 

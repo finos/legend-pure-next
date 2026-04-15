@@ -97,12 +97,9 @@ function meta::pure::compiler::structural::propertyCompiler::compileAggregationK
         | meta::pure::metamodel::function::property::AggregationKind.None,
         | let enumPointer = $p.aggregation->toOne();
           let valueName = $enumPointer.extraPointerValues->at(0).value;
-          if($valueName == 'Composite',
-              | meta::pure::metamodel::function::property::AggregationKind.Composite,
-              | if($valueName == 'Shared',
-                    | meta::pure::metamodel::function::property::AggregationKind.Shared,
-                    | meta::pure::metamodel::function::property::AggregationKind.None
-                )
+          if([pair(| $valueName == 'Composite', | meta::pure::metamodel::function::property::AggregationKind.Composite),
+              pair(| $valueName == 'Shared', | meta::pure::metamodel::function::property::AggregationKind.Shared)],
+             | meta::pure::metamodel::function::property::AggregationKind.None
           );
     );
 }
@@ -143,19 +140,17 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
                             a : Any[1] | $lastExpr.genericType
                         ]
                     );
-                    let ctx3 = if($exprGT->isEmpty() || $prop.genericType->isEmpty() || $exprGT->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                        | $ctx2,
-                        | if(meta::pure::compiler::helper::genericType::isCompatibleGenericType($prop.genericType->toOne(), $exprGT->toOne()),
-                              | $ctx2,
-                              | ^$ctx2(errors += 'Default value type mismatch: expected ' + meta::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne()) + ' but got ' + meta::pure::compiler::helper::genericType::printGenericType($exprGT->toOne()) + $siCtx)
-                          )
+                    let ctx3 = if([pair(| $exprGT->isEmpty() || $prop.genericType->isEmpty() || $exprGT->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                                       | $ctx2),
+                                  pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($prop.genericType->toOne(), $exprGT->toOne()),
+                                       | $ctx2)],
+                                 | ^$ctx2(errors += 'Default value type mismatch: expected ' + meta::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne()) + ' but got ' + meta::pure::compiler::helper::genericType::printGenericType($exprGT->toOne()) + $siCtx)
                     );
-                    if($lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
-                        | $ctx3,
-                        | if(meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($prop.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
-                              | $ctx3,
-                              | ^$ctx3(errors += 'Default value multiplicity mismatch: expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne()) + ' but got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
-                          )
+                    if([pair(| $lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
+                            | $ctx3),
+                        pair(| meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($prop.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                             | $ctx3)],
+                       | ^$ctx3(errors += 'Default value multiplicity mismatch: expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne()) + ' but got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
                     );
               );
         );

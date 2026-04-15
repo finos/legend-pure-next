@@ -19,7 +19,9 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
     if($si->isEmpty(),
         | '',
         | let psi = $si->toOne();
-          let sid = if($psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
+          let sid = if([pair(| $psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
           if($sid->length() > 0,
               | ' (at ' + $sid + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
               | ''
@@ -32,7 +34,9 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatMeta
     if($si->isEmpty(),
         | '',
         | let msi = $si->toOne();
-          let sid = if($msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
+          let sid = if([pair(| $msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
           if($sid->length() > 0,
               | ' (at ' + $sid + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
               | ''

@@ -79,12 +79,9 @@ function meta::pure::compiler::helper::relationType::findCommonRelationType(rela
 
 function meta::pure::compiler::helper::relationType::findCommonRelationType(relationTypes:RelationType<Any>[*], contravariant:Boolean[1]):Type[0..1]
 {
-    if($relationTypes->isEmpty(),
-        | [],
-        | if($relationTypes->size() == 1,
-              | $relationTypes->at(0),
-              | findCommonRelationType_build($relationTypes, $contravariant)
-          )
+    if([pair(| $relationTypes->isEmpty(), | []),
+        pair(| $relationTypes->size() == 1, | $relationTypes->at(0))],
+       | findCommonRelationType_build($relationTypes, $contravariant)
     );
 }
 
@@ -155,22 +152,21 @@ function meta::pure::compiler::helper::relationType::evaluateRelationTypeOperati
 {
     $opType->match([
         op : GenericTypeOperationType[1] |
-            if($op == GenericTypeOperationType.Union,
-                | let leftCols = $leftRT.columns->cast(@Column<Any,Any|*>)->map(c | 
-                      ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
-                  );
-                  let rightCols = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c |
-                      ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
-                  );
-                  ^RelationType<Any>(columns = $leftCols->concatenate($rightCols));,
-                | if($op == GenericTypeOperationType.Difference,
+            if([pair(| $op == GenericTypeOperationType.Union,
+                     | let leftCols = $leftRT.columns->cast(@Column<Any,Any|*>)->map(c |
+                           ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
+                       );
+                       let rightCols = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c |
+                           ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
+                       );
+                       ^RelationType<Any>(columns = $leftCols->concatenate($rightCols));),
+                 pair(| $op == GenericTypeOperationType.Difference,
                       | let rightNames = $rightRT.columns->cast(@Column<Any,Any|*>)->map(c | $c.name->toOne());
                         let kept = $leftRT.columns->cast(@Column<Any,Any|*>)->filter(c | !$rightNames->contains($c.name->toOne()))->map(c |
                             ^Column<Any,Any|*>(name = $c.name, nameWildCard = if($c.nameWildCard->isEmpty(), | false, | $c.nameWildCard), genericType = $c.genericType, multiplicity = $c.multiplicity)
                         );
-                        ^RelationType<Any>(columns = $kept);,
-                      | []
-                  )
+                        ^RelationType<Any>(columns = $kept);)],
+               | []
             )
     ]);
 }
