@@ -21,6 +21,8 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 
+import java.util.Map;
+
 /**
  * Helper methods for {@link Type}.
  *
@@ -68,26 +70,36 @@ public final class _Type
             return Lists.mutable.empty();
         }
 
+        Map<Type, MutableList<Type>> cache = model.linearizationCache();
+        MutableList<Type> cached = cache.get(type);
+        if (cached != null)
+        {
+            return cached;
+        }
+
         // Get direct supertypes
         MutableList<Type> parents = directSupertypes(type);
 
         if (parents.isEmpty())
         {
             // Top type (Any) — just [Any]
-            return Lists.mutable.with(type);
+            MutableList<Type> result = Lists.mutable.with(type);
+            cache.put(type, result);
+            return result;
         }
 
         // Build the list of linearizations of each parent + the parents list itself
         MutableList<MutableList<Type>> listsToMerge = Lists.mutable.empty();
         for (Type parent : parents)
         {
-            listsToMerge.add(linearize(parent, model));
+            listsToMerge.add(Lists.mutable.withAll(linearize(parent, model)));
         }
         listsToMerge.add(Lists.mutable.withAll(parents));
 
         // L(C) = C + merge(...)
         MutableList<Type> result = Lists.mutable.with(type);
         result.addAll(merge(listsToMerge));
+        cache.put(type, result);
         return result;
     }
 

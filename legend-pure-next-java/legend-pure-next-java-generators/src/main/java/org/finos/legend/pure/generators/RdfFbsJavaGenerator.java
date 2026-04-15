@@ -296,7 +296,8 @@ public class RdfFbsJavaGenerator
             boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
             boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer
                     && !"Any".equals(prop.typeName);
-            boolean createsWrapper = isPointer || isClassType
+            boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
+            boolean createsWrapper = isPointer || isClassType || isEnumType
                     || isMainTaxonomyType(prop.typeName)
                     || (getNonPointerSubtypes(m3Model, prop).notEmpty());
             if (createsWrapper)
@@ -359,7 +360,7 @@ public class RdfFbsJavaGenerator
             boolean isEnumType = m3Model.enumInfoMap().containsKey(prop.typeName);
 
             // Determine if this getter needs caching (creates wrapper objects)
-            boolean needsCache = isPointer || isClassType
+            boolean needsCache = isPointer || isClassType || isEnumType
                     || isMainTaxonomyType(prop.typeName)
                     || (getNonPointerSubtypes(m3Model, prop).notEmpty());
 
@@ -381,7 +382,7 @@ public class RdfFbsJavaGenerator
             }
             else if (isEnumType)
             {
-                generateEnumGetter(sb, prop, javaType, javaAccessor);
+                generateEnumGetter(sb, prop, javaType, javaAccessor, cacheField);
             }
             else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
             {
@@ -463,9 +464,12 @@ public class RdfFbsJavaGenerator
                 sb.append("                            {\n");
                 sb.append("                                if (enumValueName.equals(p._name()))\n");
                 sb.append("                                {\n");
-                sb.append("                                    // Create and cache EnumImpl with correct type\n");
-                sb.append("                                    cached_value = new meta.pure.metamodel.type.EnumImpl()\n");
-                sb.append("                                            ._name(enumValueName)\n");
+                sb.append("                                    // Create typed Enum instance via reflection\n");
+                sb.append("                                    String implClass = enumOwnerPath.replace(\"::\", \".\") + \"Impl\";\n");
+                sb.append("                                    meta.pure.metamodel.type.EnumImpl ei;\n");
+                sb.append("                                    try { ei = (meta.pure.metamodel.type.EnumImpl) java.lang.Class.forName(implClass).getDeclaredConstructor().newInstance(); }\n");
+                sb.append("                                    catch (Exception _ex) { ei = new meta.pure.metamodel.type.EnumImpl(); }\n");
+                sb.append("                                    cached_value = ei._name(enumValueName)\n");
                 sb.append("                                            ._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) enumeration, resolver));\n");
                 sb.append("                                    return cached_value;\n");
                 sb.append("                                }\n");
@@ -954,9 +958,11 @@ public class RdfFbsJavaGenerator
         }
     }
 
-    private void generateEnumGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField)
+    private void generateEnumGetter(StringBuilder sb, PropertyInfo prop, String javaType, String fbField, String cacheField)
     {
         String enumType = prop.typeName;
+        var enumInfo = m3Model.enumInfoMap().get(enumType);
+        String purePath = enumInfo.packagePath + "::" + enumInfo.name;
         if (prop.isMany)
         {
             sb.append("        int len = fb.").append(fbField).append("Length();\n");
@@ -964,14 +970,24 @@ public class RdfFbsJavaGenerator
             sb.append("        for (int i = 0; i < len; i++)\n");
             sb.append("        {\n");
             sb.append("            String v = fb.").append(fbField).append("(i);\n");
-            sb.append("            if (v != null) { result.add(").append(enumType).append(".valueOf(v)); }\n");
+            sb.append("            if (v != null) { result.add((").append(enumType).append(") org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(\"").append(purePath).append("\", v, resolver)); }\n");
             sb.append("        }\n");
+            if (cacheField != null)
+            {
+                sb.append("        ").append(cacheField).append(" = result;\n");
+            }
             sb.append("        return result;\n");
         }
         else
         {
             sb.append("        String v = fb.").append(fbField).append("();\n");
-            sb.append("        return v != null ? ").append(enumType).append(".valueOf(v) : null;\n");
+            sb.append("        if (v == null) return null;\n");
+            sb.append("        ").append(enumType).append(" resolved = (").append(enumType).append(") org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(\"").append(purePath).append("\", v, resolver);\n");
+            if (cacheField != null)
+            {
+                sb.append("        ").append(cacheField).append(" = resolved;\n");
+            }
+            sb.append("        return resolved;\n");
         }
     }
 
@@ -1192,6 +1208,19 @@ public class RdfFbsJavaGenerator
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
+                    else if (isEnumType)
+                    {
+                        sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
+                        sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
+                        sb.append("        {\n");
+                        sb.append("            var ").append(fbField).append("List = obj._").append(prop.name).append("();\n");
+                        sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
+                        sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
+                        sb.append("            {\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createString(((meta.pure.metamodel.type.Enum) ").append(fbField).append("List.get(i))._name());\n");
+                        sb.append("            }\n");
+                        sb.append("        }\n");
+                    }
                     else if (isPointer || "String".equals(prop.typeName) || (!isClassType && !"Boolean".equals(prop.typeName) && !"Integer".equals(prop.typeName) && !"Float".equals(prop.typeName)))
                     {
                         sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
@@ -1314,6 +1343,10 @@ public class RdfFbsJavaGenerator
                         if (isPointer)
                         {
                             sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createString(pointerPath(obj._").append(prop.name).append("())); }\n");
+                        }
+                        else if (isEnumType)
+                        {
+                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createString(((meta.pure.metamodel.type.Enum) obj._").append(prop.name).append("())._name()); }\n");
                         }
                         else
                         {

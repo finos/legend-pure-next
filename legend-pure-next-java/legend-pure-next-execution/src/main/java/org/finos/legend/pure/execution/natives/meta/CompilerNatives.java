@@ -49,17 +49,18 @@ public class CompilerNatives implements NativeExtension
                          MetadataAccess resolver)
     {
         // meta::pure::compiler::parse(sourceId:String[1], content:String[1]):PureFile[1]
+        List<ParserExtension> extensions = new ArrayList<>();
+        extensions.add(new PureLanguageParser());
+        extensions.addAll(this.extraExtensions);
+        PureParser parser = PureParser.builder()
+                .withExtensions(extensions)
+                .build();
+
         natives.put("parse_String_1__String_1__PureFile_1_", (args, eval, genericType, multiplicity) ->
         {
             String sourceId = (String) _E_ValueSpecification.unwrap(args.get(0));
             String content = (String) _E_ValueSpecification.unwrap(args.get(1));
 
-            List<ParserExtension> extensions = new ArrayList<>();
-            extensions.add(new PureLanguageParser());
-            extensions.addAll(this.extraExtensions);
-            PureParser parser = PureParser.builder()
-                    .withExtensions(extensions)
-                    .build();
             PureFile pureFile = parser.parse(sourceId, content);
 
             ProtocolToDynamicInstance translator = new ProtocolToDynamicInstance(resolver);

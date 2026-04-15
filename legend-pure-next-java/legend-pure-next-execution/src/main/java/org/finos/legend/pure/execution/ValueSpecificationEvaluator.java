@@ -27,7 +27,6 @@ import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.natives.collection.CollectionNatives;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
@@ -51,7 +50,7 @@ import java.util.Map;
 public class ValueSpecificationEvaluator
 {
     private final NativeRepository natives;
-    private final Deque<String> callStack = new ArrayDeque<>();
+    private final Deque<FunctionExpression> callStack = new ArrayDeque<>();
     private final Deque<Map<String, ValueSpecification>> varStack = new ArrayDeque<>();
     private final Deque<Object> constructionStack = new ArrayDeque<>();
 
@@ -159,8 +158,6 @@ public class ValueSpecificationEvaluator
                         ._genericType(vs._genericType())
                         ._multiplicity(vs._multiplicity());
             }
-            // Lambda functions in parameter position — pass through as-is
-            case FunctionDefinition fd -> (ValueSpecification) fd;
             // GenericTypeAndMultiplicityHolder (and subtypes) carry type annotations — pass through as-is
             case GenericTypeAndMultiplicityHolder gmh -> (ValueSpecification) gmh;
             case FunctionExpression fe -> evaluateFunctionExpression(fe);
@@ -215,8 +212,7 @@ public class ValueSpecificationEvaluator
 
     private ValueSpecification evaluateFunctionExpression(FunctionExpression fe)
     {
-        String sourceFrame = formatSourceFrame(fe);
-        callStack.push(sourceFrame);
+        callStack.push(fe);
         try
         {
             meta.pure.metamodel.function.Function func = fe._func();
@@ -407,6 +403,7 @@ public class ValueSpecificationEvaluator
     }
 
     private static final Object PROPERTY_NOT_FOUND = new Object();
+    private static final Map<Class<?>, Map<String, Method>> METHOD_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Access a property on a target object by name.
@@ -422,7 +419,7 @@ public class ValueSpecificationEvaluator
         if (target instanceof DynamicInstance di)
         {
             Object propertyValueRaw = "classifierGenericType".equals(propertyName) ? di.getClassifierGenericType() : di.get(propertyName);
-            return wrapPropertyResult(propertyValueRaw, genericType, multiplicity);
+            return _E_ValueSpecification.wrap(propertyValueRaw, genericType, multiplicity, this.natives.resolver());
         }
 
         // For metamodel objects, use reflection to find _<propertyName>() accessor
@@ -458,7 +455,7 @@ public class ValueSpecificationEvaluator
                     + (effectiveTarget == null ? "null" : effectiveTarget.getClass().getSimpleName()));
         }
 
-        return wrapPropertyResult(result, genericType, multiplicity);
+        return _E_ValueSpecification.wrap(result, genericType, multiplicity, this.natives.resolver());
     }
 
     /**
@@ -467,19 +464,18 @@ public class ValueSpecificationEvaluator
      */
     private static Object reflectivePropertyGet(Object target, String propertyName)
     {
-        String methodName = "_" + propertyName;
-        try
+        if (target == null)
         {
-            if (target == null)
-            {
-                throw new RuntimeException("Cannot access property '" + propertyName + "' because target is null");
-            }
-            Method method = target.getClass().getMethod(methodName);
-            return method.invoke(target);
+            throw new RuntimeException("Cannot access property '" + propertyName + "' because target is null");
         }
-        catch (NoSuchMethodException e)
+        Method method = lookupMethod(target.getClass(), propertyName);
+        if (method == null)
         {
             return PROPERTY_NOT_FOUND;
+        }
+        try
+        {
+            return method.invoke(target);
         }
         catch (InvocationTargetException e)
         {
@@ -496,28 +492,20 @@ public class ValueSpecificationEvaluator
         }
     }
 
-    /**
-     * Wrap a raw property result into a {@link ValueSpecification}.
-     * Handles null, {@link ValueSpecification}, {@link java.util.List}, and scalar values.
-     */
-    private ValueSpecification wrapPropertyResult(Object result,
-                                                  GenericType genericType,
-                                                  meta.pure.metamodel.multiplicity.Multiplicity multiplicity)
+    private static Method lookupMethod(Class<?> cls, String propertyName)
     {
-        if (result instanceof ValueSpecification vs)
+        Map<String, Method> classCache = METHOD_CACHE.computeIfAbsent(cls, c -> new java.util.concurrent.ConcurrentHashMap<>());
+        return classCache.computeIfAbsent(propertyName, name ->
         {
-            return vs;
-        }
-        if (result instanceof java.util.List<?> resultList)
-        {
-            List<ValueSpecification> vsItems = new ArrayList<>(resultList.size());
-            for (Object item : resultList)
+            try
             {
-                vsItems.add(_E_ValueSpecification.wrap(item, genericType, null, this.natives.resolver()));
+                return cls.getMethod("_" + name);
             }
-            return CollectionNatives.makeCollection(vsItems, this.natives.resolver());
-        }
-        return _E_ValueSpecification.wrap(result, genericType, multiplicity, this.natives.resolver());
+            catch (NoSuchMethodException e)
+            {
+                return null;
+            }
+        });
     }
 
     /**
@@ -651,11 +639,9 @@ public class ValueSpecificationEvaluator
             return "";
         }
         StringBuilder sb = new StringBuilder("\nPure stack trace:");
-        int depth = 0;
-        for (String frame : callStack)
+        for (FunctionExpression frame : callStack)
         {
-            sb.append("\n    ").append(depth == 0 ? "at " : "at ").append(frame);
-            depth++;
+            sb.append("\n    at ").append(formatSourceFrame(frame));
         }
         return sb.toString();
     }

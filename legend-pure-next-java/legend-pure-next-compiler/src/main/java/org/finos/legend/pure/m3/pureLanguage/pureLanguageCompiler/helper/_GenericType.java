@@ -30,6 +30,7 @@ import meta.pure.metamodel.type.generics.TypeParameter;
 import meta.pure.metamodel.type.generics.UndefinedGenericType;
 import meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
@@ -55,7 +56,9 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> null;
             case UndefinedGenericType undefined -> null;
+            case GenericTypeOperation gto -> null;
             case GenericTypeValue gtv -> gtv._type();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -84,7 +87,9 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> Lists.mutable.empty();
             case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeOperation gto -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._typeArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -97,7 +102,9 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> Lists.mutable.empty();
             case UndefinedGenericType undefined -> Lists.mutable.empty();
+            case GenericTypeOperation gto -> Lists.mutable.empty();
             case GenericTypeValue gtv -> gtv._multiplicityArguments();
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + genericType.getClass());
         };
@@ -285,6 +292,11 @@ public class _GenericType
 
         switch (genericType)
         {
+            case CompilerNotSetGenericType notSet ->
+            {
+                sb.append("NotSet");
+                return;
+            }
             case UndefinedGenericType undefined ->
             {
                 sb.append("?");
@@ -404,12 +416,13 @@ public class _GenericType
      */
     public static boolean isConcrete(GenericType genericType)
     {
-        if (genericType == null)
+        if (genericType == null || genericType instanceof CompilerNotSetGenericType)
         {
             return false;
         }
         return switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> false;
             case UndefinedGenericType undefined -> true;
             case GenericTypeOperation gto -> _GenericTypeOperation.isConcrete(gto);
             case GenericTypeValue gtv ->
@@ -519,6 +532,7 @@ public class _GenericType
         }
         switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> { /* no-op */ }
             case UndefinedGenericType undefined ->
             { /* no-op */ }
             case GenericTypeOperation gto -> _GenericTypeOperation.collectReferencedTypeParameterNames(gto, names);
@@ -564,6 +578,7 @@ public class _GenericType
         }
         switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> { /* no-op */ }
             case UndefinedGenericType undefined -> { /* no-op */ }
             case GenericTypeOperation gto ->
             {
@@ -608,6 +623,7 @@ public class _GenericType
 
         switch (paramGT)
         {
+            case CompilerNotSetGenericType notSet -> { /* no-op */ }
             case UndefinedGenericType undefined -> { /* no-op: undefined wildcard doesn't bind */ }
             case GenericTypeOperation gto ->
             {
@@ -682,6 +698,7 @@ public class _GenericType
     {
         return switch (genericType)
         {
+            case CompilerNotSetGenericType notSet -> genericType;
             case UndefinedGenericType undefined -> genericType;
             case GenericTypeOperation gto -> _GenericTypeOperation.makeAsConcreteAsPossible(gto, bindings, model);
             case GenericTypeValue gtv ->
@@ -768,7 +785,7 @@ public class _GenericType
      */
     public static GenericType asInferred(GenericType gt, MetadataAccess model)
     {
-        if (gt == null || gt instanceof Inferred || gt instanceof GenericTypeOperation || gt instanceof UndefinedGenericType)
+        if (gt == null || gt instanceof CompilerNotSetGenericType || gt instanceof Inferred || gt instanceof GenericTypeOperation || gt instanceof UndefinedGenericType)
         {
             return gt;
         }
@@ -932,7 +949,9 @@ public class _GenericType
 
                 yield null;
             }
+            case CompilerNotSetGenericType notSet -> null;
             case UndefinedGenericType undefined -> null;
+            case GenericTypeOperation gto -> null;
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + sourceGenericType.getClass());
         };
     }
@@ -976,6 +995,12 @@ public class _GenericType
         if (actual instanceof GenericTypeOperation actualOp)
         {
             return _GenericTypeOperation.isCompatible(actualOp, declared, !contravariant, model);
+        }
+
+        // CompilerNotSetGenericType — not set yet, skip compatibility check
+        if (declared instanceof CompilerNotSetGenericType || actual instanceof CompilerNotSetGenericType)
+        {
+            return true;
         }
 
         // UndefinedGenericType matches only other UndefinedGenericType

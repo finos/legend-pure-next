@@ -284,7 +284,8 @@ public class NativeRepository
             return pureEquals(a, listB.get(0));
         }
 
-        // Enum values — compare by name AND owning enumeration
+
+        // Pure Enum values — compare by name AND owning enumeration
         if (a instanceof meta.pure.metamodel.type.Enum enumA && b instanceof meta.pure.metamodel.type.Enum enumB)
         {
             if (!Objects.equals(enumA._name(), enumB._name()))

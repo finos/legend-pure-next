@@ -38,9 +38,11 @@ public final class _Multiplicity
      */
     public static boolean subsumes(Multiplicity general, Multiplicity specific)
     {
-        if (general == null || specific == null)
+        if (general == null || specific == null
+                || general instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity
+                || specific instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity)
         {
-            return true; // unknown — skip
+            return true; // unknown / not set — skip
         }
 
         // If either has a multiplicity parameter, skip concrete checking
@@ -136,6 +138,15 @@ public final class _Multiplicity
     }
 
     /**
+     * Check if a multiplicity is singular (upper bound is 1).
+     */
+    public static boolean isSingular(Multiplicity m)
+    {
+        Long upper = upperBound(m);
+        return upper != null && upper <= 1;
+    }
+
+    /**
      * Format a multiplicity for display in error messages.
      */
     public static String print(Multiplicity m)
@@ -202,7 +213,9 @@ public final class _Multiplicity
      */
     public static boolean isConcrete(Multiplicity multiplicity)
     {
-        return multiplicity != null && !(multiplicity instanceof MultiplicityParameter);
+        return multiplicity != null
+                && !(multiplicity instanceof MultiplicityParameter)
+                && !(multiplicity instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity);
     }
 
     /**

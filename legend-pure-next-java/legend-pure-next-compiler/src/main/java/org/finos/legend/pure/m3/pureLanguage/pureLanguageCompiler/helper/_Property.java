@@ -48,7 +48,7 @@ public class _Property
         }
 
         return new PropertyImpl((GenericTypeValue) resolvedClassifierGenericType)
-                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                ._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue("meta::pure::metamodel::function::property::AggregationKind", "None", model))
                 ._name(prop._name())
                 ._genericType(resolvedGenericType)
                 ._multiplicity(resolvedMultiplicity)

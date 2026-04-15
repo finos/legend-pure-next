@@ -18,6 +18,8 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.type.Type;
 import org.eclipse.collections.api.list.MutableList;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,4 +66,9 @@ public interface MetadataAccess
     }
 
     <T extends MetadataAccessExtension> MutableList<T> getMetadataAccessExtension(Class<T> clz);
+
+    default Map<Type, MutableList<Type>> linearizationCache()
+    {
+        return new IdentityHashMap<>();
+    }
 }

@@ -1,0 +1,13 @@
+###Pure
+Class protocol::MyClass
+{
+  (none) value: Integer[1];
+  (composite) value2: Integer[1];
+  (shared) value3: Integer[1];
+}
+
+###CompiledGraph
+class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @2:1-7:1
+  property value :Integer[1]  ~Property<protocol::MyClass, Integer|1>
+  property value2 (composite) :Integer[1]  ~Property<protocol::MyClass, Integer|1>
+  property value3 (shared) :Integer[1]  ~Property<protocol::MyClass, Integer|1>

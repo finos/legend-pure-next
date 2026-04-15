@@ -145,6 +145,8 @@ public final class CompiledGraphPrinter
         appendClassifierGenericType(sb, f);
         sb.append('\n');
         printAnnotations(f, 1, sb);
+        printConstraints(f._preConstraints(), "preConstraint", 1, sb);
+        printConstraints(f._postConstraints(), "postConstraint", 1, sb);
         f._expressionSequence().forEach(vs -> printValueSpec(vs, 1, sb));
     }
 
@@ -206,8 +208,9 @@ public final class CompiledGraphPrinter
         {
             c._properties().forEach(p ->
             {
-                indent(sb, 1).append("property ").append(p._name())
-                    .append(" :").append(printType(p._genericType()))
+                indent(sb, 1).append("property ").append(p._name());
+                appendAggregationKind(sb, p);
+                sb.append(" :").append(printType(p._genericType()))
                     .append(printMul(p._multiplicity()));
                 GenericType propCgt = ((Any) p)._classifierGenericType();
                 if (propCgt != null)
@@ -215,6 +218,7 @@ public final class CompiledGraphPrinter
                     sb.append("  ~").append(printType(propCgt));
                 }
                 sb.append('\n');
+                printAnnotations(p, 2, sb);
                 // Print default value lambda if present
                 if (p._defaultValue() != null)
                 {
@@ -282,6 +286,7 @@ public final class CompiledGraphPrinter
                 .append(" :").append(printType(qp._genericType()))
                 .append(printMul(qp._multiplicity()))
                 .append('\n');
+            printAnnotations(qp, depth + 1, sb);
             if (qp._expressionSequence() != null)
             {
                 qp._expressionSequence().forEach(vs -> printValueSpec(vs, depth + 1, sb));
@@ -300,8 +305,9 @@ public final class CompiledGraphPrinter
         {
             a._properties().forEach(p ->
             {
-                indent(sb, 1).append("property ").append(p._name())
-                    .append(" :").append(printType(p._genericType()))
+                indent(sb, 1).append("property ").append(p._name());
+                appendAggregationKind(sb, p);
+                sb.append(" :").append(printType(p._genericType()))
                     .append(printMul(p._multiplicity()));
                 GenericType propCgt = ((Any) p)._classifierGenericType();
                 if (propCgt != null)
@@ -309,6 +315,7 @@ public final class CompiledGraphPrinter
                     sb.append("  ~").append(printType(propCgt));
                 }
                 sb.append('\n');
+                printAnnotations(p, 2, sb);
             });
         }
         printQualifiedProperties(a, 1, sb);
@@ -355,6 +362,7 @@ public final class CompiledGraphPrinter
                 }
                 appendSourceInfo(sb, p._sourceInformation());
                 sb.append('\n');
+                printAnnotations(p, 2, sb);
             });
         }
     }
@@ -408,6 +416,41 @@ public final class CompiledGraphPrinter
                     .append(printMul(tv._multiplicity())).append('\n'));
         }
         printConstraints(p._constraints(), 1, sb);
+    }
+
+    private static void printConstraints(MutableList<Constraint> constraints, String label, int depth, StringBuilder sb)
+    {
+        if (constraints == null || constraints.isEmpty())
+        {
+            return;
+        }
+        constraints.forEach(c ->
+        {
+            indent(sb, depth).append(label);
+            if (c._name() != null)
+            {
+                sb.append(' ').append(c._name());
+            }
+            if (c._owner() != null)
+            {
+                sb.append(" ~owner:").append(c._owner());
+            }
+            if (c._externalId() != null)
+            {
+                sb.append(" ~externalId:").append(c._externalId());
+            }
+            if (c._enforcementLevel() != null)
+            {
+                sb.append(" ~enforcementLevel:").append(c._enforcementLevel());
+            }
+            sb.append('\n');
+            printFunctionDefinition(c._functionDefinition(), depth + 1, sb);
+            if (c._messageFunction() != null)
+            {
+                indent(sb, depth + 1).append("messageFunction\n");
+                printFunctionDefinition(c._messageFunction(), depth + 2, sb);
+            }
+        });
     }
 
     private static void printConstraints(MutableList<Constraint> constraints, int depth, StringBuilder sb)
@@ -706,12 +749,14 @@ public final class CompiledGraphPrinter
         // Handle GenericTypeOperation (type algebra: T+R, T-R, T=R, T⊆R)
         if (gt instanceof GenericTypeOperation gto)
         {
-            String op = switch (gto._operationType())
+            String opName = gto._operationType()._name();
+            String op = switch (opName)
             {
-                case UNION -> "+";
-                case DIFFERENCE -> "-";
-                case EQUAL -> "=";
-                case SUBSET -> "⊆";
+                case "Union" -> "+";
+                case "Difference" -> "-";
+                case "Equal" -> "=";
+                case "Subset" -> "⊆";
+                default -> "?";
             };
             return printType(gto._left()) + op + printType(gto._right());
         }
@@ -979,6 +1024,18 @@ public final class CompiledGraphPrinter
      * Stereotypes are printed as: {@code  <<profile::path.stereo>}
      * Tagged values are printed as: {@code  {profile::path.tag = 'value'}}
      */
+    private static void appendAggregationKind(StringBuilder sb, meta.pure.metamodel.function.property.Property p)
+    {
+        if (p._aggregation() != null)
+        {
+            String name = p._aggregation()._name();
+            if (name != null && !"None".equals(name))
+            {
+                sb.append(" (").append(name.toLowerCase()).append(')');
+            }
+        }
+    }
+
     private static void printAnnotations(ElementWithStereotypes element, int depth, StringBuilder sb)
     {
         MutableList<Stereotype> stereotypes = element._stereotypes();

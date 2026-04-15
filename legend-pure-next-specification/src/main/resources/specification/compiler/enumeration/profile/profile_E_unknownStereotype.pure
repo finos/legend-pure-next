@@ -1,0 +1,16 @@
+###Error
+The stereotype 'unknown' can't be found in profile 'AProfile' in enumeration 'pack::MyEnum' (at enumeration/profile/profile_E_unknownStereotype 7:17-7:23)
+
+###Pure
+import pack::*;
+
+Enum <<AProfile.unknown>> pack::MyEnum
+{
+  Val
+}
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}

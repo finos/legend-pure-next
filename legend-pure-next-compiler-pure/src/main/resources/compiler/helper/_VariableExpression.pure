@@ -14,7 +14,6 @@
 
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;

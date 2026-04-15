@@ -91,7 +91,7 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
             case meta.pure.protocol.grammar.type.Class c ->
                     ClassHandler.secondPass((meta.pure.metamodel.type.ClassImpl) entry.element(), c, imports, model, context);
             case meta.pure.protocol.grammar.type.Enumeration e ->
-                    EnumerationHandler.secondPass((meta.pure.metamodel.type.EnumerationImpl) entry.element(), e, model);
+                    EnumerationHandler.secondPass((meta.pure.metamodel.type.EnumerationImpl) entry.element(), e, imports, model, context);
             case meta.pure.protocol.grammar.function.NativeFunction f ->
                     NativeFunctionHandler.secondPass((meta.pure.metamodel.function.NativeFunctionImpl) entry.element(), f, imports, model, context);
             case meta.pure.protocol.grammar.function.UserDefinedFunction f ->
@@ -117,7 +117,9 @@ public final class PureLanguageCompilerExtension implements CompilerExtension
     {
         return switch (entry.element())
         {
-            case UserDefinedFunction f -> UserDefinedFunctionHandler.thirdPass(f, model, context);
+            case UserDefinedFunction f -> UserDefinedFunctionHandler.thirdPass(f,
+                    (meta.pure.protocol.grammar.function.UserDefinedFunction) entry.grammarElement(),
+                    context.imports(), model, context);
             case Class cls -> ClassHandler.thirdPass(cls,
                     (meta.pure.protocol.grammar.type.Class) entry.grammarElement(),
                     context.imports(),

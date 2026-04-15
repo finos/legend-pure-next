@@ -1,5 +1,4 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
@@ -157,7 +156,7 @@ function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(ge
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
         | ^meta::pure::metamodel::type::generics::InferredGenericType(
-              type = ^$ft(parameters = $newParams, returnType = $rRetGT, returnMultiplicity = $rRetMul),
+              type = ^$ft(parameters = $newParams, returnType = $rRetGT->toOne(), returnMultiplicity = $rRetMul->toOne()),
               typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
               multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])
           )
@@ -201,7 +200,7 @@ function meta::pure::compiler::helper::functionType::findCommonFunctionType_buil
               let pName = $functionTypes->at(0).parameters->at($i).name;
               ^VariableExpression(
                   name = if($pName->isEmpty() || $pName->toOne() == '', | 'p' + $i->toString(), | $pName->toOne()),
-                  genericType = $commonParamType,
+                  genericType = $commonParamType->toOne(),
                   multiplicity = if($commonParamMul->isEmpty(), | PureOne, | $commonParamMul->toOne())
               );
           }),
@@ -221,7 +220,7 @@ function meta::pure::compiler::helper::functionType::findCommonFunctionType_buil
 
     ^FunctionType(
         parameters = $commonParams,
-        returnType = $commonReturnType,
+        returnType = if($commonReturnType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $commonReturnType->toOne()),
         returnMultiplicity = if($commonReturnMul->isEmpty(), | PureOne, | $commonReturnMul->toOne())
     );
 }

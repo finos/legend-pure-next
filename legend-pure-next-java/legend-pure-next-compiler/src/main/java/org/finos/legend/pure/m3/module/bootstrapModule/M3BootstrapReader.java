@@ -151,12 +151,13 @@ public class M3BootstrapReader
             // Wire stereotypes onto matching elements
             wireStereotypesToElements(model, index);
 
-            // Third pass: wire properties to their owner types
+            // Third pass: wire enum values as properties on their Enumeration
+            // Must run before property wiring so AggregationKind values are available
+            bootstrapEnumValues(model, m3Enumeration, index);
+
+            // Fourth pass: wire properties to their owner types
             Resource m3Property = model.createResource(M3_NS + "Property");
             bootstrapProperties(model, m3Property, index);
-
-            // Fourth pass: wire enum values as properties on their Enumeration
-            bootstrapEnumValues(model, m3Enumeration, index);
         }
         catch (IOException e)
         {
@@ -557,11 +558,13 @@ public class M3BootstrapReader
                     String uri = aggStmt.getObject().asResource().getURI();
                     aggName = uri.substring(uri.lastIndexOf('_') + 1);
                 }
-                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.valueOf(aggName.toUpperCase()));
+                meta.pure.metamodel.type.Enumeration aggEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
+                prop._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, aggName));
             }
             else
             {
-                prop._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE);
+                meta.pure.metamodel.type.Enumeration aggEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
+                prop._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggEnum, "None"));
             }
 
             // Wire stereotypes (e.g., ProtocolInfo.inferred, ProtocolInfo.excluded)
@@ -717,9 +720,9 @@ public class M3BootstrapReader
                     continue;
                 }
 
-                // Create an Enum instance
-                EnumImpl enumInstance = new EnumImpl()
-                        ._name(valName);
+                // Create a typed Enum instance (e.g., AggregationKindImpl instead of EnumImpl)
+                EnumImpl enumInstance = createTypedEnumInstance(enumPkg, enumName);
+                enumInstance._name(valName);
                 Statement cgtStmt = getM3Statement(model, valRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {
@@ -757,7 +760,6 @@ public class M3BootstrapReader
                 propCGT._classifierGenericType(propCGT);
 
                 PropertyImpl prop = new PropertyImpl()
-                        ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
                         ._name(valName)
                         ._owner(enumeration)
                         ._genericType(enumGT)
@@ -766,6 +768,26 @@ public class M3BootstrapReader
                         ._defaultValue(defaultValueLambda);
 
                 enumeration._properties().add(prop);
+            }
+        }
+
+        // Post-pass: set aggregation on all enum value properties now that AggregationKind values exist
+        meta.pure.metamodel.type.Enumeration aggKindEnum = (meta.pure.metamodel.type.Enumeration) index.get("meta::pure::metamodel::function::property::AggregationKind");
+        if (aggKindEnum != null)
+        {
+            meta.pure.metamodel.function.property.AggregationKind aggNone = (meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(aggKindEnum, "None");
+            for (PackageableElement elem : index.valuesView())
+            {
+                if (elem instanceof Enumeration enumeration && enumeration._properties() != null)
+                {
+                    for (meta.pure.metamodel.function.property.Property prop : enumeration._properties())
+                    {
+                        if (prop._aggregation() == null)
+                        {
+                            prop._aggregation(aggNone);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1245,5 +1267,27 @@ public class M3BootstrapReader
             }
         }
         return current;
+    }
+
+    /**
+     * Create a typed EnumImpl subclass instance (e.g., AggregationKindImpl)
+     * so that the enum value implements the specific interface (e.g., AggregationKind).
+     * Falls back to plain EnumImpl if the typed class is not found.
+     */
+    private static EnumImpl createTypedEnumInstance(String purePkg, String enumName)
+    {
+        // Convert Pure package path to Java package (matching RdfJavaGenerator.toJavaPackage)
+        String javaPackage = purePkg.replace("::", ".");
+        String implClassName = javaPackage + "." + enumName + "Impl";
+        try
+        {
+            Class<?> implClass = Class.forName(implClassName);
+            return (EnumImpl) implClass.getDeclaredConstructor().newInstance();
+        }
+        catch (Exception e)
+        {
+            // Fallback to plain EnumImpl
+            return new EnumImpl();
+        }
     }
 }

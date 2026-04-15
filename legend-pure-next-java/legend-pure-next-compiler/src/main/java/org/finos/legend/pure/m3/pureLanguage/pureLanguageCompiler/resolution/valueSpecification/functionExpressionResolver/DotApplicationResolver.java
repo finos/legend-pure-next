@@ -19,6 +19,10 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
@@ -67,7 +71,7 @@ public final class DotApplicationResolver
         MutableList<ValueSpecification> processParameters = expr._parametersValues().collect(p -> ValueSpecificationResolver.resolve(p, model, context));
         ValueSpecification receiver = processParameters.getFirst();
 
-        if (receiver._genericType() == null)
+        if (receiver._genericType() == null || receiver._genericType() instanceof CompilerNotSetGenericType)
         {
             context.addError(new CompilationError(
                     "Can't resolve property '" + functionName + "' on unresolved receiver",
@@ -125,7 +129,7 @@ public final class DotApplicationResolver
         }
 
         Multiplicity receiverMul = receiver._multiplicity();
-        if (receiverMul != null
+        if (receiverMul != null && !(receiverMul instanceof CompilerNotSetMultiplicity)
                 && _Multiplicity.lowerBound(receiverMul) == 1
                 && _Multiplicity.upperBound(receiverMul) == 1)
         {

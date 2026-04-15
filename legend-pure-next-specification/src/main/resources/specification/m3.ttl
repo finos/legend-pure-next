@@ -807,6 +807,18 @@
     :type :UndefinedMultiplicity ;
     :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
 
+:GenericType_CompilerNotSetGenericType a :UserDefinedPackageableGenericType ;
+    :name [ :classifierGenericType :GenericType_String ; :data "GenericType_CompilerNotSetGenericType" ] ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
+    :type :CompilerNotSetGenericType ;
+    :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
+
+:GenericType_CompilerNotSetMultiplicity a :UserDefinedPackageableGenericType ;
+    :name [ :classifierGenericType :GenericType_String ; :data "GenericType_CompilerNotSetMultiplicity" ] ;
+    :package :meta_pure_metamodel_type_generics_optimization ;
+    :type :CompilerNotSetMultiplicity ;
+    :classifierGenericType :GenericType_UserDefinedPackageableGenericType .
+
 :GenericType_UserDefinedAdHocMultiplicity a :UserDefinedPackageableGenericType ;
     :name [ :classifierGenericType :GenericType_String ; :data "GenericType_UserDefinedAdHocMultiplicity" ] ;
     :package :meta_pure_metamodel_type_generics_optimization ;
@@ -952,6 +964,22 @@
     :package :meta_pure_metamodel_type_generics ;
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :UndefinedGenericType ; :general :GenericType_GenericTypeBase ] .
 
+# --- CompilerNotSetGenericType ---
+# Compiler-internal: "not set yet" (non-concrete). Unlike UndefinedGenericType (concrete wildcard).
+
+:CompilerNotSetGenericType a :Class ;
+    :name [ :classifierGenericType :GenericType_String ; :data "CompilerNotSetGenericType" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_CompilerNotSetGenericType ] ;
+    :package :meta_pure_metamodel_type_generics ;
+    :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :CompilerNotSetGenericType ; :general :GenericType_GenericTypeBase ] .
+
+# --- CompilerNotSetMultiplicity ---
+
+:CompilerNotSetMultiplicity a :Class ;
+    :name [ :classifierGenericType :GenericType_String ; :data "CompilerNotSetMultiplicity" ] ;
+    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_CompilerNotSetMultiplicity ] ;
+    :package :meta_pure_metamodel_multiplicity ;
+    :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :CompilerNotSetMultiplicity ; :general :GenericType_Multiplicity ] .
 
 
 # --- TypeAndMultiplicityParametersOwner ---

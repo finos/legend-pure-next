@@ -24,7 +24,7 @@ import meta.pure.protocol.grammar.function.LambdaFunction;
 import meta.pure.protocol.grammar.function.NativeFunction;
 import meta.pure.protocol.grammar.function.PackageableFunction;
 import meta.pure.protocol.grammar.function.UserDefinedFunction;
-import meta.pure.protocol.grammar.function.property.AggregationKind;
+// AggregationKind Java enum replaced by Enum_Pointer
 import meta.pure.protocol.grammar.function.property.Property;
 import meta.pure.protocol.grammar.function.property.QualifiedProperty;
 import meta.pure.protocol.grammar.multiplicity.ConcreteMultiplicity;
@@ -902,22 +902,24 @@ public class M3ProtocolSerializer
     private void serializeGenericTypeOperation(final StringBuilder sb, final GenericTypeOperation op)
     {
         serializeGenericType(sb, op._left());
-        switch (op._operationType())
+        // Read enum value name from Enum_Pointer's extraPointerValues
+        String opName = op._operationType()._extraPointerValues().getFirst()._value();
+        switch (opName)
         {
-            case EQUAL:
+            case "Equal":
                 sb.append("=");
                 break;
-            case UNION:
+            case "Union":
                 sb.append("+");
                 break;
-            case DIFFERENCE:
+            case "Difference":
                 sb.append("-");
                 break;
-            case SUBSET:
+            case "Subset":
                 sb.append("⊆");
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown GenericTypeOperation type: " + op._operationType());
+                throw new UnsupportedOperationException("Unknown GenericTypeOperation type: " + opName);
         }
         serializeGenericType(sb, op._right());
     }
@@ -1942,8 +1944,9 @@ public class M3ProtocolSerializer
         // Aggregation kind
         if (prop._aggregation() != null)
         {
-            AggregationKind agg = prop._aggregation();
-            sb.append("(").append(agg.name().toLowerCase()).append(") ");
+            // Read enum value name from Enum_Pointer's extraPointerValues
+            String aggName = prop._aggregation()._extraPointerValues().getFirst()._value();
+            sb.append("(").append(aggName.toLowerCase()).append(") ");
         }
 
         sb.append(prop._name());

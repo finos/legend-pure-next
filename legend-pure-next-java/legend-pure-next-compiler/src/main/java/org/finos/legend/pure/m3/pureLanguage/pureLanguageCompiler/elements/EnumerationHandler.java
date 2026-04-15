@@ -28,11 +28,17 @@ import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
+import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+
+import java.util.Objects;
 
 /**
  * Handler for Enumeration.
@@ -49,7 +55,7 @@ public final class EnumerationHandler
                 ._name(grammar._name());
     }
 
-    public static Enumeration secondPass(EnumerationImpl result, meta.pure.protocol.grammar.type.Enumeration grammar, MetadataAccess model)
+    public static Enumeration secondPass(EnumerationImpl result, meta.pure.protocol.grammar.type.Enumeration grammar, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // Add generalization: every user-defined enumeration extends Enum
         Type enumType = (Type) model.getElement("meta::pure::metamodel::type::Enum");
@@ -62,6 +68,13 @@ public final class EnumerationHandler
         // GenericType for Enumeration<E> parameterized with this enum type
         UserDefinedGenericTypeImpl enumerationOfE = _GenericType.buildUserDefinedGenericType(enumerationType, model)
                 ._typeArguments(Lists.mutable.with(enumGT));
+
+        // Check for duplicate enum value names
+        grammar._properties().collect(meta.pure.protocol.grammar.function.property.Property::_name)
+                .toBag().selectDuplicates().toSet()
+                .each(name -> context.addError(new CompilationError(
+                        "Duplicate enum value '" + name + "'",
+                        SourceInformationCompiler.compile(grammar._sourceInformation(), model))));
 
         // Create one Property per enum value, each with a defaultValue containing the Enum instance
         var properties = grammar._properties().collect(grammarProp ->
@@ -102,26 +115,40 @@ public final class EnumerationHandler
                             _GenericType.buildUserDefinedGenericType(propertyType, model)
                             ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                             ._multiplicityArguments(Lists.mutable.with(pureOne))
-                        )._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                        )._aggregation((meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue("meta::pure::metamodel::function::property::AggregationKind", "None", model))
                          ._name(grammarProp._name())
                          ._owner(result)
                          ._genericType(enumGT)
                          ._multiplicity(pureOne)
                          ._defaultValue(defaultValueLambda)
+                         ._stereotypes(grammarProp._stereotypes()
+                                 .collect(s -> AnnotationCompiler.resolveStereotype(s, imports, model, context))
+                                 .select(Objects::nonNull))
+                         ._taggedValues(grammarProp._taggedValues()
+                                 .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
+                                 .select(Objects::nonNull))
                          ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
         });
 
         org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> props =
                 (org.eclipse.collections.api.list.MutableList) properties;
 
-        return result
-                ._classifierGenericType(enumerationOfE)
+        result._classifierGenericType(enumerationOfE)
                 ._generalizations(Lists.mutable.with(
                         new GeneralizationImpl(model)
                                 ._general(_GenericType.buildUserDefinedGenericType(enumType, model))
                                 ._specific(result)))
                 ._properties(props)
+                ._stereotypes(grammar._stereotypes()
+                        .collect(s -> AnnotationCompiler.resolveStereotype(s, imports, model, context))
+                        .select(Objects::nonNull))
+                ._taggedValues(grammar._taggedValues()
+                        .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
+                        .select(Objects::nonNull))
                 ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+
+        context.enrichCurrentErrors("enumeration '" + _G_PackageableElement.fullPath(grammar) + "'");
+        return result;
     }
 
     public static Enumeration thirdPass(Enumeration cls, meta.pure.protocol.grammar.type.Enumeration grammar, CompilationContext context)

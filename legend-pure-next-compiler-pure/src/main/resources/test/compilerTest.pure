@@ -21,32 +21,48 @@ import meta::pure::protocol::*;
 import meta::pure::test::pct::*;
 
 // Harness
-function meta::pure::compiler::test::assertCompiledGraph(content:String[1]):Boolean[1]
+function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
 {
-    if(contains($content, '###' + 'CompiledGraph'),
-       | // 1. Call native parse (assuming the parser has CompiledGraphLanguageExtension configured)
-         let parsedFile = meta::pure::compiler::parse('testSource.pure', $content);
-         
-         // 2. Extract CompiledGraph assertion from the PureFile sections
-         let expectedGraphElement = $parsedFile.sections.elements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
-         if($expectedGraphElement->isNotEmpty(),
-            | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
-              
-              // 3. Compile the rest of the Pure models
-              let compiledMetamodel = meta::pure::compiler::compile($parsedFile);
-              
-              // 4. Print elements
-              let actualGraph = meta::pure::compiler::printer::printCompiledGraph($compiledMetamodel);
-              
-              // 5. Assert equality
-              let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
-              let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
-              println('EXPECTED LEN: ' + $cleanedExpected->length()->toString());
-              println('ACTUAL LEN: ' + $cleanedActual->length()->toString());
-              assertEquals($cleanedExpected, $cleanedActual);
-              true;,
+    if(contains($content, '###' + 'Error'),
+       | assertCompilationError($content, $sourceId),
+       | if(contains($content, '###' + 'CompiledGraph'),
+            | assertCompiledGraphContent($content, $sourceId),
             | true
-         );,
+         )
+    );
+}
+
+function meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
+    let expectedMessages = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim()->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
+    let pureStart = $content->indexOf('###' + 'Pure');
+    let errorLines = $content->substring(0, $pureStart)->split('\n');
+    let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
+    let pureContent = $blankedPrefix + $content->substring($pureStart);
+    let parsedFile = meta::pure::compiler::parse($sourceId, $pureContent);
+    let result = meta::pure::compiler::compile($parsedFile);
+    assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
+    if($expectedMessages->size() != $result.errors->size(), |println('EXPECTED: ' + $expectedMessages->joinStrings(' | ')), |[]);
+    if($expectedMessages->size() != $result.errors->size(), |println('ACTUAL:   ' + $result.errors->joinStrings(' | ')), |[]);
+    assertEquals($expectedMessages->size(), $result.errors->size());
+    assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
+}
+
+function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    let parsedFile = meta::pure::compiler::parse($sourceId, $content);
+    let result = meta::pure::compiler::compile($parsedFile);
+
+    let expectedGraphElement = $parsedFile.sections.elements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
+    if($expectedGraphElement->isNotEmpty(),
+       | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
+         let actualGraph = meta::pure::compiler::printer::printCompiledGraph($result.elements);
+
+         let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
+         let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
+         assertEquals($cleanedExpected, $cleanedActual);
+         true;,
        | true
     );
 }

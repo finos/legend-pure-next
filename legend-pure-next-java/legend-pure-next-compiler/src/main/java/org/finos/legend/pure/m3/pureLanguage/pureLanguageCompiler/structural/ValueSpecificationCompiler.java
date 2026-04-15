@@ -13,6 +13,10 @@ import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
@@ -117,20 +121,20 @@ public final class ValueSpecificationCompiler
         {
             meta.pure.metamodel.type.generics.GenericType heldGT = holder._genericType() != null
                     ? GenericTypeCompiler.compile(holder._genericType(), imports, model, context)
-                    : null;
+                    : new CompilerNotSetGenericTypeImpl();
             Multiplicity heldMul = holder._multiplicity() != null
                     ? MultiplicityCompiler.compile(holder._multiplicity(), model)
-                    : null;
+                    : new CompilerNotSetMultiplicityImpl();
 
             // Build classifier type: GenericType(type=UserDefinedGenericTypeAndMultiplicityHolder, typeArguments=[heldGT])
             meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) model.getElement(
                     "meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
             UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, model);
-            if (heldGT != null)
+            if (!(heldGT instanceof CompilerNotSetGenericType))
             {
                 classifierGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldGT));
             }
-            if (heldMul != null)
+            if (!(heldMul instanceof CompilerNotSetMultiplicity))
             {
                 classifierGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(heldMul));
             }
@@ -152,7 +156,9 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl var, MetadataAccess model)
     {
         VariableExpressionImpl result = _VariableExpression.newVariableExpression(model)
-                ._name(var._name() != null ? var._name() : "");
+                ._name(var._name() != null ? var._name() : "")
+                ._genericType(new CompilerNotSetGenericTypeImpl())
+                ._multiplicity(new CompilerNotSetMultiplicityImpl());
         if (var._sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(var._sourceInformation(), model));
@@ -170,19 +176,12 @@ public final class ValueSpecificationCompiler
         {
             result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation(), context.getSourceId(), model));
         }
-        if (av._genericType() != null)
-        {
-            result._genericType(GenericTypeCompiler.compile(av._genericType(), imports, model, context));
-        }
-        if (av._multiplicity() != null)
-        {
-            result._multiplicity(MultiplicityCompiler.compile(av._multiplicity(), model));
-        }
-        else
-        {
-            // AtomicValues are inherently single-valued [1]
-            result._multiplicity((Multiplicity)model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
-        }
+        result._genericType(av._genericType() != null
+                ? GenericTypeCompiler.compile(av._genericType(), imports, model, context)
+                : new CompilerNotSetGenericTypeImpl());
+        result._multiplicity(av._multiplicity() != null
+                ? MultiplicityCompiler.compile(av._multiplicity(), model)
+                : (Multiplicity)model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
 
         // Compile the single value: recursively compile inner ValueSpecification,
         // compile LambdaFunction (grammar -> metamodel), or pass through raw primitives as-is

@@ -1,0 +1,16 @@
+###Error
+The stereotype 'unknown' can't be found in profile 'AProfile' in property 'value' in class 'pack::MyClass' (at class/property/profile_E_unknownStereotype 15:14-15:20)
+
+###Pure
+import pack::*;
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class pack::MyClass
+{
+  <<AProfile.unknown>> value: Integer[1];
+}

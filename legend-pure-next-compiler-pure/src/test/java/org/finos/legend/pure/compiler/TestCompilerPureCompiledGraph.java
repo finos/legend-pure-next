@@ -55,16 +55,16 @@ public class TestCompilerPureCompiledGraph
         model.compile();
 
         resolver = new ScopedMetadataAccess(compilerModule, model);
-        
+
         execution = PureExecution.builder()
                 .withResolver(resolver)
                 .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
                 .withParserExtensions(List.of(new org.finos.legend.pure.m3.localModule.compiledgraph.CompiledGraphLanguageExtension()))
                 .build();
 
-        assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_");
+        assertCompiledGraph = (FunctionDefinition) compilerModule.getElement("meta::pure::compiler::test::assertCompiledGraph_String_1__String_1__Boolean_1_");
         if (assertCompiledGraph == null) {
-            throw new RuntimeException("Could not find meta::pure::compiler::test::assertCompiledGraph_String_1__Boolean_1_ in compiler execution.");
+            throw new RuntimeException("Could not find meta::pure::compiler::test::assertCompiledGraph_String_1__String_1__Boolean_1_ in compiler execution.");
         }
     }
 
@@ -75,48 +75,33 @@ public class TestCompilerPureCompiledGraph
         if (!Files.exists(start)) {
             start = Path.of("../legend-pure-next-specification/src/main/resources/specification/compiler");
         }
-        
+
         final Path finalStart = start;
         List<DynamicTest> tests = new ArrayList<>();
-        
+
         try (Stream<Path> stream = Files.walk(finalStart))
         {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(".pure"))
-                  .forEach(p -> 
+                  .forEach(p ->
                   {
                       try
                       {
                           String content = Files.readString(p);
-                          if (content.contains("###CompiledGraph"))
+                          if (content.contains("###CompiledGraph") || content.contains("###Error"))
                           {
                               String testName = finalStart.relativize(p).toString();
-                              
-                              if (!testName.contains("class/property/simple.pure") &&
-                                  !testName.contains("class/property/typeArguments.pure") &&
-                                  !testName.contains("class/profile/profile.pure") &&
-                                  !testName.contains("class/inheritance/simple.pure") &&
-                                  !testName.contains("class/inheritance/typeArguments.pure") &&
-                                  !testName.contains("class/typeAndMulParam/typeAndMulParam.pure") &&
-                                  !testName.contains("enumeration/simple.pure") &&
-                                  !testName.contains("association/property/simple.pure") &&
-                                  !testName.contains("association/property/typeArguments.pure") &&
-                                  !testName.contains("function/native/simple.pure") &&
-                                  !testName.contains("function/lambda/openVariables.pure") &&
-                                  !testName.contains("primitive/simple.pure") &&
-                                  !testName.contains("primitive/typeVariable.pure")) {
-                                  return;
-                              }
-                              
-                              tests.add(DynamicTest.dynamicTest(testName, () -> 
+                              String sourceId = testName.replace(".pure", "");
+
+                              tests.add(DynamicTest.dynamicTest(testName, () ->
                               {
                                   try
                                   {
-                                      execution.execute(assertCompiledGraph, content);
+                                      execution.execute(assertCompiledGraph, content, sourceId);
                                   }
-                                  catch (PureAssertionError e)
+                                  catch (Throwable e)
                                   {
-                                      throw new org.opentest4j.AssertionFailedError(e.getMessage(), e);
+                                      throw new org.opentest4j.AssertionFailedError(testName + ": " + e.getMessage(), e);
                                   }
                               }));
                           }
@@ -127,9 +112,9 @@ public class TestCompilerPureCompiledGraph
                       }
                   });
         }
-        
+
         assertFalse(tests.isEmpty(), "Should discover at least one specification file");
-        
+
         return tests;
     }
 }

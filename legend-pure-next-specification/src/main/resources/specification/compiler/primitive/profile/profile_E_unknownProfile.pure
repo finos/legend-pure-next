@@ -1,0 +1,13 @@
+###Error
+The profile 'Unknown' can't be found in primitive type 'pack::MyPrimitive' (at primitive/profile/profile_E_unknownProfile 7:13-7:19)
+
+###Pure
+import pack::*;
+
+Primitive <<Unknown.flag>> pack::MyPrimitive extends String
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}

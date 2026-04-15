@@ -94,15 +94,15 @@ public class _E_ValueSpecification
         {
             return av._value();
         }
-        // Collections — unwrap to a list of values
+        // Collections — unwrap one level: each child unwrapped once
         if (vs instanceof Collection col)
         {
             List<Object> results = new ArrayList<>();
             for (Object v : col._values())
             {
-                if (v instanceof ValueSpecification vvs)
+                if (v instanceof AtomicValue childAv)
                 {
-                    results.add(unwrap(vvs));
+                    results.add(childAv._value());
                 }
                 else
                 {
@@ -115,23 +115,34 @@ public class _E_ValueSpecification
     }
 
     /**
-     * Wrap a single raw Java scalar value in an AtomicValueImpl with the given type info.
-     * Do NOT pass a List here — build a CollectionImpl directly instead.
+     * Ensure a value is a ValueSpecification.
+     * - null → empty Collection
+     * - List → Collection (each element wrapped recursively)
+     * - raw Java value → AtomicValue
      */
     public static ValueSpecification wrap(Object value,
                                    meta.pure.metamodel.type.generics.GenericType genericType,
                                    meta.pure.metamodel.multiplicity.Multiplicity multiplicity,
                                    MetadataAccess resolver)
     {
-        if (value instanceof ValueSpecification vs)
+        if (value == null)
         {
-            return vs;
+            return new meta.pure.metamodel.valuespecification.CollectionImpl(resolver)
+                    ._values(org.eclipse.collections.api.factory.Lists.mutable.empty())
+                    ._genericType(genericType != null ? genericType
+                            : (meta.pure.metamodel.type.generics.GenericType) resolver.getElement(
+                                    "meta::pure::metamodel::type::generics::optimization::GenericType_Nil"))
+                    ._multiplicity((meta.pure.metamodel.multiplicity.Multiplicity)
+                            resolver.getElement("meta::pure::metamodel::multiplicity::PureZero"));
         }
-        if (value instanceof List<?>)
+        if (value instanceof List<?> list)
         {
-            throw new IllegalArgumentException(
-                "wrap() does not accept raw List values — use makeCollection() or CollectionImpl directly "
-                + "to preserve per-element ValueSpecification types.");
+            java.util.List<ValueSpecification> items = new java.util.ArrayList<>(list.size());
+            for (Object item : list)
+            {
+                items.add(wrap(item, genericType, null, resolver));
+            }
+            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(items, resolver);
         }
         return new AtomicValueImpl(resolver)
                 ._value(value)
@@ -156,7 +167,22 @@ public class _E_ValueSpecification
      */
     public static Type getValueOriginalType(ValueSpecification vs, MetadataAccess resolver)
     {
-        Object value = unwrap(vs);
+        Object value = (vs instanceof AtomicValue av) ? av._value() : vs;
+        // Collection — compute common type from actual elements
+        if (vs instanceof Collection col)
+        {
+            if (col._values().isEmpty())
+            {
+                return resolver != null ? (Type) resolver.getElement("meta::pure::metamodel::type::Nil") : null;
+            }
+            org.eclipse.collections.api.list.MutableList<GenericType> elementTypes =
+                    col._values().collect(ValueSpecification::_genericType).select(gt -> gt != null);
+            if (elementTypes.notEmpty() && resolver != null)
+            {
+                return _GenericType.type(_GenericType.findCommonGenericType(elementTypes, resolver));
+            }
+            return col._genericType() != null ? _GenericType.type(col._genericType()) : null;
+        }
         // DynamicInstance — use classifierGenericType
         if (value instanceof DynamicInstance di)
         {
@@ -166,6 +192,10 @@ public class _E_ValueSpecification
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
             GenericType cgt = any._classifierGenericType();
+            if (cgt == null && any instanceof ValueSpecification vsVal && vsVal._genericType() != null)
+            {
+                return _GenericType.type(vsVal._genericType());
+            }
             if (cgt == null)
             {
                 throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()

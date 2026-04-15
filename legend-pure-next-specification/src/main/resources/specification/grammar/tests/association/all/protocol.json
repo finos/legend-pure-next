@@ -46,7 +46,14 @@
         }
       }, {
         "_type" : "Property",
-        "aggregation" : "SHARED",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "Shared"
+          } ],
+          "pointerValue" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
         "defaultValue" : {
           "_type" : "LambdaFunction",
           "expressionSequence" : [ {

@@ -1,0 +1,25 @@
+###Error
+The tag 'unknown' can't be found in profile 'AProfile' in association 'pack::MyAssociation' (at association/profile/profile_E_unknownTag 7:23-7:29)
+
+###Pure
+import pack::*;
+
+Association {AProfile.unknown = 'value'} pack::MyAssociation
+{
+  a: ClassA[1];
+  b: ClassB[*];
+}
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class pack::ClassA
+{
+}
+
+Class pack::ClassB
+{
+}

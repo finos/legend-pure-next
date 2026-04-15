@@ -1,0 +1,25 @@
+###Error
+The profile 'Unknown' can't be found in association 'pack::MyAssociation' (at association/profile/profile_E_unknownProfile 7:15-7:21)
+
+###Pure
+import pack::*;
+
+Association <<Unknown.flag>> pack::MyAssociation
+{
+  a: ClassA[1];
+  b: ClassB[*];
+}
+
+Profile pack::AProfile
+{
+  stereotypes: [flag];
+  tags: [tag1];
+}
+
+Class pack::ClassA
+{
+}
+
+Class pack::ClassB
+{
+}

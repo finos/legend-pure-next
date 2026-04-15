@@ -103,7 +103,7 @@ public class RdfJavaGenerator
         generateAnnotations(outputDir);
         generateClassInterfaces(outputDir);
         generateClassImplementations(outputDir);
-        generateEnums(outputDir);
+        generateEnumInterfaces(outputDir);
 
         System.out.println("\nGeneration complete. Output: " + outputDir);
     }
@@ -361,6 +361,18 @@ public class RdfJavaGenerator
         sb.append(" implements ").append(classInfo.name);
         sb.append("\n{\n");
 
+        // Freeze support: once frozen, setters throw. Excluded from serialization.
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    private boolean frozen;\n\n");
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    public void freeze() { this.frozen = true; }\n\n");
+        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        sb.append("    public boolean isFrozen() { return this.frozen; }\n\n");
+        sb.append("    private void checkNotFrozen()\n");
+        sb.append("    {\n");
+        sb.append("        if (this.frozen) throw new UnsupportedOperationException(\"").append(classInfo.name).append("Impl is frozen (immutable)\");\n");
+        sb.append("    }\n\n");
+
         // Generate private fields for all properties
         allProperties.forEach(prop ->
         {
@@ -421,7 +433,7 @@ public class RdfJavaGenerator
             String fieldName = escapeFieldName(prop.name);
             String getterName = "_" + prop.name;
 
-            // Getter
+            // Getter (returns unmodifiable list view when frozen)
             appendPureAnnotations(sb, prop.stereotypes, prop.taggedValues, "    ");
             sb.append("    @JsonProperty(\"")
                 .append(prop.name).append("\")\n");
@@ -429,19 +441,27 @@ public class RdfJavaGenerator
             sb.append("    public ").append(javaType).append(" ");
             sb.append(getterName).append("()\n");
             sb.append("    {\n");
-            sb.append("        return this.").append(fieldName).append(";\n");
+            if (prop.isMany)
+            {
+                sb.append("        return this.frozen && this.").append(fieldName).append(" != null ? this.").append(fieldName).append(".asUnmodifiable() : this.").append(fieldName).append(";\n");
+            }
+            else
+            {
+                sb.append("        return this.").append(fieldName).append(";\n");
+            }
             sb.append("    }\n\n");
 
-            // Fluent setter
+            // Fluent setter (throws if frozen)
             sb.append("    public ").append(classInfo.name).append("Impl _");
             sb.append(prop.name).append("(");
             sb.append(javaType).append(" value)\n");
             sb.append("    {\n");
+            sb.append("        checkNotFrozen();\n");
             sb.append("        this.").append(fieldName).append(" = value;\n");
             sb.append("        return this;\n");
             sb.append("    }\n\n");
         });
-        // Generate _copy() method
+        // Generate _copy() method — always returns an unfrozen (mutable) copy
         sb.append("    @Override\n");
         sb.append("    public ").append(classInfo.name).append("Impl _copy()\n");
         sb.append("    {\n");
@@ -463,7 +483,7 @@ public class RdfJavaGenerator
     // Code Generation - Enums
     // =========================================================================
 
-    private void generateEnums(Path outputDir) throws IOException
+    private void generateEnumInterfaces(Path outputDir) throws IOException
     {
         for (EnumInfo enumInfo : m3Model.enumInfoMap().valuesView())
         {
@@ -471,47 +491,57 @@ public class RdfJavaGenerator
             Path packageDir = outputDir.resolve(javaPackage.replace('.', '/'));
             Files.createDirectories(packageDir);
 
-            String javaCode = generateEnumCode(enumInfo);
-            Path filePath = packageDir.resolve(enumInfo.name + ".java");
-            Files.write(filePath, javaCode.getBytes(StandardCharsets.UTF_8));
-            System.out.println("  Generated: " + enumInfo.name + ".java");
+            // Generate interface
+            String interfaceCode = generateEnumInterfaceCode(enumInfo);
+            Path interfacePath = packageDir.resolve(enumInfo.name + ".java");
+            Files.write(interfacePath, interfaceCode.getBytes(StandardCharsets.UTF_8));
+
+            // Generate implementation
+            String implCode = generateEnumImplCode(enumInfo);
+            Path implPath = packageDir.resolve(enumInfo.name + "Impl.java");
+            Files.write(implPath, implCode.getBytes(StandardCharsets.UTF_8));
+
+            System.out.println("  Generated: " + enumInfo.name + ".java + Impl");
         }
     }
 
-    private String generateEnumCode(EnumInfo enumInfo)
+    private String generateEnumInterfaceCode(EnumInfo enumInfo)
     {
         StringBuilder sb = new StringBuilder();
         String thisPackage = toJavaPackage(enumInfo.packagePath);
 
-        // Package declaration
         sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n");
         sb.append("package ").append(thisPackage).append(";\n\n");
-
-        // JavaDoc
         sb.append("/**\n");
-        sb.append(" * Generated enum for M3 enumeration: ").append(enumInfo.name).append("\n");
+        sb.append(" * Generated interface for M3 enumeration: ").append(enumInfo.name).append("\n");
         if (enumInfo.packagePath != null)
         {
             sb.append(" * Pure package: ").append(enumInfo.packagePath).append("\n");
         }
         sb.append(" */\n");
+        sb.append("public interface ").append(enumInfo.name).append(" extends meta.pure.metamodel.type.Enum\n{\n");
+        sb.append("}\n");
 
-        // Enum declaration
-        sb.append("public enum ").append(enumInfo.name).append("\n{\n");
+        return sb.toString();
+    }
 
-        // Enum values
-        if (!enumInfo.values.isEmpty())
-        {
-            for (int i = 0; i < enumInfo.values.size(); i++)
-            {
-                String value = enumInfo.values.get(i);
-                String enumConstant = toEnumConstant(value);
-                sb.append("    ").append(enumConstant);
-                sb.append(i < enumInfo.values.size() - 1 ? "," : ";");
-                sb.append("  // ").append(value).append("\n");
-            }
-        }
+    private String generateEnumImplCode(EnumInfo enumInfo)
+    {
+        StringBuilder sb = new StringBuilder();
+        String thisPackage = toJavaPackage(enumInfo.packagePath);
 
+        sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n");
+        sb.append("package ").append(thisPackage).append(";\n\n");
+        sb.append("/**\n");
+        sb.append(" * Generated implementation for M3 enumeration: ").append(enumInfo.name).append("\n");
+        sb.append(" * <p>Extends EnumImpl and implements the typed interface.</p>\n");
+        sb.append(" */\n");
+        sb.append("public class ").append(enumInfo.name).append("Impl extends meta.pure.metamodel.type.EnumImpl implements ").append(enumInfo.name).append("\n{\n");
+        sb.append("    public ").append(enumInfo.name).append("Impl() {}\n\n");
+        sb.append("    public ").append(enumInfo.name).append("Impl(org.finos.legend.pure.m3.module.MetadataAccess model)\n");
+        sb.append("    {\n");
+        sb.append("        super(model);\n");
+        sb.append("    }\n");
         sb.append("}\n");
 
         return sb.toString();
@@ -648,18 +678,9 @@ public class RdfJavaGenerator
 
     private String toEnumConstant(String value)
     {
-        // Convert camelCase or spaces to UPPER_SNAKE_CASE
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < value.length(); i++)
-        {
-            char c = value.charAt(i);
-            if (Character.isUpperCase(c) && i > 0)
-            {
-                sb.append('_');
-            }
-            sb.append(Character.toUpperCase(c));
-        }
-        return sb.toString();
+        // Use the original case from the metamodel (e.g., "Composite", "Subset")
+        // so that Java enum name() matches the metamodel element name.
+        return value;
     }
 
     /**

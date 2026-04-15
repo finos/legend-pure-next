@@ -174,6 +174,9 @@ public class M3ProtocolGenerator
 
         loadAdditionalTtl(additionalTtlPaths);
 
+        int enumProps = processEnumProperties();
+        System.out.println("Converted " + enumProps + " enum properties to Enum_Pointer");
+
         System.out.println("Final model size: " + model.size());
 
         if (outputPath.getParent() != null)
@@ -207,7 +210,9 @@ public class M3ProtocolGenerator
             writeHeader(w);
             writeClasses(w);
             writePrimitiveTypes(w);
-            writeEnumerations(w);
+            // Protocol enumerations no longer needed — properties use Enum_Pointer
+            // which references the metamodel enumeration path + value name.
+            // writeEnumerations(w);
             writeMultiplicities(w);
             writePackages(w);
             writeProfilesAndStereotypes(w);
@@ -1084,6 +1089,60 @@ public class M3ProtocolGenerator
                     model.remove(propRes, stereotypesProp, protocolInfoPointer);
                 }
             }
+        }
+
+        return count;
+    }
+
+    /**
+     * Find all properties whose type is an Enumeration and replace their type
+     * with Enum_Pointer (defined in m3_protocol_addition.ttl).
+     */
+    private int processEnumProperties()
+    {
+        int count = 0;
+
+        // Find all Enumeration types in the model
+        MutableSet<Resource> enumerationTypes = Sets.mutable.empty();
+        ResIterator enumIter = model.listSubjectsWithProperty(rdfType, m3Enumeration);
+        while (enumIter.hasNext())
+        {
+            enumerationTypes.add(enumIter.next());
+        }
+
+        if (enumerationTypes.isEmpty())
+        {
+            return 0;
+        }
+
+        // Enum_Pointer is defined in m3_protocol_addition.ttl
+        Resource enumPointerType = model.createResource(M3_NS + "Enum_Pointer");
+
+        // Find all properties whose type is an Enumeration
+        ResIterator propIter = model.listSubjectsWithProperty(rdfType, m3Property);
+        while (propIter.hasNext())
+        {
+            Resource propRes = propIter.next();
+            Statement genTypeStmt = model.getProperty(propRes, genericTypeProp);
+            if (genTypeStmt == null || !genTypeStmt.getObject().isResource())
+            {
+                continue;
+            }
+            Resource genTypeRes = genTypeStmt.getObject().asResource();
+            Statement rawStmt = model.getProperty(genTypeRes, rawTypeProp);
+            if (rawStmt == null || !rawStmt.getObject().isResource())
+            {
+                continue;
+            }
+            Resource rawType = rawStmt.getObject().asResource();
+            if (!enumerationTypes.contains(rawType))
+            {
+                continue;
+            }
+
+            // Replace the property's type with Enum_Pointer
+            replaceRawType(propRes, genTypeRes, enumPointerType);
+            count++;
         }
 
         return count;

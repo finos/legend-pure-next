@@ -1,5 +1,4 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
@@ -168,14 +167,11 @@ function <<test.Test>> meta::pure::compiler::helper::type::tests::testLinearize(
 {
     // Any linearizes to just itself (no parents)
     let anyLin = Any->linearize();
-    println('Any linearize: ' + $anyLin->size()->toString());
     assertEquals(1, $anyLin->size());
     assertEquals(Any, $anyLin->at(0));
 
     // Integer -> Number -> Any
     let intLin = Integer->linearize();
-    println('Integer generalizations: ' + Integer.generalizations->size()->toString());
-    println('Integer linearize: ' + $intLin->size()->toString());
     assertEquals(3, $intLin->size());
     assertEquals(Integer, $intLin->at(0));
     assertEquals(Number, $intLin->at(1));

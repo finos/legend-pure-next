@@ -1,0 +1,17 @@
+###Error
+No matching function 'fold' found for argument types (String[3], LambdaFunction<{String[1], test::Child[1]->test::Parent[1]}>[1], test::Child[1]) (at valueSpecification/functionExpression/functionApplication/generics/foldSubtypeInit_E_varianceMismatch 16:20-16:113)
+
+###Pure
+// fold<T,V> uses V in both covariant (return) and contravariant (param)
+// positions, making V invariant. The init type (Child) must exactly match
+// the lambda return type (Parent) — a subtype init is rejected.
+Class test::Parent { name : String[1]; }
+Class test::Child extends test::Parent { extra : String[1]; }
+function test::processParent(p:test::Parent[1], s:String[1]):test::Parent[1]
+{
+    ^test::Parent(name = $p.name + $s)
+}
+function test::tst():Any[*]
+{
+    ['a', 'b', 'c']->fold({val, acc| test::processParent($acc, $val)}, ^test::Child(name = 'init:', extra = 'x'))
+}

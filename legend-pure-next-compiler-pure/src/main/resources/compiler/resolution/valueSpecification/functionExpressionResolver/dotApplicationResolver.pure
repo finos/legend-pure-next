@@ -1,0 +1,234 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::helper::property::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::*;
+import meta::pure::metamodel::relation::*;
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:meta::pure::metamodel::valuespecification::DotApplication[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+{
+    let functionName = $dot.functionName->toOne();
+    let siCtx = formatMetamodelSourceInfo($dot.sourceInformation, $context);
+
+    // Resolve receiver parameters — use resolved types for property lookup
+    let resolvedParamResults = $dot.parametersValues->map(p | resolveValueSpecification($p, $scope, $context));
+    let ctx1 = $resolvedParamResults->fold({r, c | $r.context}, $context);
+    let resolvedParams = $resolvedParamResults->map(r | if($r.value->isEmpty(), | [], | $r.value->toOne()));
+
+    if($resolvedParams->isEmpty(),
+        | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+              value = $dot,
+              context = ^$ctx1(errors += 'DotApplication has no parameters' + $siCtx)
+          ),
+        | let receiver = $resolvedParams->at(0);
+          let _d = debug($context, | 'resolveDotApplication: .' + $functionName
+              + ' receiverGT=' + if($receiver.genericType->isEmpty(), | '?', | printGenericType($receiver.genericType->toOne()))
+              + ' receiverMul=' + if($receiver.multiplicity->isEmpty(), | '?', | printMultiplicity($receiver.multiplicity->toOne()))
+              + ' additionalParams=' + $resolvedParams->size()->toString());
+          if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
+              | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                    value = $dot,
+                    context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
+                ),
+              | let ownerType = $receiver.genericType->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type->toOne();
+                // Handle Enumeration value access: check if the receiver's value IS an Enumeration
+                let isEnum = $receiver->instanceOf(meta::pure::metamodel::valuespecification::AtomicValue) && $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration);
+                if($isEnum,
+                    | let enumeration = $receiver->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>);
+                      let enumPath = $enumeration->meta::pure::functions::meta::elementToPath();
+                      let resolvedEnum = $context->resolveElement($enumPath);
+                      let enumOwner = if($resolvedEnum->isNotEmpty() && $resolvedEnum->toOne()->instanceOf(meta::pure::metamodel::type::Enumeration),
+                          | $resolvedEnum->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>),
+                          | $enumeration
+                      );
+                      let matchedProp = $enumOwner.properties->filter(p | $p.name == $functionName);
+                      if($matchedProp->isEmpty(),
+                          | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = $dot,
+                                context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
+                            ),
+                          | let _de = debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
+                            let enumGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $enumeration);
+                            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = ^$dot(
+                                    func = $matchedProp->at(0),
+                                    genericType = $enumGT,
+                                    multiplicity = meta::pure::metamodel::multiplicity::PureOne
+                                ),
+                                context = $ctx1
+                            );
+                      );,
+                    | // Column access on a RelationType — mirrors Java DotApplicationResolver.lookupFunction lines 300-313
+                      let isRelationType = $ownerType->instanceOf(RelationType);
+                      if($isRelationType,
+                          | let rt = $ownerType->cast(@RelationType<Any>);
+                            let col = $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $functionName);
+                            let _dc = debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
+                            if($col->isNotEmpty(),
+                                | let resolvedCol = $col->at(0);
+                                  let colGT = if($resolvedCol.genericType->isNotEmpty(), | asInferredGenericType($resolvedCol.genericType->toOne()), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType());
+                                  let colMul = if($resolvedCol.multiplicity->isNotEmpty(), | $resolvedCol.multiplicity->toOne(), | meta::pure::metamodel::multiplicity::PureOne);
+                                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = ^$dot(
+                                          func = $resolvedCol,
+                                          genericType = $colGT,
+                                          multiplicity = $colMul
+                                      ),
+                                      context = $ctx1
+                                  );,
+                                | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = $dot,
+                                      context = ^$ctx1(errors += 'Can\'t find column \'' + $functionName + '\' in relation type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
+                                  )
+                            );,
+                          | // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
+                      let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
+                          | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
+                            let fromCtx = $context->resolveElement($path);
+                            if($fromCtx->isNotEmpty() && $fromCtx->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+                                | $fromCtx->toOne()->cast(@meta::pure::metamodel::type::Class<Any>),
+                                | $ownerType->cast(@meta::pure::metamodel::type::Class<Any>)
+                            );,
+                          | []
+                      );
+                      // Look up property on the owner type
+                      let prop = if($resolvedOwner->isNotEmpty(),
+                          | findProperty($resolvedOwner->toOne(), $functionName),
+                          | []
+                      );
+                      if($prop->isEmpty(),
+                          | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                value = $dot,
+                                context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + if($resolvedOwner->isNotEmpty(), |$resolvedOwner->toOne()->meta::pure::functions::meta::elementToPath(), |$ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath()) + '\'' + $siCtx)
+                            ),
+                          | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
+                            let resolvedProp = $prop->toOne();
+                            let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
+                            let propGT = $propResolved.first;
+                            let propMul = $propResolved.second;
+                            let receiverMul = $receiver.multiplicity;
+                            // Check if automap needed: receiver multiplicity is NOT [1]
+                            if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
+                                | // Direct access — receiver is [1]
+                                  let _dd = debug($context, | '  direct access [1]');
+                                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = ^$dot(
+                                          func = $resolvedProp,
+                                          genericType = $propGT,
+                                          multiplicity = $propMul
+                                      ),
+                                      context = $ctx1
+                                  );,
+                                | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
+                                  let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                                  buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                            );
+                      );
+                      ); // end RelationType if
+                ); // end enum if
+          );
+    );
+}
+
+// Matches Java DotApplicationResolver lines 106-113: apply class type bindings to property type and multiplicity
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:meta::pure::metamodel::function::property::AbstractProperty<Any>[1], ownerGT:meta::pure::metamodel::type::generics::GenericType[1]):Pair<meta::pure::metamodel::type::generics::GenericType, meta::pure::metamodel::multiplicity::Multiplicity>[1]
+{
+    let rawGT = $prop.genericType->toOne();
+    let rawMul = $prop.multiplicity->toOne();
+    let ownerType = if($ownerGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+        | $ownerGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).type,
+        | []
+    );
+    if($ownerType->isNotEmpty() && $ownerType->toOne()->instanceOf(meta::pure::metamodel::type::Class),
+        | let ownerClass = $ownerType->toOne()->cast(@meta::pure::metamodel::type::Class<Any>);
+          let bindings = $ownerClass->buildBindingsFromGenericType($ownerGT);
+          if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
+              | pair($rawGT, $rawMul),
+              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
+          );,
+        | pair($rawGT, $rawMul)
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:meta::pure::metamodel::valuespecification::DotApplication[1], receiver:meta::pure::metamodel::valuespecification::ValueSpecification[1], functionName:String[1], propGT:meta::pure::metamodel::type::generics::GenericType[1], propMul:meta::pure::metamodel::multiplicity::Multiplicity[1], prop:meta::pure::metamodel::function::property::AbstractProperty<Any>[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+{
+    // Build lambda parameter: v_automap:ReceiverElementType[1]
+    let lambdaParam = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        name = 'v_automap',
+        genericType = $receiver.genericType->toOne(),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+
+    // Build lambda body: $v_automap.propertyName (direct DotApplication with [1] receiver)
+    let varRef = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        name = 'v_automap',
+        genericType = $receiver.genericType->toOne(),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    let innerDot = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::valuespecification::DotApplication)
+    )->cast(@meta::pure::metamodel::valuespecification::DotApplication);
+    let dotBody = ^$innerDot(
+        functionName = $functionName,
+        parametersValues = [$varRef],
+        func = $prop,
+        genericType = $propGT,
+        multiplicity = $propMul,
+        sourceInformation = $dot.sourceInformation
+    );
+
+    // Build lambda function
+    let emptyLambda = meta::pure::functions::lang::new(
+        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::LambdaFunction)
+    )->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+    let lambda = ^$emptyLambda(
+        parameters = [$lambdaParam],
+        expressionSequence = [$dotBody]
+    );
+
+    // Wrap lambda in AtomicValue
+    let lambdaAV = ^meta::pure::metamodel::valuespecification::AtomicValue(
+        value = $lambda,
+        genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+
+    // Build map() FunctionInvocation
+    let mapFI = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+        functionName = 'map',
+        parametersValues = [$receiver, $lambdaAV],
+        genericType = $propGT,
+        multiplicity = $receiver.multiplicity->toOne(),
+        sourceInformation = $dot.sourceInformation
+    );
+
+    // Resolve the map expression to bind the function
+    let _d = debug($context, | '  automap: resolving map() expression');
+    let mapResult = resolveValueSpecification($mapFI, $scope, $context->debugSpaceInc());
+    let resolved = if($mapResult.value->isEmpty(), | $mapFI, | $mapResult.value->toOne());
+    let _d2 = debug($context, | '  automap: map() resolved gt=' + if($resolved.genericType->isEmpty(), | '?', | printGenericType($resolved.genericType->toOne()))
+        + ' mul=' + if($resolved.multiplicity->isEmpty(), | '?', | printMultiplicity($resolved.multiplicity->toOne())));
+    // Restore debug space — mapResult.context carries deeper space from resolveValueSpecification
+    let mapCtx = $mapResult.context;
+    let restoredCtx = ^$mapCtx(debugState = $context.debugState);
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(value = $mapResult.value, context = $restoredCtx);
+}

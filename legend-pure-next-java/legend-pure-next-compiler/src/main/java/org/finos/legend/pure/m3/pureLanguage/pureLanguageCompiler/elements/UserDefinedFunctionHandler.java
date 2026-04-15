@@ -16,12 +16,18 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.function.UserDefinedFunction;
 import meta.pure.metamodel.function.UserDefinedFunctionImpl;
+import meta.pure.metamodel.valuespecification.VariableExpression;
+import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
+import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.FunctionDefinitionResolver;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PackageableFunctionCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ValueSpecificationCompiler;
 
@@ -65,6 +71,16 @@ public final class UserDefinedFunctionHandler
         result._expressionSequence(grammar._expressionSequence()
                 .collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
 
+        // Create constraint shells (expression sequences resolved in third pass)
+        if (grammar._preConstraints() != null && grammar._preConstraints().notEmpty())
+        {
+            result._preConstraints(grammar._preConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+        }
+        if (grammar._postConstraints() != null && grammar._postConstraints().notEmpty())
+        {
+            result._postConstraints(grammar._postConstraints().collect(gc -> ConstraintCompiler.compileShell(gc, model)));
+        }
+
         context.enrichCurrentErrors("function '" + PackageableFunctionCompiler.fullPath(grammar) + "'");
         return result;
     }
@@ -73,7 +89,9 @@ public final class UserDefinedFunctionHandler
      * Third pass: resolve inferred function references in the expression sequence,
      * then validate return type and multiplicity compatibility.
      */
-    public static UserDefinedFunction thirdPass(meta.pure.metamodel.function.UserDefinedFunction result, MetadataAccess model, CompilationContext context)
+    public static UserDefinedFunction thirdPass(meta.pure.metamodel.function.UserDefinedFunction result,
+                                                   meta.pure.protocol.grammar.function.UserDefinedFunction grammar,
+                                                   MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         // Set in-scope type/multiplicity params so inner FunctionExpressions
         // can validate that unresolved type params come from this enclosing scope.
@@ -88,10 +106,93 @@ public final class UserDefinedFunctionHandler
                 model,
                 context);
 
+        // Resolve pre-constraints (parameters are the function parameters)
+        resolveFunctionConstraints(result, grammar, imports, model, context);
+
         // Clear scope params
         context.compilerContextExtensions(PureLanguageCompilerContext.class).clearEnclosingOwner();
 
         return result;
+    }
+
+    private static void resolveFunctionConstraints(meta.pure.metamodel.function.UserDefinedFunction result,
+                                                    meta.pure.protocol.grammar.function.UserDefinedFunction grammar,
+                                                    MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    {
+        MutableList<VariableExpression> funcParams = result._parameters();
+
+        // Pre-constraints: lambda parameters are the function's parameters
+        if (result._preConstraints() != null && result._preConstraints().notEmpty()
+                && grammar._preConstraints() != null && grammar._preConstraints().notEmpty())
+        {
+            context.compilerContextExtensions(PureLanguageCompilerContext.class).pushScope(funcParams);
+            try
+            {
+                resolveFunctionConstraintList(result._preConstraints(), grammar._preConstraints(), funcParams, imports, model, context);
+            }
+            finally
+            {
+                context.compilerContextExtensions(PureLanguageCompilerContext.class).popScope();
+            }
+        }
+
+        // Post-constraints: lambda parameters include the function's parameters plus $return
+        if (result._postConstraints() != null && result._postConstraints().notEmpty()
+                && grammar._postConstraints() != null && grammar._postConstraints().notEmpty())
+        {
+            VariableExpressionImpl returnVar = _VariableExpression.newVariableExpression(model)
+                    ._name("return")
+                    ._genericType(result._returnGenericType())
+                    ._multiplicity(result._returnMultiplicity());
+
+            MutableList<VariableExpression> allParams = Lists.mutable.<VariableExpression>withAll(funcParams);
+            allParams.add(returnVar);
+
+            context.compilerContextExtensions(PureLanguageCompilerContext.class).pushScope(allParams);
+            try
+            {
+                resolveFunctionConstraintList(result._postConstraints(), grammar._postConstraints(), allParams, imports, model, context);
+            }
+            finally
+            {
+                context.compilerContextExtensions(PureLanguageCompilerContext.class).popScope();
+            }
+        }
+    }
+
+    private static void resolveFunctionConstraintList(
+            MutableList<meta.pure.metamodel.constraint.Constraint> compiledConstraints,
+            MutableList<? extends meta.pure.protocol.grammar.constraint.Constraint> grammarConstraints,
+            MutableList<VariableExpression> params,
+            MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    {
+        compiledConstraints.zip(grammarConstraints).forEach(pair ->
+        {
+            meta.pure.metamodel.constraint.Constraint compiled = pair.getOne();
+            meta.pure.protocol.grammar.constraint.Constraint grammarC = pair.getTwo();
+
+            if (grammarC._functionDefinition() instanceof meta.pure.protocol.grammar.function.LambdaFunction lambdaFunc)
+            {
+                meta.pure.metamodel.function.LambdaFunctionImpl lambda =
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.LambdaCompiler.compile(lambdaFunc, imports, model, context);
+                lambda._parameters(Lists.mutable.<VariableExpression>withAll(params));
+                lambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(lambda._expressionSequence(), model, context));
+                lambda._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda.getLambdaClassifierGenericType(model, lambda));
+                compiled._functionDefinition(lambda);
+            }
+
+            if (grammarC._messageFunction() instanceof meta.pure.protocol.grammar.function.LambdaFunction msgFunc)
+            {
+                meta.pure.metamodel.function.LambdaFunctionImpl msgLambda =
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.LambdaCompiler.compile(msgFunc, imports, model, context);
+                msgLambda._parameters(Lists.mutable.<VariableExpression>withAll(params));
+                msgLambda._expressionSequence(FunctionDefinitionResolver.resolveExpressionSequence(msgLambda._expressionSequence(), model, context));
+                msgLambda._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda.getLambdaClassifierGenericType(model, msgLambda));
+                compiled._messageFunction(msgLambda);
+            }
+        });
     }
 }
 

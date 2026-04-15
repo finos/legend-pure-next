@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
@@ -58,5 +57,5 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
         )
     );
     
-    ^CompilerContext(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
+    ^$ctx(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
 }

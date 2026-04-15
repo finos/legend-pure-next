@@ -19,7 +19,11 @@ import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.PureModel;
 
+import meta.pure.metamodel.type.Type;
+
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -33,6 +37,7 @@ public final class ScopedMetadataAccess implements MetadataAccess
 {
     private final Module self;
     private final MutableList<Module> dependencies;
+    private final Map<Type, MutableList<Type>> linearizationCache = new IdentityHashMap<>();
 
     public ScopedMetadataAccess(Module self, PureModel model)
     {
@@ -111,4 +116,9 @@ public final class ScopedMetadataAccess implements MetadataAccess
         return all;
     }
 
+    @Override
+    public Map<Type, MutableList<Type>> linearizationCache()
+    {
+        return linearizationCache;
+    }
 }

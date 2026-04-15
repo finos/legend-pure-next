@@ -13,49 +13,57 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::generalizationCompiler::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::PrimitiveType[1]
+function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>[1]
 {
-    let packagePath = $protocolPrimitive.package->toOne().pointerValue;
-    let primitiveName = $packagePath + '::' + $protocolPrimitive.name;
+    let packagePath = if($protocolPrimitive.package->isEmpty(), | '', | $protocolPrimitive.package->toOne().pointerValue);
+    let primitiveName = if($packagePath == '', | $protocolPrimitive.name, | $packagePath + '::' + $protocolPrimitive.name);
     let skeleton = $context->resolveElement($primitiveName)->toOne()->cast(@meta::pure::metamodel::type::PrimitiveType);
+    let ownerCtx = 'primitive type \'' + $primitiveName + '\'';
 
-    let typeVariables = if($protocolPrimitive.typeVariables->isEmpty(), | [], 
-        | $protocolPrimitive.typeVariables->map(tv | 
+    let genAccum = compileGeneralizations($protocolPrimitive.generalizations, $skeleton, $context, $packagePath, $ownerCtx);
+    let ctx1 = $genAccum.context;
+
+    let typeVariables = if($protocolPrimitive.typeVariables->isEmpty(), | [],
+        | $protocolPrimitive.typeVariables->map(tv |
             let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
-            let pMult = $tv.multiplicity->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-            let mMult = if($pMult.upperBound->isEmpty(),
-                            | if($pMult.lowerBound.value == 0,
-                                  | meta::pure::metamodel::multiplicity::ZeroMany,
-                                  | meta::pure::metamodel::multiplicity::OneMany
-                              ),
-                            | let upper = $pMult.upperBound->toOne().value;
-                              if($pMult.lowerBound.value == 1 && $upper == 1,
-                                  | meta::pure::metamodel::multiplicity::PureOne,
-                                  | if($pMult.lowerBound.value == 0 && $upper == 1,
-                                        | meta::pure::metamodel::multiplicity::ZeroOne,
-                                        | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                                              lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                                              upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                                          )
-                                    )
-                              );
-                        );
+            let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^meta::pure::metamodel::valuespecification::VariableExpression(
                 name = $tv.name,
-                genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $context->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type)),
+                genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ctx1->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type)),
                 multiplicity = $mMult
             );
         )
     );
 
-    // Enrich skeleton from pass 1 with compiled type variables
-    ^$skeleton(
-        typeVariables = $typeVariables
+    // Build the compiled type with generalizations first, so constraints see the full type
+    let compiledPrim = ^$skeleton(
+        typeVariables = $typeVariables,
+        generalizations = $genAccum.values->map(g | ^$g(specific = ~.~))
+    );
+    let ownerGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledPrim);
+    let constraintAccum = compileConstraints($protocolPrimitive.constraints, $ownerGenericType, $typeVariables, $ctx1);
+    let ctx2 = $constraintAccum.context;
+
+    // Compile stereotypes and tagged values
+    let stereoAccum = $protocolPrimitive.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx2));
+    let tvAccum = $protocolPrimitive.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+    let ctx3 = $tvAccum.context;
+
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>(
+        value = ^$compiledPrim(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
+            constraints = $constraintAccum.values
+        ),
+        context = $ctx3
     );
 }

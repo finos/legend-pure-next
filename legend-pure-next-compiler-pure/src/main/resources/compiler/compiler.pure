@@ -13,23 +13,49 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::multiplicityCompiler::*;
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
 
-function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::metamodel::PackageableElement[*]
+function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):meta::pure::compiler::CompilationResult[1]
 {
+    let debug = ^meta::pure::compiler::DebugState(debug = false, space = '');
+
     let allElements = $file.sections.elements;
+    let defaultImports = [
+        'meta::pure::metamodel::type::primitives',
+        'meta::pure::metamodel',
+        'meta::pure::metamodel::function::property',
+        'meta::pure::metamodel::type',
+        'meta::pure::metamodel::type::generics',
+        'meta::pure::metamodel::function',
+        'meta::pure::metamodel::multiplicity',
+        'meta::pure::metamodel::relation',
+        'meta::pure::metamodel::valuespecification',
+        'meta::pure::functions::math',
+        'meta::pure::functions::lang',
+        'meta::pure::functions::string',
+        'meta::pure::functions::collection',
+        'meta::pure::functions::boolean',
+        'meta::pure::functions::relation',
+        'meta::pure::functions::multiplicity',
+        'meta::pure::functions::asserts',
+        'meta::pure::functions::meta',
+        'meta::pure::functions::io',
+        'meta::pure::profiles'
+    ];
+    let fileImports = $file.sections.imports->map(i | if($i->endsWith('::*'), | $i->substring(0, $i->length() - 3), | $i));
+    let allImports = $defaultImports->concatenate($fileImports)->removeDuplicates();
 
     // Pass 1: Build structural scaffolding
     let pass1Context = $allElements->fold({e, ctx |
         $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
-                let packagePath = $c.package->toOne().pointerValue;
-                let className = $packagePath + '::' + $c.name;
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().pointerValue);
+                let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
                 let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
                 let typeParams = $c.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
                 let mulParams = $c.multiplicityParameters->map(mp | ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name)->cast(@meta::pure::metamodel::multiplicity::MultiplicityParameter));
@@ -47,7 +73,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                         endColumn = $si.endColumn
                     ))
                 );
-                ^CompilerContext(elementMap=$ctx.elementMap->put($className, $skeleton));,
+                ^$ctx(elementMap=$ctx.elementMap->put($className, $skeleton));,
             a:meta::pure::protocol::grammar::relationship::Association[1] |
                 let packagePath = $a.package->toOne().pointerValue;
                 let aName = $packagePath + '::' + $a.name;
@@ -66,7 +92,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                         endColumn = $si.endColumn
                     ))
                 );
-                ^CompilerContext(elementMap=$ctx.elementMap->put($aName, $assocSkeleton));,
+                ^$ctx(elementMap=$ctx.elementMap->put($aName, $assocSkeleton));,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
                 let packagePath = $en.package->toOne().pointerValue;
                 let enName = $packagePath + '::' + $en.name;
@@ -92,7 +118,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                         typeArguments = [$selfGenType]
                     )
                 );
-                ^CompilerContext(elementMap=$ctx.elementMap->put($enName, $enumSkeleton));,
+                ^$ctx(elementMap=$ctx.elementMap->put($enName, $enumSkeleton));,
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
                 $pr->compileProfilePass1($ctx);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
@@ -117,55 +143,130 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                         endColumn = $si.endColumn
                     ))
                 );
-                ^CompilerContext(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
+                ^$ctx(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
-    }, ^meta::pure::compiler::CompilerContext(elementMap=newMap([])));
+    }, ^meta::pure::compiler::CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([])));
 
-    // Pass 2: Compile elements
-    $allElements->map(e |
+    // Pass 2: Compile elements (threading context for error collection)
+    let pass2 = $allElements->fold({e, acc |
         $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
-                $c->compileClass($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $c->compileClass($acc.context);
+                let compiledClass = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().pointerValue);
+                let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
+                let ctx = $r.context;
+                let newMap = $ctx.elementMap->put($className, $compiledClass);
+                let updatedCtx = ^$ctx(elementMap = $newMap);
+                ^$acc(values += $compiledClass, context = $updatedCtx);,
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-                $p->compilePrimitive($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $p->compilePrimitive($acc.context);
+                let compiledPrim = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().pointerValue);
+                let primName = if($primPackagePath == '', | $p.name, | $primPackagePath + '::' + $p.name);
+                let primRCtx = $r.context;
+                let primNewMap = $primRCtx.elementMap->put($primName, $compiledPrim);
+                let primCtx = ^$primRCtx(elementMap = $primNewMap);
+                ^$acc(values += $compiledPrim, context = $primCtx);,
             assoc:meta::pure::protocol::grammar::relationship::Association[1] |
-                $assoc->compileAssociation($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $assoc->compileAssociation($acc.context);
+                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
-                $en->compileEnumeration($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $en->compileEnumeration($acc.context);
+                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
-                $fn->compileNativeFunctionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $fn->compileNativeFunctionPass2($acc.context);
+                let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+                let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
+                let fnRCtx = $r.context;
+                let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
+                let fnCtx = ^$fnRCtx(elementMap = $fnNewMap);
+                ^$acc(values += $compiledFn, context = $fnCtx);,
             fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
-                $fd->compileFunctionDefinitionPass2($pass1Context)->cast(@meta::pure::metamodel::PackageableElement),
+                let r = $fd->compileFunctionDefinitionPass2($acc.context);
+                let compiledFd = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
+                let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().pointerValue);
+                let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
+                let fdRCtx = $r.context;
+                let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
+                let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
+                ^$acc(values += $compiledFd, context = $fdCtx);,
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
                 let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
                 let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
-                $pass1Context.elementMap->get($prName)->toOne()->cast(@meta::pure::metamodel::PackageableElement);,
+                ^$acc(values += $acc.context.elementMap->get($prName)->toOne()->cast(@meta::pure::metamodel::PackageableElement));,
             a:meta::pure::protocol::grammar::PackageableElement[1] |
-                []->cast(@meta::pure::metamodel::PackageableElement)
+                $acc
         ]);
-    );
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::PackageableElement>(context = $pass1Context));
+
+    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties
+    let pass3Ctx = $pass2.values->fold({elem, ctx |
+        $elem->match([
+            fn:meta::pure::metamodel::function::UserDefinedFunction<Any>[1] |
+                resolveFunctionDefinition($fn, $ctx);,
+            cls:meta::pure::metamodel::type::Class<Any>[1] |
+                resolveClass($cls, $ctx);,
+            pt:meta::pure::metamodel::type::PrimitiveType[1] |
+                meta::pure::compiler::structural::constraintCompiler::resolveConstraints($pt, $ctx);,
+            a:Any[1] | $ctx
+        ]);
+    }, $pass2.context);
+
+    ^CompilationResult(elements = $pass2.values, errors = $pass3Ctx.errors);
 }
 
-function meta::pure::compiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamodel::function::UserDefinedFunction<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
-    let pMult = $m->cast(@meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity);
-    if($pMult.upperBound->isEmpty(),
-        | if($pMult.lowerBound.value == 0,
-              | meta::pure::metamodel::multiplicity::ZeroMany,
-              | meta::pure::metamodel::multiplicity::OneMany
-          ),
-        | let upper = $pMult.upperBound->toOne().value;
-          if($pMult.lowerBound.value == 1 && $upper == 1,
-              | meta::pure::metamodel::multiplicity::PureOne,
-              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
+    if($fn.expressionSequence->isEmpty(),
+        | $context,
+        | let _d = debug($context, | 'resolveAndValidate: function \'' + $fn.functionName->toOne() + '\'');
+          // Set ownerTypeParams for pass 3 — matches Java UserDefinedFunctionHandler.thirdPass setEnclosingOwner
+          let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+          let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $ctxWithOwner->debugSpaceInc());
+          let resultCtx = $result.context;
+          // Validate return type and multiplicity of the last expression
+          let validatedCtx = if($result.resolvedSpecs->isEmpty() || $resultCtx.errors->size() > $context.errors->size(),
+              | $resultCtx,
+              | let lastExpr = $result.resolvedSpecs->at($result.resolvedSpecs->size() - 1);
+                let fnName = $fn.name->toOne();
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $resultCtx);
+                // Type validation
+                let ctx1 = if($lastExpr.genericType->isEmpty() || $fn.returnGenericType->isEmpty()
+                              || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                    | $resultCtx,
+                    | if(meta::pure::compiler::helper::genericType::isCompatibleGenericType($fn.returnGenericType->toOne(), $lastExpr.genericType->toOne()),
+                          | $resultCtx,
+                          | ^$resultCtx(errors += 'Return type error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($fn.returnGenericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
                       )
-                )
+                );
+                // Multiplicity validation
+                if($lastExpr.multiplicity->isEmpty() || $fn.returnMultiplicity->isEmpty(),
+                    | $ctx1,
+                    | if(meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($fn.returnMultiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                          | $ctx1,
+                          | ^$ctx1(errors += 'Return multiplicity error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($fn.returnMultiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
+                      )
+                );
           );
+          // Resolve function constraints
+          let preCtx = meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints($fn.preConstraints, $validatedCtx);
+          let postCtx = meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints($fn.postConstraints, $preCtx);
+          // Clear ownerTypeParams — matches Java clearEnclosingOwner
+          ^$postCtx(debugState = $context.debugState, ownerTypeParams = []);
     );
 }
 
+function meta::pure::compiler::resolveClass(cls:meta::pure::metamodel::type::Class<Any>[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    // Set ownerTypeParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
+    let ctxWithOwner = ^$context(ownerTypeParams = $cls.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let ctx1 = meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties($cls.qualifiedProperties, $ctxWithOwner);
+    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides($cls, $ctx1);
+    let ctx3 = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls, $ctx2);
+    let ctx4 = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $ctx3);
+    // Clear ownerTypeParams — matches Java clearEnclosingOwner
+    ^$ctx4(ownerTypeParams = []);
+}

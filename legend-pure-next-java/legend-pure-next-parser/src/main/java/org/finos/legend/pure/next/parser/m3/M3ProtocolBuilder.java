@@ -30,7 +30,8 @@ import meta.pure.protocol.grammar.extension.TaggedValueImpl;
 import meta.pure.protocol.grammar.function.LambdaFunctionImpl;
 import meta.pure.protocol.grammar.function.NativeFunctionImpl;
 import meta.pure.protocol.grammar.function.UserDefinedFunctionImpl;
-import meta.pure.protocol.grammar.function.property.AggregationKind;
+import meta.pure.protocol.grammar.Enum_PointerImpl;
+import meta.pure.protocol.grammar.PointerValueImpl;
 import meta.pure.protocol.grammar.function.property.PropertyImpl;
 import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;
 import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;
@@ -41,7 +42,7 @@ import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;
 import meta.pure.protocol.grammar.relation.ColumnImpl;
 import meta.pure.protocol.grammar.relation.GenericTypeOperationImpl;
-import meta.pure.protocol.grammar.relation.GenericTypeOperationType;
+// GenericTypeOperationType Java enum replaced by Enum_Pointer
 import meta.pure.protocol.grammar.relation.RelationTypeImpl;
 import meta.pure.protocol.grammar.relationship.AssociationImpl;
 import meta.pure.protocol.grammar.relationship.GeneralizationImpl;
@@ -320,7 +321,7 @@ public class M3ProtocolBuilder
             String aggText = ctx.aggregation().getText();
             // Remove parentheses: (none) -> none
             aggText = aggText.substring(1, aggText.length() - 1);
-            prop._aggregation(AggregationKind.valueOf(aggText.toUpperCase()));
+            prop._aggregation(buildEnumPointer("meta::pure::metamodel::function::property::AggregationKind", aggText.substring(0, 1).toUpperCase() + aggText.substring(1)));
         }
 
         // Parse default value
@@ -1986,7 +1987,7 @@ public class M3ProtocolBuilder
         if (ctx.equalType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._operationType(GenericTypeOperationType.EQUAL)
+                    ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Equal"))
                     ._left(result)
                     ._right(buildGenericType(ctx.equalType().type(), typeParamNames, multParamNames));
         }
@@ -1997,14 +1998,14 @@ public class M3ProtocolBuilder
             if (opCtx.addType() != null)
             {
                 result = new GenericTypeOperationImpl()
-                        ._operationType(GenericTypeOperationType.UNION)
+                        ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Union"))
                         ._left(result)
                         ._right(buildGenericType(opCtx.addType().type(), typeParamNames, multParamNames));
             }
             else
             {
                 result = new GenericTypeOperationImpl()
-                        ._operationType(GenericTypeOperationType.DIFFERENCE)
+                        ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Difference"))
                         ._left(result)
                         ._right(buildGenericType(opCtx.subType().type(), typeParamNames, multParamNames));
             }
@@ -2014,7 +2015,7 @@ public class M3ProtocolBuilder
         if (ctx.subsetType() != null)
         {
             result = new GenericTypeOperationImpl()
-                    ._operationType(GenericTypeOperationType.SUBSET)
+                    ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Subset"))
                     ._left(result)
                     ._right(buildGenericType(ctx.subsetType().type(), typeParamNames, multParamNames));
         }
@@ -2263,6 +2264,18 @@ public class M3ProtocolBuilder
             return -i;
         }
         throw new RuntimeException("Unsupported number type: " + num.getClass());
+    }
+
+    /**
+     * Build an Enum_Pointer for a protocol enum reference.
+     * pointerValue = Enumeration name, extraPointerValues[0].value = enum value name.
+     */
+    private static Enum_PointerImpl buildEnumPointer(String enumerationName, String valueName)
+    {
+        PointerValueImpl pv = new PointerValueImpl()._value(valueName);
+        return new Enum_PointerImpl()
+                ._pointerValue(enumerationName)
+                ._extraPointerValues(org.eclipse.collections.impl.factory.Lists.mutable.with(pv));
     }
 
 }

@@ -11,6 +11,8 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.protocol.grammar.Package_Pointer;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
@@ -46,7 +48,7 @@ public class AtomicValueResolver
         {
             return processPackagePointer(av, model, context, pp);
         }
-        else if (av._genericType() == null)
+        else if (av._genericType() == null || av._genericType() instanceof CompilerNotSetGenericType)
         {
             throw new RuntimeException("Not supported yet " + value.getClass());
         }

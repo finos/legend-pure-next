@@ -55,9 +55,10 @@ public final class PropertyCompiler
             context.enrichCurrentErrorsFrom(errorsBefore, "property '" + grammarProperty._name() + "'");
             return null;
         }
+        int annotErrorsBefore = context.currentErrorCount();
         PropertyImpl result = new PropertyImpl()
                 ._name(grammarProperty._name())
-                ._aggregation(meta.pure.metamodel.function.property.AggregationKind.NONE)
+                ._aggregation(resolveAggregationKind(grammarProperty, model))
                 ._genericType(genericType)
                 ._multiplicity(MultiplicityCompiler.compile(grammarProperty._multiplicity(), model))
                 ._stereotypes(grammarProperty._stereotypes()
@@ -67,6 +68,7 @@ public final class PropertyCompiler
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(java.util.Objects::nonNull))
                 ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._sourceInformation(), model));
+        context.enrichCurrentErrorsFrom(annotErrorsBefore, "property '" + grammarProperty._name() + "'");
         if (grammarProperty._defaultValue() != null)
         {
             meta.pure.metamodel.function.LambdaFunction compiledDefault =
@@ -82,5 +84,17 @@ public final class PropertyCompiler
                             ._multiplicityArguments(Lists.mutable.with(result._multiplicity())));
         }
         return result;
+    }
+
+    private static meta.pure.metamodel.function.property.AggregationKind resolveAggregationKind(meta.pure.protocol.grammar.function.property.Property grammarProperty, MetadataAccess model)
+    {
+        meta.pure.protocol.grammar.Enum_Pointer aggPointer = grammarProperty._aggregation();
+        String valueName = "None";
+        if (aggPointer != null && aggPointer._extraPointerValues() != null && aggPointer._extraPointerValues().notEmpty())
+        {
+            valueName = aggPointer._extraPointerValues().getFirst()._value();
+        }
+        return (meta.pure.metamodel.function.property.AggregationKind) org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Enumeration.resolveEnumValue(
+                "meta::pure::metamodel::function::property::AggregationKind", valueName, model);
     }
 }

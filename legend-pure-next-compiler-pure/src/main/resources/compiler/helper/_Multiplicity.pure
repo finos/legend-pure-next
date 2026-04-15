@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::functionResolution::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
@@ -106,7 +105,7 @@ function meta::pure::compiler::helper::multiplicity::printMultiplicityBare(m:Mul
 
 function meta::pure::compiler::helper::multiplicity::isConcreteMultiplicity(m:Multiplicity[1]):Boolean[1]
 {
-    !$m->instanceOf(MultiplicityParameter)
+    !$m->instanceOf(MultiplicityParameter) && !$m->instanceOf(meta::pure::metamodel::multiplicity::CompilerNotSetMultiplicity)
 }
 
 function meta::pure::compiler::helper::multiplicity::isUniversalMultiplicity(m:Multiplicity[1]):Boolean[1]
@@ -317,4 +316,19 @@ function meta::pure::compiler::helper::multiplicity::makeAsConcreteAsPossible(mu
             );,
         other : Multiplicity[1] | $multiplicity
     ])
+}
+
+function meta::pure::compiler::helper::multiplicity::asInferredMultiplicity(mul:meta::pure::metamodel::multiplicity::Multiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+{
+    if($mul->instanceOf(meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity),
+        | $mul,
+        | $mul->match([
+              cm:meta::pure::metamodel::multiplicity::ConcreteMultiplicity[1] |
+                  ^meta::pure::metamodel::multiplicity::InferredAdHocMultiplicity(
+                      lowerBound = $cm.lowerBound,
+                      upperBound = $cm.upperBound
+                  ),
+              other:meta::pure::metamodel::multiplicity::Multiplicity[1] | $mul
+          ])
+    );
 }
