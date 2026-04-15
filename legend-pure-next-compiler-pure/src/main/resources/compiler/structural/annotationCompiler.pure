@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1]
@@ -31,6 +32,38 @@ function meta::pure::compiler::structural::annotationCompiler::compileStereotype
                 let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.pointerValue + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
               | ^$acc(values += $matched->toOne())
+          );
+    );
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>[1]
+{
+    let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
+    $p.stereotypes->fold({s, acc |
+        compileStereotype($s, $acc, $propCtx);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx));
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1]
+{
+    let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
+    $p.taggedValues->fold({t, acc |
+        compileTaggedValue($t, $acc, $propCtx);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $ctx));
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compileAggregationKind(p:meta::pure::protocol::grammar::function::property::Property[1]):meta::pure::metamodel::function::property::AggregationKind[1]
+{
+    if($p.aggregation->isEmpty(),
+        | meta::pure::metamodel::function::property::AggregationKind.None,
+        | let enumPointer = $p.aggregation->toOne();
+          let valueName = $enumPointer.extraPointerValues->at(0).value;
+          if($valueName == 'Composite',
+              | meta::pure::metamodel::function::property::AggregationKind.Composite,
+              | if($valueName == 'Shared',
+                    | meta::pure::metamodel::function::property::AggregationKind.Shared,
+                    | meta::pure::metamodel::function::property::AggregationKind.None
+                )
           );
     );
 }

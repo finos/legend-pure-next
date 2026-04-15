@@ -81,6 +81,29 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
     );
 }
 
+function meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints(protocolConstraints:meta::pure::protocol::grammar::constraint::Constraint[*], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::constraint::Constraint>[1]
+{
+    $protocolConstraints->fold({pc, acc |
+        let result = compileConstraint($pc, $scope, $acc.context);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::constraint::Constraint>(context = $context));
+}
+
+function meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints(constraints:meta::pure::metamodel::constraint::Constraint[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+{
+    $constraints->fold({constraint, cCtx |
+        if($constraint.functionDefinition->isEmpty(),
+            | $cCtx,
+            | let lambda = $constraint.functionDefinition->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
+              meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $lambda.expressionSequence,
+                  $lambda.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression),
+                  $cCtx
+              ).context;
+        );
+    }, $context);
+}
+
 function meta::pure::compiler::structural::constraintCompiler::resolveConstraints(elem:Any[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let constraints = if($elem->instanceOf(meta::pure::metamodel::type::Class),

@@ -93,37 +93,15 @@ public class TestCompilerPureCompiledGraph
                               String testName = finalStart.relativize(p).toString();
                               String sourceId = testName.replace(".pure", "");
 
-                              if (!testName.contains("association/") &&
-                                  !testName.contains("class/") &&
-                                  !testName.contains("enumeration/") &&
-                                  !testName.contains("function/") &&
-                                  !testName.contains("primitive/") &&
-                                  !testName.contains("valueSpecification/collection/") &&
-                                  !testName.contains("valueSpecification/copy/") &&
-                                  !testName.contains("valueSpecification/element/") &&
-                                  !testName.contains("valueSpecification/functionApplication/dot") &&
-                                  !testName.contains("valueSpecification/functionApplication/simple") &&
-                                  !testName.contains("valueSpecification/functionApplication/generics/") &&
-                                  !testName.contains("valueSpecification/let/") &&
-                                  !testName.contains("valueSpecification/multiplicity/") &&
-                                  !testName.contains("valueSpecification/new/") &&
-                                  !testName.contains("valueSpecification/package/") &&
-                                  !testName.contains("valueSpecification/primitive/") &&
-                                  !testName.contains("valueSpecification/relation/")
-                              )
-                              {
-                                  return;
-                              }
-
                               tests.add(DynamicTest.dynamicTest(testName, () ->
                               {
                                   try
                                   {
                                       execution.execute(assertCompiledGraph, content, sourceId);
                                   }
-                                  catch (PureAssertionError e)
+                                  catch (Throwable e)
                                   {
-                                      throw new org.opentest4j.AssertionFailedError(e.getMessage(), e);
+                                      throw new org.opentest4j.AssertionFailedError(testName + ": " + e.getMessage(), e);
                                   }
                               }));
                           }

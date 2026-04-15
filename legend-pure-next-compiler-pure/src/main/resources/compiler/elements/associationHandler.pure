@@ -16,6 +16,7 @@ import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>[1]
@@ -52,9 +53,11 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           let prop1 = meta::pure::functions::lang::new($propClassifierGT1)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
           let builtProp1 = ^$prop1(
               name = $p1Protocol.name,
-              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              aggregation = compileAggregationKind($p1Protocol),
               genericType = $mGenType1,
               multiplicity = $mMult1,
+              stereotypes = compilePropertyStereotypes($p1Protocol, $ctx1, $ownerCtx).values,
+              taggedValues = compilePropertyTaggedValues($p1Protocol, $ctx1, $ownerCtx).values,
               sourceInformation = $p1Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
                   sourceId = $si.sourceId,
                   startLine = $si.startLine,
@@ -72,9 +75,11 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           let prop2 = meta::pure::functions::lang::new($propClassifierGT2)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
           let builtProp2 = ^$prop2(
               name = $p2Protocol.name,
-              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              aggregation = compileAggregationKind($p2Protocol),
               genericType = $mGenType2,
               multiplicity = $mMult2,
+              stereotypes = compilePropertyStereotypes($p2Protocol, $ctx1, $ownerCtx).values,
+              taggedValues = compilePropertyTaggedValues($p2Protocol, $ctx1, $ownerCtx).values,
               sourceInformation = $p2Protocol.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
                   sourceId = $si.sourceId,
                   startLine = $si.startLine,
@@ -84,14 +89,25 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               ))
           );
 
+          // Compile stereotypes and tagged values on the association itself
+          let stereoAccum = $protocolAssoc.stereotypes->fold({s, acc |
+                                      compileStereotype($s, $acc, $ownerCtx);
+                                  }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx1));
+          let tvAccum = $protocolAssoc.taggedValues->fold({t, acc |
+                                      compileTaggedValue($t, $acc, $ownerCtx);
+                                  }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+          let ctx2 = $tvAccum.context;
+
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::relationship::Association>(
               value = ^$skeleton(
+                  stereotypes = $stereoAccum.values,
+                  taggedValues = $tvAccum.values,
                   properties = [
                       ^$builtProp1(owner = ~.~),
                       ^$builtProp2(owner = ~.~)
                   ]
               ),
-              context = $ctx1
+              context = $ctx2
           );
     );
 }

@@ -16,9 +16,11 @@ import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::Enumeration<Any>[1]
+function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Enumeration<Any>>[1]
 {
     let packagePath = $protocolEnum.package->toOne().pointerValue;
     let enumName = $packagePath + '::' + $protocolEnum.name;
@@ -28,29 +30,51 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
 
     let pureOne = meta::pure::metamodel::multiplicity::PureOne;
 
-    // Build the enum value properties
-    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::buildEnumProperty($skeleton, $selfGenType));
+    let ownerCtx = 'enumeration \'' + $enumName + '\'';
+    let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).sourceInformation, $context);
 
-    ^$skeleton(
-        properties = $enumValues
+    // Check for duplicate enum value names
+    let dupNames = $protocolEnum.properties->map(p | $p.name)->filter(n | $protocolEnum.properties->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
+    let ctx0 = $dupNames->fold({d, c |
+        ^$c(errors += 'Duplicate enum value \'' + $d + '\' in ' + $ownerCtx + $siCtx);
+    }, $context);
+
+    // Build the enum value properties (with annotations on each value)
+    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::elements::buildEnumProperty($skeleton, $selfGenType, $ctx0, $ownerCtx));
+
+    // Compile stereotypes and tagged values on the enumeration itself
+    let stereoAccum = $protocolEnum.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx0));
+    let tvAccum = $protocolEnum.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::Enumeration<Any>>(
+        value = ^$skeleton(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
+            properties = $enumValues
+        ),
+        context = $tvAccum.context
     );
 }
 
-function meta::pure::compiler::elements::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:meta::pure::metamodel::type::Enumeration<Any>[1], selfGenType:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
+function meta::pure::compiler::elements::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:meta::pure::metamodel::type::Enumeration<Any>[1], selfGenType:meta::pure::metamodel::type::generics::GenericType[1], context:meta::pure::compiler::CompilerContext[1], ownerCtx:String[1]):meta::pure::metamodel::function::property::Property<Nil, Any|*>[1]
 {
     let pureOne = meta::pure::metamodel::multiplicity::PureOne;
 
     let propClassifierGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
         type = meta::pure::metamodel::function::property::Property,
         typeArguments = [
-            $skeleton.classifierGenericType->toOne(), 
-            $selfGenType 
+            $skeleton.classifierGenericType->toOne(),
+            $selfGenType
         ],
         multiplicityArguments = [$pureOne]
     );
 
     let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    
+
     let lambdaReturn = ^meta::pure::metamodel::type::FunctionType(
         returnType = $selfGenType,
         returnMultiplicity = $pureOne
@@ -61,12 +85,18 @@ function meta::pure::compiler::elements::buildEnumProperty(p:meta::pure::protoco
     );
     let emptyLambda = meta::pure::functions::lang::new($defaultLambdaGT)->cast(@meta::pure::metamodel::function::LambdaFunction<Any>);
 
+    // Compile stereotypes and tagged values on the enum value
+    let stereoResult = compilePropertyStereotypes($p, $context, $ownerCtx);
+    let tvResult = compilePropertyTaggedValues($p, $context, $ownerCtx);
+
     ^$prop(
         name = $p.name,
         aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
         genericType = $selfGenType,
         multiplicity = $pureOne,
         owner = $skeleton,
+        stereotypes = $stereoResult.values,
+        taggedValues = $tvResult.values,
         defaultValue = ^$emptyLambda(
             expressionSequence = [
                 ^meta::pure::metamodel::valuespecification::AtomicValue(

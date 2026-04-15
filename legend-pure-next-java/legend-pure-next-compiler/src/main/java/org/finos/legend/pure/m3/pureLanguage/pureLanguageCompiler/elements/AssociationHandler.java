@@ -28,6 +28,7 @@ import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.PropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.QualifiedPropertyCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -96,6 +97,14 @@ public final class AssociationHandler
                 ownerCls._qualifiedPropertiesFromAssociations().addAll(compiledQPs.toList());
             }
         }
+
+        // Resolve stereotypes and tagged values
+        result._stereotypes(grammar._stereotypes()
+                .collect(s -> AnnotationCompiler.resolveStereotype(s, imports, model, context))
+                .select(Objects::nonNull));
+        result._taggedValues(grammar._taggedValues()
+                .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
+                .select(Objects::nonNull));
 
         context.enrichCurrentErrors("association '" + _G_PackageableElement.fullPath(grammar) + "'");
         return result;

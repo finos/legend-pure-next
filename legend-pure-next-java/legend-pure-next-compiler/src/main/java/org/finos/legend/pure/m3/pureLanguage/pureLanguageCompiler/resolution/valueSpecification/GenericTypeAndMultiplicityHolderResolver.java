@@ -13,7 +13,8 @@ public class GenericTypeAndMultiplicityHolderResolver
     {
         if (gm._multiplicity() == null || gm._multiplicity() instanceof CompilerNotSetMultiplicity)
         {
-            return (GenericTypeAndMultiplicityHolder)((GenericTypeAndMultiplicityHolder) gm._copy())._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+            return (GenericTypeAndMultiplicityHolder)((GenericTypeAndMultiplicityHolder) gm._copy())
+                    ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"));
         }
         return gm;
     }

@@ -83,45 +83,58 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         t:meta::pure::protocol::grammar::type::generics::TypeParameter[1] |
             let matched = $typeParameters->filter(tp | $tp.name == $t.name);
             let resolved = if($matched->isNotEmpty(), | $matched, | $context.ownerTypeParams->filter(tp | $tp.name == $t.name));
-            let resolvedTP = if($resolved->isNotEmpty(),
-                | $resolved->toOne(),
-                | ^meta::pure::metamodel::type::generics::TypeParameter(name = $t.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter)
-            );
-            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-                value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                    type = $resolvedTP
-                ),
-                context = $context
+            if($resolved->isNotEmpty(),
+                | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                      value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
+                          type = $resolved->toOne()
+                      ),
+                      context = $context
+                  ),
+                | let tElemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
+                  let tOwnerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+                  let siCtx = if($t.sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($t.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                      | ''
+                  );
+                  let errorMsg = 'The type \'' + $t.name + '\' can\'t be found' + $tElemCtx + $tOwnerCtx + $siCtx;
+                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                      value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+                      context = ^$context(errors += $errorMsg)
+                  );
             );,
         ft:meta::pure::protocol::grammar::type::FunctionType[1] |
-            let ftParams = $ft.parameters->map(fp |
+            let ftParamAccum = $ft.parameters->fold({fp, acc |
                 let fpType = $fp.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-                let fpGtResult = $fpType->compileGenericType($context, $packagePath, $typeParameters);
+                let fpGtResult = $fpType->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext);
                 let fpMult = $fp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-                ^meta::pure::metamodel::valuespecification::VariableExpression(
-                    name = $fp.name,
-                    genericType = $fpGtResult.value->toOne(),
-                    multiplicity = $fpMult
+                ^$acc(
+                    values += ^meta::pure::metamodel::valuespecification::VariableExpression(
+                        name = $fp.name,
+                        genericType = $fpGtResult.value->toOne(),
+                        multiplicity = $fpMult
+                    ),
+                    context = $fpGtResult.context
                 );
-            );
-            let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters);
+            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $context));
+            let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ftParamAccum.context, $packagePath, $typeParameters, '', $ownerContext);
             let ftReturnMul = $ft.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             let functionType = meta::pure::functions::lang::new(
                 ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
             )->cast(@meta::pure::metamodel::type::FunctionType);
             let compiledFT = ^$functionType(
-                parameters = $ftParams,
+                parameters = $ftParamAccum.values,
                 returnType = $ftReturnGT.value->toOne(),
                 returnMultiplicity = $ftReturnMul
             );
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
                 value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledFT),
-                context = $context
+                context = $ftReturnGT.context
             );,
         rt:meta::pure::protocol::grammar::relation::RelationType[1] |
+            let rtResult = compileRelationType($rt, $context, $packagePath, $typeParameters, $ownerContext);
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-                value = compileRelationType($rt, $context, $packagePath, $typeParameters),
-                context = $context
+                value = $rtResult.value,
+                context = $rtResult.context
             );,
         a:Any[1] |
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(

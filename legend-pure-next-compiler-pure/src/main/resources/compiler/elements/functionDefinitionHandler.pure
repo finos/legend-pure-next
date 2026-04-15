@@ -15,6 +15,8 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileFunctionDefinitionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
@@ -109,14 +111,40 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
     let bodyResult = compileExpressionSequence($fn.expressionSequence, $ctx3, $compiledParams);
     let ctx4 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx3);
 
+    // Compile stereotypes and tagged values
+    let stereoAccum = $fn.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx4));
+    let tvAccum = $fn.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+    let ctx5 = $tvAccum.context;
+
+    // Compile pre-constraints (scope: function parameters)
+    let preConstraintAccum = compileFunctionConstraints($fn.preConstraints, $compiledParams, $ctx5);
+    let ctx6 = $preConstraintAccum.context;
+
+    // Compile post-constraints (scope: function parameters + $return)
+    let returnVar = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        name = 'return',
+        genericType = $rGenType,
+        multiplicity = $rMMult
+    );
+    let postConstraintAccum = compileFunctionConstraints($fn.postConstraints, $compiledParams->concatenate($returnVar), $ctx6);
+    let ctx7 = $postConstraintAccum.context;
+
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>(
         value = ^$skeleton(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
             parameters = $compiledParams,
             returnGenericType = $rGenType,
             returnMultiplicity = $rMMult,
             classifierGenericType = $finalGenType,
-            expressionSequence = $bodyResult.specs
+            expressionSequence = $bodyResult.specs,
+            preConstraints = $preConstraintAccum.values,
+            postConstraints = $postConstraintAccum.values
         ),
-        context = $ctx4
+        context = $ctx7
     );
 }

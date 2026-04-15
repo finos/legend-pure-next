@@ -16,7 +16,7 @@ import meta::pure::compiler::resolution::valueSpecification::functionExpressionR
 import meta::pure::compiler::resolution::valueSpecification::collectionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::variableExpressionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::*;
-import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::genericTypeAndMultiplicityHolderResolver::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
@@ -37,6 +37,8 @@ function meta::pure::compiler::resolution::valueSpecification::valueSpecificatio
             resolveVariableExpression($ve, $scope, $deepCtx),
         av:meta::pure::metamodel::valuespecification::AtomicValue[1] |
             resolveAtomicValue($av, $scope, $deepCtx),
+        gm:meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1] |
+            resolveGenericTypeAndMultiplicityHolder($gm, $deepCtx),
         a:Any[1] | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(context = $deepCtx)
     ]);
     // Restore debug space on returned context so sibling calls in folds stay at the right level

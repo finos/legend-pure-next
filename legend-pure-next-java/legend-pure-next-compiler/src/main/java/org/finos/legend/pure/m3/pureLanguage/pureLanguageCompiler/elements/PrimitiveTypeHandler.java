@@ -12,6 +12,7 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.ConstraintCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GeneralizationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
@@ -55,6 +56,14 @@ public final class PrimitiveTypeHandler
                     .collect(v -> VariableCompiler.compileParameter(v, imports, model, context))
                     .select(Objects::nonNull));
         }
+
+        // Resolve stereotypes and tagged values
+        result._stereotypes(grammar._stereotypes()
+                .collect(s -> AnnotationCompiler.resolveStereotype(s, imports, model, context))
+                .select(java.util.Objects::nonNull));
+        result._taggedValues(grammar._taggedValues()
+                .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
+                .select(java.util.Objects::nonNull));
 
         // Create constraint shells (name, owner, source info) without expression sequences.
         // Expression sequences are compiled in thirdPass when all functions are available.

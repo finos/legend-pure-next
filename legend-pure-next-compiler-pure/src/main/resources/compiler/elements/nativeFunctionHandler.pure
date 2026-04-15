@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
@@ -96,8 +97,19 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
         returnMultiplicity = $rMMult
     );
 
+    // Compile stereotypes and tagged values
+    let stereoAccum = $fn.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx3));
+    let tvAccum = $fn.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+    let ctx4 = $tvAccum.context;
+
     ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::NativeFunction<Any>>(
         value = ^$skeleton(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
             parameters = $compiledParams,
             returnGenericType = $rMGenType,
             returnMultiplicity = $rMMult,
@@ -110,6 +122,6 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
                 ]
             )
         ),
-        context = $ctx3
+        context = $ctx4
     );
 }

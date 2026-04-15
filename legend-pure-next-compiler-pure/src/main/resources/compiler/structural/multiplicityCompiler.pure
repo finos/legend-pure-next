@@ -21,6 +21,8 @@ function meta::pure::compiler::structural::multiplicityCompiler::compileMultipli
             ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name),
         cm:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] |
             compileConcreteMultiplicity($cm),
+        um:meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] |
+            ^meta::pure::metamodel::multiplicity::UndefinedMultiplicity(),
         u:Any[1] |
             meta::pure::metamodel::multiplicity::PureOne
     ]);

@@ -173,7 +173,8 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):m
                 let r = $assoc->compileAssociation($acc.context);
                 ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
-                ^$acc(values += $en->compileEnumeration($acc.context)->cast(@meta::pure::metamodel::PackageableElement)),
+                let r = $en->compileEnumeration($acc.context);
+                ^$acc(values += $r.value->cast(@meta::pure::metamodel::PackageableElement), context = $r.context);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
                 let r = $fn->compileNativeFunctionPass2($acc.context);
                 let compiledFn = $r.value->toOne()->cast(@meta::pure::metamodel::PackageableElement);
@@ -226,8 +227,35 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:meta::pure::metamode
           let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter));
           let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression), $ctxWithOwner->debugSpaceInc());
           let resultCtx = $result.context;
+          // Validate return type and multiplicity of the last expression
+          let validatedCtx = if($result.resolvedSpecs->isEmpty() || $resultCtx.errors->size() > $context.errors->size(),
+              | $resultCtx,
+              | let lastExpr = $result.resolvedSpecs->at($result.resolvedSpecs->size() - 1);
+                let fnName = $fn.name->toOne();
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $resultCtx);
+                // Type validation
+                let ctx1 = if($lastExpr.genericType->isEmpty() || $fn.returnGenericType->isEmpty()
+                              || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+                    | $resultCtx,
+                    | if(meta::pure::compiler::helper::genericType::isCompatibleGenericType($fn.returnGenericType->toOne(), $lastExpr.genericType->toOne()),
+                          | $resultCtx,
+                          | ^$resultCtx(errors += 'Return type error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($fn.returnGenericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
+                      )
+                );
+                // Multiplicity validation
+                if($lastExpr.multiplicity->isEmpty() || $fn.returnMultiplicity->isEmpty(),
+                    | $ctx1,
+                    | if(meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($fn.returnMultiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                          | $ctx1,
+                          | ^$ctx1(errors += 'Return multiplicity error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($fn.returnMultiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
+                      )
+                );
+          );
+          // Resolve function constraints
+          let preCtx = meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints($fn.preConstraints, $validatedCtx);
+          let postCtx = meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints($fn.postConstraints, $preCtx);
           // Clear ownerTypeParams — matches Java clearEnclosingOwner
-          ^$resultCtx(debugState = $context.debugState, ownerTypeParams = []);
+          ^$postCtx(debugState = $context.debugState, ownerTypeParams = []);
     );
 }
 

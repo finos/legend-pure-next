@@ -15,6 +15,7 @@
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
@@ -83,11 +84,22 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     let emptyQP = meta::pure::functions::lang::new(
         ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::property::QualifiedProperty)
     )->cast(@meta::pure::metamodel::function::property::QualifiedProperty<Any>);
+    // Compile stereotypes and tagged values
+    let qpCtx = 'qualified property \'' + $qp.name + '\' in ' + $classCtx;
+    let stereoAccum = $qp.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $qpCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx3));
+    let tvAccum = $qp.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $qpCtx);
+                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+
     let compiledQP = ^$emptyQP(
         name = $qp.name,
         genericType = $returnGenType,
         multiplicity = $returnMult,
         parameters = $allParams,
+        stereotypes = $stereoAccum.values,
+        taggedValues = $tvAccum.values,
         expressionSequence = $bodyResult.specs,
         classifierGenericType = $qpClassifierGT,
         sourceInformation = $qp.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(

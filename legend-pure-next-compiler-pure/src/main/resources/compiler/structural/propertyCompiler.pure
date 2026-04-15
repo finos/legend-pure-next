@@ -16,6 +16,7 @@ import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
@@ -54,11 +55,18 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
           );
 
           let prop = meta::pure::functions::lang::new($propClassifierGT)->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+          let classCtx = 'class \'' + $packagePath + '::' + $owner.name->toOne() + '\'';
+          let stereoResult = compilePropertyStereotypes($protocolProperty, $updatedContext, $classCtx);
+          let tvResult = compilePropertyTaggedValues($protocolProperty, $stereoResult.context, $classCtx);
+          let annotCtx = $tvResult.context;
+
           let builtProp = ^$prop(
               name = $protocolProperty.name,
-              aggregation = meta::pure::metamodel::function::property::AggregationKind.None,
+              aggregation = compileAggregationKind($protocolProperty),
               genericType = $mGenType,
               multiplicity = $mMult,
+              stereotypes = $stereoResult.values,
+              taggedValues = $tvResult.values,
               sourceInformation = $protocolProperty.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
                   sourceId = $si.sourceId,
                   startLine = $si.startLine,
@@ -70,7 +78,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
           let finalProp = if($protocolProperty.defaultValue->isEmpty(),
               | $builtProp,
               | let defaultLambda = $protocolProperty.defaultValue->toOne()->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
-                let defaultResult = $defaultLambda->compileLambda($updatedContext, [], [], []);
+                let defaultResult = $defaultLambda->compileLambda($annotCtx, [], [], []);
                 if($defaultResult.values->isEmpty(),
                     | $builtProp,
                     | ^$builtProp(defaultValue = $defaultResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>))
@@ -78,7 +86,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
           );
           ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::property::Property<Nil, Any|*>>(
               value = $finalProp,
-              context = $updatedContext
+              context = $annotCtx
           );
     );
 }

@@ -19,22 +19,31 @@ import meta::pure::compiler::*;
 
 // Mirrors Java RelationTypeCompiler.compile()
 // Compiles a protocol RelationType into a metamodel RelationType.
-function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::metamodel::type::generics::GenericType[1]
+function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*], ownerContext:String[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>[1]
 {
     let ownerGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::relation::RelationType);
-    let compiledCols = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->map(col |
+    let colAccum = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->fold({col, acc |
         let colGenType = $col.genericType;
-        let colGT = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
-            | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters).value->toOne(),
-            | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()
+        let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
+            | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
+            | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                  value = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
+                  context = $acc.context
+              )
         );
         let colMul = if($col.multiplicity->isEmpty(),
             | meta::pure::metamodel::multiplicity::PureOne,
             | $col.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
         );
         let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
-        buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGT, $colMul, $colNameWC);
+        ^$acc(
+            values += buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
+            context = $colGTResult.context
+        );
+    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relation::Column<Nil, Any|*>>(context = $context));
+    let compiledRT = ^meta::pure::metamodel::relation::RelationType<Any>(columns = $colAccum.values);
+    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+        value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledRT),
+        context = $colAccum.context
     );
-    let compiledRT = ^meta::pure::metamodel::relation::RelationType<Any>(columns = $compiledCols);
-    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledRT);
 }
