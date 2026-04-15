@@ -196,3 +196,45 @@ function meta::pure::functions::valueSpecificationManipulation::sampleFunction()
     'hello';
     true;
 }
+
+// Collection in [0..1] property tests
+Class meta::pure::functions::valueSpecificationManipulation::SingleVSHolder
+{
+    value: meta::pure::metamodel::valuespecification::ValueSpecification[0..1];
+}
+
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionInSingleValuedProperty():Boolean[1]
+{
+    let col = ^meta::pure::metamodel::valuespecification::Collection(
+        values = [
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 2, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+        ],
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let holder = ^meta::pure::functions::valueSpecificationManipulation::SingleVSHolder(value = $col);
+    assert($holder.value->size() == 1);
+    assert($holder.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::Collection));
+    true;
+}
+
+// Plain copy — goes through shallowCopyProperties → getInstanceProperty.
+// Reproduces: getInstanceProperty returns a naked Collection VS (line 1105-1107),
+// then setInstanceProperty → put(unwrap(Collection)) flattens it.
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testCollectionPlainCopy():Boolean[1]
+{
+    let col = ^meta::pure::metamodel::valuespecification::Collection(
+        values = [
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 1, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+            ^meta::pure::metamodel::valuespecification::AtomicValue(value = 2, genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = Integer), multiplicity = meta::pure::metamodel::multiplicity::PureOne)
+        ],
+        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        multiplicity = meta::pure::metamodel::multiplicity::ZeroMany
+    );
+    let holder1 = ^meta::pure::functions::valueSpecificationManipulation::SingleVSHolder(value = $col);
+    let holder2 = ^$holder1();
+    assert($holder2.value->size() == 1);
+    assert($holder2.value->toOne()->instanceOf(meta::pure::metamodel::valuespecification::Collection));
+    true;
+}

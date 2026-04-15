@@ -114,9 +114,8 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require relation support or cross-test leak
-                              if (testName.contains("generics/relation/") ||
-                                  testName.contains("lambdaCollectionAsParameters_E_diffParamsCount.pure"))
+                              // Tests excluded — require relation support or further compiler work
+                              if (testName.contains("generics/relation/"))
                               {
                                   return;
                               }

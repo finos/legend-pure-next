@@ -963,11 +963,27 @@ public class MetaNatives
     {
         if (source instanceof DynamicInstance diSource)
         {
-            for (Map.Entry<String, Object> entry : diSource.getValues().entrySet())
+            if (target instanceof DynamicInstance diTarget)
             {
-                if (entry.getValue() != null)
+                // Direct raw-value copy: values in the DI map are already unwrapped.
+                // Going through setInstanceProperty/put would double-unwrap VS objects
+                // (e.g. a CollectionImpl stored as a meta-level value gets flattened to a List).
+                for (Map.Entry<String, Object> entry : diSource.getValues().entrySet())
                 {
-                    setInstanceProperty(target, entry.getKey(), entry.getValue());
+                    if (entry.getValue() != null)
+                    {
+                        diTarget.getValues().put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+            else
+            {
+                for (Map.Entry<String, Object> entry : diSource.getValues().entrySet())
+                {
+                    if (entry.getValue() != null)
+                    {
+                        setInstanceProperty(target, entry.getKey(), entry.getValue());
+                    }
                 }
             }
         }
@@ -1102,10 +1118,6 @@ public class MetaNatives
         {
             return null;
         }
-        if (value instanceof ValueSpecification vs)
-        {
-            return vs;
-        }
         if (value instanceof java.util.List<?> list)
         {
             java.util.List<ValueSpecification> wrapped = new java.util.ArrayList<>();
@@ -1164,7 +1176,8 @@ public class MetaNatives
             Object nameObj = _E_ValueSpecification.unwrap(nameVS);
             String key = nameObj != null ? nameObj.toString() : null;
             // DI stores raw values; wrap back for the execution stack
-            Object value = _E_ValueSpecification.wrap(di.get("expression"), null, null, resolver);
+            Object rawExpr = di.get("expression");
+            Object value = _E_ValueSpecification.wrap(rawExpr, null, null, resolver);
 
             if (key != null)
             {
@@ -1175,6 +1188,8 @@ public class MetaNatives
                             + "This field is system-managed and derived from the instantiation. "
                             + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.");
                 }
+                // For DynamicInstance targets with [0..1] properties, pass the raw
+                // expression value to avoid the wrap→unwrap cycle that flattens Collections.
                 setInstanceProperty(instance, key, value);
                 if (value != null)
                 {

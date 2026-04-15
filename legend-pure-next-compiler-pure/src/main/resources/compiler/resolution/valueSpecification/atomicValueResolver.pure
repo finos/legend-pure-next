@@ -36,8 +36,11 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
           if(!$paramsAreConcrete,
               | let _d = debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
                 let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($av.sourceInformation, $context);
+                // Return av with UndefinedGenericType to match Java behavior (where av._genericType() is null).
+                // This prevents the collection resolver from seeing a concrete type for unresolvable lambdas,
+                // ensuring the Collection branch in resolveOneParam is reached instead of the CONCRETE branch.
                 ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                    value = $av,
+                    value = ^$av(genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType()),
                     context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
                 );,
               | // Check for lambda param names that conflict with existing scope variables (matches Java AtomicValueResolver line 91)
