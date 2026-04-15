@@ -10,6 +10,10 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
@@ -116,8 +120,8 @@ public final class FunctionExpressionResolver
         else
         {
             FunctionExpression updated = (FunctionExpression) ((FunctionExpression) resolved._copy())
-                    ._genericType(null)
-                    ._multiplicity(null);
+                    ._genericType(new CompilerNotSetGenericTypeImpl())
+                    ._multiplicity(new CompilerNotSetMultiplicityImpl());
             // Only report if no specific error was already added by resolveFunctionApplication.
             // This avoids duplicate errors when e.g. "No matching function 'X' found" was already reported.
             if (context.currentErrorCount() == errorCheckpoint)

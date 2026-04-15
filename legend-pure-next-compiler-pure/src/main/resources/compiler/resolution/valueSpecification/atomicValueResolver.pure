@@ -27,20 +27,20 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
           // NOT the current function's type params pushed by the fixpoint. Use isConcreteGenericType
           // (not InContext) to match Java's behavior — the fixpoint's LAMBDA dispatch will fill
           // param types from bindings via setMissingLambdaParameterInformation.
-          // NOTE: UndefinedGenericType means "no type set" (Java equivalent: null genericType).
+          // CompilerNotSetGenericType/Multiplicity means "not set yet" (Java equivalent: null).
+          // isConcreteGenericType/isConcreteMultiplicity return false for CompilerNotSet types.
           let paramsAreConcrete = $lambdaParams->forAll(p |
-              !$p.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType)
-              && $p.genericType->toOne()->isConcreteGenericType()
+              $p.genericType->toOne()->isConcreteGenericType()
               && $p.multiplicity->toOne()->isConcreteMultiplicity()
           );
           if(!$paramsAreConcrete,
               | let _d = debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
                 let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($av.sourceInformation, $context);
-                // Return av with UndefinedGenericType to match Java behavior (where av._genericType() is null).
+                // Return av with CompilerNotSetGenericType (matches Java where av._genericType() is null/not-set).
                 // This prevents the collection resolver from seeing a concrete type for unresolvable lambdas,
-                // ensuring the Collection branch in resolveOneParam is reached instead of the CONCRETE branch.
+                // ensuring the Collection branch in resolveParameterValue is reached instead of the CONCRETE branch.
                 ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
-                    value = ^$av(genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType()),
+                    value = ^$av(genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()),
                     context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
                 );,
               | // Check for lambda param names that conflict with existing scope variables (matches Java AtomicValueResolver line 91)
@@ -58,10 +58,10 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                 let ctx1 = $resolveResult.context;
                 // Compute lambda genericType from body return type (like Java processLambda lines 114-121)
                 let bodyReturnGT = if($resolveResult.resolvedSpecs->isEmpty(),
-                    | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                    | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
                     | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
-                      if($lastExpr.genericType->isEmpty() || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                          | ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                      if($lastExpr.genericType->isEmpty() || $lastExpr.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
+                          | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
                           | asInferredGenericType($lastExpr.genericType->toOne())
                       );
                 );

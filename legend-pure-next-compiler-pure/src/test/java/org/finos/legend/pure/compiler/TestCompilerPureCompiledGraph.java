@@ -115,8 +115,8 @@ public class TestCompilerPureCompiledGraph
                                   return;
                               }
 
-                              // Tests excluded — require relation support or further compiler work
-                              if (testName.contains("generics/relation/"))
+                              // Excluded — requires RelationColumnResolver subset validation (colSpecArray with ⊆ constraint)
+                              if (testName.contains("distinct_E_columnIsNotSubset.pure"))
                               {
                                   return;
                               }

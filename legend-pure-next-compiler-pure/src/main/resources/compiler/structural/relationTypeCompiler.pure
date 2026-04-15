@@ -26,7 +26,7 @@ function meta::pure::compiler::structural::relationTypeCompiler::compileRelation
         let colGenType = $col.genericType;
         let colGT = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
             | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters).value->toOne(),
-            | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+            | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()
         );
         let colMul = if($col.multiplicity->isEmpty(),
             | meta::pure::metamodel::multiplicity::PureOne,

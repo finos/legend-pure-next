@@ -149,7 +149,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
               | $lambdaResult,
               | // Lambda is already wrapped in AtomicValue by compileLambda
                 let wrappedLambda = $lambdaResult.values->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
-                let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne());
+                let inferredGT = if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne());
                 ^ValueCompileResult(
                     values = [^$wrappedLambda(
                         genericType = $inferredGT,
@@ -180,7 +180,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
               | let parserGT = $a.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
                 let compiledGT = $parserGT->compileGenericType($ctx, '', []);
                 let inferredGT = if($compiledGT.value->isEmpty() || $compiledGT.value->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
-                    | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $mGenType->toOne()),
+                    | if($mGenType->isEmpty(), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(), | $mGenType->toOne()),
                     | $compiledGT.value->toOne()
                 );
                 ^ValueCompileResult(
@@ -207,7 +207,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
         | ^ValueCompileResult(
               values = [^meta::pure::metamodel::valuespecification::VariableExpression(
                   name = $v.name,
-                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
                   multiplicity = meta::pure::metamodel::multiplicity::PureOne,
                   sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
@@ -244,7 +244,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
               values = [^meta::pure::metamodel::valuespecification::FunctionInvocation(
                   functionName = $fi.functionName,
                   parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
-                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
                   multiplicity = meta::pure::metamodel::multiplicity::PureOne,
                   sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
@@ -270,7 +270,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
               values = [^meta::pure::metamodel::valuespecification::FunctionInvocation(
                   functionName = $arrow.functionName,
                   parametersValues = $paramValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification),
-                  genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+                  genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
                   multiplicity = meta::pure::metamodel::multiplicity::PureOne,
                   sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
@@ -297,7 +297,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
         values = [^$m3Dot(
             functionName = $dot.functionName,
             parametersValues = $compiledParams.values,
-            genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+            genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
             multiplicity = meta::pure::metamodel::multiplicity::PureOne,
             sourceInformation = $vs.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
         )],
@@ -319,7 +319,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
         | let collMult = $c.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
           let collGenType = if($c.genericType->isNotEmpty(),
               | $c.genericType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx, '', []).value->toOne(),
-              | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+              | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType()
           );
           let compiledValues = $elemResults->filter(r | $r.values->isNotEmpty())->map(r | $r.values->at(0))->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->list();
           ^ValueCompileResult(

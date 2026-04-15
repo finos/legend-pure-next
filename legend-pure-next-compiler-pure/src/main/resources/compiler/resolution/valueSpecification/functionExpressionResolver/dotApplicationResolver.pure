@@ -17,10 +17,12 @@ import meta::pure::compiler::resolution::valueSpecification::functionExpressionR
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::relation::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:meta::pure::metamodel::valuespecification::DotApplication[1], scope:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
 {
@@ -42,7 +44,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               + ' receiverGT=' + if($receiver.genericType->isEmpty(), | '?', | printGenericType($receiver.genericType->toOne()))
               + ' receiverMul=' + if($receiver.multiplicity->isEmpty(), | '?', | printMultiplicity($receiver.multiplicity->toOne()))
               + ' additionalParams=' + $resolvedParams->size()->toString());
-          if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+          if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
               | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
                     value = $dot,
                     context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
@@ -75,7 +77,30 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 context = $ctx1
                             );
                       );,
-                    | // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
+                    | // Column access on a RelationType — mirrors Java DotApplicationResolver.lookupFunction lines 300-313
+                      let isRelationType = $ownerType->instanceOf(RelationType);
+                      if($isRelationType,
+                          | let rt = $ownerType->cast(@RelationType<Any>);
+                            let col = $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $functionName);
+                            let _dc = debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
+                            if($col->isNotEmpty(),
+                                | let resolvedCol = $col->at(0);
+                                  let colGT = if($resolvedCol.genericType->isNotEmpty(), | asInferredGenericType($resolvedCol.genericType->toOne()), | ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType());
+                                  let colMul = if($resolvedCol.multiplicity->isNotEmpty(), | $resolvedCol.multiplicity->toOne(), | meta::pure::metamodel::multiplicity::PureOne);
+                                  ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = ^$dot(
+                                          func = $resolvedCol,
+                                          genericType = $colGT,
+                                          multiplicity = $colMul
+                                      ),
+                                      context = $ctx1
+                                  );,
+                                | ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+                                      value = $dot,
+                                      context = ^$ctx1(errors += 'Can\'t find column \'' + $functionName + '\' in relation type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
+                                  )
+                            );,
+                          | // Look up the fully compiled class from the context (the receiver may reference the pass 1 skeleton)
                       let resolvedOwner = if($ownerType->instanceOf(meta::pure::metamodel::type::Class),
                           | let path = $ownerType->cast(@meta::pure::metamodel::PackageableElement)->meta::pure::functions::meta::elementToPath();
                             let fromCtx = $context->resolveElement($path);
@@ -118,6 +143,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
                             );
                       );
+                      ); // end RelationType if
                 ); // end enum if
           );
     );
@@ -182,7 +208,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Wrap lambda in AtomicValue
     let lambdaAV = ^meta::pure::metamodel::valuespecification::AtomicValue(
         value = $lambda,
-        genericType = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
+        genericType = ^meta::pure::metamodel::type::generics::CompilerNotSetGenericType(),
         multiplicity = meta::pure::metamodel::multiplicity::PureOne
     );
 

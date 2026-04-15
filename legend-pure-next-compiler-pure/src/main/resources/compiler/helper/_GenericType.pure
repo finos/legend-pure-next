@@ -32,6 +32,7 @@ function meta::pure::compiler::helper::genericType::printGenericType(genericType
 {
     $genericType->match(
         [
+            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | 'NotSet',
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
@@ -59,6 +60,7 @@ function meta::pure::compiler::helper::genericType::printGenericTypeValue(gtv:Ge
               | let typeName = $t->match(
                     [
                         ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
+                        rt : meta::pure::metamodel::relation::RelationType<Any>[1] | $rt->printRelationType($fullPath),
                         pe : PackageableElement[1] |
                             if($fullPath,
                                 | let pPath = $pe->fullPath();
@@ -124,6 +126,7 @@ function meta::pure::compiler::helper::genericType::isConcreteGenericType(generi
 {
     $genericType->match(
         [
+            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | false,
             ugt : UndefinedGenericType[1] | true,
             gto : GenericTypeOperation[1] | $gto->isConcreteGenericTypeOperation(),
             gtv : GenericTypeValue[1]     | $gtv->isConcreteGenericTypeValue(),
@@ -184,6 +187,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedTypeParamet
 {
     $genericType->match(
         [
+            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
                 $gto.left->collectReferencedTypeParameterNames()
@@ -211,6 +215,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedMultiplicit
 {
     $genericType->match(
         [
+            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
                 $gto.left->collectReferencedMultiplicityParameterNames()
@@ -638,6 +643,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
 function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(genericType:GenericType[1], bindings:ParametersBinding[1]):GenericType[1]
 {
     $genericType->match([
+        ns : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | $genericType,
         undefined : UndefinedGenericType[1] | $genericType,
         gtv : GenericTypeValue[1] |
             if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(TypeParameter),
@@ -709,10 +715,14 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericType(decl
         | isCompatibleGenericTypeOperation($declared->cast(@GenericTypeOperation), $actual, $contravariant),
         | if($actual->instanceOf(GenericTypeOperation),
               | isCompatibleGenericTypeOperation($actual->cast(@GenericTypeOperation), $declared, !$contravariant),
-              | // UndefinedGenericType matches only other UndefinedGenericType
-                if($declared->instanceOf(UndefinedGenericType) || $actual->instanceOf(UndefinedGenericType),
-                    | $declared->instanceOf(UndefinedGenericType) && $actual->instanceOf(UndefinedGenericType),
-                    | isCompatibleGenericTypeValue($declared->cast(@GenericTypeValue), $actual->cast(@GenericTypeValue), $contravariant)
+              | // CompilerNotSetGenericType — not set yet, skip compatibility check
+                if($declared->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType) || $actual->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
+                    | true,
+                    | // UndefinedGenericType matches only other UndefinedGenericType
+                      if($declared->instanceOf(UndefinedGenericType) || $actual->instanceOf(UndefinedGenericType),
+                          | $declared->instanceOf(UndefinedGenericType) && $actual->instanceOf(UndefinedGenericType),
+                          | isCompatibleGenericTypeValue($declared->cast(@GenericTypeValue), $actual->cast(@GenericTypeValue), $contravariant)
+                      )
                 )
           )
     );

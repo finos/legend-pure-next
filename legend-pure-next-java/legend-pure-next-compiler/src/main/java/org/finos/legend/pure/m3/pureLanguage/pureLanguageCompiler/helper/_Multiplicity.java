@@ -38,9 +38,11 @@ public final class _Multiplicity
      */
     public static boolean subsumes(Multiplicity general, Multiplicity specific)
     {
-        if (general == null || specific == null)
+        if (general == null || specific == null
+                || general instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity
+                || specific instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity)
         {
-            return true; // unknown — skip
+            return true; // unknown / not set — skip
         }
 
         // If either has a multiplicity parameter, skip concrete checking
@@ -211,7 +213,9 @@ public final class _Multiplicity
      */
     public static boolean isConcrete(Multiplicity multiplicity)
     {
-        return multiplicity != null && !(multiplicity instanceof MultiplicityParameter);
+        return multiplicity != null
+                && !(multiplicity instanceof MultiplicityParameter)
+                && !(multiplicity instanceof meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity);
     }
 
     /**

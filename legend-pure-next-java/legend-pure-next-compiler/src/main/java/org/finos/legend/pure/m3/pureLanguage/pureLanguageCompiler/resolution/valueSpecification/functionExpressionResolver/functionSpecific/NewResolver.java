@@ -117,7 +117,7 @@ public class NewResolver
         // Build class type parameter bindings from the new/copy expression's return type
         // e.g., MyClass<String> → {Z → String}, so we can resolve property types
         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding classBindings =
-                (fe._genericType() != null && !(fe._genericType() instanceof meta.pure.metamodel.type.generics.UndefinedGenericType))
+                (fe._genericType() != null && !(fe._genericType() instanceof meta.pure.metamodel.type.generics.UndefinedGenericType) && !(fe._genericType() instanceof meta.pure.metamodel.type.generics.CompilerNotSetGenericType))
                         ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.buildBindingsFromGenericType(cls, fe._genericType())
                         : org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
 

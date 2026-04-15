@@ -15,6 +15,10 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
 
 import meta.pure.metamodel.function.LambdaFunction;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.FunctionTypeImpl;
 import meta.pure.metamodel.type.Type;
@@ -52,14 +56,12 @@ public final class _Lambda
         if (lambda._expressionSequence() != null && lambda._expressionSequence().notEmpty())
         {
             ValueSpecification lastExpr = lambda._expressionSequence().getLast();
-            if (lastExpr._genericType() != null)
-            {
-                ft._returnType(lastExpr._genericType());
-            }
-            if (lastExpr._multiplicity() != null)
-            {
-                ft._returnMultiplicity(lastExpr._multiplicity());
-            }
+            ft._returnType(lastExpr._genericType() != null
+                    ? lastExpr._genericType()
+                    : new CompilerNotSetGenericTypeImpl());
+            ft._returnMultiplicity(lastExpr._multiplicity() != null
+                    ? lastExpr._multiplicity()
+                    : new CompilerNotSetMultiplicityImpl());
         }
         return ft;
     }

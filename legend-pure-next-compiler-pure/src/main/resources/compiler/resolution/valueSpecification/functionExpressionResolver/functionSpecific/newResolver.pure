@@ -178,7 +178,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkKeyExpressions(cls:meta::pure::metamodel::type::Class<Any>[1], providedNames:String[*], fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     // Build class type parameter bindings from the new/copy expression's return type
-    let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType),
+    let classBindings = if($fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::UndefinedGenericType) && !$fi.genericType->toOne()->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
         | $cls->buildBindingsFromGenericType($fi.genericType->toOne()),
         | newPlainParametersBinding()->cast(@ParametersBinding)
     );

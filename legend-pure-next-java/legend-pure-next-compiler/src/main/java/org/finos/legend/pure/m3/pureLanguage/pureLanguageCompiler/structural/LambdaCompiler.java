@@ -7,6 +7,10 @@ import meta.pure.protocol.grammar.function.LambdaFunction;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 
 /**
@@ -53,14 +57,12 @@ public final class LambdaCompiler
         {
             cp._sourceInformation(SourceInformationCompiler.compile(gp._sourceInformation(), model));
         }
-        if (gp._genericType() != null)
-        {
-            cp._genericType(GenericTypeCompiler.compile(gp._genericType(), imports, model, context));
-        }
-        if (gp._multiplicity() != null)
-        {
-            cp._multiplicity(MultiplicityCompiler.compile(gp._multiplicity(), model));
-        }
+        cp._genericType(gp._genericType() != null
+                ? GenericTypeCompiler.compile(gp._genericType(), imports, model, context)
+                : new CompilerNotSetGenericTypeImpl());
+        cp._multiplicity(gp._multiplicity() != null
+                ? MultiplicityCompiler.compile(gp._multiplicity(), model)
+                : new CompilerNotSetMultiplicityImpl());
         return cp;
     }
 }
