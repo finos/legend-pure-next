@@ -1,0 +1,40 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::relationTypeCompiler::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::*;
+
+// Mirrors Java RelationTypeCompiler.compile()
+// Compiles a protocol RelationType into a metamodel RelationType.
+function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], typeParameters:meta::pure::metamodel::type::generics::TypeParameter[*]):meta::pure::metamodel::type::generics::GenericType[1]
+{
+    let ownerGT = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::relation::RelationType);
+    let compiledCols = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->map(col |
+        let colGenType = $col.genericType;
+        let colGT = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
+            | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($context, $packagePath, $typeParameters).value->toOne(),
+            | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+        );
+        let colMul = if($col.multiplicity->isEmpty(),
+            | meta::pure::metamodel::multiplicity::PureOne,
+            | $col.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
+        );
+        let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
+        buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGT, $colMul, $colNameWC);
+    );
+    let compiledRT = ^meta::pure::metamodel::relation::RelationType<Any>(columns = $compiledCols);
+    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledRT);
+}

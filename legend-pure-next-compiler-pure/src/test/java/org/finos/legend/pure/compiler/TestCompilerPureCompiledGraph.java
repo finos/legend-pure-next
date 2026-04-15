@@ -108,7 +108,8 @@ public class TestCompilerPureCompiledGraph
                                   !testName.contains("valueSpecification/multiplicity/") &&
                                   !testName.contains("valueSpecification/new/") &&
                                   !testName.contains("valueSpecification/package/") &&
-                                  !testName.contains("valueSpecification/primitive/")
+                                  !testName.contains("valueSpecification/primitive/") &&
+                                  !testName.contains("valueSpecification/relation/")
                               )
                               {
                                   return;

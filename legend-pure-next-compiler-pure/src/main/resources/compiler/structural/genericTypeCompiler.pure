@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::relationTypeCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
@@ -96,6 +97,11 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                 value = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledFT),
                 context = $context
             );,
+        rt:meta::pure::protocol::grammar::relation::RelationType[1] |
+            ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+                value = compileRelationType($rt, $context, $packagePath, $typeParameters),
+                context = $context
+            );,
         a:Any[1] |
             ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
                 value = ^meta::pure::metamodel::type::generics::UndefinedGenericType(),
@@ -112,9 +118,17 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         );
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::type::generics::GenericType>(context = $result.context));
 
-    let resultValue = $result.value->toOne()->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
-        value = ^$resultValue(typeArguments = $typeArgResult.values),
-        context = $typeArgResult.context
+    let resultGT = $result.value->toOne();
+    if($resultGT->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
+        | let resultValue = $resultGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+              value = ^$resultValue(typeArguments = $typeArgResult.values),
+              context = $typeArgResult.context
+          );,
+        | // UndefinedGenericType or other non-GenericTypeValue — return as-is
+          ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::generics::GenericType>(
+              value = $resultGT,
+              context = $typeArgResult.context
+          );
     );
 }
