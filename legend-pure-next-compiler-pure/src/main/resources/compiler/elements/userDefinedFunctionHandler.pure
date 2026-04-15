@@ -13,24 +13,27 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionTypeCompiler::*;
+import meta::pure::compiler::structural::packageableFunctionCompiler::*;
+import meta::pure::compiler::structural::variableCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::elements::compileFunctionDefinitionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
-    
+
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    
+
     let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
     let emptyFunc = meta::pure::functions::lang::new(
         ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::UserDefinedFunction)
     )->cast(@meta::pure::metamodel::function::UserDefinedFunction<Any>);
-    
+
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = $fn.name,
@@ -43,11 +46,11 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass1(fn:meta:
             endColumn = $si.endColumn
         ))
     );
-    
+
     ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>[1]
+function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::UserDefinedFunction<Any>>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     let mangledName = $fn.name;
@@ -57,29 +60,14 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
     let siCtx = if($fn.sourceInformation->isNotEmpty(), | formatSourceInfo($fn.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
     // Check for duplicate parameter names
-    let dupNames = $fn.parameters->map(p | $p.name)->filter(n | $fn.parameters->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
-    let ctx1 = $dupNames->fold({d, c |
-        ^$c(errors += 'Duplicate parameter name \'' + $d + '\' in ' + $ownerCtx + $siCtx);
-    }, $ctx);
+    let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
 
     // Compile type parameters and register them in the context (matches Java setEnclosingOwner)
-    let fnTypeParams = $fn.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let fnTypeParams = compileTypeParameters($fn.typeParameters);
     let ctx1b = ^$ctx1(ownerTypeParams = $fnTypeParams);
 
-    // Compile parameters with context threading
-    let paramAccum = $fn.parameters->fold({p, acc |
-        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let gtResult = $pType->compileGenericType($acc.context, $packagePath, $fnTypeParams, 'parameter \'' + $p.name + '\'', $ownerCtx);
-        let mMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-        ^$acc(
-            values += ^meta::pure::metamodel::valuespecification::VariableExpression(
-                name = $p.name,
-                genericType = $gtResult.value->toOne(),
-                multiplicity = $mMult
-            ),
-            context = $gtResult.context
-        );
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1b));
+    // Compile parameters
+    let paramAccum = compileParameters($fn.parameters, $ctx1b, $packagePath, $fnTypeParams, $ownerCtx);
     let compiledParams = $paramAccum.values;
     let ctx2 = $paramAccum.context;
 
@@ -91,22 +79,7 @@ function meta::pure::compiler::elements::compileFunctionDefinitionPass2(fn:meta:
 
     let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-    let functionType = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
-    )->cast(@meta::pure::metamodel::type::FunctionType);
-    let funcType = ^$functionType(
-        parameters = $compiledParams,
-        returnType = $rGenType,
-        returnMultiplicity = $rMMult
-    );
-    let finalGenType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-        type = meta::pure::metamodel::function::UserDefinedFunction,
-        typeArguments = [
-            ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                type = $funcType
-            )
-        ]
-    );
+    let finalGenType = compileFunctionClassifierGenericType(meta::pure::metamodel::function::UserDefinedFunction, $compiledParams, $rGenType, $rMMult);
 
     let bodyResult = compileExpressionSequence($fn.expressionSequence, $ctx3, $compiledParams);
     let ctx4 = if($bodyResult.context->isNotEmpty(), | $bodyResult.context->toOne(), | $ctx3);

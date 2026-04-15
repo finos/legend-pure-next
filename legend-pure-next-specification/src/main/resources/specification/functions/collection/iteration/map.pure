@@ -62,7 +62,7 @@ function <<PCT.test>> meta::pure::functions::collection::tests::map::testMapRela
     assertEquals([$locationParis, $locationSF, $locationHoboken], $f->eval(|[$smith, $roe].locations));
 }
 
-function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::functions::collection::tests::map::testMapWithPropertyAsVariable():Boolean[1]
+function <<test.Test>> meta::pure::functions::collection::tests::map::testMapWithPropertyAsVariable():Boolean[1]
 {
     let vals = [^M_Person(firstName='a', lastName='a'), ^M_Person(firstName='b', lastName='b'), ^M_Person(firstName='c', lastName='c')];
     let property = M_Person.properties->filter(p | $p.name == 'lastName')->toOne();

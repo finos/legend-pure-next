@@ -52,22 +52,6 @@ function meta::pure::compiler::structural::annotationCompiler::compilePropertyTa
     }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $ctx));
 }
 
-function meta::pure::compiler::structural::annotationCompiler::compileAggregationKind(p:meta::pure::protocol::grammar::function::property::Property[1]):meta::pure::metamodel::function::property::AggregationKind[1]
-{
-    if($p.aggregation->isEmpty(),
-        | meta::pure::metamodel::function::property::AggregationKind.None,
-        | let enumPointer = $p.aggregation->toOne();
-          let valueName = $enumPointer.extraPointerValues->at(0).value;
-          if($valueName == 'Composite',
-              | meta::pure::metamodel::function::property::AggregationKind.Composite,
-              | if($valueName == 'Shared',
-                    | meta::pure::metamodel::function::property::AggregationKind.Shared,
-                    | meta::pure::metamodel::function::property::AggregationKind.None
-                )
-          );
-    );
-}
-
 function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1], ownerCtx:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>[1]
 {
     let ctx = $acc.context;

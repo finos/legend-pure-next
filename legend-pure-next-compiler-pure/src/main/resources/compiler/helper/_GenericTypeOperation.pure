@@ -1,0 +1,92 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::genericTypeOperation::*;
+import meta::pure::compiler::helper::relationType::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::type::generics::*;
+
+function meta::pure::compiler::helper::genericTypeOperation::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
+{
+    let left = $gto.left->printGenericType($fullPath);
+    let opName = $gto.operationType->toString();
+    let op = if($opName == 'Union', | '+',
+             | if($opName == 'Difference', | '-',
+               | if($opName == 'Equal', | '=', | '⊆')));
+    let right = $gto.right->printGenericType($fullPath);
+    $left + $op + $right;
+}
+
+function meta::pure::compiler::helper::genericTypeOperation::isConcreteGenericTypeOperation(gto:GenericTypeOperation[1]):Boolean[1]
+{
+    let opName = $gto.operationType->toString();
+    if($opName == 'Subset' || $opName == 'Equal',
+        | $gto.right->isConcreteGenericType(),
+        | $gto.left->isConcreteGenericType() && $gto.right->isConcreteGenericType()
+    );
+}
+
+function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationReferencedTypeParameterNames(gto:GenericTypeOperation[1]):String[*]
+{
+    $gto.left->collectReferencedTypeParameterNames()
+        ->concatenate($gto.right->collectReferencedTypeParameterNames());
+}
+
+function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeOperationTypeParameterBindings(gto:GenericTypeOperation[1], argGT:GenericType[1], bindings:ParametersBinding[1]):ParametersBinding[1]
+{
+    if($gto.operationType == GenericTypeOperationType.Subset,
+        | collectTypeParameterBindings($gto.left, $argGT, $bindings),
+        | if($gto.operationType == GenericTypeOperationType.Equal,
+              | let b1 = collectTypeParameterBindings($gto.left, $argGT, $bindings);
+                collectTypeParameterBindings($gto.right, $argGT, $b1);,
+              | $bindings
+          )
+    );
+}
+
+function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOperationAsConcreteAsPossible(gto:GenericTypeOperation[1], bindings:ParametersBinding[1]):GenericType[1]
+{
+    let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings);
+    let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings);
+    // If both sides are concrete RelationTypes, evaluate the operation
+    let evaluated = if($resolvedLeft->instanceOf(GenericTypeValue) && $resolvedLeft->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedLeft->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType)
+                       && $resolvedRight->instanceOf(GenericTypeValue) && $resolvedRight->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedRight->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType),
+        | let leftRT = $resolvedLeft->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
+          let rightRT = $resolvedRight->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
+          let result = evaluateRelationTypeOperation($leftRT, $rightRT, $gto.operationType);
+          if($result->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $result->toOne()), | []);,
+        | []
+    );
+    if($evaluated->isNotEmpty(),
+        | $evaluated->toOne(),
+        | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
+              | ^$gto(left = $resolvedLeft, right = $resolvedRight),
+              | $gto
+          )
+    );
+}
+
+function meta::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
+{
+    let right = $gto.right;
+    if($gto.operationType == GenericTypeOperationType.Equal,
+        | isCompatibleGenericType($right, $other, $contravariant),
+        | if($gto.operationType == GenericTypeOperationType.Subset,
+              | isCompatibleGenericType($other, $right, $contravariant),
+              | true
+          )
+    );
+}

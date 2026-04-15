@@ -63,7 +63,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGeneric()
     assertEquals(['a', 'b', 'c'], $l.values);
 }
 
-function <<test.Test>> {test.excludePlatform = 'Java compiled'} meta::pure::functions::lang::tests::new::testNewGenericFunc():Boolean[1]
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGenericFunc():Boolean[1]
 {
     let l1 = ^LA_List<String>(values=['a', 'b', 'c']);
     assertIs(LA_List, $l1->type()->toOne());

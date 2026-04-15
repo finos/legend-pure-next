@@ -14,11 +14,5 @@
 
 Profile meta::pure::profiles::test
 {
-    stereotypes : [Test, TestCollection, BeforePackage, AfterPackage, ToFix, ExcludeAlloy, ExcludeLazy, ExcludeModular, AlloyOnly, ExcludeAlloyTextMode];
-    tags: [excludePlatform, sensitiveToStereotype];
-}
-
-Profile meta::pure::profiles::temporaryLazyExclusion
-{
-   stereotypes: [exclude];
+    stereotypes : [Test, BeforePackage, AfterPackage, ToFix];
 }

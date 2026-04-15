@@ -18,7 +18,6 @@ import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::helper::lambda::*;
 import meta::pure::compiler::helper::functionExpression::*;
