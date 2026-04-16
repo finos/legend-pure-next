@@ -19,9 +19,9 @@ import meta::pure::metamodel::type::*;
 import meta::pure::functions::collection::*;
 import meta::pure::functions::string::*;
 import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::printer::*;
+import meta::pure::compiler::test::printer::*;
 
-function meta::pure::compiler::printer::primitive::printPrimitive(p:PrimitiveType[1]):String[1]
+function meta::pure::compiler::test::printer::primitive::printPrimitive(p:PrimitiveType[1]):String[1]
 {
     [
         'primitive ', $p->fullPath(),

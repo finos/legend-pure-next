@@ -48,7 +48,7 @@ public class CompilerNatives implements NativeExtension
                          Map<String, LazyNativeImpl> lazyNatives,
                          MetadataAccess resolver)
     {
-        // meta::pure::compiler::parse(sourceId:String[1], content:String[1]):PureFile[1]
+        // meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1]
         List<ParserExtension> extensions = new ArrayList<>();
         extensions.add(new PureLanguageParser());
         extensions.addAll(this.extraExtensions);

@@ -14,49 +14,49 @@
 
 import meta::pure::functions::meta::tests::model::*;
 
-Class meta::pure::functions::meta::tests::model::CC_EntityWithAddress
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_EntityWithAddress
 {
     address : CC_Address[0..1];
 }
 
-Class meta::pure::functions::meta::tests::model::CC_Person extends CC_EntityWithAddress
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_Person extends CC_EntityWithAddress
 {
     firstName : String[1];
     lastName : String[1];
     locations : CC_Location[*];
 }
 
-Class meta::pure::functions::meta::tests::model::CC_GeographicEntity
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_GeographicEntity
 {
     type : meta::pure::functions::meta::tests::model::CC_GeographicEntityType[1];
 }
 
-Enum meta::pure::functions::meta::tests::model::CC_GeographicEntityType
+Enum <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_GeographicEntityType
 {
     CITY,
     COUNTRY,
     REGION
 }
 
-Class meta::pure::functions::meta::tests::model::CC_Address extends meta::pure::functions::meta::tests::model::CC_GeographicEntity
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_Address extends meta::pure::functions::meta::tests::model::CC_GeographicEntity
 {
     name : String[1];
     street : String[0..1];
     comments : String[0..1];
 }
 
-Class meta::pure::functions::meta::tests::model::CC_Location extends CC_GeographicEntity
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_Location extends CC_GeographicEntity
 {
     place : String[1];
     censusdate: Date[0..1];
 }
 
-Class meta::pure::functions::meta::tests::model::CC_List<T>
+Class <<test.TestDependency>> meta::pure::functions::meta::tests::model::CC_List<T>
 {
     values : T[*];
 }
 
-Association meta::pure::functions::meta::tests::model::AddressLocation
+Association <<test.TestDependency>> meta::pure::functions::meta::tests::model::AddressLocation
 {
     location : CC_Location[0..1];
     addresses: CC_Address[*];

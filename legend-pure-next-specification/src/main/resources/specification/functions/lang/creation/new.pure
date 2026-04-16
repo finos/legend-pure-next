@@ -120,7 +120,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewWithAssoc
 }
 
 
-Class meta::pure::functions::lang::tests::new::MyClassWithTypeVariables(x:Integer[1])
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::new::MyClassWithTypeVariables(x:Integer[1])
 [
    wx(~function:$this.text->size() < $x ~message:'Error '+$this.text->size()->toString()+' >= '+$x->toString())
 ]

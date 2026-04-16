@@ -142,12 +142,12 @@ function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::t
     assertEquals('meta::pure::functions::string::toRepresentation_Any_1__String_1_', meta::pure::functions::string::toRepresentation_Any_1__String_1_->toRepresentation());
 }
 
-Class meta::pure::functions::string::tests::toRepresentation::ST_List<T>
+Class <<test.TestDependency>> meta::pure::functions::string::tests::toRepresentation::ST_List<T>
 {
     values : T[*];
 }
 
-Class meta::pure::functions::string::tests::toRepresentation::ST_Person
+Class <<test.TestDependency>> meta::pure::functions::string::tests::toRepresentation::ST_Person
 {
     firstName : String[1];
     lastName : String[1];

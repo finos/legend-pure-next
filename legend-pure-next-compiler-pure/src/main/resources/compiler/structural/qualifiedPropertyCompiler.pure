@@ -125,7 +125,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     );
 }
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerContext[1]
 {
     $qualifiedProperties->fold({qp, qCtx |
         if($qp.expressionSequence->isEmpty(),
@@ -162,7 +162,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::resolveQua
     }, $context);
 }
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::validateQualifiedPropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
 {
     if($cls.qualifiedProperties->isEmpty() || $cls.generalizations->isEmpty(),
         | $context,

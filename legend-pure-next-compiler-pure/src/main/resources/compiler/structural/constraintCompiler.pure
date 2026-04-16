@@ -97,7 +97,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileFunctionCo
     }, ^CompilerListResult<Constraint>(context = $context));
 }
 
-function meta::pure::compiler::structural::constraintCompiler::resolveFunctionConstraints(constraints:Constraint[*], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints(constraints:Constraint[*], context:CompilerContext[1]):CompilerContext[1]
 {
     $constraints->fold({constraint, cCtx |
         if($constraint.functionDefinition->isEmpty(),
@@ -112,7 +112,7 @@ function meta::pure::compiler::structural::constraintCompiler::resolveFunctionCo
     }, $context);
 }
 
-function meta::pure::compiler::structural::constraintCompiler::resolveConstraints(elem:Any[1], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::constraintCompiler::compileConstraints(elem:Any[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let constraints = $elem->match(
         [

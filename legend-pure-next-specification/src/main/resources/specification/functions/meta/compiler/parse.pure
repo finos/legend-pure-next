@@ -14,12 +14,12 @@
 
 import meta::pure::protocol::*;
 
-native function meta::pure::compiler::parse(sourceId:String[1], content:String[1]):PureFile[1];
+native function meta::pure::functions::meta::parse(sourceId:String[1], content:String[1]):PureFile[1];
 
-function <<test.Test>> meta::pure::compiler::testParseNativeIntegration() : Boolean[1]
+function <<test.Test>> meta::pure::functions::meta::testParseNativeIntegration() : Boolean[1]
 {
     let content = 'Class pkg::MyClass { name:String[1]; }';
-    let file = meta::pure::compiler::parse('testSource', $content);
+    let file = meta::pure::functions::meta::parse('testSource', $content);
     assertEquals('testSource', $file.sourceId);
     assertEquals(1, $file.sections->size());
 
@@ -35,11 +35,11 @@ function <<test.Test>> meta::pure::compiler::testParseNativeIntegration() : Bool
     assertEquals('name', $prop.name);
 }
 
-function <<test.Test>> meta::pure::compiler::testParseEnumPropertyValues() : Boolean[1]
+function <<test.Test>> meta::pure::functions::meta::testParseEnumPropertyValues() : Boolean[1]
 {
     // Parse a class with a composite aggregation property
     let content = 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }';
-    let file = meta::pure::compiler::parse('testSource', $content);
+    let file = meta::pure::functions::meta::parse('testSource', $content);
     let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
 
     // The composite property's aggregation should be an Enum_Pointer referencing the metamodel enum

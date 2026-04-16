@@ -32,7 +32,7 @@ import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:DotApplication[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     let functionName = $dot.functionName->toOne();
     let siCtx = formatMetamodelSourceInfo($dot.sourceInformation, $context);
@@ -43,17 +43,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let resolvedParams = $resolvedParamResults->map(r | if($r.value->isEmpty(), | [], | $r.value->toOne()));
 
     if($resolvedParams->isEmpty(),
-        | ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+        | ^CompilerResult<ValueSpecification>(
               value = $dot,
               context = ^$ctx1(errors += 'DotApplication has no parameters' + $siCtx)
           ),
         | let receiver = $resolvedParams->at(0);
-          let _d = debug($context, | 'resolveDotApplication: .' + $functionName
+          debug($context, | 'resolveDotApplication: .' + $functionName
               + ' receiverGT=' + if($receiver.genericType->isEmpty(), | '?', | printGenericType($receiver.genericType->toOne()))
               + ' receiverMul=' + if($receiver.multiplicity->isEmpty(), | '?', | printMultiplicity($receiver.multiplicity->toOne()))
               + ' additionalParams=' + $resolvedParams->size()->toString());
           if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
-              | ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+              | ^CompilerResult<ValueSpecification>(
                     value = $dot,
                     context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
                 ),
@@ -80,13 +80,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       );
                       let matchedProp = $enumOwner.properties->filter(p | $p.name == $functionName);
                       if($matchedProp->isEmpty(),
-                          | ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                          | ^CompilerResult<ValueSpecification>(
                                 value = $dot,
                                 context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
                             ),
-                          | let _de = debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
+                          | debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
                             let enumGT = ^InferredGenericType(type = $enumeration);
-                            ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                            ^CompilerResult<ValueSpecification>(
                                 value = ^$dot(
                                     func = $matchedProp->at(0),
                                     genericType = $enumGT,
@@ -99,12 +99,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       $ownerType->match([
                           rt:RelationType<Any>[1] |
                             let col = $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $functionName);
-                            let _dc = debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
+                            debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
                             if($col->isNotEmpty(),
                                 | let resolvedCol = $col->at(0);
                                   let colGT = if($resolvedCol.genericType->isNotEmpty(), | asInferredGenericType($resolvedCol.genericType->toOne()), | ^CompilerNotSetGenericType());
                                   let colMul = if($resolvedCol.multiplicity->isNotEmpty(), | $resolvedCol.multiplicity->toOne(), | PureOne);
-                                  ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                                  ^CompilerResult<ValueSpecification>(
                                       value = ^$dot(
                                           func = $resolvedCol,
                                           genericType = $colGT,
@@ -112,7 +112,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       ),
                                       context = $ctx1
                                   );,
-                                | ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                                | ^CompilerResult<ValueSpecification>(
                                       value = $dot,
                                       context = ^$ctx1(errors += 'Can\'t find column \'' + $functionName + '\' in relation type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
                                   )
@@ -131,11 +131,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             // Look up property on the owner type
                             let prop = findProperty($resolvedOwner, $functionName);
                             if($prop->isEmpty(),
-                                | ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                                | ^CompilerResult<ValueSpecification>(
                                       value = $dot,
                                       context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx)
                                   ),
-                                | let _dp = debug($context, | '  property found: ' + $prop->toOne().name->toOne());
+                                | debug($context, | '  property found: ' + $prop->toOne().name->toOne());
                                   let resolvedProp = $prop->toOne();
                                   let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
                                   let propGT = $propResolved.first;
@@ -144,8 +144,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   // Check if automap needed: receiver multiplicity is NOT [1]
                                   if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
                                       | // Direct access — receiver is [1]
-                                        let _dd = debug($context, | '  direct access [1]');
-                                        ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                                        debug($context, | '  direct access [1]');
+                                        ^CompilerResult<ValueSpecification>(
                                             value = ^$dot(
                                                 func = $resolvedProp,
                                                 genericType = $propGT,
@@ -154,12 +154,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                             context = $ctx1
                                         );,
                                       | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
-                                        let _da = debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                                        debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
                                         buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
                                   );
                             );,
                           a:Any[1] |
-                            ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                            ^CompilerResult<ValueSpecification>(
                                 value = $dot,
                                 context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + $ownerType->cast(@PackageableElement)->elementToPath() + '\'' + $siCtx)
                             )
@@ -192,7 +192,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], prop:AbstractProperty<Any>[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], prop:AbstractProperty<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Build lambda parameter: v_automap:ReceiverElementType[1]
     let lambdaParam = ^VariableExpression(
@@ -245,13 +245,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     // Resolve the map expression to bind the function
-    let _d = debug($context, | '  automap: resolving map() expression');
+    debug($context, | '  automap: resolving map() expression');
     let mapResult = resolveValueSpecification($mapFI, $scope, $context->debugSpaceInc());
     let resolved = if($mapResult.value->isEmpty(), | $mapFI, | $mapResult.value->toOne());
-    let _d2 = debug($context, | '  automap: map() resolved gt=' + if($resolved.genericType->isEmpty(), | '?', | printGenericType($resolved.genericType->toOne()))
+    debug($context, | '  automap: map() resolved gt=' + if($resolved.genericType->isEmpty(), | '?', | printGenericType($resolved.genericType->toOne()))
         + ' mul=' + if($resolved.multiplicity->isEmpty(), | '?', | printMultiplicity($resolved.multiplicity->toOne())));
     // Restore debug space — mapResult.context carries deeper space from resolveValueSpecification
     let mapCtx = $mapResult.context;
     let restoredCtx = ^$mapCtx(debugState = $context.debugState);
-    ^meta::pure::compiler::CompilerResult<ValueSpecification>(value = $mapResult.value, context = $restoredCtx);
+    ^CompilerResult<ValueSpecification>(value = $mapResult.value, context = $restoredCtx);
 }

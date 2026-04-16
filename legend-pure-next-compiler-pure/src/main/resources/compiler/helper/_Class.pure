@@ -78,21 +78,21 @@ function meta::pure::compiler::helper::class::buildBindingsFromGenericType(owner
 
 // Tests
 
-Class meta::pure::compiler::helper::class::tests::SuperClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::SuperClass
 {
     superProp : String[1];
     superQual(a:String[1]) { $a } : String[1];
     overloadedQual(a:String[1]) { $a } : String[1];
 }
 
-Class meta::pure::compiler::helper::class::tests::SubClass extends meta::pure::compiler::helper::class::tests::SuperClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::SubClass extends meta::pure::compiler::helper::class::tests::SuperClass
 {
     subProp : Integer[1];
     subQual(a:String[1]) { $a } : String[1];
     overloadedQual(a:String[1], b:String[1]) { $a } : String[1];
 }
 
-Association meta::pure::compiler::helper::class::tests::Asso
+Association <<test.TestDependency>> meta::pure::compiler::helper::class::tests::Asso
 {
     origin : meta::pure::compiler::helper::class::tests::SubClass[1];
     assocProp : meta::pure::compiler::helper::class::tests::SuperClass[1];
@@ -134,15 +134,15 @@ function <<test.Test>> meta::pure::compiler::helper::class::tests::testFindQuali
     assertEquals(0, $subClass->findQualifiedProperties('notFound')->size());
 }
 
-Class meta::pure::compiler::helper::class::tests::Wrapper<Z>
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::Wrapper<Z>
 {
 }
 
-Class meta::pure::compiler::helper::class::tests::MyClass<T, U|m>
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::MyClass<T, U|m>
 {
 }
 
-Class meta::pure::compiler::helper::class::tests::TestClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::class::tests::TestClass
 {
     prop : meta::pure::compiler::helper::class::tests::MyClass<meta::pure::compiler::helper::class::tests::Wrapper<String>, Integer | 1..*>[1];
 }

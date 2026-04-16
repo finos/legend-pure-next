@@ -21,12 +21,12 @@ native function
         doc.doc='Cast the result of a function to [1]',
         PCT.grammarDoc='toOne is leveraged in milestoning generated derived properties'
     }
-    meta::pure::functions::multiplicity::toOne<T>(values:T[*]):T[1];
+    meta::pure::functions::lang::toOne<T>(values:T[*]):T[1];
 
-native function <<PCT.function>> meta::pure::functions::multiplicity::toOne<T>(values:T[*], message: String[1]): T[1];
+native function <<PCT.function>> meta::pure::functions::lang::toOne<T>(values:T[*], message: String[1]): T[1];
 
 
-function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testToOneMultiplicity():Boolean[1]
+function <<test.Test>> meta::pure::functions::lang::tests::toOne::testToOneMultiplicity():Boolean[1]
 {
     assertIs(InferredPureOne, {|toOne('a')}.expressionSequence->at(0).multiplicity);
     assertIs(InferredPureOne, {|toOne(['a'])}.expressionSequence->at(0).multiplicity);
@@ -34,7 +34,7 @@ function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testTo
     assertIs(InferredPureOne, {|[1, 2, 3]->filter(x | $x == 1)->toOne()}.expressionSequence->at(0).multiplicity);
 }
 
-function <<test.Test>> meta::pure::functions::multiplicity::tests::toOne::testToOne():Boolean[1]
+function <<test.Test>> meta::pure::functions::lang::tests::toOne::testToOne():Boolean[1]
 {
     assertEquals('a', 'a'->toOne());
     assertEquals(1, [1, 2, 3]->head()->toOne());

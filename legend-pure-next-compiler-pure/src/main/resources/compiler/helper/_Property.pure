@@ -45,11 +45,11 @@ function meta::pure::compiler::helper::property::resolveProperty(prop:Property<N
 
 // Tests
 
-Class meta::pure::compiler::helper::property::tests::MyClass<T, U|m>
+Class <<test.TestDependency>> meta::pure::compiler::helper::property::tests::MyClass<T, U|m>
 {
 }
 
-Class meta::pure::compiler::helper::property::tests::TestClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::property::tests::TestClass
 {
     prop : meta::pure::compiler::helper::property::tests::MyClass<String, Integer | 1..*>[1];
 }

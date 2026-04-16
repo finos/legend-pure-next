@@ -21,17 +21,17 @@ import meta::pure::compiler::*;
 Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveResult
 {
     resolvedSpecs: ValueSpecification[*];
-    context: meta::pure::compiler::CompilerContext[1];
+    context: CompilerContext[1];
 }
 
 Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccumulator
 {
     scope: VariableExpression[*];
-    context: meta::pure::compiler::CompilerContext[1];
+    context: CompilerContext[1];
     resolvedSpecs: ValueSpecification[*];
 }
 
-function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):ResolveResult[1]
+function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1]):ResolveResult[1]
 {
     let result = $specs->fold({spec, acc |
         let r = resolveValueSpecification($spec, $acc.scope, $acc.context);

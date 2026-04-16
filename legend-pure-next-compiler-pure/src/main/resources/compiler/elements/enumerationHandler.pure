@@ -45,7 +45,7 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
     }, $context);
 
     // Build the enum value properties (with annotations on each value)
-    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::elements::buildEnumProperty($skeleton, $selfGenType, $ctx0, $ownerCtx));
+    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::structural::propertyCompiler::compileEnumProperty($skeleton, $selfGenType, $ctx0, $ownerCtx));
 
     // Compile stereotypes and tagged values on the enumeration itself
     let stereoAccum = $protocolEnum.stereotypes->fold({s, acc |
@@ -65,58 +65,3 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
     );
 }
 
-function meta::pure::compiler::elements::buildEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:Enumeration<Any>[1], selfGenType:GenericType[1], context:CompilerContext[1], ownerCtx:String[1]):Property<Nil, Any|*>[1]
-{
-    let pureOne = PureOne;
-
-    let propClassifierGT = ^UserDefinedGenericType(
-        type = Property,
-        typeArguments = [
-            $skeleton.classifierGenericType->toOne(),
-            $selfGenType
-        ],
-        multiplicityArguments = [$pureOne]
-    );
-
-    let prop = new($propClassifierGT)->cast(@Property<Nil, Any|*>);
-
-    let lambdaReturn = ^FunctionType(
-        returnType = $selfGenType,
-        returnMultiplicity = $pureOne
-    );
-    let defaultLambdaGT = ^UserDefinedGenericType(
-        type = LambdaFunction,
-        typeArguments = [^UserDefinedGenericType(type = $lambdaReturn)]
-    );
-    let emptyLambda = new($defaultLambdaGT)->cast(@LambdaFunction<Any>);
-
-    // Compile stereotypes and tagged values on the enum value
-    let stereoResult = compilePropertyStereotypes($p, $context, $ownerCtx);
-    let tvResult = compilePropertyTaggedValues($p, $context, $ownerCtx);
-
-    ^$prop(
-        name = $p.name,
-        aggregation = AggregationKind.None,
-        genericType = $selfGenType,
-        multiplicity = $pureOne,
-        owner = $skeleton,
-        stereotypes = $stereoResult.values,
-        taggedValues = $tvResult.values,
-        defaultValue = ^$emptyLambda(
-            expressionSequence = [
-                ^AtomicValue(
-                    genericType = $selfGenType,
-                    multiplicity = $pureOne,
-                    value = ^$skeleton(name = $p.name)
-                )
-            ]
-        ),
-        sourceInformation = $p.sourceInformation->map(si | ^SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
-    );
-}

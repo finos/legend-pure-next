@@ -23,7 +23,7 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(av:AtomicValue[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::resolveAtomicValue(av:AtomicValue[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     $av.value->match(
         [
@@ -41,12 +41,12 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                     && $p.multiplicity->toOne()->isConcreteMultiplicity()
                 );
                 if(!$paramsAreConcrete,
-                    | let _d = debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
+                    | debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');
                       let siCtx = formatMetamodelSourceInfo($av.sourceInformation, $context);
                       // Return av with CompilerNotSetGenericType (matches Java where av._genericType() is null/not-set).
                       // This prevents the collection resolver from seeing a concrete type for unresolvable lambdas,
                       // ensuring the Collection branch in resolveParameterValue is reached instead of the CONCRETE branch.
-                      ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                      ^CompilerResult<ValueSpecification>(
                           value = ^$av(genericType = ^CompilerNotSetGenericType()),
                           context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
                       );,
@@ -59,7 +59,7 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                               | $c
                           );
                       }, $context);
-                      let _d = debug($conflictCtx, | 'resolveAtomicValue: LAMBDA resolving body');
+                      debug($conflictCtx, | 'resolveAtomicValue: LAMBDA resolving body');
                       let innerScope = $scope->concatenate($lambdaParams);
                       let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $conflictCtx);
                       let ctx1 = $resolveResult.context;
@@ -85,14 +85,14 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                           type = LambdaFunction,
                           typeArguments = [^InferredGenericType(type = $ft)]
                       );
-                      let _d2 = debug($context, | 'resolveAtomicValue: LAMBDA gt=' + printGenericType($lambdaGT));
-                      ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+                      debug($context, | 'resolveAtomicValue: LAMBDA gt=' + printGenericType($lambdaGT));
+                      ^CompilerResult<ValueSpecification>(
                           value = ^$av(genericType = $lambdaGT),
                           context = $ctx1
                       );
                 );,
             a : Any[1] |
-                ^meta::pure::compiler::CompilerResult<ValueSpecification>(value = $av, context = $context)
+                ^CompilerResult<ValueSpecification>(value = $av, context = $context)
         ]
     );
 }

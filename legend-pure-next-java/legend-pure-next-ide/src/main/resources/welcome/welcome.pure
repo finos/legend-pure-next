@@ -3,7 +3,7 @@ import meta::pure::compiler::*;
 function go():Any[*]
 {
 let content = 'Class pkg::MyClass { (composite) child:String[*]; name:String[1]; }';
-    let file = meta::pure::compiler::parse('testSource', $content);
+    let file = meta::pure::functions::meta::parse('testSource', $content);
     let cls = $file.sections->at(0).elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
 
     // The composite property should have AggregationKind == Composite

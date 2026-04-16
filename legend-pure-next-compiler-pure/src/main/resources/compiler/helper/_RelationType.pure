@@ -220,7 +220,7 @@ function meta::pure::compiler::helper::relationType::makeRelationTypeAsConcreteA
 // Native pure tests for RelationType matching Java implementation parity
 // --------------------------------------------------------------------------------------------------------------------------------
 
-Class meta::pure::compiler::helper::relationType::tests::RelClass<T>
+Class <<test.TestDependency>> meta::pure::compiler::helper::relationType::tests::RelClass<T>
 {
     emptyRt: Relation<Any>[1];
     simpleRt: Relation<(col1:String, col2:Integer)>[1];

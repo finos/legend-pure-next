@@ -15,7 +15,7 @@
 import meta::pure::compiler::test::*;
 import meta::pure::functions::collection::*;
 import meta::pure::functions::string::*;
-import meta::pure::compiler::printer::*;
+import meta::pure::compiler::test::printer::*;
 
 // Harness
 function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
@@ -34,7 +34,7 @@ function meta::pure::compiler::test::assertCompilationError(content:String[1], s
     let errorLines = $content->substring(0, $pureStart)->split('\n');
     let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
     let pureContent = $blankedPrefix + $content->substring($pureStart);
-    let parsedFile = meta::pure::compiler::parse($sourceId, $pureContent);
+    let parsedFile = meta::pure::functions::meta::parse($sourceId, $pureContent);
     let result = meta::pure::compiler::compile($parsedFile);
     assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
     if($expectedMessages->size() != $result.errors->size(), |println('EXPECTED: ' + $expectedMessages->joinStrings(' | ')), |[]);
@@ -45,13 +45,13 @@ function meta::pure::compiler::test::assertCompilationError(content:String[1], s
 
 function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
 {
-    let parsedFile = meta::pure::compiler::parse($sourceId, $content);
+    let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
     let result = meta::pure::compiler::compile($parsedFile);
 
     let expectedGraphElement = $parsedFile.sections.elements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
     if($expectedGraphElement->isNotEmpty(),
        | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
-         let actualGraph = meta::pure::compiler::printer::printCompiledGraph($result.elements);
+         let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements);
 
          let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();

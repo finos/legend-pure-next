@@ -40,7 +40,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::eval::testEval():Bool
     // assertEquals('test', SimpleFunctionDefinition.all()->filter(f | $f->functionType().parameters->isEmpty())->at(0)->eval());
 }
 
-function <<test.Test>>  meta::pure::functions::math::tests::evaluate::minus::testSingleExpressionMinus():Boolean[1]
+function <<test.Test>>  meta::pure::functions::lang::tests::evaluate::minus::testSingleExpressionMinus():Boolean[1]
 {
     assertEquals(-1, -({| 1}->eval()));
 }
@@ -98,7 +98,7 @@ function <<test.Test>> meta::pure::functions::lang::tests::evaluate::copy::testF
     assertEmpty($type->properties()->filter(p | $p->eval($f1) != $p->eval($f2)));
 }
 
-Class meta::pure::functions::lang::tests::eval::MyClass
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::eval::MyClass
 {
     name: String[1];
 }

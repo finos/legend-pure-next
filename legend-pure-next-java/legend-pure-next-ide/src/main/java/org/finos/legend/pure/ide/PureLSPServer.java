@@ -31,6 +31,7 @@ import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -764,8 +765,20 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     {
         if (client == null) { return; }
 
+        // Each entry: path -> [type, displayName, hasSource]
+        Map<String, String[]> elementEntries = new LinkedHashMap<>();
+
+        // Build function signatures from PDB metadata
+        Map<String, String> functionSignatures = buildFunctionDisplayNames();
+
+        // Collect element paths from editable modules to determine which elements have source
+        Set<String> editableElementPaths = new HashSet<>();
+        for (LocalModule module : editableModules)
+        {
+            editableElementPaths.addAll(module.elementPaths());
+        }
+
         // Read elementIndex from PDB archive
-        Map<String, String> elementTypes = new LinkedHashMap<>();
         byte[] indexBytes = coreModule.archive().readSection("elementIndex");
         if (indexBytes != null)
         {
@@ -773,7 +786,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             for (int i = 0; i < index.elementsLength(); i++)
             {
                 ElementIndexEntry entry = index.elements(i);
-                elementTypes.put(entry.elementPath(), entry.elementType());
+                String path = entry.elementPath();
+                String type = entry.elementType();
+                String displayName = functionSignatures.get(path);
+                boolean hasSource = editableElementPaths.contains(path);
+                elementEntries.put(path, new String[]{type, displayName, hasSource ? "true" : "false"});
             }
         }
 
@@ -786,10 +803,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 {
                     for (String path : m.elementPaths())
                     {
-                        if (!elementTypes.containsKey(path))
+                        if (!elementEntries.containsKey(path))
                         {
                             meta.pure.metamodel.PackageableElement element = m.getElement(path);
                             String type = "UserDefined";
+                            String displayName = null;
                             if (element != null)
                             {
                                 if (element instanceof meta.pure.metamodel.type.Class) { type = "Class"; }
@@ -800,16 +818,49 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                                 else if (element instanceof meta.pure.metamodel.function.NativeFunction) { type = "NativeFunction"; }
                                 else if (element instanceof meta.pure.metamodel.type.PrimitiveType) { type = "PrimitiveType"; }
                                 else if (element instanceof meta.pure.metamodel.Package) { type = "Package"; }
+                                if (element instanceof FunctionIndexEntry fie)
+                                {
+                                    displayName = fie.signatureWithoutPackage();
+                                }
+                                else if (element instanceof meta.pure.metamodel.function.PackageableFunction fn)
+                                {
+                                    displayName = buildFunctionSignature(fn);
+                                }
                             }
-                            elementTypes.put(path, type);
+                            elementEntries.put(path, new String[]{type, displayName, "true"});
                         }
                     }
                 }
             }
         }
 
-        String json = buildPackageTreeJson(elementTypes);
+        String json = buildPackageTreeJson(elementEntries);
         sendTreeData("packageTree", json);
+    }
+
+    /**
+     * Build a map of function path → display signature using the PureLanguage metadata.
+     */
+    private Map<String, String> buildFunctionDisplayNames()
+    {
+        Map<String, String> result = new LinkedHashMap<>();
+        try
+        {
+            org.finos.legend.pure.m3.module.MetadataAccessExtension ext =
+                    new PureLanguageExtension().buildMetadataExtensionForModule(coreModule);
+            if (ext instanceof org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadataAccess metadata)
+            {
+                for (FunctionIndexEntry entry : metadata.getAllFunctionHeaders())
+                {
+                    result.put(entry.fullPath(), entry.signatureWithoutPackage());
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            // Fall through — no display names
+        }
+        return result;
     }
 
     private void sendTreeData(String treeId, String json)
@@ -824,15 +875,17 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
      * Build a JSON tree from :: separated element paths.
      * Each node: {"name":"x","type":"Package","children":[...]}
      */
-    private String buildPackageTreeJson(Map<String, String> elementTypes)
+    private String buildPackageTreeJson(Map<String, String[]> elementEntries)
     {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("__children", new LinkedHashMap<String, Object>());
 
-        for (Map.Entry<String, String> entry : elementTypes.entrySet())
+        for (Map.Entry<String, String[]> entry : elementEntries.entrySet())
         {
             String path = entry.getKey();
-            String type = entry.getValue();
+            String type = entry.getValue()[0];
+            String displayName = entry.getValue()[1];
+            String hasSource = entry.getValue().length > 2 ? entry.getValue()[2] : "true";
             String[] parts = path.split("::");
 
             @SuppressWarnings("unchecked")
@@ -851,6 +904,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 if (i == parts.length - 1)
                 {
                     nodeMap.put("__type", type);
+                    if (displayName != null)
+                    {
+                        nodeMap.put("__displayName", displayName);
+                    }
+                    nodeMap.put("__hasSource", hasSource);
                 }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nextChildren = (Map<String, Object>) nodeMap.get("__children");
@@ -876,9 +934,19 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             Map<String, Object> node = (Map<String, Object>) entry.getValue();
             Map<String, Object> children = (Map<String, Object>) node.get("__children");
             String type = node.containsKey("__type") ? (String) node.get("__type") : "Package";
+            String displayName = node.containsKey("__displayName") ? (String) node.get("__displayName") : null;
+            String hasSource = node.containsKey("__hasSource") ? (String) node.get("__hasSource") : null;
 
-            sb.append("{\"name\":\"").append(entry.getKey()).append("\"");
+            sb.append("{\"name\":\"").append(escapeJson(entry.getKey())).append("\"");
             sb.append(",\"type\":\"").append(type).append("\"");
+            if (displayName != null)
+            {
+                sb.append(",\"displayName\":\"").append(escapeJson(displayName)).append("\"");
+            }
+            if ("false".equals(hasSource))
+            {
+                sb.append(",\"hasSource\":false");
+            }
             if (children != null && !children.isEmpty())
             {
                 sb.append(",\"children\":").append(renderTreeJson(children));
@@ -1028,6 +1096,43 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     // =========================================================================
     // Module helpers
     // =========================================================================
+
+    /**
+     * Build a display signature for a locally-compiled PackageableFunction.
+     */
+    private String buildFunctionSignature(meta.pure.metamodel.function.PackageableFunction fn)
+    {
+        try
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append(fn._functionName() != null ? fn._functionName() : "?");
+            sb.append('(');
+            if (fn._parameters() != null)
+            {
+                boolean first = true;
+                for (meta.pure.metamodel.valuespecification.VariableExpression param : fn._parameters())
+                {
+                    if (!first) sb.append(", ");
+                    first = false;
+                    sb.append(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.print(param._genericType(), false));
+                    sb.append(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.print(param._multiplicity()));
+                }
+            }
+            sb.append("): ");
+            sb.append(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.print(fn._returnGenericType(), false));
+            sb.append(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity.print(fn._returnMultiplicity()));
+            return sb.toString();
+        }
+        catch (Exception e)
+        {
+            return fn._functionName();
+        }
+    }
+
+    private static String escapeJson(String s)
+    {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
 
     /**
      * Find the editable module that owns the given source file.

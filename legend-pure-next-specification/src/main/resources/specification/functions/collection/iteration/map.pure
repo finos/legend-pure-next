@@ -90,12 +90,12 @@ function <<test.Test>> meta::pure::functions::collection::tests::map::testAutoMa
     assertEmpty($lambda->evaluate([]));
 }
 
-Class meta::pure::functions::collection::tests::map::OptionalString
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::map::OptionalString
 {
     value : String[0..1];
 }
 
-Class meta::pure::functions::collection::tests::map::model::M_Person
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::map::model::M_Person
 {
     firstName : String[1];
     lastName : String[1];
@@ -103,19 +103,19 @@ Class meta::pure::functions::collection::tests::map::model::M_Person
     address : M_Address[0..1];
 }
 
-Class meta::pure::functions::collection::tests::map::model::M_Location
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::map::model::M_Location
 {
     place : String[1];
     type : M_GeographicEntityType[1];
 }
 
-Class meta::pure::functions::collection::tests::map::model::M_Address
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::map::model::M_Address
 {
     name : String[1];
     type : M_GeographicEntityType[1];
 }
 
-Enum meta::pure::functions::collection::tests::map::model::M_GeographicEntityType
+Enum <<test.TestDependency>> meta::pure::functions::collection::tests::map::model::M_GeographicEntityType
 {
     {doc.doc = 'A city, town, village, or other urban area.'} CITY,
     <<doc.deprecated>> COUNTRY,

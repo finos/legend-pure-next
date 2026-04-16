@@ -72,7 +72,7 @@ meta::pure::functions::collection::tests::fold::testFoldMixedAccumulatorTypes<Z|
     assertEquals(7, $f->eval(|fold(['one', 'two'], {val, acc| $acc + $val->length()}, 1)));
 }
 
-Class meta::pure::functions::collection::tests::fold::FO_Person
+Class <<test.TestDependency>> meta::pure::functions::collection::tests::fold::FO_Person
 {
     firstName : String[1];
     lastName : String[1];
