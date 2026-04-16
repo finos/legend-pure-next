@@ -556,15 +556,6 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
     );
 }
 
-function meta::pure::compiler::helper::genericType::range(count:Integer[1]):Integer[*]
-{
-    range(0, $count);
-}
-
-function meta::pure::compiler::helper::genericType::range(start:Integer[1], end:Integer[1]):Integer[*]
-{
-    if($start == $end, | [], | $start->concatenate(range($start + 1, $end)));
-}
 
 function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1]):GenericType[0..1]
 {

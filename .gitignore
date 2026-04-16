@@ -23,11 +23,8 @@ website/yarn-error.log*
 /.vscode/
 /.agent/
 
-# Build outputs
+# Build outputs (includes specification artifacts generated from m3.ttl)
 /build/
-
-# Specification artifacts generated from m3.ttl
-/specification/generated/
 
 # Platforms
 /platforms/typescript/node_modules/

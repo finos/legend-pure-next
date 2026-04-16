@@ -15,6 +15,7 @@ platforms := root / "platforms"
 ts        := platforms / "typescript"
 truffle   := platforms / "truffle"
 out       := root / "build"
+gen_spec  := out / "specification"
 cli       := out / "cli" / "pure-cli.jar"
 gen_jar   := boot / "legend-pure-next-generators" / "target" / "legend-pure-next-generators-0.0.1-SNAPSHOT.jar"
 gen_deps  := boot / "legend-pure-next-generators" / "target" / "dependency"
@@ -30,22 +31,21 @@ build-generators:
     cd {{boot}} && mvn install -pl legend-pure-next-generators -am -DskipTests -q
     cd {{boot}}/legend-pure-next-generators && mvn dependency:copy-dependencies -DoutputDirectory=target/dependency -q
 
-# --- Phase 2: Generate specification artifacts from m3.ttl ---
+# --- Phase 2: Generate specification artifacts from m3.ttl into build/specification/ ---
 generate: build-generators
-    mkdir -p {{spec}}/generated
+    mkdir -p {{gen_spec}}/protocol
     java -cp "{{gen_jar}}:{{gen_deps}}/*" \
         org.finos.legend.pure.specification.generation.RdfPureGenerator \
-        {{spec}}/m3.ttl {{spec}}/generated/m3.pure
+        {{spec}}/m3.ttl {{gen_spec}}/m3.pure
     java -cp "{{gen_jar}}:{{gen_deps}}/*" \
         org.finos.legend.pure.specification.generation.RdfFbsSchemaGenerator \
-        {{spec}}/m3.ttl {{spec}}/generated {{spec}}/m3_fbs_addition.fbs
+        {{spec}}/m3.ttl {{gen_spec}} {{spec}}/m3_fbs_addition.fbs
     java -cp "{{gen_jar}}:{{gen_deps}}/*" \
         org.finos.legend.pure.specification.generation.M3ProtocolGenerator \
-        {{spec}}/m3.ttl {{spec}}/generated/m3_protocol.ttl {{spec}}/m3_protocol_addition.ttl
-    mkdir -p {{spec}}/generated/protocol
+        {{spec}}/m3.ttl {{gen_spec}}/m3_protocol.ttl {{spec}}/m3_protocol_addition.ttl
     java -cp "{{gen_jar}}:{{gen_deps}}/*" \
         org.finos.legend.pure.specification.generation.RdfPureGenerator \
-        {{spec}}/generated/m3_protocol.ttl {{spec}}/generated/protocol/m3_protocol.pure
+        {{gen_spec}}/m3_protocol.ttl {{gen_spec}}/protocol/m3_protocol.pure
 
 # --- Phase 3: Build the full Java bootstrap (parser, compiler, execution, cli, ide) ---
 build-bootstrap: generate
@@ -62,7 +62,7 @@ build-core-pdb: build-cli
     java -jar {{cli}} compile-spec \
         --m3-ttl {{spec}}/m3.ttl \
         {{spec}}/functions \
-        {{spec}}/generated/protocol \
+        {{gen_spec}}/protocol \
         {{out}}/core.pdb
 
 # --- Phase 6: Compile compiler.pdb from compiler-pure sources ---
@@ -122,5 +122,5 @@ ide: build-compiler-pdb
         --function "meta::pure::ide::start"
 
 clean:
-    rm -rf {{out}} {{spec}}/generated
+    rm -rf {{out}}
     cd {{boot}} && mvn clean -q

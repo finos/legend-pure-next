@@ -32,6 +32,7 @@
 
     <properties>
         <spec.dir>${project.basedir}/../../specification</spec.dir>
+        <gen.spec.dir>${project.basedir}/../../build/specification</gen.spec.dir>
     </properties>
 
     <dependencies>
@@ -146,7 +147,7 @@
                         <configuration>
                             <mainClass>org.finos.legend.pure.generators.RdfJavaGenerator</mainClass>
                             <arguments>
-                                <argument>${spec.dir}/generated/m3_protocol.ttl</argument>
+                                <argument>${gen.spec.dir}/m3_protocol.ttl</argument>
                                 <argument>${project.build.directory}/generated-sources</argument>
                                 <argument>org.finos.legend.pure.m3.generated.protocol</argument>
                             </arguments>

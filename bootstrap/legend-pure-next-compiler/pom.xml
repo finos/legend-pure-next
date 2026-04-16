@@ -82,6 +82,7 @@
 
     <properties>
         <spec.dir>${project.basedir}/../../specification</spec.dir>
+        <gen.spec.dir>${project.basedir}/../../build/specification</gen.spec.dir>
     </properties>
 
     <build>
@@ -126,7 +127,7 @@
                                 <argument>--java</argument>
                                 <argument>-o</argument>
                                 <argument>${project.build.directory}/generated-sources</argument>
-                                <argument>${spec.dir}/generated/m3.fbs</argument>
+                                <argument>${gen.spec.dir}/m3.fbs</argument>
                             </arguments>
                         </configuration>
                     </execution>

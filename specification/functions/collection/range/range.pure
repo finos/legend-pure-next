@@ -1,0 +1,37 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::collection::*;
+
+// range(count) returns [0, 1, ..., count-1].
+function meta::pure::functions::collection::range(count:Integer[1]):Integer[*]
+{
+    range(0, $count);
+}
+
+// range(start, end) returns [start, start+1, ..., end-1]. Empty when start >= end.
+// Implemented as divide-and-conquer so the recursion depth is O(log n) rather
+// than O(n) — important on a tree-walking interpreter where each Pure call
+// consumes many Java stack frames.
+function meta::pure::functions::collection::range(start:Integer[1], end:Integer[1]):Integer[*]
+{
+    if($start >= $end,
+        | [],
+        | if($start + 1 == $end,
+            | $start,
+            | let mid = floor(($start + $end) / 2);
+              range($start, $mid)->concatenate(range($mid, $end));
+        )
+    );
+}
