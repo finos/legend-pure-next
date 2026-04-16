@@ -20,3 +20,15 @@ website/yarn-debug.log*
 website/yarn-error.log*
 **/target/
 /.idea/
+/.vscode/
+/.agent/
+
+# Build outputs
+/build/
+
+# Specification artifacts generated from m3.ttl
+/specification/generated/
+
+# Platforms
+/platforms/typescript/node_modules/
+/platforms/typescript/dist/
