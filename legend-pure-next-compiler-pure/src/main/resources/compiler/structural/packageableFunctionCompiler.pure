@@ -1,0 +1,52 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::compiler::structural::packageableFunctionCompiler::*;
+import meta::pure::compiler::structural::functionTypeCompiler::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::packageableFunctionCompiler::compileTypeParameters(typeParameters:meta::pure::protocol::grammar::type::generics::TypeParameter[*]):TypeParameter[*]
+{
+    $typeParameters->map(tp | ^TypeParameter(name = $tp.name, contravariant = false)->cast(@TypeParameter));
+}
+
+function meta::pure::compiler::structural::packageableFunctionCompiler::compileFunctionClassifierGenericType(functionMetaType:Type[1], parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):UserDefinedGenericType[1]
+{
+    let funcType = compileFunctionType($parameters, $returnGenericType, $returnMultiplicity);
+    ^UserDefinedGenericType(
+        type = $functionMetaType,
+        typeArguments = [
+            ^UserDefinedGenericType(
+                type = $funcType
+            )
+        ]
+    );
+}
+
+function meta::pure::compiler::structural::packageableFunctionCompiler::validateDuplicateParameters(parameters:meta::pure::protocol::grammar::valuespecification::VariableExpression[*], context:CompilerContext[1], ownerCtx:String[1], siCtx:String[1]):CompilerContext[1]
+{
+    let dupNames = $parameters->map(p | $p.name)->filter(n | $parameters->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
+    $dupNames->fold({d, c |
+        ^$c(errors += 'Duplicate parameter name \'' + $d + '\' in ' + $ownerCtx + $siCtx);
+    }, $context);
+}
+
+function meta::pure::compiler::structural::packageableFunctionCompiler::fullPath(fn:meta::pure::protocol::grammar::function::PackageableFunction[1]):String[1]
+{
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    if($packagePath == '', | $fn.name, | $packagePath + '::' + $fn.name);
+}

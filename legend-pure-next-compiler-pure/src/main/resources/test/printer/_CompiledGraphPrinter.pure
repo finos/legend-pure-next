@@ -13,105 +13,99 @@
 // limitations under the License.
 
 
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::compiler::printer::*;
-import meta::pure::compiler::printer::primitive::*;
 import meta::pure::metamodel::*;
-import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::functions::meta::*;
 import meta::pure::functions::collection::*;
 import meta::pure::functions::string::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::test::printer::*;
+import meta::pure::compiler::test::printer::primitive::*;
 
-function meta::pure::compiler::printer::printCompiledGraph(elements:PackageableElement[*]):String[1]
+function meta::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*]):String[1]
 {
     $elements->map(e | $e->printElement())->joinStrings('\n\n')
 }
 
-function meta::pure::compiler::printer::printElement(element:PackageableElement[1]):String[1]
+function meta::pure::compiler::test::printer::printElement(element:PackageableElement[1]):String[1]
 {
     $element->match(
         [
-            c:meta::pure::metamodel::type::Class<Any>[1] | $c->printClass(),
-            assoc:meta::pure::metamodel::relationship::Association[1] | $assoc->printAssociation(),
-            en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en->meta::pure::compiler::printer::printEnumeration(),
-            fn:meta::pure::metamodel::function::NativeFunction<Any>[1] | $fn->meta::pure::compiler::printer::printNativeFunction(),
-            udf:meta::pure::metamodel::function::UserDefinedFunction<Any>[1] | $udf->meta::pure::compiler::printer::printUserDefinedFunction(),
-            pr:meta::pure::metamodel::extension::Profile[1] | $pr->meta::pure::compiler::printer::printProfile(),
-            p:meta::pure::metamodel::type::PrimitiveType[1] | $p->printPrimitive(),
+            c:Class<Any>[1] | $c->printClass(),
+            assoc:Association[1] | $assoc->printAssociation(),
+            en:Enumeration<Any>[1] | $en->meta::pure::compiler::test::printer::printEnumeration(),
+            fn:NativeFunction<Any>[1] | $fn->meta::pure::compiler::test::printer::printNativeFunction(),
+            udf:UserDefinedFunction<Any>[1] | $udf->meta::pure::compiler::test::printer::printUserDefinedFunction(),
+            pr:Profile[1] | $pr->meta::pure::compiler::test::printer::printProfile(),
+            p:PrimitiveType[1] | $p->printPrimitive(),
             a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
         ]
     )
 }
 
-function meta::pure::compiler::printer::printClass(c:meta::pure::metamodel::type::Class<Any>[1]):String[1]
+function meta::pure::compiler::test::printer::printClass(c:Class<Any>[1]):String[1]
 {
     [
         'class ', $c->fullPath(), 
-        if($c.generalizations->isEmpty(), | '', | [ ' extends ', $c.generalizations->cast(@Any)->map(g | let g2 = $g->cast(@meta::pure::metamodel::relationship::Generalization); $g2.general->printType();)->joinStrings(', ') ]->joinStrings('') ),
+        if($c.generalizations->isEmpty(), | '', | [ ' extends ', $c.generalizations->cast(@Any)->map(g | let g2 = $g->cast(@Generalization); $g2.general->printType();)->joinStrings(', ') ]->joinStrings('') ),
         $c.classifierGenericType->printClassifierGenericType(),
         $c.sourceInformation->printSourceInfo(),
         if($c.stereotypes->isEmpty(), | '', | '\n  <<' + $c.stereotypes->map(s | $s.profile->toOne()->fullPath() + '.' + $s.value)->joinStrings(', ') + '>>'),
         if($c.taggedValues->isEmpty(), | '', | '\n  {' + $c.taggedValues->map(t | $t.tag.profile->toOne()->fullPath() + '.' + $t.tag.value + ' = \'' + $t.value + '\'')->joinStrings(', ') + '}'),
         if($c.properties->isEmpty(), | '', | [ '\n', $c.properties->cast(@Any)->map(p | 
-            let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+            let p2 = $p->cast(@Property<Nil, Any|*>);
             [ 'property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
         )->joinStrings('\n') ]->joinStrings(''))
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printAssociation(assoc:meta::pure::metamodel::relationship::Association[1]):String[1]
+function meta::pure::compiler::test::printer::printAssociation(assoc:Association[1]):String[1]
 {
     [
         'association ', $assoc->fullPath(),
         $assoc.classifierGenericType->printClassifierGenericType(),
         $assoc.sourceInformation->printSourceInfo(),
         if($assoc.properties->isEmpty(), | '', | [ '\n', $assoc.properties->cast(@Any)->map(p | 
-            let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
+            let p2 = $p->cast(@Property<Nil, Any|*>);
             [ '  property ', $p2.name->toOne(), ' :', $p2.genericType->printType(), $p2.multiplicity->printMul(), $p2.classifierGenericType->printClassifierGenericType() ]->joinStrings('');
         )->joinStrings('\n') ]->joinStrings(''))
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printEnumeration(en:meta::pure::metamodel::type::Enumeration<Any>[1]):String[1]
+function meta::pure::compiler::test::printer::printEnumeration(en:Enumeration<Any>[1]):String[1]
 {
     [
         'enumeration ', $en->fullPath(), ' extends Enum',
         $en.classifierGenericType->printClassifierGenericType(),
         $en.sourceInformation->printSourceInfo(),
-        if($en.properties->isEmpty(), | '', | [ '\n', $en.properties->cast(@Any)->map(p | $p->meta::pure::compiler::printer::printEnumerationProperty())->joinStrings('\n') ]->joinStrings(''))
+        if($en.properties->isEmpty(), | '', | [ '\n', $en.properties->cast(@Any)->map(p | $p->meta::pure::compiler::test::printer::printEnumerationProperty())->joinStrings('\n') ]->joinStrings(''))
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printEnumerationProperty(p:Any[1]):String[1]
+function meta::pure::compiler::test::printer::printEnumerationProperty(p:Any[1]):String[1]
 {
-    let p2 = $p->cast(@meta::pure::metamodel::function::property::Property<Nil, Any|*>);
-    let expr = $p2.defaultValue->toOne()->cast(@meta::pure::metamodel::function::LambdaFunction<Any>).expressionSequence->at(0);
+    let p2 = $p->cast(@Property<Nil, Any|*>);
+    let expr = $p2.defaultValue->toOne()->cast(@LambdaFunction<Any>).expressionSequence->at(0);
     let val = $expr->match([
-        a:meta::pure::metamodel::valuespecification::AtomicValue[1] | $a.value->toOne()->cast(@meta::pure::metamodel::type::Enumeration<Any>),
-        en:meta::pure::metamodel::type::Enumeration<Any>[1] | $en
+        a:AtomicValue[1] | $a.value->toOne()->cast(@Enumeration<Any>),
+        en:Enumeration<Any>[1] | $en
     ]);
     let propCGT = $p2.classifierGenericType->printClassifierGenericType();
     let enumFullName = $p2.owner->toOne()->cast(@PackageableElement)->fullPath();
     [ '  property ', $p2.name->toOne(), $propCGT, '  = ^', $enumFullName, '(name=\'', $val.name->toOne(), '\')  ~lambda:#LambdaFunction<#{->', $enumFullName, '[1]}#>#', $p2.sourceInformation->printSourceInfo() ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printNativeFunction(fn:meta::pure::metamodel::function::NativeFunction<Any>[1]):String[1]
+function meta::pure::compiler::test::printer::printNativeFunction(fn:NativeFunction<Any>[1]):String[1]
 {
-    let paramStr = $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(p | 
+    let paramStr = $fn.parameters->cast(@VariableExpression)->map(p |
         [$p.name->toOne(), ':', $p.genericType->toOne()->printType(), $p.multiplicity->toOne()->printMul()]->joinStrings('')
     )->joinStrings(', ');
     let returnStr = [$fn.returnGenericType->toOne()->printType(), $fn.returnMultiplicity->toOne()->printMul()]->joinStrings('');
@@ -123,7 +117,7 @@ function meta::pure::compiler::printer::printNativeFunction(fn:meta::pure::metam
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printProfile(pr:meta::pure::metamodel::extension::Profile[1]):String[1]
+function meta::pure::compiler::test::printer::printProfile(pr:Profile[1]):String[1]
 {
     [
         'profile ', $pr->fullPath(),
@@ -134,7 +128,7 @@ function meta::pure::compiler::printer::printProfile(pr:meta::pure::metamodel::e
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printClassifierGenericType(cgt:GenericType[0..1]):String[1]
+function meta::pure::compiler::test::printer::printClassifierGenericType(cgt:GenericType[0..1]):String[1]
 {
     if($cgt->isEmpty(),
         | '',
@@ -142,7 +136,7 @@ function meta::pure::compiler::printer::printClassifierGenericType(cgt:GenericTy
     );
 }
 
-function meta::pure::compiler::printer::printSourceInfo(si:meta::pure::metamodel::SourceInformation[0..1]):String[1]
+function meta::pure::compiler::test::printer::printSourceInfo(si:SourceInformation[0..1]):String[1]
 {
     if($si->isEmpty(),
         | '',
@@ -150,9 +144,9 @@ function meta::pure::compiler::printer::printSourceInfo(si:meta::pure::metamodel
     );
 }
 
-function meta::pure::compiler::printer::printType(gt:GenericType[1]):String[1]
+function meta::pure::compiler::test::printer::printType(gt:GenericType[1]):String[1]
 {
-    let isInferred = $gt->instanceOf(meta::pure::metamodel::Inferred);
+    let isInferred = $gt->instanceOf(Inferred);
     // Need to handle missing core mappings!
     let coreType = $gt->match(
         [
@@ -160,20 +154,17 @@ function meta::pure::compiler::printer::printType(gt:GenericType[1]):String[1]
                 if($gtv.type->isEmpty(), | '?', |
                     $gtv.type->toOne()->match(
                         [
-                            tp:meta::pure::metamodel::type::generics::TypeParameter[1] | $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | if($pe.name->isEmpty(), | '?', | $pe->fullPath()), a:Any[1] | '?' ])),
-                            ft:meta::pure::metamodel::type::FunctionType[1] |
-                                let pStr = $ft.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(p | [$p.genericType->toOne()->printType(), $p.multiplicity->toOne()->printMul()]->joinStrings(''))->joinStrings(', ');
+                            tp:TypeParameter[1] | $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | if($pe.name->isEmpty(), | '?', | $pe->fullPath()), a:Any[1] | '?' ])),
+                            ft:FunctionType[1] |
+                                let pStr = $ft.parameters->cast(@VariableExpression)->map(p | [$p.genericType->toOne()->printType(), $p.multiplicity->toOne()->printMul()]->joinStrings(''))->joinStrings(', ');
                                 let rStr = [$ft.returnType->toOne()->printType(), $ft.returnMultiplicity->toOne()->printMul()]->joinStrings('');
                                 ['{', $pStr, '->', $rStr, '}']->joinStrings('');,
                             pe:PackageableElement[1] |
                                 if($pe.name->isEmpty(), | '?', |
                                     let path = $pe->fullPath();
-                                    if($path->startsWith('meta::pure::metamodel::type::primitives::'),
-                                       | $path->substring(41),
-                                       | if($path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'),
-                                            | $pe.name->toOne(),
-                                            | $path
-                                         )
+                                    if([pair(| $path->startsWith('meta::pure::metamodel::type::primitives::'), | $path->substring(41)),
+                                        pair(| $path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'), | $pe.name->toOne())],
+                                       | $path
                                     );
                                 ),
                             a:Any[1] | '?'
@@ -193,36 +184,28 @@ function meta::pure::compiler::printer::printType(gt:GenericType[1]):String[1]
     if($isInferred, | '#' + $typeStr + '#', | $typeStr);
 }
 
-function meta::pure::compiler::printer::printMul(mul:Multiplicity[1]):String[1]
+function meta::pure::compiler::test::printer::printMul(mul:Multiplicity[1]):String[1]
 {
-    let isInferred = $mul->instanceOf(meta::pure::metamodel::Inferred);
+    let isInferred = $mul->instanceOf(Inferred);
     let coreMul = $mul->match([
         pm:PackageableMultiplicity[1] |
             let path = $pm->fullPath();
             let strip1 = if($path->startsWith('meta::pure::metamodel::multiplicity::'), | $path->substring(37), | $path);
             let strip2 = if($strip1->startsWith('Inferred'), | $strip1->substring(8), | $strip1);
             
-            if($strip2 == 'PureOne', | '[1]',
-               | if($strip2 == 'ZeroOne', | '[0..1]',
-                    | if($strip2 == 'ZeroMany', | '[*]',
-                         | if($strip2 == 'OneMany', | '[1..*]',
-                              | '[' + $strip2 + ']'
-                           )
-                      )
-                 )
+            if([pair(| $strip2 == 'PureOne', | '[1]'),
+                pair(| $strip2 == 'ZeroOne', | '[0..1]'),
+                pair(| $strip2 == 'ZeroMany', | '[*]'),
+                pair(| $strip2 == 'OneMany', | '[1..*]')],
+               | '[' + $strip2 + ']'
             );,
         cm:ConcreteMultiplicity[1] |
-            if($cm.upperBound->isEmpty(),
-               | if($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0,
-                    | '[*]',
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'
-                 ),
-               | if($cm.lowerBound.value == $cm.upperBound.value,
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + ']',
-                    | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
-                 )
+            if([pair(| $cm.upperBound->isEmpty() && ($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0), | '[*]'),
+                pair(| $cm.upperBound->isEmpty(), | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'),
+                pair(| $cm.lowerBound.value == $cm.upperBound.value, | '[' + $cm.lowerBound.value->toOne()->toString() + ']')],
+               | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
             );,
-        mp:meta::pure::metamodel::multiplicity::MultiplicityParameter[1] |
+        mp:MultiplicityParameter[1] |
             '[' + $mp.name + if($mp.owner->isEmpty(), | '', | '~' + $mp.owner->toOne()->match([ pe:PackageableElement[1] | if($pe.name->isEmpty(), | '?', | $pe->fullPath()), a:Any[1] | '?' ])) + ']'
     ]);
     
@@ -230,16 +213,16 @@ function meta::pure::compiler::printer::printMul(mul:Multiplicity[1]):String[1]
     if($isInferred, | '#' + $coreMul + '#', | $coreMul);
 }
 
-function meta::pure::compiler::printer::printUserDefinedFunction(fn:meta::pure::metamodel::function::UserDefinedFunction<Any>[1]):String[1]
+function meta::pure::compiler::test::printer::printUserDefinedFunction(fn:UserDefinedFunction<Any>[1]):String[1]
 {
-    let paramStr = $fn.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(p | 
+    let paramStr = $fn.parameters->cast(@VariableExpression)->map(p |
         [$p.name->toOne(), ':', $p.genericType->toOne()->printType(), $p.multiplicity->toOne()->printMul()]->joinStrings('')
     )->joinStrings(', ');
     let returnStr = [$fn.returnGenericType->toOne()->printType(), $fn.returnMultiplicity->toOne()->printMul()]->joinStrings('');
     let signature = [$fn->fullPath(), '(', $paramStr, '):', $returnStr]->joinStrings('');
     
-    let exprs = $fn.expressionSequence->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->map(expr |
-        $expr->meta::pure::compiler::printer::printValueSpecification('  ')
+    let exprs = $fn.expressionSequence->cast(@ValueSpecification)->map(expr |
+        $expr->meta::pure::compiler::test::printer::printValueSpecification('  ')
     )->joinStrings('\n');
     
     [
@@ -249,18 +232,18 @@ function meta::pure::compiler::printer::printUserDefinedFunction(fn:meta::pure::
     ]->joinStrings('');
 }
 
-function meta::pure::compiler::printer::printValueSpecification(vs:Any[1], indent:String[1]):String[1]
+function meta::pure::compiler::test::printer::printValueSpecification(vs:Any[1], indent:String[1]):String[1]
 {
     $vs->match([
-        l:meta::pure::metamodel::function::LambdaFunction<Any>[1] |
-            let paramStr = $l.parameters->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(p | 
+        l:LambdaFunction<Any>[1] |
+            let paramStr = $l.parameters->cast(@VariableExpression)->map(p |
                 [$p.name->toOne(), ':', $p.genericType->toOne()->printType(), $p.multiplicity->toOne()->printMul()]->joinStrings('')
             )->joinStrings(', ');
-            let openVars = $l.openVariables->cast(@meta::pure::metamodel::valuespecification::VariableExpression)->map(v |
+            let openVars = $l.openVariables->cast(@VariableExpression)->map(v |
                 $indent + '  openVar ' + $v.name->toOne() + ' :' + $v.genericType->toOne()->printType() + $v.multiplicity->toOne()->printMul()
             )->joinStrings('\n');
-            let body = $l.expressionSequence->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->map(expr |
-                $expr->meta::pure::compiler::printer::printValueSpecification($indent + '  ')
+            let body = $l.expressionSequence->cast(@ValueSpecification)->map(expr |
+                $expr->meta::pure::compiler::test::printer::printValueSpecification($indent + '  ')
             )->joinStrings('\n');
             let lamCGT = $l.classifierGenericType->toOne()->printType();
             let lamMul = if($l.classifierGenericType->toOne()->genericTypeMultiplicityArguments()->isEmpty(),
@@ -274,9 +257,9 @@ function meta::pure::compiler::printer::printValueSpecification(vs:Any[1], inden
                 if($openVars == '', | '', | '\n' + $openVars),
                 if($body == '', | '', | '\n' + $body)
             ]->joinStrings('');,
-        fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
-            let params = $fi.parametersValues->cast(@meta::pure::metamodel::valuespecification::ValueSpecification)->map(p |
-                $p->meta::pure::compiler::printer::printValueSpecification($indent + '  ')
+        fi:FunctionInvocation[1] |
+            let params = $fi.parametersValues->cast(@ValueSpecification)->map(p |
+                $p->meta::pure::compiler::test::printer::printValueSpecification($indent + '  ')
             )->joinStrings('\n');
             let resolvedTypeParams = $fi.resolvedTypeParameters->map(rtp |
                 $indent + '  typeParam ' + $rtp.name + ' -> ' + $rtp.value->printType()->replace('#', '')
@@ -292,16 +275,16 @@ function meta::pure::compiler::printer::printValueSpecification(vs:Any[1], inden
                 if($resolvedMulParams == '', | '', | '\n' + $resolvedMulParams),
                 if($params == '', | '', | '\n' + $params)
             ]->joinStrings('');,
-        v:meta::pure::metamodel::valuespecification::VariableExpression[1] |
+        v:VariableExpression[1] |
             [
                 $indent, 'Variable ', $v.name->toOne(), ' :', $v.genericType->toOne()->printType(), $v.multiplicity->toOne()->printMul(),
                 $v.classifierGenericType->printClassifierGenericType(),
                 $v.sourceInformation->printSourceInfo()
             ]->joinStrings('');,
-        a:meta::pure::metamodel::valuespecification::ValueSpecification[1] |
-            let val = $a->cast(@meta::pure::metamodel::valuespecification::AtomicValue).value->toOne();
-            if($val->instanceOf(meta::pure::metamodel::function::LambdaFunction),
-               | $val->meta::pure::compiler::printer::printValueSpecification($indent),
+        a:ValueSpecification[1] |
+            let val = $a->cast(@AtomicValue).value->toOne();
+            if($val->instanceOf(LambdaFunction),
+               | $val->meta::pure::compiler::test::printer::printValueSpecification($indent),
                | [
                    $indent, 'AtomicValue  ', 
                    if($val->instanceOf(String), | '\'' + $val->toString() + '\'', | $val->toString()),
@@ -310,6 +293,6 @@ function meta::pure::compiler::printer::printValueSpecification(vs:Any[1], inden
                    $a.sourceInformation->printSourceInfo()
                  ]->joinStrings('')
             );,
-        other:Any[1] | $indent + 'unsupported: ' + $other->meta::pure::functions::meta::type()->elementToPath()
+        other:Any[1] | $indent + 'unsupported: ' + $other->type()->elementToPath()
     ]);
 }

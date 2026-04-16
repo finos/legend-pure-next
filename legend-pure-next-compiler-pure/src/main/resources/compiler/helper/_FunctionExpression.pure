@@ -1,24 +1,11 @@
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::type::generics::*;
 import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
 
-function meta::pure::compiler::helper::functionExpression::extractResolvedParametersBinding(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1]):ParametersBinding[1]
+function meta::pure::compiler::helper::functionExpression::extractResolvedParametersBinding(expr:FunctionExpression[1]):ParametersBinding[1]
 {
     let emptyBindings = newPlainParametersBinding();
     
@@ -29,51 +16,44 @@ function meta::pure::compiler::helper::functionExpression::extractResolvedParame
     
     let withMultiplicities = if($expr.resolvedMultiplicityParameters->isEmpty(),
        | $withTypes,
-       | $expr.resolvedMultiplicityParameters->fold({param, bb | $bb->addMultiplicityBinding(^meta::pure::metamodel::multiplicity::InferredMultiplicityParameter(name=$param.name), $param.value)}, $withTypes->cast(@ParametersBinding))
+       | $expr.resolvedMultiplicityParameters->fold({param, bb | $bb->addMultiplicityBinding(^InferredMultiplicityParameter(name=$param.name), $param.value)}, $withTypes->cast(@ParametersBinding))
     );
     
     $withMultiplicities;
 }
 
-function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1]):FunctionExpression[1]
 {
     populateResolvedParameters($expr, $bindings, [], []);
 }
 
-function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:meta::pure::metamodel::valuespecification::FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*]):meta::pure::metamodel::valuespecification::FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*]):FunctionExpression[1]
 {
     let doFilterType = $ownTypeParams->isNotEmpty();
     let tbKeys = $bindings.typeBindings->keys();
     let rtp = fold($tbKeys, {k, resolved |
         let vals = get($bindings.typeBindings, $k)->toOne();
-        if($doFilterType && !$ownTypeParams->contains($k),
-            | $resolved,
-            | if($vals.values->size() == 1,
-                  | $resolved->concatenate(^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name=$k, value=$vals.values->at(0))),
-                  | if($vals.values->size() > 1,
-                        | let common = findCommonGenericType($vals.values, false);
-                          if($common->isNotEmpty(),
-                              | $resolved->concatenate(^meta::pure::metamodel::type::generics::ResolvedTypeParameter(name=$k, value=$common->toOne())),
-                              | $resolved
-                          );,
-                        | $resolved
-                    )
-              )
+        if([pair(| $doFilterType && !$ownTypeParams->contains($k), | $resolved),
+            pair(| $vals.values->size() == 1, | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$vals.values->at(0)))),
+            pair(| $vals.values->size() > 1,
+                 | let common = findCommonGenericType($vals.values, false);
+                   if($common->isNotEmpty(),
+                       | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$common->toOne())),
+                       | $resolved
+                   );)],
+           | $resolved
         );
-    }, []->cast(@meta::pure::metamodel::type::generics::ResolvedTypeParameter));
+    }, []->cast(@ResolvedTypeParameter));
 
     let doFilterMul = $ownMulParams->isNotEmpty();
     let mbKeys = $bindings.multiplicityBindings->keys();
     let rmp = fold($mbKeys, {k, resolved |
         let vals = get($bindings.multiplicityBindings, $k)->toOne();
-        if($doFilterMul && !$ownMulParams->contains($k),
-            | $resolved,
-            | if($vals.values->size() == 1,
-                  | $resolved->concatenate(^meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter(name=$k, value=$vals.values->at(0))),
-                  | $resolved
-              )
+        if([pair(| $doFilterMul && !$ownMulParams->contains($k), | $resolved),
+            pair(| $vals.values->size() == 1, | $resolved->concatenate(^ResolvedMultiplicityParameter(name=$k, value=$vals.values->at(0))))],
+           | $resolved
         );
-    }, []->cast(@meta::pure::metamodel::type::generics::ResolvedMultiplicityParameter));
+    }, []->cast(@ResolvedMultiplicityParameter));
 
     if($rtp->isEmpty() && $rmp->isEmpty(),
         | $expr,
@@ -84,11 +64,11 @@ function meta::pure::compiler::helper::functionExpression::populateResolvedParam
     );
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::testExtractResolvedParametersBinding_empty():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::functionExpression::testExtractResolvedParametersBinding_empty():Boolean[1]
 {
-    let expr = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+    let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(),
+        genericType = ^InferredGenericType(),
         multiplicity = PureOne
     );
     
@@ -96,20 +76,20 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
     assertEquals('', toString($bindings));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::testPopulateAndExtract():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPopulateAndExtract():Boolean[1]
 {
     let targetClass = String;
-    let targetGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type=$targetClass);
+    let targetGT = ^InferredGenericType(type=$targetClass);
     let mul = PureOne;
     
     let b1 = newPlainParametersBinding();
     let b2 = $b1->addTypeBinding(^TypeParameter(name='T', contravariant=false), $targetGT);
     let b3 = $b2->addTypeBinding(^TypeParameter(name='Z', contravariant=false), $targetGT);
-    let bindings = $b3->addMultiplicityBinding(^meta::pure::metamodel::multiplicity::InferredMultiplicityParameter(name='m'), $mul);
+    let bindings = $b3->addMultiplicityBinding(^InferredMultiplicityParameter(name='m'), $mul);
     
-    let expr = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+    let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(),
+        genericType = ^InferredGenericType(),
         multiplicity = PureOne
     );
     
@@ -126,21 +106,21 @@ function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::t
     assertEquals('{T=String, Z=String | m=[1]}', toString($extracted));
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::functionExpression::testPopulateWithOwnership():Boolean[1]
+function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPopulateWithOwnership():Boolean[1]
 {
     let targetClass = String;
-    let targetGT = ^meta::pure::metamodel::type::generics::InferredGenericType(type=$targetClass);
+    let targetGT = ^InferredGenericType(type=$targetClass);
     let mul = PureOne;
     
     let b1 = newPlainParametersBinding();
     let b2 = $b1->addTypeBinding(^TypeParameter(name='T', contravariant=false), $targetGT);
     let b3 = $b2->addTypeBinding(^TypeParameter(name='Z', contravariant=false), $targetGT);
-    let b4 = $b3->addMultiplicityBinding(^meta::pure::metamodel::multiplicity::InferredMultiplicityParameter(name='m'), $mul);
-    let bindings = $b4->addMultiplicityBinding(^meta::pure::metamodel::multiplicity::InferredMultiplicityParameter(name='n'), $mul);
+    let b4 = $b3->addMultiplicityBinding(^InferredMultiplicityParameter(name='m'), $mul);
+    let bindings = $b4->addMultiplicityBinding(^InferredMultiplicityParameter(name='n'), $mul);
     
-    let expr = ^meta::pure::metamodel::valuespecification::FunctionInvocation(
+    let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(),
+        genericType = ^InferredGenericType(),
         multiplicity = PureOne
     );
     

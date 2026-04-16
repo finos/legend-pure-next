@@ -1,23 +1,4 @@
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::functions::meta::tests::model::*;
 
 function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
 {
@@ -83,12 +64,9 @@ function meta::pure::compiler::helper::type::c3merge(lists:List<Any>[*]):Type[*]
 
 function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1]):Boolean[1]
 {
-    if($sub == $super,
-        | true,
-        | if($sub->isBottomType() || $super->isTopType(),
-              | true,
-              | $sub->linearize()->filter(t | $t == $super)->isNotEmpty();
-          );
+    if([pair(| $sub == $super, | true),
+        pair(| $sub->isBottomType() || $super->isTopType(), | true)],
+       | $sub->linearize()->filter(t | $t == $super)->isNotEmpty();
     );
 }
 
@@ -99,40 +77,34 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*]):Type[
 
 function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1]):Type[0..1]
 {
-    if($types->isEmpty(),
-        | [],
-        | if($types->size() == 1,
-              | $types->at(0),
-              | let first = $types->at(0);
-                if($types->forAll(t | $t == $first),
-                    | $first,
-                    | let nonNil = $types->filter(t | !$t->isBottomType());
-                      if($nonNil->size() < $types->size(),
-                          | // Nil is present
-                            if($contravariant,
-                                | Nil,
-                                | if($nonNil->isEmpty(),
-                                      | Nil,
-                                      | $nonNil->findCommonType(false)
-                                  )
-                            ),
-                          | // RelationType logic blocked here since it is Tier 3
-                            let linearizations = $types->map(t | $t->linearize()->list());
-                            let firstLin = $linearizations->at(0).values;
-                            
-                            if($contravariant,
-                                | Nil, // GLB of unrelated types defaults to Nil
-                                | let commonList = $firstLin->filter(candidate | 
-                                      $linearizations->forAll(lin | $lin.values->contains($candidate))
-                                  );
-                                  if($commonList->isEmpty(),
-                                      | Any,
-                                      | $commonList->at(0)
-                                  );
-                            );
-                      );
-                );
-          );
+    if([pair(| $types->isEmpty(), | []),
+        pair(| $types->size() == 1, | $types->at(0))],
+       | let first = $types->at(0);
+         if($types->forAll(t | $t == $first),
+             | $first,
+             | let nonNil = $types->filter(t | !$t->isBottomType());
+               if($nonNil->size() < $types->size(),
+                   | // Nil is present
+                     if([pair(| $contravariant, | Nil),
+                         pair(| $nonNil->isEmpty(), | Nil)],
+                        | $nonNil->findCommonType(false)
+                     ),
+                   | // RelationType logic blocked here since it is Tier 3
+                     let linearizations = $types->map(t | $t->linearize()->list());
+                     let firstLin = $linearizations->at(0).values;
+
+                     if($contravariant,
+                         | Nil, // GLB of unrelated types defaults to Nil
+                         | let commonList = $firstLin->filter(candidate |
+                               $linearizations->forAll(lin | $lin.values->contains($candidate))
+                           );
+                           if($commonList->isEmpty(),
+                               | Any,
+                               | $commonList->at(0)
+                           );
+                     );
+               );
+         );
     );
 }
 

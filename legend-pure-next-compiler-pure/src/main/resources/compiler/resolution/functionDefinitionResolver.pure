@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::valuespecification::*;
 import meta::pure::compiler::resolution::functionDefinitionResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::*;
@@ -19,32 +20,32 @@ import meta::pure::compiler::*;
 
 Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveResult
 {
-    resolvedSpecs: meta::pure::metamodel::valuespecification::ValueSpecification[*];
-    context: meta::pure::compiler::CompilerContext[1];
+    resolvedSpecs: ValueSpecification[*];
+    context: CompilerContext[1];
 }
 
 Class meta::pure::compiler::resolution::functionDefinitionResolver::ResolveAccumulator
 {
-    scope: meta::pure::metamodel::valuespecification::VariableExpression[*];
-    context: meta::pure::compiler::CompilerContext[1];
-    resolvedSpecs: meta::pure::metamodel::valuespecification::ValueSpecification[*];
+    scope: VariableExpression[*];
+    context: CompilerContext[1];
+    resolvedSpecs: ValueSpecification[*];
 }
 
-function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:meta::pure::metamodel::valuespecification::ValueSpecification[*], params:meta::pure::metamodel::valuespecification::VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):ResolveResult[1]
+function meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(specs:ValueSpecification[*], params:VariableExpression[*], context:CompilerContext[1]):ResolveResult[1]
 {
     let result = $specs->fold({spec, acc |
         let r = resolveValueSpecification($spec, $acc.scope, $acc.context);
         let resolved = if($r.value->isEmpty(), | $spec, | $r.value->toOne());
         let ctx2 = $spec->match([
-            fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+            fi:FunctionInvocation[1] |
                 checkLetDuplicate($fi, $acc.scope, $r.context),
             a:Any[1] | $r.context
         ]);
         let newScope = $resolved->match([
-            fi:meta::pure::metamodel::valuespecification::FunctionInvocation[1] |
+            fi:FunctionInvocation[1] |
                 if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 1,
-                    | let varName = $fi.parametersValues->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue<String>).value->cast(@String);
-                      $acc.scope->concatenate(^meta::pure::metamodel::valuespecification::VariableExpression(
+                    | let varName = $fi.parametersValues->at(0)->cast(@AtomicValue<String>).value->cast(@String);
+                      $acc.scope->concatenate(^VariableExpression(
                           name = $varName,
                           genericType = $resolved.genericType,
                           multiplicity = $resolved.multiplicity

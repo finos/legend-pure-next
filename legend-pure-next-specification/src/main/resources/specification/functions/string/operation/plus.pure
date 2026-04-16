@@ -64,24 +64,24 @@ function <<PCT.test>> meta::pure::functions::string::tests::plus::testPlusInIter
     assertEquals('init: Doe RoeDoe Some_LName', $f->eval(|$person.lastName));
 }
 
-Class meta::pure::functions::string::tests::plus::model::P_GeographicEntity
+Class <<test.TestDependency>> meta::pure::functions::string::tests::plus::model::P_GeographicEntity
 {
     type : P_GeographicEntityType[1];
 }
 
-Class meta::pure::functions::string::tests::plus::model::P_Location extends P_GeographicEntity
+Class <<test.TestDependency>> meta::pure::functions::string::tests::plus::model::P_Location extends P_GeographicEntity
 {
     place : String[1];
     censusdate: Date[0..1];
 }
 
-Class meta::pure::functions::string::tests::plus::model::P_Person
+Class <<test.TestDependency>> meta::pure::functions::string::tests::plus::model::P_Person
 {
     firstName : String[1];
     lastName: String[1];
 }
 
-Enum meta::pure::functions::string::tests::plus::model::P_GeographicEntityType
+Enum <<test.TestDependency>> meta::pure::functions::string::tests::plus::model::P_GeographicEntityType
 {
     {doc.doc = 'A city, town, village, or other urban area.'} CITY,
     <<doc.deprecated>> COUNTRY,

@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::generalizationCompiler::*;
 import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::extension::*;
 
-function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>[1]
+function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:CompilerContext[1]):CompilerResult<PrimitiveType>[1]
 {
     let packagePath = if($protocolPrimitive.package->isEmpty(), | '', | $protocolPrimitive.package->toOne().pointerValue);
     let primitiveName = if($packagePath == '', | $protocolPrimitive.name, | $packagePath + '::' + $protocolPrimitive.name);
-    let skeleton = $context->resolveElement($primitiveName)->toOne()->cast(@meta::pure::metamodel::type::PrimitiveType);
+    let skeleton = $context->resolveElement($primitiveName)->toOne()->cast(@PrimitiveType);
     let ownerCtx = 'primitive type \'' + $primitiveName + '\'';
 
     let genAccum = compileGeneralizations($protocolPrimitive.generalizations, $skeleton, $context, $packagePath, $ownerCtx);
@@ -32,9 +35,9 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
         | $protocolPrimitive.typeVariables->map(tv |
             let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
             let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-            ^meta::pure::metamodel::valuespecification::VariableExpression(
+            ^VariableExpression(
                 name = $tv.name,
-                genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ctx1->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type)),
+                genericType = ^UserDefinedGenericType(type = $ctx1->resolveElement($genType)->toOne()->cast(@Type)),
                 multiplicity = $mMult
             );
         )
@@ -45,20 +48,20 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
         typeVariables = $typeVariables,
         generalizations = $genAccum.values->map(g | ^$g(specific = ~.~))
     );
-    let ownerGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $compiledPrim);
+    let ownerGenericType = ^UserDefinedGenericType(type = $compiledPrim);
     let constraintAccum = compileConstraints($protocolPrimitive.constraints, $ownerGenericType, $typeVariables, $ctx1);
     let ctx2 = $constraintAccum.context;
 
     // Compile stereotypes and tagged values
     let stereoAccum = $protocolPrimitive.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx2));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx2));
     let tvAccum = $protocolPrimitive.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
     let ctx3 = $tvAccum.context;
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::type::PrimitiveType>(
+    ^CompilerResult<PrimitiveType>(
         value = ^$compiledPrim(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,

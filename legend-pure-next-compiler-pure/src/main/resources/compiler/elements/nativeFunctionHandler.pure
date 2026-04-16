@@ -13,27 +13,35 @@
 // limitations under the License.
 
 import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::functionTypeCompiler::*;
+import meta::pure::compiler::structural::packageableFunctionCompiler::*;
+import meta::pure::compiler::structural::variableCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
 
-function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
-    
+
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    
-    let rootPkg = ^meta::pure::metamodel::Package(name = 'Root');
-    let emptyFunc = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::function::NativeFunction)
-    )->cast(@meta::pure::metamodel::function::NativeFunction<Any>);
-    
+
+    let rootPkg = ^Package(name = 'Root');
+    let emptyFunc = new(
+        ^UserDefinedGenericType(type = NativeFunction)
+    )->cast(@NativeFunction<Any>);
+
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = $fn.name,
-        package = ^meta::pure::metamodel::Package(name = $packagePath, package = $rootPkg),
-        sourceInformation = $fn.sourceInformation->map(si | ^meta::pure::metamodel::SourceInformation(
+        package = ^Package(name = $packagePath, package = $rootPkg),
+        sourceInformation = $fn.sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -41,42 +49,27 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
             endColumn = $si.endColumn
         ))
     );
-    
+
     ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
 }
 
-function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::NativeFunction<Any>>[1]
+function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]
 {
     let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
-    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@meta::pure::metamodel::function::NativeFunction<Any>);
+    let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@NativeFunction<Any>);
     let ownerCtx = 'native function \'' + $fName + '\'';
     let siCtx = if($fn.sourceInformation->isNotEmpty(), | formatSourceInfo($fn.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
     // Check for duplicate parameter names
-    let dupNames = $fn.parameters->map(p | $p.name)->filter(n | $fn.parameters->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
-    let ctx1 = $dupNames->fold({d, c |
-        ^$c(errors += 'Duplicate parameter name \'' + $d + '\' in ' + $ownerCtx + $siCtx);
-    }, $ctx);
+    let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
 
     // Compile type parameters
-    let fnTypeParams = $fn.typeParameters->map(tp | ^meta::pure::metamodel::type::generics::TypeParameter(name = $tp.name, contravariant = false)->cast(@meta::pure::metamodel::type::generics::TypeParameter));
+    let fnTypeParams = compileTypeParameters($fn.typeParameters);
 
-    // Compile parameters with context threading
-    let paramAccum = $fn.parameters->fold({p, acc |
-        let pType = $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue);
-        let gtResult = $pType->compileGenericType($acc.context, $packagePath, $fnTypeParams, 'parameter \'' + $p.name + '\'', $ownerCtx);
-        let mMult = $p.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
-        ^$acc(
-            values += ^meta::pure::metamodel::valuespecification::VariableExpression(
-                name = $p.name,
-                genericType = $gtResult.value->toOne(),
-                multiplicity = $mMult
-            ),
-            context = $gtResult.context
-        );
-    }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::valuespecification::VariableExpression>(context = $ctx1));
+    // Compile parameters
+    let paramAccum = compileParameters($fn.parameters, $ctx1, $packagePath, $fnTypeParams, $ownerCtx);
     let compiledParams = $paramAccum.values;
     let ctx2 = $paramAccum.context;
 
@@ -88,39 +81,25 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
 
     let rMMult = $fn.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-    let functionType = meta::pure::functions::lang::new(
-        ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::FunctionType)
-    )->cast(@meta::pure::metamodel::type::FunctionType);
-    let populatedFunctionType = ^$functionType(
-        parameters = $compiledParams,
-        returnType = $rMGenType,
-        returnMultiplicity = $rMMult
-    );
+    let classifierGT = compileFunctionClassifierGenericType(NativeFunction, $compiledParams, $rMGenType, $rMMult);
 
     // Compile stereotypes and tagged values
     let stereoAccum = $fn.stereotypes->fold({s, acc |
                                 compileStereotype($s, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::Stereotype>(context = $ctx3));
+                            }, ^CompilerListResult<Stereotype>(context = $ctx3));
     let tvAccum = $fn.taggedValues->fold({t, acc |
                                 compileTaggedValue($t, $acc, $ownerCtx);
-                            }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::extension::TaggedValue>(context = $stereoAccum.context));
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
     let ctx4 = $tvAccum.context;
 
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::function::NativeFunction<Any>>(
+    ^CompilerResult<NativeFunction<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,
             parameters = $compiledParams,
             returnGenericType = $rMGenType,
             returnMultiplicity = $rMMult,
-            classifierGenericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                type = meta::pure::metamodel::function::NativeFunction,
-                typeArguments = [
-                    ^meta::pure::metamodel::type::generics::UserDefinedGenericType(
-                        type = $populatedFunctionType
-                    )
-                ]
-            )
+            classifierGenericType = $classifierGT
         ),
         context = $ctx4
     );

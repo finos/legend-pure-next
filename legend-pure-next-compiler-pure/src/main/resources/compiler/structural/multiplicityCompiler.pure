@@ -12,39 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::compiler::structural::multiplicityCompiler::*;
 
-function meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+function meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(m:meta::pure::protocol::grammar::multiplicity::Multiplicity_Protocol[1]):Multiplicity[1]
 {
     $m->match([
         mp:meta::pure::protocol::grammar::multiplicity::MultiplicityParameter[1] |
-            ^meta::pure::metamodel::multiplicity::UserDefinedMultiplicityParameter(name = $mp.name),
+            ^UserDefinedMultiplicityParameter(name = $mp.name),
         cm:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1] |
             compileConcreteMultiplicity($cm),
         um:meta::pure::protocol::grammar::multiplicity::UndefinedMultiplicity[1] |
-            ^meta::pure::metamodel::multiplicity::UndefinedMultiplicity(),
+            ^UndefinedMultiplicity(),
         u:Any[1] |
-            meta::pure::metamodel::multiplicity::PureOne
+            PureOne
     ]);
 }
 
-function meta::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):meta::pure::metamodel::multiplicity::Multiplicity[1]
+function meta::pure::compiler::structural::multiplicityCompiler::compileConcreteMultiplicity(pMult:meta::pure::protocol::grammar::multiplicity::ConcreteMultiplicity[1]):Multiplicity[1]
 {
     if($pMult.upperBound->isEmpty(),
         | if($pMult.lowerBound.value == 0,
-              | meta::pure::metamodel::multiplicity::ZeroMany,
-              | meta::pure::metamodel::multiplicity::OneMany
+              | ZeroMany,
+              | OneMany
           ),
         | let upper = $pMult.upperBound->toOne().value;
-          if($pMult.lowerBound.value == 1 && $upper == 1,
-              | meta::pure::metamodel::multiplicity::PureOne,
-              | if($pMult.lowerBound.value == 0 && $upper == 1,
-                    | meta::pure::metamodel::multiplicity::ZeroOne,
-                    | ^meta::pure::metamodel::multiplicity::UserDefinedAdHocMultiplicity(
-                          lowerBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $pMult.lowerBound.value),
-                          upperBound = ^meta::pure::metamodel::multiplicity::MultiplicityValue(value = $upper)
-                      )
-                )
+          if([pair(| $pMult.lowerBound.value == 1 && $upper == 1, | PureOne),
+              pair(| $pMult.lowerBound.value == 0 && $upper == 1, | ZeroOne)],
+             | ^UserDefinedAdHocMultiplicity(
+                   lowerBound = ^MultiplicityValue(value = $pMult.lowerBound.value),
+                   upperBound = ^MultiplicityValue(value = $upper)
+               )
           );
     );
 }

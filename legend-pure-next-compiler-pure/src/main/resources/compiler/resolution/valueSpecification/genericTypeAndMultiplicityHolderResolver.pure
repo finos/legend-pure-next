@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::genericTypeAndMultiplicityHolderResolver::resolveGenericTypeAndMultiplicityHolder(gm:meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::genericTypeAndMultiplicityHolderResolver::resolveGenericTypeAndMultiplicityHolder(gm:GenericTypeAndMultiplicityHolder[1], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<ValueSpecification>[1]
 {
-    let resolved = if($gm.multiplicity->isEmpty() || $gm.multiplicity->toOne()->instanceOf(meta::pure::metamodel::multiplicity::UndefinedMultiplicity),
-        | ^$gm(multiplicity = meta::pure::metamodel::multiplicity::PureOne),
+    let resolved = if($gm.multiplicity->isEmpty() || $gm.multiplicity->toOne()->instanceOf(UndefinedMultiplicity),
+        | ^$gm(multiplicity = PureOne),
         | $gm
     );
-    ^meta::pure::compiler::CompilerResult<meta::pure::metamodel::valuespecification::ValueSpecification>(
+    ^meta::pure::compiler::CompilerResult<ValueSpecification>(
         value = $resolved,
         context = $context
     );

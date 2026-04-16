@@ -150,18 +150,18 @@ function <<PCT.test>> meta::pure::functions::string::tests::toString::testEnumer
     assertEquals('CITY', $f->eval(|STR_GeographicEntityType.CITY->toString()));
 }
 
-Enum  meta::pure::functions::string::tests::toString::ErrorType {
+Enum <<test.TestDependency>>  meta::pure::functions::string::tests::toString::ErrorType {
    NoGin,
    NoTonic
 }
 
-Class meta::pure::functions::string::tests::toString::STR_Person
+Class <<test.TestDependency>> meta::pure::functions::string::tests::toString::STR_Person
 {
     firstName : String[1];
     lastName : String[1];
 }
 
-Enum meta::pure::functions::string::tests::toString::STR_GeographicEntityType
+Enum <<test.TestDependency>> meta::pure::functions::string::tests::toString::STR_GeographicEntityType
 {
     {doc.doc = 'A city, town, village, or other urban area.'} CITY,
     <<doc.deprecated>> COUNTRY,

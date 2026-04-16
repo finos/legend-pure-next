@@ -1,25 +1,17 @@
 import meta::pure::compiler::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
 import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
 import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
 import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
-import meta::pure::metamodel::relation::*;
+import meta::pure::compiler::helper::genericTypeOperation::*;
+import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::functions::lang::*;
 
 // GenericType helpers
 
@@ -32,7 +24,7 @@ function meta::pure::compiler::helper::genericType::printGenericType(genericType
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | 'NotSet',
+            ns  : CompilerNotSetGenericType[1] | 'NotSet',
             ugt : UndefinedGenericType[1] | '?',
             gto : GenericTypeOperation[1] | $gto->printGenericTypeOperation($fullPath),
             gtv : GenericTypeValue[1]     | $gtv->printGenericTypeValue($fullPath),
@@ -54,47 +46,33 @@ function meta::pure::compiler::helper::genericType::printGenericTypeValue(gtv:Ge
     if($rawType->isEmpty(),
         | 'Unknown',
         | let t = $rawType->toOne();
-          if($t->instanceOf(TypeParameter),
-              | let tpName = $t->cast(@TypeParameter).name;
-                if($tpName->isEmpty(), | '?', | $tpName->toOne());,
-              | let typeName = $t->match(
-                    [
-                        ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
-                        rt : meta::pure::metamodel::relation::RelationType<Any>[1] | $rt->printRelationType($fullPath),
-                        pe : PackageableElement[1] |
-                            if($fullPath,
-                                | let pPath = $pe->fullPath();
-                                  if($pPath->startsWith('meta::pure::metamodel::') || $pPath->startsWith('meta::pure::functions::'),
-                                      | $pe.name->toOne(),
-                                      | $pPath
-                                  );,
-                                | $pe.name->toOne()
-                            ),
-                        a  : Any[1]                | 'Unknown'
-                    ]
-                );
-                let typeArgs = $gtv.typeArguments;
-                let mulArgs = $gtv.multiplicityArguments;
-                if($typeArgs->isEmpty() && $mulArgs->isEmpty(),
-                    | $typeName,
-                    | let typeArgStr = $typeArgs->map(a | $a->printGenericType($fullPath))->joinStrings(', ');
-                      let mulArgStr = $mulArgs->map(m | '|' + $m->printMultiplicityBare())->joinStrings('');
-                      $typeName + '<' + $typeArgStr + $mulArgStr + '>';
-                );
-          );
+          $t->match(
+              [
+                  tp : TypeParameter[1] | if($tp.name->isEmpty(), | '?', | $tp.name->toOne()),
+                  ft : FunctionType[1]       | $ft->printFunctionType($fullPath),
+                  rt : RelationType<Any>[1] | $rt->printRelationType($fullPath),
+                  pe : PackageableElement[1] |
+                      let typeName = if($fullPath,
+                          | let pPath = $pe->fullPath();
+                            if($pPath->startsWith('meta::pure::metamodel::') || $pPath->startsWith('meta::pure::functions::'),
+                                | $pe.name->toOne(),
+                                | $pPath
+                            );,
+                          | $pe.name->toOne()
+                      );
+                      let typeArgs = $gtv.typeArguments;
+                      let mulArgs = $gtv.multiplicityArguments;
+                      if($typeArgs->isEmpty() && $mulArgs->isEmpty(),
+                          | $typeName,
+                          | let typeArgStr = $typeArgs->map(a | $a->printGenericType($fullPath))->joinStrings(', ');
+                            let mulArgStr = $mulArgs->map(m | '|' + $m->printMultiplicityBare())->joinStrings('');
+                            $typeName + '<' + $typeArgStr + $mulArgStr + '>';
+                      );,
+                  a  : Any[1]                | 'Unknown'
+              ]);
     );
 }
 
-function meta::pure::compiler::helper::genericType::printGenericTypeOperation(gto:GenericTypeOperation[1], fullPath:Boolean[1]):String[1]
-{
-    let left = $gto.left->printGenericType($fullPath);
-    let opName = $gto.operationType->toString();
-    let op = if($opName == 'Union', | '+',
-             | if($opName == 'Difference', | '-',
-               | if($opName == 'Equal', | '=', | '⊆')));
-    let right = $gto.right->printGenericType($fullPath);
-    $left + $op + $right;
-}
 
 
 // GenericType accessors
@@ -126,7 +104,7 @@ function meta::pure::compiler::helper::genericType::isConcreteGenericType(generi
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | false,
+            ns  : CompilerNotSetGenericType[1] | false,
             ugt : UndefinedGenericType[1] | true,
             gto : GenericTypeOperation[1] | $gto->isConcreteGenericTypeOperation(),
             gtv : GenericTypeValue[1]     | $gtv->isConcreteGenericTypeValue(),
@@ -139,31 +117,16 @@ function meta::pure::compiler::helper::genericType::isConcreteGenericTypeValue(g
 {
     if($gtv.type->isEmpty(),
         | true,
-        | let t = $gtv.type->toOne();
-          if($t->instanceOf(TypeParameter),
-              | false,
-              | let ftCheck = $t->match(
-                    [
-                        ft : FunctionType[1] | $ft->isConcreteFunctionType(),
-                        a  : Any[1]          | true
-                    ]
-                );
-                if(!$ftCheck,
-                    | false,
-                    | $gtv.typeArguments->filter(arg | !$arg->isConcreteGenericType())->isEmpty()
-                );
+        | $gtv.type->toOne()->match(
+              [
+                  tp : TypeParameter[1] | false,
+                  ft : FunctionType[1]  | if($ft->isConcreteFunctionType(), | $gtv.typeArguments->filter(arg | !$arg->isConcreteGenericType())->isEmpty(), | false),
+                  a  : Any[1]           | $gtv.typeArguments->filter(arg | !$arg->isConcreteGenericType())->isEmpty()
+              ]
           );
     );
 }
 
-function meta::pure::compiler::helper::genericType::isConcreteGenericTypeOperation(gto:GenericTypeOperation[1]):Boolean[1]
-{
-    let opName = $gto.operationType->toString();
-    if($opName == 'Subset' || $opName == 'Equal',
-        | $gto.right->isConcreteGenericType(),
-        | $gto.left->isConcreteGenericType() && $gto.right->isConcreteGenericType()
-    );
-}
 
 
 // GenericType concreteness in context
@@ -187,11 +150,10 @@ function meta::pure::compiler::helper::genericType::collectReferencedTypeParamet
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
+            ns  : CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
-                $gto.left->collectReferencedTypeParameterNames()
-                    ->concatenate($gto.right->collectReferencedTypeParameterNames()),
+                $gto->collectGenericTypeOperationReferencedTypeParameterNames(),
             gtv : GenericTypeValue[1]     |
                 let rawType = $gtv.type;
                 let tpNames = if($rawType->isEmpty(),
@@ -215,7 +177,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedMultiplicit
 {
     $genericType->match(
         [
-            ns  : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | [],
+            ns  : CompilerNotSetGenericType[1] | [],
             ugt : UndefinedGenericType[1] | [],
             gto : GenericTypeOperation[1] |
                 $gto.left->collectReferencedMultiplicityParameterNames()
@@ -249,13 +211,13 @@ function meta::pure::compiler::helper::genericType::collectReferencedMultiplicit
 
 // Tests
 
-Class meta::pure::compiler::helper::genericType::tests::MyClass<T>
+Class <<test.TestDependency>> meta::pure::compiler::helper::genericType::tests::MyClass<T>
 {
     tpProp: T[1];
     nestedTpProp: Class<T>[1];
 }
 
-Class meta::pure::compiler::helper::genericType::tests::TestClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::genericType::tests::TestClass
 {
     intProp: Integer[1];
     strProp: String[1];
@@ -414,11 +376,11 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithSameFunctionType():Boolean[1]
 {
     // LambdaFunction<{Integer[1]->Boolean[1]}> for both
-    let ft = meta::pure::functions::lang::new(
+    let ft = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concretesFT = ^$ft(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Boolean),
         returnMultiplicity = PureOne
     );
@@ -436,19 +398,19 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFindCommonGenericType_lambdaWithDifferentFunctionTypeInstances():Boolean[1]
 {
     // Two LambdaFunction<{Integer[1]->Integer[1]}> with DIFFERENT FunctionType objects
-    let ft1 = meta::pure::functions::lang::new(
+    let ft1 = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concreteFT1 = ^$ft1(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Integer),
         returnMultiplicity = PureOne
     );
-    let ft2 = meta::pure::functions::lang::new(
+    let ft2 = new(
         ^UserDefinedGenericType(type = FunctionType)
     )->cast(@FunctionType);
     let concreteFT2 = ^$ft2(
-        parameters = [^meta::pure::metamodel::valuespecification::VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
+        parameters = [^VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
         returnType = ^InferredGenericType(type = Integer),
         returnMultiplicity = PureOne
     );
@@ -474,15 +436,29 @@ function meta::pure::compiler::helper::genericType::collectTypeParameterBindings
                       otherParamType : Type[1] |
                           $argGT->match([
                               argV : GenericTypeValue[1] |
-                                  let b1 = if($otherParamType->instanceOf(FunctionType) && $argV.type->isNotEmpty() && $argV.type->toOne()->instanceOf(FunctionType),
-                                      | collectTypeParameterBindings($paramV.type->toOne()->cast(@FunctionType), $argV.type->toOne()->cast(@FunctionType), $bindings),
-                                      | $bindings
-                                  );
+                                  let b1 = $otherParamType->match([
+                                      paramFT : FunctionType[1] |
+                                          if($argV.type->isNotEmpty(),
+                                              | $argV.type->toOne()->match([
+                                                    argFT : FunctionType[1] | collectTypeParameterBindings($paramFT, $argFT, $bindings),
+                                                    other : Type[1] | $bindings
+                                                ]);,
+                                              | $bindings
+                                          );,
+                                      other : Type[1] | $bindings
+                                  ]);
                                   // Recurse into RelationType columns for wildcard binding
-                                  let b1rt = if($otherParamType->instanceOf(RelationType) && $argV.type->isNotEmpty() && $argV.type->toOne()->instanceOf(RelationType),
-                                      | collectRelationTypeParameterBindings($otherParamType->cast(@RelationType<Any>), $argV.type->toOne()->cast(@RelationType<Any>), $b1),
-                                      | $b1
-                                  );
+                                  let b1rt = $otherParamType->match([
+                                      paramRT : RelationType<Any>[1] |
+                                          if($argV.type->isNotEmpty(),
+                                              | $argV.type->toOne()->match([
+                                                    argRT : RelationType<Any>[1] | collectRelationTypeParameterBindings($paramRT, $argRT, $b1),
+                                                    other : Type[1] | $b1
+                                                ]);,
+                                              | $b1
+                                          );,
+                                      other : Type[1] | $b1
+                                  ]);
                                   
                                   // Recurse into type arguments positionally
                                   let b2 = if($paramV.typeArguments->isNotEmpty() && $argV.typeArguments->isNotEmpty(),
@@ -500,14 +476,7 @@ function meta::pure::compiler::helper::genericType::collectTypeParameterBindings
                   ])
             ),
         gto : GenericTypeOperation[1] |
-            if($gto.operationType == GenericTypeOperationType.Subset,
-                | collectTypeParameterBindings($gto.left, $argGT, $bindings),
-                | if($gto.operationType == GenericTypeOperationType.Equal,
-                      | let b1 = collectTypeParameterBindings($gto.left, $argGT, $bindings);
-                        collectTypeParameterBindings($gto.right, $argGT, $b1);,
-                      | $bindings
-                  )
-            ),
+            $gto->collectGenericTypeOperationTypeParameterBindings($argGT, $bindings),
         otherParamGT : GenericType[1] | $bindings
     ])
 }
@@ -532,23 +501,25 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
           if($sourceType == $targetType,
               | $src,
               | let initialBindings = newPlainParametersBinding();
-                let typeB = if($sourceType->instanceOf(Class),
-                    | $sourceType->cast(@Class<Any>).typeParameters->zip($src.typeArguments)->fold({pair, bb | $bb->addTypeBinding($pair.first, $pair.second)}, $initialBindings->cast(@ParametersBinding)),
-                    | $initialBindings
-                );
-                let mulB = if($sourceType->instanceOf(Class) && $src.multiplicityArguments->isNotEmpty(),
-                    | $sourceType->cast(@Class<Any>).multiplicityParameters->zip($src.multiplicityArguments)->fold({pair, bb | $bb->addMultiplicityBinding($pair.first, $pair.second)}, $typeB->cast(@ParametersBinding)),
-                    | $typeB
-                );
-                
-                let validGens = $sourceType.generalizations->filter(g | 
-                    $g.general->instanceOf(GenericTypeValue) 
-                    && $g.general->cast(@GenericTypeValue).type->isNotEmpty()
-                    && $g.general->cast(@GenericTypeValue).type->toOne()->linearize()->contains($targetType)
+                let bindings = $sourceType->match([
+                    cls : Class<Any>[1] |
+                        let typeB = $cls.typeParameters->zip($src.typeArguments)->fold({pair, bb | $bb->addTypeBinding($pair.first, $pair.second)}, $initialBindings->cast(@ParametersBinding));
+                        if($src.multiplicityArguments->isNotEmpty(),
+                            | $cls.multiplicityParameters->zip($src.multiplicityArguments)->fold({pair, bb | $bb->addMultiplicityBinding($pair.first, $pair.second)}, $typeB->cast(@ParametersBinding)),
+                            | $typeB
+                        );,
+                    other : Type[1] | $initialBindings
+                ]);
+
+                let validGens = $sourceType.generalizations->filter(g |
+                    $g.general->match([
+                        gtv : GenericTypeValue[1] | $gtv.type->isNotEmpty() && $gtv.type->toOne()->linearize()->contains($targetType),
+                        other : GenericType[1] | false
+                    ])
                 );
                 if($validGens->isEmpty(),
                     | [],
-                    | let resolvedGT = makeAsConcreteAsPossible($validGens->at(0).general, $mulB);
+                    | let resolvedGT = makeAsConcreteAsPossible($validGens->at(0).general, $bindings);
                       resolveForTarget($resolvedGT, $targetType);
                 );
           );
@@ -565,16 +536,18 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
     if($withArgs->size() == $projectedValues->size() && $withArgs->isNotEmpty(),
         | let argCount = $withArgs->at(0).typeArguments->size();
           if($withArgs->forAll(gt | $gt.typeArguments->size() == $argCount) && $argCount > 0,
-              | let typeParams = if($common->instanceOf(Class), | $common->cast(@Class<Any>).typeParameters, | []);
+              | let typeParams = $common->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
                 let commonArgs = range($argCount)->map({i | 
                     let argsAtPos = $withArgs->map(gt | $gt.typeArguments->at($i));
                     let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
                     findCommonGenericType($argsAtPos, $argContravariant);
                 })->filter(a | $a->isNotEmpty())->map(a | $a->toOne());
                 
-                if($commonArgs->size() == $argCount && $resultType->instanceOf(meta::pure::metamodel::type::generics::GenericTypeValue),
-                    | let rtv = $resultType->cast(@meta::pure::metamodel::type::generics::GenericTypeValue);
-                      ^$rtv(typeArguments = $commonArgs);,
+                if($commonArgs->size() == $argCount,
+                    | $resultType->match([
+                          rtv : GenericTypeValue[1] | ^$rtv(typeArguments = $commonArgs),
+                          other : GenericType[1] | $resultType
+                      ]),
                     | $resultType
                 );,
               | $resultType
@@ -596,7 +569,7 @@ function meta::pure::compiler::helper::genericType::range(start:Integer[1], end:
 function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1]):GenericType[0..1]
 {
     if($genericTypes->isEmpty(),
-        | ^meta::pure::metamodel::type::generics::InferredGenericType(type = Nil),
+        | ^InferredGenericType(type = Nil),
         | let nonNullValues = $genericTypes->filter(gt | $gt->instanceOf(GenericTypeValue))->cast(@GenericTypeValue);
           
           let firstName = if($nonNullValues->isNotEmpty() && $nonNullValues->at(0).type->isNotEmpty() && $nonNullValues->at(0).type->toOne()->instanceOf(TypeParameter),
@@ -616,13 +589,13 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                       let rawFunctionTypes = $rawTypes->filter(t | $t->instanceOf(FunctionType))->cast(@FunctionType);
                       if($rawFunctionTypes->size() == $rawTypes->size() && $rawFunctionTypes->isNotEmpty(),
                           | let common = findCommonFunctionType($rawFunctionTypes);
-                            if($common->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common->toOne()), | []);,
+                            if($common->isNotEmpty(), | ^InferredGenericType(type = $common->toOne()), | []);,
                           |
                       let commonType = findCommonType($rawTypes, $contravariant);
                       if($commonType->isEmpty(),
                           | [],
                           | let common = $commonType->toOne();
-                            let resultType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = $common);
+                            let resultType = ^InferredGenericType(type = $common);
                             
                             let projected = if($rawTypes->forAll(t | $t == $common),
                                 | $nonNullValues,
@@ -643,81 +616,43 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
 function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(genericType:GenericType[1], bindings:ParametersBinding[1]):GenericType[1]
 {
     $genericType->match([
-        ns : meta::pure::metamodel::type::generics::CompilerNotSetGenericType[1] | $genericType,
+        ns : CompilerNotSetGenericType[1] | $genericType,
         undefined : UndefinedGenericType[1] | $genericType,
-        gto : meta::pure::metamodel::relation::GenericTypeOperation[1] |
-            let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings);
-            let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings);
-            // If both sides are concrete RelationTypes, evaluate the operation (like Java _GenericTypeOperation.makeAsConcreteAsPossible)
-            let evaluated = if($resolvedLeft->instanceOf(GenericTypeValue) && $resolvedLeft->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedLeft->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType)
-                               && $resolvedRight->instanceOf(GenericTypeValue) && $resolvedRight->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedRight->cast(@GenericTypeValue).type->toOne()->instanceOf(meta::pure::metamodel::relation::RelationType),
-                | let leftRT = $resolvedLeft->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
-                  let rightRT = $resolvedRight->cast(@GenericTypeValue).type->toOne()->cast(@meta::pure::metamodel::relation::RelationType<Any>);
-                  let result = evaluateRelationTypeOperation($leftRT, $rightRT, $gto.operationType);
-                  if($result->isNotEmpty(), | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $result->toOne()), | []);,
-                | []
-            );
-            if($evaluated->isNotEmpty(),
-                | $evaluated->toOne(),
-                | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
-                      | ^$gto(left = $resolvedLeft, right = $resolvedRight),
-                      | $genericType
-                  )
-            );,
+        gto : GenericTypeOperation[1] |
+            $gto->makeGenericTypeOperationAsConcreteAsPossible($bindings),
         gtv : GenericTypeValue[1] |
-            if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(TypeParameter),
-                | let name = $gtv.type->toOne()->cast(@TypeParameter).name;
-                  let boundTypes = $bindings.typeBindings->get($name);
-                  if($boundTypes->isEmpty(),
+            if($gtv.type->isEmpty(),
+                | let typeArgsResolved = $gtv.typeArguments->map(a | makeAsConcreteAsPossible($a, $bindings));
+                  let mulArgsResolved = $gtv.multiplicityArguments->map(m | makeAsConcreteAsPossible($m, $bindings));
+                  if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
                       | $genericType,
-                      | if($boundTypes->toOne().values->size() == 1,
-                            | $boundTypes->toOne().values->at(0),
-                            | let common = findCommonGenericType($boundTypes->toOne().values);
-                              if($common->isEmpty(), | $genericType, | $common->toOne());
-                        )
+                      | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
                   );,
-                | let ftResolved = if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(FunctionType),
-                      | makeAsConcreteAsPossible($genericType, $gtv.type->toOne()->cast(@FunctionType), $bindings),
-                      | []
-                  );
-                  // RelationType inference: resolve column types/multiplicities
-                  let rtResolved = if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(RelationType),
-                      | makeRelationTypeAsConcreteAsPossible($gtv.type->toOne()->cast(@RelationType<Any>), $bindings),
-                      | []
-                  );
-                  if($ftResolved->isNotEmpty(),
-                      | $ftResolved->toOne(),
-                      | if($rtResolved->isNotEmpty(),
-                            | $rtResolved->toOne(),
-                            | let typeArgsResolved = $gtv.typeArguments->map(a | makeAsConcreteAsPossible($a, $bindings));
-                              let mulArgsResolved = $gtv.multiplicityArguments->map(m | makeAsConcreteAsPossible($m, $bindings));
-                              if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
-                                  | $genericType,
-                                  | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
-                              );
-                        )
-                  );
+                | $gtv.type->toOne()->match([
+                      tp : TypeParameter[1] |
+                          let boundTypes = $bindings.typeBindings->get($tp.name);
+                          if([pair(| $boundTypes->isEmpty(), | $genericType),
+                              pair(| $boundTypes->toOne().values->size() == 1, | $boundTypes->toOne().values->at(0))],
+                             | let common = findCommonGenericType($boundTypes->toOne().values);
+                               if($common->isEmpty(), | $genericType, | $common->toOne());
+                          );,
+                      ft : FunctionType[1] |
+                          let ftResolved = makeAsConcreteAsPossible($genericType, $ft, $bindings);
+                          if($ftResolved->isNotEmpty(), | $ftResolved->toOne(), | $genericType);,
+                      rt : RelationType<Any>[1] |
+                          let rtResolved = makeRelationTypeAsConcreteAsPossible($rt, $bindings);
+                          if($rtResolved->isNotEmpty(), | $rtResolved->toOne(), | $genericType);,
+                      other : Type[1] |
+                          let typeArgsResolved = $gtv.typeArguments->map(a | makeAsConcreteAsPossible($a, $bindings));
+                          let mulArgsResolved = $gtv.multiplicityArguments->map(m | makeAsConcreteAsPossible($m, $bindings));
+                          if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
+                              | $genericType,
+                              | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
+                          );
+                  ])
             );,
         gto : GenericTypeOperation[1] |
-            let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings);
-            let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings);
-            // If both sides are concrete RelationTypes, evaluate the operation
-            if($resolvedLeft->instanceOf(GenericTypeValue) && $resolvedLeft->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedLeft->cast(@GenericTypeValue).type->toOne()->instanceOf(RelationType)
-               && $resolvedRight->instanceOf(GenericTypeValue) && $resolvedRight->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedRight->cast(@GenericTypeValue).type->toOne()->instanceOf(RelationType),
-                | let resultRT = evaluateRelationTypeOperation(
-                      $resolvedLeft->cast(@GenericTypeValue).type->toOne()->cast(@RelationType<Any>),
-                      $resolvedRight->cast(@GenericTypeValue).type->toOne()->cast(@RelationType<Any>),
-                      $gto.operationType
-                  );
-                  if($resultRT->isEmpty(),
-                      | $genericType,
-                      | ^meta::pure::metamodel::type::generics::InferredGenericType(type = $resultRT->toOne())
-                  );,
-                | if($resolvedLeft != $gto.left || $resolvedRight != $gto.right,
-                      | ^$gto(left = $resolvedLeft, right = $resolvedRight),
-                      | $genericType
-                  )
-            );,
+            $gto->makeGenericTypeOperationAsConcreteAsPossible($bindings),
         other : GenericType[1] | $genericType
     ])
 }
@@ -729,22 +664,29 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericType(decl
 
 function meta::pure::compiler::helper::genericType::isCompatibleGenericType(declared:GenericType[1], actual:GenericType[1], contravariant:Boolean[1]):Boolean[1]
 {
-    // GenericTypeOperation dispatch
-    if($declared->instanceOf(GenericTypeOperation),
-        | isCompatibleGenericTypeOperation($declared->cast(@GenericTypeOperation), $actual, $contravariant),
-        | if($actual->instanceOf(GenericTypeOperation),
-              | isCompatibleGenericTypeOperation($actual->cast(@GenericTypeOperation), $declared, !$contravariant),
-              | // CompilerNotSetGenericType — not set yet, skip compatibility check
-                if($declared->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType) || $actual->instanceOf(meta::pure::metamodel::type::generics::CompilerNotSetGenericType),
-                    | true,
-                    | // UndefinedGenericType matches only other UndefinedGenericType
-                      if($declared->instanceOf(UndefinedGenericType) || $actual->instanceOf(UndefinedGenericType),
-                          | $declared->instanceOf(UndefinedGenericType) && $actual->instanceOf(UndefinedGenericType),
-                          | isCompatibleGenericTypeValue($declared->cast(@GenericTypeValue), $actual->cast(@GenericTypeValue), $contravariant)
-                      )
-                )
-          )
-    );
+    $declared->match([
+        declaredOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($declaredOp, $actual, $contravariant),
+        declaredNotSet : CompilerNotSetGenericType[1] | true,
+        declaredUndef : UndefinedGenericType[1] |
+            $actual->match([
+                au : UndefinedGenericType[1] | true,
+                other : GenericType[1] | false
+            ]),
+        declaredV : GenericTypeValue[1] |
+            $actual->match([
+                actualOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($actualOp, $declared, !$contravariant),
+                actualNotSet : CompilerNotSetGenericType[1] | true,
+                actualUndef : UndefinedGenericType[1] | false,
+                actualV : GenericTypeValue[1] | isCompatibleGenericTypeValue($declaredV, $actualV, $contravariant),
+                other : GenericType[1] | false
+            ]),
+        other : GenericType[1] |
+            $actual->match([
+                actualOp : GenericTypeOperation[1] | isCompatibleGenericTypeOperation($actualOp, $declared, !$contravariant),
+                actualNotSet : CompilerNotSetGenericType[1] | true,
+                other2 : GenericType[1] | false
+            ])
+    ]);
 }
 
 function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue(declared:GenericTypeValue[1], actual:GenericTypeValue[1], contravariant:Boolean[1]):Boolean[1]
@@ -754,26 +696,30 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue
         | true,
         | let declaredType = $declared.type->toOne();
           let actualType = $actual.type->toOne();
-          
-          // TypeParameter compatibility
-          if($declaredType->instanceOf(TypeParameter),
-              | if($actualType->instanceOf(TypeParameter),
-                    | $declaredType->cast(@TypeParameter).name == $actualType->cast(@TypeParameter).name,
-                    | true
-                ),
-              | if($actualType->instanceOf(TypeParameter),
-                    | true,
-                    | // FunctionTypes are structural
-                      if($declaredType->instanceOf(FunctionType) && $actualType->instanceOf(FunctionType),
-                          | isCompatibleFunctionType($declaredType->cast(@FunctionType), $actualType->cast(@FunctionType), $contravariant),
-                          | // RelationTypes are structural
-                            if($declaredType->instanceOf(RelationType) && $actualType->instanceOf(RelationType),
-                                | isCompatibleRelationType($declaredType->cast(@RelationType<Any>), $actualType->cast(@RelationType<Any>), $contravariant),
-                                | isCompatibleGenericTypeValue_rawCheck($declared, $actual, $declaredType, $actualType, $contravariant)
-                            )
-                      )
-                )
-          );
+          $declaredType->match([
+              declTP : TypeParameter[1] |
+                  $actualType->match([
+                      actTP : TypeParameter[1] | $declTP.name == $actTP.name,
+                      other : Type[1] | true
+                  ]),
+              declFT : FunctionType[1] |
+                  $actualType->match([
+                      actTP : TypeParameter[1] | true,
+                      actFT : FunctionType[1] | isCompatibleFunctionType($declFT, $actFT, $contravariant),
+                      other : Type[1] | isCompatibleGenericTypeValue_rawCheck($declared, $actual, $declaredType, $actualType, $contravariant)
+                  ]),
+              declRT : RelationType<Any>[1] |
+                  $actualType->match([
+                      actTP : TypeParameter[1] | true,
+                      actRT : RelationType<Any>[1] | isCompatibleRelationType($declRT, $actRT, $contravariant),
+                      other : Type[1] | isCompatibleGenericTypeValue_rawCheck($declared, $actual, $declaredType, $actualType, $contravariant)
+                  ]),
+              other : Type[1] |
+                  $actualType->match([
+                      actTP : TypeParameter[1] | true,
+                      other2 : Type[1] | isCompatibleGenericTypeValue_rawCheck($declared, $actual, $declaredType, $actualType, $contravariant)
+                  ])
+          ]);
     );
 }
 
@@ -801,69 +747,62 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue
 
 function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue_args(declared:GenericTypeValue[1], resolvedActual:GenericType[1], declaredType:Type[1], contravariant:Boolean[1]):Boolean[1]
 {
-    let typeArgsOk = if($resolvedActual->instanceOf(GenericTypeValue) && $declared.typeArguments->isNotEmpty() && $resolvedActual->cast(@GenericTypeValue).typeArguments->isNotEmpty(),
-        | let resolvedActualV = $resolvedActual->cast(@GenericTypeValue);
-          if($declared.typeArguments->size() != $resolvedActualV.typeArguments->size(),
-              | false,
-              | let typeParams = if($declaredType->instanceOf(Class), | $declaredType->cast(@Class<Any>).typeParameters, | []);
-                range($declared.typeArguments->size())->forAll({i |
-                    let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
-                    isCompatibleGenericType($declared.typeArguments->at($i), $resolvedActualV.typeArguments->at($i), $argContravariant);
-                });
-          );,
-        | true
-    );
-    
+    let typeArgsOk = $resolvedActual->match([
+        resolvedActualV : GenericTypeValue[1] |
+            if($declared.typeArguments->isNotEmpty() && $resolvedActualV.typeArguments->isNotEmpty(),
+                | if($declared.typeArguments->size() != $resolvedActualV.typeArguments->size(),
+                      | false,
+                      | let typeParams = $declaredType->match([cls : Class<Any>[1] | $cls.typeParameters, other : Type[1] | []]);
+                        range($declared.typeArguments->size())->forAll({i |
+                            let argContravariant = if($i < $typeParams->size() && $typeParams->at($i).contravariant == true, | !$contravariant, | $contravariant);
+                            isCompatibleGenericType($declared.typeArguments->at($i), $resolvedActualV.typeArguments->at($i), $argContravariant);
+                        });
+                  );,
+                | true
+            );,
+        other : GenericType[1] | true
+    ]);
+
     if(!$typeArgsOk,
         | false,
         | // Check multiplicity arguments
-          if($declared.multiplicityArguments->isNotEmpty() && $resolvedActual->instanceOf(GenericTypeValue) && $resolvedActual->cast(@GenericTypeValue).multiplicityArguments->isNotEmpty(),
-              | let actualMulArgs = $resolvedActual->cast(@GenericTypeValue).multiplicityArguments;
-                if($declared.multiplicityArguments->size() != $actualMulArgs->size(),
-                    | false,
-                    | $declared.multiplicityArguments->zip($actualMulArgs)->forAll({pair |
-                          multiplicitySubsumes($pair.first, $pair.second);
-                      })
-                );,
-              | true
-          )
-    );
-}
-
-function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
-{
-    let right = $gto.right;
-    if($gto.operationType == GenericTypeOperationType.Equal,
-        | isCompatibleGenericType($right, $other, $contravariant),
-        | if($gto.operationType == GenericTypeOperationType.Subset,
-              | isCompatibleGenericType($other, $right, $contravariant),
-              | true
-          )
-    );
-}
-
-function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:meta::pure::metamodel::type::generics::GenericType[1]):meta::pure::metamodel::type::generics::GenericType[1]
-{
-    if($gt->instanceOf(meta::pure::metamodel::type::generics::InferredGenericType),
-        | $gt,
-        | $gt->match([
-              gtv:meta::pure::metamodel::type::generics::GenericTypeValue[1] |
-                  ^meta::pure::metamodel::type::generics::InferredGenericType(
-                      type = $gtv.type,
-                      typeArguments = $gtv.typeArguments,
-                      multiplicityArguments = $gtv.multiplicityArguments
-                  ),
-              other:meta::pure::metamodel::type::generics::GenericType[1] | $gt
+          $resolvedActual->match([
+              resolvedActualV : GenericTypeValue[1] |
+                  if($declared.multiplicityArguments->isNotEmpty() && $resolvedActualV.multiplicityArguments->isNotEmpty(),
+                      | if($declared.multiplicityArguments->size() != $resolvedActualV.multiplicityArguments->size(),
+                            | false,
+                            | $declared.multiplicityArguments->zip($resolvedActualV.multiplicityArguments)->forAll({pair |
+                                  multiplicitySubsumes($pair.first, $pair.second);
+                              })
+                        );,
+                      | true
+                  );,
+              other : GenericType[1] | true
           ])
     );
 }
 
-function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1], ctx:meta::pure::compiler::CompilerContext[1]):meta::pure::metamodel::type::generics::GenericType[1]
+
+function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:GenericType[1]):GenericType[1]
+{
+    $gt->match([
+        igt : InferredGenericType[1] | $igt,
+        gtv : GenericTypeValue[1] |
+            ^InferredGenericType(
+                type = $gtv.type,
+                typeArguments = $gtv.typeArguments,
+                multiplicityArguments = $gtv.multiplicityArguments
+            ),
+        other : GenericType[1] | $gt
+    ]);
+}
+
+function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1], ctx:CompilerContext[1]):GenericType[1]
 {
     let pureName = $value->genericType().type->cast(@NamedType).name;
     if($pureName->isNotEmpty(),
-        | let resolved = $ctx->resolveElement($pureName->toOne())->toOne()->cast(@meta::pure::metamodel::type::Type);
-          ^meta::pure::metamodel::type::generics::InferredGenericType(type = $resolved);,
-        | ^meta::pure::metamodel::type::generics::UndefinedGenericType()
+        | let resolved = $ctx->resolveElement($pureName->toOne())->toOne()->cast(@Type);
+          ^InferredGenericType(type = $resolved);,
+        | ^UndefinedGenericType()
     );
 }

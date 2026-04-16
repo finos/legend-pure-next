@@ -1,19 +1,8 @@
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::functions::lang::*;
 import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
 import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
@@ -26,23 +15,25 @@ function meta::pure::compiler::helper::property::resolveProperty(prop:Property<N
     let resolvedMultiplicity = $prop.multiplicity;
     let resolvedClassifierGenericType = $prop.classifierGenericType;
     
-    let resolvedTuple = if($receiverType->genericTypeRawType()->toOne()->instanceOf(Class),
-       | let ownerClass = $receiverType->genericTypeRawType()->toOne()->cast(@Class<Any>);
-         let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
-         if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
-            | pair(
-                $resolvedGenericType->makeAsConcreteAsPossible($bindings),
-                pair(
-                    $resolvedMultiplicity->makeAsConcreteAsPossible($bindings),
-                    $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings)
-                )
-              ),
-            | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
-         );,
-       | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+    let resolvedTuple = $receiverType->genericTypeRawType()->toOne()->match(
+        [
+            ownerClass : Class<Any>[1] |
+                let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
+                if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
+                    | pair(
+                        $resolvedGenericType->makeAsConcreteAsPossible($bindings),
+                        pair(
+                            $resolvedMultiplicity->makeAsConcreteAsPossible($bindings),
+                            $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings)
+                        )
+                      ),
+                    | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+                );,
+            a : Any[1] | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
+        ]
     );
     
-    let resolvedProp = meta::pure::functions::lang::new($resolvedTuple.second.second)->cast(@Property<Nil,Any|*>);
+    let resolvedProp = new($resolvedTuple.second.second)->cast(@Property<Nil,Any|*>);
     ^$resolvedProp(
         aggregation = AggregationKind.None,
         name = $prop.name,
@@ -54,11 +45,11 @@ function meta::pure::compiler::helper::property::resolveProperty(prop:Property<N
 
 // Tests
 
-Class meta::pure::compiler::helper::property::tests::MyClass<T, U|m>
+Class <<test.TestDependency>> meta::pure::compiler::helper::property::tests::MyClass<T, U|m>
 {
 }
 
-Class meta::pure::compiler::helper::property::tests::TestClass
+Class <<test.TestDependency>> meta::pure::compiler::helper::property::tests::TestClass
 {
     prop : meta::pure::compiler::helper::property::tests::MyClass<String, Integer | 1..*>[1];
 }
@@ -72,7 +63,7 @@ function <<test.Test>> meta::pure::compiler::helper::property::tests::testResolv
     let sourceProp = ^Property<Nil,Any|*>(
         aggregation = AggregationKind.None,
         name = 'mockProp',
-        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(
+        genericType = ^InferredGenericType(
             type = meta::pure::compiler::helper::property::tests::TestClass
         ),
         multiplicity = PureOne,

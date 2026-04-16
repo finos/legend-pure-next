@@ -12,25 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
 import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::valuespecification::*;
 import meta::pure::functions::collection::*;
 
 
@@ -51,8 +37,8 @@ Class meta::pure::compiler::helper::parametersBinding::EnclosingOwnerParametersB
 
 Class meta::pure::compiler::helper::parametersBinding::FunctionCallParametersBinding extends ParametersBinding
 {
-    expr: meta::pure::metamodel::valuespecification::FunctionExpression[0..1];
-    function: meta::pure::metamodel::type::generics::TypeAndMultiplicityParametersOwner[0..1]; // Corresponds to FunctionIndexEntry
+    expr: FunctionExpression[0..1];
+    function: TypeAndMultiplicityParametersOwner[0..1]; // Corresponds to FunctionIndexEntry
     ownTypeParams: Map<String, TypeParameter>[1];
     ownMulParams: Map<String, MultiplicityParameter>[1];
     enclosingOwner: EnclosingOwnerParametersBinding[0..1];
@@ -61,8 +47,8 @@ Class meta::pure::compiler::helper::parametersBinding::FunctionCallParametersBin
 function meta::pure::compiler::helper::parametersBinding::newPlainParametersBinding():PlainParametersBinding[1]
 {
     ^PlainParametersBinding(
-        typeBindings = newMap([]->cast(@meta::pure::functions::collection::Pair<String, List<GenericType>>)),
-        multiplicityBindings = newMap([]->cast(@meta::pure::functions::collection::Pair<String, List<Multiplicity>>))
+        typeBindings = newMap([]->cast(@Pair<String, List<GenericType>>)),
+        multiplicityBindings = newMap([]->cast(@Pair<String, List<Multiplicity>>))
     );
 }
 
@@ -117,30 +103,45 @@ function meta::pure::compiler::helper::parametersBinding::unify_step1_pairwiseBi
     ]);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step2_transitiveType_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], gt:GenericType[1]):meta::pure::functions::collection::Pair<FunctionCallParametersBinding, Boolean>[1]
+function meta::pure::compiler::helper::parametersBinding::unify_step2_transitiveType_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], gt:GenericType[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
 {
-    if($gt->instanceOf(GenericTypeValue) && $gt->cast(@GenericTypeValue).type->isNotEmpty() && $gt->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
-        | let targetName = $gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter).name;
-          let targetBindingOptional = $tb.typeBindings->get($targetName);
-          
-          let targetBinding = if(($targetBindingOptional->isEmpty() || $targetBindingOptional->toOne().values->isEmpty()) && $tb.enclosingOwner->isNotEmpty(),
-              | if($gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter).owner == $tb.enclosingOwner->toOne().owner,
-                    | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
-                    | $targetBindingOptional
-                ),
-              | $targetBindingOptional
-          );
-          
-          if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
-              | let resolved = $targetBinding->toOne().values->at(0);
-                if($resolved->instanceOf(GenericTypeValue) && $resolved->cast(@GenericTypeValue).type->isNotEmpty() && $resolved->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
-                    | pair($tb, $changed),
-                    | pair(^$tb(typeBindings = $tb.typeBindings->put($kvName, ^List<GenericType>(values=$resolved))), true)
-                );,
-              | pair($tb, $changed)
-          );,
-        | pair($tb, $changed)
-    );
+    $gt->match([
+        gtv : GenericTypeValue[1] |
+            if($gtv.type->isNotEmpty(),
+                | $gtv.type->toOne()->match([
+                      tp : TypeParameter[1] |
+                          let targetName = $tp.name;
+                          let targetBindingOptional = $tb.typeBindings->get($targetName);
+
+                          let targetBinding = if(($targetBindingOptional->isEmpty() || $targetBindingOptional->toOne().values->isEmpty()) && $tb.enclosingOwner->isNotEmpty(),
+                              | if($tp.owner == $tb.enclosingOwner->toOne().owner,
+                                    | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
+                                    | $targetBindingOptional
+                                ),
+                              | $targetBindingOptional
+                          );
+
+                          if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
+                              | let resolved = $targetBinding->toOne().values->at(0);
+                                $resolved->match([
+                                    resV : GenericTypeValue[1] |
+                                        if($resV.type->isNotEmpty(),
+                                            | $resV.type->toOne()->match([
+                                                  tp2 : TypeParameter[1] | pair($tb, $changed),
+                                                  other2 : Type[1] | pair(^$tb(typeBindings = $tb.typeBindings->put($kvName, ^List<GenericType>(values=$resolved))), true)
+                                              ]);,
+                                            | pair(^$tb(typeBindings = $tb.typeBindings->put($kvName, ^List<GenericType>(values=$resolved))), true)
+                                        );,
+                                    other : GenericType[1] | pair(^$tb(typeBindings = $tb.typeBindings->put($kvName, ^List<GenericType>(values=$resolved))), true)
+                                ]);,
+                              | pair($tb, $changed)
+                          );,
+                      other : Type[1] | pair($tb, $changed)
+                  ]);,
+                | pair($tb, $changed)
+            );,
+        other : GenericType[1] | pair($tb, $changed)
+    ]);
 }
 
 function meta::pure::compiler::helper::parametersBinding::unify_step2_transitiveType(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
@@ -161,21 +162,22 @@ function meta::pure::compiler::helper::parametersBinding::unify_step2_transitive
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], mul:Multiplicity[1]):meta::pure::functions::collection::Pair<FunctionCallParametersBinding, Boolean>[1]
+function meta::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul_Helper(tb:FunctionCallParametersBinding[1], changed:Boolean[1], kvName:String[1], mul:Multiplicity[1]):Pair<FunctionCallParametersBinding, Boolean>[1]
 {
-    if($mul->instanceOf(MultiplicityParameter),
-        | let targetName = $mul->cast(@MultiplicityParameter).name;
-          let targetBinding = $tb.multiplicityBindings->get($targetName);
-          if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
-              | let resolved = $targetBinding->toOne().values->at(0);
-                if($resolved->instanceOf(MultiplicityParameter),
-                    | pair($tb, $changed),
-                    | pair(^$tb(multiplicityBindings = $tb.multiplicityBindings->put($kvName, ^List<Multiplicity>(values=$resolved))), true)
-                );,
-              | pair($tb, $changed)
-          );,
-        | pair($tb, $changed)
-    );
+    $mul->match([
+        mp : MultiplicityParameter[1] |
+            let targetName = $mp.name;
+            let targetBinding = $tb.multiplicityBindings->get($targetName);
+            if($targetBinding->isNotEmpty() && $targetBinding->toOne().values->size() == 1,
+                | let resolved = $targetBinding->toOne().values->at(0);
+                  $resolved->match([
+                      mp2 : MultiplicityParameter[1] | pair($tb, $changed),
+                      other : Multiplicity[1] | pair(^$tb(multiplicityBindings = $tb.multiplicityBindings->put($kvName, ^List<Multiplicity>(values=$resolved))), true)
+                  ]);,
+                | pair($tb, $changed)
+            );,
+        other : Multiplicity[1] | pair($tb, $changed)
+    ]);
 }
 
 function meta::pure::compiler::helper::parametersBinding::unify_step3_transitiveMul(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
@@ -199,22 +201,37 @@ function meta::pure::compiler::helper::parametersBinding::unify_step3_transitive
 function meta::pure::compiler::helper::parametersBinding::unify_preReduce_Helper(fcpb:FunctionCallParametersBinding[1], kvName:String[1], kvValues:List<GenericType>[1]):FunctionCallParametersBinding[1]
 {
     let newValsAndChanged = $kvValues.values->fold({gt, agg |
-        if($gt->instanceOf(GenericTypeValue) && $gt->cast(@GenericTypeValue).type->isNotEmpty() && $gt->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
-            | let tp = $gt->cast(@GenericTypeValue).type->toOne()->cast(@TypeParameter);
-              if($tp.owner == $fcpb.enclosingOwner->toOne().owner,
-                  | let ownerBinding = $fcpb.enclosingOwner->toOne().typeBindings->get($tp.name);
-                    if($ownerBinding->isNotEmpty() && $ownerBinding->toOne().values->size() == 1,
-                        | let ownerResolved = $ownerBinding->toOne().values->at(0);
-                          if($ownerResolved->instanceOf(GenericTypeValue) && $ownerResolved->cast(@GenericTypeValue).type->isNotEmpty() && $ownerResolved->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter),
-                              | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second),
-                              | pair(^List<GenericType>(values=$agg.first.values->concatenate($ownerResolved)), true)
-                          );,
-                        | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
-                    );,
-                  | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
-              );,
-            | pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second)
-        )
+        let keepOriginal = pair(^List<GenericType>(values=$agg.first.values->concatenate($gt)), $agg.second);
+        $gt->match([
+            gtv : GenericTypeValue[1] |
+                if($gtv.type->isNotEmpty(),
+                    | $gtv.type->toOne()->match([
+                          tp : TypeParameter[1] |
+                              if($tp.owner == $fcpb.enclosingOwner->toOne().owner,
+                                  | let ownerBinding = $fcpb.enclosingOwner->toOne().typeBindings->get($tp.name);
+                                    if($ownerBinding->isNotEmpty() && $ownerBinding->toOne().values->size() == 1,
+                                        | let ownerResolved = $ownerBinding->toOne().values->at(0);
+                                          $ownerResolved->match([
+                                              resV : GenericTypeValue[1] |
+                                                  if($resV.type->isNotEmpty(),
+                                                      | $resV.type->toOne()->match([
+                                                            tp2 : TypeParameter[1] | $keepOriginal,
+                                                            other2 : Type[1] | pair(^List<GenericType>(values=$agg.first.values->concatenate($ownerResolved)), true)
+                                                        ]);,
+                                                      | pair(^List<GenericType>(values=$agg.first.values->concatenate($ownerResolved)), true)
+                                                  );,
+                                              other : GenericType[1] | pair(^List<GenericType>(values=$agg.first.values->concatenate($ownerResolved)), true)
+                                          ]);,
+                                        | $keepOriginal
+                                    );,
+                                  | $keepOriginal
+                              );,
+                          other : Type[1] | $keepOriginal
+                      ]);,
+                    | $keepOriginal
+                );,
+            other : GenericType[1] | $keepOriginal
+        ]);
     }, pair(^List<GenericType>(), false));
     
     if($newValsAndChanged.second,

@@ -390,6 +390,17 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .tree-item .fn-name {
+            font-weight: 500;
+        }
+        .tree-item .fn-params {
+            opacity: 0.55;
+        }
+        .tree-item.no-source .node-name,
+        .tree-item.no-source .fn-name,
+        .tree-item.no-source .fn-params {
+            opacity: 0.4;
+        }
         .tree-children {
             display: none;
         }
@@ -1232,7 +1243,7 @@
             'PrimitiveType':        { icon: 'category',  cls: 'icon-primitive material-symbols-outlined' },
             'FunctionDefinition':   { icon: 'function',   cls: 'icon-function material-symbols-outlined' },
             'ConcreteFunctionDefinition': { icon: 'function', cls: 'icon-function material-symbols-outlined' },
-            'NativeFunction':       { icon: 'bolt',  cls: 'icon-native material-symbols-outlined' },
+            'NativeFunction':       { icon: 'function',  cls: 'icon-function material-symbols-outlined' },
             'Association':          { icon: 'link',  cls: 'icon-association material-symbols-outlined' },
             'Profile':              { icon: 'label',  cls: 'icon-profile material-symbols-outlined' },
             'Measure':              { icon: 'straighten',  cls: 'icon-measure material-symbols-outlined' },
@@ -1257,14 +1268,17 @@
                 if (!aHasChildren && bHasChildren) return 1;
                 
                 if (!aHasChildren && !bHasChildren) {
-                    const aType = a.type || '';
-                    const bType = b.type || '';
+                    const normalizeType = t => (t === 'NativeFunction' || t === 'UserDefinedFunction') ? 'Function' : (t || '');
+                    const aType = normalizeType(a.type);
+                    const bType = normalizeType(b.type);
                     if (aType !== bType) {
                         return aType.localeCompare(bType);
                     }
                 }
-                
-                return (a.name || '').localeCompare(b.name || '');
+
+                const aLabel = a.displayName || a.name || '';
+                const bLabel = b.displayName || b.name || '';
+                return aLabel.localeCompare(bLabel);
             });
 
             for (const node of sortedNodes) {
@@ -1277,7 +1291,7 @@
                 nodeDiv.className = 'tree-node';
 
                 const item = document.createElement('div');
-                item.className = 'tree-item';
+                item.className = 'tree-item' + (node.hasSource === false ? ' no-source' : '');
                 item.style.setProperty('--depth', depth);
                 item.title = node.name + (node.type && node.type !== 'Package' ? ' (' + node.type + ')' : '');
 
@@ -1289,13 +1303,27 @@
                 icon.className = 'node-icon ' + iconInfo.cls;
                 icon.textContent = iconInfo.icon;
 
-                const name = document.createElement('span');
-                name.className = 'node-name';
-                name.textContent = node.name;
+                const nameContainer = document.createElement('span');
+                nameContainer.className = 'node-name';
+                if (node.displayName) {
+                    const parenIdx = node.displayName.indexOf('(');
+                    const fnName = document.createElement('span');
+                    fnName.className = 'fn-name';
+                    fnName.textContent = parenIdx >= 0 ? node.displayName.substring(0, parenIdx) : node.displayName;
+                    nameContainer.appendChild(fnName);
+                    if (parenIdx >= 0) {
+                        const fnParams = document.createElement('span');
+                        fnParams.className = 'fn-params';
+                        fnParams.textContent = node.displayName.substring(parenIdx);
+                        nameContainer.appendChild(fnParams);
+                    }
+                } else {
+                    nameContainer.textContent = node.name;
+                }
 
                 item.appendChild(chevron);
                 item.appendChild(icon);
-                item.appendChild(name);
+                item.appendChild(nameContainer);
                 nodeDiv.appendChild(item);
 
                 if (hasChildren) {

@@ -13,33 +13,19 @@
 // limitations under the License.
 
 import meta::pure::metamodel::valuespecification::*;
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::functions::lang::*;
 import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
-import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
 import meta::pure::compiler::helper::variableExpression::*;
-import meta::pure::compiler::helper::genericType::*;
-import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
-import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
 
 function meta::pure::compiler::helper::variableExpression::newVariableExpression():VariableExpression[1]
 {
-    let ve = meta::pure::functions::lang::new(^meta::pure::metamodel::type::generics::InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
+    let ve = new(^InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
     ^$ve(
         name = '',
-        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = Any),
-        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+        genericType = ^InferredGenericType(type = Any),
+        multiplicity = PureOne
     );
 }
 

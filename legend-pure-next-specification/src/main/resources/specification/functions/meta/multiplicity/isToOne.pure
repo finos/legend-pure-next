@@ -19,7 +19,7 @@ function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::isToOne
     $m->instanceOf(ConcreteMultiplicity) && $m->cast(@ConcreteMultiplicity).upperBound->isNotEmpty() && $m->cast(@ConcreteMultiplicity).upperBound->toOne().value == 1 && $m->cast(@ConcreteMultiplicity).lowerBound.value == 1;
 }
 
-function <<test.Test>> meta::pure::functions::multiplicity::tests::isToOne::testIsToOne():Boolean[1]
+function <<test.Test>> meta::pure::functions::meta::tests::isToOne::testIsToOne():Boolean[1]
 {
     assertFalse(PureZero->isToOne());
     assertFalse(ZeroOne->isToOne());

@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-Class meta::pure::functions::tests::dispatch::SuperClass
+Class <<test.TestDependency>> meta::pure::functions::tests::dispatch::SuperClass
 {
     poly() { 'super' }: String[1];
 }
 
-Class meta::pure::functions::tests::dispatch::SubClass1 extends meta::pure::functions::tests::dispatch::SuperClass
+Class <<test.TestDependency>> meta::pure::functions::tests::dispatch::SubClass1 extends meta::pure::functions::tests::dispatch::SuperClass
 {
     poly() { 'sub1' }: String[1];
 }
 
-Class meta::pure::functions::tests::dispatch::SubClass2 extends meta::pure::functions::tests::dispatch::SuperClass
+Class <<test.TestDependency>> meta::pure::functions::tests::dispatch::SubClass2 extends meta::pure::functions::tests::dispatch::SuperClass
 {
     poly() { 'sub2' }: String[1];
 }

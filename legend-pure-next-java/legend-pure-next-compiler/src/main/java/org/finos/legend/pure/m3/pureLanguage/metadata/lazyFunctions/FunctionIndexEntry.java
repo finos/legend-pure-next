@@ -531,6 +531,39 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         return sb.toString();
     }
 
+    /**
+     * Build a human-readable function signature without the package prefix.
+     * Example: {@code myFunc(param1: String[1], param2: Integer[*]): Boolean[1]}
+     */
+    public String signatureWithoutPackage()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(functionName);
+
+        sb.append('(');
+        if (functionType._parameters() != null)
+        {
+            boolean first = true;
+            for (VariableExpression param : functionType._parameters())
+            {
+                if (!first)
+                {
+                    sb.append(", ");
+                }
+                first = false;
+                sb.append(_GenericType.print(param._genericType(), false));
+                sb.append(formatMultiplicity(param._multiplicity()));
+            }
+        }
+        sb.append(')');
+
+        sb.append(": ");
+        sb.append(_GenericType.print(functionType._returnType(), false));
+        sb.append(formatMultiplicity(functionType._returnMultiplicity()));
+
+        return sb.toString();
+    }
+
     private static String formatMultiplicity(Multiplicity m)
     {
         if (m == null)

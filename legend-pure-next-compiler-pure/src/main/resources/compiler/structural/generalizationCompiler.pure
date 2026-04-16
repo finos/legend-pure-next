@@ -12,19 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relationship::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:meta::pure::metamodel::type::Type[1], context:meta::pure::compiler::CompilerContext[1], packagePath:String[1], ownerContext:String[1]):meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>[1]
+function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:Type[1], context:CompilerContext[1], packagePath:String[1], ownerContext:String[1]):CompilerListResult<Generalization>[1]
 {
-    let typeParams = if($skeleton->instanceOf(meta::pure::metamodel::type::Class),
-        | $skeleton->cast(@meta::pure::metamodel::type::Class<Any>).typeParameters->cast(@meta::pure::metamodel::type::generics::TypeParameter),
-        | []->cast(@meta::pure::metamodel::type::generics::TypeParameter)
+    let typeParams = $skeleton->match(
+        [
+            c : Class<Any>[1] | $c.typeParameters->cast(@TypeParameter),
+            a : Any[1]        | []->cast(@TypeParameter)
+        ]
     );
     if($protocolGeneralizations->isEmpty(),
-        | ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(
-              values = [^meta::pure::metamodel::relationship::Generalization(
-                  general = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = meta::pure::metamodel::type::Any),
+        | ^CompilerListResult<Generalization>(
+              values = [^Generalization(
+                  general = ^UserDefinedGenericType(type = Any),
                   specific = $skeleton
               )],
               context = $context
@@ -32,12 +37,12 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
         | $protocolGeneralizations->fold({g, acc |
               let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
-                  values += ^meta::pure::metamodel::relationship::Generalization(
+                  values += ^Generalization(
                       general = $gtResult.value->toOne(),
                       specific = $skeleton
                   ),
                   context = $gtResult.context
               );
-          }, ^meta::pure::compiler::CompilerListResult<meta::pure::metamodel::relationship::Generalization>(context = $context))
+          }, ^CompilerListResult<Generalization>(context = $context))
     );
 }

@@ -1,29 +1,15 @@
-import meta::pure::compiler::structural::genericTypeCompiler::*;
-import meta::pure::compiler::structural::propertyCompiler::*;
-import meta::pure::compiler::structural::valueSpecificationCompiler::*;
-import meta::pure::compiler::structural::lambdaCompiler::*;
-import meta::pure::compiler::helper::packageableElement::*;
-import meta::pure::compiler::helper::function::*;
-import meta::pure::compiler::helper::relationType::*;
-import meta::pure::compiler::helper::column::*;
-import meta::pure::compiler::helper::type::*;
-import meta::pure::compiler::helper::packageableFunction::*;
+import meta::pure::metamodel::type::generics::*;
 import meta::pure::compiler::helper::multiplicity::*;
-import meta::pure::compiler::helper::lambda::*;
-import meta::pure::compiler::helper::functionExpression::*;
-import meta::pure::compiler::helper::variableExpression::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::functionType::*;
-import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::class::*;
 
 // FunctionType printing
 
 function meta::pure::compiler::helper::functionType::newFunctionType():FunctionType[1]
 {
     ^FunctionType(
-        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type=Any),
+        returnType = ^InferredGenericType(type=Any),
         returnMultiplicity = PureOne
     );
 }
@@ -62,12 +48,9 @@ function meta::pure::compiler::helper::functionType::printFunctionType(ft:Functi
 function meta::pure::compiler::helper::functionType::isConcreteFunctionType(ft:FunctionType[1]):Boolean[1]
 {
     let paramsOk = $ft.parameters->filter(p | !$p.genericType->toOne()->isConcreteGenericType())->isEmpty();
-    if(!$paramsOk,
-        | false,
-        | if($ft.returnType->isEmpty(),
-              | true,
-              | $ft.returnType->toOne()->isConcreteGenericType()
-          )
+    if([pair(| !$paramsOk, | false),
+        pair(| $ft.returnType->isEmpty(), | true)],
+       | $ft.returnType->toOne()->isConcreteGenericType()
     );
 }
 
@@ -155,27 +138,26 @@ function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(ge
     
     if($newParams == $ft.parameters && $rRetGT == $ft.returnType && $rRetMul == $ft.returnMultiplicity,
         | [],
-        | ^meta::pure::metamodel::type::generics::InferredGenericType(
+        | let typeArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.typeArguments, a : Any[1] | []]);
+          let mulArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.multiplicityArguments, a : Any[1] | []]);
+          ^InferredGenericType(
               type = ^$ft(parameters = $newParams, returnType = $rRetGT->toOne(), returnMultiplicity = $rRetMul->toOne()),
-              typeArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).typeArguments, | []),
-              multiplicityArguments = if($genericType->instanceOf(GenericTypeValue), | $genericType->cast(@GenericTypeValue).multiplicityArguments, | [])
-          )
+              typeArguments = $typeArgs,
+              multiplicityArguments = $mulArgs
+          );
     );
 }
 
 function meta::pure::compiler::helper::functionType::findCommonFunctionType(functionTypes:FunctionType[*]):FunctionType[0..1]
 {
-    if($functionTypes->isEmpty(),
-        | [],
-        | if($functionTypes->size() == 1,
-              | $functionTypes->at(0),
-              | let paramCount = $functionTypes->at(0).parameters->size();
-                let allSame = $functionTypes->forAll(ft | $ft.parameters->size() == $paramCount);
-                if(!$allSame,
-                    | [],
-                    | findCommonFunctionType_build($functionTypes, $paramCount)
-                );
-          )
+    if([pair(| $functionTypes->isEmpty(), | []),
+        pair(| $functionTypes->size() == 1, | $functionTypes->at(0))],
+       | let paramCount = $functionTypes->at(0).parameters->size();
+         let allSame = $functionTypes->forAll(ft | $ft.parameters->size() == $paramCount);
+         if(!$allSame,
+             | [],
+             | findCommonFunctionType_build($functionTypes, $paramCount)
+         );
     );
 }
 
@@ -220,7 +202,7 @@ function meta::pure::compiler::helper::functionType::findCommonFunctionType_buil
 
     ^FunctionType(
         parameters = $commonParams,
-        returnType = if($commonReturnType->isEmpty(), | ^meta::pure::metamodel::type::generics::UndefinedGenericType(), | $commonReturnType->toOne()),
+        returnType = if($commonReturnType->isEmpty(), | ^UndefinedGenericType(), | $commonReturnType->toOne()),
         returnMultiplicity = if($commonReturnMul->isEmpty(), | PureOne, | $commonReturnMul->toOne())
     );
 }

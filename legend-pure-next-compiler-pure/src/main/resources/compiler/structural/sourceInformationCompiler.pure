@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::metamodel::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:meta::pure::compiler::CompilerContext[1]):String[1]
+function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',
         | let psi = $si->toOne();
-          let sid = if($psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
+          let sid = if([pair(| $psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
           if($sid->length() > 0,
               | ' (at ' + $sid + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
               | ''
@@ -27,12 +30,14 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
     );
 }
 
-function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:meta::pure::metamodel::SourceInformation[0..1], context:meta::pure::compiler::CompilerContext[1]):String[1]
+function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:SourceInformation[0..1], context:CompilerContext[1]):String[1]
 {
     if($si->isEmpty(),
         | '',
         | let msi = $si->toOne();
-          let sid = if($msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne(), | if($context.sourceId->isNotEmpty(), | $context.sourceId->toOne(), | ''));
+          let sid = if([pair(| $msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
           if($sid->length() > 0,
               | ' (at ' + $sid + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
               | ''

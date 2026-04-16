@@ -23,7 +23,7 @@ native function <<PCT.function>> meta::pure::functions::lang::cast<T|m>(source:A
 
 Primitive meta::pure::functions::lang::tests::cast::P8 extends Integer
 
-Class meta::pure::functions::lang::tests::cast::Container
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container
 {
   val : P8[1];
 }
@@ -38,7 +38,7 @@ Primitive meta::pure::functions::lang::tests::cast::P(x:Integer[1]) extends Inte
     $this < $x
 ]
 
-Class meta::pure::functions::lang::tests::cast::Container2
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container2
 {
     val : P(8)[1];
 }
@@ -63,7 +63,7 @@ Primitive meta::pure::functions::lang::tests::cast::NP(x:Integer[1]) extends Int
    id(~function:$this < $x ~message:'the value is greater than '+$x->toString())
 ]
 
-Class meta::pure::functions::lang::tests::cast::Container3
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container3
 {
     val : NP(8)[1];
 }
@@ -80,7 +80,7 @@ Primitive meta::pure::functions::lang::tests::cast::OP(x:Integer[1]) extends Int
 
 Primitive meta::pure::functions::lang::tests::cast::OP8 extends OP(8)
 
-Class meta::pure::functions::lang::tests::cast::Container4 {val : OP8[1];}
+Class <<test.TestDependency>> meta::pure::functions::lang::tests::cast::Container4 {val : OP8[1];}
 
 function <<test.Test>> meta::pure::functions::lang::tests::cast::testSimpleConstraintCastErrorWithMessageSimpleInheritance():Any[*]
 {
