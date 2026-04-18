@@ -1,0 +1,46 @@
+###Pure
+import meta::pure::functions::asserts::*;
+import meta::pure::functions::lang::tests::model::*;
+
+function test::simpleAssertEquals():Boolean[1]
+{
+  assertEquals(1, 1);
+}
+
+function test::assertEqualsWithStrings():Boolean[1]
+{
+  assertEquals('hello', 'hello');
+}
+
+function test::letAndAssert():Boolean[1]
+{
+  let x = 1;
+  assertEquals(1, $x);
+}
+
+function test::simpleAnd():Boolean[1]
+{
+  true && true;
+}
+
+function test::simpleOr():Boolean[1]
+{
+  false || true;
+}
+
+###CompiledGraph
+function test::simpleAssertEquals__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  FunctionInvocation assertEquals_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @7:3-7:21
+
+function test::assertEqualsWithStrings__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  FunctionInvocation assertEquals_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @12:3-12:31
+
+function test::letAndAssert__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Integer##[1]#  ~FunctionInvocation  @17:3-17:12
+  FunctionInvocation assertEquals_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @18:3-18:22
+
+function test::simpleAnd__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  ArrowInvocation and_Boolean_1__Boolean_1__Boolean_1_ :#Boolean##[1]#  ~ArrowInvocation  @23:3-23:17
+
+function test::simpleOr__Boolean_1_():Boolean[1]  ~UserDefinedFunction<{->Boolean[1]}>
+  ArrowInvocation or_Boolean_1__Boolean_1__Boolean_1_ :#Boolean##[1]#  ~ArrowInvocation  @28:3-28:17

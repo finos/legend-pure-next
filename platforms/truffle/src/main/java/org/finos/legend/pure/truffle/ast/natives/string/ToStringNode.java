@@ -146,48 +146,69 @@ public final class ToStringNode extends PureNode
 
     static boolean isDateString(String s)
     {
-        // Quick heuristic: matches yyyy-M-d or yyyy-M-dTh:m:s patterns
-        return s.length() >= 6 && s.length() <= 30
-                && Character.isDigit(s.charAt(0))
-                && s.indexOf('-') >= 1 && s.indexOf('-') <= 10;
+        // Quick heuristic: matches yyyy-M-d, +yyyy-M-d, or yyyy-M-dTh:m:s patterns
+        if (s.length() < 6)
+        {
+            return false;
+        }
+        int start = 0;
+        if (s.charAt(0) == '+' || s.charAt(0) == '-')
+        {
+            start = 1; // skip sign prefix for large years
+        }
+        if (start >= s.length() || !Character.isDigit(s.charAt(start)))
+        {
+            return false;
+        }
+        int dashIdx = s.indexOf('-', start);
+        return dashIdx >= start + 1 && dashIdx <= start + 10;
     }
 
     static String normalizeDateString(String s)
     {
-        // Parse and reformat to ensure zero-padding
+        // Strip leading + for large years
+        String input = s.startsWith("+") ? s.substring(1) : s;
         try
         {
-            if (s.contains("T"))
+            if (input.contains("T"))
             {
-                // Split on T, normalize date and time parts separately
-                String[] parts = s.split("T", 2);
+                String[] parts = input.split("T", 2);
                 String datePart = normalizeStrictDate(parts[0]);
                 String timePart = normalizeTimePart(parts[1]);
                 return datePart + "T" + timePart;
             }
             else
             {
-                return normalizeStrictDate(s);
+                return normalizeStrictDate(input);
             }
         }
         catch (Exception e)
         {
-            return s;
+            return input;
         }
     }
 
     private static String normalizeStrictDate(String s)
     {
+        // Strip leading + for large years
+        String input = s.startsWith("+") ? s.substring(1) : s;
         // Parse yyyy-M-d with lenient handling
-        String[] parts = s.split("-");
+        String[] parts = input.split("-");
         if (parts.length >= 3)
         {
-            int year = Integer.parseInt(parts[0]);
+            long year = Long.parseLong(parts[0]);
             int month = Integer.parseInt(parts[1]);
             int day = Integer.parseInt(parts[2]);
-            return String.format("%04d-%02d-%02d", year, month, day);
+            return String.format("%d-%02d-%02d", year, month, day);
         }
-        return s;
+        if (parts.length == 2)
+        {
+            // yyyy-MM only
+            long year = Long.parseLong(parts[0]);
+            int month = Integer.parseInt(parts[1]);
+            return String.format("%d-%02d", year, month);
+        }
+        return input;
     }
 
     private static String normalizeTimePart(String s)

@@ -81,19 +81,19 @@ public final class AdjustDateNode extends PureNode
             default -> throw new RuntimeException("Unknown duration unit: " + unitName);
         };
 
-        // Format back to Pure date format matching input precision
+        // Format back to Pure date format — no + prefix for large years
         if (dateStr.contains("T"))
         {
+            String datePart = String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());
+            String timePart = String.format("%02d:%02d:%02d", adjusted.getHour(), adjusted.getMinute(), adjusted.getSecond());
             if (dateStr.contains("."))
             {
-                return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS"));
+                int nanos = adjusted.getNano();
+                int millis = nanos / 1_000_000;
+                return datePart + "T" + timePart + String.format(".%03d", millis);
             }
-            return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            return datePart + "T" + timePart;
         }
-        if (dateStr.length() <= 10)
-        {
-            return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        }
-        return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        return String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());
     }
 }
