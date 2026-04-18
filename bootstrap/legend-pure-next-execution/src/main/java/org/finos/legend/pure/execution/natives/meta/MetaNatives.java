@@ -693,7 +693,7 @@ public class MetaNatives
      * (e.g., Class&lt;self&gt;), create a new CGT with the typeArgument pointing to the copy.
      * Returns the updated CGT, or the original if no self-reference was found.
      */
-    static GenericTypeValue fixSelfReferentialCGT(
+    public static GenericTypeValue fixSelfReferentialCGT(
             GenericTypeValue cgt,
             Object original, Object copy,
             MetadataAccess resolver)
@@ -774,7 +774,7 @@ public class MetaNatives
         return cgt;
     }
 
-    static void validateConstraints(meta.pure.metamodel.type.Type type,
+    public static void validateConstraints(meta.pure.metamodel.type.Type type,
                                     meta.pure.metamodel.type.generics.GenericType targetGT,
                                     Object value, ValueSpecificationEvaluator eval,
                                     MetadataAccess resolver)
@@ -919,7 +919,7 @@ public class MetaNatives
      * Create a new instance of the given class by path, using the same strategy as {@code new}.
      * Tries the direct Impl class, then UserDefined prefix, then falls back to DynamicInstance.
      */
-    static Object createInstanceByPath(String classPath)
+    public static Object createInstanceByPath(String classPath)
     {
         String javaClassName = classPath.replace("::", ".") + "Impl";
         try
@@ -938,7 +938,7 @@ public class MetaNatives
      * Derive the class path from a classifierGenericType.
      * Used as fallback when the instance has no name/package yet (freshly created via new(GenericType)).
      */
-    static String resolveClassPathFromCGT(meta.pure.metamodel.type.generics.GenericType cgt)
+    public static String resolveClassPathFromCGT(meta.pure.metamodel.type.generics.GenericType cgt)
     {
         meta.pure.metamodel.type.Type rawType = _GenericType.type(cgt);
         if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
@@ -957,7 +957,7 @@ public class MetaNatives
      * For DynamicInstance sources, copies from the value map.
      * For Java class sources, uses metamodel-driven reflection.
      */
-    static void shallowCopyProperties(Object source, Object target,
+    public static void shallowCopyProperties(Object source, Object target,
                                       meta.pure.metamodel.type.generics.GenericType cgt,
                                       MetadataAccess resolver)
     {
@@ -1455,7 +1455,7 @@ public class MetaNatives
         }
     }
 
-    static Object createInstance(String classPath, GenericTypeAndMultiplicityHolder gtmh2)
+    public static Object createInstance(String classPath, GenericTypeAndMultiplicityHolder gtmh2)
     {
         String javaClassName = classPath.replace("::", ".") + "Impl";
         try

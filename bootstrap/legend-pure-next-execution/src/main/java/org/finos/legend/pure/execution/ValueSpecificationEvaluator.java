@@ -61,6 +61,15 @@ public class ValueSpecificationEvaluator
     }
 
     /**
+     * Exposes the native registry for callers that need to dispatch natives
+     * (e.g. the Truffle {@code NativeCallNode}).
+     */
+    public NativeRepository natives()
+    {
+        return natives;
+    }
+
+    /**
      * Return the current (top-of-stack) variable scope.
      * Used by native functions that need to read or modify variable bindings.
      */

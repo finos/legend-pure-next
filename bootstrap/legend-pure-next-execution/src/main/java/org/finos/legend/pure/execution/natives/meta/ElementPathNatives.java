@@ -169,7 +169,7 @@ public class ElementPathNatives
     // Helper methods
     // =========================================================================
 
-    static String elementToPathString(PackageableElement pe, String separator)
+    public static String elementToPathString(PackageableElement pe, String separator)
     {
         String path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
         if ("::".equals(path))

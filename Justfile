@@ -79,6 +79,47 @@ build-typescript:
 # Truffle is Maven-based — builds its own JAR, depends on bootstrap artifacts
 build-truffle: build-bootstrap
     cd {{truffle}} && mvn install -DskipTests -q
+    mkdir -p {{out}}/cli
+    cp {{truffle}}/target/pure-compile-*-fat.jar {{out}}/cli/pure-compile.jar
+
+test-truffle: build-truffle build-compiler-pdb
+    cd {{truffle}} && mvn test
+
+# Run the Pure test suite via the Truffle interpreter (JVM mode).
+# Useful to compare against `just test-pure` (Java tree-walking).
+test-pure-truffle: build-truffle build-compiler-pdb
+    java -jar {{out}}/cli/pure-compile.jar execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
+        --args "{{spec}}/compiler"
+
+# Build the native-image binary for pure-compile.
+# Requires a GraalVM 23.1.x JDK (for JDK 21) on PATH or set JAVA_HOME.
+# On macOS: brew install --cask graalvm-jdk@21
+# Then export JAVA_HOME to the GraalVM JDK Home (see /usr/libexec/java_home -V)
+build-truffle-native: build-bootstrap
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v native-image >/dev/null 2>&1; then
+        echo "Error: 'native-image' not on PATH." >&2
+        echo "GraalVM is required. Install with:" >&2
+        echo "  brew install --cask graalvm-jdk@21" >&2
+        echo "Then set JAVA_HOME to the GraalVM JDK Home." >&2
+        exit 1
+    fi
+    cd {{truffle}} && mvn -Pnative package -DskipTests -q
+    mkdir -p {{out}}/cli
+    cp {{truffle}}/target/pure-compile {{out}}/cli/pure-compile-native
+    echo "Native binary: {{out}}/cli/pure-compile-native"
+
+# Run the Pure test suite via the native-image binary (requires build-truffle-native).
+test-pure-native: build-truffle-native build-compiler-pdb
+    {{out}}/cli/pure-compile-native execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
+        --args "{{spec}}/compiler"
 
 # --- Tests ---
 # Run both Java and Pure tests. Neither short-circuits on the other's failure
@@ -113,6 +154,59 @@ test-pure: build-compiler-pdb
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
         --args "{{spec}}/compiler"
+
+# Run the 172 <<test.Test>> stdlib runtime tests via the Java tree-walking evaluator
+# (baseline / parity oracle for the full-Truffle rewrite).
+test-functions-pure: build-compiler-pdb
+    java -jar {{cli}} execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runFunctionTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# Same 172 tests via the Truffle interpreter (JVM mode).
+test-functions-truffle: build-truffle build-compiler-pdb
+    java -jar {{out}}/cli/pure-compile.jar execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runFunctionTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# Same 172 tests via the native-image binary.
+test-functions-native: build-truffle-native build-compiler-pdb
+    {{out}}/cli/pure-compile-native execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runFunctionTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# Run the 418 <<PCT.test>> platform conformance tests via the Java tree-walking evaluator.
+test-pct-pure: build-compiler-pdb
+    java -jar {{cli}} execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# Same 418 PCT tests via the Truffle interpreter (JVM mode).
+test-pct-truffle: build-truffle build-compiler-pdb
+    java -jar {{out}}/cli/pure-compile.jar execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# Same 418 PCT tests via the native-image binary.
+test-pct-native: build-truffle-native build-compiler-pdb
+    {{out}}/cli/pure-compile-native execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__Boolean_1_" \
+        --args "meta::pure::functions"
+
+# --- Benchmarks ---
+bench-truffle: build-truffle build-compiler-pdb
+    cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
 
 # --- Utilities ---
 ide: build-compiler-pdb

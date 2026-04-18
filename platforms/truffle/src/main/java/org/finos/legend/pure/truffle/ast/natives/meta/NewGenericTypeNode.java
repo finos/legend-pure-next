@@ -1,0 +1,106 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package org.finos.legend.pure.truffle.ast.natives.meta;
+
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.NodeInfo;
+import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.type.Any;
+import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.execution.DynamicInstance;
+import org.finos.legend.pure.execution._E_ValueSpecification;
+import org.finos.legend.pure.execution.natives.meta.MetaNatives;
+import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
+import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
+import org.finos.legend.pure.truffle.types.ValueAdapter;
+
+/**
+ * {@code new(GenericType[1]) : Any[1]}.
+ *
+ * <p>Creates an instance with the given GenericType as classifierGenericType.</p>
+ */
+@NodeInfo(shortName = "newGenericType")
+public final class NewGenericTypeNode extends PureNode
+{
+    @Child
+    private PureNode child;
+
+    private final GenericType genericType;
+    private final Multiplicity multiplicity;
+
+    public NewGenericTypeNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
+    {
+        this.child = child;
+        this.genericType = genericType;
+        this.multiplicity = multiplicity;
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        Object result = child.executeGeneric(frame);
+        return doNewGenericType(result, genericType, multiplicity);
+    }
+
+    @TruffleBoundary
+    private static ValueSpecification doNewGenericType(Object result, GenericType genericType, Multiplicity multiplicity)
+    {
+        ValueSpecification vs = ValueAdapter.ensureVS(result);
+        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
+
+        Object rawArg = _E_ValueSpecification.unwrap(vs);
+        if (!(rawArg instanceof GenericTypeValue gt))
+        {
+            throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
+        }
+
+        meta.pure.metamodel.type.Type rawType = _GenericType.type(gt);
+        String classPath = "Unknown";
+        if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
+        {
+            classPath = _PackageableElement.path(pe);
+            if (classPath.isEmpty())
+            {
+                classPath = pe._name() != null ? pe._name() : "Unknown";
+            }
+        }
+
+        if ("meta::pure::metamodel::type::Class".equals(classPath))
+        {
+            if (_GenericType.typeArguments(gt) == null || _GenericType.typeArguments(gt).isEmpty())
+            {
+                throw new RuntimeException("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
+            }
+        }
+
+        Object instance = MetaNatives.createInstanceByPath(classPath);
+        if (instance instanceof Any any)
+        {
+            any._classifierGenericType(gt);
+        }
+        else if (instance instanceof DynamicInstance di)
+        {
+            di.setClassifierGenericType(gt);
+        }
+
+        return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+    }
+}
