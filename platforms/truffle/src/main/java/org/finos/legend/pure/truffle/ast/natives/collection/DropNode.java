@@ -14,18 +14,17 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
- * {@code drop(T[*], Integer[1]) : T[*]} — skip first {@code count} elements.
+ * {@code drop(T[*], Integer[1]) : T[*]} -- skip first {@code count} elements.
  */
 @NodeInfo(shortName = "drop")
 public final class DropNode extends PureNode
@@ -49,15 +48,12 @@ public final class DropNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         long n = IntegerHelper.asLong(count.executeGeneric(frame), SIG);
-        return slice(col, n);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification slice(Object col, long n)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        int size = values.size();
-        int from = (int) Math.min(Math.max(n, 0), size);
-        return CollectionHelper.makeCollection(new ArrayList<>(values.subList(from, size)));
+        Object[] arr = CollectionHelper.toArray(col);
+        int from = (int) Math.min(Math.max(n, 0), arr.length);
+        if (from >= arr.length)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOfRange(arr, from, arr.length));
     }
 }

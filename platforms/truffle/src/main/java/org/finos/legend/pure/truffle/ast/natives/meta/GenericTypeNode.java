@@ -18,22 +18,14 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
-import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code genericType(Any[*]) : GenericTypeValue[1]}.
- *
- * <p>Returns the GenericType of the value. For DynamicInstances, uses the
- * instance's classifierGenericType. For metamodel elements, uses
- * {@code _classifierGenericType()}. Falls back to the VS's genericType.</p>
+ * Returns the GenericType of the value as a raw object.
  */
 @NodeInfo(shortName = "genericType")
 public final class GenericTypeNode extends PureNode
@@ -55,26 +47,14 @@ public final class GenericTypeNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doGenericType(result, genericType, multiplicity);
+        return doGenericType(result);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doGenericType(Object result, GenericType genericType, Multiplicity multiplicity)
+    private static Object doGenericType(Object result)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(result);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-
-        Object val = _E_ValueSpecification.unwrap(vs);
-        // DynamicInstance may carry its own classifierGenericType (set by new/copy)
-        if (val instanceof DynamicInstance di && di.getClassifierGenericType() != null)
-        {
-            return _E_ValueSpecification.wrap(di.getClassifierGenericType(), genericType, multiplicity, resolver);
-        }
-        // Fall back to the ValueSpecification's generic type
-        if (val instanceof Any pe)
-        {
-            return _E_ValueSpecification.wrap(pe._classifierGenericType(), genericType, multiplicity, resolver);
-        }
-        return _E_ValueSpecification.wrap(vs._genericType(), genericType, multiplicity, resolver);
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
+        GenericType gt = MetaHelper.getRawGenericType(result, resolver);
+        return gt != null ? gt : result;
     }
 }

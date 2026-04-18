@@ -14,12 +14,10 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
  * {@code or(Boolean[1], Boolean[1]) : Boolean[1]} -- short-circuit.
@@ -65,18 +63,7 @@ public final class OrNode extends PureNode
         {
             return b;
         }
-        return fallbackBoolean(v);
-    }
-
-    @TruffleBoundary
-    private static boolean fallbackBoolean(Object v)
-    {
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof Boolean b)
-        {
-            return b;
-        }
         throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+                + (v == null ? "null" : v.getClass().getName()));
     }
 }

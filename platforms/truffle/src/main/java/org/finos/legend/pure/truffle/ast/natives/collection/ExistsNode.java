@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 @NodeInfo(shortName = "exists")
@@ -30,7 +28,7 @@ public final class ExistsNode extends PureNode
     private PureNode lambda;
 
     @Child
-    private LambdaCallNode callNode = new LambdaCallNode();
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode callNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public ExistsNode(PureNode collection, PureNode lambda)
     {
@@ -43,12 +41,11 @@ public final class ExistsNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         Object fn = lambda.executeGeneric(frame);
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        int size = values.size();
-        for (int i = 0; i < size; i++)
+        int sz = CollectionHelper.size(col);
+        for (int i = 0; i < sz; i++)
         {
-            ValueSpecification test = callNode.call(fn, values.get(i));
-            if (Boolean.TRUE.equals(org.finos.legend.pure.execution._E_ValueSpecification.unwrap(test)))
+            Object test = callNode.call(fn, CollectionHelper.at(col, i));
+            if (test instanceof Boolean b ? b : false)
             {
                 return true;
             }

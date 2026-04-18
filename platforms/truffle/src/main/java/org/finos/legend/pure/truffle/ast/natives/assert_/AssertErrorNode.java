@@ -17,18 +17,16 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository.PureAssertionError;
+import meta.pure.metamodel.function.LambdaFunction;
+import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
  * {@code assertError(Function<{->Any[*]}>[1], String[1], Integer[0..1], Integer[0..1]) : Boolean[1]}
- * — asserts that the function throws an error containing the expected message.
+ * -- asserts that the function throws an error containing the expected message.
  */
 @NodeInfo(shortName = "assertError")
 public final class AssertErrorNode extends PureNode
@@ -60,7 +58,6 @@ public final class AssertErrorNode extends PureNode
     {
         Object fn = fnArg.executeGeneric(frame);
         String expectedMessage = StringHelper.asString(msgArg.executeGeneric(frame), SIG);
-        // line and col are evaluated but not used in the current implementation
         if (lineArg != null)
         {
             lineArg.executeGeneric(frame);
@@ -73,12 +70,26 @@ public final class AssertErrorNode extends PureNode
     }
 
     @TruffleBoundary
-    private static boolean doAssertError(Object fn, String expectedMessage)
+    private static boolean doAssertError(Object rawFn, String expectedMessage)
     {
-        ValueSpecification fnVS = ValueAdapter.ensureVS(fn);
+        // Unwrap AtomicValue if present
+        Object fn = rawFn instanceof meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawFn;
         try
         {
-            EvaluatorHolder.current().executeFunction(fnVS, List.of());
+            // Execute the zero-arg function
+            if (fn instanceof RawClosure rc)
+            {
+                StandaloneEvaluatorHolder.current().executeLambda(rc, new Object[0]);
+            }
+            else if (fn instanceof LambdaFunction lf)
+            {
+                RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
+                StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
+            }
+            else
+            {
+                throw new RuntimeException("assertError: argument is not a function");
+            }
             throw new PureAssertionError("Expected error with message containing: '"
                     + expectedMessage + "' but no error was thrown");
         }

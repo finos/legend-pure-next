@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -49,12 +48,6 @@ public final class DivideDecimalNode extends PureNode
         Object a = dividend.executeGeneric(frame);
         Object b = divisor.executeGeneric(frame);
         int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
-        return divide(a, b, s);
-    }
-
-    @TruffleBoundary
-    private static BigDecimal divide(Object a, Object b, int s)
-    {
         return toBigDecimal(a).divide(toBigDecimal(b), s, RoundingMode.HALF_UP);
     }
 

@@ -17,18 +17,13 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.functions.collection.MapImpl;
+import meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
 
 /**
  * {@code newMap(Pair[*]) : Map[1]} and
- * {@code newMap(Pair[*], Property[*]) : Map[1]} — map construction from pairs.
- * Delegates to the bridged native since Map construction requires
- * DynamicInstance pair destructuring and PureMap creation.
+ * {@code newMap(Pair[*], Property[*]) : Map[1]}.
  */
 @NodeInfo(shortName = "newMap")
 public final class NewMapNode extends PureNode
@@ -52,29 +47,26 @@ public final class NewMapNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object pairs = pairsArg.executeGeneric(frame);
-        Object properties = propertiesArg != null ? propertiesArg.executeGeneric(frame) : null;
-        return buildMap(pairs, properties);
+        if (propertiesArg != null)
+        {
+            propertiesArg.executeGeneric(frame);
+        }
+        return buildMap(pairs);
     }
 
     @TruffleBoundary
-    private ValueSpecification buildMap(Object pairs, Object properties)
+    private static Object buildMap(Object pairs)
     {
-        ValueSpecification pairsVS = ValueAdapter.ensureVS(pairs);
-        if (properties != null)
+        MapImpl map = new MapImpl();
+        int sz = CollectionHelper.size(pairs);
+        for (int i = 0; i < sz; i++)
         {
-            ValueSpecification propsVS = ValueAdapter.ensureVS(properties);
-            return EvaluatorHolder.current().natives().execute(
-                    signature,
-                    List.of(pairsVS, propsVS),
-                    EvaluatorHolder.current(),
-                    null,
-                    null);
+            Object pair = CollectionHelper.at(pairs, i);
+            if (pair instanceof PairImpl p)
+            {
+                map.put(p._first(), p._second());
+            }
         }
-        return EvaluatorHolder.current().natives().execute(
-                signature,
-                List.of(pairsVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        return map;
     }
 }

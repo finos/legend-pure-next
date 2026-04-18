@@ -14,18 +14,17 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
- * {@code take(T[*], Integer[1]) : T[*]} — first {@code count} elements.
+ * {@code take(T[*], Integer[1]) : T[*]} -- first {@code count} elements.
  */
 @NodeInfo(shortName = "take")
 public final class TakeNode extends PureNode
@@ -49,14 +48,12 @@ public final class TakeNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         long n = IntegerHelper.asLong(count.executeGeneric(frame), SIG);
-        return slice(col, n);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification slice(Object col, long n)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        int to = (int) Math.min(Math.max(n, 0), values.size());
-        return CollectionHelper.makeCollection(new ArrayList<>(values.subList(0, to)));
+        Object[] arr = CollectionHelper.toArray(col);
+        int to = (int) Math.min(Math.max(n, 0), arr.length);
+        if (to == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOf(arr, to));
     }
 }

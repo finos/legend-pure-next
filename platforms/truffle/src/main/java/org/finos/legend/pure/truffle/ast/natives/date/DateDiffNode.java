@@ -17,18 +17,14 @@ package org.finos.legend.pure.truffle.ast.natives.date;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * {@code dateDiff(Date[1], Date[1], DurationUnit[1]) : Integer[1]}
- * — difference between two dates in the given unit.
- * Delegates to the bridged native for the complex unit-based calculation.
+ * -- difference between two dates in the given unit.
  */
 @NodeInfo(shortName = "dateDiff")
 public final class DateDiffNode extends PureNode
@@ -61,16 +57,53 @@ public final class DateDiffNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doDiff(Object d1, Object d2, Object unit)
+    private static long doDiff(Object d1, Object d2, Object unit)
     {
-        ValueSpecification d1VS = ValueAdapter.ensureVS(d1);
-        ValueSpecification d2VS = ValueAdapter.ensureVS(d2);
-        ValueSpecification unitVS = ValueAdapter.ensureVS(unit);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(d1VS, d2VS, unitVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        String d1Str = DateHelper.asDateString(d1, SIG);
+        String d2Str = DateHelper.asDateString(d2, SIG);
+        String unitName = resolveUnitName(unit);
+
+        LocalDateTime ldt1 = DateHelper.parseDate(d1Str);
+        LocalDateTime ldt2 = DateHelper.parseDate(d2Str);
+
+        return switch (unitName)
+        {
+            case "YEARS" -> ChronoUnit.YEARS.between(ldt1, ldt2);
+            case "MONTHS" -> ChronoUnit.MONTHS.between(ldt1, ldt2);
+            case "WEEKS" -> ChronoUnit.WEEKS.between(ldt1, ldt2);
+            case "DAYS" -> ChronoUnit.DAYS.between(ldt1, ldt2);
+            case "HOURS" -> ChronoUnit.HOURS.between(ldt1, ldt2);
+            case "MINUTES" -> ChronoUnit.MINUTES.between(ldt1, ldt2);
+            case "SECONDS" -> ChronoUnit.SECONDS.between(ldt1, ldt2);
+            case "MILLISECONDS" -> ChronoUnit.MILLIS.between(ldt1, ldt2);
+            case "MICROSECONDS" -> ChronoUnit.MICROS.between(ldt1, ldt2);
+            case "NANOSECONDS" -> ChronoUnit.NANOS.between(ldt1, ldt2);
+            default -> throw new RuntimeException("Unknown duration unit: " + unitName);
+        };
+    }
+
+    static String resolveUnitName(Object unit)
+    {
+        if (unit instanceof meta.pure.metamodel.type.Enum e)
+        {
+            return e._name();
+        }
+        if (unit instanceof String s)
+        {
+            return s;
+        }
+        if (unit instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            Object inner = av._value();
+            if (inner instanceof meta.pure.metamodel.type.Enum e)
+            {
+                return e._name();
+            }
+            if (inner instanceof String s)
+            {
+                return s;
+            }
+        }
+        return String.valueOf(unit);
     }
 }

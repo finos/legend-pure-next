@@ -17,20 +17,17 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
  * {@code if(Boolean[1], Function<{->T[m]}>[1], Function<{->T[m]}>[1]) : T[m]}.
  *
- * <p>Evaluates the condition eagerly (child 0). Based on the boolean result,
- * evaluates the chosen branch child (child 1 for true, child 2 for false) to
- * obtain a zero-arg lambda, then invokes it via the bridged evaluator.</p>
+ * <p>Evaluates the condition eagerly. Based on the boolean result,
+ * evaluates the chosen branch and invokes it as a zero-arg lambda.</p>
  */
 @NodeInfo(shortName = "if")
 public final class IfNode extends PureNode
@@ -56,21 +53,32 @@ public final class IfNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        // Evaluate all children (matches BridgedNativeCallNode behavior —
-        // all args are evaluated before the native sees them). The unchosen
-        // branch is evaluated but not invoked.
         Object condVal = condition.executeGeneric(frame);
         Object thenFn = thenBranch.executeGeneric(frame);
         Object elseFn = elseBranch.executeGeneric(frame);
         boolean cond = asBoolean(condVal);
-        return invokeBranch(cond ? thenFn : elseFn);
+        return callExecuteFunction(cond ? thenFn : elseFn);
     }
 
     @TruffleBoundary
-    private static Object invokeBranch(Object branchFn)
+    private static Object callExecuteFunction(Object branchFn)
     {
-        ValueSpecification branchVS = ValueAdapter.ensureVS(branchFn);
-        return EvaluatorHolder.current().executeFunction(branchVS, List.of());
+        if (branchFn instanceof RawClosure rc)
+        {
+            return StandaloneEvaluatorHolder.current().executeLambda(rc, new Object[0]);
+        }
+        if (branchFn instanceof LambdaFunction lf)
+        {
+            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
+            return StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
+        }
+        // AtomicValue wrapping a LambdaFunction
+        if (branchFn instanceof AtomicValue av && av._value() instanceof LambdaFunction lf)
+        {
+            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
+            return StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
+        }
+        throw new RuntimeException("if: branch is not a function: " + (branchFn == null ? "null" : branchFn.getClass().getName()));
     }
 
     private static boolean asBoolean(Object v)
@@ -83,18 +91,7 @@ public final class IfNode extends PureNode
         {
             return b;
         }
-        return fallbackBoolean(v);
-    }
-
-    @TruffleBoundary
-    private static boolean fallbackBoolean(Object v)
-    {
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof Boolean b)
-        {
-            return b;
-        }
         throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+                + (v == null ? "null" : v.getClass().getName()));
     }
 }

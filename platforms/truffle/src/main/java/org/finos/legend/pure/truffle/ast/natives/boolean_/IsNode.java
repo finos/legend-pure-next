@@ -17,16 +17,15 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+
+import java.util.Objects;
 
 /**
  * {@code is(Any[1], Any[1]) : Boolean[1]} -- identity comparison.
  *
  * <p>Compares by reference ({@code ==}), with special cases for primitives
- * (Numbers, Strings, Booleans, Enums) which fall back to
- * {@link NativeRepository#pureEquals} since the JVM may not intern them.</p>
+ * which fall back to structural equality since the JVM may not intern them.</p>
  */
 @NodeInfo(shortName = "is")
 public final class IsNode extends PureNode
@@ -48,14 +47,8 @@ public final class IsNode extends PureNode
     {
         Object a = left.executeGeneric(frame);
         Object b = right.executeGeneric(frame);
-        return doIs(a, b);
-    }
-
-    @TruffleBoundary
-    private static boolean doIs(Object a, Object b)
-    {
-        Object rawA = normalize(ValueAdapter.toRaw(a));
-        Object rawB = normalize(ValueAdapter.toRaw(b));
+        Object rawA = normalize(a);
+        Object rawB = normalize(b);
         if (rawA == rawB)
         {
             return true;
@@ -65,9 +58,15 @@ public final class IsNode extends PureNode
                 || rawA instanceof Boolean && rawB instanceof Boolean
                 || rawA instanceof meta.pure.metamodel.type.Enum && rawB instanceof meta.pure.metamodel.type.Enum)
         {
-            return NativeRepository.pureEquals(rawA, rawB);
+            return callPureEquals(rawA, rawB);
         }
         return false;
+    }
+
+    @TruffleBoundary
+    private static boolean callPureEquals(Object a, Object b)
+    {
+        return Objects.equals(a, b);
     }
 
     private static Object normalize(Object v)
@@ -75,6 +74,11 @@ public final class IsNode extends PureNode
         if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return null;
+        }
+        if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            Object inner = av._value();
+            return inner != null ? inner : null;
         }
         return v;
     }

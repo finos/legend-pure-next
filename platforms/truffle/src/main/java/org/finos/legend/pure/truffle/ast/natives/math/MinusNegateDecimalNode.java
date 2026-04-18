@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -35,12 +34,7 @@ public final class MinusNegateDecimalNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return negate(operand.executeGeneric(frame));
-    }
-
-    @TruffleBoundary
-    private static BigDecimal negate(Object v)
-    {
+        Object v = operand.executeGeneric(frame);
         if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
         {
             v = av._value();

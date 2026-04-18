@@ -17,16 +17,14 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
- * {@code removeAll(T[*], T[*]) : T[*]} — set difference using structural equality.
+ * {@code removeAll(T[*], T[*]) : T[*]} -- set difference using structural equality.
  */
 @NodeInfo(shortName = "removeAll")
 public final class RemoveAllNode extends PureNode
@@ -48,22 +46,17 @@ public final class RemoveAllNode extends PureNode
     {
         Object set = setArg.executeGeneric(frame);
         Object other = otherArg.executeGeneric(frame);
-        return doRemoveAll(set, other);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification doRemoveAll(Object set, Object other)
-    {
-        MutableList<ValueSpecification> setVals = CollectionHelper.values(set);
-        MutableList<ValueSpecification> otherVals = CollectionHelper.values(other);
-        List<ValueSpecification> result = new ArrayList<>();
-        for (int i = 0; i < setVals.size(); i++)
+        int setSz = CollectionHelper.size(set);
+        int otherSz = CollectionHelper.size(other);
+        Object[] buf = new Object[setSz];
+        int count = 0;
+        for (int i = 0; i < setSz; i++)
         {
-            ValueSpecification vs = setVals.get(i);
+            Object item = CollectionHelper.at(set, i);
             boolean found = false;
-            for (int j = 0; j < otherVals.size(); j++)
+            for (int j = 0; j < otherSz; j++)
             {
-                if (NativeRepository.pureEquals(vs, otherVals.get(j)))
+                if (pureEquals(item, CollectionHelper.at(other, j)))
                 {
                     found = true;
                     break;
@@ -71,9 +64,26 @@ public final class RemoveAllNode extends PureNode
             }
             if (!found)
             {
-                result.add(vs);
+                buf[count++] = item;
             }
         }
-        return CollectionHelper.makeCollection(result);
+        if (count == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOf(buf, count));
+    }
+
+    private static boolean pureEquals(Object a, Object b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a == null || b == null)
+        {
+            return false;
+        }
+        return java.util.Objects.equals(a, b);
     }
 }

@@ -17,24 +17,27 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution.PureMap;
-import org.finos.legend.pure.execution._E_ValueSpecification;
+import meta.pure.functions.collection.ListImpl;
+import meta.pure.functions.collection.MapImpl;
+import meta.pure.functions.collection.PairImpl;
+import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@code groupBy(X[*], Function<{X[1]->K[1]}>[1]) : Map<K,List<X>>[1]}
- * — groups elements by key function result.
+ * -- groups elements by key function result.
+ *
+ * <p>Iteration is boundary-free via {@link org.finos.legend.pure.truffle.ast.RawLambdaCallNode}.
+ * The map/Impl construction step stays behind
+ * {@code @TruffleBoundary}.</p>
  */
 @NodeInfo(shortName = "groupBy")
 public final class GroupByNode extends PureNode
@@ -46,7 +49,7 @@ public final class GroupByNode extends PureNode
     private PureNode keyFnArg;
 
     @Child
-    private LambdaCallNode callNode = new LambdaCallNode();
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode callNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public GroupByNode(PureNode collectionArg, PureNode keyFnArg)
     {
@@ -59,45 +62,53 @@ public final class GroupByNode extends PureNode
     {
         Object col = collectionArg.executeGeneric(frame);
         Object keyFn = keyFnArg.executeGeneric(frame);
-        return doGroupBy(col, keyFn);
+
+        int sz = CollectionHelper.size(col);
+        Object[] items = new Object[sz];
+        Object[] keys = new Object[sz];
+        for (int i = 0; i < sz; i++)
+        {
+            items[i] = CollectionHelper.at(col, i);
+            keys[i] = callNode.call(keyFn, items[i]);
+        }
+        return buildMap(items, keys, sz);
     }
 
     @TruffleBoundary
-    private ValueSpecification doGroupBy(Object col, Object keyFn)
+    private static Object buildMap(Object[] items, Object[] keys, int sz)
     {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        ValueSpecification keyFnVS = ValueAdapter.ensureVS(keyFn);
+        LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();
+        List<Object> canonicalKeys = new ArrayList<>();
 
-        LinkedHashMap<ValueSpecification, List<ValueSpecification>> grouped = new LinkedHashMap<>();
-        for (int i = 0; i < values.size(); i++)
+        for (int i = 0; i < sz; i++)
         {
-            ValueSpecification itemVS = values.get(i);
-            ValueSpecification key = EvaluatorHolder.current().executeFunction(keyFnVS, List.of(itemVS));
-            ValueSpecification canonicalKey = null;
-            for (ValueSpecification k : grouped.keySet())
+            Object key = keys[i];
+            Object canonicalKey = null;
+            for (Object ck : canonicalKeys)
             {
-                if (NativeRepository.pureEquals(k, key))
+                if (Objects.equals(ck, key))
                 {
-                    canonicalKey = k;
+                    canonicalKey = ck;
                     break;
                 }
             }
             if (canonicalKey == null)
             {
                 canonicalKey = key;
+                canonicalKeys.add(canonicalKey);
                 grouped.put(canonicalKey, new ArrayList<>());
             }
-            grouped.get(canonicalKey).add(itemVS);
+            grouped.get(canonicalKey).add(items[i]);
         }
 
-        LinkedHashMap<ValueSpecification, ValueSpecification> resultMap = new LinkedHashMap<>();
-        org.finos.legend.pure.m3.module.MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-        for (Map.Entry<ValueSpecification, List<ValueSpecification>> e : grouped.entrySet())
+        // Build MapImpl backed by LinkedHashMap
+        MapImpl mapInstance = new MapImpl();
+        for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
-            DynamicInstance listInstance = new DynamicInstance("meta::pure::functions::collection::List");
-            listInstance.put("values", CollectionHelper.makeCollection(e.getValue()));
-            resultMap.put(e.getKey(), _E_ValueSpecification.wrap(listInstance, null, null, resolver));
+            ListImpl listInstance = new ListImpl();
+            listInstance._values(Lists.mutable.with(e.getValue().toArray()));
+            mapInstance.put(e.getKey(), listInstance);
         }
-        return _E_ValueSpecification.wrap(new PureMap(resultMap), null, null, resolver);
+        return mapInstance;
     }
 }

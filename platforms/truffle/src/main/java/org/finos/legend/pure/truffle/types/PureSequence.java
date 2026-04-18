@@ -45,4 +45,14 @@ public abstract class PureSequence
     public abstract Object getBoxed(int index);
 
     public abstract Object[] toBoxedArray();
+
+    /**
+     * Convert to a {@code java.util.List} for interop with code that
+     * doesn't know about PureSequence (e.g. PureValuePrinter).
+     */
+    public java.util.List<Object> toList()
+    {
+        Object[] arr = toBoxedArray();
+        return java.util.Arrays.asList(arr);
+    }
 }

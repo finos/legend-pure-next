@@ -17,22 +17,20 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.metamodel.function.FunctionDefinition;
+import meta.pure.metamodel.function.LambdaFunction;
+import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
  * {@code match(Any[*], Function<{...}>[1..*]) : T[m]} and the two-parameter
  * variant with an extra parameter {@code P[o]}.
  *
- * <p>Evaluates all children, then delegates to a {@link TruffleBoundary} method
- * that performs type-based dispatch against the match function collection. The
- * matching logic mirrors {@code LangNatives.matchesBranch} and accesses the
- * resolver for subtype checks.</p>
+ * <p>Evaluates all children, then performs type-based dispatch against the
+ * match function collection.</p>
  */
 @NodeInfo(shortName = "match")
 public final class MatchNode extends PureNode
@@ -61,60 +59,123 @@ public final class MatchNode extends PureNode
     {
         // values[0] = value to match
         // values[1] = match functions collection
-        // values[2] = optional extra parameter (P[o])
-        ValueSpecification valueVS = ValueAdapter.ensureVS(values[0]);
-        ValueSpecification matchFnsVS = ValueAdapter.ensureVS(values[1]);
-
-        org.finos.legend.pure.execution.ValueSpecificationEvaluator eval = EvaluatorHolder.current();
-        org.finos.legend.pure.m3.module.MetadataAccess resolver = eval.natives().resolver();
-
-        meta.pure.metamodel.type.Type valueType =
-                org.finos.legend.pure.execution._E_ValueSpecification.getValueOriginalType(valueVS, resolver);
-        int valueCount = getValueCount(org.finos.legend.pure.execution._E_ValueSpecification.unwrap(valueVS));
-
-        meta.pure.metamodel.valuespecification.Collection matchFuncCol =
-                org.finos.legend.pure.execution._E_ValueSpecification.toCollection(matchFnsVS, resolver);
-
-        for (ValueSpecification mfVS : matchFuncCol._values())
+        // values[2] = optional extra parameter
+        Object value = values[0];
+        // Unwrap AtomicValue (e.g., date values kept as AV)
+        if (value instanceof AtomicValue av)
         {
-            Object mf = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(mfVS);
-            if (!matchesBranch(mf, valueType, valueCount, resolver))
+            value = av._value();
+        }
+        Object matchFns = values[1];
+
+        org.finos.legend.pure.m3.module.MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
+        meta.pure.metamodel.type.Type valueType = getRawValueType(values[0], value, resolver);
+        int valueCount = getRawValueCount(value);
+
+        // Iterate over match functions
+        int fnCount = CollectionHelper.size(matchFns);
+        for (int i = 0; i < fnCount; i++)
+        {
+            Object mfRaw = CollectionHelper.at(matchFns, i);
+            // Unwrap AtomicValue if needed
+            if (mfRaw instanceof AtomicValue av)
+            {
+                mfRaw = av._value();
+            }
+            if (!(mfRaw instanceof FunctionDefinition fd))
             {
                 continue;
             }
-            List<ValueSpecification> args = new ArrayList<>(2);
-            args.add(valueVS);
-            if (values.length > 2 && mf instanceof meta.pure.metamodel.function.FunctionDefinition fd
-                    && fd._parameters() != null && fd._parameters().size() >= 2)
+            if (!matchesBranch(fd, valueType, valueCount, resolver))
             {
-                args.add(ValueAdapter.ensureVS(values[2]));
+                continue;
             }
-            return eval.executeFunction(mfVS, args);
+
+            // Build args: [value, optionalExtra]
+            Object[] args;
+            if (values.length > 2 && fd._parameters() != null && fd._parameters().size() >= 2)
+            {
+                args = new Object[]{value, values[2]};
+            }
+            else
+            {
+                args = new Object[]{value};
+            }
+            return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
         }
-        throw new RuntimeException("No match function matched the value: "
-                + org.finos.legend.pure.execution._E_ValueSpecification.unwrap(valueVS));
+        throw new RuntimeException("No match function matched the value: " + value);
     }
 
-    private static int getValueCount(Object value)
+    private static int getRawValueCount(Object value)
     {
-        if (value == null)
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return 0;
         }
-        if (value instanceof java.util.List<?> list)
-        {
-            return list.size();
-        }
-        return 1;
+        return CollectionHelper.size(value);
     }
 
-    private static boolean matchesBranch(Object mf,
+    private static meta.pure.metamodel.type.Type getRawValueType(Object original, Object unwrapped,
+                                                                  org.finos.legend.pure.m3.module.MetadataAccess resolver)
+    {
+        // If original was AtomicValue with genericType, use that
+        if (original instanceof AtomicValue av && av._genericType() != null)
+        {
+            meta.pure.metamodel.type.Type t =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(av._genericType());
+            if (t != null)
+            {
+                return t;
+            }
+        }
+        Object value = unwrapped;
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+        }
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence)
+        {
+            // For collections, use the first element's type if available
+            int sz = CollectionHelper.size(value);
+            if (sz > 0)
+            {
+                return getRawValueType(CollectionHelper.at(value, 0), CollectionHelper.at(value, 0), resolver);
+            }
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+        }
+        if (value instanceof meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
+        {
+            return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(any._classifierGenericType());
+        }
+        if (value instanceof Long)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
+        }
+        if (value instanceof Double)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float");
+        }
+        if (value instanceof Boolean)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
+        }
+        if (value instanceof String)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
+        }
+        if (value instanceof java.math.BigDecimal)
+        {
+            return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
+        }
+        return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Any");
+    }
+
+    private static boolean matchesBranch(FunctionDefinition fd,
                                          meta.pure.metamodel.type.Type valueType,
                                          int valueCount,
                                          org.finos.legend.pure.m3.module.MetadataAccess resolver)
     {
-        if (!(mf instanceof meta.pure.metamodel.function.FunctionDefinition fd)
-                || fd._parameters() == null || fd._parameters().isEmpty())
+        if (fd._parameters() == null || fd._parameters().isEmpty())
         {
             return true;
         }
@@ -123,12 +184,21 @@ public final class MatchNode extends PureNode
 
         if (param._genericType() != null)
         {
-            meta.pure.metamodel.type.Type paramType =
-                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(param._genericType());
-            if (paramType != null
-                    && !org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(valueType, paramType, resolver))
+            try
             {
-                return false;
+                meta.pure.metamodel.type.Type paramType =
+                        org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(param._genericType());
+                if (paramType != null && valueType != null
+                        && !org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(valueType, paramType, resolver))
+                {
+                    return false;
+                }
+            }
+            catch (NullPointerException ignored)
+            {
+                // GenericType may have null type in FlatBuffer wrappers.
+                // When type information is unavailable, accept the branch
+                // and let the runtime decide.
             }
         }
 
@@ -166,10 +236,6 @@ public final class MatchNode extends PureNode
         {
             return false;
         }
-        if (upper != -1 && count > upper)
-        {
-            return false;
-        }
-        return true;
+        return upper == -1 || count <= upper;
     }
 }

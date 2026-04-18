@@ -14,9 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 public final class StringHelper
 {
@@ -34,18 +32,25 @@ public final class StringHelper
         {
             return s;
         }
-        return fallback(v, signature);
-    }
-
-    @TruffleBoundary
-    private static String fallback(Object v, String signature)
-    {
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof String s)
+        if (v instanceof AtomicValue av && av._value() != null)
         {
-            return s;
+            return av._value().toString();
         }
-        throw new ClassCastException(signature + " expected String, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+        if (v instanceof org.finos.legend.pure.truffle.types.PureNull || v == null)
+        {
+            return "";
+        }
+        // PureSequence — join all elements as strings
+        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < seq.size(); i++)
+            {
+                sb.append(asString(seq.getBoxed(i), signature));
+            }
+            return sb.toString();
+        }
+        // Any other type — use toString
+        return ToStringNode.pureToString(v);
     }
 }

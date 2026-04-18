@@ -46,9 +46,14 @@ public final class StringNodeFactories
         registry.register("contains_String_1__String_1__Boolean_1_",
                 (args, gt, mul, fe) -> new ContainsStringNode(args[0], args[1]));
 
-        // toString, joinStrings, format, toRepresentation stay on the bridge —
-        // they have complex DynamicInstance/Date/Float formatting that the
-        // simple nodes don't replicate correctly.
+        registry.register("toString_Any_1__String_1_",
+                (args, gt, mul, fe) -> new ToStringNode(args[0], gt, mul));
+        registry.register("joinStrings_String_MANY__String_1__String_1__String_1__String_1_",
+                (args, gt, mul, fe) -> new JoinStringsNode(args[0], args[1], args[2], args[3], gt, mul));
+        registry.register("format_String_1__Any_MANY__String_1_",
+                (args, gt, mul, fe) -> new FormatNode(args[0], args[1], gt, mul));
+        registry.register("toRepresentation_Any_1__String_1_",
+                (args, gt, mul, fe) -> new ToRepresentationNode(args[0], gt, mul));
 
         registry.register("split_String_1__String_1__String_MANY_",
                 (args, gt, mul, fe) -> new SplitNode(args[0], args[1], gt, mul));

@@ -52,12 +52,29 @@ public final class NativeNodeRegistry
     private final Map<String, Factory> factories = new HashMap<>();
 
     /**
-     * Default registry with no specializations — every native lowers to the
-     * bridge. Phases 2+ populate this via {@link #register}.
+     * Default registry with no specializations.
      */
     public static NativeNodeRegistry empty()
     {
         return new NativeNodeRegistry();
+    }
+
+    /**
+     * Creates a fully-populated registry with all standard native specializations.
+     */
+    public static NativeNodeRegistry createDefault()
+    {
+        NativeNodeRegistry registry = new NativeNodeRegistry();
+        org.finos.legend.pure.truffle.ast.natives.math.MathNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.boolean_.BooleanNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.string.StringNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.collection.CollectionNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.lang.LangNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.meta.MetaNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.io.IONodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.assert_.AssertNodeFactories.registerAll(registry);
+        org.finos.legend.pure.truffle.ast.natives.date.DateNodeFactories.registerAll(registry);
+        return registry;
     }
 
     public NativeNodeRegistry register(String signature, Factory factory)

@@ -25,19 +25,15 @@ import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
-import org.finos.legend.pure.truffle.ast.BridgedNativeCallNode;
-import org.finos.legend.pure.truffle.ast.CollectionNode;
 import org.finos.legend.pure.truffle.ast.FrameLetFunctionNode;
 import org.finos.legend.pure.truffle.ast.FrameVariableReadNode;
 import org.finos.legend.pure.truffle.ast.GenericTypeHolderNode;
-import org.finos.legend.pure.truffle.ast.LambdaCaptureNode;
-import org.finos.legend.pure.truffle.ast.LazyNativeCallNode;
-import org.finos.legend.pure.truffle.ast.PropertyAccessNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.ast.UserFunctionCallNode;
-import org.finos.legend.pure.truffle.ast.VariableReadNode;
+import org.finos.legend.pure.truffle.ast.RawCollectionNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCaptureNode;
+import org.finos.legend.pure.truffle.ast.RawPropertyAccessNode;
+import org.finos.legend.pure.truffle.ast.RawUserFunctionCallNode;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
 
 /**
@@ -46,39 +42,27 @@ import org.finos.legend.pure.truffle.frame.FrameLayout;
  *
  * <p>For each native call, the builder consults {@link NativeNodeRegistry}
  * first — a specialized node operates on raw values and is inlineable by
- * Graal. Signatures without a specialization fall back to {@link
- * BridgedNativeCallNode}, which crosses a {@code @TruffleBoundary} to the
- * legacy {@link NativeRepository}. Short-circuit / lazy natives always
- * route through {@link LazyNativeCallNode} since they control argument
- * evaluation.</p>
+ * Graal. All native signatures must have a registered specialization.</p>
  */
 public final class PureASTBuilder
 {
     private static final String LET_FUNCTION_SIGNATURE = "letFunction_String_1__T_m__T_m_";
 
-    private final NativeRepository natives;
     private final NativeNodeRegistry specialized;
 
     // Current enclosing FunctionDefinition's frame layout. Set by
     // {@link #lowerBody} and consulted when lowering variable reads /
-    // letFunction calls. Null means "no frame in scope" — emit HashMap
-    // VariableReadNode / BridgedNativeCallNode(letFunction).
+    // letFunction calls. Null means "no frame in scope".
     private FrameLayout currentLayout;
 
-    public PureASTBuilder(NativeRepository natives)
+    public PureASTBuilder(Object nativesFallback, NativeNodeRegistry specialized)
     {
-        this(natives, NativeNodeRegistry.empty());
+        this.specialized = specialized;
     }
 
     public NativeNodeRegistry specialized()
     {
         return specialized;
-    }
-
-    public PureASTBuilder(NativeRepository natives, NativeNodeRegistry specialized)
-    {
-        this.natives = natives;
-        this.specialized = specialized;
     }
 
     /**
@@ -149,7 +133,7 @@ public final class PureASTBuilder
                 {
                     children[i] = lower(values.get(i));
                 }
-                yield new CollectionNode(children, col._genericType(), col._multiplicity());
+                yield new RawCollectionNode(children);
             }
             case GenericTypeAndMultiplicityHolder gmh -> new GenericTypeHolderNode(gmh);
             case FunctionExpression fe -> lowerFunctionExpression(fe);
@@ -171,24 +155,15 @@ public final class PureASTBuilder
             // lazily against the target's runtime class, and touching that
             // resolution at lower time (before the target is evaluated) can
             // throw IndexOutOfBounds on unreachable references. Defer to
-            // the Java evaluator, which evaluates the target first.
-            return new org.finos.legend.pure.truffle.ast.DeferredLowerNode(fe);
+            // the property access node, which evaluates the target first.
+            return new RawPropertyAccessNode(fe, lowerArgs(fe));
         }
-        // Note: QualifiedProperty implements both FunctionDefinition and
-        // AbstractProperty. Matching FunctionDefinition first means QPs
-        // dispatch through UserFunctionCallNode, which bypasses Java's
-        // evaluatePropertyFunc type-variable binding. This is a known gap
-        // — switching the order causes a different Truffle-only failure
-        // (FlatBuffer IOBE when Java's evaluator re-reads the same FE via
-        // javaEvaluate), so we leave the ordering and accept the missed
-        // type-var binding for now. testNewWithTypeVariables is the only
-        // test that exercises this; all other QPs have no type variables.
         return switch (func)
         {
             case NativeFunction nf -> lowerNativeCall(nf, fe);
-            case FunctionDefinition fd -> new UserFunctionCallNode(fd, lowerArgs(fe));
-            case AbstractProperty prop -> new PropertyAccessNode(fe);
-            case null -> new org.finos.legend.pure.truffle.ast.DeferredLowerNode(fe);
+            case FunctionDefinition fd -> new RawUserFunctionCallNode(fd, lowerArgs(fe));
+            case AbstractProperty prop -> new RawPropertyAccessNode(fe, lowerArgs(fe));
+            case null -> new RawPropertyAccessNode(fe, lowerArgs(fe));
             default -> throw new RuntimeException(
                     "Unsupported function type: " + func.getClass().getName());
         };
@@ -205,16 +180,14 @@ public final class PureASTBuilder
                 return slotNode;
             }
         }
-        if (natives.isLazy(signature))
-        {
-            return new LazyNativeCallNode(signature, fe);
-        }
         NativeNodeRegistry.Factory factory = specialized.lookup(signature);
         if (factory != null)
         {
             return factory.create(lowerArgs(fe), fe._genericType(), fe._multiplicity(), fe);
         }
-        return new BridgedNativeCallNode(signature, lowerArgs(fe), fe._genericType(), fe._multiplicity());
+        // All signatures should be registered. If we reach here, it's a
+        // new native added without a corresponding Truffle node.
+        throw new RuntimeException("No specialized Truffle node for native: " + signature);
     }
 
     private PureNode lowerVariableRead(VariableExpression ve)
@@ -227,7 +200,7 @@ public final class PureASTBuilder
                 return new FrameVariableReadNode(slot, ve._name());
             }
         }
-        return new VariableReadNode(ve._name());
+        return new FrameVariableReadNode(-1, ve._name());
     }
 
     private PureNode tryLowerFrameLet(FunctionExpression fe)
@@ -258,39 +231,39 @@ public final class PureASTBuilder
             MutableList<VariableExpression> openVars = lambda._openVariables();
             if (openVars != null && !openVars.isEmpty())
             {
-                return new LambdaCaptureNode(av, lambda, openVars, currentLayout);
+                return new RawLambdaCaptureNode(lambda, openVars, currentLayout);
             }
-            // Lambdas without open vars keep the AtomicValue wrapper —
-            // executeFunction/eval/match expect a VS wrapping a lambda.
+            // Lambdas without open vars keep the AtomicValue wrapper for now —
+            // eval/match dispatch code checks for AtomicValue wrapping LambdaFunction.
+            // TODO: eliminate once all dispatch paths handle RawClosure directly.
             return new AtomicValueNode(av);
         }
         if (value == null)
         {
             return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
         }
-        // Primitives → raw (consumers handle via IntegerHelper etc.)
-        if (value instanceof Long || value instanceof Double || value instanceof Boolean)
-        {
-            return new AtomicValueNode(value);
-        }
-        // String: only unwrap if the type IS String (not Date/Enum stored as String)
-        if (value instanceof String)
+        // Date strings are kept as AtomicValue to preserve type info —
+        // downstream date nodes check genericType to distinguish StrictDate/DateTime.
+        // TODO: eliminate once all date paths use java.time objects.
+        if (value instanceof String s)
         {
             meta.pure.metamodel.type.generics.GenericType gt = av._genericType();
             if (gt != null)
             {
                 meta.pure.metamodel.type.Type type =
                         org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(gt);
-                if (type instanceof meta.pure.metamodel.PackageableElement pe && !"String".equals(pe._name()))
+                if (type instanceof meta.pure.metamodel.PackageableElement pe)
                 {
-                    return new AtomicValueNode(av);
+                    String typeName = pe._name();
+                    if ("StrictDate".equals(typeName) || "Date".equals(typeName)
+                            || "DateTime".equals(typeName) || "StrictTime".equals(typeName))
+                    {
+                        return new AtomicValueNode(av);
+                    }
                 }
             }
-            return new AtomicValueNode(value);
         }
-        // Everything else (metamodel objects, DynamicInstance, etc.)
-        // Keep the AV wrapper to preserve genericType metadata.
-        return new AtomicValueNode(av);
+        return new AtomicValueNode(value);
     }
 
     private PureNode[] lowerArgs(FunctionExpression fe)

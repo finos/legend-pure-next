@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -24,7 +23,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * {@code parseDecimal(String[1]) : Decimal[1]} — parses a string to a double.
+ * {@code parseDecimal(String[1]) : Decimal[1]} -- parses a string to a double.
  * Also handles the three-arg variant with precision and scale.
  */
 @NodeInfo(shortName = "parseDec")
@@ -55,28 +54,16 @@ public final class ParseDecimalNode extends PureNode
         if (scaleArg != null)
         {
             long scale = IntegerHelper.asLong(scaleArg.executeGeneric(frame), SIG);
-            return parseWithScale(s, (int) scale);
+            double d = new BigDecimal(s.trim())
+                    .setScale((int) scale, RoundingMode.HALF_UP)
+                    .doubleValue();
+            if (d == 0.0)
+            {
+                d = 0.0;
+            }
+            return d;
         }
-        return parseSimple(s);
-    }
-
-    @TruffleBoundary
-    private static double parseSimple(String s)
-    {
         double d = Double.parseDouble(s.trim());
-        if (d == 0.0)
-        {
-            d = 0.0;
-        }
-        return d;
-    }
-
-    @TruffleBoundary
-    private static double parseWithScale(String s, int scale)
-    {
-        double d = new BigDecimal(s.trim())
-                .setScale(scale, RoundingMode.HALF_UP)
-                .doubleValue();
         if (d == 0.0)
         {
             d = 0.0;

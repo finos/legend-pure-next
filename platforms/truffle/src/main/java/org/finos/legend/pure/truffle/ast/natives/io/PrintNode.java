@@ -20,10 +20,9 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code print(Any[*], Integer[1]) : Nil[0]} — prints value to stdout.
+ * {@code print(Any[*], Integer[1]) : Nil[0]} -- prints value to stdout.
  */
 @NodeInfo(shortName = "print")
 public final class PrintNode extends PureNode
@@ -44,7 +43,6 @@ public final class PrintNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object val = valueArg.executeGeneric(frame);
-        // depth arg is evaluated but not used in the bridge either
         if (depthArg != null)
         {
             depthArg.executeGeneric(frame);
@@ -56,12 +54,8 @@ public final class PrintNode extends PureNode
     @TruffleBoundary
     private static void doPrint(Object val)
     {
-        Object raw = ValueAdapter.toRaw(val);
-        if (raw == PureNull.INSTANCE)
-        {
-            raw = null;
-        }
-        System.out.print(PureValuePrinter.printForOutput(raw));
+        Object normalized = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(val);
+        System.out.print(PureValuePrinter.printForOutput(normalized));
         System.out.flush();
     }
 }

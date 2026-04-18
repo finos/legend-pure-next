@@ -18,10 +18,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 @NodeInfo(shortName = "head")
 public final class HeadNode extends PureNode
@@ -29,7 +27,9 @@ public final class HeadNode extends PureNode
     @Child
     private PureNode arg;
 
+    @SuppressWarnings("unused")
     private final GenericType genericType;
+    @SuppressWarnings("unused")
     private final Multiplicity multiplicity;
 
     public HeadNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
@@ -45,13 +45,8 @@ public final class HeadNode extends PureNode
         Object col = arg.executeGeneric(frame);
         if (CollectionHelper.isEmpty(col))
         {
-            return emptyResult();
+            return PureNull.INSTANCE;
         }
         return CollectionHelper.at(col, 0);
-    }
-
-    private ValueSpecification emptyResult()
-    {
-        return ValueAdapter.toVS(PureNull.INSTANCE, genericType, multiplicity);
     }
 }

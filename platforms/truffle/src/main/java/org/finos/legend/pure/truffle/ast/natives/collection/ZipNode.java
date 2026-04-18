@@ -17,24 +17,17 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
+import meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
 /**
- * {@code zip(T[*], U[*]) : Pair<T,U>[*]} — zips two collections into pairs.
- * Delegates to the bridged native since Pair construction requires
- * DynamicInstance creation with correct classifierGenericType.
+ * {@code zip(T[*], U[*]) : Pair<T,U>[*]} -- zips two collections into pairs.
  */
 @NodeInfo(shortName = "zip")
 public final class ZipNode extends PureNode
 {
-    private static final String SIG = "zip_T_MANY__U_MANY__Pair_MANY_";
-
     @Child
     private PureNode leftArg;
 
@@ -56,15 +49,23 @@ public final class ZipNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doZip(Object left, Object right)
+    private static Object doZip(Object left, Object right)
     {
-        ValueSpecification leftVS = ValueAdapter.ensureVS(left);
-        ValueSpecification rightVS = ValueAdapter.ensureVS(right);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(leftVS, rightVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        int leftSz = CollectionHelper.size(left);
+        int rightSz = CollectionHelper.size(right);
+        int sz = Math.min(leftSz, rightSz);
+        if (sz == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        Object[] pairs = new Object[sz];
+        for (int i = 0; i < sz; i++)
+        {
+            PairImpl pair = new PairImpl();
+            pair._first(CollectionHelper.at(left, i));
+            pair._second(CollectionHelper.at(right, i));
+            pairs[i] = pair;
+        }
+        return new ObjectSequence(pairs);
     }
 }

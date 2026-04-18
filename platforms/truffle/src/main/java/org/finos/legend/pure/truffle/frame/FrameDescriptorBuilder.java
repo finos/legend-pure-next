@@ -191,8 +191,25 @@ public final class FrameDescriptorBuilder
         {
             return;
         }
-        if (fe._func() instanceof NativeFunction nf
-                && LET_FUNCTION_SIGNATURE.equals(nf._name()))
+        boolean isLet = false;
+        try
+        {
+            if (fe._func() instanceof NativeFunction nf
+                    && LET_FUNCTION_SIGNATURE.equals(nf._name()))
+            {
+                isLet = true;
+            }
+        }
+        catch (RuntimeException ignored)
+        {
+            // FlatBuffer wrapper may fail to resolve _func() lazily.
+            // Fall back to checking _functionName().
+        }
+        if (!isLet && "letFunction".equals(fe._functionName()))
+        {
+            isLet = true;
+        }
+        if (isLet)
         {
             String name = extractLetName(fe);
             if (name != null)
@@ -259,6 +276,76 @@ public final class FrameDescriptorBuilder
             return s;
         }
         return null;
+    }
+
+    /**
+     * Scan the expression sequence for VariableExpression reads and
+     * allocate slots for any variable names not yet present in the layout.
+     * This is a safety net: if {@link #collectLetTargets} missed a
+     * {@code let} definition (e.g. because the FlatBuffer wrapper's
+     * {@code _func()} could not be resolved), the corresponding
+     * VariableExpression read will still have a slot. The slot starts
+     * as null and will be populated by the {@code LetFunctionFallbackNode}
+     * at runtime.
+     */
+    private static void collectVariableReads(Iterable<ValueSpecification> exprs,
+                                             FrameDescriptor.Builder builder,
+                                             Map<String, Integer> slots)
+    {
+        if (exprs == null)
+        {
+            return;
+        }
+        for (ValueSpecification vs : exprs)
+        {
+            scanForVariableReads(vs, builder, slots);
+        }
+    }
+
+    private static void scanForVariableReads(ValueSpecification vs,
+                                             FrameDescriptor.Builder builder,
+                                             Map<String, Integer> slots)
+    {
+        if (vs instanceof VariableExpression ve)
+        {
+            String name = ve._name();
+            if (name != null)
+            {
+                allocateSlot(builder, slots, name);
+            }
+            return;
+        }
+        if (vs instanceof AtomicValue av)
+        {
+            // Don't recurse into lambdas — they get their own layout
+            return;
+        }
+        if (vs instanceof Collection col && col._values() != null)
+        {
+            for (ValueSpecification child : col._values())
+            {
+                scanForVariableReads(child, builder, slots);
+            }
+            return;
+        }
+        if (vs instanceof FunctionExpression fe)
+        {
+            try
+            {
+                MutableList<ValueSpecification> args = fe._parametersValues();
+                if (args != null)
+                {
+                    for (ValueSpecification arg : args)
+                    {
+                        scanForVariableReads(arg, builder, slots);
+                    }
+                }
+            }
+            catch (RuntimeException ignored)
+            {
+                // FlatBuffer lazy resolution may fail — skip gracefully
+            }
+        }
     }
 
 }

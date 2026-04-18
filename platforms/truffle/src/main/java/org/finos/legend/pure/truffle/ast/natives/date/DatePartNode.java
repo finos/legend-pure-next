@@ -20,12 +20,11 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code datePart(Date[1]) : StrictDate[1]} — strips the time component from a date.
+ * {@code datePart(Date[1]) : StrictDate[1]} -- strips the time component from a date.
+ * Returns the date-only string directly as a raw value.
  */
 @NodeInfo(shortName = "datePart")
 public final class DatePartNode extends PureNode
@@ -56,7 +55,7 @@ public final class DatePartNode extends PureNode
     }
 
     @TruffleBoundary
-    private ValueSpecification extract(Object v)
+    private static String extract(Object v)
     {
         String dateStr = DateHelper.asDateString(v, SIG);
         String datePart = dateStr.contains("T") ? dateStr.substring(0, dateStr.indexOf('T')) : dateStr;
@@ -68,6 +67,6 @@ public final class DatePartNode extends PureNode
         {
             datePart += "-01";
         }
-        return ValueAdapter.toVS(datePart, genericType, multiplicity);
+        return datePart;
     }
 }

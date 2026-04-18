@@ -22,24 +22,16 @@ import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code new(GenericTypeAndMultiplicityHolder[1]) : T[1]}.
- *
- * <p>Constructs an instance with no property assignments. Extracts the class
- * path from the GTMH, creates the instance, sets its classifierGenericType,
- * and validates constraints.</p>
+ * Constructs an instance with no property assignments.
  */
 @NodeInfo(shortName = "newSimple")
 public final class NewSimpleNode extends PureNode
@@ -61,21 +53,18 @@ public final class NewSimpleNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doNew(result, genericType, multiplicity);
+        return doNew(result);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doNew(Object result, GenericType genericType, Multiplicity multiplicity)
+    private static Object doNew(Object result)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(result);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-        ValueSpecificationEvaluator eval = EvaluatorHolder.current();
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
-        Object unwrapped = _E_ValueSpecification.unwrap(vs);
-        if (!(unwrapped instanceof GenericTypeAndMultiplicityHolder gtmh))
+        if (!(result instanceof GenericTypeAndMultiplicityHolder gtmh))
         {
             throw new RuntimeException("new(GenericTypeAndMultiplicityHolder[1]) requires a GenericTypeAndMultiplicityHolder argument, got: "
-                    + (unwrapped == null ? "null" : unwrapped.getClass().getSimpleName()));
+                    + (result == null ? "null" : result.getClass().getSimpleName()));
         }
 
         String classPath = "Unknown";
@@ -105,18 +94,14 @@ public final class NewSimpleNode extends PureNode
             {
                 any._classifierGenericType((GenericTypeValue) cgt);
             }
-            else if (instance instanceof DynamicInstance di)
-            {
-                di.setClassifierGenericType((GenericTypeValue) cgt);
-            }
 
             meta.pure.metamodel.type.Type targetType = _GenericType.type(cgt);
             if (targetType instanceof meta.pure.metamodel.extension.ElementWithConstraints)
             {
-                MetaNatives.validateConstraints(targetType, cgt, instance, eval, resolver);
+                MetaNatives.validateConstraints(targetType, cgt, instance, null, resolver);
             }
         }
 
-        return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+        return instance;
     }
 }

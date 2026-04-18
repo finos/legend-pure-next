@@ -16,17 +16,13 @@ package org.finos.legend.pure.truffle.ast.natives.math;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
  * Specialized Truffle node for {@code plus_Integer_1__Integer_1__Integer_1_}.
  *
- * <p>The long happy path unwraps both children directly from {@link
- * AtomicValue} without the generic {@code _E_ValueSpecification.unwrap}
- * detour (see {@link IntegerHelper#asLong}). Only the fallback path crosses
- * {@link ValueAdapter#toRaw}.</p>
+ * <p>The long happy path unwraps both children directly as raw Long
+ * values (see {@link IntegerHelper#asLong}).</p>
  */
 @NodeInfo(shortName = "plusInt")
 public final class PlusIntegerNode extends PureNode

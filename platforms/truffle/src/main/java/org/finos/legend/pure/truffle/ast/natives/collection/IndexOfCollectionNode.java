@@ -17,14 +17,10 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code indexOf(T[*], T[1]) : Integer[1]} — collection indexOf (NOT string indexOf).
+ * {@code indexOf(T[*], T[1]) : Integer[1]} -- collection indexOf (NOT string indexOf).
  * Returns the index of the first element equal to the target, or -1 if not found.
  */
 @NodeInfo(shortName = "indexOfCol")
@@ -47,28 +43,27 @@ public final class IndexOfCollectionNode extends PureNode
     {
         Object col = collectionArg.executeGeneric(frame);
         Object target = targetArg.executeGeneric(frame);
-        return doIndexOf(col, target);
-    }
-
-    @TruffleBoundary
-    private static long doIndexOf(Object col, Object target)
-    {
-        Object rawCol = ValueAdapter.toRaw(col);
-        Object rawTarget = ValueAdapter.toRaw(target);
-        // Special case: both String → string indexOf
-        if (rawCol instanceof String s && rawTarget instanceof String t)
+        int sz = CollectionHelper.size(col);
+        for (int i = 0; i < sz; i++)
         {
-            return (long) s.indexOf(t);
-        }
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        ValueSpecification targetVS = ValueAdapter.ensureVS(target);
-        for (int i = 0; i < values.size(); i++)
-        {
-            if (NativeRepository.pureEquals(values.get(i), targetVS))
+            if (pureEquals(CollectionHelper.at(col, i), target))
             {
                 return (long) i;
             }
         }
         return -1L;
+    }
+
+    private static boolean pureEquals(Object a, Object b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a == null || b == null)
+        {
+            return false;
+        }
+        return java.util.Objects.equals(a, b);
     }
 }

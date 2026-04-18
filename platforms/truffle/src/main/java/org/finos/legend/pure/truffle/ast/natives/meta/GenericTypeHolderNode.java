@@ -19,21 +19,15 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code genericTypeHolder(T[m]) : GenericTypeAndMultiplicityHolder[1]}.
- *
- * <p>Creates a {@code GenericTypeAndMultiplicityHolder} that captures the
- * type and multiplicity of the argument. This holder is then passed to
- * {@code new} or {@code cast} to drive instantiation or type-narrowing.</p>
+ * Creates a GenericTypeAndMultiplicityHolder that captures the type and multiplicity.
  */
 @NodeInfo(shortName = "genericTypeHolder")
 public final class GenericTypeHolderNode extends PureNode
@@ -59,14 +53,11 @@ public final class GenericTypeHolderNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doGenericTypeHolder(Object result, GenericType genericType, Multiplicity multiplicity)
+    private static Object doGenericTypeHolder(Object result, GenericType genericType, Multiplicity multiplicity)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(result);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
-        GenericType heldGT = vs._genericType();
-        Multiplicity heldMul = vs._multiplicity();
-
+        GenericType heldGT = MetaHelper.getRawGenericType(result, resolver);
         // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
         meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder");
         meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, resolver);
@@ -74,16 +65,12 @@ public final class GenericTypeHolderNode extends PureNode
         {
             classifierGT._typeArguments(Lists.mutable.with(heldGT));
         }
-        if (heldMul != null)
-        {
-            classifierGT._multiplicityArguments(Lists.mutable.with(heldMul));
-        }
 
         meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
                 new meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
                         ._classifierGenericType(classifierGT)
                         ._genericType(classifierGT)
                         ._multiplicity((Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
-        return _E_ValueSpecification.wrap(holder, genericType, multiplicity, resolver);
+        return holder;
     }
 }

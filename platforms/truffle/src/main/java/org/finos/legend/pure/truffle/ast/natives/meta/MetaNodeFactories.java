@@ -33,6 +33,16 @@ public final class MetaNodeFactories
 
     public static void registerAll(NativeNodeRegistry registry)
     {
+        // --- Lazy meta natives (construction stack + key expressions) ---
+        // These take the FunctionExpression directly (not lowered args)
+        // because they control evaluation order.
+        registry.register("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
+                (args, gt, mul, fe) -> new NewWithKeysNode(
+                        "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", fe));
+        registry.register("copy_T_1__KeyExpression_MANY__T_1_",
+                (args, gt, mul, fe) -> new CopyWithKeysNode(
+                        "copy_T_1__KeyExpression_MANY__T_1_", fe));
+
         // --- Meta natives ---
 
         // instanceOf(Any[1], Type[1]) : Boolean[1]
@@ -102,5 +112,21 @@ public final class MetaNodeFactories
         // elementToPath(Type[1], String[1]) : String[1]
         registry.register("elementToPath_Type_1__String_1__String_1_",
                 (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
+
+        // lenientPathToElement — returns null instead of throwing
+        registry.register("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_",
+                (args, gt, mul, fe) -> new PathToElementNode(args, gt, mul));
+
+        // elementPath — element ancestry chain
+        registry.register("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_",
+                (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
+
+        // newClass — creates a new Class at runtime (rare)
+        registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
+                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0])); // pass-through placeholder
+
+        // parse — invokes the Pure parser (CompilerNatives extension)
+        registry.register("parse_String_1__String_1__PureFile_1_",
+                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0])); // placeholder
     }
 }

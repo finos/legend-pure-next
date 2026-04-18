@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -44,29 +43,22 @@ public final class RoundDecimalNode extends PureNode
     {
         Object v = value.executeGeneric(frame);
         int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
-        return round(v, s);
-    }
-
-    @TruffleBoundary
-    private static BigDecimal round(Object v, int s)
-    {
-        Object raw = v;
-        if (raw instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
         {
-            raw = av._value();
+            v = av._value();
         }
         BigDecimal bd;
-        if (raw instanceof BigDecimal d)
+        if (v instanceof BigDecimal d)
         {
             bd = d;
         }
-        else if (raw instanceof Number n)
+        else if (v instanceof Number n)
         {
             bd = BigDecimal.valueOf(n.doubleValue());
         }
         else
         {
-            bd = new BigDecimal(raw.toString());
+            bd = new BigDecimal(v.toString());
         }
         return bd.setScale(s, RoundingMode.HALF_UP);
     }

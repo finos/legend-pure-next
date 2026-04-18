@@ -17,22 +17,19 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.functions.collection.MapImpl;
+import meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
 
-import java.util.List;
+import java.util.Objects;
 
 /**
- * {@code put(Map[1], U[1], V[1]) : Map[1]} — inserts a key-value pair into a map.
- * Delegates to the bridged native for PureMap manipulation.
+ * {@code put(Map[1], U[1], V[1]) : Map[1]} -- inserts a key-value pair into a map.
  */
 @NodeInfo(shortName = "mapPut")
 public final class MapPutNode extends PureNode
 {
-    private static final String SIG = "put_Map_1__U_1__V_1__Map_1_";
-
     @Child
     private PureNode mapArg;
 
@@ -59,16 +56,14 @@ public final class MapPutNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doPut(Object map, Object key, Object value)
+    private static Object doPut(Object map, Object key, Object value)
     {
-        ValueSpecification mapVS = ValueAdapter.ensureVS(map);
-        ValueSpecification keyVS = ValueAdapter.ensureVS(key);
-        ValueSpecification valueVS = ValueAdapter.ensureVS(value);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(mapVS, keyVS, valueVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        MapImpl newMap = new MapImpl();
+        if (map instanceof MapImpl mi)
+        {
+            newMap.putAll(mi);
+        }
+        newMap.put(key, value);
+        return newMap;
     }
 }

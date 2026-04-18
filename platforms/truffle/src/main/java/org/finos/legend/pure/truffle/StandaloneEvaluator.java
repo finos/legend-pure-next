@@ -56,7 +56,7 @@ public final class StandaloneEvaluator
 
     // Per-FD compilation cache: layout + lowered body
     private final WeakHashMap<FunctionDefinition, CompiledFunction> functionCache = new WeakHashMap<>();
-    // Per-lambda RootCallTarget cache
+    // Per-lambda RootCallTarget cache (lambdas don't have stable paths)
     private final WeakHashMap<LambdaFunction, RootCallTarget> lambdaCache = new WeakHashMap<>();
 
     // Construction stack for new/copy (~) parent references
@@ -105,7 +105,15 @@ public final class StandaloneEvaluator
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                frame.setObject(paramSlots[i], rawArgs[i]);
+                if (rawArgs[i] == null)
+                {
+                    // Null arg — bind PureNull so slot isn't empty
+                    frame.setObject(paramSlots[i], PureNull.INSTANCE);
+                }
+                else
+                {
+                    frame.setObject(paramSlots[i], rawArgs[i]);
+                }
             }
         }
 
@@ -151,7 +159,7 @@ public final class StandaloneEvaluator
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                frame.setObject(paramSlots[i], rawArgs[i]);
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
             }
         }
 
@@ -215,13 +223,62 @@ public final class StandaloneEvaluator
         FrameLayout layout = FrameDescriptorBuilder.analyze(fd);
         if (layout == null)
         {
-            // Should not happen in the standalone evaluator — every FD
-            // gets a layout. Create a minimal one with just params.
             layout = FrameDescriptorBuilder.analyzeMinimal(fd);
         }
         CompiledFunction cf = new CompiledFunction(layout);
         functionCache.put(fd, cf);
         return cf;
+    }
+
+    /**
+     * Returns a cached RootCallTarget for a lambda, compiling its body
+     * on first access. Used by RawLambdaCallNode for DirectCallNode dispatch.
+     */
+    public RootCallTarget callTargetForLambda(LambdaFunction lambda)
+    {
+        RootCallTarget cached = lambdaCache.get(lambda);
+        if (cached != null)
+        {
+            return cached;
+        }
+        CompiledFunction cf = compile(lambda);
+        try
+        {
+            FrameLayout prevLayout = astBuilder.pushLayout(cf.layout());
+            try
+            {
+                PureNode[] body = astBuilder.lowerBody(
+                        lambda._expressionSequence(), cf.layout());
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.valuespecification.VariableExpression> openVars =
+                        lambda._openVariables();
+                String[] openVarNames = openVars == null || openVars.isEmpty()
+                        ? new String[0]
+                        : openVars.collect(ov -> ov._name()).toArray(new String[0]);
+                RawLambdaRootNode root = new RawLambdaRootNode(
+                        language, "lambda@" + System.identityHashCode(lambda),
+                        cf.layout(), cf.layout().paramSlots(), openVarNames, body);
+                RootCallTarget ct = root.getCallTarget();
+                lambdaCache.put(lambda, ct);
+                return ct;
+            }
+            finally
+            {
+                astBuilder.popLayout(prevLayout);
+            }
+        }
+        catch (RuntimeException e)
+        {
+            return null;
+        }
+    }
+
+    private static PureNode createSequenceNode(PureNode[] body)
+    {
+        if (body.length == 1)
+        {
+            return body[0];
+        }
+        return new org.finos.legend.pure.truffle.ast.SequenceNode(body);
     }
 
     // ---------------------------------------------------------------
@@ -261,8 +318,180 @@ public final class StandaloneEvaluator
      * invokes the typed getter {@code _propertyName()}. For QualifiedProperties,
      * dispatches via C3 MRO and evaluates the body.
      */
+    /**
+     * Set a property on a target object via its typed setter.
+     */
+    public void accessProperty(Object target, String propertyName, Object value)
+    {
+        String methodName = "_" + propertyName;
+        try
+        {
+            for (java.lang.reflect.Method m : target.getClass().getMethods())
+            {
+                if (methodName.equals(m.getName()) && m.getParameterCount() == 1)
+                {
+                    Class<?> paramType = m.getParameterTypes()[0];
+                    Object coerced = coerceForSetter(value, paramType);
+                    if (coerced != null || value == null
+                            || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+                    {
+                        m.invoke(target, coerced);
+                        return;
+                    }
+                }
+            }
+            // Fallback: DynamicInstance from MetaNatives.createInstanceByPath (classes without generated Impl)
+            if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
+            {
+                di.put(propertyName, value);
+                return;
+            }
+            throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getSimpleName());
+        }
+        catch (IllegalArgumentException iae)
+        {
+            throw new RuntimeException("argument type mismatch setting '" + propertyName + "' on "
+                    + target.getClass().getSimpleName()
+                    + " value=" + (value == null ? "null" : value.getClass().getName()), iae);
+        }
+        catch (java.lang.reflect.InvocationTargetException ite)
+        {
+            Throwable cause = ite.getCause() != null ? ite.getCause() : ite;
+            if (cause instanceof RuntimeException re)
+            {
+                throw re;
+            }
+            throw new RuntimeException("Error setting property '" + propertyName + "' on "
+                    + target.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Error setting property '" + propertyName + "' on "
+                    + target.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    private Object coerceForSetter(Object value, Class<?> targetType)
+    {
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        {
+            return null;
+        }
+        if (targetType.isInstance(value))
+        {
+            return value;
+        }
+        // MutableList property: wrap scalar/sequence into MutableList
+        if (org.eclipse.collections.api.list.MutableList.class.isAssignableFrom(targetType))
+        {
+            if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+            {
+                return org.eclipse.collections.api.factory.Lists.mutable.with(seq.toBoxedArray());
+            }
+            if (value instanceof java.util.List<?> list)
+            {
+                return org.eclipse.collections.api.factory.Lists.mutable.withAll(list);
+            }
+            return org.eclipse.collections.api.factory.Lists.mutable.with(value);
+        }
+        // Unwrap AtomicValue
+        if (value instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            Object inner = av._value();
+            if (inner != null)
+            {
+                return coerceForSetter(inner, targetType);
+            }
+        }
+        // Unwrap single-element PureSequence
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq && seq.size() == 1)
+        {
+            return coerceForSetter(seq.getBoxed(0), targetType);
+        }
+        // Object target type accepts everything
+        if (targetType == Object.class)
+        {
+            return value;
+        }
+        // Numeric coercion
+        if (targetType == Long.class && value instanceof Number n)
+        {
+            return n.longValue();
+        }
+        if (targetType == Double.class && value instanceof Number n)
+        {
+            return n.doubleValue();
+        }
+        // String coercion
+        if (targetType == String.class)
+        {
+            return value.toString();
+        }
+        // Boolean
+        if (targetType == Boolean.class && value instanceof Boolean)
+        {
+            return value;
+        }
+        // Enum coercion: value may be a PDB EnumImpl/FlatBufferWrapper,
+        // target is a generated Java enum
+        if (targetType.isEnum() && value instanceof meta.pure.metamodel.type.Enum enumVal)
+        {
+            String enumName = enumVal._name();
+            if (enumName != null)
+            {
+                for (Object constant : targetType.getEnumConstants())
+                {
+                    if (constant instanceof java.lang.Enum<?> e && e.name().equals(enumName))
+                    {
+                        return constant;
+                    }
+                }
+            }
+        }
+        // Interface coercion: the target is an interface and the value implements
+        // a compatible interface (e.g., generated enum implementing the enum interface)
+        if (targetType.isInterface() && value instanceof meta.pure.metamodel.type.Enum enumVal2)
+        {
+            String enumName = enumVal2._name();
+            if (enumName != null)
+            {
+                // Try to find the generated Enum class that implements this interface
+                String enumClassName = targetType.getName() + "Enum";
+                try
+                {
+                    Class<?> enumClass = Class.forName(enumClassName);
+                    if (enumClass.isEnum())
+                    {
+                        for (Object constant : enumClass.getEnumConstants())
+                        {
+                            if (constant instanceof java.lang.Enum<?> e && e.name().equals(enumName))
+                            {
+                                return constant;
+                            }
+                        }
+                    }
+                }
+                catch (ClassNotFoundException ignored)
+                {
+                }
+            }
+        }
+        // Can't coerce — return null to skip this setter method
+        return null;
+    }
+
     public Object accessProperty(Object target, String propertyName)
     {
+        // Unwrap AtomicValue — the inner value is the real target
+        if (target instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+        {
+            target = av._value();
+        }
+        // Unwrap RawClosure — access the lambda's FD properties
+        if (target instanceof org.finos.legend.pure.truffle.types.RawClosure rc)
+        {
+            target = rc.lambda();
+        }
         // Generated Impl classes have _propertyName() getters
         try
         {
@@ -271,7 +500,54 @@ public final class StandaloneEvaluator
         }
         catch (NoSuchMethodException e)
         {
-            throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());
+            // Try without underscore prefix (some metamodel properties)
+            // But skip methods inherited from Object (toString, hashCode, etc.)
+            try
+            {
+                java.lang.reflect.Method method = target.getClass().getMethod(propertyName);
+                if (method.getDeclaringClass() != Object.class)
+                {
+                    return method.invoke(target);
+                }
+                throw new NoSuchMethodException(propertyName);
+            }
+            catch (Exception e2)
+            {
+                // Enum value fallback: search the Enumeration's properties
+                // for one matching propertyName and extract its defaultValue
+                if (target instanceof meta.pure.metamodel.type.Enumeration en && en._properties() != null)
+                {
+                    var prop = en._properties().detect(p -> propertyName.equals(p._name()));
+                    if (prop != null && prop._defaultValue() != null
+                            && prop._defaultValue()._expressionSequence() != null
+                            && !prop._defaultValue()._expressionSequence().isEmpty())
+                    {
+                        meta.pure.metamodel.valuespecification.ValueSpecification vs =
+                                prop._defaultValue()._expressionSequence().getFirst();
+                        if (vs instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+                        {
+                            return av._value();
+                        }
+                    }
+                }
+                // QualifiedProperty dispatch: look up QP from the target's type
+                meta.pure.metamodel.type.Class cls = resolveClassForTarget(target);
+                if (cls != null)
+                {
+                    meta.pure.metamodel.function.property.QualifiedProperty qp = findQualifiedProperty(cls, propertyName);
+                    if (qp != null)
+                    {
+                        return executeFunction(qp, new Object[]{target});
+                    }
+                }
+                // Fallback: DynamicInstance
+                if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
+                {
+                    Object val = di.get(propertyName);
+                    return val != null ? val : org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                }
+                throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());
+            }
         }
         catch (Exception e)
         {
@@ -282,6 +558,68 @@ public final class StandaloneEvaluator
     // ---------------------------------------------------------------
     // QualifiedProperty dispatch
     // ---------------------------------------------------------------
+
+    private meta.pure.metamodel.type.Class resolveClassForTarget(Object target)
+    {
+        // Try CGT first
+        meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
+        if (cgt != null)
+        {
+            meta.pure.metamodel.type.Type t =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
+            if (t instanceof meta.pure.metamodel.type.Class cls)
+            {
+                return cls;
+            }
+        }
+        // Fallback: derive class path from Java interface name
+        Class<?>[] ifaces = target.getClass().getInterfaces();
+        if (ifaces.length > 0)
+        {
+            String ifaceName = ifaces[0].getName().replace(".", "::");
+            meta.pure.metamodel.PackageableElement elem = resolver.getElement(ifaceName);
+            if (elem instanceof meta.pure.metamodel.type.Class cls)
+            {
+                return cls;
+            }
+        }
+        return null;
+    }
+
+    private meta.pure.metamodel.function.property.QualifiedProperty findQualifiedProperty(
+            meta.pure.metamodel.type.Class cls, String name)
+    {
+        // Search own QPs
+        if (cls._qualifiedProperties() != null)
+        {
+            var qp = cls._qualifiedProperties().detect(q -> name.equals(q._name()));
+            if (qp != null)
+            {
+                return qp;
+            }
+        }
+        // Search supertypes
+        if (cls._generalizations() != null)
+        {
+            for (var gen : cls._generalizations())
+            {
+                var gt = gen._general();
+                if (gt != null)
+                {
+                    var parentType = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(gt);
+                    if (parentType instanceof meta.pure.metamodel.type.Class parentCls)
+                    {
+                        var found = findQualifiedProperty(parentCls, name);
+                        if (found != null)
+                        {
+                            return found;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
     private FunctionDefinition resolveQpDispatch(
             meta.pure.metamodel.function.property.QualifiedProperty staticQp,
@@ -378,6 +716,11 @@ public final class StandaloneEvaluator
     public VirtualFrame currentFrame()
     {
         return currentFrame;
+    }
+
+    public void setCurrentFrame(VirtualFrame frame)
+    {
+        this.currentFrame = frame;
     }
 
     public FrameLayout currentLayout()

@@ -14,20 +14,14 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.AtomicValue;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository;
+import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 
 @NodeInfo(shortName = "joinStrings")
 public final class JoinStringsNode extends PureNode
@@ -44,10 +38,7 @@ public final class JoinStringsNode extends PureNode
     @Child
     private PureNode suffixArg;
 
-    @CompilationFinal
     private final GenericType genericType;
-
-    @CompilationFinal
     private final Multiplicity multiplicity;
 
     public JoinStringsNode(PureNode collectionArg, PureNode prefixArg, PureNode separatorArg,
@@ -72,41 +63,37 @@ public final class JoinStringsNode extends PureNode
     }
 
     @TruffleBoundary
-    private ValueSpecification join(Object col, String prefix, String separator, String suffix)
+    private static String join(Object col, String prefix, String separator, String suffix)
     {
-        List<? extends ValueSpecification> items;
-        if (col instanceof Collection c)
-        {
-            items = c._values();
-        }
-        else if (col instanceof AtomicValue av)
-        {
-            items = av._value() == null
-                    ? List.of()
-                    : List.of(av);
-        }
-        else
-        {
-            items = List.of();
-        }
+        int sz = CollectionHelper.size(col);
 
         StringBuilder sb = new StringBuilder();
         if (prefix != null)
         {
             sb.append(prefix);
         }
-        for (int i = 0; i < items.size(); i++)
+        for (int i = 0; i < sz; i++)
         {
             if (i > 0 && separator != null)
             {
                 sb.append(separator);
             }
-            sb.append(NativeRepository.pureToString(items.get(i)));
+            Object item = CollectionHelper.at(col, i);
+            // Unwrap AtomicValue (dates kept as AV)
+            if (item instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+            {
+                Object inner = av._value();
+                sb.append(inner != null ? PureValuePrinter.printForOutput(inner) : "");
+            }
+            else
+            {
+                sb.append(PureValuePrinter.printForOutput(item));
+            }
         }
         if (suffix != null)
         {
             sb.append(suffix);
         }
-        return ValueAdapter.toVS(sb.toString(), genericType, multiplicity);
+        return sb.toString();
     }
 }

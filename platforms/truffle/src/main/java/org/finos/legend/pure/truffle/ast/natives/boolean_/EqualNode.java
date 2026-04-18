@@ -17,16 +17,14 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.NativeRepository;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+
+import java.util.Objects;
 
 /**
  * {@code equal(Any[*], Any[*]) : Boolean[1]}.
  *
- * <p>Evaluates both children to raw values, then delegates to
- * {@link NativeRepository#pureEquals} via a {@link TruffleBoundary}
- * method for deep equality comparison.</p>
+ * <p>Evaluates both children to raw values, then performs deep equality.</p>
  */
 @NodeInfo(shortName = "equal")
 public final class EqualNode extends PureNode
@@ -48,26 +46,130 @@ public final class EqualNode extends PureNode
     {
         Object a = left.executeGeneric(frame);
         Object b = right.executeGeneric(frame);
-        return doEquals(a, b);
+        Object rawA = normalizeForEquals(a);
+        Object rawB = normalizeForEquals(b);
+        return callPureEquals(rawA, rawB);
     }
 
     @TruffleBoundary
-    private static boolean doEquals(Object a, Object b)
+    private static boolean callPureEquals(Object a, Object b)
     {
-        Object rawA = normalizeForEquals(ValueAdapter.toRaw(a));
-        Object rawB = normalizeForEquals(ValueAdapter.toRaw(b));
-        return NativeRepository.pureEquals(rawA, rawB);
+        if (a == b)
+        {
+            return true;
+        }
+        if (a == null || b == null)
+        {
+            return false;
+        }
+        // Numeric coercion: compare numbers by value
+        if (a instanceof Number na && b instanceof Number nb)
+        {
+            if (a instanceof Long && b instanceof Long)
+            {
+                return na.longValue() == nb.longValue();
+            }
+            return Double.compare(na.doubleValue(), nb.doubleValue()) == 0;
+        }
+        // List comparison
+        if (a instanceof java.util.List<?> la && b instanceof java.util.List<?> lb)
+        {
+            if (la.size() != lb.size())
+            {
+                return false;
+            }
+            for (int i = 0; i < la.size(); i++)
+            {
+                if (!callPureEquals(la.get(i), lb.get(i)))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // Map comparison — deep equality by entries
+        if (a instanceof meta.pure.functions.collection.MapImpl ma
+                && b instanceof meta.pure.functions.collection.MapImpl mb)
+        {
+            if (ma.size() != mb.size())
+            {
+                return false;
+            }
+            for (var entry : ma.getMap().entrySet())
+            {
+                Object bVal = mb.get(entry.getKey());
+                if (!callPureEquals(entry.getValue(), bVal))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // Generated Impl equality — compare by classifierGenericType + all property values
+        if (a instanceof meta.pure.metamodel.type.Any anyA
+                && b instanceof meta.pure.metamodel.type.Any anyB
+                && a.getClass() == b.getClass())
+        {
+            return equalByProperties(anyA, anyB);
+        }
+        return Objects.equals(a, b);
+    }
+
+    private static boolean equalByProperties(meta.pure.metamodel.type.Any a, meta.pure.metamodel.type.Any b)
+    {
+        // Compare all getter methods (_xxx()) that return property values
+        for (java.lang.reflect.Method m : a.getClass().getMethods())
+        {
+            String name = m.getName();
+            if (name.startsWith("_") && m.getParameterCount() == 0
+                    && !name.equals("_classifierGenericType") && !name.equals("_sourceInformation")
+                    && !name.equals("_elementOverride") && !name.equals("_copy")
+                    && !name.equals("_class") && !name.equals("_hashCode"))
+            {
+                try
+                {
+                    Object va = m.invoke(a);
+                    Object vb = m.invoke(b);
+                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb)))
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception ignored)
+                {
+                }
+            }
+        }
+        return true;
     }
 
     private static Object normalizeForEquals(Object v)
     {
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
+            if (seq.size() == 1)
+            {
+                return normalizeForEquals(seq.getBoxed(0));
+            }
             return java.util.Arrays.asList(seq.toBoxedArray());
         }
         if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return null;
+        }
+        // Unwrap AtomicValue (dates kept as AV)
+        if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            Object inner = av._value();
+            return inner != null ? inner : null;
+        }
+        // Unwrap Collection (legacy VS — shouldn't appear but handle defensively)
+        if (v instanceof meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
+        {
+            if (col._values().size() == 1)
+            {
+                return normalizeForEquals(col._values().getFirst());
+            }
         }
         return v;
     }

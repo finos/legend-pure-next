@@ -20,7 +20,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code compare(T[1], T[1]) : Integer[1]}.
@@ -29,9 +29,6 @@ import org.finos.legend.pure.truffle.types.ValueAdapter;
  * For numbers, converts both to {@link java.math.BigDecimal} and uses
  * {@code compareTo}. For dates, normalizes and compares as strings.
  * For all other types, uses string representation comparison.</p>
- *
- * <p>This node delegates to a {@link TruffleBoundary} method that accesses
- * the resolver for type checking (Number vs Date subtype tests).</p>
  */
 @NodeInfo(shortName = "compare")
 public final class CompareNode extends PureNode
@@ -64,32 +61,12 @@ public final class CompareNode extends PureNode
     @TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
-        meta.pure.metamodel.valuespecification.ValueSpecification vsA = ValueAdapter.ensureVS(rawA);
-        meta.pure.metamodel.valuespecification.ValueSpecification vsB = ValueAdapter.ensureVS(rawB);
+        // Unwrap AtomicValue (dates kept as AV)
+        Object a = rawA instanceof meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawA;
+        Object b = rawB instanceof meta.pure.metamodel.valuespecification.AtomicValue bv ? bv._value() : rawB;
 
-        Object a = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(vsA);
-        Object b = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(vsB);
-
-        org.finos.legend.pure.m3.module.MetadataAccess resolver =
-                org.finos.legend.pure.truffle.runtime.EvaluatorHolder.current().natives().resolver();
-
-        meta.pure.metamodel.type.Type typeA =
-                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(vsA._genericType());
-        meta.pure.metamodel.type.Type typeB =
-                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(vsB._genericType());
-
-        meta.pure.metamodel.type.Type pureNumber =
-                (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Number");
-        meta.pure.metamodel.type.Type pureDate =
-                (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
-
-        boolean isNumA = typeA != null
-                && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeA, pureNumber, resolver);
-        boolean isNumB = typeB != null
-                && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeB, pureNumber, resolver);
-
-        int cmp;
-        if (isNumA && isNumB)
+        // Number comparison
+        if (a instanceof Number nA && b instanceof Number nB)
         {
             java.math.BigDecimal bdA = a instanceof java.math.BigDecimal
                     ? (java.math.BigDecimal) a
@@ -97,51 +74,40 @@ public final class CompareNode extends PureNode
             java.math.BigDecimal bdB = b instanceof java.math.BigDecimal
                     ? (java.math.BigDecimal) b
                     : new java.math.BigDecimal(b.toString());
-            cmp = bdA.compareTo(bdB);
+            return (long) Math.signum(bdA.compareTo(bdB));
         }
-        else
-        {
-            boolean isDateA = typeA != null
-                    && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeA, pureDate, resolver);
-            boolean isDateB = typeB != null
-                    && org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.subtypeOf(typeB, pureDate, resolver);
 
-            if (isDateA && isDateB)
+        // Date comparison (dates are stored as Strings)
+        if (a instanceof String sA && b instanceof String sB)
+        {
+            // Try date comparison if both look like dates
+            if (looksLikeDate(sA) && looksLikeDate(sB))
             {
-                cmp = comparePureDates(String.valueOf(a), String.valueOf(b));
+                String n1 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(sA);
+                String n2 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(sB);
+                return (long) Math.signum(comparePureDates(n1, n2));
             }
-            else if (typeA != typeB && !java.util.Objects.equals(typeA, typeB))
-            {
-                String pathA = (typeA instanceof meta.pure.metamodel.PackageableElement peA)
-                        ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA)
-                        : "Unknown";
-                String pathB = (typeB instanceof meta.pure.metamodel.PackageableElement peB)
-                        ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB)
-                        : "Unknown";
-                cmp = pathA.compareTo(pathB);
-                if (cmp == 0)
-                {
-                    cmp = String.valueOf(a).compareTo(String.valueOf(b));
-                }
-            }
-            else
-            {
-                cmp = String.valueOf(a).compareTo(String.valueOf(b));
-            }
+            return (long) Math.signum(sA.compareTo(sB));
         }
-        return (long) Math.signum(cmp);
+
+        // Fallback: string representation
+        return (long) Math.signum(String.valueOf(a).compareTo(String.valueOf(b)));
+    }
+
+    private static boolean looksLikeDate(String s)
+    {
+        return s.length() >= 4 && s.length() <= 30
+                && Character.isDigit(s.charAt(0))
+                && (s.length() == 4 || s.charAt(4) == '-');
     }
 
     private static int comparePureDates(String d1, String d2)
     {
-        String n1 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(d1);
-        String n2 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(d2);
+        int dash1 = d1.indexOf('-', d1.startsWith("-") ? 1 : 0);
+        int dash2 = d2.indexOf('-', d2.startsWith("-") ? 1 : 0);
 
-        int dash1 = n1.indexOf('-', n1.startsWith("-") ? 1 : 0);
-        int dash2 = n2.indexOf('-', n2.startsWith("-") ? 1 : 0);
-
-        String y1 = dash1 > 0 ? n1.substring(0, dash1) : n1;
-        String y2 = dash2 > 0 ? n2.substring(0, dash2) : n2;
+        String y1 = dash1 > 0 ? d1.substring(0, dash1) : d1;
+        String y2 = dash2 > 0 ? d2.substring(0, dash2) : d2;
 
         try
         {
@@ -151,13 +117,13 @@ public final class CompareNode extends PureNode
             {
                 return Integer.compare(year1, year2);
             }
-            String rest1 = dash1 > 0 ? n1.substring(dash1) : "";
-            String rest2 = dash2 > 0 ? n2.substring(dash2) : "";
+            String rest1 = dash1 > 0 ? d1.substring(dash1) : "";
+            String rest2 = dash2 > 0 ? d2.substring(dash2) : "";
             return rest1.compareTo(rest2);
         }
         catch (NumberFormatException e)
         {
-            return n1.compareTo(n2);
+            return d1.compareTo(d2);
         }
     }
 }

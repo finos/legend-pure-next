@@ -14,38 +14,25 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
 
 /**
- * {@code toRepresentation(Any[1]) : String[1]} — returns the Pure-syntax
- * representation of a value (with quoting for strings, % prefix for dates, etc.).
- *
- * <p>Delegates to the bridged StringNatives implementation since the logic
- * involves DynamicInstance inspection and type-based formatting.</p>
+ * {@code toRepresentation(Any[1]) : String[1]} -- returns the Pure-syntax
+ * representation of a value.
  */
 @NodeInfo(shortName = "toRepr")
 public final class ToRepresentationNode extends PureNode
 {
-    private static final String SIG = "toRepresentation_Any_1__String_1_";
-
     @Child
     private PureNode arg;
 
-    @CompilationFinal
     private final GenericType genericType;
-
-    @CompilationFinal
     private final Multiplicity multiplicity;
 
     public ToRepresentationNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
@@ -63,14 +50,38 @@ public final class ToRepresentationNode extends PureNode
     }
 
     @TruffleBoundary
-    private ValueSpecification convert(Object v)
+    private static String convert(Object v)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(v);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(vs),
-                EvaluatorHolder.current(),
-                genericType,
-                multiplicity);
+        // Date AtomicValues → %yyyy-MM-dd format
+        if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String s)
+        {
+            if (ToStringNode.isDateString(s))
+            {
+                return "%" + ToStringNode.normalizeDateString(s);
+            }
+        }
+        if (v instanceof java.time.LocalDate ld)
+        {
+            return "%" + ToStringNode.formatStrictDate(ld);
+        }
+        if (v instanceof java.time.ZonedDateTime zdt)
+        {
+            return "%" + ToStringNode.formatDateTime(zdt);
+        }
+        Object raw = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(v);
+        if (raw instanceof String s)
+        {
+            return "'" + s.replace("'", "\\'") + "'";
+        }
+        if (raw == null)
+        {
+            return "[]";
+        }
+        // Numbers, booleans — use their toString
+        if (raw instanceof Number || raw instanceof Boolean)
+        {
+            return ToStringNode.pureToString(raw);
+        }
+        return PureValuePrinter.printForOutput(raw);
     }
 }

@@ -52,10 +52,26 @@ public final class LangNodeFactories
         registry.register("eval_Function_1__T_n__U_p__W_q__V_m_",
                 (args, gt, mul, fe) -> new EvalNode(args));
 
+        // and/or — short-circuit boolean. Registry check now preempts
+        // the isLazy check in PureASTBuilder, so these get wired.
+        registry.register("and_Boolean_1__Boolean_1__Boolean_1_",
+                (args, gt, mul, fe) -> new AndNode(args[0], args[1]));
+        registry.register("or_Boolean_1__Boolean_1__Boolean_1_",
+                (args, gt, mul, fe) -> new OrNode(args[0], args[1]));
+
         // match — both overloads (with and without extra parameter)
         registry.register("match_Any_MANY__Function_$1_MANY$__T_m_",
                 (args, gt, mul, fe) -> new MatchNode(args));
         registry.register("match_Any_MANY__Function_$1_MANY$__P_o__T_m_",
                 (args, gt, mul, fe) -> new MatchNode(args));
+
+        // evaluate(Function[1], List[*]) — pass-through to eval
+        registry.register("evaluate_Function_1__List_MANY__Any_MANY_",
+                (args, gt, mul, fe) -> new EvalNode(args));
+
+        // letFunction — frame-slot write (handled by PureASTBuilder for
+        // known names; this fallback handles dynamic/late-resolved cases)
+        registry.register("letFunction_String_1__T_m__T_m_",
+                (args, gt, mul, fe) -> new LetFunctionFallbackNode(args[0], args[1]));
     }
 }

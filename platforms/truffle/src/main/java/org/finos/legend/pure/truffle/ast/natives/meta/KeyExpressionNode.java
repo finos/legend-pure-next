@@ -19,20 +19,12 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution._E_ValueSpecification;
-import org.finos.legend.pure.m3.module.MetadataAccess;
+import meta.pure.functions.lang.KeyExpressionImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code keyExpression(String[1], Any[*]) : KeyExpression[1]} and
- * {@code keyExpression(String[1], Any[*], Boolean[1]) : KeyExpression[1]}.
- *
- * <p>Creates a DynamicInstance representing a key-value pair with {name, expression}
- * and optionally an {add} flag.</p>
+ * {@code keyExpression(String[1], Any[*]) : KeyExpression[1]}.
+ * Creates a KeyExpressionImpl representing a key-value pair.
  */
 @NodeInfo(shortName = "keyExpression")
 public final class KeyExpressionNode extends PureNode
@@ -58,24 +50,19 @@ public final class KeyExpressionNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doKeyExpression(values, genericType, multiplicity);
+        return doKeyExpression(values);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doKeyExpression(Object[] values, GenericType genericType, Multiplicity multiplicity)
+    private static Object doKeyExpression(Object[] values)
     {
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-
-        ValueSpecification keyVS = ValueAdapter.ensureVS(values[0]);
-        ValueSpecification valueVS = ValueAdapter.ensureVS(values[1]);
-
-        DynamicInstance keyExpr = new DynamicInstance("meta::pure::functions::lang::KeyExpression");
-        keyExpr.put("name", keyVS);
-        keyExpr.put("expression", valueVS);
+        KeyExpressionImpl keyExpr = new KeyExpressionImpl();
+        keyExpr._name((String) values[0]);
+        keyExpr._expression(values[1]);
         if (values.length > 2)
         {
-            keyExpr.put("add", ValueAdapter.ensureVS(values[2]));
+            keyExpr._add((Boolean) values[2]);
         }
-        return _E_ValueSpecification.wrap(keyExpr, genericType, multiplicity, resolver);
+        return keyExpr;
     }
 }

@@ -14,9 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
  * Unwrap helpers shared by specialized integer-arithmetic nodes. Separating
@@ -31,8 +29,7 @@ public final class IntegerHelper
 
     /**
      * Hot-path unwrap: a {@link AtomicValue} with a {@link Long} payload. Anything
-     * else goes through the slow-path {@link #fallback} (bridged value, Integer
-     * boxed as a different type, etc.).
+     * else falls through to inline Number checks.
      */
     public static long asLong(Object v, String signature)
     {
@@ -48,18 +45,7 @@ public final class IntegerHelper
         {
             return n.longValue();
         }
-        return fallback(v, signature);
-    }
-
-    @TruffleBoundary
-    private static long fallback(Object v, String signature)
-    {
-        if (v instanceof Number n)
-        {
-            return n.longValue();
-        }
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof Number n)
+        if (v instanceof AtomicValue av && av._value() instanceof Number n)
         {
             return n.longValue();
         }

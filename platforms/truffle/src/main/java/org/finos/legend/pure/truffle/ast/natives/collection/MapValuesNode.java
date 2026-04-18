@@ -17,15 +17,15 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.functions.collection.MapImpl;
+import meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.execution.PureMap;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-
-import java.util.ArrayList;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
 /**
- * {@code values(Map[1]) : V[*]} — extracts all values from a map.
+ * {@code values(Map[1]) : V[*]} -- extracts all values from a map.
  */
 @NodeInfo(shortName = "values")
 public final class MapValuesNode extends PureNode
@@ -46,10 +46,18 @@ public final class MapValuesNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doValues(Object map)
+    private static Object doValues(Object map)
     {
-        Object rawMap = map instanceof ValueSpecification vs ? _E_ValueSpecification.unwrap(vs) : map;
-        PureMap pureMap = (PureMap) rawMap;
-        return CollectionHelper.makeCollection(new ArrayList<>(pureMap.getMap().values()));
+        if (map instanceof MapImpl mi)
+        {
+            Object[] values = mi.values().toArray();
+            return values.length == 0 ? PureNull.INSTANCE : new ObjectSequence(values);
+        }
+        if (map instanceof PureMap pureMap)
+        {
+            Object[] values = pureMap.getMap().values().toArray();
+            return values.length == 0 ? PureNull.INSTANCE : new ObjectSequence(values);
+        }
+        return PureNull.INSTANCE;
     }
 }

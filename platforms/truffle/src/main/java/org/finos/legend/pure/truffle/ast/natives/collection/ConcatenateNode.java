@@ -14,21 +14,15 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
 /**
- * {@code concatenate(T[*], T[*]) : T[*]} — append both element lists into
- * a fresh collection. The output's {@code genericType} and
- * {@code multiplicity} are set by {@link CollectionNatives#makeCollection}
- * using the caller-site {@code FunctionExpression}'s type/multiplicity.
+ * {@code concatenate(T[*], T[*]) : T[*]} -- append both element lists into
+ * a fresh collection.
  */
 @NodeInfo(shortName = "concatenate")
 public final class ConcatenateNode extends PureNode
@@ -50,17 +44,16 @@ public final class ConcatenateNode extends PureNode
     {
         Object a = left.executeGeneric(frame);
         Object b = right.executeGeneric(frame);
-        return combine(a, b);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification combine(Object a, Object b)
-    {
-        MutableList<ValueSpecification> aVals = CollectionHelper.values(a);
-        MutableList<ValueSpecification> bVals = CollectionHelper.values(b);
-        List<ValueSpecification> merged = new ArrayList<>(aVals.size() + bVals.size());
-        merged.addAll(aVals);
-        merged.addAll(bVals);
-        return CollectionHelper.makeCollection(merged);
+        Object[] aArr = CollectionHelper.toArray(a);
+        Object[] bArr = CollectionHelper.toArray(b);
+        int total = aArr.length + bArr.length;
+        if (total == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        Object[] merged = new Object[total];
+        System.arraycopy(aArr, 0, merged, 0, aArr.length);
+        System.arraycopy(bArr, 0, merged, aArr.length, bArr.length);
+        return new ObjectSequence(merged);
     }
 }

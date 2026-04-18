@@ -14,13 +14,12 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
- * {@code reverseString(String[1]) : String[1]} — reverses a string.
+ * {@code reverseString(String[1]) : String[1]} -- reverses a string.
  */
 @NodeInfo(shortName = "reverseStr")
 public final class ReverseStringNode extends PureNode
@@ -39,12 +38,6 @@ public final class ReverseStringNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
-        return reverse(s);
-    }
-
-    @TruffleBoundary
-    private static String reverse(String s)
-    {
         return new StringBuilder(s).reverse().toString();
     }
 }

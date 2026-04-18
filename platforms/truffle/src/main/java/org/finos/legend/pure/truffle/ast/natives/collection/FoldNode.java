@@ -14,15 +14,12 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
- * {@code fold(T[*], Function<{T[1],V[*]->V[*]}>[1], V[*]) : V[*]} — left fold.
+ * {@code fold(T[*], Function<{T[1],V[*]->V[*]}>[1], V[*]) : V[*]} -- left fold.
  * The lambda receives {@code (element, accumulator)} (element first).
  */
 @NodeInfo(shortName = "fold")
@@ -38,7 +35,7 @@ public final class FoldNode extends PureNode
     private PureNode seed;
 
     @Child
-    private LambdaCallNode callNode = new LambdaCallNode();
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode callNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public FoldNode(PureNode collection, PureNode lambda, PureNode seed)
     {
@@ -53,14 +50,10 @@ public final class FoldNode extends PureNode
         Object col = collection.executeGeneric(frame);
         Object fn = lambda.executeGeneric(frame);
         Object acc = seed.executeGeneric(frame);
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        int size = values.size();
-        for (int i = 0; i < size; i++)
+        int sz = CollectionHelper.size(col);
+        for (int i = 0; i < sz; i++)
         {
-            // fold lambda takes (element, accumulator) — both need to be
-            // VS for the bridge path, but raw for the DirectCallNode path.
-            // LambdaCallNode handles both via ensureVS in its fallback.
-            acc = callNode.call(fn, values.get(i), org.finos.legend.pure.truffle.types.ValueAdapter.ensureVS(acc));
+            acc = callNode.call(fn, CollectionHelper.at(col, i), acc);
         }
         return acc;
     }

@@ -20,10 +20,9 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code println(Any[*]) : Nil[0]} — prints value to stdout with newline.
+ * {@code println(Any[*]) : Nil[0]} -- prints value to stdout with newline.
  */
 @NodeInfo(shortName = "println")
 public final class PrintlnNode extends PureNode
@@ -47,11 +46,7 @@ public final class PrintlnNode extends PureNode
     @TruffleBoundary
     private static void doPrintln(Object val)
     {
-        Object raw = ValueAdapter.toRaw(val);
-        if (raw == PureNull.INSTANCE)
-        {
-            raw = null;
-        }
-        System.out.println(PureValuePrinter.printForOutput(raw));
+        Object normalized = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(val);
+        System.out.println(PureValuePrinter.printForOutput(normalized));
     }
 }

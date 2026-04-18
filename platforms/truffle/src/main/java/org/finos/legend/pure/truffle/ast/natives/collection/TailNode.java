@@ -14,17 +14,16 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
- * {@code tail(T[*]) : T[*]} — every element except the first.
+ * {@code tail(T[*]) : T[*]} -- every element except the first.
  */
 @NodeInfo(shortName = "tail")
 public final class TailNode extends PureNode
@@ -40,18 +39,12 @@ public final class TailNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return slice(arg.executeGeneric(frame));
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification slice(Object v)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(v);
-        int sz = values.size();
-        if (sz <= 1)
+        Object v = arg.executeGeneric(frame);
+        Object[] arr = CollectionHelper.toArray(v);
+        if (arr.length <= 1)
         {
-            return CollectionHelper.makeCollection(new ArrayList<>());
+            return PureNull.INSTANCE;
         }
-        return CollectionHelper.makeCollection(new ArrayList<>(values.subList(1, sz)));
+        return new ObjectSequence(Arrays.copyOfRange(arr, 1, arr.length));
     }
 }

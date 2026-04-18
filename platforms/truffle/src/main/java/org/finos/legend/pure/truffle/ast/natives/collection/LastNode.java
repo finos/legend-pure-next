@@ -18,10 +18,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 @NodeInfo(shortName = "last")
 public final class LastNode extends PureNode
@@ -29,7 +27,9 @@ public final class LastNode extends PureNode
     @Child
     private PureNode arg;
 
+    @SuppressWarnings("unused")
     private final GenericType genericType;
+    @SuppressWarnings("unused")
     private final Multiplicity multiplicity;
 
     public LastNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
@@ -46,13 +46,8 @@ public final class LastNode extends PureNode
         int size = CollectionHelper.size(col);
         if (size == 0)
         {
-            return emptyResult();
+            return PureNull.INSTANCE;
         }
         return CollectionHelper.at(col, size - 1);
-    }
-
-    private ValueSpecification emptyResult()
-    {
-        return ValueAdapter.toVS(PureNull.INSTANCE, genericType, multiplicity);
     }
 }

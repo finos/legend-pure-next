@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.date;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -58,13 +57,11 @@ public final class DateHelper
         {
             return s;
         }
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof String s)
+        if (v != null)
         {
-            return s;
+            return v.toString();
         }
-        throw new ClassCastException(signature + " expected Date string, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+        throw new ClassCastException(signature + " expected Date string, got: null");
     }
 
     @TruffleBoundary

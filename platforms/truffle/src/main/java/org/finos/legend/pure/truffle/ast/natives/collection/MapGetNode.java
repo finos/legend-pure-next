@@ -17,19 +17,12 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution.PureMap;
-import org.finos.legend.pure.execution._E_ValueSpecification;
+import meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.Map;
 
 /**
- * {@code get(Map[1], U[1]) : V[0..1]} — map lookup using structural equality.
+ * {@code get(Map[1], U[1]) : V[0..1]}.
  */
 @NodeInfo(shortName = "mapGet")
 public final class MapGetNode extends PureNode
@@ -57,18 +50,15 @@ public final class MapGetNode extends PureNode
     @TruffleBoundary
     private static Object doGet(Object map, Object key)
     {
-        Object rawMap = map instanceof ValueSpecification vs ? _E_ValueSpecification.unwrap(vs) : map;
-        ValueSpecification keyVS = ValueAdapter.ensureVS(key);
-        if (rawMap instanceof PureMap pureMap)
+        if (map instanceof MapImpl mi)
         {
-            for (Map.Entry<ValueSpecification, ValueSpecification> e : pureMap.getMap().entrySet())
-            {
-                if (NativeRepository.pureEquals(e.getKey(), keyVS))
-                {
-                    return e.getValue();
-                }
-            }
-            return PureNull.INSTANCE;
+            Object value = mi.get(key);
+            return value != null ? value : PureNull.INSTANCE;
+        }
+        if (map instanceof org.finos.legend.pure.execution.PureMap pureMap)
+        {
+            Object value = pureMap.getMap().get(key);
+            return value != null ? value : PureNull.INSTANCE;
         }
         return PureNull.INSTANCE;
     }

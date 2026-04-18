@@ -15,28 +15,22 @@
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.metamodel.function.LambdaFunction;
+import meta.pure.metamodel.function.NativeFunction;
+import meta.pure.metamodel.valuespecification.AtomicValue;
+import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
  * Generic eval: evaluates all children, treats the first as a function and the
- * rest as arguments, then invokes the function via the bridged evaluator.
- *
- * <p>Handles all four {@code eval} overloads with a variable number of
- * children:</p>
- * <ul>
- *   <li>{@code eval_Function_1__V_m_} -- 1 child (fn only)</li>
- *   <li>{@code eval_Function_1__T_n__V_m_} -- 2 children</li>
- *   <li>{@code eval_Function_1__T_n__U_p__V_m_} -- 3 children</li>
- *   <li>{@code eval_Function_1__T_n__U_p__W_q__V_m_} -- 4 children</li>
- * </ul>
+ * rest as arguments, then invokes the function via the standalone evaluator.
  */
 @NodeInfo(shortName = "eval")
 public final class EvalNode extends PureNode
@@ -63,12 +57,71 @@ public final class EvalNode extends PureNode
     @TruffleBoundary
     private static Object invokeEval(Object[] values)
     {
-        ValueSpecification fnVS = ValueAdapter.ensureVS(values[0]);
-        List<ValueSpecification> args = new ArrayList<>(values.length - 1);
-        for (int i = 1; i < values.length; i++)
+        Object fn = values[0];
+        // Unwrap AtomicValue wrapper if present (PDB function references
+        // come as AtomicValue wrapping a FunctionDefinition/NativeFunction)
+        if (fn instanceof AtomicValue av)
         {
-            args.add(ValueAdapter.ensureVS(values[i]));
+            fn = av._value();
         }
-        return EvaluatorHolder.current().executeFunction(fnVS, args);
+        // Handle PureNull (e.g. when AtomicValue._value() was null)
+        if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureNull)
+        {
+            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+        }
+        Object[] args = new Object[values.length - 1];
+        System.arraycopy(values, 1, args, 0, args.length);
+
+        if (fn instanceof RawClosure rc)
+        {
+            return StandaloneEvaluatorHolder.current().executeLambda(rc, args);
+        }
+        if (fn instanceof LambdaFunction lf)
+        {
+            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
+            return StandaloneEvaluatorHolder.current().executeLambda(closure, args);
+        }
+        if (fn instanceof meta.pure.metamodel.function.FunctionDefinition fd)
+        {
+            return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+        }
+        if (fn instanceof NativeFunction nf)
+        {
+            return executeNativeViaRegistry(nf, args);
+        }
+        if (fn instanceof meta.pure.metamodel.function.property.Property prop)
+        {
+            // Property passed as first-class function to eval: access the
+            // property on the first argument
+            if (args.length > 0)
+            {
+                return StandaloneEvaluatorHolder.current().accessProperty(args[0], prop._name());
+            }
+            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+        }
+        throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
+    }
+
+    @TruffleBoundary
+    private static Object executeNativeViaRegistry(NativeFunction nf, Object[] args)
+    {
+        String signature = nf._name();
+        NativeNodeRegistry registry = StandaloneEvaluatorHolder.current().astBuilder().specialized();
+        NativeNodeRegistry.Factory factory = registry.lookup(signature);
+        if (factory == null)
+        {
+            throw new RuntimeException("eval: no specialized node for native: " + signature);
+        }
+        // Wrap each raw arg in a ConstantNode so the factory can build a
+        // Truffle node tree. Then execute in a temporary frame.
+        PureNode[] argNodes = new PureNode[args.length];
+        for (int i = 0; i < args.length; i++)
+        {
+            argNodes[i] = new ConstantNode(args[i]);
+        }
+        PureNode node = factory.create(argNodes, null, null, null);
+        VirtualFrame tmpFrame = Truffle.getRuntime().createVirtualFrame(
+                new Object[0], FrameDescriptor.newBuilder().build());
+        return node.executeGeneric(tmpFrame);
     }
 }

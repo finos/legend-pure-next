@@ -14,44 +14,29 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
-import org.finos.legend.pure.execution.natives.string.StringNatives;
+import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 
 /**
- * {@code format(String[1], Any[*]) : String[1]} — printf-style formatting
+ * {@code format(String[1], Any[*]) : String[1]} -- printf-style formatting
  * with Pure format specifiers (%s, %d, %r, %f, %t, etc.).
- *
- * <p>Delegates to the bridged StringNatives implementation via
- * {@code NativeRepository.execute} since the format logic is complex and
- * involves DynamicInstance inspection, date formatting, and type checking.</p>
  */
 @NodeInfo(shortName = "format")
 public final class FormatNode extends PureNode
 {
-    private static final String SIG = "format_String_1__Any_MANY__String_1_";
-
     @Child
     private PureNode formatArg;
 
     @Child
     private PureNode argsArg;
 
-    @CompilationFinal
     private final GenericType genericType;
-
-    @CompilationFinal
     private final Multiplicity multiplicity;
 
     public FormatNode(PureNode formatArg, PureNode argsArg, GenericType genericType, Multiplicity multiplicity)
@@ -71,15 +56,77 @@ public final class FormatNode extends PureNode
     }
 
     @TruffleBoundary
-    private ValueSpecification doFormat(Object fmt, Object args)
+    private static String doFormat(Object fmt, Object args)
     {
-        ValueSpecification fmtVS = ValueAdapter.ensureVS(fmt);
-        ValueSpecification argsVS = ValueAdapter.ensureVS(args);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(fmtVS, argsVS),
-                EvaluatorHolder.current(),
-                genericType,
-                multiplicity);
+        String formatStr = StringHelper.asString(fmt, "format");
+        int sz = CollectionHelper.size(args);
+        Object[] rawArgs = new Object[sz];
+        for (int i = 0; i < sz; i++)
+        {
+            Object item = CollectionHelper.at(args, i);
+            // Normalize truffle types (PureSequence->List, AtomicValue->raw, PureNull->null)
+            rawArgs[i] = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(item);
+            if (rawArgs[i] == null)
+            {
+                rawArgs[i] = "";
+            }
+        }
+        // Simple %s/%d replacement
+        StringBuilder sb = new StringBuilder();
+        int argIdx = 0;
+        for (int i = 0; i < formatStr.length(); i++)
+        {
+            char c = formatStr.charAt(i);
+            if (c == '%' && i + 1 < formatStr.length())
+            {
+                char next = formatStr.charAt(i + 1);
+                if (next == '%')
+                {
+                    sb.append('%');
+                    i++;
+                }
+                else if (argIdx < rawArgs.length)
+                {
+                    if (next == 's' || next == 'd' || next == 't')
+                    {
+                        sb.append(pureToString(rawArgs[argIdx++]));
+                        i++;
+                    }
+                    else if (next == 'r')
+                    {
+                        sb.append(toRepresentation(rawArgs[argIdx++]));
+                        i++;
+                    }
+                    else
+                    {
+                        sb.append(pureToString(rawArgs[argIdx++]));
+                        i++;
+                    }
+                }
+                else
+                {
+                    sb.append(c);
+                }
+            }
+            else
+            {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String pureToString(Object v)
+    {
+        return ToStringNode.pureToString(v);
+    }
+
+    private static String toRepresentation(Object v)
+    {
+        if (v instanceof String s)
+        {
+            return "'" + s.replace("'", "\\'") + "'";
+        }
+        return pureToString(v);
     }
 }

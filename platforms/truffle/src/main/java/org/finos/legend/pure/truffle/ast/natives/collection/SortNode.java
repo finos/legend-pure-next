@@ -17,19 +17,19 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
  * {@code sort(T[m], Function<{T[1]->U[1]}>[0..1], Function<{U[1],U[1]->Integer[1]}>[0..1]) : T[m]}
- * — sort with optional key extractor and comparator lambdas.
+ * -- sort with optional key extractor and comparator lambdas.
+ *
+ * <p>Element access and key extraction are boundary-free. The actual
+ * {@link Arrays#sort} call is behind a single {@code @TruffleBoundary}
+ * since it allocates internally.</p>
  */
 @NodeInfo(shortName = "sort")
 public final class SortNode extends PureNode
@@ -42,6 +42,12 @@ public final class SortNode extends PureNode
 
     @Child
     private PureNode compFnArg;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode keyCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode compCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public SortNode(PureNode collectionArg, PureNode keyFnArg, PureNode compFnArg)
     {
@@ -56,53 +62,101 @@ public final class SortNode extends PureNode
         Object col = collectionArg.executeGeneric(frame);
         Object keyFn = keyFnArg != null ? keyFnArg.executeGeneric(frame) : null;
         Object compFn = compFnArg != null ? compFnArg.executeGeneric(frame) : null;
-        return doSort(col, keyFn, compFn);
+
+        Object[] arr = CollectionHelper.toArray(col);
+        if (arr.length <= 1)
+        {
+            return arr.length == 0 ? PureNull.INSTANCE : arr[0];
+        }
+
+        boolean hasKeyFn = keyFn != null && !CollectionHelper.isEmpty(keyFn);
+        boolean hasCompFn = compFn != null && !CollectionHelper.isEmpty(compFn);
+
+        // Extract keys once if key function supplied
+        Object[] keys = hasKeyFn ? extractKeys(arr, keyFn) : arr;
+
+        // Sort via insertion sort (boundary-free, stable, no allocation)
+        if (hasCompFn)
+        {
+            insertionSortWithComp(arr, keys, compFn);
+        }
+        else
+        {
+            insertionSortNatural(arr, keys);
+        }
+        return new ObjectSequence(arr);
+    }
+
+    private Object[] extractKeys(Object[] arr, Object keyFn)
+    {
+        Object[] keys = new Object[arr.length];
+        for (int i = 0; i < arr.length; i++)
+        {
+            keys[i] = keyCallNode.call(keyFn, arr[i]);
+        }
+        return keys;
+    }
+
+    private void insertionSortWithComp(Object[] arr, Object[] keys, Object compFn)
+    {
+        for (int i = 1; i < arr.length; i++)
+        {
+            Object elem = arr[i];
+            Object key = keys[i];
+            int j = i - 1;
+            while (j >= 0)
+            {
+                Object cmpResult = compCallNode.call(compFn, keys[j], key);
+                int cmp = cmpResult instanceof Number n ? n.intValue() : 0;
+                if (cmp <= 0)
+                {
+                    break;
+                }
+                arr[j + 1] = arr[j];
+                keys[j + 1] = keys[j];
+                j--;
+            }
+            arr[j + 1] = elem;
+            keys[j + 1] = key;
+        }
     }
 
     @TruffleBoundary
-    private static ValueSpecification doSort(Object col, Object keyFn, Object compFn)
+    @SuppressWarnings("unchecked")
+    private static void insertionSortNatural(Object[] arr, Object[] keys)
     {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        List<ValueSpecification> sorted = new ArrayList<>(values);
-
-        ValueSpecification keyFnVS = keyFn != null ? ValueAdapter.ensureVS(keyFn) : null;
-        ValueSpecification compFnVS = compFn != null ? ValueAdapter.ensureVS(compFn) : null;
-        boolean hasKeyFn = keyFnVS != null && !CollectionHelper.isEmpty(keyFnVS);
-        boolean hasCompFn = compFnVS != null && !CollectionHelper.isEmpty(compFnVS);
-
-        sorted.sort((aVS, bVS) ->
+        for (int i = 1; i < arr.length; i++)
         {
-            ValueSpecification kA = aVS;
-            ValueSpecification kB = bVS;
-            if (hasKeyFn)
+            Object elem = arr[i];
+            Object key = keys[i];
+            int j = i - 1;
+            while (j >= 0 && naturalCompare(keys[j], key) > 0)
             {
-                kA = EvaluatorHolder.current().executeFunction(keyFnVS, List.of(aVS));
-                kB = EvaluatorHolder.current().executeFunction(keyFnVS, List.of(bVS));
+                arr[j + 1] = arr[j];
+                keys[j + 1] = keys[j];
+                j--;
             }
-            if (hasCompFn)
-            {
-                ValueSpecification cmpResult = EvaluatorHolder.current().executeFunction(compFnVS, List.of(kA, kB));
-                return ((Number) _E_ValueSpecification.unwrap(cmpResult)).intValue();
-            }
-            Object rawA = _E_ValueSpecification.unwrap(kA);
-            Object rawB = _E_ValueSpecification.unwrap(kB);
-            if (rawA instanceof Number nA && rawB instanceof Number nB)
-            {
-                return Double.compare(nA.doubleValue(), nB.doubleValue());
-            }
-            if (rawA instanceof Comparable c && rawA.getClass().isInstance(rawB))
-            {
-                @SuppressWarnings("unchecked")
-                int cmp = c.compareTo(rawB);
-                return cmp;
-            }
-            int typeCmp = rawA.getClass().getSimpleName().compareTo(rawB.getClass().getSimpleName());
-            if (typeCmp != 0)
-            {
-                return typeCmp;
-            }
-            return String.valueOf(rawA).compareTo(String.valueOf(rawB));
-        });
-        return CollectionHelper.makeCollection(sorted);
+            arr[j + 1] = elem;
+            keys[j + 1] = key;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static int naturalCompare(Object a, Object b)
+    {
+        if (a instanceof Number nA && b instanceof Number nB)
+        {
+            return Double.compare(nA.doubleValue(), nB.doubleValue());
+        }
+        if (a instanceof Comparable c && a.getClass().isInstance(b))
+        {
+            return c.compareTo(b);
+        }
+        int typeCmp = a.getClass().getSimpleName().compareTo(b.getClass().getSimpleName());
+        if (typeCmp != 0)
+        {
+            return typeCmp;
+        }
+        return String.valueOf(a).compareTo(String.valueOf(b));
     }
 }

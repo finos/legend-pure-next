@@ -21,21 +21,14 @@ import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.Any;
 import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.GenericTypeValue;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.execution.natives.meta.MetaNatives;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
  * {@code new(GenericType[1]) : Any[1]}.
- *
- * <p>Creates an instance with the given GenericType as classifierGenericType.</p>
+ * Creates an instance with the given GenericType as classifierGenericType.
  */
 @NodeInfo(shortName = "newGenericType")
 public final class NewGenericTypeNode extends PureNode
@@ -57,17 +50,13 @@ public final class NewGenericTypeNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doNewGenericType(result, genericType, multiplicity);
+        return doNewGenericType(result);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doNewGenericType(Object result, GenericType genericType, Multiplicity multiplicity)
+    private static Object doNewGenericType(Object result)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(result);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-
-        Object rawArg = _E_ValueSpecification.unwrap(vs);
-        if (!(rawArg instanceof GenericTypeValue gt))
+        if (!(result instanceof GenericTypeValue gt))
         {
             throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
         }
@@ -96,11 +85,7 @@ public final class NewGenericTypeNode extends PureNode
         {
             any._classifierGenericType(gt);
         }
-        else if (instance instanceof DynamicInstance di)
-        {
-            di.setClassifierGenericType(gt);
-        }
 
-        return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+        return instance;
     }
 }

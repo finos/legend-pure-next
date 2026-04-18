@@ -17,15 +17,13 @@ package org.finos.legend.pure.truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.nodes.RootNode;
 import meta.pure.metamodel.function.FunctionDefinition;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.execution.NativeExtension;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
+import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.PureNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +39,6 @@ import org.finos.legend.pure.next.parser.ParserExtension;
  */
 public final class PureTruffleRuntime
 {
-    private final TruffleEvaluator evaluator;
     private final StandaloneEvaluator standalone;
     private final MetadataAccess resolver;
 
@@ -50,15 +47,7 @@ public final class PureTruffleRuntime
                                List<? extends ParserExtension> parserExtensions)
     {
         this.resolver = resolver;
-        NativeRepository natives = NativeRepository.builder()
-                .withResolver(resolver)
-                .withParserExtensions(parserExtensions)
-                .withNativeExtensions(nativeExtensions)
-                .build();
-        this.evaluator = new TruffleEvaluator(natives, null);
-        // StandaloneEvaluator shares the same NativeNodeRegistry as TruffleEvaluator.
-        // Bridge fallback for ~31 remaining signatures uses EvaluatorHolder → TruffleEvaluator.
-        this.standalone = new StandaloneEvaluator(resolver, null, evaluator.astBuilder().specialized(), natives);
+        this.standalone = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
     }
 
     public static final class Builder
@@ -110,16 +99,11 @@ public final class PureTruffleRuntime
      */
     public Object execute(FunctionDefinition function, Object... args)
     {
-        EvaluatorHolder.set(evaluator);
-        org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.set(standalone);
+        StandaloneEvaluatorHolder.set(standalone);
         try
         {
             Object result = standalone.executeFunction(function, args);
-            if (result instanceof meta.pure.metamodel.valuespecification.ValueSpecification vs)
-            {
-                return _E_ValueSpecification.unwrap(vs);
-            }
-            if (result instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (result instanceof PureNull)
             {
                 return null;
             }
@@ -127,8 +111,7 @@ public final class PureTruffleRuntime
         }
         finally
         {
-            org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.clear();
-            EvaluatorHolder.clear();
+            StandaloneEvaluatorHolder.clear();
         }
     }
 

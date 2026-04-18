@@ -45,15 +45,35 @@ public final class MathNodeFactories
         registry.register("times_Float_1__Float_1__Float_1_",
                 (args, gt, mul, fe) -> new TimesFloatNode(args[0], args[1]));
 
-        // Generic Number arithmetic stays on bridge — when operands are
-        // BigDecimal (Decimal), coercing to double loses precision.
-        // Java native also uses double but wraps result as VS which
-        // preserves the same precision symmetrically.
+        // ── Generic Number arithmetic ──────────────────────────────────
+        registry.register("plus_Number_1__Number_1__Number_1_",
+                (args, gt, mul, fe) -> new BinaryNumberNode(args[0], args[1],
+                        "plus_Number_1__Number_1__Number_1_", Double::sum));
+        registry.register("minus_Number_1__Number_1__Number_1_",
+                (args, gt, mul, fe) -> new BinaryNumberNode(args[0], args[1],
+                        "minus_Number_1__Number_1__Number_1_", (a, b) -> a - b));
+        registry.register("times_Number_1__Number_1__Number_1_",
+                (args, gt, mul, fe) -> new BinaryNumberNode(args[0], args[1],
+                        "times_Number_1__Number_1__Number_1_", (a, b) -> a * b));
 
-        // Decimal arithmetic stays on the bridge — BigDecimal precision
-        // requires end-to-end BigDecimal flow which the current hybrid
-        // architecture doesn't guarantee (upstream Number nodes may coerce
-        // to double). The standalone evaluator (Phase 2+) will handle this.
+        // ── Decimal arithmetic ────────────────────────────────────────
+        registry.register("plus_Decimal_1__Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
+                        "plus_Decimal_1__Decimal_1__Decimal_1_", java.math.BigDecimal::add));
+        registry.register("minus_Decimal_1__Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
+                        "minus_Decimal_1__Decimal_1__Decimal_1_", java.math.BigDecimal::subtract));
+        registry.register("times_Decimal_1__Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
+                        "times_Decimal_1__Decimal_1__Decimal_1_", java.math.BigDecimal::multiply));
+        registry.register("divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DivideDecimalNode(args[0], args[1], args[2]));
+        registry.register("minus_Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new MinusNegateDecimalNode(args[0]));
+        registry.register("abs_Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new AbsDecimalNode(args[0]));
+        registry.register("round_Decimal_1__Integer_1__Decimal_1_",
+                (args, gt, mul, fe) -> new RoundDecimalNode(args[0], args[1]));
 
         // ── Division ───────────────────────────────────────────────────
         registry.register("divide_Number_1__Number_1__Float_1_",
@@ -62,7 +82,6 @@ public final class MathNodeFactories
         // ── Single-arg negate ──────────────────────────────────────────
         registry.register("minus_Number_1__Number_1_",
                 (args, gt, mul, fe) -> new MinusNegateNumberNode(args[0]));
-        // minus_Decimal_1__Decimal_1_ stays on bridge (Decimal precision)
 
         // ── Comparisons ────────────────────────────────────────────────
         registry.register("lessThan_Number_1__Number_1__Boolean_1_",
@@ -79,7 +98,7 @@ public final class MathNodeFactories
                 (args, gt, mul, fe) -> new AbsIntegerNode(args[0]));
         registry.register("abs_Float_1__Float_1_",
                 (args, gt, mul, fe) -> new AbsFloatNode(args[0]));
-        // abs_Decimal_1__Decimal_1_ stays on bridge (Decimal precision)
+        // abs_Decimal registered above in Decimal section
         registry.register("abs_Number_1__Number_1_",
                 (args, gt, mul, fe) -> new AbsNumberNode(args[0]));
 
@@ -106,7 +125,7 @@ public final class MathNodeFactories
                 (args, gt, mul, fe) -> new RoundNumberNode(args[0]));
         registry.register("round_Float_1__Integer_1__Float_1_",
                 (args, gt, mul, fe) -> new RoundFloatNode(args[0], args[1]));
-        // round_Decimal_1__Integer_1__Decimal_1_ stays on bridge (Decimal precision)
+        // round_Decimal registered above in Decimal section
 
         // ── Trigonometric (unary Number[1] -> Float[1]) ────────────────
         registry.register("sin_Number_1__Float_1_",

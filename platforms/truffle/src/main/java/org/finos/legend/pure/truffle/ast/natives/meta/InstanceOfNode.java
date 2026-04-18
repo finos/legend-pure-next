@@ -18,20 +18,15 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.ast.natives.lang.MatchNode;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code instanceOf(Any[1], Type[1]) : Boolean[1]}.
- *
- * <p>Checks whether the runtime type of the first argument is a subtype of
- * the second argument. Returns a raw boolean.</p>
  */
 @NodeInfo(shortName = "instanceOf")
 public final class InstanceOfNode extends PureNode
@@ -57,40 +52,88 @@ public final class InstanceOfNode extends PureNode
     }
 
     @TruffleBoundary
-    private static boolean doInstanceOf(Object valResult, Object typeResult)
+    private static boolean doInstanceOf(Object rawVal, Object typeResult)
     {
-        ValueSpecification valVS = ValueAdapter.ensureVS(valResult);
-        ValueSpecification typeVS = ValueAdapter.ensureVS(typeResult);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
-        Object unwrapped = _E_ValueSpecification.unwrap(valVS);
-        if (unwrapped == null)
+        // Unwrap AtomicValue if present (e.g., dates kept as AV)
+        Object valResult = rawVal;
+        if (valResult instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
+        {
+            valResult = av._value();
+        }
+        if (valResult == null || valResult instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return false;
         }
 
         // Resolve the target type
         Type targetType = null;
-        Object targetValue = _E_ValueSpecification.unwrap(typeVS);
-        if (targetValue instanceof Type t)
+        if (typeResult instanceof Type t)
         {
             targetType = t;
         }
-        else if (typeVS._genericType() != null)
+        else if (typeResult instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof Type t)
         {
-            targetType = _GenericType.type(typeVS._genericType());
+            targetType = t;
         }
         if (targetType == null)
         {
-            return unwrapped != null;
+            return valResult != null;
         }
 
-        // Get the value's runtime type
-        Type valueType = _E_ValueSpecification.getValueOriginalType(valVS);
+        // Get the value's runtime type. If original was AtomicValue, use
+        // its genericType (carries the actual Pure type like Date/StrictDate).
+        Type valueType = getRawValueType(rawVal, valResult, resolver);
         if (valueType == null)
         {
             return false;
         }
         return _Type.subtypeOf(valueType, targetType, resolver);
+    }
+
+    private static Type getRawValueType(Object original, Object unwrapped, MetadataAccess resolver)
+    {
+        // If original was an AtomicValue with genericType, use that
+        // (handles dates stored as Strings with Date genericType)
+        if (original instanceof meta.pure.metamodel.valuespecification.AtomicValue av
+                && av._genericType() != null)
+        {
+            Type t = _GenericType.type(av._genericType());
+            if (t != null)
+            {
+                return t;
+            }
+        }
+        Object value = unwrapped;
+        if (value instanceof meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
+        {
+            return _GenericType.type(any._classifierGenericType());
+        }
+        if (value instanceof Long)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
+        }
+        if (value instanceof Double)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float");
+        }
+        if (value instanceof Boolean)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
+        }
+        if (value instanceof String)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
+        }
+        if (value instanceof java.math.BigDecimal)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
+        }
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
+        }
+        return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
     }
 }

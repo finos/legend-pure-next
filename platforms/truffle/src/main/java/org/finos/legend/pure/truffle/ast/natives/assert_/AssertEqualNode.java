@@ -17,14 +17,13 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution.NativeRepository.PureAssertionError;
+import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+
+import java.util.Objects;
 
 /**
- * {@code assertEqual(Any[*], Any[*]) : Boolean[1]} — asserts structural equality.
+ * {@code assertEqual(Any[*], Any[*]) : Boolean[1]} -- asserts structural equality.
  */
 @NodeInfo(shortName = "assertEqual")
 public final class AssertEqualNode extends PureNode
@@ -52,14 +51,55 @@ public final class AssertEqualNode extends PureNode
     @TruffleBoundary
     private static boolean doAssertEqual(Object expected, Object actual)
     {
-        ValueSpecification expectedVS = ValueAdapter.ensureVS(expected);
-        ValueSpecification actualVS = ValueAdapter.ensureVS(actual);
-        if (!NativeRepository.pureEquals(expectedVS, actualVS))
+        Object normExpected = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(expected);
+        Object normActual = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(actual);
+        if (!deepEquals(normExpected, normActual))
         {
-            throw new PureAssertionError("assertEqual failed:\nexpected: "
-                    + NativeRepository.pureToString(expectedVS)
-                    + "\nactual:   " + NativeRepository.pureToString(actualVS));
+            Object printExpected = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(expected);
+            Object printActual = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(actual);
+            throw new org.finos.legend.pure.execution.PureAssertionError(
+                    "assertEqual failed:\nexpected: "
+                    + PureValuePrinter.printForOutput(printExpected)
+                    + "\nactual:   " + PureValuePrinter.printForOutput(printActual));
         }
         return true;
+    }
+
+    private static boolean deepEquals(Object a, Object b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a == null || b == null)
+        {
+            return false;
+        }
+        // Numeric coercion: compare numbers by double value
+        if (a instanceof Number na && b instanceof Number nb)
+        {
+            if (a instanceof Long && b instanceof Long)
+            {
+                return na.longValue() == nb.longValue();
+            }
+            return Double.compare(na.doubleValue(), nb.doubleValue()) == 0;
+        }
+        // List comparison (for PureSequence that was normalized to List)
+        if (a instanceof java.util.List<?> la && b instanceof java.util.List<?> lb)
+        {
+            if (la.size() != lb.size())
+            {
+                return false;
+            }
+            for (int i = 0; i < la.size(); i++)
+            {
+                if (!deepEquals(la.get(i), lb.get(i)))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return Objects.equals(a, b);
     }
 }

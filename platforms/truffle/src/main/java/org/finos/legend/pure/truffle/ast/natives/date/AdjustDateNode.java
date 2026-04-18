@@ -17,17 +17,15 @@ package org.finos.legend.pure.truffle.ast.natives.date;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * {@code adjust(Date[1], Integer[1], DurationUnit[1]) : Date[1]}
- * — adds or subtracts a duration from a date.
- * Delegates to the bridged native for the complex date arithmetic.
+ * -- adds or subtracts a duration from a date.
  */
 @NodeInfo(shortName = "adjustDate")
 public final class AdjustDateNode extends PureNode
@@ -60,16 +58,42 @@ public final class AdjustDateNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification doAdjust(Object date, Object amount, Object unit)
+    private static String doAdjust(Object date, Object amount, Object unit)
     {
-        ValueSpecification dateVS = ValueAdapter.ensureVS(date);
-        ValueSpecification amountVS = ValueAdapter.ensureVS(amount);
-        ValueSpecification unitVS = ValueAdapter.ensureVS(unit);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(dateVS, amountVS, unitVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        String dateStr = DateHelper.asDateString(date, SIG);
+        long amt = IntegerHelper.asLong(amount, SIG);
+        String unitName = DateDiffNode.resolveUnitName(unit);
+
+        LocalDateTime ldt = DateHelper.parseDate(dateStr);
+
+        LocalDateTime adjusted = switch (unitName)
+        {
+            case "YEARS" -> ldt.plusYears(amt);
+            case "MONTHS" -> ldt.plusMonths(amt);
+            case "WEEKS" -> ldt.plusWeeks(amt);
+            case "DAYS" -> ldt.plusDays(amt);
+            case "HOURS" -> ldt.plusHours(amt);
+            case "MINUTES" -> ldt.plusMinutes(amt);
+            case "SECONDS" -> ldt.plusSeconds(amt);
+            case "MILLISECONDS" -> ldt.plusNanos(amt * 1_000_000);
+            case "MICROSECONDS" -> ldt.plusNanos(amt * 1_000);
+            case "NANOSECONDS" -> ldt.plusNanos(amt);
+            default -> throw new RuntimeException("Unknown duration unit: " + unitName);
+        };
+
+        // Format back to Pure date format matching input precision
+        if (dateStr.contains("T"))
+        {
+            if (dateStr.contains("."))
+            {
+                return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS"));
+            }
+            return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        }
+        if (dateStr.length() <= 10)
+        {
+            return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        }
+        return adjusted.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
     }
 }

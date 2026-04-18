@@ -19,14 +19,8 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * {@code range(Integer[1], Integer[1], Integer[1]) : Integer[*]} —

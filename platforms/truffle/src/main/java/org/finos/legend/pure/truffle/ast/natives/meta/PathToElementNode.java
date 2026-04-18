@@ -20,19 +20,14 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code pathToElement(String[1], String[1]) : PackageableElement[1]}.
- *
- * <p>Looks up a PackageableElement in the resolver by path and separator.
- * The 2-arg variant uses a user-specified separator; the 1-arg variant
- * defaults to "::".</p>
+ * Looks up a PackageableElement in the resolver by path.
  */
 @NodeInfo(shortName = "pathToElement")
 public final class PathToElementNode extends PureNode
@@ -58,16 +53,16 @@ public final class PathToElementNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doPathToElement(values, genericType, multiplicity);
+        return doPathToElement(values);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doPathToElement(Object[] values, GenericType genericType, Multiplicity multiplicity)
+    private static Object doPathToElement(Object[] values)
     {
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
-        String path = (String) ValueAdapter.toRaw(values[0]);
-        String separator = values.length > 1 ? (String) ValueAdapter.toRaw(values[1]) : "::";
+        String path = StringHelper.asString(values[0], "pathToElement");
+        String separator = values.length > 1 ? StringHelper.asString(values[1], "pathToElement") : "::";
 
         if (!"::".equals(separator))
         {
@@ -84,10 +79,10 @@ public final class PathToElementNode extends PureNode
                 }
                 if (rootPkg != null)
                 {
-                    return _E_ValueSpecification.wrap(rootPkg, genericType, multiplicity, resolver);
+                    return rootPkg;
                 }
             }
-            return _E_ValueSpecification.wrap("::", genericType, multiplicity, resolver);
+            return "::";
         }
         if (resolver == null)
         {
@@ -98,6 +93,6 @@ public final class PathToElementNode extends PureNode
         {
             throw new RuntimeException("Element not found: " + path);
         }
-        return _E_ValueSpecification.wrap(element, genericType, multiplicity, resolver);
+        return element;
     }
 }

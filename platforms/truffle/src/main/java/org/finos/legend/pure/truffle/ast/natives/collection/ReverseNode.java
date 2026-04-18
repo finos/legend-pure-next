@@ -14,16 +14,11 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
 /**
  * {@code reverse(T[m]) : T[m]}.
@@ -42,15 +37,19 @@ public final class ReverseNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return reverse(arg.executeGeneric(frame));
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification reverse(Object v)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(v);
-        List<ValueSpecification> reversed = new ArrayList<>(values);
-        Collections.reverse(reversed);
-        return CollectionHelper.makeCollection(reversed);
+        Object v = arg.executeGeneric(frame);
+        Object[] arr = CollectionHelper.toArray(v);
+        if (arr.length == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        // reverse in-place
+        for (int lo = 0, hi = arr.length - 1; lo < hi; lo++, hi--)
+        {
+            Object tmp = arr[lo];
+            arr[lo] = arr[hi];
+            arr[hi] = tmp;
+        }
+        return new ObjectSequence(arr);
     }
 }

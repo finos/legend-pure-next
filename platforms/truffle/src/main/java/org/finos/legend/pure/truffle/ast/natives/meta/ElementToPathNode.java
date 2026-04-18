@@ -20,22 +20,14 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.DynamicInstance;
-import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.execution.natives.meta.ElementPathNatives;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 
 /**
  * {@code elementToPath(PackageableElement[1]) : String[1]} and
  * {@code elementToPath(PackageableElement[1], String[1]) : String[1]}.
- *
- * <p>Converts a PackageableElement to its path string representation,
- * optionally using a custom separator instead of "::".</p>
+ * Returns the path string of a PackageableElement.
  */
 @NodeInfo(shortName = "elementToPath")
 public final class ElementToPathNode extends PureNode
@@ -61,44 +53,23 @@ public final class ElementToPathNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doElementToPath(values, genericType, multiplicity);
+        return doElementToPath(values);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doElementToPath(Object[] values, GenericType genericType, Multiplicity multiplicity)
+    private static String doElementToPath(Object[] values)
     {
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-
-        Object element = ValueAdapter.toRaw(values[0]);
-        String separator = values.length > 1 ? (String) ValueAdapter.toRaw(values[1]) : "::";
+        Object element = values[0];
+        String separator = values.length > 1 ? StringHelper.asString(values[1], "elementToPath") : "::";
 
         if (element instanceof PackageableElement pe)
         {
-            return _E_ValueSpecification.wrap(
-                    ElementPathNatives.elementToPathString(pe, separator),
-                    genericType, multiplicity, resolver);
-        }
-        if (element instanceof DynamicInstance)
-        {
-            // For DynamicInstance, delegate to the full native which handles
-            // dynamic path building via the evaluator
-            ValueSpecification elementVS = ValueAdapter.ensureVS(values[0]);
-            ValueSpecificationEvaluator eval = EvaluatorHolder.current();
-            java.util.List<ValueSpecification> args = new java.util.ArrayList<>();
-            args.add(elementVS);
-            if (values.length > 1)
-            {
-                args.add(ValueAdapter.ensureVS(values[1]));
-            }
-            String sig = values.length > 1
-                    ? "elementToPath_PackageableElement_1__String_1__String_1_"
-                    : "elementToPath_PackageableElement_1__String_1_";
-            return eval.natives().execute(sig, args, eval, genericType, multiplicity);
+            return ElementPathNatives.elementToPathString(pe, separator);
         }
         if ("::".equals(String.valueOf(element)))
         {
-            return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
+            return "";
         }
-        return _E_ValueSpecification.wrap(String.valueOf(element), genericType, multiplicity, resolver);
+        return String.valueOf(element);
     }
 }

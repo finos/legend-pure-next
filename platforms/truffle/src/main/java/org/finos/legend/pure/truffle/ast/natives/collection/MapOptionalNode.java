@@ -14,19 +14,13 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
 import org.finos.legend.pure.truffle.types.PureNull;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
 
 /**
- * {@code map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]} — map on optional.
+ * {@code map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]} -- map on optional.
  * If the input is non-empty, invokes the function; otherwise returns empty.
  */
 @NodeInfo(shortName = "mapOpt")
@@ -37,6 +31,9 @@ public final class MapOptionalNode extends PureNode
 
     @Child
     private PureNode lambdaArg;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode callNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public MapOptionalNode(PureNode valueArg, PureNode lambdaArg)
     {
@@ -53,14 +50,6 @@ public final class MapOptionalNode extends PureNode
             return PureNull.INSTANCE;
         }
         Object fn = lambdaArg.executeGeneric(frame);
-        return invokeMap(val, fn);
-    }
-
-    @TruffleBoundary
-    private static Object invokeMap(Object val, Object fn)
-    {
-        ValueSpecification valVS = ValueAdapter.ensureVS(val);
-        ValueSpecification fnVS = ValueAdapter.ensureVS(fn);
-        return EvaluatorHolder.current().executeFunction(fnVS, List.of(valVS));
+        return callNode.call(fn, val);
     }
 }

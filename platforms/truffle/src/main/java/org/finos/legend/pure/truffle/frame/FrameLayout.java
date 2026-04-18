@@ -54,4 +54,9 @@ public record FrameLayout(
     {
         return slots.size();
     }
+
+    public String slotNames()
+    {
+        return slots.keySet().toString();
+    }
 }

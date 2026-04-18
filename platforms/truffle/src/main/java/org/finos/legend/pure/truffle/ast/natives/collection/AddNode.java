@@ -14,21 +14,15 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 /**
- * {@code add(T[*], T[1]) : T[1..*]} — append element to collection.
- * {@code add(T[*], Integer[1], T[1]) : T[1..*]} — insert at index.
+ * {@code add(T[*], T[1]) : T[1..*]} -- append element to collection.
+ * {@code add(T[*], Integer[1], T[1]) : T[1..*]} -- insert at index.
  */
 @NodeInfo(shortName = "add")
 public final class AddNode extends PureNode
@@ -56,34 +50,23 @@ public final class AddNode extends PureNode
     {
         Object col = collectionArg.executeGeneric(frame);
         Object second = indexOrElementArg.executeGeneric(frame);
+        Object[] arr = CollectionHelper.toArray(col);
         if (elementArg != null)
         {
             // Three-arg: add(col, index, element)
             long index = IntegerHelper.asLong(second, SIG);
             Object element = elementArg.executeGeneric(frame);
-            return insertAt(col, (int) index, element);
+            Object[] result = new Object[arr.length + 1];
+            int idx = (int) index;
+            System.arraycopy(arr, 0, result, 0, idx);
+            result[idx] = element;
+            System.arraycopy(arr, idx, result, idx + 1, arr.length - idx);
+            return new ObjectSequence(result);
         }
         // Two-arg: add(col, element)
-        return append(col, second);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification append(Object col, Object element)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        List<ValueSpecification> result = new ArrayList<>(values.size() + 1);
-        result.addAll(values);
-        result.add(ValueAdapter.ensureVS(element));
-        return CollectionHelper.makeCollection(result);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification insertAt(Object col, int index, Object element)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        List<ValueSpecification> result = new ArrayList<>(values.size() + 1);
-        result.addAll(values);
-        result.add(index, ValueAdapter.ensureVS(element));
-        return CollectionHelper.makeCollection(result);
+        Object[] result = new Object[arr.length + 1];
+        System.arraycopy(arr, 0, result, 0, arr.length);
+        result[arr.length] = second;
+        return new ObjectSequence(result);
     }
 }

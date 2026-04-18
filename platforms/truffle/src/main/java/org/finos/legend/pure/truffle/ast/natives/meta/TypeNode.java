@@ -20,20 +20,14 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code type(Any[*]) : Type[1]}.
- *
- * <p>Returns the Pure Type of the value. Uses
- * {@link _E_ValueSpecification#getValueOriginalType} and wraps the result
- * as a VS (matching MetaNatives behavior).</p>
+ * Returns the Pure Type of the value as a raw Type object.
  */
 @NodeInfo(shortName = "type")
 public final class TypeNode extends PureNode
@@ -55,23 +49,13 @@ public final class TypeNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doType(result, genericType, multiplicity);
+        return doType(result);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doType(Object result, GenericType genericType, Multiplicity multiplicity)
+    private static Object doType(Object result)
     {
-        ValueSpecification vs = ValueAdapter.ensureVS(result);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-
-        Type type = _E_ValueSpecification.getValueOriginalType(vs);
-        // If the resolved type is itself a TypeParameter (unresolved generic like T),
-        // fall back to the VS's genericType which has the concrete binding from the compiler
-        if (type instanceof meta.pure.metamodel.type.generics.TypeParameter
-                && vs._genericType() != null)
-        {
-            type = _GenericType.type(vs._genericType());
-        }
-        return _E_ValueSpecification.wrap(type, genericType, multiplicity, resolver);
+        MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
+        return MetaHelper.getRawValueType(result, resolver);
     }
 }

@@ -14,18 +14,17 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
- * {@code slice(T[*], Integer[1], Integer[1]) : T[*]} — elements in {@code [from, to)}.
+ * {@code slice(T[*], Integer[1], Integer[1]) : T[*]} -- elements in {@code [from, to)}.
  * Matches the bridged native's clamping rules.
  */
 @NodeInfo(shortName = "slice")
@@ -55,17 +54,15 @@ public final class SliceNode extends PureNode
         Object col = collection.executeGeneric(frame);
         long from = IntegerHelper.asLong(fromNode.executeGeneric(frame), SIG);
         long to = IntegerHelper.asLong(toNode.executeGeneric(frame), SIG);
-        return slice(col, from, to);
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification slice(Object col, long from, long to)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
+        Object[] arr = CollectionHelper.toArray(col);
         int fromI = (int) Math.max(0, from);
-        int toI = (int) Math.min(values.size(), to);
-        fromI = Math.min(fromI, values.size());
+        int toI = (int) Math.min(arr.length, to);
+        fromI = Math.min(fromI, arr.length);
         toI = Math.max(fromI, toI);
-        return CollectionHelper.makeCollection(new ArrayList<>(values.subList(fromI, toI)));
+        if (fromI >= toI)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOfRange(arr, fromI, toI));
     }
 }

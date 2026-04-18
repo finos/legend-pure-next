@@ -17,17 +17,13 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
+import meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
-
-import java.util.List;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 /**
  * {@code putAll(Map[1], Pair[*]) : Map[1]} and
- * {@code putAll(Map[1], Map[1]) : Map[1]} — merge operations on maps.
- * Delegates to the bridged native for PureMap manipulation.
+ * {@code putAll(Map[1], Map[1]) : Map[1]} -- merge operations on maps.
  */
 @NodeInfo(shortName = "putAll")
 public final class PutAllNode extends PureNode
@@ -56,15 +52,30 @@ public final class PutAllNode extends PureNode
     }
 
     @TruffleBoundary
-    private ValueSpecification doPutAll(Object map, Object other)
+    private static Object doPutAll(Object map, Object other)
     {
-        ValueSpecification mapVS = ValueAdapter.ensureVS(map);
-        ValueSpecification otherVS = ValueAdapter.ensureVS(other);
-        return EvaluatorHolder.current().natives().execute(
-                signature,
-                List.of(mapVS, otherVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        MapImpl newMap = new MapImpl();
+        if (map instanceof MapImpl mi)
+        {
+            newMap.putAll(mi);
+        }
+        if (other instanceof MapImpl otherMap)
+        {
+            newMap.putAll(otherMap);
+        }
+        else
+        {
+            // other is a collection of Pairs
+            int sz = CollectionHelper.size(other);
+            for (int i = 0; i < sz; i++)
+            {
+                Object pair = CollectionHelper.at(other, i);
+                if (pair instanceof meta.pure.functions.collection.PairImpl p)
+                {
+                    newMap.put(p._first(), p._second());
+                }
+            }
+        }
+        return newMap;
     }
 }

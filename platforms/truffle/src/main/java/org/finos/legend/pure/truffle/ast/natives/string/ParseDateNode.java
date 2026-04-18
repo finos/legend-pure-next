@@ -14,22 +14,17 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
- * {@code parseDate(String[1]) : Date[1]} — parses a date string, normalizing
- * the Pure date format and stripping trailing Z.
+ * {@code parseDate(String[1]) : Date[1]} -- parses a date string.
+ * Returns the parsed date string directly as a raw value.
  */
 @NodeInfo(shortName = "parseDate")
 public final class ParseDateNode extends PureNode
@@ -39,10 +34,7 @@ public final class ParseDateNode extends PureNode
     @Child
     private PureNode arg;
 
-    @CompilationFinal
     private final GenericType genericType;
-
-    @CompilationFinal
     private final Multiplicity multiplicity;
 
     public ParseDateNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
@@ -56,11 +48,11 @@ public final class ParseDateNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
-        return parse(s);
+        return parseDate(s);
     }
 
     @TruffleBoundary
-    private ValueSpecification parse(String s)
+    private static String parseDate(String s)
     {
         String dateStr = s.trim();
         String result = StringNatives.normalizePureDate(dateStr);
@@ -68,6 +60,6 @@ public final class ParseDateNode extends PureNode
         {
             result = result.substring(0, result.length() - 1);
         }
-        return ValueAdapter.toVS(result, genericType, multiplicity);
+        return result;
     }
 }

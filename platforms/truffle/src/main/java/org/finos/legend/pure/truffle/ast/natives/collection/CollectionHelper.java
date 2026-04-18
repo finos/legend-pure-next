@@ -14,36 +14,30 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureNull;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
- * Shared helpers for specialized collection-native nodes. All of them need
- * to coerce their input to a list of {@link ValueSpecification}s matching
- * Pure's flattened collection semantics: a {@link Collection} exposes its
- * values directly; a non-null {@link AtomicValue} is a one-element list;
- * a null-valued AtomicValue is empty.
+ * Boundary-free collection helpers. Every method is inlineable by
+ * Graal's partial evaluator — no {@code @TruffleBoundary}, no Eclipse
+ * Collections, no {@code ValueSpecification} allocation.
  *
- * <p>Hot path is inlined — no virtual dispatch, no TruffleBoundary — so
- * Graal can see through nested calls like {@code size($xs)->plus(1)}.</p>
+ * <p>Callers iterate via {@link #size} + {@link #at} instead of
+ * materializing lists. Results are collected into {@code Object[]} and
+ * wrapped as {@link ObjectSequence}.</p>
  */
-final class CollectionHelper
+public final class CollectionHelper
 {
     private CollectionHelper()
     {
     }
 
-    /**
-     * Number of values in {@code v} under Pure's flatten rules.
-     */
-    static int size(Object v)
+    public static int size(Object v)
     {
-        if (v == PureNull.INSTANCE)
+        if (v == PureNull.INSTANCE || v == null)
         {
             return 0;
         }
@@ -63,42 +57,16 @@ final class CollectionHelper
         {
             return av._value() == null ? 0 : 1;
         }
-        return slowSize(v);
+        // Single raw scalar
+        return 1;
     }
 
-    /**
-     * True iff the value has zero elements.
-     */
-    static boolean isEmpty(Object v)
+    public static boolean isEmpty(Object v)
     {
-        if (v == PureNull.INSTANCE)
-        {
-            return true;
-        }
-        if (v instanceof PureSequence seq)
-        {
-            return seq.isEmpty();
-        }
-        if (v instanceof Collection col)
-        {
-            return col._values().isEmpty();
-        }
-        if (v instanceof java.util.List<?> list)
-        {
-            return list.isEmpty();
-        }
-        if (v instanceof AtomicValue av)
-        {
-            return av._value() == null;
-        }
-        return slowSize(v) == 0;
+        return size(v) == 0;
     }
 
-    /**
-     * Return the element at index {@code i} as a {@link ValueSpecification}.
-     * Assumes {@code 0 &le; i &lt; size(v)}; callers bound-check first.
-     */
-    static Object at(Object v, int i)
+    public static Object at(Object v, int i)
     {
         if (v instanceof PureSequence seq)
         {
@@ -106,101 +74,41 @@ final class CollectionHelper
         }
         if (v instanceof Collection col)
         {
-            return col._values().get(i);
-        }
-        if (v instanceof AtomicValue av)
-        {
-            return av;
-        }
-        return slowAt(v, i);
-    }
-
-    /**
-     * Expose {@code v} as a {@code MutableList<ValueSpecification>} for
-     * natives that need to walk elements (concatenate, head, tail, last).
-     * A single {@link AtomicValue} is returned as a one-element list
-     * backed by Eclipse Collections.
-     */
-    @TruffleBoundary
-    static MutableList<ValueSpecification> values(Object v)
-    {
-        if (v instanceof PureSequence seq)
-        {
-            Object[] boxed = seq.toBoxedArray();
-            MutableList<ValueSpecification> result = org.eclipse.collections.api.factory.Lists.mutable.withInitialCapacity(boxed.length);
-            for (Object item : boxed)
+            // Unwrap AtomicValue → raw payload so downstream nodes
+            // see the actual object (DynamicInstance, LambdaFunction, etc.)
+            // instead of a VS wrapper.
+            Object item = col._values().get(i);
+            if (item instanceof AtomicValue av)
             {
-                result.add(org.finos.legend.pure.truffle.types.ValueAdapter.ensureVS(item));
+                Object inner = av._value();
+                return inner != null ? inner : PureNull.INSTANCE;
             }
-            return result;
-        }
-        if (v instanceof Collection col)
-        {
-            return col._values();
-        }
-        if (v instanceof AtomicValue av)
-        {
-            return av._value() == null
-                    ? org.eclipse.collections.api.factory.Lists.mutable.empty()
-                    : org.eclipse.collections.api.factory.Lists.mutable.with(av);
-        }
-        return slowValues(v);
-    }
-
-    @TruffleBoundary
-    private static int slowSize(Object v)
-    {
-        return values(v).size();
-    }
-
-    @TruffleBoundary
-    private static ValueSpecification slowAt(Object v, int i)
-    {
-        return values(v).get(i);
-    }
-
-    @TruffleBoundary
-    @SuppressWarnings("unchecked")
-    private static MutableList<ValueSpecification> slowValues(Object v)
-    {
-        if (v == null)
-        {
-            return org.eclipse.collections.api.factory.Lists.mutable.empty();
+            return item;
         }
         if (v instanceof java.util.List<?> list)
         {
-            // Raw unwrapped collection (from _E_ValueSpecification.unwrap
-            // on a Collection VS). Re-wrap each element for consumers that
-            // expect ValueSpecification items.
-            MutableList<ValueSpecification> result = org.eclipse.collections.api.factory.Lists.mutable.withInitialCapacity(list.size());
-            for (Object item : list)
-            {
-                result.add(org.finos.legend.pure.truffle.types.ValueAdapter.ensureVS(item));
-            }
-            return result;
+            return list.get(i);
         }
-        if (v instanceof ValueSpecification vs)
+        if (v instanceof AtomicValue av)
         {
-            return org.eclipse.collections.api.factory.Lists.mutable.with(vs);
+            return av._value();
         }
-        // Raw scalar (Long, String, etc.) stored directly in a frame slot —
-        // treat as a 1-element collection.
-        return org.eclipse.collections.api.factory.Lists.mutable.with(
-                org.finos.legend.pure.truffle.types.ValueAdapter.ensureVS(v));
+        // Single raw scalar at index 0
+        return v;
     }
 
     /**
-     * Wrap a pre-built list of {@link ValueSpecification}s into a fresh Pure
-     * {@code Collection}. Delegates to
-     * {@link org.finos.legend.pure.execution.natives.collection.CollectionNatives#makeCollection}
-     * so the result's {@code genericType}/{@code multiplicity} are set the
-     * same way the bridged natives do.
+     * Collect elements of {@code v} into a fresh {@code Object[]}.
+     * No boundaries — uses {@link #size} + {@link #at}.
      */
-    @TruffleBoundary
-    static ValueSpecification makeCollection(java.util.List<ValueSpecification> items)
+    public static Object[] toArray(Object v)
     {
-        return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(
-                items,
-                org.finos.legend.pure.truffle.runtime.EvaluatorHolder.current().natives().resolver());
+        int sz = size(v);
+        Object[] arr = new Object[sz];
+        for (int i = 0; i < sz; i++)
+        {
+            arr[i] = at(v, i);
+        }
+        return arr;
     }
 }

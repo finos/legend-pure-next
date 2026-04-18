@@ -14,20 +14,17 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.Collection;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
- * {@code map(T[*], Function<{T[1]->V[*]}>[1]) : V[*]} — Pure's map is
- * flat-map: each lambda result that is itself a {@code Collection} has its
+ * {@code map(T[*], Function<{T[1]->V[*]}>[1]) : V[*]} -- Pure's map is
+ * flat-map: each lambda result that is itself a collection has its
  * elements spliced into the output.
  */
 @NodeInfo(shortName = "map")
@@ -40,7 +37,7 @@ public final class MapNode extends PureNode
     private PureNode lambda;
 
     @Child
-    private LambdaCallNode callNode = new LambdaCallNode();
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode callNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public MapNode(PureNode collection, PureNode lambda)
     {
@@ -53,27 +50,44 @@ public final class MapNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         Object fn = lambda.executeGeneric(frame);
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        List<ValueSpecification> results = new ArrayList<>(values.size());
-        int size = values.size();
-        for (int i = 0; i < size; i++)
+        int sz = CollectionHelper.size(col);
+        Object[] buf = new Object[sz];
+        int count = 0;
+        for (int i = 0; i < sz; i++)
         {
-            ValueSpecification result = callNode.call(fn, values.get(i));
-            if (result instanceof Collection resultCol)
+            Object item = CollectionHelper.at(col, i);
+            Object result = callNode.call(fn, item);
+            int rSz = CollectionHelper.size(result);
+            if (rSz == 0)
             {
-                addAll(results, resultCol);
+                continue;
             }
-            else if (!CollectionHelper.isEmpty(result))
+            if (rSz == 1)
             {
-                results.add(result);
+                if (count == buf.length)
+                {
+                    buf = Arrays.copyOf(buf, buf.length * 2);
+                }
+                buf[count++] = CollectionHelper.at(result, 0);
+            }
+            else
+            {
+                // flatten multi-valued result
+                int needed = count + rSz;
+                if (needed > buf.length)
+                {
+                    buf = Arrays.copyOf(buf, Math.max(buf.length * 2, needed));
+                }
+                for (int j = 0; j < rSz; j++)
+                {
+                    buf[count++] = CollectionHelper.at(result, j);
+                }
             }
         }
-        return CollectionHelper.makeCollection(results);
-    }
-
-    @TruffleBoundary
-    private static void addAll(List<ValueSpecification> results, Collection resultCol)
-    {
-        results.addAll(resultCol._values());
+        if (count == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOf(buf, count));
     }
 }

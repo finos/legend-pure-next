@@ -17,20 +17,15 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.execution.NativeRepository;
-import org.finos.legend.pure.execution._E_ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
  * {@code removeDuplicates(T[*], Function[0..1], Function[0..1]) : T[*]}
- * — removes duplicate elements, with optional key extractor and equality functions.
+ * -- removes duplicate elements, with optional key extractor and equality functions.
  */
 @NodeInfo(shortName = "removeDuplicates")
 public final class RemoveDuplicatesNode extends PureNode
@@ -43,6 +38,12 @@ public final class RemoveDuplicatesNode extends PureNode
 
     @Child
     private PureNode eqlFnArg;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode keyCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode eqlCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public RemoveDuplicatesNode(PureNode collectionArg, PureNode keyFnArg, PureNode eqlFnArg)
     {
@@ -57,35 +58,26 @@ public final class RemoveDuplicatesNode extends PureNode
         Object col = collectionArg.executeGeneric(frame);
         Object keyFn = keyFnArg != null ? keyFnArg.executeGeneric(frame) : null;
         Object eqlFn = eqlFnArg != null ? eqlFnArg.executeGeneric(frame) : null;
-        return doRemoveDuplicates(col, keyFn, eqlFn);
-    }
 
-    @TruffleBoundary
-    private static ValueSpecification doRemoveDuplicates(Object col, Object keyFn, Object eqlFn)
-    {
-        MutableList<ValueSpecification> values = CollectionHelper.values(col);
-        ValueSpecification keyFnVS = keyFn != null ? ValueAdapter.ensureVS(keyFn) : null;
-        ValueSpecification eqlFnVS = eqlFn != null ? ValueAdapter.ensureVS(eqlFn) : null;
-        boolean hasKeyFn = keyFnVS != null && !CollectionHelper.isEmpty(keyFnVS);
-        boolean hasEqlFn = eqlFnVS != null && !CollectionHelper.isEmpty(eqlFnVS);
+        int sz = CollectionHelper.size(col);
+        boolean hasKeyFn = keyFn != null && !CollectionHelper.isEmpty(keyFn);
+        boolean hasEqlFn = eqlFn != null && !CollectionHelper.isEmpty(eqlFn);
 
-        List<ValueSpecification> result = new ArrayList<>();
-        List<ValueSpecification> resultKeys = new ArrayList<>();
+        Object[] result = new Object[sz];
+        Object[] resultKeys = new Object[sz];
+        int count = 0;
 
-        for (int i = 0; i < values.size(); i++)
+        for (int i = 0; i < sz; i++)
         {
-            ValueSpecification itemVS = values.get(i);
-            ValueSpecification itemKey = hasKeyFn
-                    ? EvaluatorHolder.current().executeFunction(keyFnVS, List.of(itemVS))
-                    : itemVS;
+            Object item = CollectionHelper.at(col, i);
+            Object itemKey = hasKeyFn ? keyCallNode.call(keyFn, item) : item;
             boolean found = false;
-            for (ValueSpecification existingKey : resultKeys)
+            for (int j = 0; j < count; j++)
             {
                 if (hasEqlFn)
                 {
-                    Object eqlResult = _E_ValueSpecification.unwrap(
-                            EvaluatorHolder.current().executeFunction(eqlFnVS, List.of(existingKey, itemKey)));
-                    if (Boolean.TRUE.equals(eqlResult))
+                    Object eqlResult = eqlCallNode.call(eqlFn, resultKeys[j], itemKey);
+                    if (eqlResult instanceof Boolean b ? b : false)
                     {
                         found = true;
                         break;
@@ -93,7 +85,7 @@ public final class RemoveDuplicatesNode extends PureNode
                 }
                 else
                 {
-                    if (NativeRepository.pureEquals(existingKey, itemKey))
+                    if (pureEquals(resultKeys[j], itemKey))
                     {
                         found = true;
                         break;
@@ -102,10 +94,28 @@ public final class RemoveDuplicatesNode extends PureNode
             }
             if (!found)
             {
-                result.add(itemVS);
-                resultKeys.add(itemKey);
+                result[count] = item;
+                resultKeys[count] = itemKey;
+                count++;
             }
         }
-        return CollectionHelper.makeCollection(result);
+        if (count == 0)
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(Arrays.copyOf(result, count));
+    }
+
+    private static boolean pureEquals(Object a, Object b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a == null || b == null)
+        {
+            return false;
+        }
+        return java.util.Objects.equals(a, b);
     }
 }

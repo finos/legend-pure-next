@@ -17,17 +17,20 @@ package org.finos.legend.pure.truffle.ast.natives.io;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.types.ObjectSequence;
+import org.finos.legend.pure.truffle.types.PureNull;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
- * {@code directoryTree(String[1]) : String[*]} — lists all file paths under a directory.
- * Delegates to the bridged native for the filesystem walk.
+ * {@code directoryTree(String[1]) : String[*]} -- lists all file paths under a directory.
  */
 @NodeInfo(shortName = "dirTree")
 public final class DirectoryTreeNode extends PureNode
@@ -50,14 +53,27 @@ public final class DirectoryTreeNode extends PureNode
     }
 
     @TruffleBoundary
-    private static ValueSpecification walk(String path)
+    private static Object walk(String path)
     {
-        ValueSpecification pathVS = ValueAdapter.ensureVS(path);
-        return EvaluatorHolder.current().natives().execute(
-                SIG,
-                List.of(pathVS),
-                EvaluatorHolder.current(),
-                null,
-                null);
+        Path dir = Path.of(path);
+        if (!Files.isDirectory(dir))
+        {
+            return PureNull.INSTANCE;
+        }
+        List<String> paths = new ArrayList<>();
+        try (Stream<Path> stream = Files.walk(dir))
+        {
+            stream.filter(Files::isRegularFile)
+                    .forEach(p -> paths.add(p.toString()));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Error walking directory: " + path, e);
+        }
+        if (paths.isEmpty())
+        {
+            return PureNull.INSTANCE;
+        }
+        return new ObjectSequence(paths.toArray());
     }
 }

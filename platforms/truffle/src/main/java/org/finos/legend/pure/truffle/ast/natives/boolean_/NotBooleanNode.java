@@ -14,12 +14,10 @@
 
 package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 @NodeInfo(shortName = "notBool")
 public final class NotBooleanNode extends PureNode
@@ -51,18 +49,7 @@ public final class NotBooleanNode extends PureNode
         {
             return b;
         }
-        return fallback(v);
-    }
-
-    @TruffleBoundary
-    private static boolean fallback(Object v)
-    {
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof Boolean b)
-        {
-            return b;
-        }
         throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+                + (v == null ? "null" : v.getClass().getName()));
     }
 }

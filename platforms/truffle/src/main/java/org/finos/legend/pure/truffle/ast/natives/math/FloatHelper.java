@@ -14,9 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
 
 /**
  * Unwrap helpers shared by specialized float-arithmetic nodes. Mirrors
@@ -49,19 +47,16 @@ final class FloatHelper
             {
                 return l.doubleValue();
             }
+            if (inner instanceof Number n)
+            {
+                return n.doubleValue();
+            }
         }
-        return fallback(v, signature);
-    }
-
-    @TruffleBoundary
-    private static double fallback(Object v, String signature)
-    {
-        Object raw = ValueAdapter.toRaw(v);
-        if (raw instanceof Number n)
+        if (v instanceof Number n)
         {
             return n.doubleValue();
         }
         throw new ClassCastException(signature + " expected Float, got: "
-                + (raw == null ? "null" : raw.getClass().getName()));
+                + (v == null ? "null" : v.getClass().getName()));
     }
 }

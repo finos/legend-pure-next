@@ -19,19 +19,13 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.execution.ValueSpecificationEvaluator;
-import org.finos.legend.pure.execution._E_ValueSpecification;
-import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.EvaluatorHolder;
-import org.finos.legend.pure.truffle.types.ValueAdapter;
+import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code parentReference(Integer[1], String[1]) : Any[1]}.
- *
- * <p>Returns the parent instance from the construction stack at the given depth.
- * Used during {@code ^Type(...)} expressions to resolve {@code ~} references.</p>
+ * Returns the parent instance from the construction stack at the given depth.
  */
 @NodeInfo(shortName = "parentReference")
 public final class ParentReferenceNode extends PureNode
@@ -58,26 +52,19 @@ public final class ParentReferenceNode extends PureNode
     {
         Object depthResult = depthChild.executeGeneric(frame);
         Object propNameResult = propNameChild.executeGeneric(frame);
-        return doParentReference(depthResult, propNameResult, genericType, multiplicity);
+        return doParentReference(depthResult);
     }
 
     @TruffleBoundary
-    private static ValueSpecification doParentReference(Object depthResult, Object propNameResult,
-                                                        GenericType genericType, Multiplicity multiplicity)
+    private static Object doParentReference(Object depthResult)
     {
-        ValueSpecification depthVS = ValueAdapter.ensureVS(depthResult);
-        MetadataAccess resolver = EvaluatorHolder.current().natives().resolver();
-        ValueSpecificationEvaluator eval = EvaluatorHolder.current();
-
-        int depth = ((Number) _E_ValueSpecification.unwrap(depthVS)).intValue();
-        // Look up the construction stack: depth 0 = self (top), depth 1 = parent, etc.
-        Object target = eval.peekConstruction(depth);
+        int depth = (int) IntegerHelper.asLong(depthResult, "parentReference");
+        Object target = StandaloneEvaluatorHolder.current().peekConstruction(depth);
         if (target == null)
         {
             throw new RuntimeException("Parent reference ~ at depth " + depth
-                    + " is out of bounds (construction stack size: unknown). "
-                    + "Ensure ~ is used inside a ^Type(...) expression.");
+                    + " is out of bounds. Ensure ~ is used inside a ^Type(...) expression.");
         }
-        return _E_ValueSpecification.wrap(target, genericType, multiplicity, resolver);
+        return target;
     }
 }
