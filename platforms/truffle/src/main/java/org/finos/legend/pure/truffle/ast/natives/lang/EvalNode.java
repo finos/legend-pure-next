@@ -72,6 +72,20 @@ public final class EvalNode extends PureNode
         Object[] args = new Object[values.length - 1];
         System.arraycopy(values, 1, args, 0, args.length);
 
+        return dispatch(fn, args);
+    }
+
+    /**
+     * Dispatch a function call with pre-unwrapped args. Used by both
+     * {@link EvalNode} and {@link EvaluateNode}.
+     */
+    @TruffleBoundary
+    public static Object dispatch(Object fn, Object[] args)
+    {
+        if (fn instanceof AtomicValue av)
+        {
+            fn = av._value();
+        }
         if (fn instanceof RawClosure rc)
         {
             return StandaloneEvaluatorHolder.current().executeLambda(rc, args);

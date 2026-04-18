@@ -64,56 +64,229 @@ public final class FormatNode extends PureNode
         for (int i = 0; i < sz; i++)
         {
             Object item = CollectionHelper.at(args, i);
-            // Normalize truffle types (PureSequence->List, AtomicValue->raw, PureNull->null)
             rawArgs[i] = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(item);
             if (rawArgs[i] == null)
             {
                 rawArgs[i] = "";
             }
         }
-        // Simple %s/%d replacement
         StringBuilder sb = new StringBuilder();
         int argIdx = 0;
-        for (int i = 0; i < formatStr.length(); i++)
+        int len = formatStr.length();
+        for (int i = 0; i < len; i++)
         {
             char c = formatStr.charAt(i);
-            if (c == '%' && i + 1 < formatStr.length())
+            if (c != '%' || i + 1 >= len)
             {
-                char next = formatStr.charAt(i + 1);
-                if (next == '%')
+                sb.append(c);
+                continue;
+            }
+            char next = formatStr.charAt(i + 1);
+            if (next == '%')
+            {
+                sb.append('%');
+                i++;
+                continue;
+            }
+            if (argIdx >= rawArgs.length)
+            {
+                sb.append(c);
+                continue;
+            }
+
+            // Parse format specifier after %
+            if (next == 's' || next == 'd')
+            {
+                sb.append(pureToString(rawArgs[argIdx++]));
+                i++;
+            }
+            else if (next == 'f')
+            {
+                sb.append(formatFloat(rawArgs[argIdx++], -1));
+                i++;
+            }
+            else if (next == 'r')
+            {
+                sb.append(toRepresentation(rawArgs[argIdx++]));
+                i++;
+            }
+            else if (next == 't')
+            {
+                // %t or %t{pattern}
+                i++;
+                if (i + 1 < len && formatStr.charAt(i + 1) == '{')
                 {
-                    sb.append('%');
-                    i++;
-                }
-                else if (argIdx < rawArgs.length)
-                {
-                    if (next == 's' || next == 'd' || next == 't')
+                    int closeIdx = formatStr.indexOf('}', i + 2);
+                    if (closeIdx >= 0)
                     {
-                        sb.append(pureToString(rawArgs[argIdx++]));
-                        i++;
-                    }
-                    else if (next == 'r')
-                    {
-                        sb.append(toRepresentation(rawArgs[argIdx++]));
-                        i++;
+                        String pattern = formatStr.substring(i + 2, closeIdx);
+                        sb.append(formatDateWithPattern(rawArgs[argIdx++], pattern));
+                        i = closeIdx;
                     }
                     else
                     {
                         sb.append(pureToString(rawArgs[argIdx++]));
-                        i++;
                     }
                 }
                 else
                 {
-                    sb.append(c);
+                    sb.append(pureToString(rawArgs[argIdx++]));
+                }
+            }
+            else if (next == '.' || (next >= '0' && next <= '9'))
+            {
+                // Parse extended format: %05d, %.2f, etc.
+                int specStart = i + 1;
+                int j = specStart;
+                while (j < len && (formatStr.charAt(j) == '.' || (formatStr.charAt(j) >= '0' && formatStr.charAt(j) <= '9')))
+                {
+                    j++;
+                }
+                if (j < len)
+                {
+                    char specChar = formatStr.charAt(j);
+                    String specBody = formatStr.substring(specStart, j);
+                    if (specChar == 'f')
+                    {
+                        int precision = -1;
+                        if (specBody.startsWith("."))
+                        {
+                            precision = Integer.parseInt(specBody.substring(1));
+                        }
+                        sb.append(formatFloat(rawArgs[argIdx++], precision));
+                        i = j;
+                    }
+                    else if (specChar == 'd')
+                    {
+                        sb.append(formatInt(rawArgs[argIdx++], specBody));
+                        i = j;
+                    }
+                    else
+                    {
+                        sb.append(pureToString(rawArgs[argIdx++]));
+                        i = j;
+                    }
+                }
+                else
+                {
+                    sb.append(pureToString(rawArgs[argIdx++]));
+                    i = j - 1;
                 }
             }
             else
             {
-                sb.append(c);
+                sb.append(pureToString(rawArgs[argIdx++]));
+                i++;
             }
         }
         return sb.toString();
+    }
+
+    private static String formatFloat(Object v, int precision)
+    {
+        double d;
+        if (v instanceof Double dd)
+        {
+            d = dd;
+        }
+        else if (v instanceof Float ff)
+        {
+            d = ff;
+        }
+        else if (v instanceof Number n)
+        {
+            d = n.doubleValue();
+        }
+        else
+        {
+            return pureToString(v);
+        }
+        if (precision >= 0)
+        {
+            // Use HALF_DOWN rounding to match Pure's behavior
+            java.math.BigDecimal bd = java.math.BigDecimal.valueOf(d)
+                    .setScale(precision, java.math.RoundingMode.HALF_DOWN);
+            return bd.toPlainString();
+        }
+        return pureToString(v);
+    }
+
+    private static String formatInt(Object v, String spec)
+    {
+        long val;
+        if (v instanceof Long l)
+        {
+            val = l;
+        }
+        else if (v instanceof Number n)
+        {
+            val = n.longValue();
+        }
+        else
+        {
+            return pureToString(v);
+        }
+        // Parse spec like "05" → width=5, zero-padded
+        if (spec.startsWith("0") && spec.length() > 1)
+        {
+            int width = Integer.parseInt(spec.substring(1));
+            String sign = val < 0 ? "-" : "";
+            String digits = String.valueOf(Math.abs(val));
+            while (digits.length() < width)
+            {
+                digits = "0" + digits;
+            }
+            return sign + digits;
+        }
+        return String.valueOf(val);
+    }
+
+    private static String formatDateWithPattern(Object v, String pattern)
+    {
+        String dateStr = pureToString(v);
+        // Parse the Pure date string and format with the given pattern
+        // Handle optional timezone prefix: [EST]pattern, [CET]pattern
+        String tz = null;
+        String actualPattern = pattern;
+        if (actualPattern.startsWith("["))
+        {
+            int closeIdx = actualPattern.indexOf(']');
+            if (closeIdx > 0)
+            {
+                tz = actualPattern.substring(1, closeIdx);
+                actualPattern = actualPattern.substring(closeIdx + 1);
+            }
+        }
+        try
+        {
+            java.time.temporal.TemporalAccessor parsed;
+            if (dateStr.contains("T"))
+            {
+                // DateTime — parse flexibly
+                java.time.format.DateTimeFormatter parser = new java.time.format.DateTimeFormatterBuilder()
+                        .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+                        .optionalStart().appendPattern(".SSS").optionalEnd()
+                        .optionalStart().appendPattern("XXX").optionalEnd()
+                        .parseDefaulting(java.time.temporal.ChronoField.OFFSET_SECONDS, 0)
+                        .toFormatter();
+                java.time.ZonedDateTime zdt = java.time.ZonedDateTime.parse(dateStr, parser);
+                if (tz != null)
+                {
+                    zdt = zdt.withZoneSameInstant(java.time.ZoneId.of(tz, java.time.ZoneId.SHORT_IDS));
+                }
+                parsed = zdt;
+            }
+            else
+            {
+                // StrictDate
+                parsed = java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            }
+            return java.time.format.DateTimeFormatter.ofPattern(actualPattern).format(parsed);
+        }
+        catch (Exception e)
+        {
+            return dateStr;
+        }
     }
 
     private static String pureToString(Object v)
@@ -125,8 +298,19 @@ public final class FormatNode extends PureNode
     {
         if (v instanceof String s)
         {
-            return "'" + s.replace("'", "\\'") + "'";
+            // Date strings get % prefix, not quote wrapping
+            if (ToStringNode.isDateString(s))
+            {
+                return "%" + ToStringNode.normalizeDateString(s);
+            }
+            return "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'";
         }
-        return pureToString(v);
+        // Date representation: prefix with %
+        String str = pureToString(v);
+        if (ToStringNode.isDateString(str))
+        {
+            return "%" + str;
+        }
+        return str;
     }
 }

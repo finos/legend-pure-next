@@ -69,7 +69,12 @@ public final class EqualNode extends PureNode
             {
                 return na.longValue() == nb.longValue();
             }
-            return Double.compare(na.doubleValue(), nb.doubleValue()) == 0;
+            double da = na.doubleValue();
+            double db = nb.doubleValue();
+            // Normalize -0.0 to 0.0
+            if (da == 0.0) da = 0.0;
+            if (db == 0.0) db = 0.0;
+            return Double.compare(da, db) == 0;
         }
         // List comparison
         if (a instanceof java.util.List<?> la && b instanceof java.util.List<?> lb)

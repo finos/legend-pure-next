@@ -37,12 +37,19 @@ public final class PathToElementNode extends PureNode
 
     private final GenericType genericType;
     private final Multiplicity multiplicity;
+    private final boolean lenient;
 
     public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
+    {
+        this(children, genericType, multiplicity, false);
+    }
+
+    public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity, boolean lenient)
     {
         this.children = children;
         this.genericType = genericType;
         this.multiplicity = multiplicity;
+        this.lenient = lenient;
     }
 
     @Override
@@ -53,11 +60,11 @@ public final class PathToElementNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doPathToElement(values);
+        return doPathToElement(values, lenient);
     }
 
     @TruffleBoundary
-    private static Object doPathToElement(Object[] values)
+    private static Object doPathToElement(Object[] values, boolean lenient)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
@@ -91,6 +98,10 @@ public final class PathToElementNode extends PureNode
         PackageableElement element = resolver.getElement(path);
         if (element == null)
         {
+            if (lenient)
+            {
+                return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            }
             throw new RuntimeException("Element not found: " + path);
         }
         return element;

@@ -118,6 +118,8 @@ public final class ToStringNode extends PureNode
         // Float/Double: use Double.toString for shortest representation, avoid scientific notation
         if (v instanceof Double d)
         {
+            // Normalize -0.0 to 0.0
+            if (d == 0.0) d = 0.0;
             String s = Double.toString(d);
             if (s.contains("E") || s.contains("e"))
             {

@@ -35,6 +35,8 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.WeakHashMap;
 
+import org.finos.legend.pure.next.parser.PureParser;
+
 /**
  * Standalone Pure interpreter — no {@code ValueSpecificationEvaluator},
  * no {@code NativeRepository}, no {@code ValueSpecification} types.
@@ -53,6 +55,7 @@ public final class StandaloneEvaluator
     private final MetadataAccess resolver;
     private final PureLanguage language;
     private final PureASTBuilder astBuilder;
+    private PureParser pureParser;
 
     // Per-FD compilation cache: layout + lowered body
     private final WeakHashMap<FunctionDefinition, CompiledFunction> functionCache = new WeakHashMap<>();
@@ -83,6 +86,16 @@ public final class StandaloneEvaluator
         return resolver;
     }
 
+    public PureParser pureParser()
+    {
+        return pureParser;
+    }
+
+    public void setPureParser(PureParser parser)
+    {
+        this.pureParser = parser;
+    }
+
     // ---------------------------------------------------------------
     // Function execution — the main entry point
     // ---------------------------------------------------------------
@@ -100,20 +113,13 @@ public final class StandaloneEvaluator
         // Bind params
         MutableList<VariableExpression> params = fd._parameters();
         int[] paramSlots = layout.paramSlots();
+
         if (params != null)
         {
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                if (rawArgs[i] == null)
-                {
-                    // Null arg — bind PureNull so slot isn't empty
-                    frame.setObject(paramSlots[i], PureNull.INSTANCE);
-                }
-                else
-                {
-                    frame.setObject(paramSlots[i], rawArgs[i]);
-                }
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
             }
         }
 

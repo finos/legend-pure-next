@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.finos.legend.pure.next.parser.ParserExtension;
+import org.finos.legend.pure.next.parser.PureParser;
+import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 
 /**
  * Plain Java entry point for running Pure code through the Truffle interpreter.
@@ -48,6 +50,14 @@ public final class PureTruffleRuntime
     {
         this.resolver = resolver;
         this.standalone = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
+
+        // Build the PureParser with the standard Pure language parser + any extra extensions
+        List<ParserExtension> allExtensions = new ArrayList<>();
+        allExtensions.add(new PureLanguageParser());
+        parserExtensions.forEach(allExtensions::add);
+        this.standalone.setPureParser(PureParser.builder()
+                .withExtensions(allExtensions)
+                .build());
     }
 
     public static final class Builder

@@ -111,21 +111,9 @@ public final class CastNode extends PureNode
         // MetaNatives.validateConstraints requires a ValueSpecificationEvaluator
         // which we don't have. Constraints will be implemented as Truffle nodes.
 
-        // Stamp the classifierGenericType on the target for Any
-        if (inputResult != null && targetGT != null)
-        {
-            if (inputResult instanceof meta.pure.metamodel.type.Any any)
-            {
-                try
-                {
-                    any._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue) targetGT);
-                }
-                catch (Exception ignored)
-                {
-                    // Some metamodel objects may not accept classifierGenericType updates
-                }
-            }
-        }
+        // Cast is a type assertion — it does NOT change the runtime type (CGT)
+        // of the object. The object retains its original classifierGenericType
+        // so that polymorphic QP dispatch resolves to the correct override.
         return inputResult;
     }
 }

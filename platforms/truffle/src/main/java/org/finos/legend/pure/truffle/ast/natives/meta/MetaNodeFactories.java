@@ -115,18 +115,18 @@ public final class MetaNodeFactories
 
         // lenientPathToElement — returns null instead of throwing
         registry.register("lenientPathToElement_String_1__String_1__PackageableElement_$0_1$_",
-                (args, gt, mul, fe) -> new PathToElementNode(args, gt, mul));
+                (args, gt, mul, fe) -> new PathToElementNode(args, gt, mul, true));
 
         // elementPath — element ancestry chain
         registry.register("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_",
-                (args, gt, mul, fe) -> new ElementToPathNode(args, gt, mul));
+                (args, gt, mul, fe) -> new ElementPathNode(args[0]));
 
         // newClass — creates a new Class at runtime (rare)
         registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
                 (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0])); // pass-through placeholder
 
-        // parse — invokes the Pure parser (CompilerNatives extension)
+        // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
         registry.register("parse_String_1__String_1__PureFile_1_",
-                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0])); // placeholder
+                (args, gt, mul, fe) -> new ParseNode(args[0], args[1]));
     }
 }

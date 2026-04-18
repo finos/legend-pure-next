@@ -65,9 +65,9 @@ public final class LangNodeFactories
         registry.register("match_Any_MANY__Function_$1_MANY$__P_o__T_m_",
                 (args, gt, mul, fe) -> new MatchNode(args));
 
-        // evaluate(Function[1], List[*]) — pass-through to eval
+        // evaluate(Function[1], List[*]) — unwraps List values before dispatch
         registry.register("evaluate_Function_1__List_MANY__Any_MANY_",
-                (args, gt, mul, fe) -> new EvalNode(args));
+                (args, gt, mul, fe) -> new EvaluateNode(args));
 
         // letFunction — frame-slot write (handled by PureASTBuilder for
         // known names; this fallback handles dynamic/late-resolved cases)

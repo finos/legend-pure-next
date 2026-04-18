@@ -125,6 +125,28 @@ public final class RawLambdaCallNode extends Node
         {
             lambda = lf;
         }
+        else if (lambdaOrClosure instanceof meta.pure.metamodel.function.property.Property prop)
+        {
+            // Property used as first-class function: access the property on the arg
+            Object[] rawArgs = extractArgs(args);
+            if (rawArgs.length > 0)
+            {
+                return StandaloneEvaluatorHolder.current().accessProperty(rawArgs[0], prop._name());
+            }
+            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+        }
+        else if (lambdaOrClosure instanceof meta.pure.metamodel.function.FunctionDefinition fd)
+        {
+            // FunctionDefinition used as first-class function
+            Object[] rawArgs = extractArgs(args);
+            return StandaloneEvaluatorHolder.current().executeFunction(fd, rawArgs);
+        }
+        else if (lambdaOrClosure instanceof meta.pure.metamodel.function.NativeFunction nf)
+        {
+            // Native function used as first-class function
+            Object[] rawArgs = extractArgs(args);
+            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(nf, rawArgs);
+        }
         else
         {
             throw new RuntimeException("Cannot call non-lambda: " + lambdaOrClosure.getClass().getName());
