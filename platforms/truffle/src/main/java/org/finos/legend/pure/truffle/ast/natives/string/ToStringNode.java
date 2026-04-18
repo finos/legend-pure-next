@@ -76,6 +76,11 @@ public final class ToStringNode extends PureNode
             }
             return "";
         }
+        // Enum values — return just the enum constant name
+        if (v instanceof meta.pure.metamodel.type.Enum enumVal && enumVal._name() != null)
+        {
+            return enumVal._name();
+        }
         // Named metamodel elements — return just the name
         if (v instanceof meta.pure.metamodel.PackageableElement pe && pe._name() != null)
         {

@@ -111,7 +111,15 @@ public final class CopyWithKeysNode extends PureNode
                 {
                     String propName = keImpl._name();
                     Object propValue = keImpl._expression();
-                    eval.accessProperty(copy, propName, propValue);
+                    if (propName.contains("."))
+                    {
+                        // Deep property path: navigate and copy sub-objects
+                        setDeepProperty(copy, propName, propValue, eval);
+                    }
+                    else
+                    {
+                        eval.accessProperty(copy, propName, propValue);
+                    }
                     keyValues.add(java.util.Map.entry(propName, propValue));
                 }
             }
@@ -125,5 +133,42 @@ public final class CopyWithKeysNode extends PureNode
         {
             eval.popConstruction();
         }
+    }
+
+    /**
+     * Handle dotted property paths like "address.name" or "firm.employees".
+     * Navigates to each sub-object, creating copies as needed, and sets the leaf property.
+     */
+    private static void setDeepProperty(Object root, String dottedPath, Object value,
+                                         org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+    {
+        String[] parts = dottedPath.split("\\.");
+        Object current = root;
+        // Navigate to the parent of the leaf, copying sub-objects along the way
+        for (int i = 0; i < parts.length - 1; i++)
+        {
+            Object child = eval.accessProperty(current, parts[i]);
+            if (child == null || child instanceof org.finos.legend.pure.truffle.types.PureNull)
+            {
+                return; // Sub-object doesn't exist — nothing to set
+            }
+            // Copy the sub-object so we don't mutate the original
+            if (child instanceof meta.pure.metamodel.type.Any any)
+            {
+                Object childCopy = any._copy();
+                if (childCopy instanceof meta.pure.metamodel.type.Any anyCopy)
+                {
+                    anyCopy._classifierGenericType(any._classifierGenericType());
+                }
+                eval.accessProperty(current, parts[i], childCopy);
+                current = childCopy;
+            }
+            else
+            {
+                current = child;
+            }
+        }
+        // Set the leaf property
+        eval.accessProperty(current, parts[parts.length - 1], value);
     }
 }

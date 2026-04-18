@@ -71,6 +71,13 @@ class TrufflePureTestRunner
         ScopedMetadataAccess resolver = new ScopedMetadataAccess(compilerModule, model);
         evaluator = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
 
+        // Configure the PureParser for the parse native
+        java.util.List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new java.util.ArrayList<>();
+        parserExts.add(new org.finos.legend.pure.next.parser.m3.PureLanguageParser());
+        evaluator.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
+                .withExtensions(parserExts)
+                .build());
+
         // Find PCT adapter
         for (String path : coreModule.elementPaths())
         {

@@ -97,19 +97,40 @@ public final class EvaluateNode extends PureNode
         if (listObj instanceof meta.pure.functions.collection.List listInst)
         {
             var vals = listInst._values();
-            if (vals != null)
+            if (vals == null || vals.isEmpty())
             {
-                for (Object v : vals)
+                out.add(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
+            }
+            else if (vals.size() == 1)
+            {
+                // Single-valued List: unwrap to the single value
+                Object v = vals.getFirst();
+                if (v instanceof AtomicValue av2)
                 {
-                    if (v instanceof AtomicValue av)
+                    out.add(av2._value() != null ? av2._value() : v);
+                }
+                else
+                {
+                    out.add(v);
+                }
+            }
+            else
+            {
+                // Multi-valued List: keep as collection (ObjectSequence)
+                Object[] arr = new Object[vals.size()];
+                for (int i = 0; i < vals.size(); i++)
+                {
+                    Object v = vals.get(i);
+                    if (v instanceof AtomicValue av2)
                     {
-                        out.add(av._value() != null ? av._value() : v);
+                        arr[i] = av2._value() != null ? av2._value() : v;
                     }
                     else
                     {
-                        out.add(v);
+                        arr[i] = v;
                     }
                 }
+                out.add(new org.finos.legend.pure.truffle.types.ObjectSequence(arr));
             }
         }
         else

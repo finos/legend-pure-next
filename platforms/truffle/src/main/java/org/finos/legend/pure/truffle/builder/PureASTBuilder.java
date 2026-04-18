@@ -220,7 +220,18 @@ public final class PureASTBuilder
         {
             return null;
         }
-        return new FrameLetFunctionNode(slot, lower(args.get(1)));
+        // If only one value arg, lower it directly
+        if (args.size() == 2)
+        {
+            return new FrameLetFunctionNode(slot, lower(args.get(1)));
+        }
+        // Multiple value args: the T[m] parameter was flattened — wrap in collection
+        PureNode[] valueNodes = new PureNode[args.size() - 1];
+        for (int i = 1; i < args.size(); i++)
+        {
+            valueNodes[i - 1] = lower(args.get(i));
+        }
+        return new FrameLetFunctionNode(slot, new RawCollectionNode(valueNodes));
     }
 
     private PureNode lowerAtomicValue(AtomicValue av)

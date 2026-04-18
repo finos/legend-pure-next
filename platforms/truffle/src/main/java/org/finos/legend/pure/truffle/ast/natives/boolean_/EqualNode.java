@@ -110,12 +110,20 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
+        // Enum equality — compare by name
+        if (a instanceof meta.pure.metamodel.type.Enum ea
+                && b instanceof meta.pure.metamodel.type.Enum eb)
+        {
+            return Objects.equals(ea._name(), eb._name());
+        }
         // Generated Impl equality — compare by classifierGenericType + all property values
         if (a instanceof meta.pure.metamodel.type.Any anyA
-                && b instanceof meta.pure.metamodel.type.Any anyB
-                && a.getClass() == b.getClass())
+                && b instanceof meta.pure.metamodel.type.Any anyB)
         {
-            return equalByProperties(anyA, anyB);
+            if (a.getClass() == b.getClass())
+            {
+                return equalByProperties(anyA, anyB);
+            }
         }
         return Objects.equals(a, b);
     }
@@ -152,6 +160,10 @@ public final class EqualNode extends PureNode
     {
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
+            if (seq.size() == 0)
+            {
+                return null;
+            }
             if (seq.size() == 1)
             {
                 return normalizeForEquals(seq.getBoxed(0));
@@ -161,6 +173,19 @@ public final class EqualNode extends PureNode
         if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return null;
+        }
+        // MutableList normalization
+        if (v instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+        {
+            if (ml.isEmpty())
+            {
+                return null;
+            }
+            if (ml.size() == 1)
+            {
+                return normalizeForEquals(ml.getFirst());
+            }
+            return ml;
         }
         // Unwrap AtomicValue (dates kept as AV)
         if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)

@@ -281,7 +281,9 @@ public final class FormatNode extends PureNode
                 // StrictDate
                 parsed = java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             }
-            return java.time.format.DateTimeFormatter.ofPattern(actualPattern).format(parsed);
+            // Convert Pure's "literal" (double quotes) to Java's 'literal' (single quotes)
+            String javaPattern = actualPattern.replace('"', '\'');
+            return java.time.format.DateTimeFormatter.ofPattern(javaPattern).format(parsed);
         }
         catch (Exception e)
         {
