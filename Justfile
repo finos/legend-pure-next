@@ -76,26 +76,23 @@ build-compiler-pdb: build-core-pdb
 build-typescript:
     @if [ -d "{{ts}}" ]; then cd {{ts}} && pnpm install && pnpm run build; else echo "platforms/typescript/ not present, skipping"; fi
 
-# --- Phase 7a: Generate Java classes from PDB (for Truffle runtime) ---
-generate-pdb-classes: build-bootstrap build-core-pdb
-    cd {{truffle}} && mvn compile -DskipTests -q
-    cd {{truffle}} && mvn package -DskipTests -q
-    java -cp "{{truffle}}/target/pure-compile-0.0.1-SNAPSHOT-fat.jar" \
-        org.finos.legend.pure.truffle.codegen.PdbJavaGenerator \
-        {{truffle}}/target/generated-pdb-sources \
-        {{out}}/core.pdb
-    # MapImpl is hand-written in src/main/java (uses LinkedHashMap), remove generated version
-    rm -f {{truffle}}/target/generated-pdb-sources/meta/pure/functions/collection/MapImpl.java
+truffle_codegen := truffle / "codegen"
+truffle_runtime := truffle / "runtime"
 
-# Truffle is Maven-based — builds its own JAR, depends on bootstrap artifacts.
-# After generating PDB classes, recompile to include them.
+# --- Phase 7a: Build codegen module and generate PDB classes ---
+generate-pdb-classes: build-bootstrap build-core-pdb
+    cd {{truffle_codegen}} && mvn package -DskipTests -q
+    # Remove hand-written MapImpl (uses LinkedHashMap, lives in runtime src)
+    rm -f {{truffle_runtime}}/target/generated-pdb-sources/org/finos/legend/pure/truffle/pdb/meta/pure/functions/collection/MapImpl.java
+
+# Build Truffle runtime (includes generated PDB classes)
 build-truffle: generate-pdb-classes
-    cd {{truffle}} && mvn install -DskipTests -q
+    cd {{truffle_runtime}} && mvn install -DskipTests -q
     mkdir -p {{out}}/cli
-    cp {{truffle}}/target/pure-compile-*-fat.jar {{out}}/cli/pure-compile.jar
+    cp {{truffle_runtime}}/target/pure-compile-*-fat.jar {{out}}/cli/pure-compile.jar
 
 test-truffle: build-truffle build-compiler-pdb
-    cd {{truffle}} && mvn test
+    cd {{truffle_runtime}} && mvn test
 
 # Run the Pure test suite via the Truffle interpreter (JVM mode).
 # Useful to compare against `just test-pure` (Java tree-walking).

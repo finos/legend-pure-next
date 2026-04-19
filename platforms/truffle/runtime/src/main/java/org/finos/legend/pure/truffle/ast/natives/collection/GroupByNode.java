@@ -17,9 +17,9 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import meta.pure.functions.collection.ListImpl;
-import meta.pure.functions.collection.MapImpl;
-import meta.pure.functions.collection.PairImpl;
+import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.ListImpl;
+import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
+import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
@@ -106,7 +106,7 @@ public final class GroupByNode extends PureNode
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
             ListImpl listInstance = new ListImpl();
-            listInstance._values(org.eclipse.collections.api.factory.Lists.mutable.with(e.getValue().toArray()));
+            listInstance._values(new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));
             mapInstance.put(e.getKey(), listInstance);
         }
         return mapInstance;

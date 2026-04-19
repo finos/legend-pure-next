@@ -56,6 +56,7 @@ public class PdbJavaGenerator
 {
     private final PDBModule pdb;
     private final Path outputDir;
+    private FbsSchema fbsSchema;
 
     // Collected model
     private final MutableMap<String, ClassRecord> classes = Maps.mutable.empty();
@@ -66,6 +67,11 @@ public class PdbJavaGenerator
     {
         this.pdb = pdb;
         this.outputDir = outputDir;
+    }
+
+    public void setFbsSchema(FbsSchema schema)
+    {
+        this.fbsSchema = schema;
     }
 
     public void generate() throws IOException
@@ -99,6 +105,17 @@ public class PdbJavaGenerator
                 Files.write(packageDir.resolve(cr.name + "Impl.java"),
                         generateImpl(cr).getBytes(StandardCharsets.UTF_8));
                 impls++;
+
+                // Generate FlatBuffer wrapper if FBS schema is available
+                if (fbsSchema != null)
+                {
+                    String wrapperCode = generateFlatBufferWrapper(cr);
+                    if (wrapperCode != null)
+                    {
+                        Files.write(packageDir.resolve(cr.name + "FlatBufferWrapper.java"),
+                                wrapperCode.getBytes(StandardCharsets.UTF_8));
+                    }
+                }
             }
         }
 
@@ -139,9 +156,8 @@ public class PdbJavaGenerator
             String typeName = elem.getClass().getSimpleName();
             typeCounts.put(typeName, typeCounts.getIfAbsentPut(typeName, 0) + 1);
 
-            // Skip protocol grammar and metamodel types — they already have
-            // generated classes from RdfJavaGenerator via m3.ttl
-            if (path.startsWith("meta::pure::protocol::") || path.startsWith("meta::pure::metamodel::"))
+            // Skip protocol grammar types (internal compiler representation)
+            if (path.startsWith("meta::pure::protocol::"))
             {
                 continue;
             }
@@ -415,7 +431,16 @@ public class PdbJavaGenerator
                 findClass(g) != null || implExistsOnClasspath(resolveFullPath(g)));
         if (validExtends.isEmpty() && !"Any".equals(cr.name))
         {
-            sb.append(" extends meta.pure.metamodel.type.Any");
+            // Use truffle-namespaced Any if available, otherwise bootstrap
+            ClassRecord anyRecord = findClass("Any");
+            if (anyRecord != null)
+            {
+                sb.append(" extends ").append(toJavaPackage(anyRecord.packagePath)).append(".Any");
+            }
+            else
+            {
+                sb.append(" extends meta.pure.metamodel.type.Any");
+            }
         }
         else if (!validExtends.isEmpty())
         {
@@ -446,6 +471,12 @@ public class PdbJavaGenerator
             String javaType = resolveJavaType(pr);
             sb.append("    ").append(javaType).append(" _").append(pr.name).append("();\n\n");
             sb.append("    ").append(cr.name).append(" _").append(pr.name).append("(").append(javaType).append(" value);\n\n");
+        }
+
+        // _copy() — required for all classes
+        if (!cr.isAbstract)
+        {
+            sb.append("    ").append(cr.name).append(" _copy();\n\n");
         }
 
         sb.append("}\n");
@@ -565,6 +596,355 @@ public class PdbJavaGenerator
     }
 
     // =========================================================================
+    // FlatBuffer wrapper generation
+    // =========================================================================
+
+    private static final String FBS_PKG = "org.finos.legend.pure.m3.module.pdbModule.fbs";
+
+    private String generateFlatBufferWrapper(ClassRecord cr)
+    {
+        String defName = fbsSchema.findDefTableName(cr.name);
+        if (defName == null)
+        {
+            return null;
+        }
+        java.util.List<FbsSchema.FbsField> fbsFields = fbsSchema.getTableFields(defName);
+        if (fbsFields == null)
+        {
+            return null;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String pkg = toJavaPackage(cr.packagePath);
+        MutableList<PropRecord> allProps = collectAllProperties(cr);
+
+        sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
+        sb.append("package ").append(pkg).append(";\n\n");
+        sb.append("import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;\n");
+        sb.append("import org.finos.legend.pure.truffle.types.ObjectSequence;\n");
+        sb.append("import org.finos.legend.pure.truffle.types.PureSequence;\n\n");
+
+        sb.append("public class ").append(cr.name).append("FlatBufferWrapper implements ").append(cr.name).append("\n{\n");
+        sb.append("    private final ").append(FBS_PKG).append(".").append(defName).append(" fb;\n");
+        sb.append("    private final TruffleMetadataAccess resolver;\n");
+
+        // Cache fields — one per property (uses sentinel to distinguish null from uncached)
+        for (PropRecord pr : allProps)
+        {
+            String javaType = resolveJavaType(pr);
+            sb.append("    private ").append(boxType(javaType)).append(" cached_").append(escapeKeyword(pr.name)).append(";\n");
+        }
+        sb.append("    private static final Object UNSET = new Object();\n\n");
+
+        // Constructor — initialize all caches to UNSET
+        sb.append("    public ").append(cr.name).append("FlatBufferWrapper(")
+                .append(FBS_PKG).append(".").append(defName).append(" fb, TruffleMetadataAccess resolver)\n");
+        sb.append("    {\n        this.fb = fb;\n        this.resolver = resolver;\n    }\n\n");
+
+        for (PropRecord pr : allProps)
+        {
+            String javaType = resolveJavaType(pr);
+            String boxedType = boxType(javaType);
+            String cacheField = "cached_" + escapeKeyword(pr.name);
+            FbsSchema.FbsField fbsField = findFbsField(fbsFields, pr.name);
+
+            // Getter with caching
+            sb.append("    @Override\n");
+            sb.append("    public ").append(javaType).append(" _").append(pr.name).append("()\n    {\n");
+            sb.append("        if (").append(cacheField).append(" != null) return ").append(cacheField).append(";\n");
+            // Generate the actual resolution into a local, then cache
+            sb.append("        Object __raw = null;\n");
+            generateWrapperGetterBody(sb, pr, fbsField);
+            sb.append("        ").append(cacheField).append(" = (").append(boxedType).append(") __raw;\n");
+            sb.append("        return ").append(cacheField).append(";\n");
+            sb.append("    }\n\n");
+
+            // Setter — read-only
+            sb.append("    @Override\n");
+            sb.append("    public ").append(cr.name).append("FlatBufferWrapper _").append(pr.name)
+                    .append("(").append(javaType).append(" value)\n");
+            sb.append("    {\n        throw new UnsupportedOperationException(\"Read-only FlatBuffer wrapper\");\n    }\n\n");
+        }
+
+        // _copy()
+        sb.append("    @Override\n    public ").append(cr.name).append("Impl _copy()\n    {\n");
+        sb.append("        ").append(cr.name).append("Impl copy = new ").append(cr.name).append("Impl();\n");
+        for (PropRecord pr : allProps)
+        {
+            sb.append("        copy._").append(pr.name).append("(this._").append(pr.name).append("());\n");
+        }
+        sb.append("        return copy;\n    }\n\n");
+
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    private FbsSchema.FbsField findFbsField(java.util.List<FbsSchema.FbsField> fields, String propName)
+    {
+        String snake = camelToSnake(propName);
+        for (FbsSchema.FbsField f : fields)
+        {
+            // FlatBuffers escapes keywords with trailing underscore (e.g. "type" → "type_")
+            if (f.name().equals(snake) || f.name().equals(snake + "_"))
+            {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Generate the body of a wrapper getter that assigns to {@code result}.
+     */
+    private void generateWrapperGetterBody(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fbsField)
+    {
+        if (fbsField == null)
+        {
+            sb.append("        __raw = null;\n");
+            return;
+        }
+        String camel = FbsSchema.snakeToCamel(fbsField.name());
+
+        if ("string".equals(fbsField.type()) && !fbsField.isVector())
+        {
+            // If Pure type is String, return raw. Otherwise it's a pointer path — resolve.
+            if ("String".equals(pr.typeName) || isPrimitiveType(pr.typeName))
+            {
+                sb.append("        __raw = fb.").append(camel).append("();\n");
+            }
+            else
+            {
+                // Pointer path — resolve via MetadataAccess
+                sb.append("        { String path = fb.").append(camel).append("();\n");
+                sb.append("          __raw = path != null ? (").append(resolveJavaType(pr)).append(") (Object) resolver.getElement(path) : null; }\n");
+            }
+        }
+        else if (fbsField.type().equals("long") || fbsField.type().equals("int")
+                || fbsField.type().equals("double") || fbsField.type().equals("bool"))
+        {
+            sb.append("        __raw = fb.").append(camel).append("();\n");
+        }
+        else if (pr.isMany && !fbsField.isUnion())
+        {
+            String defType = fbsField.type();
+            boolean isStringPointerVector = "string".equals(defType) && !"String".equals(pr.typeName);
+            String wrapperClass = isStringPointerVector ? null : resolveWrapperFqn(defType);
+            sb.append("        { int len = fb.").append(camel).append("Length();\n");
+            sb.append("          if (len == 0) { __raw = new ObjectSequence(new Object[0]); }\n");
+            sb.append("          else { Object[] arr = new Object[len];\n");
+            sb.append("            for (int i = 0; i < len; i++) {\n");
+            if (isStringPointerVector && "Stereotype".equals(pr.typeName))
+            {
+                // Stereotype: "profilePath.StereotypeName" → resolve Profile, find by name
+                sb.append("              String path = fb.").append(camel).append("(i);\n");
+                sb.append("              if (path != null) {\n");
+                sb.append("                int dotIdx = path.lastIndexOf('.');\n");
+                sb.append("                if (dotIdx > 0) {\n");
+                sb.append("                  Object prof = resolver.getElement(path.substring(0, dotIdx));\n");
+                sb.append("                  if (prof instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Profile p) {\n");
+                sb.append("                    String stName = path.substring(dotIdx + 1);\n");
+                sb.append("                    var stSeq = p._p_stereotypes();\n");
+                sb.append("                    if (stSeq != null) for (Object st : stSeq.toBoxedArray()) {\n");
+                sb.append("                      if (st instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s && stName.equals(s._value())) { arr[i] = s; break; }\n");
+                sb.append("                    }\n");
+                sb.append("                  }\n");
+                sb.append("                }\n");
+                sb.append("              }\n");
+            }
+            else if (isStringPointerVector && "Tag".equals(pr.typeName))
+            {
+                // Tag: "profilePath#TagName" → resolve Profile, find by name
+                sb.append("              String path = fb.").append(camel).append("(i);\n");
+                sb.append("              if (path != null) {\n");
+                sb.append("                int hashIdx = path.lastIndexOf('#');\n");
+                sb.append("                if (hashIdx > 0) {\n");
+                sb.append("                  Object prof = resolver.getElement(path.substring(0, hashIdx));\n");
+                sb.append("                  if (prof instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Profile p) {\n");
+                sb.append("                    String tName = path.substring(hashIdx + 1);\n");
+                sb.append("                    var tSeq = p._p_tags();\n");
+                sb.append("                    if (tSeq != null) for (Object t : tSeq.toBoxedArray()) {\n");
+                sb.append("                      if (t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag tag && tName.equals(tag._value())) { arr[i] = tag; break; }\n");
+                sb.append("                    }\n");
+                sb.append("                  }\n");
+                sb.append("                }\n");
+                sb.append("              }\n");
+            }
+            else if (isStringPointerVector)
+            {
+                sb.append("              String path = fb.").append(camel).append("(i);\n");
+                sb.append("              arr[i] = path != null ? resolver.getElement(path) : null;\n");
+            }
+            else
+            {
+                sb.append("              var item = fb.").append(camel).append("(i);\n");
+                if (wrapperClass != null)
+                {
+                    sb.append("              arr[i] = item != null ? new ").append(wrapperClass).append("(item, resolver) : null;\n");
+                }
+                else
+                {
+                    sb.append("              arr[i] = item;\n");
+                }
+            }
+            sb.append("            }\n");
+            sb.append("            __raw = new ObjectSequence(arr); } }\n");
+        }
+        else if (pr.isMany && fbsField.isUnion())
+        {
+            generateUnionVectorGetterBody(sb, camel, fbsField.type());
+        }
+        else if (!pr.isMany && fbsField.isUnion())
+        {
+            generateUnionSingleGetterBody(sb, camel, fbsField.type());
+        }
+        else
+        {
+            String defType = fbsField.type();
+            String wrapperClass = resolveWrapperFqn(defType);
+            if (wrapperClass != null)
+            {
+                sb.append("        { var raw = fb.").append(camel).append("();\n");
+                sb.append("          __raw = raw != null ? new ").append(wrapperClass).append("(raw, resolver) : null; }\n");
+            }
+            else
+            {
+                sb.append("        __raw = fb.").append(camel).append("();\n");
+            }
+        }
+    }
+
+    private void generateUnionVectorGetterBody(StringBuilder sb, String camelName, String unionName)
+    {
+        java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
+        sb.append("        { int len = fb.").append(camelName).append("Length();\n");
+        sb.append("          if (len == 0) { __raw = new ObjectSequence(new Object[0]); }\n");
+        sb.append("          else { Object[] arr = new Object[len];\n");
+        sb.append("            for (int i = 0; i < len; i++) {\n");
+        String typeSuffix = camelName.endsWith("_") ? "type" : "Type";
+        sb.append("              byte uType = fb.").append(camelName).append(typeSuffix).append("(i);\n");
+        sb.append("              switch (uType) {\n");
+        if (members != null)
+        {
+            for (int idx = 0; idx < members.size(); idx++)
+            {
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, true);
+            }
+        }
+        sb.append("                default: break;\n");
+        sb.append("              }\n");
+        sb.append("            }\n");
+        sb.append("            __raw = new ObjectSequence(arr); } }\n");
+    }
+
+    private void generateUnionSingleGetterBody(StringBuilder sb, String camelName, String unionName)
+    {
+        java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
+        String typeSuffix2 = camelName.endsWith("_") ? "type" : "Type";
+        sb.append("        { byte uType = fb.").append(camelName).append(typeSuffix2).append("();\n");
+        sb.append("          if (uType == 0) { __raw = null; }\n");
+        sb.append("          else { switch (uType) {\n");
+        if (members != null)
+        {
+            for (int idx = 0; idx < members.size(); idx++)
+            {
+                generateUnionCase(sb, idx + 1, members.get(idx), camelName, false);
+            }
+        }
+        sb.append("            default: __raw = null; break;\n");
+        sb.append("          } } }\n");
+    }
+
+    private void generateUnionCase(StringBuilder sb, int discriminator, String defName,
+                                   String camelName, boolean isVector)
+    {
+        String target = isVector ? "arr[i]" : "__raw";
+        if (FbsSchema.isSpecialRef(defName))
+        {
+            if ("PointerRef".equals(defName))
+            {
+                sb.append("                case ").append(discriminator).append(": { ")
+                        .append(FBS_PKG).append(".PointerRef pr = (").append(FBS_PKG)
+                        .append(".PointerRef) fb.").append(camelName).append("(new ").append(FBS_PKG)
+                        .append(".PointerRef()");
+                if (isVector) sb.append(", i");
+                sb.append("); if (pr != null) ").append(target).append(" = (Object) resolver.getElement(pr.path()); break; }\n");
+            }
+            else
+            {
+                sb.append("                case ").append(discriminator).append(": break; // AncestorRef\n");
+            }
+            return;
+        }
+
+        String wrapperFqn = resolveWrapperFqn(defName);
+        sb.append("                case ").append(discriminator).append(": { ")
+                .append(FBS_PKG).append(".").append(defName).append(" d = (")
+                .append(FBS_PKG).append(".").append(defName).append(") fb.").append(camelName)
+                .append("(new ").append(FBS_PKG).append(".").append(defName).append("()");
+        if (isVector) sb.append(", i");
+        sb.append("); ");
+        if (wrapperFqn != null)
+        {
+            sb.append("if (d != null) ").append(target).append(" = new ").append(wrapperFqn).append("(d, resolver); ");
+        }
+        else if ("IntegerValueDef".equals(defName))
+        {
+            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+        }
+        else if ("FloatValueDef".equals(defName))
+        {
+            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+        }
+        else if ("BooleanValueDef".equals(defName))
+        {
+            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+        }
+        else if ("StringValueDef".equals(defName))
+        {
+            sb.append("if (d != null) ").append(target).append(" = d.val(); ");
+        }
+        else if ("DecimalValueDef".equals(defName))
+        {
+            sb.append("if (d != null) ").append(target).append(" = d.val() != null ? new java.math.BigDecimal(d.val()) : null; ");
+        }
+        sb.append("break; }\n");
+    }
+
+    /**
+     * Resolve the fully-qualified truffle wrapper class name for a Def type.
+     * Returns null if no wrapper exists (primitive value types, etc.)
+     */
+    private String resolveWrapperFqn(String defName)
+    {
+        if (FbsSchema.isSpecialRef(defName) || FbsSchema.isPrimitiveValueDef(defName))
+        {
+            return null;
+        }
+        String pureName = FbsSchema.defToPureClassName(defName);
+        ClassRecord cr = findClass(pureName);
+        if (cr != null)
+        {
+            return toJavaPackage(cr.packagePath) + "." + pureName + "FlatBufferWrapper";
+        }
+        return null;
+    }
+
+    private static String camelToSnake(String camel)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < camel.length(); i++)
+        {
+            char c = camel.charAt(i);
+            if (Character.isUpperCase(c) && i > 0)
+            {
+                sb.append('_');
+            }
+            sb.append(Character.toLowerCase(c));
+        }
+        return sb.toString();
+    }
+
+    // =========================================================================
     // Enum generation
     // =========================================================================
 
@@ -575,7 +955,7 @@ public class PdbJavaGenerator
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("public interface ").append(er.name).append(" extends meta.pure.metamodel.type.Enum\n{\n");
+        sb.append("public interface ").append(er.name).append(" extends ").append(TRUFFLE_PACKAGE_PREFIX).append("meta.pure.metamodel.type.Enum\n{\n");
         sb.append("}\n");
         return sb.toString();
     }
@@ -584,6 +964,7 @@ public class PdbJavaGenerator
     {
         StringBuilder sb = new StringBuilder();
         String pkg = toJavaPackage(er.packagePath);
+        String tp = TRUFFLE_PACKAGE_PREFIX;
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
@@ -597,35 +978,35 @@ public class PdbJavaGenerator
 
         sb.append("\n");
 
-        // Fields from Any + AnnotatedElement + Enum
-        sb.append("    private meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType;\n");
-        sb.append("    private meta.pure.metamodel.SourceInformation sourceInformation;\n");
-        sb.append("    private meta.pure.metamodel.type.ElementOverride elementOverride;\n");
-        sb.append("    private org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.TaggedValue> taggedValues = org.eclipse.collections.api.factory.Lists.mutable.empty();\n");
-        sb.append("    private org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.Stereotype> stereotypes = org.eclipse.collections.api.factory.Lists.mutable.empty();\n\n");
+        // Fields from Any + AnnotatedElement + Enum (all truffle-namespaced)
+        sb.append("    private ").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType;\n");
+        sb.append("    private ").append(tp).append("meta.pure.metamodel.SourceInformation sourceInformation;\n");
+        sb.append("    private ").append(tp).append("meta.pure.metamodel.type.ElementOverride elementOverride;\n");
+        sb.append("    private org.finos.legend.pure.truffle.types.PureSequence taggedValues = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n");
+        sb.append("    private org.finos.legend.pure.truffle.types.PureSequence stereotypes = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n\n");
 
         // _classifierGenericType
-        sb.append("    @Override public meta.pure.metamodel.type.generics.GenericTypeValue _classifierGenericType() { return this.classifierGenericType; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _classifierGenericType(meta.pure.metamodel.type.generics.GenericTypeValue value) { this.classifierGenericType = value; return this; }\n\n");
+        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue _classifierGenericType() { return this.classifierGenericType; }\n");
+        sb.append("    @Override public ").append(er.name).append("Enum _classifierGenericType(").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue value) { this.classifierGenericType = value; return this; }\n\n");
 
         // _sourceInformation
-        sb.append("    @Override public meta.pure.metamodel.SourceInformation _sourceInformation() { return this.sourceInformation; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _sourceInformation(meta.pure.metamodel.SourceInformation value) { this.sourceInformation = value; return this; }\n\n");
+        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.SourceInformation _sourceInformation() { return this.sourceInformation; }\n");
+        sb.append("    @Override public ").append(er.name).append("Enum _sourceInformation(").append(tp).append("meta.pure.metamodel.SourceInformation value) { this.sourceInformation = value; return this; }\n\n");
 
         // _elementOverride
-        sb.append("    @Override public meta.pure.metamodel.type.ElementOverride _elementOverride() { return this.elementOverride; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _elementOverride(meta.pure.metamodel.type.ElementOverride value) { this.elementOverride = value; return this; }\n\n");
+        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.type.ElementOverride _elementOverride() { return this.elementOverride; }\n");
+        sb.append("    @Override public ").append(er.name).append("Enum _elementOverride(").append(tp).append("meta.pure.metamodel.type.ElementOverride value) { this.elementOverride = value; return this; }\n\n");
 
         // _name (from Enum interface — use enum name())
         sb.append("    @Override public String _name() { return this.name(); }\n");
         sb.append("    @Override public ").append(er.name).append("Enum _name(String value) { return this; }\n\n");
 
-        // _taggedValues, _stereotypes (from AnnotatedElement)
-        sb.append("    @Override public org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.TaggedValue> _taggedValues() { return this.taggedValues; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _taggedValues(org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.TaggedValue> value) { this.taggedValues = value; return this; }\n\n");
+        // _taggedValues, _stereotypes (PureSequence to match truffle AnnotatedElement interfaces)
+        sb.append("    @Override public org.finos.legend.pure.truffle.types.PureSequence _taggedValues() { return this.taggedValues; }\n");
+        sb.append("    @Override public ").append(er.name).append("Enum _taggedValues(org.finos.legend.pure.truffle.types.PureSequence value) { this.taggedValues = value; return this; }\n\n");
 
-        sb.append("    @Override public org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.Stereotype> _stereotypes() { return this.stereotypes; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _stereotypes(org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.extension.Stereotype> value) { this.stereotypes = value; return this; }\n\n");
+        sb.append("    @Override public org.finos.legend.pure.truffle.types.PureSequence _stereotypes() { return this.stereotypes; }\n");
+        sb.append("    @Override public ").append(er.name).append("Enum _stereotypes(org.finos.legend.pure.truffle.types.PureSequence value) { this.stereotypes = value; return this; }\n\n");
 
         // _copy() — enum values are singletons
         sb.append("    @Override public ").append(er.name).append("Enum _copy() { return this; }\n\n");
@@ -646,21 +1027,36 @@ public class PdbJavaGenerator
         // Add Any's properties (all classes implicitly extend Any)
         if (!"Any".equals(cr.name))
         {
-            for (String[] anyProp : new String[][]{
-                    {"classifierGenericType", "meta.pure.metamodel.type.generics.GenericTypeValue"},
-                    {"sourceInformation", "meta.pure.metamodel.SourceInformation"},
-                    {"elementOverride", "meta.pure.metamodel.type.ElementOverride"}})
+            ClassRecord anyRecord = findClass("Any");
+            if (anyRecord != null && !anyRecord.properties.isEmpty())
             {
-                if (!seen.contains(anyProp[0]))
+                for (PropRecord anyProp : anyRecord.properties)
                 {
-                    PropRecord pr = new PropRecord();
-                    pr.name = anyProp[0];
-                    pr.typeName = anyProp[1];
-                    pr.isMany = false;
-                    pr.ownerName = "Any";
-                    pr.javaTypeFqn = anyProp[1]; // already fully qualified
-                    seen.add(pr.name);
-                    result.add(pr);
+                    if (!seen.contains(anyProp.name))
+                    {
+                        seen.add(anyProp.name);
+                        result.add(anyProp);
+                    }
+                }
+            }
+            else
+            {
+                // Fallback: hardcoded Any properties with truffle-namespaced types
+                for (String[] anyProp : new String[][]{
+                        {"classifierGenericType", "GenericTypeValue"},
+                        {"sourceInformation", "SourceInformation"},
+                        {"elementOverride", "ElementOverride"}})
+                {
+                    if (!seen.contains(anyProp[0]))
+                    {
+                        PropRecord pr = new PropRecord();
+                        pr.name = anyProp[0];
+                        pr.typeName = anyProp[1];
+                        pr.isMany = false;
+                        pr.ownerName = "Any";
+                        seen.add(pr.name);
+                        result.add(pr);
+                    }
                 }
             }
         }
@@ -734,7 +1130,6 @@ public class PdbJavaGenerator
             case "Number" -> "Number";
             case "Byte" -> "Byte";
             case "Any" -> "Object";
-            case "GenericType" -> "meta.pure.metamodel.type.generics.GenericType";
             default ->
             {
                 // Check if it's a known class in this PDB
@@ -769,14 +1164,16 @@ public class PdbJavaGenerator
     // Utility
     // =========================================================================
 
+    private static final String TRUFFLE_PACKAGE_PREFIX = "org.finos.legend.pure.truffle.pdb.";
+
     private static String toJavaPackage(String purePackagePath)
     {
         if (purePackagePath == null || purePackagePath.isEmpty())
         {
-            return "generated";
+            return TRUFFLE_PACKAGE_PREFIX + "generated";
         }
         String[] segments = purePackagePath.split("::");
-        StringBuilder result = new StringBuilder();
+        StringBuilder result = new StringBuilder(TRUFFLE_PACKAGE_PREFIX);
         for (int i = 0; i < segments.length; i++)
         {
             if (i > 0)
@@ -1382,7 +1779,7 @@ public class PdbJavaGenerator
     {
         if (args.length < 2)
         {
-            System.out.println("Usage: PdbJavaGenerator <output-dir> <input.pdb> [additional.pdb ...]");
+            System.out.println("Usage: PdbJavaGenerator <output-dir> <input.pdb> [additional.pdb ...] [--fbs <m3.fbs>]");
             System.exit(1);
         }
 
@@ -1393,6 +1790,11 @@ public class PdbJavaGenerator
         MutableList<String> moduleNames = Lists.mutable.empty();
         for (int i = 1; i < args.length; i++)
         {
+            if ("--fbs".equals(args[i]))
+            {
+                i++; // skip the path argument
+                continue;
+            }
             Path pdbPath = Path.of(args[i]);
             String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
             MutableList<String> deps = Lists.mutable.withAll(moduleNames);
@@ -1410,12 +1812,25 @@ public class PdbJavaGenerator
                 .build();
         model.compile();
 
+        // Load FBS schema if --fbs flag is provided (for wrapper generation)
+        FbsSchema fbsSchema = null;
+        for (int i = 1; i < args.length - 1; i++)
+        {
+            if ("--fbs".equals(args[i]))
+            {
+                fbsSchema = FbsSchema.parse(Path.of(args[i + 1]));
+                System.out.println("Loaded FBS schema from " + args[i + 1]);
+                break;
+            }
+        }
+
         // Generate from each PDB module
         for (PDBModule pdb : modules)
         {
             System.out.println("Processing PDB: " + pdb.getName());
 
             PdbJavaGenerator generator = new PdbJavaGenerator(pdb, outputDir);
+            generator.setFbsSchema(fbsSchema);
             generator.generate();
         }
     }
