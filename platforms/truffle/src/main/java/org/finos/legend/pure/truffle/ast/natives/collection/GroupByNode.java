@@ -106,7 +106,7 @@ public final class GroupByNode extends PureNode
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
             ListImpl listInstance = new ListImpl();
-            listInstance._values(Lists.mutable.with(e.getValue().toArray()));
+            listInstance._values(new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));
             mapInstance.put(e.getKey(), listInstance);
         }
         return mapInstance;

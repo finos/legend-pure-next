@@ -121,8 +121,11 @@ public final class EqualNode extends PureNode
                 {
                     return false;
                 }
-                // Same name — check same enum type (Java class or CGT)
-                if (a.getClass() == b.getClass())
+                // Same name — check same enum type
+                // For generated Java enums, same class = same enum type
+                // For EnumImpl (FlatBuffer-wrapped), same class doesn't mean same
+                // enum type — must check CGT path
+                if (a.getClass() == b.getClass() && a.getClass().isEnum())
                 {
                     return true;
                 }
@@ -154,7 +157,7 @@ public final class EqualNode extends PureNode
         {
             return Objects.equals(s, eb._name());
         }
-        // Generated Impl equality — compare by classifierGenericType + all property values
+        // Generated Impl equality — compare by property values respecting <<equality.Key>>
         if (a instanceof meta.pure.metamodel.type.Any anyA
                 && b instanceof meta.pure.metamodel.type.Any anyB)
         {
@@ -168,7 +171,31 @@ public final class EqualNode extends PureNode
 
     private static boolean equalByProperties(meta.pure.metamodel.type.Any a, meta.pure.metamodel.type.Any b)
     {
-        // Compare all getter methods (_xxx()) that return property values
+        // Check for <<equality.Key>> properties — only compare those if present.
+        // Try runtime metamodel first, then Java interface name fallback.
+        java.util.Set<String> keyProps = collectEqualityKeyProperties(a);
+        if (keyProps != null && !keyProps.isEmpty())
+        {
+            for (String propName : keyProps)
+            {
+                try
+                {
+                    java.lang.reflect.Method m = a.getClass().getMethod("_" + propName);
+                    Object va = m.invoke(a);
+                    Object vb = m.invoke(b);
+                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb)))
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception ignored)
+                {
+                }
+            }
+            return true;
+        }
+
+        // No equality keys found — compare all property getter methods
         for (java.lang.reflect.Method m : a.getClass().getMethods())
         {
             String name = m.getName();
@@ -192,6 +219,98 @@ public final class EqualNode extends PureNode
             }
         }
         return true;
+    }
+
+    /**
+     * Collect property names with the {@code <<equality.Key>>} stereotype
+     * from the object's class hierarchy via the PDB metamodel.
+     */
+    private static java.util.Set<String> collectEqualityKeyProperties(meta.pure.metamodel.type.Any obj)
+    {
+        java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        var cgt = obj._classifierGenericType();
+        if (cgt == null)
+        {
+            return null;
+        }
+        meta.pure.metamodel.SimplePropertyOwner spo = null;
+        var type = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(cgt);
+        if (type instanceof meta.pure.metamodel.SimplePropertyOwner s)
+        {
+            spo = s;
+        }
+        else
+        {
+            // Try resolving via the MetadataAccess from the Java interface name
+            String ifaceName = obj.getClass().getInterfaces().length > 0
+                    ? obj.getClass().getInterfaces()[0].getName().replace(".", "::") : null;
+            if (ifaceName != null)
+            {
+                var resolver = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current().resolver();
+                var elem = resolver.getElement(ifaceName);
+                if (elem instanceof meta.pure.metamodel.SimplePropertyOwner s2)
+                {
+                    spo = s2;
+                }
+            }
+        }
+        if (spo == null)
+        {
+            return null;
+        }
+        collectEqualityKeysRecursive(spo, keys, seen);
+        if (!keys.isEmpty() || obj.getClass().getSimpleName().contains("Side") || obj.getClass().getSimpleName().contains("Right"))
+        {
+            System.err.println("[EQ-KEY-RESULT] " + obj.getClass().getSimpleName() + " spo=" + spo.getClass().getSimpleName() + " keys=" + keys);
+        }
+        return keys;
+    }
+
+    private static void collectEqualityKeysRecursive(
+            meta.pure.metamodel.SimplePropertyOwner owner,
+            java.util.Set<String> keys, java.util.Set<String> seen)
+    {
+        if (owner._properties() != null)
+        {
+            for (var p : owner._properties())
+            {
+                String propName = p._name();
+                if (propName == null || seen.contains(propName))
+                {
+                    continue;
+                }
+                seen.add(propName);
+                if (p._stereotypes() != null)
+                {
+                    for (var st : p._stereotypes())
+                    {
+                        if ("Key".equals(st._value())
+                                && st._profile() instanceof meta.pure.metamodel.PackageableElement pe
+                                && "meta::pure::profiles::equality".equals(
+                                org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe)))
+                        {
+                            keys.add(propName);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (owner instanceof meta.pure.metamodel.type.Type type && type._generalizations() != null)
+        {
+            for (var gen : type._generalizations())
+            {
+                if (gen._general() != null)
+                {
+                    var superType = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(gen._general());
+                    if (superType instanceof meta.pure.metamodel.SimplePropertyOwner superOwner)
+                    {
+                        collectEqualityKeysRecursive(superOwner, keys, seen);
+                    }
+                }
+            }
+        }
     }
 
     private static Object normalizeForEquals(Object v)

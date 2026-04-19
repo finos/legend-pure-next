@@ -406,21 +406,32 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         {
             Type t1 = resolvedType(params1.get(i));
             Type t2 = resolvedType(params2.get(i));
+            boolean t1IsTypeParam = t1 instanceof meta.pure.metamodel.type.generics.TypeParameter;
+            boolean t2IsTypeParam = t2 instanceof meta.pure.metamodel.type.generics.TypeParameter;
 
-            // Type parameter (e.g. T) vs concrete type:
-            // - T is MORE specific than Any (the top type), because T binds to
-            //   the exact type of the actual argument.
-            // - T is LESS specific than any other concrete type (e.g. String, Integer).
-            if (t1 != null && t2 == null)
+            // Null type (unresolvable) vs concrete type
+            if (t1 != null && !t1IsTypeParam && t2 == null)
             {
                 return _Type.isTopType(t1) ? 1 : -1;
             }
-            if (t1 == null && t2 != null)
+            if (t1 == null && t2 != null && !t2IsTypeParam)
             {
                 return _Type.isTopType(t2) ? -1 : 1;
             }
 
-            if (t1 != null && t1 != t2)
+            // TypeParameter vs concrete type:
+            // Concrete type is more specific than TypeParameter (unless concrete is Any/top)
+            if (t1IsTypeParam && !t2IsTypeParam && t2 != null)
+            {
+                return _Type.isTopType(t2) ? -1 : 1;
+            }
+            if (!t1IsTypeParam && t1 != null && t2IsTypeParam)
+            {
+                return _Type.isTopType(t1) ? 1 : -1;
+            }
+
+            // Both concrete and different — subtype/name comparison
+            if (t1 != null && !t1IsTypeParam && t2 != null && !t2IsTypeParam && t1 != t2)
             {
                 MutableList<Type> lin1 = _Type.linearize(t1, model);
                 if (lin1.contains(t2))

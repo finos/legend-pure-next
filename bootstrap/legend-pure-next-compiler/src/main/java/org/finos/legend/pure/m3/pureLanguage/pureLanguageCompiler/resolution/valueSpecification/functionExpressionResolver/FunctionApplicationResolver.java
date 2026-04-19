@@ -93,7 +93,8 @@ public class FunctionApplicationResolver
                     );
             context.rollbackErrorsTo(preResolveCheckpoint);
 
-            // Multiple candidates (most-specific-first) — try each with rollback.
+            // Multiple candidates — sort most-specific-first, then try each with rollback.
+            candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model));
             MutableList<CompilationError> bestCandidateErrors = null;
             for (FunctionIndexEntry candidateEntry : candidates)
             {

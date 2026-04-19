@@ -87,11 +87,6 @@ public class PdbJavaGenerator
 
         for (ClassRecord cr : classes.valuesView())
         {
-            if (implExistsOnClasspath(cr.fullPath))
-            {
-                skipped++;
-                continue;
-            }
             Path packageDir = outputDir.resolve(toJavaPackage(cr.packagePath).replace('.', '/'));
             Files.createDirectories(packageDir);
 
@@ -109,10 +104,6 @@ public class PdbJavaGenerator
 
         for (EnumRecord er : enums.valuesView())
         {
-            if (implExistsOnClasspath(er.fullPath))
-            {
-                continue;
-            }
             Path packageDir = outputDir.resolve(toJavaPackage(er.packagePath).replace('.', '/'));
             Files.createDirectories(packageDir);
 
@@ -287,6 +278,9 @@ public class PdbJavaGenerator
                         Multiplicity mult = prop._multiplicity();
                         pr.isMany = isMultiplicityMany(mult);
 
+                        // Equality key stereotype
+                        pr.isEqualityKey = hasEqualityKeyStereotype(prop);
+
                         cr.properties.add(pr);
                     }
                     catch (Exception ignored)
@@ -415,8 +409,6 @@ public class PdbJavaGenerator
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("import org.eclipse.collections.api.list.MutableList;\n\n");
-
         sb.append("public interface ").append(cr.name);
 
         MutableList<String> validExtends = cr.generalizations.select(g ->
@@ -471,9 +463,6 @@ public class PdbJavaGenerator
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("import org.eclipse.collections.api.factory.Lists;\n");
-        sb.append("import org.eclipse.collections.api.list.MutableList;\n\n");
-
         sb.append("public class ").append(cr.name).append("Impl");
         sb.append(" implements ").append(cr.name);
         sb.append("\n{\n");
@@ -486,12 +475,7 @@ public class PdbJavaGenerator
         {
             String javaType = resolveJavaType(pr);
             String fieldName = escapeKeyword(pr.name);
-            sb.append("    private ").append(javaType).append(" ").append(fieldName);
-            if (pr.isMany)
-            {
-                sb.append(" = Lists.mutable.empty()");
-            }
-            sb.append(";\n");
+            sb.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
         }
         if (!allProps.isEmpty())
         {
@@ -522,6 +506,46 @@ public class PdbJavaGenerator
             sb.append("        return this;\n");
             sb.append("    }\n\n");
         }
+
+        // equals() / hashCode() — based on <<equality.Key>> properties
+        MutableList<PropRecord> keyProps = allProps.select(p -> p.isEqualityKey);
+        MutableList<PropRecord> equalityProps = keyProps.isEmpty() ? allProps : keyProps;
+        sb.append("    @Override\n");
+        sb.append("    public boolean equals(Object o)\n");
+        sb.append("    {\n");
+        sb.append("        if (this == o) return true;\n");
+        sb.append("        if (!(o instanceof ").append(cr.name).append("Impl other)) return false;\n");
+        for (PropRecord pr : equalityProps)
+        {
+            String field = escapeKeyword(pr.name);
+            sb.append("        if (!java.util.Objects.equals(this.").append(field).append(", other.").append(field).append(")) return false;\n");
+        }
+        sb.append("        return true;\n");
+        sb.append("    }\n\n");
+
+        sb.append("    @Override\n");
+        sb.append("    public int hashCode()\n");
+        sb.append("    {\n");
+        // Only use primitive/String properties to avoid circular reference StackOverflow
+        MutableList<PropRecord> hashProps = equalityProps.select(p -> !p.isMany && isPrimitiveType(p.typeName));
+        if (hashProps.isEmpty())
+        {
+            sb.append("        return System.identityHashCode(this);\n");
+        }
+        else
+        {
+            sb.append("        return java.util.Objects.hash(");
+            for (int i = 0; i < hashProps.size(); i++)
+            {
+                if (i > 0)
+                {
+                    sb.append(", ");
+                }
+                sb.append("this.").append(escapeKeyword(hashProps.get(i).name));
+            }
+            sb.append(");\n");
+        }
+        sb.append("    }\n\n");
 
         // _copy()
         sb.append("    @Override\n");
@@ -683,7 +707,7 @@ public class PdbJavaGenerator
     {
         if (pr.javaTypeFqn != null)
         {
-            return pr.isMany ? "MutableList<" + pr.javaTypeFqn + ">" : pr.javaTypeFqn;
+            return pr.isMany ? "org.finos.legend.pure.truffle.types.PureSequence" : pr.javaTypeFqn;
         }
         return mapToJavaType(pr.typeName, pr.isMany);
     }
@@ -691,7 +715,7 @@ public class PdbJavaGenerator
     private String mapToJavaType(String pureName, boolean isMany)
     {
         String base = mapPrimitive(pureName);
-        return isMany ? "MutableList<" + boxType(base) + ">" : base;
+        return isMany ? "org.finos.legend.pure.truffle.types.PureSequence" : base;
     }
 
     private String mapPrimitive(String pureName)
@@ -791,6 +815,38 @@ public class PdbJavaGenerator
             }
             Long upper = cm._upperBound()._value();
             return upper == null || upper > 1;
+        }
+        return false;
+    }
+
+    private static boolean isPrimitiveType(String typeName)
+    {
+        return switch (typeName)
+        {
+            case "String", "Boolean", "Integer", "Float", "Decimal", "Number" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean hasEqualityKeyStereotype(Property prop)
+    {
+        try
+        {
+            if (prop instanceof meta.pure.metamodel.extension.ElementWithStereotypes ews && ews._stereotypes() != null)
+            {
+                for (var st : ews._stereotypes())
+                {
+                    if (st != null && "Key".equals(st._value())
+                            && st._profile() instanceof PackageableElement pe
+                            && "equality".equals(pe._name()))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (Exception ignored)
+        {
         }
         return false;
     }
@@ -899,6 +955,7 @@ public class PdbJavaGenerator
         String ownerName;
         String typeName;
         boolean isMany;
+        boolean isEqualityKey;
         String javaTypeFqn; // pre-resolved Java FQN, bypasses mapToJavaType
     }
 

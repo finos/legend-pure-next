@@ -494,7 +494,20 @@ public final class StandaloneEvaluator
         {
             return value;
         }
-        // MutableList property: wrap scalar/sequence into MutableList
+        // PureSequence property: wrap scalar/list into ObjectSequence
+        if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(targetType))
+        {
+            if (value instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+            {
+                return new org.finos.legend.pure.truffle.types.ObjectSequence(ml.toArray());
+            }
+            if (value instanceof java.util.List<?> list)
+            {
+                return new org.finos.legend.pure.truffle.types.ObjectSequence(list.toArray());
+            }
+            return new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[]{value});
+        }
+        // MutableList property (metamodel classes): wrap scalar/sequence into MutableList
         if (org.eclipse.collections.api.list.MutableList.class.isAssignableFrom(targetType))
         {
             if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)

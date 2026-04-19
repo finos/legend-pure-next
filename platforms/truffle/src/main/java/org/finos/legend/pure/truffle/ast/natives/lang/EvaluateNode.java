@@ -93,18 +93,18 @@ public final class EvaluateNode extends PureNode
         {
             listObj = av._value();
         }
-        // ListImpl has _values() returning MutableList<Object>
+        // ListImpl has _values() returning collection (Object / ObjectSequence / MutableList)
         if (listObj instanceof meta.pure.functions.collection.List listInst)
         {
-            var vals = listInst._values();
-            if (vals == null || vals.isEmpty())
+            Object vals = listInst._values();
+            int sz = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.size(vals);
+            if (sz == 0)
             {
                 out.add(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
             }
-            else if (vals.size() == 1)
+            else if (sz == 1)
             {
-                // Single-valued List: unwrap to the single value
-                Object v = vals.getFirst();
+                Object v = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, 0);
                 if (v instanceof AtomicValue av2)
                 {
                     out.add(av2._value() != null ? av2._value() : v);
@@ -116,11 +116,10 @@ public final class EvaluateNode extends PureNode
             }
             else
             {
-                // Multi-valued List: keep as collection (ObjectSequence)
-                Object[] arr = new Object[vals.size()];
-                for (int i = 0; i < vals.size(); i++)
+                Object[] arr = new Object[sz];
+                for (int i = 0; i < sz; i++)
                 {
-                    Object v = vals.get(i);
+                    Object v = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, i);
                     if (v instanceof AtomicValue av2)
                     {
                         arr[i] = av2._value() != null ? av2._value() : v;

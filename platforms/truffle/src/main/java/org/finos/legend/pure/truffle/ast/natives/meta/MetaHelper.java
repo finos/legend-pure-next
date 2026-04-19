@@ -78,13 +78,45 @@ public final class MetaHelper
         }
         if (value instanceof PureSequence seq)
         {
-            if (seq.size() > 0)
-            {
-                return getRawValueType(seq.getBoxed(0), resolver);
-            }
-            return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+            return getCollectionType(seq.size(), i -> seq.getBoxed(i), resolver);
+        }
+        if (value instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+        {
+            return getCollectionType(ml.size(), ml::get, resolver);
         }
         return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
+    }
+
+    /**
+     * Compute the most common (least upper bound) type of all elements
+     * in a collection. Uses {@code _Type.findCommonType} for LUB computation.
+     */
+    private static Type getCollectionType(int size, java.util.function.IntFunction<Object> getter, MetadataAccess resolver)
+    {
+        if (size == 0)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+        }
+        if (size == 1)
+        {
+            return getRawValueType(getter.apply(0), resolver);
+        }
+        org.eclipse.collections.api.list.MutableList<Type> types =
+                org.eclipse.collections.api.factory.Lists.mutable.ofInitialCapacity(size);
+        for (int i = 0; i < size; i++)
+        {
+            Type t = getRawValueType(getter.apply(i), resolver);
+            if (t != null && !types.contains(t))
+            {
+                types.add(t);
+            }
+        }
+        if (types.size() <= 1)
+        {
+            return types.isEmpty() ? (Type) resolver.getElement("meta::pure::metamodel::type::Any") : types.getFirst();
+        }
+        Type common = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type.findCommonType(types, false, resolver);
+        return common != null ? common : (Type) resolver.getElement("meta::pure::metamodel::type::Any");
     }
 
     /**
