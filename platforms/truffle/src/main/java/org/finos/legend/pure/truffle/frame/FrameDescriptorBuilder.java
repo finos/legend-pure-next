@@ -84,6 +84,9 @@ public final class FrameDescriptorBuilder
         }
 
         collectLetTargets(fd._expressionSequence(), builder, slots);
+        // Safety net: scan for variable reads to catch let targets missed
+        // by collectLetTargets (e.g. when FlatBuffer _func() resolution fails)
+        collectVariableReads(fd._expressionSequence(), builder, slots);
 
         return new FrameLayout(builder.build(), slots, paramSlots);
     }

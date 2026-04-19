@@ -125,6 +125,28 @@ public final class CopyWithKeysNode extends PureNode
             }
 
             // Set reverse association pointers (bidirectional binding)
+            // For deep property paths, add the top-level property to enable reverse binding
+            java.util.Set<String> topLevelDeepProps = new java.util.LinkedHashSet<>();
+            for (java.util.Map.Entry<String, Object> kv : keyValues)
+            {
+                if (kv.getKey().contains("."))
+                {
+                    topLevelDeepProps.add(kv.getKey().split("\\.")[0]);
+                }
+            }
+            for (String topProp : topLevelDeepProps)
+            {
+                // Only add if not already in keyValues as a simple property
+                boolean alreadyPresent = keyValues.stream().anyMatch(kv -> topProp.equals(kv.getKey()));
+                if (!alreadyPresent)
+                {
+                    Object topValue = eval.accessProperty(copy, topProp);
+                    if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureNull))
+                    {
+                        keyValues.add(java.util.Map.entry(topProp, topValue));
+                    }
+                }
+            }
             NewWithKeysNode.setReverseAssociationPointers(copy, classPath, keyValues, eval);
 
             return copy;

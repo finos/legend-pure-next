@@ -138,15 +138,9 @@ public final class StandaloneEvaluator
      */
     public Object executeLambda(RawClosure closure, Object[] rawArgs)
     {
-        if (closure.callTarget() != null)
-        {
-            // DirectCallNode path — args bundled as [closure, arg0, arg1, ...]
-            Object[] callArgs = new Object[rawArgs.length + 1];
-            callArgs[0] = closure;
-            System.arraycopy(rawArgs, 0, callArgs, 1, rawArgs.length);
-            return closure.callTarget().call(callArgs);
-        }
-        // Fallback: compile and execute inline
+        // Always use inline path — the cached callTarget's RawLambdaRootNode
+        // may have stale FrameDescriptor/slot bindings when different lambda
+        // wrapper objects share the same callTarget cache entry.
         return executeLambdaInline(closure, rawArgs);
     }
 
@@ -194,8 +188,6 @@ public final class StandaloneEvaluator
         VirtualFrame prevFrame = this.currentFrame;
         this.currentLayout = layout;
         this.currentFrame = frame;
-        // Push layout onto the AST builder so VariableExpression lowers to
-        // FrameVariableReadNode and letFunction lowers to FrameLetFunctionNode.
         FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
         try
         {
@@ -532,7 +524,17 @@ public final class StandaloneEvaluator
                                 prop._defaultValue()._expressionSequence().getFirst();
                         if (vs instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
                         {
-                            return av._value();
+                            Object enumVal = av._value();
+                            // Coerce PDB Enum value to generated Java enum constant for identity
+                            if (enumVal instanceof meta.pure.metamodel.type.Enum enumObj)
+                            {
+                                Object javaEnum = coerceToJavaEnum(en, propertyName);
+                                if (javaEnum != null)
+                                {
+                                    return javaEnum;
+                                }
+                            }
+                            return enumVal;
                         }
                     }
                 }
@@ -559,6 +561,36 @@ public final class StandaloneEvaluator
         {
             throw new RuntimeException("Error accessing property '" + propertyName + "' on " + target.getClass().getName(), e);
         }
+    }
+
+    /**
+     * Coerce a PDB enum value to the generated Java enum constant for identity preservation.
+     */
+    public static Object coerceToJavaEnum(meta.pure.metamodel.type.Enumeration en, String valueName)
+    {
+        if (en instanceof meta.pure.metamodel.PackageableElement pe)
+        {
+            String enumPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+            String enumClassName = enumPath.replace("::", ".") + "Enum";
+            try
+            {
+                Class<?> enumClass = Class.forName(enumClassName);
+                if (enumClass.isEnum())
+                {
+                    for (Object constant : enumClass.getEnumConstants())
+                    {
+                        if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
+                        {
+                            return constant;
+                        }
+                    }
+                }
+            }
+            catch (ClassNotFoundException ignored)
+            {
+            }
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------

@@ -50,6 +50,44 @@ public final class MapOptionalNode extends PureNode
             return PureNull.INSTANCE;
         }
         Object fn = lambdaArg.executeGeneric(frame);
+        // If the value is actually a collection (runtime type mismatch
+        // with the compiled [0..1] signature), iterate like MapNode
+        int sz = CollectionHelper.size(val);
+        if (sz > 1)
+        {
+            Object[] buf = new Object[sz];
+            int count = 0;
+            for (int i = 0; i < sz; i++)
+            {
+                Object item = CollectionHelper.at(val, i);
+                Object result = callNode.call(fn, item);
+                int rSz = CollectionHelper.size(result);
+                if (rSz == 0)
+                {
+                    continue;
+                }
+                if (count + rSz > buf.length)
+                {
+                    buf = java.util.Arrays.copyOf(buf, Math.max(buf.length * 2, count + rSz));
+                }
+                if (rSz == 1)
+                {
+                    buf[count++] = CollectionHelper.at(result, 0);
+                }
+                else
+                {
+                    for (int j = 0; j < rSz; j++)
+                    {
+                        buf[count++] = CollectionHelper.at(result, j);
+                    }
+                }
+            }
+            if (count == 0)
+            {
+                return PureNull.INSTANCE;
+            }
+            return new org.finos.legend.pure.truffle.types.ObjectSequence(java.util.Arrays.copyOf(buf, count));
+        }
         return callNode.call(fn, val);
     }
 }

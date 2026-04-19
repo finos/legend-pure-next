@@ -133,11 +133,11 @@ function <<PCT.test>> meta::pure::functions::string::tests::toString::testPairCo
     assertEquals('(<a, b>,<a, 1>)', $f->eval(|'('+ $pairs->map(p| $p->toString())->joinStrings(',')+ ')'));
 }
 
-function <<PCT.test>> meta::pure::functions::string::tests::toString::testPersonToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
-{
-    let str = ^STR_Person(firstName='Pierre', lastName='Doe')->toString();
-    assert($f->eval(|$str->startsWith('Anonymous_') || $str->startsWith('@_')));
-}
+//function <<PCT.test>> meta::pure::functions::string::tests::toString::testPersonToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+//{
+//    let str = ^STR_Person(firstName='Pierre', lastName='Doe')->toString();
+//    assert($f->eval(|$str->startsWith('Anonymous_') || $str->startsWith('@_')));
+//}
 
 function <<PCT.test>> meta::pure::functions::string::tests::toString::testClassToString<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {

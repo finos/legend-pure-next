@@ -48,8 +48,56 @@ public final class BinaryNumberNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double a = FloatHelper.asDouble(left.executeGeneric(frame), signature);
-        double b = FloatHelper.asDouble(right.executeGeneric(frame), signature);
+        Object rawA = left.executeGeneric(frame);
+        Object rawB = right.executeGeneric(frame);
+        Object unwA = rawA instanceof meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawA;
+        Object unwB = rawB instanceof meta.pure.metamodel.valuespecification.AtomicValue av2 ? av2._value() : rawB;
+        // If either operand is BigDecimal, use BigDecimal arithmetic
+        if (unwA instanceof java.math.BigDecimal || unwB instanceof java.math.BigDecimal)
+        {
+            java.math.BigDecimal bdA = toBigDecimal(unwA);
+            java.math.BigDecimal bdB = toBigDecimal(unwB);
+            // Apply the operation via double, then construct BigDecimal from result
+            // Use BigDecimal arithmetic directly for multiply
+            if (signature.contains("times"))
+            {
+                return bdA.multiply(bdB);
+            }
+            if (signature.contains("plus"))
+            {
+                return bdA.add(bdB);
+            }
+            if (signature.contains("minus"))
+            {
+                return bdA.subtract(bdB);
+            }
+        }
+        double a = FloatHelper.asDouble(rawA, signature);
+        double b = FloatHelper.asDouble(rawB, signature);
         return op.applyAsDouble(a, b);
+    }
+
+    private static boolean isDecimalAtomicValue(Object v)
+    {
+        if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av && av._genericType() != null)
+        {
+            meta.pure.metamodel.type.Type type =
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(av._genericType());
+            if (type instanceof meta.pure.metamodel.PackageableElement pe)
+            {
+                String name = pe._name();
+                return "Decimal".equals(name);
+            }
+        }
+        return false;
+    }
+
+    private static java.math.BigDecimal toBigDecimal(Object v)
+    {
+        if (v instanceof java.math.BigDecimal bd) return bd;
+        if (v instanceof Long l) return java.math.BigDecimal.valueOf(l);
+        if (v instanceof Double d) return new java.math.BigDecimal(d.toString());
+        if (v instanceof Number n) return new java.math.BigDecimal(n.toString());
+        return new java.math.BigDecimal(v.toString());
     }
 }

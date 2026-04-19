@@ -85,7 +85,9 @@ public final class EqualNode extends PureNode
             }
             for (int i = 0; i < la.size(); i++)
             {
-                if (!callPureEquals(la.get(i), lb.get(i)))
+                Object ea = normalizeForEquals(la.get(i));
+                Object eb = normalizeForEquals(lb.get(i));
+                if (!callPureEquals(ea, eb))
                 {
                     return false;
                 }
@@ -110,11 +112,21 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
-        // Enum equality — compare by name
-        if (a instanceof meta.pure.metamodel.type.Enum ea
-                && b instanceof meta.pure.metamodel.type.Enum eb)
+        // Enum equality — compare by name (including cross-type with String)
+        if (a instanceof meta.pure.metamodel.type.Enum ea)
         {
-            return Objects.equals(ea._name(), eb._name());
+            if (b instanceof meta.pure.metamodel.type.Enum eb)
+            {
+                return Objects.equals(ea._name(), eb._name());
+            }
+            if (b instanceof String s)
+            {
+                return Objects.equals(ea._name(), s);
+            }
+        }
+        if (b instanceof meta.pure.metamodel.type.Enum eb && a instanceof String s)
+        {
+            return Objects.equals(s, eb._name());
         }
         // Generated Impl equality — compare by classifierGenericType + all property values
         if (a instanceof meta.pure.metamodel.type.Any anyA

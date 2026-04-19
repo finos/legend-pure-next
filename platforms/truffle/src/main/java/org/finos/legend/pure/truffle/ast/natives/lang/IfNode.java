@@ -54,10 +54,13 @@ public final class IfNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object condVal = condition.executeGeneric(frame);
-        Object thenFn = thenBranch.executeGeneric(frame);
-        Object elseFn = elseBranch.executeGeneric(frame);
         boolean cond = asBoolean(condVal);
-        return callExecuteFunction(cond ? thenFn : elseFn);
+        // Only evaluate the selected branch — lazy evaluation
+        // prevents the non-selected branch from reading/modifying frame state
+        Object branchFn = cond
+                ? thenBranch.executeGeneric(frame)
+                : elseBranch.executeGeneric(frame);
+        return callExecuteFunction(branchFn);
     }
 
     @TruffleBoundary

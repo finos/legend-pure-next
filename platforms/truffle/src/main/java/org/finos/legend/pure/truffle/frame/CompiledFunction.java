@@ -29,6 +29,28 @@ package org.finos.legend.pure.truffle.frame;
  * FlatBuffer wrapper hazards where {@code FunctionExpression#_func()}
  * resolves lazily against runtime-bound target types.</p>
  */
-public record CompiledFunction(FrameLayout layout)
+public final class CompiledFunction
 {
+    private final FrameLayout layout;
+    private volatile org.finos.legend.pure.truffle.ast.PureNode[] body;
+
+    public CompiledFunction(FrameLayout layout)
+    {
+        this.layout = layout;
+    }
+
+    public FrameLayout layout()
+    {
+        return layout;
+    }
+
+    public org.finos.legend.pure.truffle.ast.PureNode[] body()
+    {
+        return body;
+    }
+
+    public void setBody(org.finos.legend.pure.truffle.ast.PureNode[] body)
+    {
+        this.body = body;
+    }
 }

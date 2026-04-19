@@ -66,6 +66,12 @@ public final class MathNodeFactories
         registry.register("times_Decimal_1__Decimal_1__Decimal_1_",
                 (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
                         "times_Decimal_1__Decimal_1__Decimal_1_", java.math.BigDecimal::multiply));
+        registry.register("times_Decimal_1__Integer_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
+                        "times_Decimal_1__Integer_1__Decimal_1_", java.math.BigDecimal::multiply));
+        registry.register("times_Integer_1__Decimal_1__Decimal_1_",
+                (args, gt, mul, fe) -> new DecimalBinaryNode(args[0], args[1],
+                        "times_Integer_1__Decimal_1__Decimal_1_", java.math.BigDecimal::multiply));
         registry.register("divide_Decimal_1__Decimal_1__Integer_1__Decimal_1_",
                 (args, gt, mul, fe) -> new DivideDecimalNode(args[0], args[1], args[2]));
         registry.register("minus_Decimal_1__Decimal_1_",

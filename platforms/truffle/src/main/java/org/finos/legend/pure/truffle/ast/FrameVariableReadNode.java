@@ -51,8 +51,6 @@ public final class FrameVariableReadNode extends PureNode
     {
         if (slot < 0)
         {
-            // Dynamic variable (e.g. type variable from QP dispatch) —
-            // read from HashMap scope via the bridge evaluator.
             return readDynamic();
         }
         Object value = frame.getObject(slot);

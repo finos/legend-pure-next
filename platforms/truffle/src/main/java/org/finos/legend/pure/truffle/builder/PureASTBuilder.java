@@ -151,11 +151,6 @@ public final class PureASTBuilder
         }
         catch (RuntimeException e)
         {
-            // Some FlatBuffer-backed DotApplications resolve their `_func()`
-            // lazily against the target's runtime class, and touching that
-            // resolution at lower time (before the target is evaluated) can
-            // throw IndexOutOfBounds on unreachable references. Defer to
-            // the property access node, which evaluates the target first.
             return new RawPropertyAccessNode(fe, lowerArgs(fe));
         }
         return switch (func)

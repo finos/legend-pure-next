@@ -81,18 +81,56 @@ public final class AdjustDateNode extends PureNode
             default -> throw new RuntimeException("Unknown duration unit: " + unitName);
         };
 
-        // Format back to Pure date format — no + prefix for large years
+        // Format back to Pure date format — preserve input granularity
         if (dateStr.contains("T"))
         {
             String datePart = String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());
             String timePart = String.format("%02d:%02d:%02d", adjusted.getHour(), adjusted.getMinute(), adjusted.getSecond());
             if (dateStr.contains("."))
             {
-                int nanos = adjusted.getNano();
-                int millis = nanos / 1_000_000;
-                return datePart + "T" + timePart + String.format(".%03d", millis);
+                // Detect input fractional precision and preserve it
+                int dotIdx = dateStr.indexOf('.');
+                String inputFrac = dateStr.substring(dotIdx + 1);
+                // Strip timezone suffix if present
+                int tzIdx = inputFrac.indexOf('+');
+                if (tzIdx < 0) tzIdx = inputFrac.indexOf('-');
+                if (tzIdx < 0) tzIdx = inputFrac.indexOf('Z');
+                if (tzIdx >= 0) inputFrac = inputFrac.substring(0, tzIdx);
+                int fracDigits = inputFrac.length();
+
+                long nanos = adjusted.getNano();
+                String fracStr;
+                if (fracDigits <= 3)
+                {
+                    fracStr = String.format(".%03d", nanos / 1_000_000);
+                }
+                else if (fracDigits <= 6)
+                {
+                    fracStr = String.format(".%06d", nanos / 1_000);
+                }
+                else
+                {
+                    fracStr = String.format(".%0" + fracDigits + "d",
+                            nanos / (long) Math.pow(10, 9 - fracDigits));
+                }
+                return datePart + "T" + timePart + fracStr;
             }
             return datePart + "T" + timePart;
+        }
+        // Preserve year-only granularity; otherwise output full date
+        String cleanDate = dateStr.startsWith("+") ? dateStr.substring(1) : dateStr;
+        if (cleanDate.startsWith("-"))
+        {
+            cleanDate = cleanDate.substring(1);
+        }
+        long dashCount = cleanDate.chars().filter(c -> c == '-').count();
+        if (dashCount == 0)
+        {
+            // Year-only: preserve if adjusting by years
+            if ("YEARS".equals(unitName))
+            {
+                return String.valueOf(adjusted.getYear());
+            }
         }
         return String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());
     }

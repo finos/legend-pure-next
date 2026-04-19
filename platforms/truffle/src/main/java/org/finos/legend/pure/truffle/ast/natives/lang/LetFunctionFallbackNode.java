@@ -53,7 +53,12 @@ public final class LetFunctionFallbackNode extends PureNode
         Object nameObj = nameNode.executeGeneric(frame);
         Object value = valueNode.executeGeneric(frame);
         String name = nameObj instanceof String s ? s : String.valueOf(nameObj);
-        int slot = resolveSlot(name);
+        // Look up the slot in the frame's own descriptor first
+        int slot = resolveSlotInFrame(name, frame.getFrameDescriptor());
+        if (slot < 0)
+        {
+            slot = resolveSlotInLayout(name);
+        }
         if (slot >= 0)
         {
             frame.setObject(slot, value);
@@ -61,8 +66,20 @@ public final class LetFunctionFallbackNode extends PureNode
         return value;
     }
 
+    private static int resolveSlotInFrame(String name, com.oracle.truffle.api.frame.FrameDescriptor desc)
+    {
+        for (int i = 0; i < desc.getNumberOfSlots(); i++)
+        {
+            if (name.equals(desc.getSlotName(i)))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @TruffleBoundary
-    private static int resolveSlot(String name)
+    private static int resolveSlotInLayout(String name)
     {
         StandaloneEvaluator eval = StandaloneEvaluatorHolder.current();
         if (eval != null && eval.currentLayout() != null)

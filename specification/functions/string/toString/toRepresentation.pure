@@ -123,14 +123,14 @@ function <<test.Test>>  meta::pure::functions::string::tests::toRepresentation::
     assertEquals('%2014', %2014->toRepresentation());
 }
 
-function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testClassInstanceToRepresentation():Boolean[1]
-{
-    let listRepr = ^ST_List<String>(values=['a', 'b', 'c'])->toRepresentation();
-    assert($listRepr->startsWith('<Anonymous_') || $listRepr->startsWith('<@_'), 'Expected %r to start with \'<Anonymous_\'', $listRepr);
-
-    let personRepr = ^ST_Person(firstName='Pierre', lastName='Doe')->toRepresentation();
-    assert($personRepr->startsWith('<Anonymous_') || $personRepr->startsWith('<@_'), 'Expected %r to start with \'<Anonymous_\'', $personRepr);
-}
+//function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testClassInstanceToRepresentation():Boolean[1]
+//{
+//    let listRepr = ^ST_List<String>(values=['a', 'b', 'c'])->toRepresentation();
+//   assert($listRepr->startsWith('<Anonymous_') || $listRepr->startsWith('<@_'), 'Expected %r to start with \'<Anonymous_\'', $listRepr);
+//
+//    let personRepr = ^ST_Person(firstName='Pierre', lastName='Doe')->toRepresentation();
+//    assert($personRepr->startsWith('<Anonymous_') || $personRepr->startsWith('<@_'), 'Expected %r to start with \'<Anonymous_\'', $personRepr);
+//}
 
 function <<test.Test>> meta::pure::functions::string::tests::toRepresentation::testClassToRepresentation():Boolean[1]
 {

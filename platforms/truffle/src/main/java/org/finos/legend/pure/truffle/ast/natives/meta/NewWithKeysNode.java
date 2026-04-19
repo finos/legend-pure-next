@@ -112,6 +112,13 @@ public final class NewWithKeysNode extends PureNode
                 if (ke instanceof meta.pure.functions.lang.KeyExpressionImpl keImpl)
                 {
                     String propName = keImpl._name();
+                    if ("classifierGenericType".equals(propName))
+                    {
+                        throw new RuntimeException("Cannot set 'classifierGenericType' directly. "
+                                + "This field is system-managed and derived from the instantiation. "
+                                + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances "
+                                + "with a specific classifierGenericType.");
+                    }
                     Object propValue = keImpl._expression();
                     eval.accessProperty(instance, propName, propValue);
                     keyValues.add(java.util.Map.entry(propName, propValue));

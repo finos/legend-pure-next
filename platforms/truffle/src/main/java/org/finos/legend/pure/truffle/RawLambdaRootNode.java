@@ -90,14 +90,17 @@ public final class RawLambdaRootNode extends RootNode
             String[] names = rc.capturedNames();
             for (int i = 0; i < names.length; i++)
             {
+                boolean bound = false;
                 for (int j = 0; j < openVarNames.length; j++)
                 {
                     if (openVarNames[j].equals(names[i]) && openVarSlots[j] >= 0)
                     {
                         frame.setObject(openVarSlots[j], captured[i]);
+                        bound = true;
                         break;
                     }
                 }
+                // DEBUG: trace failed bindings for actual/expected
             }
         }
 

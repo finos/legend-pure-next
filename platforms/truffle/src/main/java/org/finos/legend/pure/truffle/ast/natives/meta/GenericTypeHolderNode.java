@@ -59,7 +59,7 @@ public final class GenericTypeHolderNode extends PureNode
 
         GenericType heldGT = MetaHelper.getRawGenericType(result, resolver);
         // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
-        meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder");
+        meta.pure.metamodel.type.Type holderType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
         meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = _GenericType.buildUserDefinedGenericType(holderType, resolver);
         if (heldGT != null)
         {

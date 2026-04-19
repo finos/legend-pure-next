@@ -1068,13 +1068,26 @@ public class MetaNatives
         {
             return;
         }
-        if (type instanceof meta.pure.metamodel.type.Class cls && cls._properties() != null)
+        if (type instanceof meta.pure.metamodel.type.Class cls)
         {
-            for (var prop : cls._properties())
+            if (cls._properties() != null)
             {
-                if (prop._name() != null && seen.add(prop._name()))
+                for (var prop : cls._properties())
                 {
-                    names.add(prop._name());
+                    if (prop._name() != null && seen.add(prop._name()))
+                    {
+                        names.add(prop._name());
+                    }
+                }
+            }
+            if (cls._propertiesFromAssociations() != null)
+            {
+                for (var prop : cls._propertiesFromAssociations())
+                {
+                    if (prop._name() != null && seen.add(prop._name()))
+                    {
+                        names.add(prop._name());
+                    }
                 }
             }
         }

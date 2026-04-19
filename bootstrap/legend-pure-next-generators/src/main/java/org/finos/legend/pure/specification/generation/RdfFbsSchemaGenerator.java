@@ -144,9 +144,10 @@ public class RdfFbsSchemaGenerator
         // AtomicValue.value is Any[1] — needs a union for primitives vs LambdaFunction
         sb.append("table IntegerValueDef { val: long; }\n");
         sb.append("table FloatValueDef { val: double; }\n");
+        sb.append("table DecimalValueDef { val: string; }\n");
         sb.append("table BooleanValueDef { val: bool; }\n");
         sb.append("table StringValueDef { val: string; }\n");
-        sb.append("union AtomicValueContentUnion { IntegerValueDef, FloatValueDef, BooleanValueDef, StringValueDef, LambdaFunctionDef, PointerRef }\n\n");
+        sb.append("union AtomicValueContentUnion { IntegerValueDef, FloatValueDef, BooleanValueDef, StringValueDef, LambdaFunctionDef, PointerRef, DecimalValueDef }\n\n");
 
         // Generate tables
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
