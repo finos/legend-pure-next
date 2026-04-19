@@ -33,6 +33,7 @@ public final class CompiledFunction
 {
     private final FrameLayout layout;
     private volatile org.finos.legend.pure.truffle.ast.PureNode[] body;
+    private volatile com.oracle.truffle.api.RootCallTarget callTarget;
 
     public CompiledFunction(FrameLayout layout)
     {
@@ -52,5 +53,15 @@ public final class CompiledFunction
     public void setBody(org.finos.legend.pure.truffle.ast.PureNode[] body)
     {
         this.body = body;
+    }
+
+    public com.oracle.truffle.api.RootCallTarget callTarget()
+    {
+        return callTarget;
+    }
+
+    public void setCallTarget(com.oracle.truffle.api.RootCallTarget callTarget)
+    {
+        this.callTarget = callTarget;
     }
 }

@@ -112,17 +112,43 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
-        // Enum equality — compare by name (including cross-type with String)
+        // Enum equality — same name AND same enumeration type
         if (a instanceof meta.pure.metamodel.type.Enum ea)
         {
             if (b instanceof meta.pure.metamodel.type.Enum eb)
             {
-                return Objects.equals(ea._name(), eb._name());
+                if (!Objects.equals(ea._name(), eb._name()))
+                {
+                    return false;
+                }
+                // Same name — check same enum type (Java class or CGT)
+                if (a.getClass() == b.getClass())
+                {
+                    return true;
+                }
+                // FlatBuffer-wrapped enums: compare classifierGenericType by path
+                if (ea._classifierGenericType() != null && eb._classifierGenericType() != null)
+                {
+                    var typeA = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(ea._classifierGenericType());
+                    var typeB = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.type(eb._classifierGenericType());
+                    if (typeA == typeB)
+                    {
+                        return true;
+                    }
+                    if (typeA instanceof meta.pure.metamodel.PackageableElement peA
+                            && typeB instanceof meta.pure.metamodel.PackageableElement peB)
+                    {
+                        return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA)
+                                .equals(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB));
+                    }
+                }
+                return true; // same name, can't distinguish type → assume equal
             }
             if (b instanceof String s)
             {
                 return Objects.equals(ea._name(), s);
             }
+            return false;
         }
         if (b instanceof meta.pure.metamodel.type.Enum eb && a instanceof String s)
         {

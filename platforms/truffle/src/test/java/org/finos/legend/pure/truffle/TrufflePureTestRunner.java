@@ -146,7 +146,7 @@ class TrufflePureTestRunner
             }
             catch (PureAssertionError e)
             {
-                throw new org.opentest4j.AssertionFailedError(e.getMessage(), e);
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + e.getMessage(), e);
             }
             catch (RuntimeException e)
             {
@@ -156,7 +156,7 @@ class TrufflePureTestRunner
                 {
                     cause = cause.getCause();
                 }
-                throw new org.opentest4j.AssertionFailedError(cause.getMessage(), e);
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + cause.getMessage(), e);
             }
             finally
             {

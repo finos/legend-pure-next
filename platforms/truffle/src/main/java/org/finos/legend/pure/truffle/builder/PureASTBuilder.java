@@ -151,6 +151,17 @@ public final class PureASTBuilder
         }
         catch (RuntimeException e)
         {
+            // _func() FlatBuffer lazy resolution failed. Try name+arity fallback.
+            String functionName = fe._functionName();
+            if (functionName != null)
+            {
+                int argCount = fe._parametersValues() != null ? fe._parametersValues().size() : 0;
+                NativeNodeRegistry.Factory factory = specialized.lookupByNameAndArity(functionName, argCount);
+                if (factory != null)
+                {
+                    return factory.create(lowerArgs(fe), fe._genericType(), fe._multiplicity(), fe);
+                }
+            }
             return new RawPropertyAccessNode(fe, lowerArgs(fe));
         }
         return switch (func)

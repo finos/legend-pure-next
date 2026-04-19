@@ -111,6 +111,17 @@ public final class CopyWithKeysNode extends PureNode
                 {
                     String propName = keImpl._name();
                     Object propValue = keImpl._expression();
+                    boolean isAdd = keImpl._add() != null && keImpl._add();
+                    if (isAdd)
+                    {
+                        // += operator: append new value(s) to existing property value.
+                        // Must preserve original types (no AtomicValue unwrapping).
+                        Object existing = eval.accessProperty(copy, propName);
+                        java.util.List<Object> merged = new java.util.ArrayList<>();
+                        addToMergedList(merged, existing);
+                        addToMergedList(merged, propValue);
+                        propValue = org.eclipse.collections.api.factory.Lists.mutable.withAll(merged);
+                    }
                     if (propName.contains("."))
                     {
                         // Deep property path: navigate and copy sub-objects
@@ -192,5 +203,37 @@ public final class CopyWithKeysNode extends PureNode
         }
         // Set the leaf property
         eval.accessProperty(current, parts[parts.length - 1], value);
+    }
+
+    /**
+     * Add elements from {@code value} to {@code target} list, preserving
+     * original types (no AtomicValue unwrapping). Handles PureNull (skip),
+     * PureSequence (flatten), MutableList (flatten), and scalar (add as-is).
+     */
+    private static void addToMergedList(java.util.List<Object> target, Object value)
+    {
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        {
+            return;
+        }
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
+        {
+            for (int i = 0; i < ps.size(); i++)
+            {
+                target.add(ps.getBoxed(i));
+            }
+        }
+        else if (value instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+        {
+            target.addAll(ml);
+        }
+        else if (value instanceof java.util.List<?> list)
+        {
+            target.addAll(list);
+        }
+        else
+        {
+            target.add(value);
+        }
     }
 }

@@ -61,9 +61,19 @@ public final class CompareNode extends PureNode
     @TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
+        // If one argument is wrapped in AtomicValue and the other is not, they
+        // have different Pure types (e.g., Date vs String) even if the underlying
+        // Java type is the same. Compare by wrapper status for consistent ordering.
+        boolean aIsWrapped = rawA instanceof meta.pure.metamodel.valuespecification.AtomicValue;
+        boolean bIsWrapped = rawB instanceof meta.pure.metamodel.valuespecification.AtomicValue;
+        if (aIsWrapped != bIsWrapped)
+        {
+            return aIsWrapped ? -1L : 1L;
+        }
+
         // Unwrap AtomicValue (dates kept as AV)
-        Object a = rawA instanceof meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawA;
-        Object b = rawB instanceof meta.pure.metamodel.valuespecification.AtomicValue bv ? bv._value() : rawB;
+        Object a = aIsWrapped ? ((meta.pure.metamodel.valuespecification.AtomicValue) rawA)._value() : rawA;
+        Object b = bIsWrapped ? ((meta.pure.metamodel.valuespecification.AtomicValue) rawB)._value() : rawB;
 
         // Number comparison
         if (a instanceof Number nA && b instanceof Number nB)
@@ -90,15 +100,40 @@ public final class CompareNode extends PureNode
             return (long) Math.signum(sA.compareTo(sB));
         }
 
-        // Fallback: string representation
+        // Different types: compare by type name first for consistent ordering
+        if (a != null && b != null && !a.getClass().equals(b.getClass()))
+        {
+            int typeCmp = a.getClass().getName().compareTo(b.getClass().getName());
+            if (typeCmp != 0)
+            {
+                return (long) Math.signum(typeCmp);
+            }
+        }
+        // Same type fallback: string representation
         return (long) Math.signum(String.valueOf(a).compareTo(String.valueOf(b)));
     }
 
     private static boolean looksLikeDate(String s)
     {
-        return s.length() >= 4 && s.length() <= 30
-                && Character.isDigit(s.charAt(0))
-                && (s.length() == 4 || s.charAt(4) == '-');
+        if (s == null || s.length() < 4 || s.length() > 30)
+        {
+            return false;
+        }
+        // Must start with digits (year), then optional -MM-DD or T
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+            if (c == '-' || c == 'T')
+            {
+                return true;
+            }
+            if (!Character.isDigit(c))
+            {
+                return false;
+            }
+        }
+        // All digits → year-only date (e.g. "2014", "10999")
+        return true;
     }
 
     private static int comparePureDates(String d1, String d2)

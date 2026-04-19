@@ -43,6 +43,14 @@ public final class IndexOfCollectionNode extends PureNode
     {
         Object col = collectionArg.executeGeneric(frame);
         Object target = targetArg.executeGeneric(frame);
+
+        // The PDB sometimes resolves string indexOf to the collection signature.
+        // Delegate to String.indexOf when both arguments are strings.
+        if (col instanceof String s && target instanceof String search)
+        {
+            return (long) s.indexOf(search);
+        }
+
         int sz = CollectionHelper.size(col);
         for (int i = 0; i < sz; i++)
         {

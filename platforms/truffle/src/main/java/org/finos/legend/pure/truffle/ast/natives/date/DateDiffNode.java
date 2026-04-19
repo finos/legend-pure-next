@@ -66,20 +66,73 @@ public final class DateDiffNode extends PureNode
         LocalDateTime ldt1 = DateHelper.parseDate(d1Str);
         LocalDateTime ldt2 = DateHelper.parseDate(d2Str);
 
-        return switch (unitName)
+        // Pure dateDiff counts calendar-part transitions, not elapsed periods.
+        // Result sign: positive if d2 > d1, negative if d2 < d1, zero if equal.
+        long absResult;
+        switch (unitName)
         {
-            case "YEARS" -> ChronoUnit.YEARS.between(ldt1, ldt2);
-            case "MONTHS" -> ChronoUnit.MONTHS.between(ldt1, ldt2);
-            case "WEEKS" -> ChronoUnit.WEEKS.between(ldt1, ldt2);
-            case "DAYS" -> ChronoUnit.DAYS.between(ldt1, ldt2);
-            case "HOURS" -> ChronoUnit.HOURS.between(ldt1, ldt2);
-            case "MINUTES" -> ChronoUnit.MINUTES.between(ldt1, ldt2);
-            case "SECONDS" -> ChronoUnit.SECONDS.between(ldt1, ldt2);
-            case "MILLISECONDS" -> ChronoUnit.MILLIS.between(ldt1, ldt2);
-            case "MICROSECONDS" -> ChronoUnit.MICROS.between(ldt1, ldt2);
-            case "NANOSECONDS" -> ChronoUnit.NANOS.between(ldt1, ldt2);
-            default -> throw new RuntimeException("Unknown duration unit: " + unitName);
-        };
+            case "YEARS":
+                absResult = Math.abs((long) ldt1.getYear() - ldt2.getYear());
+                break;
+            case "MONTHS":
+            {
+                long m1 = ldt1.getYear() * 12L + ldt1.getMonthValue();
+                long m2 = ldt2.getYear() * 12L + ldt2.getMonthValue();
+                absResult = Math.abs(m1 - m2);
+                break;
+            }
+            case "WEEKS":
+            {
+                long absDiffDays = Math.abs(ChronoUnit.DAYS.between(ldt1.toLocalDate(), ldt2.toLocalDate()));
+                int startDay = ldt1.get(java.time.temporal.ChronoField.DAY_OF_WEEK);
+                int sundayIdx = startDay == 7 ? 1 : startDay + 1;
+                int noDaysTillSunday;
+                if (ldt1.isBefore(ldt2))
+                {
+                    noDaysTillSunday = 7 - (sundayIdx - 1);
+                }
+                else
+                {
+                    noDaysTillSunday = sundayIdx - 1;
+                }
+                if (noDaysTillSunday > absDiffDays)
+                {
+                    absResult = 0;
+                }
+                else
+                {
+                    long fullWeeks = (absDiffDays - noDaysTillSunday) / 7;
+                    long partialWeek = noDaysTillSunday > 0 ? 1 : 0;
+                    absResult = fullWeeks + partialWeek;
+                }
+                break;
+            }
+            case "DAYS":
+                absResult = Math.abs(ChronoUnit.DAYS.between(ldt1.toLocalDate(), ldt2.toLocalDate()));
+                break;
+            case "HOURS":
+                absResult = Math.abs(ChronoUnit.MILLIS.between(ldt1, ldt2)) / 3600_000L;
+                break;
+            case "MINUTES":
+                absResult = Math.abs(ChronoUnit.MILLIS.between(ldt1, ldt2)) / 60_000L;
+                break;
+            case "SECONDS":
+                absResult = Math.abs(ChronoUnit.MILLIS.between(ldt1, ldt2)) / 1000L;
+                break;
+            case "MILLISECONDS":
+                absResult = Math.abs(ChronoUnit.MILLIS.between(ldt1, ldt2));
+                break;
+            case "MICROSECONDS":
+                absResult = Math.abs(ChronoUnit.MICROS.between(ldt1, ldt2));
+                break;
+            case "NANOSECONDS":
+                absResult = Math.abs(ChronoUnit.NANOS.between(ldt1, ldt2));
+                break;
+            default:
+                throw new RuntimeException("Unknown duration unit: " + unitName);
+        }
+        int sign = ldt1.isEqual(ldt2) ? 0 : ldt1.isBefore(ldt2) ? 1 : -1;
+        return sign * absResult;
     }
 
     static String resolveUnitName(Object unit)

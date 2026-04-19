@@ -106,14 +106,50 @@ public final class StandaloneEvaluator
      */
     public Object executeFunction(FunctionDefinition fd, Object[] rawArgs)
     {
+        // QualifiedProperty dispatch needs special handling: the resolved FD
+        // may differ from the original, and type variables must be bound into
+        // the frame before body execution.
+        if (fd instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && rawArgs.length > 0)
+        {
+            return executeQualifiedProperty(qp, rawArgs);
+        }
+
         CompiledFunction cf = compile(fd);
+
+        // Fast path: use pre-compiled RootCallTarget (body nodes are properly
+        // adopted, frame is Truffle-managed). This is the Truffle-idiomatic way.
+        com.oracle.truffle.api.RootCallTarget ct = cf.callTarget();
+        if (ct != null)
+        {
+            return ct.call(rawArgs);
+        }
+
+        // Fallback: inline execution (if callTarget creation failed during compile)
+        FrameLayout layout = cf.layout();
+        VirtualFrame frame = Truffle.getRuntime().createVirtualFrame(new Object[0], layout.descriptor());
+        MutableList<VariableExpression> params = fd._parameters();
+        int[] paramSlots = layout.paramSlots();
+        if (params != null)
+        {
+            int count = Math.min(params.size(), rawArgs.length);
+            for (int i = 0; i < count; i++)
+            {
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
+            }
+        }
+        return executeBody(fd, frame, layout);
+    }
+
+    private Object executeQualifiedProperty(
+            meta.pure.metamodel.function.property.QualifiedProperty qp, Object[] rawArgs)
+    {
+        CompiledFunction cf = compile(qp);
         FrameLayout layout = cf.layout();
         VirtualFrame frame = Truffle.getRuntime().createVirtualFrame(new Object[0], layout.descriptor());
 
         // Bind params
-        MutableList<VariableExpression> params = fd._parameters();
+        MutableList<VariableExpression> params = qp._parameters();
         int[] paramSlots = layout.paramSlots();
-
         if (params != null)
         {
             int count = Math.min(params.size(), rawArgs.length);
@@ -123,14 +159,11 @@ public final class StandaloneEvaluator
             }
         }
 
-        // QualifiedProperty type-variable binding
-        if (fd instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && rawArgs.length > 0)
-        {
-            fd = resolveQpDispatch(qp, rawArgs);
-            bindQpTypeVariables(rawArgs[0], frame, layout);
-        }
-
-        return executeBody(fd, frame, layout);
+        FunctionDefinition resolved = resolveQpDispatch(qp, rawArgs);
+        bindQpTypeVariables(rawArgs[0], frame, layout);
+        // Eagerly compile the resolved FD so its body is cached for future calls
+        compile(resolved);
+        return executeBody(resolved, frame, layout);
     }
 
     /**
@@ -175,6 +208,32 @@ public final class StandaloneEvaluator
             }
         }
 
+        // Use pre-compiled body if available (same fix as executeBody)
+        PureNode[] body = cf.body();
+        if (body != null)
+        {
+            FrameLayout prevLayout = this.currentLayout;
+            VirtualFrame prevFrame = this.currentFrame;
+            this.currentLayout = layout;
+            this.currentFrame = frame;
+            FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
+            try
+            {
+                Object result = PureNull.INSTANCE;
+                for (PureNode node : body)
+                {
+                    result = node.executeGeneric(frame);
+                }
+                return result;
+            }
+            finally
+            {
+                astBuilder.popLayout(prevBuilderLayout);
+                this.currentLayout = prevLayout;
+                this.currentFrame = prevFrame;
+            }
+        }
+
         return executeBody(lambda, frame, layout);
     }
 
@@ -191,6 +250,25 @@ public final class StandaloneEvaluator
         FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
         try
         {
+            // Use pre-compiled body if available (avoids re-lowering on every call).
+            // Safety: only use cached body if its layout matches the active frame —
+            // QP dispatch can resolve to a different FD whose body was lowered
+            // under a different FrameDescriptor.
+            CompiledFunction cf = functionCache.get(fd);
+            PureNode[] body = (cf != null && cf.layout().descriptor() == layout.descriptor())
+                    ? cf.body() : null;
+            if (body != null)
+            {
+                Object result = PureNull.INSTANCE;
+                for (PureNode node : body)
+                {
+                    result = node.executeGeneric(frame);
+                }
+                return result;
+            }
+
+            // Fallback: re-lower (for FDs not in cache, e.g. QP dispatch
+            // resolved to a different FD that hasn't been compiled yet)
             Object result = PureNull.INSTANCE;
             for (meta.pure.metamodel.valuespecification.ValueSpecification expr : fd._expressionSequence())
             {
@@ -224,8 +302,45 @@ public final class StandaloneEvaluator
             layout = FrameDescriptorBuilder.analyzeMinimal(fd);
         }
         CompiledFunction cf = new CompiledFunction(layout);
+        // Cache first to prevent infinite recursion if lowering triggers compilation
         functionCache.put(fd, cf);
+
+        // Pre-lower body once and create RootCallTarget for proper Truffle adoption.
+        // If lowering fails (e.g. FlatBuffer wrapper hazards), body stays null and
+        // executeBody falls back to re-lowering.
+        try
+        {
+            PureNode[] body = astBuilder.lowerBody(fd._expressionSequence(), layout);
+            cf.setBody(body);
+
+            // Create RootCallTarget only for non-lambda FDs (lambdas use RawLambdaRootNode)
+            if (!(fd instanceof LambdaFunction))
+            {
+                String name = getFunctionName(fd);
+                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body);
+                cf.setCallTarget(root.getCallTarget());
+            }
+        }
+        catch (RuntimeException e)
+        {
+            // Lowering failed — body stays null, executeBody will re-lower as fallback
+        }
         return cf;
+    }
+
+    private static String getFunctionName(FunctionDefinition fd)
+    {
+        if (fd instanceof meta.pure.metamodel.PackageableElement pe)
+        {
+            try
+            {
+                return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+            }
+            catch (RuntimeException ignored)
+            {
+            }
+        }
+        return "fn@" + System.identityHashCode(fd);
     }
 
     /**
@@ -764,6 +879,11 @@ public final class StandaloneEvaluator
     public FrameLayout currentLayout()
     {
         return currentLayout;
+    }
+
+    public void setCurrentLayout(FrameLayout layout)
+    {
+        this.currentLayout = layout;
     }
 
     public PureASTBuilder astBuilder()
