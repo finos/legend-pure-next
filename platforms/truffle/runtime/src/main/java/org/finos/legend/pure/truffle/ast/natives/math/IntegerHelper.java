@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-
 /**
  * Unwrap helpers shared by specialized integer-arithmetic nodes. Separating
  * these into one place means Graal sees a single inlinable implementation
@@ -28,8 +26,8 @@ public final class IntegerHelper
     }
 
     /**
-     * Hot-path unwrap: a {@link AtomicValue} with a {@link Long} payload. Anything
-     * else falls through to inline Number checks.
+     * Coerce a raw value to {@code long}. Handles {@link Long} and other
+     * {@link Number} subtypes.
      */
     public static long asLong(Object v, String signature)
     {
@@ -37,15 +35,7 @@ public final class IntegerHelper
         {
             return l;
         }
-        if (v instanceof AtomicValue av && av._value() instanceof Long l)
-        {
-            return l;
-        }
         if (v instanceof Number n)
-        {
-            return n.longValue();
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Number n)
         {
             return n.longValue();
         }

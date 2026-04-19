@@ -20,7 +20,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.ast.natives.lang.MatchNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
@@ -54,84 +53,28 @@ public final class InstanceOfNode extends PureNode
     {
         TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
-        // Unwrap AtomicValue if present (e.g., dates kept as AV)
-        Object valResult = rawVal;
-        if (valResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            valResult = av._value();
-        }
-        if (valResult == null || valResult instanceof org.finos.legend.pure.truffle.types.PureNull)
-        {
-            return false;
-        }
-
         // Resolve the target type
         Type targetType = null;
         if (typeResult instanceof Type t)
         {
             targetType = t;
         }
-        else if (typeResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof Type t)
+
+        if (rawVal == null || rawVal instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
-            targetType = t;
+            return false;
         }
         if (targetType == null)
         {
-            return valResult != null;
+            return true;
         }
 
-        // Get the value's runtime type. If original was AtomicValue, use
-        // its genericType (carries the actual Pure type like Date/StrictDate).
-        Type valueType = getRawValueType(rawVal, valResult, resolver);
+        // Get the value's runtime type
+        Type valueType = MetaHelper.getRawValueType(rawVal, resolver);
         if (valueType == null)
         {
             return false;
         }
         return org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(valueType, targetType, resolver);
-    }
-
-    private static Type getRawValueType(Object original, Object unwrapped, TruffleMetadataAccess resolver)
-    {
-        // If original was an AtomicValue with genericType, use that
-        // (handles dates stored as Strings with Date genericType)
-        if (original instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                && av._genericType() != null)
-        {
-            Type t = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(av._genericType());
-            if (t != null)
-            {
-                return t;
-            }
-        }
-        Object value = unwrapped;
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
-        {
-            return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(any._classifierGenericType());
-        }
-        if (value instanceof Long)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
-        }
-        if (value instanceof Double)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float");
-        }
-        if (value instanceof Boolean)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
-        }
-        if (value instanceof String)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
-        }
-        if (value instanceof java.math.BigDecimal)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
-        }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence)
-        {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
-        }
-        return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
     }
 }

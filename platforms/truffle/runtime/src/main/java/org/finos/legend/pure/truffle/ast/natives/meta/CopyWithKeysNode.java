@@ -161,7 +161,14 @@ public final class CopyWithKeysNode extends PureNode
                     }
                 }
             }
-            NewWithKeysNode.setReverseAssociationPointers(copy, classPath, keyValues, eval);
+            // Also include shallow-copied association properties that aren't in keyValues
+            // Use Pure path (not truffle-namespaced) for association matching
+            String pureClassPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "");
+            java.util.Set<String> keyPropNames = new java.util.HashSet<>();
+            for (var kv : keyValues) keyPropNames.add(kv.getKey());
+            addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
+
+            NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval);
 
             return copy;
         }
@@ -202,11 +209,8 @@ public final class CopyWithKeysNode extends PureNode
             copyViaReflection(source, target);
             return;
         }
-        java.util.List<String> propNames = collectAllPropertyNames(sourceType);
-        for (String propName : propNames)
-        {
-            copyPropertyDirect(source, target, propName);
-        }
+        // Use interface method scanning — PDB metadata may not include association properties
+        copyViaReflection(source, target);
     }
 
     /**
@@ -500,6 +504,51 @@ public final class CopyWithKeysNode extends PureNode
         else
         {
             target.add(value);
+        }
+    }
+
+    /**
+     * After shallow copy, find all association properties on the copy that have non-null values
+     * and add them to keyValues for reverse pointer binding.
+     */
+    private static void addCopiedAssociationProps(Object copy, String classPath,
+                                                   java.util.Set<String> existingKeys,
+                                                   java.util.List<java.util.Map.Entry<String, Object>> keyValues,
+                                                   org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+    {
+        // Get all getter methods on the copy
+        for (java.lang.reflect.Method m : copy.getClass().getMethods())
+        {
+            String name = m.getName();
+            if (!name.startsWith("_") || m.getParameterCount() != 0 || name.equals("_copy")
+                    || name.equals("_classifierGenericType") || name.equals("_sourceInformation")
+                    || name.equals("_elementOverride") || name.equals("_class") || name.equals("_hashCode"))
+            {
+                continue;
+            }
+            String propName = name.substring(1); // strip "_"
+            if (existingKeys.contains(propName))
+            {
+                continue;
+            }
+            // Check if this property has a reverse association
+            String reversePropName = NewWithKeysNode.findReverseAssociationProperty(propName, classPath, eval.resolver());
+            if (reversePropName == null)
+            {
+                continue;
+            }
+            try
+            {
+                Object propValue = m.invoke(copy);
+                if (propValue != null && !(propValue instanceof org.finos.legend.pure.truffle.types.PureNull)
+                        && !(propValue instanceof PureSequence seq && seq.isEmpty()))
+                {
+                    keyValues.add(java.util.Map.entry(propName, propValue));
+                }
+            }
+            catch (Exception ignored)
+            {
+            }
         }
     }
 }

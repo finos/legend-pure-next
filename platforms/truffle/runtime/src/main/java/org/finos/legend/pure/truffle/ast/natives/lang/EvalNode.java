@@ -21,7 +21,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
@@ -58,13 +57,6 @@ public final class EvalNode extends PureNode
     private static Object invokeEval(Object[] values)
     {
         Object fn = values[0];
-        // Unwrap AtomicValue wrapper if present (PDB function references
-        // come as AtomicValue wrapping a FunctionDefinition/NativeFunction)
-        if (fn instanceof AtomicValue av)
-        {
-            fn = av._value();
-        }
-        // Handle PureNull (e.g. when AtomicValue._value() was null)
         if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
@@ -82,10 +74,6 @@ public final class EvalNode extends PureNode
     @TruffleBoundary
     public static Object dispatch(Object fn, Object[] args)
     {
-        if (fn instanceof AtomicValue av)
-        {
-            fn = av._value();
-        }
         if (fn instanceof RawClosure rc)
         {
             return StandaloneEvaluatorHolder.current().executeLambda(rc, args);

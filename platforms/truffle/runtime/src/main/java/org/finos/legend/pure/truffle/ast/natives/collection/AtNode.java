@@ -18,13 +18,12 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 
 /**
  * {@code at(T[*], Integer[1]) : T[1]} — indexed access. Bounds-checked
- * against Pure's flatten semantics: an {@link AtomicValue} argument acts
+ * against Pure's flatten semantics: a scalar argument acts
  * as a one-element collection.
  */
 @NodeInfo(shortName = "at")

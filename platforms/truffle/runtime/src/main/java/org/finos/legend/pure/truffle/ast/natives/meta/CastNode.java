@@ -179,14 +179,24 @@ public final class CastNode extends PureNode
                 for (int i = 0; i < count; i++)
                 {
                     Object rawVal = typeVarVals.getBoxed(i);
-                    if (rawVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
+                    // PDB metadata values may be AtomicValue FlatBuffer wrappers — unwrap
+                    if (rawVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
                     {
                         rawVal = av._value();
                     }
                     Object rawTypeVar = typeVars.getBoxed(i);
+                    String tvName = null;
                     if (rawTypeVar instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp)
                     {
-                        typeVarBindings.put(tp._name(), rawVal);
+                        tvName = tp._name();
+                    }
+                    else if (rawTypeVar instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                    {
+                        tvName = ve._name();
+                    }
+                    if (tvName != null)
+                    {
+                        typeVarBindings.put(tvName, rawVal);
                     }
                 }
             }

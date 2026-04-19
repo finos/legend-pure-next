@@ -19,6 +19,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 import java.util.Objects;
 
@@ -67,6 +68,15 @@ public final class AssertEqualNode extends PureNode
 
     private static boolean deepEquals(Object a, Object b)
     {
+        // Unwrap PureDate to date strings for comparison
+        if (a instanceof PureDate pd)
+        {
+            a = pd.dateString();
+        }
+        if (b instanceof PureDate pd)
+        {
+            b = pd.dateString();
+        }
         if (a == b)
         {
             return true;

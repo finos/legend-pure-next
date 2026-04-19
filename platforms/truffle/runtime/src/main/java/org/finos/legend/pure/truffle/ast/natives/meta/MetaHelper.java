@@ -16,9 +16,9 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
+import org.finos.legend.pure.truffle.types.PureDate;
 import org.finos.legend.pure.truffle.types.PureNull;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -34,22 +34,13 @@ public final class MetaHelper
     /**
      * Get the raw Pure Type of a raw value.
      * Handles raw Java values (Long, Double, etc.),
-     * generated Impl classes (Any), AtomicValue (dates), and PureSequence.
+     * generated Impl classes (Any), and PureSequence.
      */
     public static Type getRawValueType(Object value, TruffleMetadataAccess resolver)
     {
         if (value == null || value instanceof PureNull)
         {
             return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
-        }
-        // AtomicValue wrapper (dates kept as AV) — use its genericType
-        if (value instanceof AtomicValue av && av._genericType() != null)
-        {
-            Type t = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(av._genericType());
-            if (t != null)
-            {
-                return t;
-            }
         }
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
         {
@@ -67,8 +58,46 @@ public final class MetaHelper
         {
             return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
         }
-        if (value instanceof String)
+        if (value instanceof PureDate.StrictDate)
         {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+        }
+        if (value instanceof PureDate.DateTime)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+        }
+        if (value instanceof PureDate)
+        {
+            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+        }
+        if (value instanceof String s)
+        {
+            // Detect enum value strings: "package::EnumType.VALUE"
+            int dotIdx = s.lastIndexOf('.');
+            if (dotIdx > 0 && s.contains("::"))
+            {
+                String enumTypePath = s.substring(0, dotIdx);
+                Object enumType = resolver.getElement(enumTypePath);
+                if (enumType instanceof Type t)
+                {
+                    return t;
+                }
+            }
+            // Detect date strings by format (fallback for dates not yet wrapped in PureDate)
+            if (org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
+            {
+                if (s.contains("T"))
+                {
+                    return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+                }
+                // yyyy-MM-dd = StrictDate, yyyy or yyyy-MM = Date
+                long dashCount = s.chars().filter(c -> c == '-').count();
+                if (dashCount >= 2)
+                {
+                    return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+                }
+                return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+            }
             return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
         }
         if (value instanceof java.math.BigDecimal)
@@ -125,10 +154,6 @@ public final class MetaHelper
      */
     public static GenericType getRawGenericType(Object value)
     {
-        if (value instanceof AtomicValue av && av._genericType() != null)
-        {
-            return av._genericType();
-        }
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
         {
             return any._classifierGenericType();

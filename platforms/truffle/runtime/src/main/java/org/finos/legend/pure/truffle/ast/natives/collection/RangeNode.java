@@ -27,9 +27,7 @@ import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
  * arithmetic progression from {@code start} to {@code stop} (exclusive) by
  * {@code step}. Negative step counts down.
  *
- * <p>Each produced integer is wrapped as a separate {@code AtomicValue}
- * with the caller site's element genericType (typically {@code Integer}),
- * matching the bridged native's semantics.</p>
+ * <p>Returns a {@code LongSequence} containing the raw {@code long} values.</p>
  */
 @NodeInfo(shortName = "range")
 public final class RangeNode extends PureNode

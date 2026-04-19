@@ -119,15 +119,7 @@ public final class RawPropertyAccessNode extends PureNode
                             && !foundProp._defaultValue()._expressionSequence().isEmpty())
                     {
                         Object vsObj = foundProp._defaultValue()._expressionSequence().getBoxed(0);
-                        if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-                        {
-                            Object enumVal = av._value();
-                            if (enumVal != null)
-                            {
-                                return enumVal;
-                            }
-                        }
-                        // If not AtomicValue, try lowering and executing the VS
+                        // Lower and execute the VS expression
                         if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
                         {
                             org.finos.legend.pure.truffle.ast.PureNode node =

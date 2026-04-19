@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.math;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 import java.math.BigDecimal;
@@ -62,10 +61,6 @@ public final class RemNumberNode extends PureNode
     private static Long asLongOrNull(Object v)
     {
         if (v instanceof Long l)
-        {
-            return l;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Long l)
         {
             return l;
         }

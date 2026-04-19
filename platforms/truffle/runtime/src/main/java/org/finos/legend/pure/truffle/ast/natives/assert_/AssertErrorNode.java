@@ -72,8 +72,7 @@ public final class AssertErrorNode extends PureNode
     @TruffleBoundary
     private static boolean doAssertError(Object rawFn, String expectedMessage)
     {
-        // Unwrap AtomicValue if present
-        Object fn = rawFn instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawFn;
+        Object fn = rawFn;
         try
         {
             // Execute the zero-arg function

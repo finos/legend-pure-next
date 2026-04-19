@@ -14,20 +14,17 @@
 
 package org.finos.legend.pure.truffle.types;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Converts Truffle-specific runtime types ({@link PureSequence},
- * {@link PureNull}, wrapped {@link AtomicValue}) into standard Java
- * types ({@link List}, {@code null}, raw primitives) that
+ * {@link PureNull}) into standard Java types ({@link List}, {@code null},
+ * raw primitives) that
  * {@link org.finos.legend.pure.execution.PureValuePrinter} understands.
  *
  * <p>Call {@link #normalize(Object)} before passing values to
- * PureValuePrinter to avoid garbled output like "ObjectSequence[...]"
- * or "AtomicValue\n  value: '...'".</p>
+ * PureValuePrinter to avoid garbled output like "ObjectSequence[...]".</p>
  */
 public final class ValueNormalizer
 {
@@ -40,7 +37,6 @@ public final class ValueNormalizer
      * <ul>
      *   <li>{@link PureNull} &rarr; {@code null}</li>
      *   <li>{@link PureSequence} &rarr; {@link List} (recursively normalized)</li>
-     *   <li>{@link AtomicValue} &rarr; unwrapped raw value (recursively normalized)</li>
      *   <li>Everything else &rarr; returned as-is</li>
      * </ul>
      */
@@ -59,11 +55,6 @@ public final class ValueNormalizer
                 list.add(normalize(seq.getBoxed(i)));
             }
             return list;
-        }
-        if (value instanceof AtomicValue av)
-        {
-            Object inner = av._value();
-            return inner != null ? normalize(inner) : null;
         }
         return value;
     }

@@ -21,6 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
  * {@code compare(T[1], T[1]) : Integer[1]}.
@@ -61,19 +62,9 @@ public final class CompareNode extends PureNode
     @TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
-        // If one argument is wrapped in AtomicValue and the other is not, they
-        // have different Pure types (e.g., Date vs String) even if the underlying
-        // Java type is the same. Compare by wrapper status for consistent ordering.
-        boolean aIsWrapped = rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-        boolean bIsWrapped = rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-        if (aIsWrapped != bIsWrapped)
-        {
-            return aIsWrapped ? -1L : 1L;
-        }
-
-        // Unwrap AtomicValue (dates kept as AV)
-        Object a = aIsWrapped ? ((org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue) rawA)._value() : rawA;
-        Object b = bIsWrapped ? ((org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue) rawB)._value() : rawB;
+        // Unwrap PureDate to date strings for comparison
+        Object a = rawA instanceof PureDate pd ? pd.dateString() : rawA;
+        Object b = rawB instanceof PureDate pd ? pd.dateString() : rawB;
 
         // Number comparison
         if (a instanceof Number nA && b instanceof Number nB)

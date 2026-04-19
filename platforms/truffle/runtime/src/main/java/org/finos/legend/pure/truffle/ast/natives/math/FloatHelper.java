@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.math;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-
 /**
  * Unwrap helpers shared by specialized float-arithmetic nodes. Mirrors
  * {@link IntegerHelper} but for {@link Double}.
@@ -35,22 +33,6 @@ final class FloatHelper
         if (v instanceof Long l)
         {
             return l.doubleValue();
-        }
-        if (v instanceof AtomicValue av)
-        {
-            Object inner = av._value();
-            if (inner instanceof Double d)
-            {
-                return d;
-            }
-            if (inner instanceof Long l)
-            {
-                return l.doubleValue();
-            }
-            if (inner instanceof Number n)
-            {
-                return n.doubleValue();
-            }
         }
         if (v instanceof Number n)
         {

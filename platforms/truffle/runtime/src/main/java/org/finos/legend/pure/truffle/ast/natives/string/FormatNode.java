@@ -22,6 +22,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
  * {@code format(String[1], Any[*]) : String[1]} -- printf-style formatting
@@ -243,7 +244,7 @@ public final class FormatNode extends PureNode
 
     private static String formatDateWithPattern(Object v, String pattern)
     {
-        String dateStr = pureToString(v);
+        String dateStr = v instanceof PureDate pd ? pd.dateString() : pureToString(v);
         // Parse the Pure date string and format with the given pattern
         // Handle optional timezone prefix: [EST]pattern, [CET]pattern
         String tz = null;
@@ -298,6 +299,10 @@ public final class FormatNode extends PureNode
 
     private static String toRepresentation(Object v)
     {
+        if (v instanceof PureDate pd)
+        {
+            return "%" + ToStringNode.normalizeDateString(pd.dateString());
+        }
         if (v instanceof String s)
         {
             // Date strings get % prefix, not quote wrapping

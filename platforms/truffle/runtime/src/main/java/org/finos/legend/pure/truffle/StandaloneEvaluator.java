@@ -458,15 +458,15 @@ public final class StandaloneEvaluator
      */
     public void accessProperty(Object target, String propertyName, Object value)
     {
-        // Unwrap ValueSpecification wrappers (like bootstrap's _E_ValueSpecification.unwrap)
-        Object rawValue = unwrapForSetter(value);
-
-        // DynamicInstance: put directly
+        // DynamicInstance: put directly (unwrap for dynamic storage)
         if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
         {
-            di.put(propertyName, rawValue);
+            di.put(propertyName, unwrapForSetter(value));
             return;
         }
+
+        Object originalValue = value instanceof org.finos.legend.pure.truffle.types.PureNull ? null : value;
+        Object rawValue = unwrapForSetter(value);
 
         String setterName = "_" + propertyName;
         for (java.lang.reflect.Method method : target.getClass().getMethods())
@@ -475,52 +475,73 @@ public final class StandaloneEvaluator
             {
                 try
                 {
-                    method.invoke(target, rawValue);
-                    return;
-                }
-                catch (IllegalArgumentException e)
-                {
-                    // Type mismatch — try coercion fallbacks
-                    Class<?> paramType = method.getParameterTypes()[0];
+                    // 1. Try original value (preserves VS instances like Collection, AtomicValue)
                     try
                     {
-                        if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType))
+                        method.invoke(target, originalValue);
+                        return;
+                    }
+                    catch (IllegalArgumentException ignored)
+                    {
+                    }
+
+                    // 2. Try unwrapped value
+                    if (rawValue != originalValue)
+                    {
+                        try
                         {
-                            method.invoke(target, toPureSequence(rawValue));
+                            method.invoke(target, rawValue);
                             return;
                         }
-                        if (org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType) || java.util.Collection.class.isAssignableFrom(paramType))
+                        catch (IllegalArgumentException ignored)
                         {
-                            method.invoke(target, toMutableList(rawValue));
-                            return;
-                        }
-                        // Enum coercion: PDB Enum wrapper → generated Java enum
-                        if (rawValue instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumVal)
-                        {
-                            Object coerced = paramType.isEnum()
-                                    ? coerceToJavaEnumConstant(paramType, enumVal._name())
-                                    : coerceEnumToInterface(paramType, enumVal._name());
-                            if (coerced != null)
-                            {
-                                method.invoke(target, coerced);
-                                return;
-                            }
-                        }
-                        // String → enum coercion (evaluator returns qualified enum name as String)
-                        if (rawValue instanceof String enumName)
-                        {
-                            Object coerced = paramType.isEnum()
-                                    ? coerceToJavaEnumConstant(paramType, enumName)
-                                    : coerceEnumToInterface(paramType, enumName);
-                            if (coerced != null)
-                            {
-                                method.invoke(target, coerced);
-                                return;
-                            }
                         }
                     }
-                    catch (Exception ignored)
+
+                    // 3. Coercion fallbacks
+                    Class<?> paramType = method.getParameterTypes()[0];
+                    if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType))
                     {
+                        method.invoke(target, toPureSequence(rawValue));
+                        return;
+                    }
+                    if (org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType) || java.util.Collection.class.isAssignableFrom(paramType))
+                    {
+                        method.invoke(target, toMutableList(rawValue));
+                        return;
+                    }
+                    // Enum coercion
+                    if (rawValue instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumVal)
+                    {
+                        Object coerced = paramType.isEnum()
+                                ? coerceToJavaEnumConstant(paramType, enumVal._name())
+                                : coerceEnumToInterface(paramType, enumVal._name());
+                        if (coerced != null)
+                        {
+                            method.invoke(target, coerced);
+                            return;
+                        }
+                    }
+                    if (rawValue instanceof String enumName)
+                    {
+                        Object coerced = paramType.isEnum()
+                                ? coerceToJavaEnumConstant(paramType, enumName)
+                                : coerceEnumToInterface(paramType, enumName);
+                        if (coerced != null)
+                        {
+                            method.invoke(target, coerced);
+                            return;
+                        }
+                    }
+                    // VS wrapping
+                    if (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification.class.isAssignableFrom(paramType))
+                    {
+                        Object wrapped = wrapAsValueSpecification(rawValue);
+                        if (wrapped != null)
+                        {
+                            method.invoke(target, wrapped);
+                            return;
+                        }
                     }
                 }
                 catch (java.lang.reflect.InvocationTargetException ite)
@@ -547,24 +568,6 @@ public final class StandaloneEvaluator
         if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return null;
-        }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
-        {
-            return av._value();
-        }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
-        {
-            org.finos.legend.pure.truffle.types.PureSequence vals = col._values();
-            if (vals.size() == 1)
-            {
-                return unwrapForSetter(vals.getBoxed(0));
-            }
-            Object[] items = new Object[vals.size()];
-            for (int i = 0; i < vals.size(); i++)
-            {
-                items[i] = unwrapForSetter(vals.getBoxed(i));
-            }
-            return org.eclipse.collections.api.factory.Lists.mutable.with(items);
         }
         // Single-element PureSequence
         if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq && seq.size() == 1)
@@ -660,62 +663,98 @@ public final class StandaloneEvaluator
         return null;
     }
 
+    /** Wrap a raw value as a ValueSpecification (CollectionImpl for lists, AtomicValueImpl for scalars). */
+    private static Object wrapAsValueSpecification(Object rawValue)
+    {
+        if (rawValue instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification)
+        {
+            return rawValue; // already a VS
+        }
+        if (rawValue instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+        {
+            var col = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.CollectionImpl();
+            Object[] items = new Object[ml.size()];
+            for (int i = 0; i < ml.size(); i++)
+            {
+                Object item = ml.get(i);
+                if (!(item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification))
+                {
+                    var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
+                    av._value(item);
+                    item = av;
+                }
+                items[i] = item;
+            }
+            col._values(new org.finos.legend.pure.truffle.types.ObjectSequence(items));
+            return col;
+        }
+        if (rawValue instanceof java.util.List<?> list)
+        {
+            var col = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.CollectionImpl();
+            Object[] items = new Object[list.size()];
+            for (int i = 0; i < list.size(); i++)
+            {
+                Object item = list.get(i);
+                if (!(item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification))
+                {
+                    var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
+                    av._value(item);
+                    item = av;
+                }
+                items[i] = item;
+            }
+            col._values(new org.finos.legend.pure.truffle.types.ObjectSequence(items));
+            return col;
+        }
+        // Single scalar → wrap in AtomicValueImpl
+        var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
+        av._value(rawValue);
+        return av;
+    }
+
     public Object accessProperty(Object target, String propertyName)
     {
-        // Unwrap AtomicValue — the inner value is the real target
-        if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
-        {
-            target = av._value();
-        }
         // Unwrap RawClosure — access the lambda's FD properties
         if (target instanceof org.finos.legend.pure.truffle.types.RawClosure rc)
         {
             target = rc.lambda();
         }
-        // Generated Impl classes have _propertyName() getters
-        try
+
+        // 1. Try _propertyName() on the original target (preserves VS instances)
+        String methodName = "_" + propertyName;
+        Object result = tryInvokeGetter(target, methodName);
+        if (result != GETTER_NOT_FOUND)
         {
-            java.lang.reflect.Method method = target.getClass().getMethod("_" + propertyName);
-            return method.invoke(target);
+            return result;
         }
-        catch (NoSuchMethodException e)
+
+        // 2. Try without underscore prefix (some metamodel properties)
+        result = tryInvokeGetter(target, propertyName);
+        if (result != GETTER_NOT_FOUND)
         {
-            // Try without underscore prefix (some metamodel properties)
-            // But skip methods inherited from Object (toString, hashCode, etc.)
-            try
+            return result;
+        }
+
+        // 3. Enum value fallback
+        if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en && en._properties() != null)
+        {
+            for (Object p : en._properties().toBoxedArray())
             {
-                java.lang.reflect.Method method = target.getClass().getMethod(propertyName);
-                if (method.getDeclaringClass() != Object.class)
+                if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property pp && propertyName.equals(pp._name()))
                 {
-                    return method.invoke(target);
-                }
-                throw new NoSuchMethodException(propertyName);
-            }
-            catch (Exception e2)
-            {
-                // Enum value fallback: search the Enumeration's properties
-                // for one matching propertyName and extract its defaultValue
-                if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en && en._properties() != null)
-                {
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop = null;
-                    for (Object p : en._properties().toBoxedArray())
+                    if (pp._defaultValue() != null && pp._defaultValue()._expressionSequence() != null
+                            && !pp._defaultValue()._expressionSequence().isEmpty())
                     {
-                        if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property pp && propertyName.equals(pp._name()))
+                        Object vsObj = pp._defaultValue()._expressionSequence().getBoxed(0);
+                        // Lower and execute the VS expression
+                        if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
                         {
-                            prop = pp;
-                            break;
-                        }
-                    }
-                    if (prop != null && prop._defaultValue() != null
-                            && prop._defaultValue()._expressionSequence() != null
-                            && !prop._defaultValue()._expressionSequence().isEmpty())
-                    {
-                        Object vsObj = prop._defaultValue()._expressionSequence().getBoxed(0);
-                        if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
-                        {
-                            Object enumVal = av._value();
-                            // Coerce PDB Enum value to generated Java enum constant for identity
-                            if (enumVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumObj)
+                            PureNode node = astBuilder.lower(vs);
+                            VirtualFrame tmpFrame = com.oracle.truffle.api.Truffle.getRuntime().createVirtualFrame(
+                                    new Object[0],
+                                    com.oracle.truffle.api.frame.FrameDescriptor.newBuilder().build());
+                            Object enumVal = node.executeGeneric(tmpFrame);
+                            if (enumVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum)
                             {
                                 Object javaEnum = coerceToJavaEnum(en, propertyName);
                                 if (javaEnum != null)
@@ -727,28 +766,51 @@ public final class StandaloneEvaluator
                         }
                     }
                 }
-                // QualifiedProperty dispatch: look up QP from the target's type
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls = resolveClassForTarget(target);
-                if (cls != null)
-                {
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp = findQualifiedProperty(cls, propertyName);
-                    if (qp != null)
-                    {
-                        return executeFunction(qp, new Object[]{target});
-                    }
-                }
-                // Fallback: DynamicInstance
-                if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
-                {
-                    Object val = di.get(propertyName);
-                    return val != null ? val : org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
-                }
-                throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());
             }
+        }
+
+        // 4. QualifiedProperty dispatch
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls = resolveClassForTarget(target);
+        if (cls != null)
+        {
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp = findQualifiedProperty(cls, propertyName);
+            if (qp != null)
+            {
+                return executeFunction(qp, new Object[]{target});
+            }
+        }
+
+        // 5. DynamicInstance fallback
+        if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
+        {
+            Object val = di.get(propertyName);
+            return val != null ? val : org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+        }
+
+        throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());
+    }
+
+    private static final Object GETTER_NOT_FOUND = new Object();
+
+    /** Try to invoke a no-arg getter method. Returns GETTER_NOT_FOUND if not found. */
+    private static Object tryInvokeGetter(Object target, String methodName)
+    {
+        try
+        {
+            java.lang.reflect.Method method = target.getClass().getMethod(methodName);
+            if (method.getDeclaringClass() == Object.class)
+            {
+                return GETTER_NOT_FOUND;
+            }
+            return method.invoke(target);
+        }
+        catch (NoSuchMethodException e)
+        {
+            return GETTER_NOT_FOUND;
         }
         catch (Exception e)
         {
-            throw new RuntimeException("Error accessing property '" + propertyName + "' on " + target.getClass().getName(), e);
+            throw new RuntimeException("Error accessing '" + methodName + "' on " + target.getClass().getName(), e);
         }
     }
 

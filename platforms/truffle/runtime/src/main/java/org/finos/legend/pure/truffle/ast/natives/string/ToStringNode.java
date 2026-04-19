@@ -21,6 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 @NodeInfo(shortName = "toStr")
 public final class ToStringNode extends PureNode
@@ -62,19 +63,9 @@ public final class ToStringNode extends PureNode
         {
             return "";
         }
-        // Unwrap AtomicValue — dates come as AV wrapping a date string
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
+        if (v instanceof PureDate pd)
         {
-            Object inner = av._value();
-            if (inner instanceof String s && isDateString(s))
-            {
-                return normalizeDateString(s);
-            }
-            if (inner != null)
-            {
-                return pureToString(inner);
-            }
-            return "";
+            return normalizeDateString(pd.dateString());
         }
         // Enum values — return just the enum constant name
         if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumVal && enumVal._name() != null)
@@ -103,6 +94,20 @@ public final class ToStringNode extends PureNode
                 catch (Exception ignored)
                 {
                     // No toString QP — fall through
+                }
+            }
+        }
+        // Enum value string (format "package::EnumType.VALUE") → return just the value name
+        if (v instanceof String s && s.contains("::") && s.contains("."))
+        {
+            int dotIdx = s.lastIndexOf('.');
+            if (dotIdx > 0 && dotIdx < s.length() - 1)
+            {
+                // Verify the prefix looks like a Pure enum path (contains ::)
+                String prefix = s.substring(0, dotIdx);
+                if (prefix.contains("::"))
+                {
+                    return s.substring(dotIdx + 1);
                 }
             }
         }
@@ -151,7 +156,7 @@ public final class ToStringNode extends PureNode
         return PureValuePrinter.printForOutput(v);
     }
 
-    static boolean isDateString(String s)
+    public static boolean isDateString(String s)
     {
         // Quick heuristic: matches yyyy-M-d, +yyyy-M-d, or yyyy-M-dTh:m:s patterns
         if (s.length() < 6)

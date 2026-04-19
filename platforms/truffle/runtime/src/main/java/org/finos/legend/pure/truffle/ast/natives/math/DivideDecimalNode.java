@@ -53,10 +53,6 @@ public final class DivideDecimalNode extends PureNode
 
     private static BigDecimal toBigDecimal(Object v)
     {
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            v = av._value();
-        }
         if (v instanceof BigDecimal d)
         {
             return d;

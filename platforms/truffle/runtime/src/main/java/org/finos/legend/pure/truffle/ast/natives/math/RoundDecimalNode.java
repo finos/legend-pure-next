@@ -43,10 +43,6 @@ public final class RoundDecimalNode extends PureNode
     {
         Object v = value.executeGeneric(frame);
         int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            v = av._value();
-        }
         BigDecimal bd;
         if (v instanceof BigDecimal d)
         {

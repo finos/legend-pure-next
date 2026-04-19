@@ -79,16 +79,7 @@ public final class JoinStringsNode extends PureNode
                 sb.append(separator);
             }
             Object item = CollectionHelper.at(col, i);
-            // Unwrap AtomicValue (dates kept as AV)
-            if (item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-            {
-                Object inner = av._value();
-                sb.append(inner != null ? PureValuePrinter.printForOutput(inner) : "");
-            }
-            else
-            {
-                sb.append(PureValuePrinter.printForOutput(item));
-            }
+            sb.append(PureValuePrinter.printForOutput(item));
         }
         if (suffix != null)
         {

@@ -21,6 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
  * {@code parseDate(String[1]) : Date[1]} -- parses a date string.
@@ -52,7 +53,7 @@ public final class ParseDateNode extends PureNode
     }
 
     @TruffleBoundary
-    private static String parseDate(String s)
+    private static PureDate parseDate(String s)
     {
         String dateStr = s.trim();
         String result = StringNatives.normalizePureDate(dateStr);
@@ -60,6 +61,14 @@ public final class ParseDateNode extends PureNode
         {
             result = result.substring(0, result.length() - 1);
         }
-        return result;
+        if (result != null && result.contains("T"))
+        {
+            return new PureDate.DateTime(result);
+        }
+        if (result != null && result.length() >= 10 && result.charAt(4) == '-' && result.charAt(7) == '-')
+        {
+            return new PureDate.StrictDate(result);
+        }
+        return new PureDate.PartialDate(result);
     }
 }

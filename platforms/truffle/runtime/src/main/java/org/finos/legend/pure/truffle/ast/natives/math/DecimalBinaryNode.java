@@ -56,10 +56,6 @@ public final class DecimalBinaryNode extends PureNode
 
     private BigDecimal asBigDecimal(Object v)
     {
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            v = av._value();
-        }
         if (v instanceof BigDecimal bd)
         {
             return bd;

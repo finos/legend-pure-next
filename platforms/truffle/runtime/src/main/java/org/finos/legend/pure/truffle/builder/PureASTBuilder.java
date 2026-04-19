@@ -24,6 +24,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression;
+import org.finos.legend.pure.truffle.types.PureDate;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.FrameLetFunctionNode;
@@ -241,6 +242,10 @@ public final class PureASTBuilder
         return new FrameLetFunctionNode(slot, new RawCollectionNode(valueNodes));
     }
 
+    private static final java.util.Set<String> DATE_TYPE_NAMES = java.util.Set.of(
+            "Date", "StrictDate", "DateTime", "StrictTime", "LatestDate"
+    );
+
     private PureNode lowerAtomicValue(AtomicValue av)
     {
         Object value = av._value();
@@ -251,37 +256,44 @@ public final class PureASTBuilder
             {
                 return new RawLambdaCaptureNode(lambda, openVars, currentLayout);
             }
-            // Lambdas without open vars keep the AtomicValue wrapper for now —
-            // eval/match dispatch code checks for AtomicValue wrapping LambdaFunction.
-            // TODO: eliminate once all dispatch paths handle RawClosure directly.
-            return new AtomicValueNode(av);
+            return new AtomicValueNode(lambda);
         }
         if (value == null)
         {
             return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
         }
-        // Date strings are kept as AtomicValue to preserve type info —
-        // downstream date nodes check genericType to distinguish StrictDate/DateTime.
-        // TODO: eliminate once all date paths use java.time objects.
         if (value instanceof String s)
         {
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType gt = av._genericType();
-            if (gt != null)
+            String typeName = extractTypeName(av);
+            if (typeName != null && DATE_TYPE_NAMES.contains(typeName))
             {
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
-                        org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
-                if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-                {
-                    String typeName = pe._name();
-                    if ("StrictDate".equals(typeName) || "Date".equals(typeName)
-                            || "DateTime".equals(typeName) || "StrictTime".equals(typeName))
-                    {
-                        return new AtomicValueNode(av);
-                    }
-                }
+                return new AtomicValueNode(PureDate.of(s, typeName));
             }
         }
         return new AtomicValueNode(value);
+    }
+
+    private static String extractTypeName(AtomicValue av)
+    {
+        try
+        {
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType gt = av._genericType();
+            if (gt == null)
+            {
+                return null;
+            }
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
+                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
+            if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+            {
+                return pe._name();
+            }
+        }
+        catch (Exception ignored)
+        {
+            // GenericType resolution may fail for some FlatBuffer entries
+        }
+        return null;
     }
 
     private PureNode[] lowerArgs(FunctionExpression fe)

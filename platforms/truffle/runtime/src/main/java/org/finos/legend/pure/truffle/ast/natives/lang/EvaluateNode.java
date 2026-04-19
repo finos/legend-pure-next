@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
@@ -60,10 +59,6 @@ public final class EvaluateNode extends PureNode
     private static Object invokeEvaluate(Object[] values)
     {
         Object fn = values[0];
-        if (fn instanceof AtomicValue av)
-        {
-            fn = av._value();
-        }
         if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
@@ -88,11 +83,6 @@ public final class EvaluateNode extends PureNode
 
     private static void unwrapListValues(Object listObj, List<Object> out)
     {
-        // Unwrap AtomicValue if needed
-        if (listObj instanceof AtomicValue av)
-        {
-            listObj = av._value();
-        }
         // ListImpl has _values() returning collection (Object / ObjectSequence / MutableList)
         if (listObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.List listInst)
         {
@@ -104,30 +94,14 @@ public final class EvaluateNode extends PureNode
             }
             else if (sz == 1)
             {
-                Object v = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, 0);
-                if (v instanceof AtomicValue av2)
-                {
-                    out.add(av2._value() != null ? av2._value() : v);
-                }
-                else
-                {
-                    out.add(v);
-                }
+                out.add(org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, 0));
             }
             else
             {
                 Object[] arr = new Object[sz];
                 for (int i = 0; i < sz; i++)
                 {
-                    Object v = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, i);
-                    if (v instanceof AtomicValue av2)
-                    {
-                        arr[i] = av2._value() != null ? av2._value() : v;
-                    }
-                    else
-                    {
-                        arr[i] = v;
-                    }
+                    arr[i] = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(vals, i);
                 }
                 out.add(new org.finos.legend.pure.truffle.types.ObjectSequence(arr));
             }

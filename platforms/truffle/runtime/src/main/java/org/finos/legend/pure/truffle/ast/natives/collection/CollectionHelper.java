@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureNull;
@@ -45,19 +44,11 @@ public final class CollectionHelper
         {
             return seq.size();
         }
-        if (v instanceof Collection col)
-        {
-            return col._values().size();
-        }
         if (v instanceof java.util.List<?> list)
         {
             return list.size();
         }
-        if (v instanceof AtomicValue av)
-        {
-            return av._value() == null ? 0 : 1;
-        }
-        // Single raw scalar
+        // Single value (including Collection treated as object)
         return 1;
     }
 
@@ -72,28 +63,11 @@ public final class CollectionHelper
         {
             return seq.getBoxed(i);
         }
-        if (v instanceof Collection col)
-        {
-            // Unwrap AtomicValue → raw payload so downstream nodes
-            // see the actual object (DynamicInstance, LambdaFunction, etc.)
-            // instead of a VS wrapper.
-            Object item = col._values().getBoxed(i);
-            if (item instanceof AtomicValue av)
-            {
-                Object inner = av._value();
-                return inner != null ? inner : PureNull.INSTANCE;
-            }
-            return item;
-        }
         if (v instanceof java.util.List<?> list)
         {
             return list.get(i);
         }
-        if (v instanceof AtomicValue av)
-        {
-            return av._value();
-        }
-        // Single raw scalar at index 0
+        // Single object at index 0
         return v;
     }
 

@@ -75,11 +75,6 @@ public final class IsNode extends PureNode
         {
             return null;
         }
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            Object inner = av._value();
-            return inner != null ? inner : null;
-        }
         return v;
     }
 }

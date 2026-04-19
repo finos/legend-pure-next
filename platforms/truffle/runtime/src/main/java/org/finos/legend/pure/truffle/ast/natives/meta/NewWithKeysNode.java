@@ -202,13 +202,6 @@ public final class NewWithKeysNode extends PureNode
         {
             return;
         }
-        // Collect association properties from the class
-        PureSequence assocPropsSeq = cls._propertiesFromAssociations();
-        if (assocPropsSeq == null || assocPropsSeq.isEmpty())
-        {
-            return;
-        }
-
         for (java.util.Map.Entry<String, Object> kv : keyValues)
         {
             String propName = kv.getKey();
@@ -218,39 +211,75 @@ public final class NewWithKeysNode extends PureNode
                 continue;
             }
 
-            // Find matching association property
-            Property assocProp = null;
-            for (Object p : assocPropsSeq.toBoxedArray())
+            // Find the reverse property name by scanning associations
+            String reversePropName = findReverseAssociationProperty(propName, classPath, eval.resolver());
+            if (reversePropName != null)
             {
-                if (p instanceof Property prop && propName.equals(prop._name()))
-                {
-                    assocProp = prop;
-                    break;
-                }
-            }
-            if (assocProp == null)
-            {
-                continue;
-            }
-
-            // Find the reverse property on the association owner
-            SimplePropertyOwner owner = assocProp._owner();
-            if (owner == null || owner._properties() == null)
-            {
-                continue;
-            }
-            PureSequence ownerProps = owner._properties();
-            for (Object otherPropObj : ownerProps.toBoxedArray())
-            {
-                if (otherPropObj instanceof Property otherProp && !propName.equals(otherProp._name()))
-                {
-                    String reversePropName = otherProp._name();
-                    // Set reverse pointer: propValue.reversePropName = instance
-                    appendToProperty(propValue, reversePropName, instance, eval);
-                    break;
-                }
+                appendToProperty(propValue, reversePropName, instance, eval);
             }
         }
+    }
+
+    /**
+     * Find the reverse association property for a given property on a class.
+     * Scans all Association elements from the resolver to find the one that
+     * owns the property, then returns the OTHER property's name.
+     */
+    static String findReverseAssociationProperty(String propName, String classPath,
+                                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        for (String path : resolver.elementPaths())
+        {
+            Object element = resolver.getElement(path);
+            if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Association assoc))
+            {
+                continue;
+            }
+            PureSequence props = assoc._properties();
+            if (props == null || props.size() != 2)
+            {
+                continue;
+            }
+            // Check if one of the association's properties matches propName
+            Property matchProp = null;
+            Property otherProp = null;
+            Object p0 = props.getBoxed(0);
+            Object p1 = props.getBoxed(1);
+            if (p0 instanceof Property prop0 && p1 instanceof Property prop1)
+            {
+                if (propName.equals(prop0._name()))
+                {
+                    matchProp = prop0;
+                    otherProp = prop1;
+                }
+                else if (propName.equals(prop1._name()))
+                {
+                    matchProp = prop1;
+                    otherProp = prop0;
+                }
+            }
+            if (matchProp != null && otherProp != null)
+            {
+                // Verify that the OTHER property's target type matches the class being constructed.
+                // otherProp points TO classPath. matchProp points AWAY from classPath.
+                // We check that otherProp's genericType resolves to a type whose path matches classPath.
+                if (otherProp._genericType() != null)
+                {
+                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType =
+                            org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherProp._genericType());
+                    if (targetType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+                    {
+                        String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+                        if (classPath.equals(targetPath))
+                        {
+                            return otherProp._name();
+                        }
+                    }
+                }
+                // If type check fails, still return if no better match found later
+            }
+        }
+        return null;
     }
 
     private static void appendToProperty(Object target, String propName, Object value,
@@ -276,14 +305,26 @@ public final class NewWithKeysNode extends PureNode
         try
         {
             Object current = eval.accessProperty(target, propName);
-            if (current == null || current instanceof org.finos.legend.pure.truffle.types.PureNull)
+            boolean isEmpty = current == null
+                    || current instanceof org.finos.legend.pure.truffle.types.PureNull
+                    || (current instanceof PureSequence seq && seq.isEmpty());
+            if (isEmpty)
             {
-                // Single value — set directly
                 eval.accessProperty(target, propName, value);
+            }
+            else if (current instanceof PureSequence seq)
+            {
+                // Append to existing PureSequence
+                Object[] items = new Object[seq.size() + 1];
+                for (int j = 0; j < seq.size(); j++)
+                {
+                    items[j] = seq.getBoxed(j);
+                }
+                items[seq.size()] = value;
+                eval.accessProperty(target, propName, new org.finos.legend.pure.truffle.types.ObjectSequence(items));
             }
             else if (current instanceof org.eclipse.collections.api.list.MutableList<?> list)
             {
-                // Many-valued — add to existing list
                 @SuppressWarnings("unchecked")
                 org.eclipse.collections.api.list.MutableList<Object> mlist =
                         (org.eclipse.collections.api.list.MutableList<Object>) list;
@@ -291,14 +332,12 @@ public final class NewWithKeysNode extends PureNode
             }
             else
             {
-                // Convert to list
                 eval.accessProperty(target, propName,
                         org.eclipse.collections.api.factory.Lists.mutable.with(current, value));
             }
         }
         catch (Exception ignored)
         {
-            // Property not found — skip
         }
     }
 }

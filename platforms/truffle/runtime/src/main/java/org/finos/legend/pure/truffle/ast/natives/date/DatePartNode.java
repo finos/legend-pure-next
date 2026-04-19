@@ -21,6 +21,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
  * {@code datePart(Date[1]) : StrictDate[1]} -- strips the time component from a date.
@@ -55,7 +56,7 @@ public final class DatePartNode extends PureNode
     }
 
     @TruffleBoundary
-    private static String extract(Object v)
+    private static PureDate extract(Object v)
     {
         String dateStr = DateHelper.asDateString(v, SIG);
         String datePart = dateStr.contains("T") ? dateStr.substring(0, dateStr.indexOf('T')) : dateStr;
@@ -67,6 +68,6 @@ public final class DatePartNode extends PureNode
         {
             datePart += "-01";
         }
-        return datePart;
+        return new PureDate.StrictDate(datePart);
     }
 }

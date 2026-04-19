@@ -19,7 +19,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
@@ -61,15 +60,10 @@ public final class MatchNode extends PureNode
         // values[1] = match functions collection
         // values[2] = optional extra parameter
         Object value = values[0];
-        // Unwrap AtomicValue (e.g., date values kept as AV)
-        if (value instanceof AtomicValue av)
-        {
-            value = av._value();
-        }
         Object matchFns = values[1];
 
         org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType = getRawValueType(values[0], value, resolver);
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType = getRawValueType(value, resolver);
         int valueCount = getRawValueCount(value);
 
         // Iterate over match functions
@@ -77,11 +71,6 @@ public final class MatchNode extends PureNode
         for (int i = 0; i < fnCount; i++)
         {
             Object mfRaw = CollectionHelper.at(matchFns, i);
-            // Unwrap AtomicValue if needed
-            if (mfRaw instanceof AtomicValue av)
-            {
-                mfRaw = av._value();
-            }
             // Unwrap RawClosure to get the lambda FunctionDefinition
             if (mfRaw instanceof RawClosure rc)
             {
@@ -106,7 +95,8 @@ public final class MatchNode extends PureNode
             {
                 args = new Object[]{value};
             }
-            return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+            Object matchResult = StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+            return matchResult;
         }
         throw new RuntimeException("No match function matched the value: " + value);
     }
@@ -120,33 +110,34 @@ public final class MatchNode extends PureNode
         return CollectionHelper.size(value);
     }
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object original, Object unwrapped,
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object value,
                                                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        // If original was AtomicValue with genericType, use that
-        if (original instanceof AtomicValue av && av._genericType() != null)
-        {
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t =
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(av._genericType());
-            if (t != null)
-            {
-                return t;
-            }
-        }
-        Object value = unwrapped;
         if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence)
+        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
-            // For collections, use the first element's type if available
-            int sz = CollectionHelper.size(value);
-            if (sz > 0)
+            if (seq.isEmpty())
             {
-                return getRawValueType(CollectionHelper.at(value, 0), CollectionHelper.at(value, 0), resolver);
+                return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
             }
-            return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+            // Compute the most common type across all elements
+            java.util.List<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type> types = new java.util.ArrayList<>();
+            for (int i = 0; i < seq.size(); i++)
+            {
+                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t = getRawValueType(seq.getBoxed(i), resolver);
+                if (t != null)
+                {
+                    types.add(t);
+                }
+            }
+            if (types.isEmpty())
+            {
+                return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+            }
+            return org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
         }
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
         {
@@ -164,8 +155,40 @@ public final class MatchNode extends PureNode
         {
             return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
         }
-        if (value instanceof String)
+        if (value instanceof org.finos.legend.pure.truffle.types.PureDate.StrictDate)
         {
+            return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+        }
+        if (value instanceof org.finos.legend.pure.truffle.types.PureDate.DateTime)
+        {
+            return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+        }
+        if (value instanceof org.finos.legend.pure.truffle.types.PureDate)
+        {
+            return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+        }
+        if (value instanceof String s)
+        {
+            // Detect date strings by format (fallback for dates not yet wrapped in PureDate)
+            if (org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
+            {
+                if (s.contains("T"))
+                {
+                    return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+                }
+                return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+            }
+            // Detect enum value strings
+            int dotIdx = s.lastIndexOf('.');
+            if (dotIdx > 0 && s.contains("::"))
+            {
+                String enumTypePath = s.substring(0, dotIdx);
+                Object enumType = resolver.getElement(enumTypePath);
+                if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+                {
+                    return t;
+                }
+            }
             return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
         }
         if (value instanceof java.math.BigDecimal)

@@ -21,6 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
  * {@code toRepresentation(Any[1]) : String[1]} -- returns the Pure-syntax
@@ -52,13 +53,19 @@ public final class ToRepresentationNode extends PureNode
     @TruffleBoundary
     private static String convert(Object v)
     {
-        // Date AtomicValues → %yyyy-MM-dd format
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() instanceof String s)
+        if (v instanceof PureDate pd)
         {
-            if (ToStringNode.isDateString(s))
-            {
-                return "%" + ToStringNode.normalizeDateString(s);
-            }
+            return "%" + ToStringNode.normalizeDateString(pd.dateString());
+        }
+        // Date strings → %yyyy-MM-dd format
+        if (v instanceof String s && ToStringNode.isDateString(s))
+        {
+            return "%" + ToStringNode.normalizeDateString(s);
+        }
+        // PureSequence of size 1 → unwrap and convert the single element
+        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq && seq.size() == 1)
+        {
+            return convert(seq.getBoxed(0));
         }
         if (v instanceof java.time.LocalDate ld)
         {
@@ -71,6 +78,7 @@ public final class ToRepresentationNode extends PureNode
         Object raw = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(v);
         if (raw instanceof String s)
         {
+            if (ToStringNode.isDateString(s)) return "%" + ToStringNode.normalizeDateString(s);
             return "'" + s.replace("'", "\\'") + "'";
         }
         if (raw == null)

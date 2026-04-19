@@ -19,6 +19,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,11 +59,15 @@ public final class AdjustDateNode extends PureNode
     }
 
     @TruffleBoundary
-    private static String doAdjust(Object date, Object amount, Object unit)
+    private static PureDate doAdjust(Object date, Object amount, Object unit)
     {
         String dateStr = DateHelper.asDateString(date, SIG);
         long amt = IntegerHelper.asLong(amount, SIG);
         String unitName = DateDiffNode.resolveUnitName(unit);
+
+        // Determine the input date kind for output preservation
+        boolean isDateTime = date instanceof PureDate.DateTime || dateStr.contains("T");
+        boolean isStrictDate = date instanceof PureDate.StrictDate;
 
         LocalDateTime ldt = DateHelper.parseDate(dateStr);
 
@@ -113,9 +118,9 @@ public final class AdjustDateNode extends PureNode
                     fracStr = String.format(".%0" + fracDigits + "d",
                             nanos / (long) Math.pow(10, 9 - fracDigits));
                 }
-                return datePart + "T" + timePart + fracStr;
+                return new PureDate.DateTime(datePart + "T" + timePart + fracStr);
             }
-            return datePart + "T" + timePart;
+            return new PureDate.DateTime(datePart + "T" + timePart);
         }
         // Preserve year-only granularity; otherwise output full date
         String cleanDate = dateStr.startsWith("+") ? dateStr.substring(1) : dateStr;
@@ -129,9 +134,11 @@ public final class AdjustDateNode extends PureNode
             // Year-only: preserve if adjusting by years
             if ("YEARS".equals(unitName))
             {
-                return String.valueOf(adjusted.getYear());
+                return new PureDate.PartialDate(String.valueOf(adjusted.getYear()));
             }
         }
-        return String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth());
+        return isStrictDate
+                ? new PureDate.StrictDate(String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth()))
+                : new PureDate.PartialDate(String.format("%d-%02d-%02d", adjusted.getYear(), adjusted.getMonthValue(), adjusted.getDayOfMonth()));
     }
 }

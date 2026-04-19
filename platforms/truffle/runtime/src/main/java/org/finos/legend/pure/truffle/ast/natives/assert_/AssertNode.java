@@ -18,7 +18,6 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
@@ -86,10 +85,6 @@ public final class AssertNode extends PureNode
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Boolean b)
         {
             return b;
         }

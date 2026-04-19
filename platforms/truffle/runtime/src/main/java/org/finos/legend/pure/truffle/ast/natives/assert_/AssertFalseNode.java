@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
@@ -60,10 +59,6 @@ public final class AssertFalseNode extends PureNode
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Boolean b)
         {
             return b;
         }

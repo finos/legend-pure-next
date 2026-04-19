@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-
 public final class StringHelper
 {
     private StringHelper()
@@ -27,14 +25,6 @@ public final class StringHelper
         if (v instanceof String s)
         {
             return s;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof String s)
-        {
-            return s;
-        }
-        if (v instanceof AtomicValue av && av._value() != null)
-        {
-            return av._value().toString();
         }
         if (v instanceof org.finos.legend.pure.truffle.types.PureNull || v == null)
         {

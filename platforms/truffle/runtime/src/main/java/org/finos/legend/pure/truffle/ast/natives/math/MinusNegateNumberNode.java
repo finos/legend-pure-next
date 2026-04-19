@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.math;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
@@ -41,10 +40,6 @@ public final class MinusNegateNumberNode extends PureNode
     {
         Object v = operand.executeGeneric(frame);
         if (v instanceof Long l)
-        {
-            return -l;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Long l)
         {
             return -l;
         }

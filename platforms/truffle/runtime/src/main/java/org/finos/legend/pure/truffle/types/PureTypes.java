@@ -49,6 +49,7 @@ import com.oracle.truffle.api.dsl.TypeSystem;
  */
 @TypeSystem({
         PureNull.class,
+        PureDate.class,
         long.class,
         double.class,
         boolean.class,

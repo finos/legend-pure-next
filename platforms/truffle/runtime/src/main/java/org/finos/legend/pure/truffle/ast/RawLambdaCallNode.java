@@ -92,12 +92,6 @@ public final class RawLambdaCallNode extends Node
         {
             return lookupCallTarget(lambda);
         }
-        // AtomicValue wrapping a LambdaFunction (from bridge path)
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                && av._value() instanceof LambdaFunction lambda)
-        {
-            return lookupCallTarget(lambda);
-        }
         return null;
     }
 
@@ -117,11 +111,6 @@ public final class RawLambdaCallNode extends Node
             return StandaloneEvaluatorHolder.current().executeLambda(rc, extractArgs(args));
         }
         if (lambdaOrClosure instanceof LambdaFunction lf)
-        {
-            lambda = lf;
-        }
-        else if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                && av._value() instanceof LambdaFunction lf)
         {
             lambda = lf;
         }

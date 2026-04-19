@@ -18,6 +18,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.types.PureDate;
 
 import java.util.Objects;
 
@@ -149,13 +150,23 @@ public final class EqualNode extends PureNode
             }
             if (b instanceof String s)
             {
-                return Objects.equals(ea._name(), s);
+                return Objects.equals(ea._name(), extractEnumValueName(s));
             }
             return false;
         }
         if (b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb && a instanceof String s)
         {
-            return Objects.equals(s, eb._name());
+            return Objects.equals(extractEnumValueName(s), eb._name());
+        }
+        // Two enum value strings: compare by extracted value name
+        if (a instanceof String sa && b instanceof String sb && sa.contains("::") && sb.contains("::"))
+        {
+            int dotA = sa.lastIndexOf('.');
+            int dotB = sb.lastIndexOf('.');
+            if (dotA > 0 && dotB > 0)
+            {
+                return sa.equals(sb);
+            }
         }
         // Generated Impl equality — compare by property values respecting <<equality.Key>>
         if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyA
@@ -167,6 +178,17 @@ public final class EqualNode extends PureNode
             }
         }
         return Objects.equals(a, b);
+    }
+
+    /** Extract just the value name from an enum value string like "pkg::EnumType.VALUE" → "VALUE". */
+    private static String extractEnumValueName(String s)
+    {
+        int dotIdx = s.lastIndexOf('.');
+        if (dotIdx > 0 && s.contains("::"))
+        {
+            return s.substring(dotIdx + 1);
+        }
+        return s;
     }
 
     private static boolean equalByProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b)
@@ -321,6 +343,10 @@ public final class EqualNode extends PureNode
 
     private static Object normalizeForEquals(Object v)
     {
+        if (v instanceof PureDate pd)
+        {
+            return pd.dateString();
+        }
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
             if (seq.size() == 0)
@@ -349,20 +375,6 @@ public final class EqualNode extends PureNode
                 return normalizeForEquals(ml.get(0));
             }
             return ml;
-        }
-        // Unwrap AtomicValue (dates kept as AV)
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            Object inner = av._value();
-            return inner != null ? inner : null;
-        }
-        // Unwrap Collection (legacy VS — shouldn't appear but handle defensively)
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection col && col._values() != null)
-        {
-            if (col._values().size() == 1)
-            {
-                return normalizeForEquals(col._values().getBoxed(0));
-            }
         }
         return v;
     }

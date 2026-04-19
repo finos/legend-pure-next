@@ -50,13 +50,11 @@ public final class BinaryNumberNode extends PureNode
     {
         Object rawA = left.executeGeneric(frame);
         Object rawB = right.executeGeneric(frame);
-        Object unwA = rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawA;
-        Object unwB = rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av2 ? av2._value() : rawB;
         // If either operand is BigDecimal, use BigDecimal arithmetic
-        if (unwA instanceof java.math.BigDecimal || unwB instanceof java.math.BigDecimal)
+        if (rawA instanceof java.math.BigDecimal || rawB instanceof java.math.BigDecimal)
         {
-            java.math.BigDecimal bdA = toBigDecimal(unwA);
-            java.math.BigDecimal bdB = toBigDecimal(unwB);
+            java.math.BigDecimal bdA = toBigDecimal(rawA);
+            java.math.BigDecimal bdB = toBigDecimal(rawB);
             // Apply the operation via double, then construct BigDecimal from result
             // Use BigDecimal arithmetic directly for multiply
             if (signature.contains("times"))
@@ -75,21 +73,6 @@ public final class BinaryNumberNode extends PureNode
         double a = FloatHelper.asDouble(rawA, signature);
         double b = FloatHelper.asDouble(rawB, signature);
         return op.applyAsDouble(a, b);
-    }
-
-    private static boolean isDecimalAtomicValue(Object v)
-    {
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._genericType() != null)
-        {
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(av._genericType());
-            if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-            {
-                String name = pe._name();
-                return "Decimal".equals(name);
-            }
-        }
-        return false;
     }
 
     private static java.math.BigDecimal toBigDecimal(Object v)

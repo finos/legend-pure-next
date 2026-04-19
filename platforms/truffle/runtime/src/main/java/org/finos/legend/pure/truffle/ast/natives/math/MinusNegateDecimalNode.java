@@ -35,10 +35,6 @@ public final class MinusNegateDecimalNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object v = operand.executeGeneric(frame);
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            v = av._value();
-        }
         if (v instanceof BigDecimal bd)
         {
             return bd.negate();

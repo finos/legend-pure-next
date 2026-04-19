@@ -18,7 +18,6 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.RawClosure;
@@ -75,22 +74,12 @@ public final class IfNode extends PureNode
             RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
             return StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
         }
-        // AtomicValue wrapping a LambdaFunction
-        if (branchFn instanceof AtomicValue av && av._value() instanceof LambdaFunction lf)
-        {
-            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-            return StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
-        }
         throw new RuntimeException("if: branch is not a function: " + (branchFn == null ? "null" : branchFn.getClass().getName()));
     }
 
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        if (v instanceof AtomicValue av && av._value() instanceof Boolean b)
         {
             return b;
         }

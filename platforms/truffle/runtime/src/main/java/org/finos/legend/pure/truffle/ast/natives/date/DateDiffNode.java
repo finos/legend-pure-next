@@ -147,18 +147,6 @@ public final class DateDiffNode extends PureNode
             int dot = s.lastIndexOf('.');
             return dot >= 0 ? s.substring(dot + 1) : s;
         }
-        if (unit instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-        {
-            Object inner = av._value();
-            if (inner instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum e)
-            {
-                return e._name();
-            }
-            if (inner instanceof String s)
-            {
-                return s;
-            }
-        }
         return String.valueOf(unit);
     }
 }
