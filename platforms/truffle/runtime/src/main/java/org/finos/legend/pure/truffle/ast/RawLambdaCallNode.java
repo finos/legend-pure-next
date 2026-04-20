@@ -114,19 +114,34 @@ public final class RawLambdaCallNode extends Node
 
     private static Object fallback(Object lambdaOrClosure, Object[] args)
     {
-        // Extract the LambdaFunction and execute inline via StandaloneEvaluator
-        LambdaFunction lambda;
         if (lambdaOrClosure instanceof RawClosure rc)
         {
-            return StandaloneEvaluator.INSTANCE.executeLambda(rc, extractArgs(args));
+            // Get or compile CallTarget, then call
+            com.oracle.truffle.api.RootCallTarget ct = rc.callTarget();
+            if (ct == null)
+            {
+                ct = StandaloneEvaluator.INSTANCE.callTargetForLambda(rc.lambda());
+            }
+            if (ct != null)
+            {
+                return ct.call(args);
+            }
+            throw new RuntimeException("Cannot compile lambda CallTarget");
         }
         if (lambdaOrClosure instanceof LambdaFunction lf)
         {
-            lambda = lf;
+            com.oracle.truffle.api.RootCallTarget ct = StandaloneEvaluator.INSTANCE.callTargetForLambda(lf);
+            if (ct != null)
+            {
+                Object[] fullArgs = new Object[args.length];
+                fullArgs[0] = new RawClosure(lf, new Object[0], new String[0], ct);
+                System.arraycopy(args, 1, fullArgs, 1, args.length - 1);
+                return ct.call(fullArgs);
+            }
+            throw new RuntimeException("Cannot compile lambda CallTarget");
         }
-        else if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
         {
-            // Property used as first-class function: access the property on the arg
             Object[] rawArgs = extractArgs(args);
             if (rawArgs.length > 0)
             {
@@ -134,25 +149,17 @@ public final class RawLambdaCallNode extends Node
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
-        else if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
+        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
         {
-            // FunctionDefinition used as first-class function
             Object[] rawArgs = extractArgs(args);
             return StandaloneEvaluator.INSTANCE.executeFunction(fd, rawArgs);
         }
-        else if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction nf)
+        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction nf)
         {
-            // Native function used as first-class function
             Object[] rawArgs = extractArgs(args);
             return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(nf, rawArgs);
         }
-        else
-        {
-            throw new RuntimeException("Cannot call non-lambda: " + lambdaOrClosure.getClass().getName());
-        }
-        Object[] rawArgs = extractArgs(args);
-        return StandaloneEvaluator.INSTANCE.executeLambda(
-                new RawClosure(lambda, new Object[0], new String[0], null), rawArgs);
+        throw new RuntimeException("Cannot call: " + lambdaOrClosure.getClass().getName());
     }
 
     private static Object[] extractArgs(Object[] args)

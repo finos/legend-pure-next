@@ -77,12 +77,29 @@ public final class EvalNode extends PureNode
     {
         if (fn instanceof RawClosure rc)
         {
-            return StandaloneEvaluator.INSTANCE.executeLambda(rc, args);
+            com.oracle.truffle.api.RootCallTarget ct = rc.callTarget();
+            if (ct == null) ct = StandaloneEvaluator.INSTANCE.callTargetForLambda(rc.lambda());
+            if (ct != null)
+            {
+                Object[] fullArgs = new Object[args.length + 1];
+                fullArgs[0] = rc;
+                System.arraycopy(args, 0, fullArgs, 1, args.length);
+                return ct.call(fullArgs);
+            }
+            throw new RuntimeException("Cannot compile lambda CallTarget");
         }
         if (fn instanceof LambdaFunction lf)
         {
-            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-            return StandaloneEvaluator.INSTANCE.executeLambda(closure, args);
+            com.oracle.truffle.api.RootCallTarget ct = StandaloneEvaluator.INSTANCE.callTargetForLambda(lf);
+            if (ct != null)
+            {
+                RawClosure closure = new RawClosure(lf, new Object[0], new String[0], ct);
+                Object[] fullArgs = new Object[args.length + 1];
+                fullArgs[0] = closure;
+                System.arraycopy(args, 0, fullArgs, 1, args.length);
+                return ct.call(fullArgs);
+            }
+            throw new RuntimeException("Cannot compile lambda CallTarget");
         }
         if (fn instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
         {
