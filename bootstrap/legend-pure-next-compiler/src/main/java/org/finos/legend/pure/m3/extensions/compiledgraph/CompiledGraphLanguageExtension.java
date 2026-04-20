@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.localModule.error;
+package org.finos.legend.pure.m3.extensions.compiledgraph;
 
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.protocol.grammar.Package_PointerImpl;
@@ -25,17 +25,17 @@ import org.finos.legend.pure.m3.module.localModule.topLevel.IndexEntry;
 import java.util.List;
 
 /**
- * Language extension for the {@code ###Error} test section.
+ * Language extension for the {@code ###CompiledGraph} test section.
  *
- * <p>Bundles grammar parsing (captures raw content as an {@link Error})
- * and compilation (creates an {@link ErrorImpl} from it).</p>
+ * <p>Bundles grammar parsing (captures raw content as a {@link CompiledGraph})
+ * and compilation (creates a {@link CompiledGraphImpl} from it).</p>
  */
-public final class ErrorLanguageExtension implements LanguageExtension
+public final class CompiledGraphLanguageExtension implements LanguageExtension
 {
     @Override
     public String sectionName()
     {
-        return "Error";
+        return "CompiledGraph";
     }
 
 
@@ -49,7 +49,7 @@ public final class ErrorLanguageExtension implements LanguageExtension
     public List<meta.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
     {
         return List.of(
-                new Error()
+                new CompiledGraph()
                         ._value(content)
                         ._package(new Package_PointerImpl()._pointerValue(sourceId)));
     }
@@ -57,11 +57,11 @@ public final class ErrorLanguageExtension implements LanguageExtension
     @Override
     public PackageableElement firstPass(meta.pure.protocol.grammar.PackageableElement grammar, MetadataAccess model)
     {
-        if (grammar instanceof Error e)
+        if (grammar instanceof CompiledGraph cg)
         {
-            return new ErrorImpl()
-                    ._name(e._name())
-                    ._value(e._value());
+            return new CompiledGraphImpl()
+                    ._name(cg._name())
+                    ._value(cg._value());
         }
         return null;
     }
@@ -69,7 +69,7 @@ public final class ErrorLanguageExtension implements LanguageExtension
     @Override
     public PackageableElement secondPass(IndexEntry entry, MetadataAccess model, CompilationContext context)
     {
-        if (entry.grammarElement() instanceof Error)
+        if (entry.grammarElement() instanceof CompiledGraph)
         {
             return entry.element();
         }
@@ -79,7 +79,7 @@ public final class ErrorLanguageExtension implements LanguageExtension
     @Override
     public PackageableElement thirdPass(IndexEntry entry, MetadataAccess model, CompilationContext context)
     {
-        if (entry.grammarElement() instanceof Error)
+        if (entry.grammarElement() instanceof CompiledGraph)
         {
             return entry.element();
         }

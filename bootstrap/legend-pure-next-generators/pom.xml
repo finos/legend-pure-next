@@ -50,4 +50,111 @@
         </dependency>
     </dependencies>
 
+    <properties>
+        <spec.dir>${project.basedir}/../../specification</spec.dir>
+        <gen.spec.dir>${project.build.directory}/generated-specification</gen.spec.dir>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <!-- Generate m3.pure from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-pure</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfPureGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}/m3.pure</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3.fbs from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-fbs</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfFbsSchemaGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}</argument>
+                                <argument>${spec.dir}/m3_fbs_addition.fbs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3_protocol.ttl from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-protocol-ttl</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.M3ProtocolGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}/m3_protocol.ttl</argument>
+                                <argument>${spec.dir}/m3_protocol_addition.ttl</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3_protocol.pure from m3_protocol.ttl -->
+                    <execution>
+                        <id>generate-m3-protocol-pure</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfPureGenerator</mainClass>
+                            <arguments>
+                                <argument>${gen.spec.dir}/m3_protocol.ttl</argument>
+                                <argument>${gen.spec.dir}/protocol/m3_protocol.pure</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Package generated spec files as JAR resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package-generated-spec</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${gen.spec.dir}</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${spec.dir}</directory>
+                                    <includes>
+                                        <include>m3.ttl</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

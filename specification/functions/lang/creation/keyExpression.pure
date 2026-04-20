@@ -4,7 +4,7 @@ import meta::pure::test::pct::*;
 Class meta::pure::functions::lang::KeyExpression
 {
     name : String[1];
-    expression : Any[1];
+    expression : Any[*];
     add : Boolean[0..1];
 }
 

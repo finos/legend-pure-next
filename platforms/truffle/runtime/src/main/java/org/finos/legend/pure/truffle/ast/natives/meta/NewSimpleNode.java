@@ -80,17 +80,11 @@ public final class NewSimpleNode extends PureNode
             }
         }
 
-        // Create instance via reflection
-        Object instance;
-        String javaClassName = "org.finos.legend.pure.truffle.pdb." + classPath.replace("::", ".") + "Impl";
-        try
+        // Create instance via TruffleInstanceFactory (handles Java keyword escaping)
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        if (instance == null)
         {
-            Class<?> implClass = Class.forName(javaClassName);
-            instance = implClass.getDeclaredConstructor().newInstance();
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Cannot instantiate " + classPath, e);
+            throw new RuntimeException("Cannot instantiate " + classPath);
         }
 
         if (typeArgs != null && typeArgs.size() > 0)

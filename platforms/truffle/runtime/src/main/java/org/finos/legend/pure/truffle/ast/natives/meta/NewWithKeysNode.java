@@ -164,7 +164,20 @@ public final class NewWithKeysNode extends PureNode
                                 + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances "
                                 + "with a specific classifierGenericType.");
                     }
-                    Object propValue = keImpl._expression();
+                    org.finos.legend.pure.truffle.types.PureSequence exprSeq = keImpl._expression();
+                    Object propValue;
+                    if (exprSeq == null || exprSeq.isEmpty())
+                    {
+                        propValue = org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                    }
+                    else if (exprSeq.size() == 1)
+                    {
+                        propValue = exprSeq.getBoxed(0);
+                    }
+                    else
+                    {
+                        propValue = exprSeq;
+                    }
                     eval.accessProperty(instance, propName, propValue);
                     keyValues.add(java.util.Map.entry(propName, propValue));
                 }
@@ -172,6 +185,20 @@ public final class NewWithKeysNode extends PureNode
 
             // Set reverse association pointers (bidirectional binding)
             setReverseAssociationPointers(instance, classPath, keyValues, eval);
+
+            // Validate constraints after all properties are set
+            if (instance instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+            {
+                var cgt = any._classifierGenericType();
+                if (cgt != null)
+                {
+                    var type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+                    if (type != null)
+                    {
+                        CastNode.validateConstraints(type, cgt, instance, eval.resolver());
+                    }
+                }
+            }
 
             return instance;
         }
@@ -355,5 +382,37 @@ public final class NewWithKeysNode extends PureNode
         catch (Exception ignored)
         {
         }
+    }
+
+    /**
+     * Unwrap VS one level for the execution stack:
+     * AtomicValue → raw value, Collection → PureSequence of unwrapped values.
+     */
+    private static Object unwrapVS(Object value)
+    {
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+        {
+            return av._value();
+        }
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection col)
+        {
+            var vals = col._values();
+            if (vals == null || vals.isEmpty()) return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            Object[] unwrapped = new Object[vals.size()];
+            for (int i = 0; i < vals.size(); i++)
+            {
+                Object elem = vals.getBoxed(i);
+                if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+                {
+                    unwrapped[i] = av._value();
+                }
+                else
+                {
+                    unwrapped[i] = elem;
+                }
+            }
+            return new org.finos.legend.pure.truffle.types.ObjectSequence(unwrapped);
+        }
+        return value;
     }
 }

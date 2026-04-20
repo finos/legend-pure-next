@@ -113,7 +113,20 @@ public final class CopyWithKeysNode extends PureNode
                 if (ke instanceof KeyExpression keImpl)
                 {
                     String propName = keImpl._name();
-                    Object propValue = keImpl._expression();
+                    org.finos.legend.pure.truffle.types.PureSequence exprSeq = keImpl._expression();
+                    Object propValue;
+                    if (exprSeq == null || exprSeq.isEmpty())
+                    {
+                        propValue = org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                    }
+                    else if (exprSeq.size() == 1)
+                    {
+                        propValue = exprSeq.getBoxed(0);
+                    }
+                    else
+                    {
+                        propValue = exprSeq;
+                    }
                     boolean isAdd = keImpl._add() != null && keImpl._add();
                     if (isAdd)
                     {

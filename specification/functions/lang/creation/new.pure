@@ -80,8 +80,8 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewGenericFu
     let l3 = new(@LA_List<String>|1, [
                                         ^KeyExpression
                                         (
-                                            name = ^AtomicValue(value='values', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne),
-                                            expression = ^Collection(values=[^AtomicValue(value='a', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='b', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne), ^AtomicValue(value='c', genericType=^UserDefinedGenericType(type=String), multiplicity=PureOne)], genericType=^UserDefinedGenericType(type=String), multiplicity=ZeroMany)
+                                            name = 'values',
+                                            expression = ['a', 'b', 'c']
                                         )
                                    ]
             );

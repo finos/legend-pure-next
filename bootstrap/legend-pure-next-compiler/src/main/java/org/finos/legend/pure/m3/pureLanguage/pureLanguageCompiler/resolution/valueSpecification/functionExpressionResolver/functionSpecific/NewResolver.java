@@ -197,8 +197,7 @@ public class NewResolver
                                 || sameRawType || isSubtype
                                 || "Any".equals(pName) || "Any".equals(vName)
                                 || "Nil".equals(vName) || "Unknown".equals(pName) || "Unknown".equals(vName)
-                                || valRawType instanceof meta.pure.metamodel.type.generics.TypeParameter
-                                || valPath.startsWith("meta::pure::metamodel::valuespecification::");
+                                || valRawType instanceof meta.pure.metamodel.type.generics.TypeParameter;
                         if (!skip && !_GenericType.isCompatible(resolvedPropGT, keyValueVS._genericType(), model))
                         {
                             context.addError(new CompilationError(

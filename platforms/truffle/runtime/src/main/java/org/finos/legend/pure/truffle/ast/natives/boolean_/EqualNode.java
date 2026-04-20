@@ -171,11 +171,11 @@ public final class EqualNode extends PureNode
         }
         // Generated Impl equality — compare by property values respecting <<equality.Key>>
         // Also handles cross-class comparisons (FlatBufferWrapper vs Impl) when both
-        // implement the same truffle interface.
+        // represent the same Pure type (checked via classifierGenericType path).
         if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyA
                 && b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyB)
         {
-            if (a.getClass() == b.getClass() || shareInterface(a, b))
+            if (a.getClass() == b.getClass() || samePureType(anyA, anyB))
             {
                 return equalByProperties(anyA, anyB);
             }
@@ -183,15 +183,33 @@ public final class EqualNode extends PureNode
         return Objects.equals(a, b);
     }
 
-    /** Check if two objects share a common truffle interface (for cross-type equality). */
-    private static boolean shareInterface(Object a, Object b)
+    /**
+     * Check if two Any instances represent the same Pure type.
+     * Compares classifierGenericType paths. This correctly distinguishes
+     * LeftClass from BottomClass (different types, not equal) while still
+     * matching FlatBufferWrapper vs Impl of the same type.
+     */
+    private static boolean samePureType(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a,
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b)
     {
-        for (Class<?> iface : a.getClass().getInterfaces())
+        var cgtA = a._classifierGenericType();
+        var cgtB = b._classifierGenericType();
+        if (cgtA == null || cgtB == null)
         {
-            if (iface.getName().startsWith("org.finos.legend.pure.truffle.pdb.") && iface.isInstance(b))
-            {
-                return true;
-            }
+            return false;
+        }
+        var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtA);
+        var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtB);
+        if (typeA == typeB)
+        {
+            return true;
+        }
+        if (typeA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peA
+                && typeB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peB)
+        {
+            return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peA)
+                    .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
         }
         return false;
     }
@@ -355,6 +373,11 @@ public final class EqualNode extends PureNode
 
     private static Object normalizeForEquals(Object v)
     {
+        // AtomicValue from PDB metadata — unwrap to raw value for comparison
+        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+        {
+            return normalizeForEquals(av._value());
+        }
         if (v instanceof PureDate pd)
         {
             return pd.dateString();

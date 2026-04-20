@@ -82,12 +82,37 @@
 
     <properties>
         <spec.dir>${project.basedir}/../../specification</spec.dir>
-        <gen.spec.dir>${project.basedir}/../../build/specification</gen.spec.dir>
+        <gen.spec.dir>${project.build.directory}/generated-specification</gen.spec.dir>
     </properties>
 
     <build>
         <plugins>
-            <!-- Step 1: Generate M3 interfaces + impls from TTL (via exec) -->
+            <!-- Unpack generated specification from generators JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-generated-spec</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.finos.legend.pure</groupId>
+                                    <artifactId>legend-pure-next-generators</artifactId>
+                                    <version>${project.version}</version>
+                                    <includes>generated-specification/**</includes>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Step 1: Generate M3 interfaces + impls from TTL -->
             <!-- Step 2: Compile .fbs schema to Java FlatBuffer accessors (flatc) -->
             <!-- Step 3: Generate FBS Java wrappers/writer/resolver -->
             <!-- Step 4: Compile specification Pure files into a .pdb archive -->
@@ -143,6 +168,24 @@
                             <arguments>
                                 <argument>${spec.dir}/m3.ttl</argument>
                                 <argument>${project.build.directory}/generated-sources</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Step 4: Build core.pdb — goes to target/classes/ so it's
+                         on the test classpath AND included in the JAR -->
+                    <execution>
+                        <id>build-core-pdb</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.m3.SpecificationBinaryBuilder</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${spec.dir}/functions</argument>
+                                <argument>${gen.spec.dir}/protocol</argument>
+                                <argument>${project.build.outputDirectory}/core.pdb</argument>
                             </arguments>
                         </configuration>
                     </execution>

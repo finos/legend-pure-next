@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.localModule;
+package org.finos.legend.pure.m3;
 
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.m3.PureModel;
-import org.finos.legend.pure.m3.localModule.error.Error;
-import org.finos.legend.pure.m3.localModule.error.ErrorLanguageExtension;
+import org.finos.legend.pure.m3.extensions.error.Error;
+import org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
@@ -34,18 +33,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 

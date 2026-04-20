@@ -1,4 +1,11 @@
+import meta::pure::compiler::*;
+
+Class A
+{
+    b() {1} : Integer[1];
+}
+
 function go():Any[*]
 {
-    println('ok');
+    println(A);
 }

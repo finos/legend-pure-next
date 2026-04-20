@@ -64,47 +64,50 @@ public class BootstrapModule implements Module
      *
      * @throws RuntimeException if m3.ttl cannot be located
      */
+    /**
+     * Load m3.ttl from the classpath (packaged in the generators JAR).
+     */
     public static Path locateM3Ttl()
     {
-        return walkUp("specification/m3.ttl");
+        return extractFromClasspath("generated-specification/m3.ttl");
     }
 
     /**
-     * Walk upward from the current working directory looking for a
-     * {@code build/core.pdb} file (produced by {@code just build-core-pdb}).
-     *
-     * @throws RuntimeException if the file cannot be located
+     * Load core.pdb from the classpath (packaged in the compiler JAR).
      */
     public static Path locateCorePdb()
     {
-        return walkUp("build/core.pdb");
+        return extractFromClasspath("core.pdb");
     }
 
     /**
-     * Walk upward from the current working directory looking for a
-     * {@code build/compiler.pdb} file (produced by {@code just build-compiler-pdb}).
-     *
-     * @throws RuntimeException if the file cannot be located
+     * Load compiler.pdb from the classpath.
      */
     public static Path locateCompilerPdb()
     {
-        return walkUp("build/compiler.pdb");
+        return extractFromClasspath("compiler.pdb");
     }
 
-    private static Path walkUp(String relativePath)
+    private static Path extractFromClasspath(String resourceName)
     {
-        Path current = Path.of("").toAbsolutePath();
-        while (current != null)
+        try (java.io.InputStream in = BootstrapModule.class.getClassLoader().getResourceAsStream(resourceName))
         {
-            Path candidate = current.resolve(relativePath);
-            if (Files.exists(candidate))
+            if (in == null)
             {
-                return candidate;
+                throw new RuntimeException("Resource '" + resourceName + "' not found on classpath");
             }
-            current = current.getParent();
+            String safeName = resourceName.replace('/', '-');
+            Path tempFile = Files.createTempFile("pure-", "-" + safeName);
+            tempFile.toFile().deleteOnExit();
+            Files.copy(in, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return tempFile;
         }
-        throw new RuntimeException("Cannot locate " + relativePath + " by walking up from " + Path.of("").toAbsolutePath());
+        catch (java.io.IOException e)
+        {
+            throw new RuntimeException("Failed to extract '" + resourceName + "' from classpath", e);
+        }
     }
+
 
     /**
      * Recursively freeze all elements in the index to make them immutable.

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.localModule.error;
+package org.finos.legend.pure.m3.extensions.compiledgraph;
 
 import meta.pure.metamodel.Package;
 import meta.pure.metamodel.PackageableElement;
@@ -24,10 +24,10 @@ import meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.eclipse.collections.api.list.MutableList;
 
 /**
- * Compiled model element for {@code ###Error} test sections.
- * Carries the expected error message text.
+ * Compiled model element for {@code ###CompiledGraph} test sections.
+ * Carries the expected compiled-graph text.
  */
-public class ErrorImpl implements PackageableElement
+public class CompiledGraphImpl implements PackageableElement
 {
     private String name;
     private Package package_;
@@ -39,7 +39,7 @@ public class ErrorImpl implements PackageableElement
         return this.name;
     }
 
-    public ErrorImpl _name(String value)
+    public CompiledGraphImpl _name(String value)
     {
         this.name = value;
         return this;
@@ -51,7 +51,7 @@ public class ErrorImpl implements PackageableElement
         return this.package_;
     }
 
-    public ErrorImpl _package(Package value)
+    public CompiledGraphImpl _package(Package value)
     {
         this.package_ = value;
         return this;
@@ -62,7 +62,7 @@ public class ErrorImpl implements PackageableElement
         return this.value;
     }
 
-    public ErrorImpl _value(String value)
+    public CompiledGraphImpl _value(String value)
     {
         this.value = value;
         return this;
@@ -129,7 +129,7 @@ public class ErrorImpl implements PackageableElement
     }
 
     @Override
-    public ErrorImpl _copy()
+    public CompiledGraphImpl _copy()
     {
         throw new UnsupportedOperationException();
     }

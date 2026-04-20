@@ -155,14 +155,61 @@ public final class PureASTBuilder
         {
             throw new RuntimeException("_func() returned null for: " + fe._functionName() + " [" + fe.getClass().getSimpleName() + "]");
         }
-        return switch (func)
+        // QP overload disambiguation: the PDB func path may resolve to the wrong
+        // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).
+        // Fix by matching the QP's param count against the call's arg count.
+        if (func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp)
+        {
+            int callArgCount = fe._parametersValues() != null ? fe._parametersValues().size() : 0;
+            int qpParamCount = qp._parameters() != null ? qp._parameters().size() : 0;
+            if (qpParamCount != callArgCount)
+            {
+                // Wrong overload — find the right one from the owning class
+                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty correct =
+                        findQpOverload(qp, callArgCount);
+                if (correct != null)
+                {
+                    func = correct;
+                }
+            }
+        }
+        final org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function resolvedFunc = func;
+        return switch (resolvedFunc)
         {
             case NativeFunction nf -> lowerNativeCall(nf, fe);
             case FunctionDefinition fd -> new RawUserFunctionCallNode(fd, lowerArgs(fe));
             case AbstractProperty prop -> new RawPropertyAccessNode(fe, lowerArgs(fe));
             default -> throw new RuntimeException(
-                    "Unsupported function type: " + func.getClass().getName() + " for: " + fe._functionName());
+                    "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: " + fe._functionName());
         };
+    }
+
+    /**
+     * Find the correct QP overload from the owning class by matching parameter count.
+     */
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty findQpOverload(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty wrongQp, int expectedParamCount)
+    {
+        var owner = wrongQp._owner();
+        if (!(owner instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls))
+        {
+            return null;
+        }
+        var qps = cls._qualifiedProperties();
+        if (qps == null) return null;
+        String targetName = wrongQp._name();
+        for (int i = 0; i < qps.size(); i++)
+        {
+            Object candidate = qps.getBoxed(i);
+            if (candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty cqp
+                    && targetName.equals(cqp._name())
+                    && cqp._parameters() != null
+                    && cqp._parameters().size() == expectedParamCount)
+            {
+                return cqp;
+            }
+        }
+        return null;
     }
 
     private PureNode lowerNativeCall(NativeFunction nf, FunctionExpression fe)

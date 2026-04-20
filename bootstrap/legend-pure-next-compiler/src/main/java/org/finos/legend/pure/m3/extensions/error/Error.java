@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.cli.compiledgraph;
+package org.finos.legend.pure.m3.extensions.error;
 
 import meta.pure.protocol.grammar.Package_Pointer;
 import meta.pure.protocol.grammar.PackageableElement;
@@ -25,10 +25,10 @@ import meta.pure.protocol.grammar.type.Any;
 import org.eclipse.collections.api.list.MutableList;
 
 /**
- * Grammar-level element for the {@code ###CompiledGraph} test section.
- * Contains the raw expected compiled-graph text.
+ * Grammar-level element for the {@code ###Error} test section.
+ * Contains the raw expected-error text.
  */
-public class CompiledGraph implements PackageableElement
+public class Error implements PackageableElement
 {
     private Package_Pointer package_;
     private String value;
@@ -36,13 +36,13 @@ public class CompiledGraph implements PackageableElement
     @Override
     public String _name()
     {
-        return "CompiledGraph";
+        return "Error";
     }
 
     @Override
     public PackageableElement _name(String value)
     {
-        throw new UnsupportedOperationException("CompiledGraph name is fixed");
+        throw new UnsupportedOperationException("Error name is fixed");
     }
 
     @Override
@@ -51,7 +51,7 @@ public class CompiledGraph implements PackageableElement
         return this.package_;
     }
 
-    public CompiledGraph _package(Package_Pointer value)
+    public Error _package(Package_Pointer value)
     {
         this.package_ = value;
         return this;
@@ -62,7 +62,7 @@ public class CompiledGraph implements PackageableElement
         return this.value;
     }
 
-    public CompiledGraph _value(String value)
+    public Error _value(String value)
     {
         this.value = value;
         return this;
@@ -71,42 +71,42 @@ public class CompiledGraph implements PackageableElement
     @Override
     public SourceInformation _sourceInformation()
     {
-        return null;
+        throw new UnsupportedOperationException("Error does not support sourceInformation");
     }
 
     @Override
     public Any _sourceInformation(SourceInformation value)
     {
-        return this;
+        throw new UnsupportedOperationException("Error does not support sourceInformation");
     }
 
     @Override
     public MutableList<TaggedValue> _taggedValues()
     {
-        return null;
+        throw new UnsupportedOperationException("Error does not support taggedValues");
     }
 
     @Override
     public ElementWithTaggedValues _taggedValues(MutableList<TaggedValue> value)
     {
-        return this;
+        throw new UnsupportedOperationException("Error does not support taggedValues");
     }
 
     @Override
     public MutableList<Stereotype_Pointer> _stereotypes()
     {
-        return null;
+        throw new UnsupportedOperationException("Error does not support stereotypes");
     }
 
     @Override
     public ElementWithStereotypes _stereotypes(MutableList<Stereotype_Pointer> value)
     {
-        return this;
+        throw new UnsupportedOperationException("Error does not support stereotypes");
     }
 
     @Override
     public Any _copy()
     {
-        throw new UnsupportedOperationException("CompiledGraph does not support copy");
+        throw new UnsupportedOperationException("Error does not support stereotypes");
     }
 }

@@ -622,19 +622,38 @@ public final class StandaloneEvaluator
         throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getSimpleName());
     }
 
-    /** Unwrap ValueSpecification wrappers to get the raw value (mirrors bootstrap _E_ValueSpecification.unwrap). */
-    private static Object unwrapForSetter(Object value)
+    /** Unwrap ValueSpecification wrappers one level to get raw values. No recursion. */
+    static Object unwrapForSetter(Object value)
     {
         if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
         {
             return null;
         }
-        // Single-element PureSequence
+        // Single-element PureSequence — unwrap one level
         if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq && seq.size() == 1)
         {
-            return unwrapForSetter(seq.getBoxed(0));
+            return seq.getBoxed(0);
+        }
+        // AtomicValue — unwrap to raw value
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+        {
+            return av._value();
         }
         return value;
+    }
+
+    /** Unwrap Collection VS to PureSequence of its values (one level, each element unwrapped one level). */
+    static org.finos.legend.pure.truffle.types.PureSequence unwrapCollectionVS(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection col)
+    {
+        var vals = col._values();
+        if (vals == null || vals.isEmpty()) return new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);
+        Object[] unwrapped = new Object[vals.size()];
+        for (int i = 0; i < vals.size(); i++)
+        {
+            unwrapped[i] = unwrapForSetter(vals.getBoxed(i));
+        }
+        return new org.finos.legend.pure.truffle.types.ObjectSequence(unwrapped);
     }
 
     private static org.finos.legend.pure.truffle.types.PureSequence toPureSequence(Object value)
@@ -1046,14 +1065,50 @@ public final class StandaloneEvaluator
             Integer slot = layout.slotFor(name);
             if (slot != null)
             {
-                // Type variable values are still VS in the PDB — unwrap to raw
-                Object raw = org.finos.legend.pure.execution._E_ValueSpecification.unwrap(typeVarVals.getBoxed(i));
-                if (raw != null)
+                // Type variable values are AtomicValue in the PDB — unwrap to raw
+                Object tvVal = typeVarVals.getBoxed(i);
+                if (tvVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
                 {
-                    frame.setObject(slot, raw);
+                    tvVal = av._value();
+                }
+                if (tvVal != null)
+                {
+                    frame.setObject(slot, tvVal);
                 }
             }
         }
+    }
+
+    /**
+     * Collect the names of type variables declared on the target's class.
+     * Returns an empty set if the target has no type variables.
+     */
+    private static java.util.Set<String> collectTypeVariableNames(Object target)
+    {
+        java.util.Set<String> names = java.util.Collections.emptySet();
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
+        if (cgt == null)
+        {
+            return names;
+        }
+        var type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+        if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls && cls._typeVariables() != null)
+        {
+            var tvs = cls._typeVariables();
+            if (!tvs.isEmpty())
+            {
+                names = new java.util.HashSet<>();
+                for (int i = 0; i < tvs.size(); i++)
+                {
+                    Object tv = tvs.getBoxed(i);
+                    if (tv instanceof VariableExpression ve && ve._name() != null)
+                    {
+                        names.add(ve._name());
+                    }
+                }
+            }
+        }
+        return names;
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType getClassifierGenericType(Object target)

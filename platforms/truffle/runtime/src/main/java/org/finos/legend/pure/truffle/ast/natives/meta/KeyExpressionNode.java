@@ -58,7 +58,15 @@ public final class KeyExpressionNode extends PureNode
     {
         KeyExpressionImpl keyExpr = new KeyExpressionImpl();
         keyExpr._name((String) values[0]);
-        keyExpr._expression(values[1]);
+        Object expr = values[1];
+        if (expr instanceof org.finos.legend.pure.truffle.types.PureSequence ps)
+        {
+            keyExpr._expression(ps);
+        }
+        else
+        {
+            keyExpr._expression(new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[]{expr}));
+        }
         if (values.length > 2)
         {
             keyExpr._add((Boolean) values[2]);

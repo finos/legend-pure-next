@@ -121,7 +121,7 @@ public final class CastNode extends PureNode
         return inputResult;
     }
 
-    private static void validateConstraints(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
+    static void validateConstraints(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
                                             GenericType targetGT,
                                             Object value,
                                             TruffleMetadataAccess resolver)
