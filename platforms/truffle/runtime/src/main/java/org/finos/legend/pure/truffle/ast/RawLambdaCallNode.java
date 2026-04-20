@@ -46,6 +46,11 @@ public final class RawLambdaCallNode extends Node
     @CompilerDirectives.CompilationFinal
     private Object cachedTarget;
 
+    public Object call(Object lambdaOrClosure)
+    {
+        return dispatch(lambdaOrClosure, new Object[]{lambdaOrClosure});
+    }
+
     public Object call(Object lambdaOrClosure, Object arg)
     {
         return dispatch(lambdaOrClosure, new Object[]{lambdaOrClosure, arg});
@@ -56,11 +61,17 @@ public final class RawLambdaCallNode extends Node
         return dispatch(lambdaOrClosure, new Object[]{lambdaOrClosure, arg0, arg1});
     }
 
+    public Object callWithArgs(Object lambdaOrClosure, Object[] rawArgs)
+    {
+        Object[] fullArgs = new Object[rawArgs.length + 1];
+        fullArgs[0] = lambdaOrClosure;
+        System.arraycopy(rawArgs, 0, fullArgs, 1, rawArgs.length);
+        return dispatch(lambdaOrClosure, fullArgs);
+    }
+
     private Object dispatch(Object lambdaOrClosure, Object[] args)
     {
-        // TODO: investigate Truffle frame binding issue with CallTarget path
-        // For now, always use fallback (inline) path
-        RootCallTarget target = null; // getCallTarget(lambdaOrClosure);
+        RootCallTarget target = getCallTarget(lambdaOrClosure);
         if (target == null)
         {
             return fallback(lambdaOrClosure, args);

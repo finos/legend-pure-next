@@ -23,6 +23,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunc
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
 import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.RawClosure;
@@ -36,6 +37,9 @@ public final class EvalNode extends PureNode
 {
     @Children
     private PureNode[] children;
+
+    @Child
+    private RawLambdaCallNode evalCallNode = new RawLambdaCallNode();
 
     public EvalNode(PureNode[] children)
     {
@@ -54,7 +58,7 @@ public final class EvalNode extends PureNode
     }
 
     @TruffleBoundary
-    private static Object invokeEval(Object[] values)
+    private Object invokeEval(Object[] values)
     {
         Object fn = values[0];
         if (fn == null || (fn instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
@@ -64,7 +68,7 @@ public final class EvalNode extends PureNode
         Object[] args = new Object[values.length - 1];
         System.arraycopy(values, 1, args, 0, args.length);
 
-        return dispatch(fn, args);
+        return evalCallNode.callWithArgs(fn, args);
     }
 
     /**

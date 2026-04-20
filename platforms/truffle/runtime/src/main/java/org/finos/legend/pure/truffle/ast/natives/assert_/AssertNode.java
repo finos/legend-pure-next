@@ -14,13 +14,9 @@
 
 package org.finos.legend.pure.truffle.ast.natives.assert_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
-import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
  * {@code assert(Boolean[1], Function<{->String[1]}>[1]) : Boolean[1]} -- assert with lazy message.
@@ -34,6 +30,9 @@ public final class AssertNode extends PureNode
 
     @Child
     private PureNode messageFnArg;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode msgCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
 
     public AssertNode(PureNode conditionArg, PureNode messageFnArg)
     {
@@ -51,7 +50,7 @@ public final class AssertNode extends PureNode
             if (messageFnArg != null)
             {
                 Object msgFn = messageFnArg.executeGeneric(frame);
-                throwWithMessage(msgFn, this);
+                throwWithMessage(msgFn);
             }
             else
             {
@@ -61,24 +60,10 @@ public final class AssertNode extends PureNode
         return true;
     }
 
-    @TruffleBoundary
-    private static void throwWithMessage(Object msgFn, com.oracle.truffle.api.nodes.Node location)
+    private void throwWithMessage(Object msgFn)
     {
-        Object message;
-        if (msgFn instanceof RawClosure rc)
-        {
-            message = StandaloneEvaluatorHolder.current().executeLambda(rc, new Object[0]);
-        }
-        else if (msgFn instanceof LambdaFunction lf)
-        {
-            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-            message = StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
-        }
-        else
-        {
-            message = String.valueOf(msgFn);
-        }
-        throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError(String.valueOf(message), location);
+        Object message = msgCallNode.call(msgFn);
+        throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError(String.valueOf(message), this);
     }
 
     private static boolean asBoolean(Object v)

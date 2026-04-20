@@ -19,8 +19,8 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -43,6 +43,9 @@ public final class AssertErrorNode extends PureNode
 
     @Child
     private PureNode colArg;
+
+    @Child
+    private RawLambdaCallNode bodyCallNode = new RawLambdaCallNode();
 
     public AssertErrorNode(PureNode fnArg, PureNode msgArg, PureNode lineArg, PureNode colArg)
     {
@@ -68,7 +71,7 @@ public final class AssertErrorNode extends PureNode
         return doAssertError(fn, expectedMessage);
     }
 
-    private static boolean doAssertError(Object rawFn, String expectedMessage)
+    private boolean doAssertError(Object rawFn, String expectedMessage)
     {
         // Unwrap AtomicValue if present
         Object fn = rawFn instanceof meta.pure.metamodel.valuespecification.AtomicValue av ? av._value() : rawFn;
@@ -77,12 +80,12 @@ public final class AssertErrorNode extends PureNode
             // Execute the zero-arg function
             if (fn instanceof RawClosure rc)
             {
-                StandaloneEvaluatorHolder.current().executeLambda(rc, new Object[0]);
+                bodyCallNode.call(rc);
             }
             else if (fn instanceof LambdaFunction lf)
             {
                 RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-                StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
+                bodyCallNode.call(closure);
             }
             else
             {

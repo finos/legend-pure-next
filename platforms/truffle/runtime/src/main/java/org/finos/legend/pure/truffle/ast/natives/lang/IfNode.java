@@ -14,19 +14,16 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
-import org.finos.legend.pure.truffle.types.RawClosure;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 
 /**
  * {@code if(Boolean[1], Function<{->T[m]}>[1], Function<{->T[m]}>[1]) : T[m]}.
  *
- * <p>Evaluates the condition eagerly. Based on the boolean result,
- * evaluates the chosen branch and invokes it as a zero-arg lambda.</p>
+ * <p>Evaluates the condition eagerly. Invokes the selected branch
+ * as a zero-arg lambda via Truffle CallTarget dispatch.</p>
  */
 @NodeInfo(shortName = "if")
 public final class IfNode extends PureNode
@@ -42,6 +39,9 @@ public final class IfNode extends PureNode
     @Child
     private PureNode elseBranch;
 
+    @Child
+    private RawLambdaCallNode callNode = new RawLambdaCallNode();
+
     public IfNode(PureNode condition, PureNode thenBranch, PureNode elseBranch)
     {
         this.condition = condition;
@@ -54,27 +54,10 @@ public final class IfNode extends PureNode
     {
         Object condVal = condition.executeGeneric(frame);
         boolean cond = asBoolean(condVal);
-        // Only evaluate the selected branch — lazy evaluation
-        // prevents the non-selected branch from reading/modifying frame state
         Object branchFn = cond
                 ? thenBranch.executeGeneric(frame)
                 : elseBranch.executeGeneric(frame);
-        return callExecuteFunction(branchFn);
-    }
-
-    @TruffleBoundary
-    private static Object callExecuteFunction(Object branchFn)
-    {
-        if (branchFn instanceof RawClosure rc)
-        {
-            return StandaloneEvaluatorHolder.current().executeLambda(rc, new Object[0]);
-        }
-        if (branchFn instanceof LambdaFunction lf)
-        {
-            RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-            return StandaloneEvaluatorHolder.current().executeLambda(closure, new Object[0]);
-        }
-        throw new RuntimeException("if: branch is not a function: " + (branchFn == null ? "null" : branchFn.getClass().getName()));
+        return callNode.call(branchFn);
     }
 
     private static boolean asBoolean(Object v)
