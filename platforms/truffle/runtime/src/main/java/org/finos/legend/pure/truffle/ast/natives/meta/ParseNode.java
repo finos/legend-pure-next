@@ -17,8 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.ProtocolToDynamicInstance;
-import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -66,10 +64,6 @@ public final class ParseNode extends PureNode
         {
             throw new RuntimeException("parse native: no PureParser configured on StandaloneEvaluator");
         }
-        TruffleMetadataAccess resolver = eval.resolver();
-        Object pureFile = parser.parse(sourceId, content);
-        // TODO: ProtocolToDynamicInstance expects bootstrap MetadataAccess — needs truffle version
-        ProtocolToDynamicInstance translator = new ProtocolToDynamicInstance(null);
-        return translator.convert(pureFile);
+        return parser.parse(sourceId, content);
     }
 }
