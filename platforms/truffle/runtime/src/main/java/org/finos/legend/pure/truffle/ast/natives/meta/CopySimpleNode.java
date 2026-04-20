@@ -127,11 +127,117 @@ public final class CopySimpleNode extends PureNode
             }
         }
 
-        // Set classifierGenericType on copy
+        // Fix self-referencing CGT (e.g., Class<x> where x == original)
+        // Only deep-copy when the CGT actually references the original
         if (copy instanceof Any anyC && cgt != null)
         {
-            anyC._classifierGenericType(cgt);
+            if (hasSelfReference(cgt, original))
+            {
+                anyC._classifierGenericType(deepCopyCgt(cgt, original, copy));
+            }
+            else
+            {
+                anyC._classifierGenericType(cgt);
+            }
         }
         return copy;
+    }
+
+    private static String printGtv(GenericTypeValue gtv, Object original, Object copy, int depth)
+    {
+        if (gtv == null) return "null";
+        String indent = "  ".repeat(depth);
+        StringBuilder sb = new StringBuilder();
+        var type = gtv._type();
+        String typeName = type == null ? "null"
+                : type == original ? "ORIGINAL@" + System.identityHashCode(original)
+                : type == copy ? "COPY@" + System.identityHashCode(copy)
+                : type.getClass().getSimpleName() + "@" + System.identityHashCode(type);
+        sb.append("GT(type=").append(typeName);
+        var ta = gtv._typeArguments();
+        if (ta != null && !ta.isEmpty())
+        {
+            sb.append(", typeArgs=[");
+            for (int i = 0; i < ta.size(); i++)
+            {
+                if (i > 0) sb.append(", ");
+                Object elem = ta.getBoxed(i);
+                if (elem instanceof GenericTypeValue inner)
+                {
+                    sb.append("\n").append(indent).append("  ").append(printGtv(inner, original, copy, depth + 1));
+                }
+                else
+                {
+                    sb.append(elem != null ? elem.getClass().getSimpleName() : "null");
+                }
+            }
+            sb.append("]");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private static boolean hasSelfReference(GenericTypeValue gtv, Object original)
+    {
+        if (gtv._type() == original) return true;
+        var typeArgs = gtv._typeArguments();
+        if (typeArgs != null)
+        {
+            for (int i = 0; i < typeArgs.size(); i++)
+            {
+                Object ta = typeArgs.getBoxed(i);
+                if (ta instanceof GenericTypeValue inner && hasSelfReference(inner, original)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Deep-copy a GenericTypeValue tree, replacing all references to {@code original}
+     * with {@code copy}. Handles type pointers and TypeParameter owner pointers.
+     */
+    private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy)
+    {
+        if (gtv == null) return null;
+        var result = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        // Copy type — substitute self-references
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type = gtv._type();
+        if (type == original && copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
+        {
+            result._type(copyType);
+        }
+        else if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp && tp._owner() == original)
+        {
+            var tpCopy = tp._copy();
+            if (copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner tmpo)
+            {
+                tpCopy._owner(tmpo);
+            }
+            result._type(tpCopy);
+        }
+        else
+        {
+            result._type(type);
+        }
+        // Deep-copy typeArguments recursively
+        var typeArgs = gtv._typeArguments();
+        if (typeArgs != null && !typeArgs.isEmpty())
+        {
+            Object[] copied = new Object[typeArgs.size()];
+            for (int i = 0; i < typeArgs.size(); i++)
+            {
+                Object ta = typeArgs.getBoxed(i);
+                if (ta instanceof GenericTypeValue innerGtv)
+                {
+                    copied[i] = deepCopyCgt(innerGtv, original, copy);
+                }
+                else
+                {
+                    copied[i] = ta;
+                }
+            }
+            result._typeArguments(new org.finos.legend.pure.truffle.types.ObjectSequence(copied));
+        }
+        return result;
     }
 }

@@ -39,21 +39,42 @@ public final class NewClassNode extends PureNode
     {
         var cls = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl();
 
+        // Normalize to PureSequence (single values get wrapped)
+        PureSequence tpSeq = toSequence(typeParams);
+        PureSequence mpSeq = toSequence(multParams);
+
         // Set type parameters and multiplicity parameters
-        if (typeParams instanceof PureSequence ps)
-        {
-            cls._typeParameters(ps);
-        }
-        if (multParams instanceof PureSequence ps)
-        {
-            cls._multiplicityParameters(ps);
-        }
+        cls._typeParameters(tpSeq);
+        cls._multiplicityParameters(mpSeq);
 
         // Build self-referencing CGT: Class<cls>
-        // The CGT is a GenericTypeValue whose type is Class and whose
-        // typeArguments[0] is a GenericType pointing back to cls.
         var selfGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         selfGT._type(cls);
+        // Add type parameter GTs as typeArguments on the self-GT
+        if (!tpSeq.isEmpty())
+        {
+            Object[] tpGTs = new Object[tpSeq.size()];
+            for (int i = 0; i < tpSeq.size(); i++)
+            {
+                Object tp = tpSeq.getBoxed(i);
+                if (tp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tParam)
+                {
+                    // Set owner to the new class
+                    if (tParam instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameterImpl tpImpl)
+                    {
+                        tpImpl._owner(cls);
+                    }
+                    var tpGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+                    tpGT._type(tParam);
+                    tpGTs[i] = tpGT;
+                }
+                else
+                {
+                    tpGTs[i] = tp;
+                }
+            }
+            selfGT._typeArguments(new ObjectSequence(tpGTs));
+        }
 
         var resolver = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current().resolver();
         Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
@@ -67,5 +88,12 @@ public final class NewClassNode extends PureNode
         cls._classifierGenericType(cgt);
 
         return cls;
+    }
+
+    private static PureSequence toSequence(Object value)
+    {
+        if (value instanceof PureSequence ps) return ps;
+        if (value == null) return PureSequence.EMPTY;
+        return new ObjectSequence(new Object[]{value});
     }
 }

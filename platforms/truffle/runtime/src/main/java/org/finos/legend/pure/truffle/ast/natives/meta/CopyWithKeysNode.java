@@ -183,6 +183,23 @@ public final class CopyWithKeysNode extends PureNode
 
             NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval);
 
+            // Also set reverse associations for sub-copies created by deep property paths
+            for (String topProp : topLevelDeepProps)
+            {
+                Object subCopy = eval.accessProperty(copy, topProp);
+                if (subCopy instanceof Any subAny && subAny._classifierGenericType() != null)
+                {
+                    var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subAny._classifierGenericType());
+                    if (subType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement subPe)
+                    {
+                        String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subPe);
+                        java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
+                        addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
+                        NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval);
+                    }
+                }
+            }
+
             return copy;
         }
         finally
@@ -450,7 +467,6 @@ public final class CopyWithKeysNode extends PureNode
             // Copy the sub-object so we don't mutate the original
             if (child instanceof Any any)
             {
-                // Try _copy() if available, otherwise fallback to createInstanceByPath + reflection copy
                 Object childCopy = tryCopy(any);
                 if (childCopy instanceof Any anyCopy)
                 {
