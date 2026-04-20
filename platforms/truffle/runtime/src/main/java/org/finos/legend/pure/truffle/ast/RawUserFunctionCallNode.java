@@ -63,27 +63,36 @@ public final class RawUserFunctionCallNode extends PureNode
         {
             args[i] = argNodes[i].executeGeneric(frame);
         }
+        // For QPs: dispatch based on target's runtime type
+        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp && args.length > 0)
+        {
+            return dispatchQp(qp, args);
+        }
+        // For regular functions: cached CallTarget
         RootCallTarget ct = cachedCallTarget;
         if (ct == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            ct = resolveCallTarget();
+            ct = StandaloneEvaluator.INSTANCE.getCallTarget(fd);
             cachedCallTarget = ct;
         }
         if (ct != null)
         {
             return callNode.call(ct, args);
         }
-        return fallbackCall(args);
-    }
-
-    private RootCallTarget resolveCallTarget()
-    {
-        return StandaloneEvaluator.INSTANCE.getCallTarget(fd);
-    }
-
-    private Object fallbackCall(Object[] args)
-    {
         return StandaloneEvaluator.INSTANCE.executeFunction(fd, args);
+    }
+
+    private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
+    {
+        // Resolve the actual QP from the target's runtime type
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition resolved =
+                StandaloneEvaluator.INSTANCE.resolveQpDispatch(staticQp, args);
+        RootCallTarget ct = StandaloneEvaluator.INSTANCE.getCallTarget(resolved);
+        if (ct != null)
+        {
+            return callNode.call(ct, args);
+        }
+        return StandaloneEvaluator.INSTANCE.executeFunction(resolved, args);
     }
 }

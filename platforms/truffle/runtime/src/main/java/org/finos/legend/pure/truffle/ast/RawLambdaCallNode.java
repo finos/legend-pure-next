@@ -104,7 +104,6 @@ public final class RawLambdaCallNode extends Node
         {
             return lookupCallTarget(lambda);
         }
-        System.out.println("EEE");
         return null;
     }
 

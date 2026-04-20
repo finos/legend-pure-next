@@ -87,6 +87,12 @@ public final class PureFunctionRootNode extends RootNode
         }
 
 
+        // Bind type variables from the target's CGT (for QPs with type parameters)
+        if (arguments.length > 0 && arguments[0] != null)
+        {
+            StandaloneEvaluator.bindQpTypeVariablesStatic(arguments[0], frame, layout);
+        }
+
         // Set evaluator context for nodes that need dynamic layout lookup
         StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         FrameLayout prevLayout = eval.currentLayout();

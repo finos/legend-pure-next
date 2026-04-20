@@ -105,17 +105,10 @@ public final class StandaloneEvaluator
     // ---------------------------------------------------------------
 
     /**
-     * Returns a compiled {@link RootCallTarget} for a FunctionDefinition.
-     * The CallTarget is cached; subsequent calls return the same instance.
-     * Returns null for QualifiedProperties (which need runtime dispatch and
-     * type variable binding) or if compilation fails.
+     * Returns a compiled {@link RootCallTarget} for a FunctionDefinition (including QPs).
      */
     public RootCallTarget getCallTarget(FunctionDefinition fd)
     {
-        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty)
-        {
-            return null;
-        }
         CompiledFunction cf = compile(fd);
         return cf.callTarget();
     }
@@ -130,84 +123,14 @@ public final class StandaloneEvaluator
      */
     public Object executeFunction(FunctionDefinition fd, Object[] rawArgs)
     {
-        // QualifiedProperty dispatch needs special handling: the resolved FD
-        // may differ from the original, and type variables must be bound into
-        // the frame before body execution.
-        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp && rawArgs.length > 0)
-        {
-            return executeQualifiedProperty(qp, rawArgs);
-        }
-
         CompiledFunction cf = compile(fd);
-
-        // Fast path: use pre-compiled RootCallTarget (body nodes are properly
-        // adopted, frame is Truffle-managed). This is the Truffle-idiomatic way.
         com.oracle.truffle.api.RootCallTarget ct = cf.callTarget();
         if (ct != null)
         {
             return ct.call(rawArgs);
         }
-
-        // Fallback: inline execution (if callTarget creation failed during compile)
-        FrameLayout layout = cf.layout();
-        VirtualFrame frame = Truffle.getRuntime().createVirtualFrame(new Object[0], layout.descriptor());
-        org.finos.legend.pure.truffle.types.PureSequence params = fd._parameters();
-        int[] paramSlots = layout.paramSlots();
-        if (params != null)
-        {
-            int count = Math.min(params.size(), rawArgs.length);
-            for (int i = 0; i < count; i++)
-            {
-                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureSequence.EMPTY);
-            }
-        }
-        return executeBody(fd, frame, layout);
-    }
-
-    private Object executeQualifiedProperty(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp, Object[] rawArgs)
-    {
-        CompiledFunction cf = compile(qp);
-        FrameLayout layout = cf.layout();
-        VirtualFrame frame = Truffle.getRuntime().createVirtualFrame(new Object[0], layout.descriptor());
-
-        // Bind params
-        org.finos.legend.pure.truffle.types.PureSequence params = qp._parameters();
-        int[] paramSlots = layout.paramSlots();
-        if (params != null)
-        {
-            int count = Math.min(params.size(), rawArgs.length);
-            for (int i = 0; i < count; i++)
-            {
-                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureSequence.EMPTY);
-            }
-        }
-
-        FunctionDefinition resolved = resolveQpDispatch(qp, rawArgs);
-        bindQpTypeVariables(rawArgs[0], frame, layout);
-        // Execute the resolved FD's body using the QP's frame and layout.
-        // Don't use the resolved FD's cached body — its slot indices may differ.
-        FrameLayout prevLayout = this.currentLayout;
-        VirtualFrame prevFrame = this.currentFrame;
-        this.currentLayout = layout;
-        this.currentFrame = frame;
-        FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
-        try
-        {
-            Object result = PureSequence.EMPTY;
-            for (Object expr : resolved._expressionSequence().toBoxedArray())
-            {
-                PureNode node = astBuilder.lower(expr);
-                result = node.executeGeneric(frame);
-            }
-            return result;
-        }
-        finally
-        {
-            this.currentFrame = prevFrame;
-            this.currentLayout = prevLayout;
-            astBuilder.popLayout(prevBuilderLayout);
-        }
+        throw new RuntimeException("No CallTarget for: " + (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe
+                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe) : fd.getClass().getSimpleName()));
     }
 
     /**
@@ -984,7 +907,7 @@ public final class StandaloneEvaluator
         return null;
     }
 
-    private FunctionDefinition resolveQpDispatch(
+    public FunctionDefinition resolveQpDispatch(
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp,
             Object[] rawArgs)
     {
@@ -1027,7 +950,11 @@ public final class StandaloneEvaluator
         return staticQp;
     }
 
-    private void bindQpTypeVariables(Object target, VirtualFrame frame, FrameLayout layout)
+    /**
+     * Bind type variable values from the target's CGT into the frame.
+     * Handles any number of type variables.
+     */
+    public static void bindQpTypeVariablesStatic(Object target, VirtualFrame frame, FrameLayout layout)
     {
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
         if (!(cgt instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv)
