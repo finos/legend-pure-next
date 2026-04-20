@@ -21,7 +21,6 @@ import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.ArrayList;
@@ -97,7 +96,7 @@ public final class PureTruffleRuntime
      */
     public Object execute(FunctionDefinition function, Object... args)
     {
-        StandaloneEvaluatorHolder.set(standalone);
+        StandaloneEvaluator.INSTANCE = standalone;
         try
         {
             Object result = standalone.executeFunction(function, args);
@@ -109,7 +108,7 @@ public final class PureTruffleRuntime
         }
         finally
         {
-            StandaloneEvaluatorHolder.clear();
+            StandaloneEvaluator.INSTANCE = null;
         }
     }
 

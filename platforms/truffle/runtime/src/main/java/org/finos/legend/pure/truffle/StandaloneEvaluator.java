@@ -52,6 +52,13 @@ import org.finos.legend.pure.next.parser.PureParser;
  */
 public final class StandaloneEvaluator
 {
+    /**
+     * Global instance — set before execution begins (e.g. in PureTruffleRuntime
+     * or TrufflePureTestRunner). AST nodes read this directly instead of going
+     * through a holder/ThreadLocal.
+     */
+    public static StandaloneEvaluator INSTANCE;
+
     private final TruffleMetadataAccess resolver;
     private final PureLanguage language;
     private final PureASTBuilder astBuilder;

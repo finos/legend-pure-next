@@ -88,7 +88,7 @@ public final class PureFunctionRootNode extends RootNode
 
 
         // Set evaluator context for nodes that need dynamic layout lookup
-        StandaloneEvaluator eval = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current();
+        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         FrameLayout prevLayout = eval.currentLayout();
         VirtualFrame prevFrame = eval.currentFrame();
         eval.setCurrentLayout(layout);

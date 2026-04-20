@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
@@ -23,7 +22,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code cast(Any[m], GenericTypeAndMultiplicityHolder[1]) : T[m]}.
@@ -47,7 +46,7 @@ public final class CastNode extends PureNode
     {
         this.inputChild = inputChild;
         this.targetChild = targetChild;
-        this.resolver = StandaloneEvaluatorHolder.current().resolver();
+        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -58,7 +57,6 @@ public final class CastNode extends PureNode
         return doCast(inputResult, targetResult, resolver, constraintCallNode);
     }
 
-    @TruffleBoundary
     private static Object doCast(Object inputResult, Object targetResult, TruffleMetadataAccess resolver, RawLambdaCallNode constraintCallNode)
     {
 

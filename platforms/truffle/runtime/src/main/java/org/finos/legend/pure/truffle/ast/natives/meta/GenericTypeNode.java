@@ -14,14 +14,13 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code genericType(Any[*]) : GenericTypeValue[1]}.
@@ -42,7 +41,7 @@ public final class GenericTypeNode extends PureNode
         this.child = child;
         this.genericType = genericType;
         this.multiplicity = multiplicity;
-        this.resolver = StandaloneEvaluatorHolder.current().resolver();
+        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -52,7 +51,6 @@ public final class GenericTypeNode extends PureNode
         return doGenericType(result, resolver);
     }
 
-    @TruffleBoundary
     private static Object doGenericType(Object result, TruffleMetadataAccess resolver)
     {
         GenericType gt = MetaHelper.getRawGenericType(result, resolver);

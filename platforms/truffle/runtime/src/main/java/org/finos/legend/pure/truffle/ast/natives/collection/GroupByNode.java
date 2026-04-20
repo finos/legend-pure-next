@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.ListImpl;
@@ -22,7 +21,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 import java.util.ArrayList;
@@ -37,7 +35,6 @@ import java.util.Objects;
  *
  * <p>Iteration is boundary-free via {@link org.finos.legend.pure.truffle.ast.RawLambdaCallNode}.
  * The map/Impl construction step stays behind
- * {@code @TruffleBoundary}.</p>
  */
 @NodeInfo(shortName = "groupBy")
 public final class GroupByNode extends PureNode
@@ -74,7 +71,6 @@ public final class GroupByNode extends PureNode
         return buildMap(items, keys, sz);
     }
 
-    @TruffleBoundary
     private static Object buildMap(Object[] items, Object[] keys, int sz)
     {
         LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();

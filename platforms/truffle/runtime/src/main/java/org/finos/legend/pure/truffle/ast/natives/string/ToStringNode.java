@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
@@ -45,7 +44,6 @@ public final class ToStringNode extends PureNode
         return convert(v);
     }
 
-    @TruffleBoundary
     private static String convert(Object v)
     {
         if (v == null)
@@ -78,7 +76,7 @@ public final class ToStringNode extends PureNode
         // For class instances (Any), try to invoke Pure's toString() QP
         if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
         {
-            var eval = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current();
+            var eval = org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE;
             if (eval != null)
             {
                 try

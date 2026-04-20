@@ -14,13 +14,11 @@
 
 package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
@@ -59,7 +57,6 @@ public final class CompareNode extends PureNode
         return doCompare(a, b);
     }
 
-    @TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
         // Normalize: if one side is PureDate and the other is a date-like String, treat both as dates

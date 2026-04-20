@@ -14,14 +14,12 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
  * {@code parse(sourceId:String[1], content:String[1]) : PureFile[1]}.
@@ -55,10 +53,9 @@ public final class ParseNode extends PureNode
         return doParse(sourceId, content);
     }
 
-    @TruffleBoundary
     private static Object doParse(String sourceId, String content)
     {
-        StandaloneEvaluator eval = StandaloneEvaluatorHolder.current();
+        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         PureParser parser = eval.pureParser();
         if (parser == null)
         {

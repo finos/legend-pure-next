@@ -104,7 +104,7 @@ public final class RawLambdaRootNode extends RootNode
         }
 
         // Execute body with layout context
-        StandaloneEvaluator eval = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current();
+        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         FrameLayout prevLayout = eval.astBuilder().pushLayout(layout);
         com.oracle.truffle.api.frame.VirtualFrame prevFrame = eval.currentFrame();
         eval.setCurrentFrame(frame);

@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -25,7 +24,7 @@ import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -57,7 +56,6 @@ public final class EvalNode extends PureNode
         return invokeEval(values);
     }
 
-    @TruffleBoundary
     private Object invokeEval(Object[] values)
     {
         Object fn = values[0];
@@ -75,21 +73,20 @@ public final class EvalNode extends PureNode
      * Dispatch a function call with pre-unwrapped args. Used by both
      * {@link EvalNode} and {@link EvaluateNode}.
      */
-    @TruffleBoundary
     public static Object dispatch(Object fn, Object[] args)
     {
         if (fn instanceof RawClosure rc)
         {
-            return StandaloneEvaluatorHolder.current().executeLambda(rc, args);
+            return StandaloneEvaluator.INSTANCE.executeLambda(rc, args);
         }
         if (fn instanceof LambdaFunction lf)
         {
             RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
-            return StandaloneEvaluatorHolder.current().executeLambda(closure, args);
+            return StandaloneEvaluator.INSTANCE.executeLambda(closure, args);
         }
         if (fn instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
         {
-            return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+            return StandaloneEvaluator.INSTANCE.executeFunction(fd, args);
         }
         if (fn instanceof NativeFunction nf)
         {
@@ -101,18 +98,17 @@ public final class EvalNode extends PureNode
             // property on the first argument
             if (args.length > 0)
             {
-                return StandaloneEvaluatorHolder.current().accessProperty(args[0], prop._name());
+                return StandaloneEvaluator.INSTANCE.accessProperty(args[0], prop._name());
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
         throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
     }
 
-    @TruffleBoundary
     private static Object executeNativeViaRegistry(NativeFunction nf, Object[] args)
     {
         String signature = nf._name();
-        NativeNodeRegistry registry = StandaloneEvaluatorHolder.current().astBuilder().specialized();
+        NativeNodeRegistry registry = StandaloneEvaluator.INSTANCE.astBuilder().specialized();
         NativeNodeRegistry.Factory factory = registry.lookup(signature);
         if (factory == null)
         {

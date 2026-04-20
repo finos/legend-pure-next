@@ -15,13 +15,12 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * Calls a user-defined FunctionDefinition via Truffle {@link IndirectCallNode}.
@@ -78,15 +77,13 @@ public final class RawUserFunctionCallNode extends PureNode
         return fallbackCall(args);
     }
 
-    @TruffleBoundary
     private RootCallTarget resolveCallTarget()
     {
-        return StandaloneEvaluatorHolder.current().getCallTarget(fd);
+        return StandaloneEvaluator.INSTANCE.getCallTarget(fd);
     }
 
-    @TruffleBoundary
     private Object fallbackCall(Object[] args)
     {
-        return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+        return StandaloneEvaluator.INSTANCE.executeFunction(fd, args);
     }
 }

@@ -14,14 +14,13 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code parentReference(Integer[1], String[1]) : Any[1]}.
@@ -55,11 +54,10 @@ public final class ParentReferenceNode extends PureNode
         return doParentReference(depthResult);
     }
 
-    @TruffleBoundary
     private static Object doParentReference(Object depthResult)
     {
         int depth = (int) IntegerHelper.asLong(depthResult, "parentReference");
-        Object target = StandaloneEvaluatorHolder.current().peekConstruction(depth);
+        Object target = StandaloneEvaluator.INSTANCE.peekConstruction(depth);
         if (target == null)
         {
             throw new RuntimeException("Parent reference ~ at depth " + depth

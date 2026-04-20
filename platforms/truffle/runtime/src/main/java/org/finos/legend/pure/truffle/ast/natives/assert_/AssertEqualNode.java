@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.assert_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureException;
@@ -49,7 +48,6 @@ public final class AssertEqualNode extends PureNode
         return doAssertEqual(expected, actual);
     }
 
-    @TruffleBoundary
     private static boolean doAssertEqual(Object expected, Object actual)
     {
         if (!deepEquals(expected, actual))

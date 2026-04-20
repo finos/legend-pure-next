@@ -23,7 +23,6 @@ import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
@@ -88,6 +87,7 @@ class TrufflePureTestRunner
         };
 
         evaluator = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
+        StandaloneEvaluator.INSTANCE = evaluator;
 
         // Keep bootstrap PDB modules for element path discovery
         coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", Lists.mutable.empty());
@@ -158,7 +158,7 @@ class TrufflePureTestRunner
     {
         return DynamicTest.dynamicTest(path, () ->
         {
-            StandaloneEvaluatorHolder.set(evaluator);
+            StandaloneEvaluator.INSTANCE = evaluator;
             try
             {
                 if (adapter != null)
@@ -191,10 +191,6 @@ class TrufflePureTestRunner
                     cause = cause.getCause();
                 }
                 throw new org.opentest4j.AssertionFailedError("[" + path + "] " + cause.getMessage() + formatPureStack(e), e);
-            }
-            finally
-            {
-                StandaloneEvaluatorHolder.clear();
             }
         });
     }

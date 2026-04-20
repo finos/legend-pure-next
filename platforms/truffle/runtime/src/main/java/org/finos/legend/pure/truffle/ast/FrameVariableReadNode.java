@@ -75,7 +75,7 @@ public final class FrameVariableReadNode extends PureNode
         // the variable was not bound in the lowering layout but may exist
         // in the actual execution frame.
         org.finos.legend.pure.truffle.StandaloneEvaluator eval =
-                org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current();
+                org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE;
         if (eval != null && eval.currentFrame() != null && eval.currentLayout() != null)
         {
             Integer dynSlot = eval.currentLayout().slotFor(name);

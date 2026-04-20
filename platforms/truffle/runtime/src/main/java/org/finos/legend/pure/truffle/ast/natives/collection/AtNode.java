@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -57,7 +56,6 @@ public final class AtNode extends PureNode
         return CollectionHelper.at(col, (int) i);
     }
 
-    @TruffleBoundary
     private static RuntimeException outOfBounds(long i, int size)
     {
         return new RuntimeException("The system is trying to get an element at offset " + i

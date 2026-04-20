@@ -15,13 +15,12 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -75,9 +74,8 @@ public final class RawLambdaCaptureNode extends PureNode
         return new RawClosure(lambda, capturedValues, openVarNames, ct);
     }
 
-    @TruffleBoundary
     private RootCallTarget lookupCallTarget()
     {
-        return StandaloneEvaluatorHolder.current().callTargetForLambda(lambda);
+        return StandaloneEvaluator.INSTANCE.callTargetForLambda(lambda);
     }
 }

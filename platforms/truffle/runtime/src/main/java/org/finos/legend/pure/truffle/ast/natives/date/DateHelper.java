@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.date;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import org.finos.legend.pure.truffle.types.PureDate;
 
 import java.time.LocalDate;
@@ -45,7 +44,6 @@ public final class DateHelper
     {
     }
 
-    @TruffleBoundary
     public static String asDateString(Object v, String signature)
     {
         if (v instanceof PureDate pd)
@@ -64,7 +62,6 @@ public final class DateHelper
     }
 
 
-    @TruffleBoundary
     public static LocalDateTime parseDate(String pureDateStr)
     {
         String normalized = normalizePureDate(pureDateStr);

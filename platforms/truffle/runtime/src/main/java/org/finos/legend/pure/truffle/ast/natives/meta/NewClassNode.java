@@ -1,10 +1,9 @@
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -28,7 +27,7 @@ public final class NewClassNode extends PureNode
     {
         this.typeParamsArg = typeParamsArg;
         this.multParamsArg = multParamsArg;
-        this.resolver = StandaloneEvaluatorHolder.current().resolver();
+        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -39,7 +38,6 @@ public final class NewClassNode extends PureNode
         return doNewClass(typeParams, multParams, resolver);
     }
 
-    @TruffleBoundary
     private static Object doNewClass(Object typeParams, Object multParams, TruffleMetadataAccess resolver)
     {
         var cls = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl();

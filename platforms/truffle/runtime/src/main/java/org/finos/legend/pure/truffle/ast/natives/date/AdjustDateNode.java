@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.date;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -58,7 +57,6 @@ public final class AdjustDateNode extends PureNode
         return doAdjust(date, amount, unit);
     }
 
-    @TruffleBoundary
     private static PureDate doAdjust(Object date, Object amount, Object unit)
     {
         String dateStr = DateHelper.asDateString(date, SIG);

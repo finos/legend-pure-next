@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
@@ -29,7 +28,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -63,14 +62,13 @@ public final class NewWithKeysNode extends PureNode
         return invoke();
     }
 
-    @TruffleBoundary
     private Object invoke()
     {
         // Delegate to StandaloneEvaluator which manages the construction
         // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
         // We evaluate them lazily through the evaluator.
         org.finos.legend.pure.truffle.StandaloneEvaluator eval =
-                StandaloneEvaluatorHolder.current();
+                StandaloneEvaluator.INSTANCE;
 
         // Evaluate type holder (first param)
         // _parametersValues() returns PureSequence; getBoxed() returns Object

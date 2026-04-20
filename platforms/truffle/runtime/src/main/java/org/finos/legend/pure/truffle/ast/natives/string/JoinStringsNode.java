@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
@@ -61,7 +60,6 @@ public final class JoinStringsNode extends PureNode
         return join(col, prefix, separator, suffix);
     }
 
-    @TruffleBoundary
     private static String join(Object col, String prefix, String separator, String suffix)
     {
         int sz = CollectionHelper.size(col);

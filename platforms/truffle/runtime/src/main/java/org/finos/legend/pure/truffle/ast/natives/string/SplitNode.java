@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
@@ -54,7 +53,6 @@ public final class SplitNode extends PureNode
         return doSplit(s, delimiter);
     }
 
-    @TruffleBoundary
     private static Object doSplit(String s, String delimiter)
     {
         String[] parts = s.split(Pattern.quote(delimiter), -1);

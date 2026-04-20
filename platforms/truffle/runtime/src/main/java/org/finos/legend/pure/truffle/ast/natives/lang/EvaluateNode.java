@@ -14,12 +14,10 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 import java.util.ArrayList;
@@ -55,7 +53,6 @@ public final class EvaluateNode extends PureNode
         return invokeEvaluate(values);
     }
 
-    @TruffleBoundary
     private static Object invokeEvaluate(Object[] values)
     {
         Object fn = values[0];

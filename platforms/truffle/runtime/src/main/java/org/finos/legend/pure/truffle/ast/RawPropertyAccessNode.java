@@ -14,13 +14,12 @@
 
 package org.finos.legend.pure.truffle.ast;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * Property access node -- evaluates target and optional args, then dispatches
@@ -52,7 +51,6 @@ public final class RawPropertyAccessNode extends PureNode
         return doAccess(fe, argValues);
     }
 
-    @TruffleBoundary
     private static Object doAccess(FunctionExpression fe, Object[] argValues)
     {
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
@@ -63,7 +61,7 @@ public final class RawPropertyAccessNode extends PureNode
 
         if (func instanceof QualifiedProperty qp)
         {
-            return StandaloneEvaluatorHolder.current().executeFunction((FunctionDefinition) qp, argValues);
+            return StandaloneEvaluator.INSTANCE.executeFunction((FunctionDefinition) qp, argValues);
         }
 
         // Simple property: derive property name
@@ -113,7 +111,7 @@ public final class RawPropertyAccessNode extends PureNode
                         if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
                         {
                             org.finos.legend.pure.truffle.ast.PureNode node =
-                                    StandaloneEvaluatorHolder.current().astBuilder().lower(vs);
+                                    StandaloneEvaluator.INSTANCE.astBuilder().lower(vs);
                             com.oracle.truffle.api.frame.VirtualFrame tmpFrame =
                                     com.oracle.truffle.api.Truffle.getRuntime().createVirtualFrame(
                                             new Object[0],
@@ -124,7 +122,7 @@ public final class RawPropertyAccessNode extends PureNode
                 }
                 // Fall through to try regular property access
             }
-            return StandaloneEvaluatorHolder.current().accessProperty(target, propName);
+            return StandaloneEvaluator.INSTANCE.accessProperty(target, propName);
         }
 
         throw new RuntimeException("Cannot access property: func=" + (func == null ? "null" : func.getClass().getName()));

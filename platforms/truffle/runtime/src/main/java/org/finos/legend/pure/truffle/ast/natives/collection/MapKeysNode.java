@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
@@ -44,7 +43,6 @@ public final class MapKeysNode extends PureNode
         return doKeys(map);
     }
 
-    @TruffleBoundary
     private static Object doKeys(Object map)
     {
         if (map instanceof MapImpl mi)

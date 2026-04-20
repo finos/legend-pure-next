@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
@@ -26,7 +25,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -57,10 +56,9 @@ public final class CopyWithKeysNode extends PureNode
         return invoke();
     }
 
-    @TruffleBoundary
     private Object invoke()
     {
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluatorHolder.current();
+        org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
 
         // Step 1: Evaluate the source object (first arg)
         // _parametersValues() returns PureSequence; getBoxed() returns Object

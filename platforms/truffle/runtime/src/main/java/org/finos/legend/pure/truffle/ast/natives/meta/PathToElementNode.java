@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
@@ -23,7 +22,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code pathToElement(String[1], String[1]) : PackageableElement[1]}.
@@ -51,7 +50,7 @@ public final class PathToElementNode extends PureNode
         this.genericType = genericType;
         this.multiplicity = multiplicity;
         this.lenient = lenient;
-        this.resolver = StandaloneEvaluatorHolder.current().resolver();
+        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -65,7 +64,6 @@ public final class PathToElementNode extends PureNode
         return doPathToElement(values, lenient, resolver);
     }
 
-    @TruffleBoundary
     private static Object doPathToElement(Object[] values, boolean lenient, TruffleMetadataAccess resolver)
     {
 
