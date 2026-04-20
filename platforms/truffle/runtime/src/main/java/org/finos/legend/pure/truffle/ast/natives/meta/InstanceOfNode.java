@@ -34,10 +34,13 @@ public final class InstanceOfNode extends PureNode
     @Child
     private PureNode typeArg;
 
+    private final TruffleMetadataAccess resolver;
+
     public InstanceOfNode(PureNode value, PureNode typeArg)
     {
         this.value = value;
         this.typeArg = typeArg;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -45,13 +48,12 @@ public final class InstanceOfNode extends PureNode
     {
         Object valResult = value.executeGeneric(frame);
         Object typeResult = typeArg.executeGeneric(frame);
-        return doInstanceOf(valResult, typeResult);
+        return doInstanceOf(valResult, typeResult, resolver);
     }
 
     @TruffleBoundary
-    private static boolean doInstanceOf(Object rawVal, Object typeResult)
+    private static boolean doInstanceOf(Object rawVal, Object typeResult, TruffleMetadataAccess resolver)
     {
-        TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
         // Resolve the target type
         Type targetType = null;

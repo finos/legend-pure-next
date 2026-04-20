@@ -4,6 +4,8 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -20,10 +22,13 @@ public final class NewClassNode extends PureNode
     @Child
     private PureNode multParamsArg;
 
+    private final TruffleMetadataAccess resolver;
+
     public NewClassNode(PureNode typeParamsArg, PureNode multParamsArg)
     {
         this.typeParamsArg = typeParamsArg;
         this.multParamsArg = multParamsArg;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -31,11 +36,11 @@ public final class NewClassNode extends PureNode
     {
         Object typeParams = typeParamsArg.executeGeneric(frame);
         Object multParams = multParamsArg.executeGeneric(frame);
-        return doNewClass(typeParams, multParams);
+        return doNewClass(typeParams, multParams, resolver);
     }
 
     @TruffleBoundary
-    private static Object doNewClass(Object typeParams, Object multParams)
+    private static Object doNewClass(Object typeParams, Object multParams, TruffleMetadataAccess resolver)
     {
         var cls = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl();
 
@@ -76,7 +81,6 @@ public final class NewClassNode extends PureNode
             selfGT._typeArguments(new ObjectSequence(tpGTs));
         }
 
-        var resolver = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current().resolver();
         Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
         var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         if (classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)

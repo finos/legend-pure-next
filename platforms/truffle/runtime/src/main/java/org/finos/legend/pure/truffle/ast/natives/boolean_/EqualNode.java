@@ -17,8 +17,9 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.PureDate;
 
 import java.util.Objects;
@@ -37,10 +38,13 @@ public final class EqualNode extends PureNode
     @Child
     private PureNode right;
 
+    private final TruffleMetadataAccess resolver;
+
     public EqualNode(PureNode left, PureNode right)
     {
         this.left = left;
         this.right = right;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -50,11 +54,11 @@ public final class EqualNode extends PureNode
         Object b = right.executeGeneric(frame);
         Object rawA = normalizeForEquals(a);
         Object rawB = normalizeForEquals(b);
-        return callPureEquals(rawA, rawB);
+        return callPureEquals(rawA, rawB, resolver);
     }
 
     @TruffleBoundary
-    private static boolean callPureEquals(Object a, Object b)
+    private static boolean callPureEquals(Object a, Object b, TruffleMetadataAccess resolver)
     {
         if (a == b)
         {
@@ -85,7 +89,7 @@ public final class EqualNode extends PureNode
             if (seqA.size() != seqB.size()) return false;
             for (int i = 0; i < seqA.size(); i++)
             {
-                if (!callPureEquals(normalizeForEquals(seqA.getBoxed(i)), normalizeForEquals(seqB.getBoxed(i))))
+                if (!callPureEquals(normalizeForEquals(seqA.getBoxed(i)), normalizeForEquals(seqB.getBoxed(i)), resolver))
                     return false;
             }
             return true;
@@ -101,7 +105,7 @@ public final class EqualNode extends PureNode
             {
                 Object ea = normalizeForEquals(la.get(i));
                 Object eb = normalizeForEquals(lb.get(i));
-                if (!callPureEquals(ea, eb))
+                if (!callPureEquals(ea, eb, resolver))
                 {
                     return false;
                 }
@@ -119,7 +123,7 @@ public final class EqualNode extends PureNode
             for (var entry : ma.getMap().entrySet())
             {
                 Object bVal = mb.get(entry.getKey());
-                if (!callPureEquals(entry.getValue(), bVal))
+                if (!callPureEquals(entry.getValue(), bVal, resolver))
                 {
                     return false;
                 }
@@ -189,7 +193,7 @@ public final class EqualNode extends PureNode
         {
             if (a.getClass() == b.getClass() || samePureType(anyA, anyB))
             {
-                return equalByProperties(anyA, anyB);
+                return equalByProperties(anyA, anyB, resolver);
             }
         }
         return Objects.equals(a, b);
@@ -237,11 +241,11 @@ public final class EqualNode extends PureNode
         return s;
     }
 
-    private static boolean equalByProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b)
+    private static boolean equalByProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b, TruffleMetadataAccess resolver)
     {
         // Check for <<equality.Key>> properties — only compare those if present.
         // Try runtime metamodel first, then Java interface name fallback.
-        java.util.Set<String> keyProps = collectEqualityKeyProperties(a);
+        java.util.Set<String> keyProps = collectEqualityKeyProperties(a, resolver);
         if (keyProps != null && !keyProps.isEmpty())
         {
             for (String propName : keyProps)
@@ -251,7 +255,7 @@ public final class EqualNode extends PureNode
                     java.lang.reflect.Method m = a.getClass().getMethod("_" + propName);
                     Object va = m.invoke(a);
                     Object vb = m.invoke(b);
-                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb)))
+                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb), resolver))
                     {
                         return false;
                     }
@@ -276,7 +280,7 @@ public final class EqualNode extends PureNode
                 {
                     Object va = m.invoke(a);
                     Object vb = m.invoke(b);
-                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb)))
+                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb), resolver))
                     {
                         return false;
                     }
@@ -293,7 +297,7 @@ public final class EqualNode extends PureNode
      * Collect property names with the {@code <<equality.Key>>} stereotype
      * from the object's class hierarchy via the PDB metamodel.
      */
-    private static java.util.Set<String> collectEqualityKeyProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any obj)
+    private static java.util.Set<String> collectEqualityKeyProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any obj, TruffleMetadataAccess resolver)
     {
         java.util.Set<String> keys = new java.util.LinkedHashSet<>();
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
@@ -315,7 +319,6 @@ public final class EqualNode extends PureNode
                     ? obj.getClass().getInterfaces()[0].getName().replace(".", "::") : null;
             if (ifaceName != null)
             {
-                var resolver = org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder.current().resolver();
                 var elem = resolver.getElement(ifaceName);
                 if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner s2)
                 {

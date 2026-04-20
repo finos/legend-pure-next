@@ -27,6 +27,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
@@ -46,6 +47,9 @@ public final class NewWithKeysNode extends PureNode
 
     @CompilationFinal
     private final FunctionExpression fe;
+
+    @Child
+    private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
 
     public NewWithKeysNode(String signature, FunctionExpression fe)
     {
@@ -189,7 +193,7 @@ public final class NewWithKeysNode extends PureNode
                     var type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
                     if (type != null)
                     {
-                        CastNode.validateConstraints(type, cgt, instance, eval.resolver());
+                        CastNode.validateConstraints(type, cgt, instance, eval.resolver(), constraintCallNode);
                     }
                 }
             }

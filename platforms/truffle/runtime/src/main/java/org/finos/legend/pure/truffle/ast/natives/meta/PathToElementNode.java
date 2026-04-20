@@ -38,6 +38,7 @@ public final class PathToElementNode extends PureNode
     private final GenericType genericType;
     private final Multiplicity multiplicity;
     private final boolean lenient;
+    private final TruffleMetadataAccess resolver;
 
     public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
     {
@@ -50,6 +51,7 @@ public final class PathToElementNode extends PureNode
         this.genericType = genericType;
         this.multiplicity = multiplicity;
         this.lenient = lenient;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -60,13 +62,12 @@ public final class PathToElementNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doPathToElement(values, lenient);
+        return doPathToElement(values, lenient, resolver);
     }
 
     @TruffleBoundary
-    private static Object doPathToElement(Object[] values, boolean lenient)
+    private static Object doPathToElement(Object[] values, boolean lenient, TruffleMetadataAccess resolver)
     {
-        TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
         String path = StringHelper.asString(values[0], "pathToElement");
         String separator = values.length > 1 ? StringHelper.asString(values[1], "pathToElement") : "::";

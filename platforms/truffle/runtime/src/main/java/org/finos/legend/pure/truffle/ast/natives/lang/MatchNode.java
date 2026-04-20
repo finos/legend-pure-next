@@ -20,8 +20,10 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -37,9 +39,15 @@ public final class MatchNode extends PureNode
     @Children
     private PureNode[] children;
 
+    @Child
+    private RawLambdaCallNode matchCallNode = new RawLambdaCallNode();
+
+    private final TruffleMetadataAccess resolver;
+
     public MatchNode(PureNode[] children)
     {
         this.children = children;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -50,11 +58,11 @@ public final class MatchNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeMatch(values);
+        return invokeMatch(values, resolver, matchCallNode);
     }
 
     @TruffleBoundary
-    private static Object invokeMatch(Object[] values)
+    private static Object invokeMatch(Object[] values, TruffleMetadataAccess resolver, RawLambdaCallNode matchCallNode)
     {
         // values[0] = value to match
         // values[1] = match functions collection
@@ -62,7 +70,6 @@ public final class MatchNode extends PureNode
         Object value = values[0];
         Object matchFns = values[1];
 
-        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType = getRawValueType(value, resolver);
         int valueCount = getRawValueCount(value);
 
@@ -95,7 +102,7 @@ public final class MatchNode extends PureNode
             {
                 args = new Object[]{value};
             }
-            Object matchResult = StandaloneEvaluatorHolder.current().executeFunction(fd, args);
+            Object matchResult = matchCallNode.callWithArgs(fd, args);
             return matchResult;
         }
         throw new RuntimeException("No match function matched the value: " + value);

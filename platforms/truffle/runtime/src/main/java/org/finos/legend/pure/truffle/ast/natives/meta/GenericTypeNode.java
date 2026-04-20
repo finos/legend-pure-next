@@ -35,25 +35,26 @@ public final class GenericTypeNode extends PureNode
 
     private final GenericType genericType;
     private final Multiplicity multiplicity;
+    private final TruffleMetadataAccess resolver;
 
     public GenericTypeNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
         this.multiplicity = multiplicity;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doGenericType(result);
+        return doGenericType(result, resolver);
     }
 
     @TruffleBoundary
-    private static Object doGenericType(Object result)
+    private static Object doGenericType(Object result, TruffleMetadataAccess resolver)
     {
-        TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
         GenericType gt = MetaHelper.getRawGenericType(result, resolver);
         return gt != null ? gt : result;
     }

@@ -22,6 +22,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
@@ -37,10 +38,16 @@ public final class CastNode extends PureNode
     @Child
     private PureNode targetChild;
 
+    @Child
+    private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
+
+    private final TruffleMetadataAccess resolver;
+
     public CastNode(PureNode inputChild, PureNode targetChild)
     {
         this.inputChild = inputChild;
         this.targetChild = targetChild;
+        this.resolver = StandaloneEvaluatorHolder.current().resolver();
     }
 
     @Override
@@ -48,13 +55,12 @@ public final class CastNode extends PureNode
     {
         Object inputResult = inputChild.executeGeneric(frame);
         Object targetResult = targetChild.executeGeneric(frame);
-        return doCast(inputResult, targetResult);
+        return doCast(inputResult, targetResult, resolver, constraintCallNode);
     }
 
     @TruffleBoundary
-    private static Object doCast(Object inputResult, Object targetResult)
+    private static Object doCast(Object inputResult, Object targetResult, TruffleMetadataAccess resolver, RawLambdaCallNode constraintCallNode)
     {
-        TruffleMetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();
 
         // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
         GenericType targetGT = null;
@@ -111,7 +117,7 @@ public final class CastNode extends PureNode
         if (targetType != null && inputResult != null
                 && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
         {
-            validateConstraints(targetType, targetGT, inputResult, resolver);
+            validateConstraints(targetType, targetGT, inputResult, resolver, constraintCallNode);
         }
 
         // Cast is a type assertion — it does NOT change the runtime type (CGT)
@@ -123,9 +129,10 @@ public final class CastNode extends PureNode
     static void validateConstraints(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
                                             GenericType targetGT,
                                             Object value,
-                                            TruffleMetadataAccess resolver)
+                                            TruffleMetadataAccess resolver,
+                                            RawLambdaCallNode constraintCallNode)
     {
-        validateConstraintsOnType(type, targetGT, value, resolver);
+        validateConstraintsOnType(type, targetGT, value, resolver, constraintCallNode);
         // Walk up the type hierarchy
         Object gens = type._generalizations();
         if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence genSeq)
@@ -135,7 +142,7 @@ public final class CastNode extends PureNode
                 if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g
                         && g._general() != null && org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general()) != null)
                 {
-                    validateConstraints(org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general()), g._general(), value, resolver);
+                    validateConstraints(org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general()), g._general(), value, resolver, constraintCallNode);
                 }
             }
         }
@@ -144,7 +151,8 @@ public final class CastNode extends PureNode
     private static void validateConstraintsOnType(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
                                                    GenericType targetGT,
                                                    Object value,
-                                                   TruffleMetadataAccess resolver)
+                                                   TruffleMetadataAccess resolver,
+                                                   RawLambdaCallNode constraintCallNode)
     {
         if (!(type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.ElementWithConstraints ewc))
         {
@@ -201,7 +209,6 @@ public final class CastNode extends PureNode
             }
         }
 
-        var eval = StandaloneEvaluatorHolder.current();
         for (int idx = 0; idx < constraints.size(); idx++)
         {
             if (!(constraints.getBoxed(idx) instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.constraint.Constraint c))
@@ -234,7 +241,7 @@ public final class CastNode extends PureNode
                 }
             }
 
-            Object result = eval.executeFunction(funcDef, constraintArgs.toArray());
+            Object result = constraintCallNode.callWithArgs(funcDef, constraintArgs.toArray());
             if (Boolean.FALSE.equals(result))
             {
                 String constraintName = c._name() != null ? c._name() : String.valueOf(idx);
@@ -262,7 +269,7 @@ public final class CastNode extends PureNode
                                 }
                             }
                         }
-                        Object msgResult = eval.executeFunction(c._messageFunction(), msgArgs.toArray());
+                        Object msgResult = constraintCallNode.callWithArgs(c._messageFunction(), msgArgs.toArray());
                         if (msgResult != null)
                         {
                             message += ", Message: " + msgResult;
