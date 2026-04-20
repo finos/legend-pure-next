@@ -19,7 +19,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code get(Map[1], U[1]) : V[0..1]}.
@@ -53,13 +53,13 @@ public final class MapGetNode extends PureNode
         if (map instanceof MapImpl mi)
         {
             Object value = mi.get(key);
-            return value != null ? value : PureNull.INSTANCE;
+            return value != null ? value : PureSequence.EMPTY;
         }
         if (map instanceof org.finos.legend.pure.execution.PureMap pureMap)
         {
             Object value = pureMap.getMap().get(key);
-            return value != null ? value : PureNull.INSTANCE;
+            return value != null ? value : PureSequence.EMPTY;
         }
-        return PureNull.INSTANCE;
+        return PureSequence.EMPTY;
     }
 }

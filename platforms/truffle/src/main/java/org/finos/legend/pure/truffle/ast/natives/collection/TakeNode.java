@@ -19,7 +19,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.Arrays;
 
@@ -52,7 +52,7 @@ public final class TakeNode extends PureNode
         int to = (int) Math.min(Math.max(n, 0), arr.length);
         if (to == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return new ObjectSequence(Arrays.copyOf(arr, to));
     }

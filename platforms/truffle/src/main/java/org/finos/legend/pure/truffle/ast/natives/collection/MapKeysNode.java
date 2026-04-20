@@ -22,7 +22,7 @@ import meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code keys(Map[1]) : U[*]} -- extracts all keys from a map.
@@ -51,13 +51,13 @@ public final class MapKeysNode extends PureNode
         if (map instanceof MapImpl mi)
         {
             Object[] keys = mi.keys().toArray();
-            return keys.length == 0 ? PureNull.INSTANCE : new ObjectSequence(keys);
+            return keys.length == 0 ? PureSequence.EMPTY : new ObjectSequence(keys);
         }
         if (map instanceof PureMap pureMap)
         {
             Object[] keys = pureMap.getMap().keySet().toArray();
-            return keys.length == 0 ? PureNull.INSTANCE : new ObjectSequence(keys);
+            return keys.length == 0 ? PureSequence.EMPTY : new ObjectSequence(keys);
         }
-        return PureNull.INSTANCE;
+        return PureSequence.EMPTY;
     }
 }

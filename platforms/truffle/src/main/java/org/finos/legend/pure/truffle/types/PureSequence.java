@@ -38,6 +38,8 @@ package org.finos.legend.pure.truffle.types;
  */
 public abstract class PureSequence
 {
+    public static final PureSequence EMPTY = new ObjectSequence(new Object[0]);
+
     public abstract int size();
 
     public abstract boolean isEmpty();

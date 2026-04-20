@@ -20,7 +20,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code zip(T[*], U[*]) : Pair<T,U>[*]} -- zips two collections into pairs.
@@ -56,7 +56,7 @@ public final class ZipNode extends PureNode
         int sz = Math.min(leftSz, rightSz);
         if (sz == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         Object[] pairs = new Object[sz];
         for (int i = 0; i < sz; i++)

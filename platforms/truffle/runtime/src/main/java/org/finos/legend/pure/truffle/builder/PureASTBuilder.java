@@ -295,7 +295,7 @@ public final class PureASTBuilder
         }
         if (value == null)
         {
-            return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
+            return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureSequence.EMPTY);
         }
         if (value instanceof String s)
         {

@@ -49,12 +49,11 @@ public final class ToStringNode extends PureNode
     @TruffleBoundary
     private static String convert(Object v)
     {
-        Object normalized = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(v);
-        if (normalized == null)
+        if (v == null)
         {
             return "";
         }
-        return pureToString(normalized);
+        return pureToString(v);
     }
 
     static String pureToString(Object v)

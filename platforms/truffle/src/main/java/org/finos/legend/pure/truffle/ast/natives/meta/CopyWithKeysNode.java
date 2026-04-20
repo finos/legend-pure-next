@@ -152,7 +152,7 @@ public final class CopyWithKeysNode extends PureNode
                 if (!alreadyPresent)
                 {
                     Object topValue = eval.accessProperty(copy, topProp);
-                    if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureNull))
+                    if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureSequence _ps1 && _ps1.isEmpty()))
                     {
                         keyValues.add(java.util.Map.entry(topProp, topValue));
                     }
@@ -181,7 +181,7 @@ public final class CopyWithKeysNode extends PureNode
         for (int i = 0; i < parts.length - 1; i++)
         {
             Object child = eval.accessProperty(current, parts[i]);
-            if (child == null || child instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (child == null || child instanceof org.finos.legend.pure.truffle.types.PureSequence _ps2 && _ps2.isEmpty())
             {
                 return; // Sub-object doesn't exist — nothing to set
             }
@@ -207,12 +207,13 @@ public final class CopyWithKeysNode extends PureNode
 
     /**
      * Add elements from {@code value} to {@code target} list, preserving
-     * original types (no AtomicValue unwrapping). Handles PureNull (skip),
-     * PureSequence (flatten), MutableList (flatten), and scalar (add as-is).
+     * original types (no AtomicValue unwrapping). Handles empty PureSequence
+     * (skip), non-empty PureSequence (flatten), MutableList (flatten), and
+     * scalar (add as-is).
      */
     private static void addToMergedList(java.util.List<Object> target, Object value)
     {
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureSequence _ps3 && _ps3.isEmpty())
         {
             return;
         }

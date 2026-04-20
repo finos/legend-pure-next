@@ -52,16 +52,12 @@ public final class AssertEqualNode extends PureNode
     @TruffleBoundary
     private static boolean doAssertEqual(Object expected, Object actual)
     {
-        Object normExpected = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(expected);
-        Object normActual = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(actual);
-        if (!deepEquals(normExpected, normActual))
+        if (!deepEquals(expected, actual))
         {
-            Object printExpected = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(expected);
-            Object printActual = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(actual);
             throw new org.finos.legend.pure.execution.PureAssertionError(
                     "assertEqual failed:\nexpected: "
-                    + PureValuePrinter.printForOutput(printExpected)
-                    + "\nactual:   " + PureValuePrinter.printForOutput(printActual));
+                    + PureValuePrinter.printForOutput(expected)
+                    + "\nactual:   " + PureValuePrinter.printForOutput(actual));
         }
         return true;
     }

@@ -19,7 +19,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.types.PureDate;
-import org.finos.legend.pure.truffle.types.PureNull;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
@@ -38,7 +37,7 @@ public final class MetaHelper
      */
     public static Type getRawValueType(Object value, TruffleMetadataAccess resolver)
     {
-        if (value == null || value instanceof PureNull)
+        if (value == null || (value instanceof PureSequence ps && ps.isEmpty()))
         {
             return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }

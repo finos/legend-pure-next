@@ -71,14 +71,9 @@ public final class IsNode extends PureNode
 
     private static Object normalize(Object v)
     {
-        if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
-        {
-            return null;
-        }
         if (v instanceof meta.pure.metamodel.valuespecification.AtomicValue av)
         {
-            Object inner = av._value();
-            return inner != null ? inner : null;
+            return av._value();
         }
         return v;
     }

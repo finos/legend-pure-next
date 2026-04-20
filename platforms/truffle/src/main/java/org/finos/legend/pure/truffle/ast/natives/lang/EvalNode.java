@@ -64,10 +64,10 @@ public final class EvalNode extends PureNode
         {
             fn = av._value();
         }
-        // Handle PureNull (e.g. when AtomicValue._value() was null)
-        if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureNull)
+        // Handle empty (e.g. when AtomicValue._value() was null)
+        if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureSequence _ps && _ps.isEmpty())
         {
-            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
         Object[] args = new Object[values.length - 1];
         System.arraycopy(values, 1, args, 0, args.length);
@@ -111,7 +111,7 @@ public final class EvalNode extends PureNode
             {
                 return StandaloneEvaluatorHolder.current().accessProperty(args[0], prop._name());
             }
-            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
         throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
     }

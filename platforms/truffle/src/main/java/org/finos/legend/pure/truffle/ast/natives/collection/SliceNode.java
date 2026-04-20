@@ -19,7 +19,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.Arrays;
 
@@ -61,7 +61,7 @@ public final class SliceNode extends PureNode
         toI = Math.max(fromI, toI);
         if (fromI >= toI)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return new ObjectSequence(Arrays.copyOfRange(arr, fromI, toI));
     }

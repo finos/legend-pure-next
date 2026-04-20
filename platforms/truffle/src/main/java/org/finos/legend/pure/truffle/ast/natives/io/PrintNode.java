@@ -19,7 +19,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code print(Any[*], Integer[1]) : Nil[0]} -- prints value to stdout.
@@ -48,14 +48,13 @@ public final class PrintNode extends PureNode
             depthArg.executeGeneric(frame);
         }
         doPrint(val);
-        return PureNull.INSTANCE;
+        return PureSequence.EMPTY;
     }
 
     @TruffleBoundary
     private static void doPrint(Object val)
     {
-        Object normalized = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(val);
-        System.out.print(PureValuePrinter.printForOutput(normalized));
+        System.out.print(PureValuePrinter.printForOutput(val));
         System.out.flush();
     }
 }

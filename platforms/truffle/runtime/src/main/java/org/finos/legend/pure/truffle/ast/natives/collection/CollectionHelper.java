@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
@@ -36,7 +35,7 @@ public final class CollectionHelper
 
     public static int size(Object v)
     {
-        if (v == PureNull.INSTANCE || v == null)
+        if (v == PureSequence.EMPTY || v == null)
         {
             return 0;
         }

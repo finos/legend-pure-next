@@ -19,7 +19,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 @NodeInfo(shortName = "last")
 public final class LastNode extends PureNode
@@ -46,7 +46,7 @@ public final class LastNode extends PureNode
         int size = CollectionHelper.size(col);
         if (size == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return CollectionHelper.at(col, size - 1);
     }

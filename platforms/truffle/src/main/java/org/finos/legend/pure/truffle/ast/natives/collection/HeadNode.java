@@ -19,7 +19,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 @NodeInfo(shortName = "head")
 public final class HeadNode extends PureNode
@@ -45,7 +45,7 @@ public final class HeadNode extends PureNode
         Object col = arg.executeGeneric(frame);
         if (CollectionHelper.isEmpty(col))
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return CollectionHelper.at(col, 0);
     }

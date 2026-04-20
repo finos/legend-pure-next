@@ -327,7 +327,7 @@ public final class EqualNode extends PureNode
             }
             return java.util.Arrays.asList(seq.toBoxedArray());
         }
-        if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence _ps1 && _ps1.isEmpty())
         {
             return null;
         }

@@ -103,7 +103,7 @@ public final class MatchNode extends PureNode
 
     private static int getRawValueCount(Object value)
     {
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
             return 0;
         }
@@ -113,7 +113,7 @@ public final class MatchNode extends PureNode
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object value,
                                                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
             return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }

@@ -121,9 +121,9 @@ public final class MetaNodeFactories
         registry.register("elementPath_PackageableElement_1__PackageableElement_$1_MANY$_",
                 (args, gt, mul, fe) -> new ElementPathNode(args[0]));
 
-        // newClass — creates a new Class at runtime (rare)
+        // newClass — creates a new Class at runtime
         registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
-                (args, gt, mul, fe) -> new EvaluateAndDeactivateNode(args[0])); // pass-through placeholder
+                (args, gt, mul, fe) -> new NewClassNode(args[0], args[1]));
 
         // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
         registry.register("parse_String_1__String_1__PureFile_1_",

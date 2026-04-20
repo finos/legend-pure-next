@@ -257,7 +257,7 @@ public final class PureASTBuilder
         }
         if (value == null)
         {
-            return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
+            return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureSequence.EMPTY);
         }
         // Date strings are kept as AtomicValue to preserve type info —
         // downstream date nodes check genericType to distinguish StrictDate/DateTime.

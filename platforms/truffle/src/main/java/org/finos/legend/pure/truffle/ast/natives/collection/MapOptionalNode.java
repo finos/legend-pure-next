@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code map(T[0..1], Function<{T[1]->V[0..1]}>[1]) : V[0..1]} -- map on optional.
@@ -47,7 +47,7 @@ public final class MapOptionalNode extends PureNode
         Object val = valueArg.executeGeneric(frame);
         if (CollectionHelper.isEmpty(val))
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         Object fn = lambdaArg.executeGeneric(frame);
         // If the value is actually a collection (runtime type mismatch
@@ -84,7 +84,7 @@ public final class MapOptionalNode extends PureNode
             }
             if (count == 0)
             {
-                return PureNull.INSTANCE;
+                return PureSequence.EMPTY;
             }
             return new org.finos.legend.pure.truffle.types.ObjectSequence(java.util.Arrays.copyOf(buf, count));
         }

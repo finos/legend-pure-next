@@ -28,7 +28,7 @@ import org.finos.legend.pure.truffle.builder.PureASTBuilder;
 import org.finos.legend.pure.truffle.frame.CompiledFunction;
 import org.finos.legend.pure.truffle.frame.FrameDescriptorBuilder;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 import java.util.ArrayDeque;
@@ -45,7 +45,7 @@ import org.finos.legend.pure.next.parser.PureParser;
  * {@code long}/{@code double}/{@code boolean}/{@code String} for
  * primitives, {@code PureSequence} for collections, generated Impl
  * classes for Pure class instances, {@code RawClosure} for lambdas,
- * {@code PureNull.INSTANCE} for empty.</p>
+ * {@code PureSequence.EMPTY} for empty.</p>
  *
  * <p>All scoping is frame-based ({@link VirtualFrame} with
  * {@link FrameLayout} slots). No HashMap {@code varStack}.</p>
@@ -134,7 +134,7 @@ public final class StandaloneEvaluator
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureSequence.EMPTY);
             }
         }
         return executeBody(fd, frame, layout);
@@ -155,7 +155,7 @@ public final class StandaloneEvaluator
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureSequence.EMPTY);
             }
         }
 
@@ -192,7 +192,7 @@ public final class StandaloneEvaluator
             int count = Math.min(params.size(), rawArgs.length);
             for (int i = 0; i < count; i++)
             {
-                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureNull.INSTANCE);
+                frame.setObject(paramSlots[i], rawArgs[i] != null ? rawArgs[i] : PureSequence.EMPTY);
             }
         }
 
@@ -219,7 +219,7 @@ public final class StandaloneEvaluator
             FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
             try
             {
-                Object result = PureNull.INSTANCE;
+                Object result = PureSequence.EMPTY;
                 for (PureNode node : body)
                 {
                     result = node.executeGeneric(frame);
@@ -259,7 +259,7 @@ public final class StandaloneEvaluator
                     ? cf.body() : null;
             if (body != null)
             {
-                Object result = PureNull.INSTANCE;
+                Object result = PureSequence.EMPTY;
                 for (PureNode node : body)
                 {
                     result = node.executeGeneric(frame);
@@ -269,7 +269,7 @@ public final class StandaloneEvaluator
 
             // Fallback: re-lower (for FDs not in cache, e.g. QP dispatch
             // resolved to a different FD that hasn't been compiled yet)
-            Object result = PureNull.INSTANCE;
+            Object result = PureSequence.EMPTY;
             for (meta.pure.metamodel.valuespecification.ValueSpecification expr : fd._expressionSequence())
             {
                 PureNode node = astBuilder.lower(expr);
@@ -446,7 +446,7 @@ public final class StandaloneEvaluator
                     Class<?> paramType = m.getParameterTypes()[0];
                     Object coerced = coerceForSetter(value, paramType);
                     if (coerced != null || value == null
-                            || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+                            || value instanceof org.finos.legend.pure.truffle.types.PureSequence _ps1 && _ps1.isEmpty())
                     {
                         m.invoke(target, coerced);
                         return;
@@ -486,7 +486,7 @@ public final class StandaloneEvaluator
 
     private Object coerceForSetter(Object value, Class<?> targetType)
     {
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureSequence _ps2 && _ps2.isEmpty())
         {
             return null;
         }
@@ -680,7 +680,7 @@ public final class StandaloneEvaluator
                 if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
                 {
                     Object val = di.get(propertyName);
-                    return val != null ? val : org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                    return val != null ? val : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
                 }
                 throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());
             }

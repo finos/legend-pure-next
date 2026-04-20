@@ -23,7 +23,7 @@ import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -113,7 +113,7 @@ public final class PureTruffleRuntime
         try
         {
             Object result = standalone.executeFunction(function, args);
-            if (result instanceof PureNull)
+            if (result instanceof PureSequence _ps && _ps.isEmpty())
             {
                 return null;
             }

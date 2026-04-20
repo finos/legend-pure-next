@@ -20,7 +20,6 @@ import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.types.PureNull;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
@@ -39,7 +38,7 @@ public final class MetaHelper
      */
     public static Type getRawValueType(Object value, MetadataAccess resolver)
     {
-        if (value == null || value instanceof PureNull)
+        if (value == null || value instanceof PureSequence _ps && _ps.isEmpty())
         {
             return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }

@@ -36,7 +36,7 @@ public final class StringHelper
         {
             return av._value().toString();
         }
-        if (v instanceof org.finos.legend.pure.truffle.types.PureNull || v == null)
+        if (v == null || v instanceof org.finos.legend.pure.truffle.types.PureSequence _ps && _ps.isEmpty())
         {
             return "";
         }

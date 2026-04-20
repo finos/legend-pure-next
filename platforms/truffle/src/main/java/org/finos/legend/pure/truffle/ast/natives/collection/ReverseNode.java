@@ -18,7 +18,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code reverse(T[m]) : T[m]}.
@@ -41,7 +41,7 @@ public final class ReverseNode extends PureNode
         Object[] arr = CollectionHelper.toArray(v);
         if (arr.length == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         // reverse in-place
         for (int lo = 0, hi = arr.length - 1; lo < hi; lo++, hi--)

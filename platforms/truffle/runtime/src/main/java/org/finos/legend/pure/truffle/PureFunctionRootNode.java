@@ -21,7 +21,7 @@ import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.RootNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * RootNode for user-defined FunctionDefinition bodies — binds parameters
@@ -83,7 +83,7 @@ public final class PureFunctionRootNode extends RootNode
         // Bind params from arguments[0..]
         for (int i = 0; i < paramSlots.length && i < arguments.length; i++)
         {
-            frame.setObject(paramSlots[i], arguments[i] != null ? arguments[i] : PureNull.INSTANCE);
+            frame.setObject(paramSlots[i], arguments[i] != null ? arguments[i] : PureSequence.EMPTY);
         }
 
 
@@ -96,7 +96,7 @@ public final class PureFunctionRootNode extends RootNode
         FrameLayout prevBuilderLayout = eval.astBuilder().pushLayout(layout);
         try
         {
-            Object result = PureNull.INSTANCE;
+            Object result = PureSequence.EMPTY;
             for (int i = 0; i < body.length; i++)
             {
                 result = ((PureNode) body[i]).executeGeneric(frame);

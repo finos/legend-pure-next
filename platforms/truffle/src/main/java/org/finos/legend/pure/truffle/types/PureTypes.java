@@ -26,9 +26,10 @@ import com.oracle.truffle.api.dsl.TypeSystem;
  *
  * <p>The type order below mirrors Pure's primitive hierarchy:</p>
  * <ul>
- *   <li>{@code PureNull} — singleton sentinel for empty multiplicity
- *       ({@code [0..0]}) and missing {@code [0..1]} values. First so it's
- *       cheapest to detect (identity check).</li>
+ *   <li>{@code PureSequence} — typed collection storage; an empty
+ *       {@code PureSequence.EMPTY} sentinel replaces the former
+ *       {@code PureSequence.EMPTY} for empty multiplicity ({@code [0..0]}) and
+ *       missing {@code [0..1]} values.</li>
  *   <li>{@code long} — Pure {@code Integer[1]}. Covers the vast majority of
  *       hot-path arithmetic.</li>
  *   <li>{@code double} — Pure {@code Float[1]}.</li>
@@ -48,7 +49,7 @@ import com.oracle.truffle.api.dsl.TypeSystem;
  * dispatch and rewraps only when crossing into a bridged native.</p>
  */
 @TypeSystem({
-        PureNull.class,
+        PureSequence.class,
         long.class,
         double.class,
         boolean.class,

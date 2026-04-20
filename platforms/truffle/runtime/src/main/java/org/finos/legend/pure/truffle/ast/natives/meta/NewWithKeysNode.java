@@ -168,7 +168,7 @@ public final class NewWithKeysNode extends PureNode
                     Object propValue;
                     if (exprSeq == null || exprSeq.isEmpty())
                     {
-                        propValue = org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                        propValue = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
                     }
                     else if (exprSeq.size() == 1)
                     {
@@ -249,7 +249,7 @@ public final class NewWithKeysNode extends PureNode
         {
             String propName = kv.getKey();
             Object propValue = kv.getValue();
-            if (propValue == null || propValue instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (propValue == null || (propValue instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
             {
                 continue;
             }
@@ -317,6 +317,20 @@ public final class NewWithKeysNode extends PureNode
                         {
                             return otherProp._name();
                         }
+                        // Check subtype: classPath may be a subtype of targetPath
+                        Object classElement = resolver.getElement(classPath);
+                        if (classElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type classType)
+                        {
+                            var mro = org.finos.legend.pure.truffle.runtime.helper._Type.linearize(classType, resolver);
+                            for (var ancestor : mro)
+                            {
+                                if (ancestor instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ape
+                                        && targetPath.equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ape)))
+                                {
+                                    return otherProp._name();
+                                }
+                            }
+                        }
                     }
                 }
                 // If type check fails, still return if no better match found later
@@ -349,7 +363,7 @@ public final class NewWithKeysNode extends PureNode
         {
             Object current = eval.accessProperty(target, propName);
             boolean isEmpty = current == null
-                    || current instanceof org.finos.legend.pure.truffle.types.PureNull
+                    || (current instanceof org.finos.legend.pure.truffle.types.PureSequence ps3 && ps3.isEmpty())
                     || (current instanceof PureSequence seq && seq.isEmpty());
             if (isEmpty)
             {
@@ -397,7 +411,7 @@ public final class NewWithKeysNode extends PureNode
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection col)
         {
             var vals = col._values();
-            if (vals == null || vals.isEmpty()) return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            if (vals == null || vals.isEmpty()) return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             Object[] unwrapped = new Object[vals.size()];
             for (int i = 0; i < vals.size(); i++)
             {

@@ -75,21 +75,20 @@ public final class ToRepresentationNode extends PureNode
         {
             return "%" + ToStringNode.formatDateTime(zdt);
         }
-        Object raw = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(v);
-        if (raw instanceof String s)
+        if (v instanceof String s)
         {
             if (ToStringNode.isDateString(s)) return "%" + ToStringNode.normalizeDateString(s);
             return "'" + s.replace("'", "\\'") + "'";
         }
-        if (raw == null)
+        if (v == null)
         {
             return "[]";
         }
         // Numbers, booleans — use their toString
-        if (raw instanceof Number || raw instanceof Boolean)
+        if (v instanceof Number || v instanceof Boolean)
         {
-            return ToStringNode.pureToString(raw);
+            return ToStringNode.pureToString(v);
         }
-        return PureValuePrinter.printForOutput(raw);
+        return PureValuePrinter.printForOutput(v);
     }
 }

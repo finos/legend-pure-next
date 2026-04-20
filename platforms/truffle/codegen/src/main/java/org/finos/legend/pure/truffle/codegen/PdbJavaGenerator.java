@@ -779,7 +779,8 @@ public class PdbJavaGenerator
                 sb.append("              var item = fb.").append(camel).append("(i);\n");
                 if (wrapperClass != null)
                 {
-                    sb.append("              arr[i] = item != null ? new ").append(wrapperClass).append("(item, resolver) : null;\n");
+                    sb.append("              if (item == null) throw new RuntimeException(\"Null element in FBS array for ").append(wrapperClass).append("\");\n");
+                    sb.append("              arr[i] = new ").append(wrapperClass).append("(item, resolver);\n");
                 }
                 else
                 {

@@ -165,7 +165,7 @@ public final class NewWithKeysNode extends PureNode
         {
             String propName = kv.getKey();
             Object propValue = kv.getValue();
-            if (propValue == null || propValue instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (propValue == null || propValue instanceof org.finos.legend.pure.truffle.types.PureSequence _ps1 && _ps1.isEmpty())
             {
                 continue;
             }
@@ -220,7 +220,7 @@ public final class NewWithKeysNode extends PureNode
         try
         {
             Object current = eval.accessProperty(target, propName);
-            if (current == null || current instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (current == null || current instanceof org.finos.legend.pure.truffle.types.PureSequence _ps2 && _ps2.isEmpty())
             {
                 // Single value — set directly
                 eval.accessProperty(target, propName, value);

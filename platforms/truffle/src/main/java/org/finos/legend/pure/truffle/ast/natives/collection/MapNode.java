@@ -18,7 +18,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.Arrays;
 
@@ -86,7 +86,7 @@ public final class MapNode extends PureNode
         }
         if (count == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return new ObjectSequence(Arrays.copyOf(buf, count));
     }

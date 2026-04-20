@@ -38,7 +38,7 @@ public final class SequenceNode extends PureNode
     @ExplodeLoop
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object result = org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+        Object result = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         for (int i = 0; i < exprs.length; i++)
         {
             result = ((PureNode) exprs[i]).executeGeneric(frame);

@@ -20,7 +20,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,7 +58,7 @@ public final class DirectoryTreeNode extends PureNode
         Path dir = Path.of(path);
         if (!Files.isDirectory(dir))
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         List<String> paths = new ArrayList<>();
         try (Stream<Path> stream = Files.walk(dir))
@@ -72,7 +72,7 @@ public final class DirectoryTreeNode extends PureNode
         }
         if (paths.isEmpty())
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         return new ObjectSequence(paths.toArray());
     }

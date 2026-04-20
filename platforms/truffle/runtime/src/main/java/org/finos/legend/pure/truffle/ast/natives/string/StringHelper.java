@@ -26,13 +26,17 @@ public final class StringHelper
         {
             return s;
         }
-        if (v instanceof org.finos.legend.pure.truffle.types.PureNull || v == null)
+        if (v == null)
         {
             return "";
         }
-        // PureSequence — join all elements as strings
+        // PureSequence — join all elements as strings (including empty)
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
+            if (seq.isEmpty())
+            {
+                return "";
+            }
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < seq.size(); i++)
             {

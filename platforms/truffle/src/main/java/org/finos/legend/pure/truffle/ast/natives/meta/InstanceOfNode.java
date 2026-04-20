@@ -62,7 +62,7 @@ public final class InstanceOfNode extends PureNode
         {
             valResult = av._value();
         }
-        if (valResult == null || valResult instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (valResult == null || valResult instanceof org.finos.legend.pure.truffle.types.PureSequence _ps && _ps.isEmpty())
         {
             return false;
         }

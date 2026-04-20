@@ -60,7 +60,7 @@ public final class InstanceOfNode extends PureNode
             targetType = t;
         }
 
-        if (rawVal == null || rawVal instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (rawVal == null || (rawVal instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
             return false;
         }

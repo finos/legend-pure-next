@@ -21,7 +21,7 @@ import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.RootNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -111,7 +111,7 @@ public final class RawLambdaRootNode extends RootNode
         eval.setCurrentFrame(frame);
         try
         {
-            Object result = PureNull.INSTANCE;
+            Object result = PureSequence.EMPTY;
             for (int i = 0; i < body.length; i++)
             {
                 result = ((PureNode) body[i]).executeGeneric(frame);

@@ -86,7 +86,7 @@ public final class IsNode extends PureNode
 
     private static Object normalize(Object v)
     {
-        if (v instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())
         {
             return null;
         }

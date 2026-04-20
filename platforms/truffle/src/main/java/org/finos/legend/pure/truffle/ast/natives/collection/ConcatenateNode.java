@@ -18,7 +18,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * {@code concatenate(T[*], T[*]) : T[*]} -- append both element lists into
@@ -49,7 +49,7 @@ public final class ConcatenateNode extends PureNode
         int total = aArr.length + bArr.length;
         if (total == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         Object[] merged = new Object[total];
         System.arraycopy(aArr, 0, merged, 0, aArr.length);

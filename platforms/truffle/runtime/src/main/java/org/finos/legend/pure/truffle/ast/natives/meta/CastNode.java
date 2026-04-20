@@ -75,7 +75,7 @@ public final class CastNode extends PureNode
 
         // Validate type compatibility
         if (inputResult != null
-                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureNull)
+                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())
                 && targetType instanceof PackageableElement targetPe)
         {
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetPe);
@@ -110,7 +110,7 @@ public final class CastNode extends PureNode
 
         // Constraint validation
         if (targetType != null && inputResult != null
-                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureNull))
+                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
         {
             validateConstraints(targetType, targetGT, inputResult, resolver);
         }

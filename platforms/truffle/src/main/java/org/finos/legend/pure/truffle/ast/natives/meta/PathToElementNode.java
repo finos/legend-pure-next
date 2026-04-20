@@ -100,7 +100,7 @@ public final class PathToElementNode extends PureNode
         {
             if (lenient)
             {
-                return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             }
             throw new RuntimeException("Element not found: " + path);
         }

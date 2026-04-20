@@ -64,9 +64,9 @@ public final class EvaluateNode extends PureNode
         {
             fn = av._value();
         }
-        if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (fn == null || fn instanceof org.finos.legend.pure.truffle.types.PureSequence _ps && _ps.isEmpty())
         {
-            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
 
         // values[1] is the List<Any>[*] collection — unwrap each List to its values
@@ -100,7 +100,7 @@ public final class EvaluateNode extends PureNode
             int sz = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.size(vals);
             if (sz == 0)
             {
-                out.add(org.finos.legend.pure.truffle.types.PureNull.INSTANCE);
+                out.add(org.finos.legend.pure.truffle.types.PureSequence.EMPTY);
             }
             else if (sz == 1)
             {

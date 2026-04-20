@@ -133,7 +133,7 @@ public final class RawLambdaCallNode extends Node
             {
                 return StandaloneEvaluatorHolder.current().accessProperty(rawArgs[0], prop._name());
             }
-            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
         else if (lambdaOrClosure instanceof meta.pure.metamodel.function.FunctionDefinition fd)
         {

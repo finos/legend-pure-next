@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 @NodeInfo(shortName = "find")
 public final class FindNode extends PureNode
@@ -52,6 +52,6 @@ public final class FindNode extends PureNode
                 return item;
             }
         }
-        return PureNull.INSTANCE;
+        return PureSequence.EMPTY;
     }
 }

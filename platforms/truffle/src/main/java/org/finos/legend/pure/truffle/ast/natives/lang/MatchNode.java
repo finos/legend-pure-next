@@ -108,7 +108,7 @@ public final class MatchNode extends PureNode
 
     private static int getRawValueCount(Object value)
     {
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureSequence _ps1 && _ps1.isEmpty())
         {
             return 0;
         }
@@ -129,7 +129,7 @@ public final class MatchNode extends PureNode
             }
         }
         Object value = unwrapped;
-        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureNull)
+        if (value == null || value instanceof org.finos.legend.pure.truffle.types.PureSequence _ps2 && _ps2.isEmpty())
         {
             return (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }

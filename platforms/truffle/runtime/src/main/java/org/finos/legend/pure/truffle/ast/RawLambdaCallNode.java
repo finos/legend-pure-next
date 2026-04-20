@@ -58,7 +58,9 @@ public final class RawLambdaCallNode extends Node
 
     private Object dispatch(Object lambdaOrClosure, Object[] args)
     {
-        RootCallTarget target = getCallTarget(lambdaOrClosure);
+        // TODO: investigate Truffle frame binding issue with CallTarget path
+        // For now, always use fallback (inline) path
+        RootCallTarget target = null; // getCallTarget(lambdaOrClosure);
         if (target == null)
         {
             return fallback(lambdaOrClosure, args);
@@ -122,7 +124,7 @@ public final class RawLambdaCallNode extends Node
             {
                 return StandaloneEvaluatorHolder.current().accessProperty(rawArgs[0], prop._name());
             }
-            return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
         else if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
         {

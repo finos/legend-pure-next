@@ -19,7 +19,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.Arrays;
 
@@ -66,7 +66,7 @@ public final class SortNode extends PureNode
         Object[] arr = CollectionHelper.toArray(col);
         if (arr.length <= 1)
         {
-            return arr.length == 0 ? PureNull.INSTANCE : arr[0];
+            return arr.length == 0 ? PureSequence.EMPTY : arr[0];
         }
 
         boolean hasKeyFn = keyFn != null && !CollectionHelper.isEmpty(keyFn);

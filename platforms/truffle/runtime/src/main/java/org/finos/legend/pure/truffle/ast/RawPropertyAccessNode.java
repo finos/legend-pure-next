@@ -83,9 +83,9 @@ public final class RawPropertyAccessNode extends PureNode
         if (propName != null && argValues.length > 0)
         {
             Object target = argValues[0];
-            if (target == null || target instanceof org.finos.legend.pure.truffle.types.PureNull)
+            if (target == null || (target instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
             {
-                return org.finos.legend.pure.truffle.types.PureNull.INSTANCE;
+                return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             }
             // Enum value access: look up enum value by searching the
             // Enumeration's properties for one matching propName and

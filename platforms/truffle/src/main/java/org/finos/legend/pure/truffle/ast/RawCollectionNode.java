@@ -17,11 +17,11 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
-import org.finos.legend.pure.truffle.types.PureNull;
+import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * Evaluates child nodes and produces a raw PureSequence/ObjectSequence
- * (or PureNull for empty, or a single scalar for size=1).
+ * (or PureSequence.EMPTY for empty, or a single scalar for size=1).
  */
 @NodeInfo(shortName = "collection")
 public final class RawCollectionNode extends PureNode
@@ -39,7 +39,7 @@ public final class RawCollectionNode extends PureNode
     {
         if (children.length == 0)
         {
-            return PureNull.INSTANCE;
+            return PureSequence.EMPTY;
         }
         if (children.length == 1)
         {

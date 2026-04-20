@@ -65,7 +65,7 @@ public final class FormatNode extends PureNode
         for (int i = 0; i < sz; i++)
         {
             Object item = CollectionHelper.at(args, i);
-            rawArgs[i] = org.finos.legend.pure.truffle.types.ValueNormalizer.normalize(item);
+            rawArgs[i] = item;
             if (rawArgs[i] == null)
             {
                 rawArgs[i] = "";
