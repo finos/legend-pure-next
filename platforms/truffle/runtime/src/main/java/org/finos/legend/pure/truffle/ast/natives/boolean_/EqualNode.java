@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -169,15 +170,30 @@ public final class EqualNode extends PureNode
             }
         }
         // Generated Impl equality — compare by property values respecting <<equality.Key>>
+        // Also handles cross-class comparisons (FlatBufferWrapper vs Impl) when both
+        // implement the same truffle interface.
         if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyA
                 && b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyB)
         {
-            if (a.getClass() == b.getClass())
+            if (a.getClass() == b.getClass() || shareInterface(a, b))
             {
                 return equalByProperties(anyA, anyB);
             }
         }
         return Objects.equals(a, b);
+    }
+
+    /** Check if two objects share a common truffle interface (for cross-type equality). */
+    private static boolean shareInterface(Object a, Object b)
+    {
+        for (Class<?> iface : a.getClass().getInterfaces())
+        {
+            if (iface.getName().startsWith("org.finos.legend.pure.truffle.pdb.") && iface.isInstance(b))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Extract just the value name from an enum value string like "pkg::EnumType.VALUE" → "VALUE". */
@@ -282,10 +298,6 @@ public final class EqualNode extends PureNode
             return null;
         }
         collectEqualityKeysRecursive(spo, keys, seen);
-        if (!keys.isEmpty() || obj.getClass().getSimpleName().contains("Side") || obj.getClass().getSimpleName().contains("Right"))
-        {
-            System.err.println("[EQ-KEY-RESULT] " + obj.getClass().getSimpleName() + " spo=" + spo.getClass().getSimpleName() + " keys=" + keys);
-        }
         return keys;
     }
 

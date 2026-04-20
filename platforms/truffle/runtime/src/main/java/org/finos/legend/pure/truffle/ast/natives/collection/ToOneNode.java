@@ -42,7 +42,8 @@ public final class ToOneNode extends PureNode
         if (size != 1)
         {
             CompilerDirectives.transferToInterpreter();
-            throw new RuntimeException("toOne expected exactly 1 element, got " + size);
+            // Include the arg node type for debugging
+            throw new org.finos.legend.pure.truffle.ast.PureException("toOne expected exactly 1 element, got " + size, this);
         }
         return CollectionHelper.at(v, 0);
     }

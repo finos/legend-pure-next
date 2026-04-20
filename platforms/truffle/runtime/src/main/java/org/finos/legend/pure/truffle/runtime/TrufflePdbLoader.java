@@ -42,7 +42,6 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
     public TrufflePdbLoader(Path pdbPath) throws IOException
     {
         this.archive = new CompressedArchiveReader(pdbPath);
-        System.err.println("[LOADER] Opened " + pdbPath + " with " + archive.elementPaths().size() + " elements");
     }
 
     @Override
@@ -69,15 +68,11 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
         Object element = deserialize(typeName, data);
         if (element == null)
         {
-            System.err.println("[LOADER] null for type=" + typeName + " path=" + path);
+            throw new RuntimeException("[LOADER] null for type=" + typeName + " path=" + path);
         }
         else
         {
             cache.put(path, element);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition)
-            {
-                System.err.println("[LOADER] FD: " + path + " -> " + element.getClass().getSimpleName());
-            }
         }
         return element;
     }

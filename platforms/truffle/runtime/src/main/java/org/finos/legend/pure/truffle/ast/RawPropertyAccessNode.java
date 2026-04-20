@@ -55,20 +55,10 @@ public final class RawPropertyAccessNode extends PureNode
     @TruffleBoundary
     private static Object doAccess(FunctionExpression fe, Object[] argValues)
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func;
-        try
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
+        if (func == null)
         {
-            func = fe._func();
-        }
-        catch (RuntimeException e)
-        {
-            // DotApplication lazy resolution: derive property name from functionName
-            String funcName = fe._functionName();
-            if (funcName != null && argValues.length > 0)
-            {
-                return StandaloneEvaluatorHolder.current().accessProperty(argValues[0], funcName);
-            }
-            throw e;
+            throw new RuntimeException("_func() returned null for FunctionExpression: " + fe._functionName() + " class=" + fe.getClass().getSimpleName());
         }
 
         if (func instanceof QualifiedProperty qp)

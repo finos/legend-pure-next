@@ -18,6 +18,11 @@ public final class _PackageableElement
         {
             return name != null ? name : "";
         }
+        // Root package: empty name means this is the root — return ""
+        if (name.isEmpty())
+        {
+            return "";
+        }
         String pkgPath = packagePath(pkg);
         return pkgPath.isEmpty() ? name : pkgPath + "::" + name;
     }

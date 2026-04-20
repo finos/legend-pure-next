@@ -56,6 +56,25 @@ public final class ObjectSequence extends PureSequence
     }
 
     @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (!(o instanceof PureSequence other)) return false;
+        if (values.length != other.size()) return false;
+        for (int i = 0; i < values.length; i++)
+        {
+            if (!java.util.Objects.equals(values[i], other.getBoxed(i))) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Arrays.hashCode(values);
+    }
+
+    @Override
     public String toString()
     {
         return "ObjectSequence" + Arrays.toString(values);

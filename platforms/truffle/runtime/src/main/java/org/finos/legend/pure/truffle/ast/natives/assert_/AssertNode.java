@@ -52,18 +52,18 @@ public final class AssertNode extends PureNode
             if (messageFnArg != null)
             {
                 Object msgFn = messageFnArg.executeGeneric(frame);
-                throwWithMessage(msgFn);
+                throwWithMessage(msgFn, this);
             }
             else
             {
-                throw new PureAssertionError("Assert failed");
+                throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError("Assert failed", this);
             }
         }
         return true;
     }
 
     @TruffleBoundary
-    private static void throwWithMessage(Object msgFn)
+    private static void throwWithMessage(Object msgFn, com.oracle.truffle.api.nodes.Node location)
     {
         Object message;
         if (msgFn instanceof RawClosure rc)
@@ -79,7 +79,7 @@ public final class AssertNode extends PureNode
         {
             message = String.valueOf(msgFn);
         }
-        throw new PureAssertionError(String.valueOf(message));
+        throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError(String.valueOf(message), location);
     }
 
     private static boolean asBoolean(Object v)

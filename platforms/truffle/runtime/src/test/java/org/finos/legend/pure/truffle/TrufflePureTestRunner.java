@@ -170,19 +170,27 @@ class TrufflePureTestRunner
                     evaluator.executeFunction(fd, new Object[0]);
                 }
             }
+            catch (org.finos.legend.pure.truffle.ast.PureException.AssertionError e)
+            {
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + e.getMessage() + formatPureStack(e), e);
+            }
+            catch (org.finos.legend.pure.truffle.ast.PureException e)
+            {
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + e.getMessage() + formatPureStack(e), e);
+            }
             catch (PureAssertionError e)
             {
-                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + e.getMessage(), e);
+                // Legacy bootstrap assertion — should be removed once all asserts use PureException
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + e.getMessage() + formatPureStack(e), e);
             }
             catch (RuntimeException e)
             {
-                // Unwrap to get a cleaner error message
                 Throwable cause = e;
                 while (cause.getCause() != null && cause.getCause() != cause)
                 {
                     cause = cause.getCause();
                 }
-                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + cause.getMessage(), e);
+                throw new org.opentest4j.AssertionFailedError("[" + path + "] " + cause.getMessage() + formatPureStack(e), e);
             }
             finally
             {
@@ -254,5 +262,66 @@ class TrufflePureTestRunner
     {
         var params = fd._parameters();
         return params == null || params.isEmpty();
+    }
+
+    /**
+     * Extract the Pure call stack from a Truffle exception.
+     * Uses TruffleStackTrace to get guest language frames with source locations.
+     */
+    private static String formatPureStack(Throwable e)
+    {
+        Throwable inner = e;
+        while (inner.getCause() != null && inner.getCause() != inner)
+        {
+            inner = inner.getCause();
+        }
+
+        try
+        {
+            var frames = com.oracle.truffle.api.TruffleStackTrace.getStackTrace(inner);
+            if (frames == null || frames.isEmpty())
+            {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder("\nPure stack:");
+            for (var frame : frames)
+            {
+                var target = frame.getTarget();
+                var rootNode = target.getRootNode();
+                String name = rootNode != null ? rootNode.getName() : "?";
+
+                // Find source from the location node (the call site or expression node)
+                com.oracle.truffle.api.source.SourceSection sourceSection = null;
+                var location = frame.getLocation();
+                if (location != null)
+                {
+                    sourceSection = location.getSourceSection();
+                    // Walk up the node tree to find the nearest source section
+                    var node = location;
+                    while (sourceSection == null && node != null)
+                    {
+                        sourceSection = node.getSourceSection();
+                        node = node.getParent();
+                    }
+                }
+                if (sourceSection == null && rootNode != null)
+                {
+                    sourceSection = rootNode.getSourceSection();
+                }
+
+                sb.append("\n  at ").append(name != null ? name : "?");
+                if (sourceSection != null && sourceSection.getSource() != null)
+                {
+                    sb.append(" (").append(sourceSection.getSource().getName())
+                            .append(":").append(sourceSection.getStartLine())
+                            .append(":").append(sourceSection.getStartColumn()).append(")");
+                }
+            }
+            return sb.toString();
+        }
+        catch (Exception ignored)
+        {
+            return "";
+        }
     }
 }

@@ -97,6 +97,26 @@ public final class StandaloneEvaluator
     }
 
     // ---------------------------------------------------------------
+    // CallTarget access — used by RawUserFunctionCallNode for Truffle-native calls
+    // ---------------------------------------------------------------
+
+    /**
+     * Returns a compiled {@link RootCallTarget} for a FunctionDefinition.
+     * The CallTarget is cached; subsequent calls return the same instance.
+     * Returns null for QualifiedProperties (which need runtime dispatch and
+     * type variable binding) or if compilation fails.
+     */
+    public RootCallTarget getCallTarget(FunctionDefinition fd)
+    {
+        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty)
+        {
+            return null;
+        }
+        CompiledFunction cf = compile(fd);
+        return cf.callTarget();
+    }
+
+    // ---------------------------------------------------------------
     // Function execution — the main entry point
     // ---------------------------------------------------------------
 
@@ -161,9 +181,29 @@ public final class StandaloneEvaluator
 
         FunctionDefinition resolved = resolveQpDispatch(qp, rawArgs);
         bindQpTypeVariables(rawArgs[0], frame, layout);
-        // Eagerly compile the resolved FD so its body is cached for future calls
-        compile(resolved);
-        return executeBody(resolved, frame, layout);
+        // Execute the resolved FD's body using the QP's frame and layout.
+        // Don't use the resolved FD's cached body — its slot indices may differ.
+        FrameLayout prevLayout = this.currentLayout;
+        VirtualFrame prevFrame = this.currentFrame;
+        this.currentLayout = layout;
+        this.currentFrame = frame;
+        FrameLayout prevBuilderLayout = astBuilder.pushLayout(layout);
+        try
+        {
+            Object result = PureNull.INSTANCE;
+            for (Object expr : resolved._expressionSequence().toBoxedArray())
+            {
+                PureNode node = astBuilder.lower(expr);
+                result = node.executeGeneric(frame);
+            }
+            return result;
+        }
+        finally
+        {
+            this.currentFrame = prevFrame;
+            this.currentLayout = prevLayout;
+            astBuilder.popLayout(prevBuilderLayout);
+        }
     }
 
     /**
@@ -317,7 +357,27 @@ public final class StandaloneEvaluator
             if (!(fd instanceof LambdaFunction))
             {
                 String name = getFunctionName(fd);
-                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body);
+                com.oracle.truffle.api.source.SourceSection rootSource = null;
+                try
+                {
+                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si = null;
+                    if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+                    {
+                        si = any._sourceInformation();
+                    }
+                    if (si == null && fd._expressionSequence() != null && !fd._expressionSequence().isEmpty())
+                    {
+                        // Try getting source from the first expression in the body
+                        Object firstExpr = fd._expressionSequence().getBoxed(0);
+                        if (firstExpr instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
+                        {
+                            si = vs._sourceInformation();
+                        }
+                    }
+                    rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
+                }
+                catch (Exception ignored) {}
+                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource);
                 cf.setCallTarget(root.getCallTarget());
             }
         }
@@ -848,7 +908,7 @@ public final class StandaloneEvaluator
     // QualifiedProperty dispatch
     // ---------------------------------------------------------------
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class resolveClassForTarget(Object target)
+    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class resolveClassForTarget(Object target)
     {
         // Try CGT first
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
@@ -875,7 +935,7 @@ public final class StandaloneEvaluator
         return null;
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty findQualifiedProperty(
+    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty findQualifiedProperty(
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls, String name)
     {
         // Search own QPs

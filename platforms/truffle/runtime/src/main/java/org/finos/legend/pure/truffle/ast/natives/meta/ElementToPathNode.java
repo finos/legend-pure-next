@@ -65,11 +65,15 @@ public final class ElementToPathNode extends PureNode
         if (element instanceof PackageableElement pe)
         {
             String path = _PackageableElement.path(pe);
+            if (path == null || path.isEmpty() || "Root".equals(path) || "::".equals(path))
+            {
+                return "";
+            }
             if ("::".equals(separator))
             {
-                return path != null ? path : "";
+                return path;
             }
-            return path != null ? path.replace("::", separator) : "";
+            return path.replace("::", separator);
         }
         if ("::".equals(String.valueOf(element)))
         {

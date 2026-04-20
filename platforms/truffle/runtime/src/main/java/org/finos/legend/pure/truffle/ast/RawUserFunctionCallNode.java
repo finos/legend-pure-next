@@ -14,15 +14,26 @@
 
 package org.finos.legend.pure.truffle.ast;
 
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
 
 /**
- * Calls a user-defined FunctionDefinition via StandaloneEvaluator.executeFunction().
- * All arguments and return values are raw Java objects.
+ * Calls a user-defined FunctionDefinition via Truffle {@link IndirectCallNode}.
+ * The CallTarget is resolved lazily and cached. All arguments and return values
+ * are raw Java objects.
+ *
+ * <p>Using IndirectCallNode (instead of a plain Java call through
+ * StandaloneEvaluator) enables Truffle to:
+ * <ul>
+ *   <li>Build proper stack frames with Pure source locations</li>
+ *   <li>Inline the callee for Graal JIT compilation</li>
+ * </ul>
  */
 @NodeInfo(shortName = "userFunctionCall")
 public final class RawUserFunctionCallNode extends PureNode
@@ -32,10 +43,17 @@ public final class RawUserFunctionCallNode extends PureNode
     @Children
     private PureNode[] argNodes;
 
+    @Child
+    private IndirectCallNode callNode;
+
+    @CompilerDirectives.CompilationFinal
+    private RootCallTarget cachedCallTarget;
+
     public RawUserFunctionCallNode(FunctionDefinition fd, PureNode[] argNodes)
     {
         this.fd = fd;
         this.argNodes = argNodes;
+        this.callNode = IndirectCallNode.create();
     }
 
     @Override
@@ -46,11 +64,28 @@ public final class RawUserFunctionCallNode extends PureNode
         {
             args[i] = argNodes[i].executeGeneric(frame);
         }
-        return doCall(fd, args);
+        RootCallTarget ct = cachedCallTarget;
+        if (ct == null)
+        {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            ct = resolveCallTarget();
+            cachedCallTarget = ct;
+        }
+        if (ct != null)
+        {
+            return callNode.call(ct, args);
+        }
+        return fallbackCall(args);
     }
 
     @TruffleBoundary
-    private static Object doCall(FunctionDefinition fd, Object[] args)
+    private RootCallTarget resolveCallTarget()
+    {
+        return StandaloneEvaluatorHolder.current().getCallTarget(fd);
+    }
+
+    @TruffleBoundary
+    private Object fallbackCall(Object[] args)
     {
         return StandaloneEvaluatorHolder.current().executeFunction(fd, args);
     }

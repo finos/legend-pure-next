@@ -14,31 +14,40 @@
 
 package org.finos.legend.pure.truffle.ast;
 
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.source.SourceSection;
 
 /**
  * Base class for all Pure Truffle AST nodes.
  *
- * <p>Each subclass mirrors one dispatch arm of the Java tree-walking
- * interpreter {@code ValueSpecificationEvaluator.evaluate(...)}.</p>
- *
- * <p>Node values are plain Java {@code Object}s carrying whatever the
- * original Pure interpreter uses:
- * <ul>
- *   <li>{@code Long} / {@code Double} / {@code String} / {@code Boolean}
- *       for primitives (wrapped in {@code ValueSpecification} only when
- *       crossing into the native bridge — see {@code BridgedNativeCallNode})</li>
- *   <li>{@code DynamicInstance} for user-defined object instances</li>
- *   <li>{@code Closure} for lambdas with captured scope</li>
- *   <li>{@code List<Object>} for collections (flattened like Pure semantics)</li>
- * </ul>
- * </p>
+ * <p>Each node carries an optional {@link SourceSection} derived from the
+ * PDB's {@code SourceInformation}. Truffle uses this to build guest-language
+ * stack traces automatically when exceptions propagate.</p>
  */
 @NodeInfo(language = "pure")
 public abstract class PureNode extends Node
 {
+    @CompilationFinal
+    private SourceSection pureSourceSection;
+
+    /**
+     * Set the Pure source location for this node. Called by the AST builder
+     * after node creation, before the node is adopted.
+     */
+    public void setPureSourceSection(SourceSection section)
+    {
+        this.pureSourceSection = section;
+    }
+
+    @Override
+    public SourceSection getSourceSection()
+    {
+        return pureSourceSection;
+    }
+
     /**
      * Evaluate this node in the given Truffle frame.
      */

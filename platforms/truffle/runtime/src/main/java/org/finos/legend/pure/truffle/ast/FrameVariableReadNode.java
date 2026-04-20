@@ -102,6 +102,6 @@ public final class FrameVariableReadNode extends PureNode
                 }
             }
         }
-        throw new RuntimeException("Unknown variable: " + name);
+        throw new org.finos.legend.pure.truffle.ast.PureException("Unknown variable: " + name, this);
     }
 }

@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.builder;
 
+import org.finos.legend.pure.truffle.ast.PureSourceHelper;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
@@ -123,7 +124,7 @@ public final class PureASTBuilder
      */
     public PureNode lower(Object vs)
     {
-        return switch (vs)
+        PureNode node = switch (vs)
         {
             case AtomicValue av -> lowerAtomicValue(av);
             case VariableExpression ve -> lowerVariableRead(ve);
@@ -142,38 +143,25 @@ public final class PureASTBuilder
             default -> throw new RuntimeException(
                     "Unsupported ValueSpecification type: " + vs.getClass().getName());
         };
+        // Attach Pure source location for stack traces
+        PureSourceHelper.withSource(node, vs);
+        return node;
     }
 
     private PureNode lowerFunctionExpression(FunctionExpression fe)
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func;
-        try
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
+        if (func == null)
         {
-            func = fe._func();
-        }
-        catch (RuntimeException e)
-        {
-            // _func() FlatBuffer lazy resolution failed. Try name+arity fallback.
-            String functionName = fe._functionName();
-            if (functionName != null)
-            {
-                int argCount = fe._parametersValues() != null ? fe._parametersValues().size() : 0;
-                NativeNodeRegistry.Factory factory = specialized.lookupByNameAndArity(functionName, argCount);
-                if (factory != null)
-                {
-                    return factory.create(lowerArgs(fe), fe._genericType(), fe._multiplicity(), fe);
-                }
-            }
-            return new RawPropertyAccessNode(fe, lowerArgs(fe));
+            throw new RuntimeException("_func() returned null for: " + fe._functionName() + " [" + fe.getClass().getSimpleName() + "]");
         }
         return switch (func)
         {
             case NativeFunction nf -> lowerNativeCall(nf, fe);
             case FunctionDefinition fd -> new RawUserFunctionCallNode(fd, lowerArgs(fe));
             case AbstractProperty prop -> new RawPropertyAccessNode(fe, lowerArgs(fe));
-            case null -> new RawPropertyAccessNode(fe, lowerArgs(fe));
             default -> throw new RuntimeException(
-                    "Unsupported function type: " + func.getClass().getName());
+                    "Unsupported function type: " + func.getClass().getName() + " for: " + fe._functionName());
         };
     }
 

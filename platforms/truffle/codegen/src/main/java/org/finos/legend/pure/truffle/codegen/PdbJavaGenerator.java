@@ -716,7 +716,7 @@ public class PdbJavaGenerator
             {
                 // Pointer path — resolve via MetadataAccess
                 sb.append("        { String path = fb.").append(camel).append("();\n");
-                sb.append("          __raw = path != null ? (").append(resolveJavaType(pr)).append(") (Object) resolver.getElement(path) : null; }\n");
+                sb.append("          if (path != null) { __raw = resolver.getElement(path); if (__raw == null) __raw = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); } }\n");
             }
         }
         else if (fbsField.type().equals("long") || fbsField.type().equals("int")
@@ -867,7 +867,9 @@ public class PdbJavaGenerator
                         .append(".PointerRef) fb.").append(camelName).append("(new ").append(FBS_PKG)
                         .append(".PointerRef()");
                 if (isVector) sb.append(", i");
-                sb.append("); if (pr != null) ").append(target).append(" = (Object) resolver.getElement(pr.path()); break; }\n");
+                sb.append("); if (pr != null) { Object _resolved = resolver.getElement(pr.path()); ")
+                  .append("if (_resolved == null) _resolved = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(pr.path(), resolver); ")
+                  .append(target).append(" = _resolved; } break; }\n");
             }
             else
             {

@@ -62,9 +62,46 @@ public final class CompareNode extends PureNode
     @TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
-        // Unwrap PureDate to date strings for comparison
-        Object a = rawA instanceof PureDate pd ? pd.dateString() : rawA;
-        Object b = rawB instanceof PureDate pd ? pd.dateString() : rawB;
+        // Normalize: if one side is PureDate and the other is a date-like String, treat both as dates
+        if (rawA instanceof PureDate && rawB instanceof String s && org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
+        {
+            rawB = PureDate.of(s, s.contains("T") ? "DateTime" : "Date");
+        }
+        else if (rawB instanceof PureDate && rawA instanceof String s && org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
+        {
+            rawA = PureDate.of(s, s.contains("T") ? "DateTime" : "Date");
+        }
+        if (rawA instanceof PureDate pdA && rawB instanceof PureDate pdB)
+        {
+            try
+            {
+                java.time.LocalDateTime dtA = org.finos.legend.pure.truffle.ast.natives.date.DateHelper.parseDate(pdA.dateString());
+                java.time.LocalDateTime dtB = org.finos.legend.pure.truffle.ast.natives.date.DateHelper.parseDate(pdB.dateString());
+                return (long) Math.signum(dtA.compareTo(dtB));
+            }
+            catch (Exception e)
+            {
+                // Fallback: try numeric year comparison for large years
+                try
+                {
+                    long yearA = Long.parseLong(pdA.dateString().split("-")[0]);
+                    long yearB = Long.parseLong(pdB.dateString().split("-")[0]);
+                    if (yearA != yearB) return (long) Math.signum(yearA - yearB);
+                }
+                catch (NumberFormatException ignored) {}
+                return (long) Math.signum(pdA.dateString().compareTo(pdB.dateString()));
+            }
+        }
+        // Mixed types: PureDate vs non-PureDate — compare by class name
+        if (rawA instanceof PureDate || rawB instanceof PureDate)
+        {
+            String classA = rawA instanceof PureDate ? "Date" : rawA.getClass().getSimpleName();
+            String classB = rawB instanceof PureDate ? "Date" : rawB.getClass().getSimpleName();
+            return (long) Math.signum(classA.compareTo(classB));
+        }
+
+        Object a = rawA;
+        Object b = rawB;
 
         // Number comparison
         if (a instanceof Number nA && b instanceof Number nB)

@@ -47,14 +47,31 @@ public final class PureFunctionRootNode extends RootNode
     @Children
     private final Node[] body;
 
+    @CompilationFinal
+    private final com.oracle.truffle.api.source.SourceSection rootSourceSection;
+
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body)
+    {
+        this(language, name, layout, body, null);
+    }
+
+    public PureFunctionRootNode(PureLanguage language, String name,
+                                FrameLayout layout, PureNode[] body,
+                                com.oracle.truffle.api.source.SourceSection sourceSection)
     {
         super(language, layout.descriptor());
         this.name = name;
         this.layout = layout;
         this.paramSlots = layout.paramSlots();
         this.body = java.util.Arrays.copyOf(body, body.length, Node[].class);
+        this.rootSourceSection = sourceSection;
+    }
+
+    @Override
+    public com.oracle.truffle.api.source.SourceSection getSourceSection()
+    {
+        return rootSourceSection;
     }
 
     @Override

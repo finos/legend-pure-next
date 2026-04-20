@@ -60,6 +60,15 @@ public final class IsNode extends PureNode
         {
             return callPureEquals(rawA, rawB);
         }
+        // Enum-String cross-comparison: extract enum value name from qualified path
+        if (rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea && rawB instanceof String s)
+        {
+            return Objects.equals(ea._name(), extractEnumValueName(s));
+        }
+        if (rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb && rawA instanceof String s)
+        {
+            return Objects.equals(extractEnumValueName(s), eb._name());
+        }
         return false;
     }
 
@@ -67,6 +76,12 @@ public final class IsNode extends PureNode
     private static boolean callPureEquals(Object a, Object b)
     {
         return Objects.equals(a, b);
+    }
+
+    private static String extractEnumValueName(String s)
+    {
+        int dotIdx = s.lastIndexOf('.');
+        return (dotIdx > 0 && s.contains("::")) ? s.substring(dotIdx + 1) : s;
     }
 
     private static Object normalize(Object v)

@@ -7,7 +7,28 @@ public final class TruffleInstanceFactory
 {
     private static final String TRUFFLE_PREFIX = "org.finos.legend.pure.truffle.pdb.";
 
+    private static final java.util.Set<String> JAVA_KEYWORDS = java.util.Set.of(
+            "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char",
+            "class", "const", "continue", "default", "do", "double", "else", "enum",
+            "extends", "final", "finally", "float", "for", "goto", "if", "implements",
+            "import", "instanceof", "int", "interface", "long", "native", "new",
+            "package", "private", "protected", "public", "return", "short", "static",
+            "strictfp", "super", "switch", "synchronized", "this", "throw", "throws",
+            "transient", "try", "void", "volatile", "while");
+
     private TruffleInstanceFactory() {}
+
+    private static String escapeJavaKeywords(String dottedPath)
+    {
+        String[] parts = dottedPath.split("\\.");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++)
+        {
+            if (i > 0) sb.append('.');
+            sb.append(JAVA_KEYWORDS.contains(parts[i]) ? parts[i] + "_" : parts[i]);
+        }
+        return sb.toString();
+    }
 
     /**
      * Create an instance of the truffle Impl class for the given Pure class path.
@@ -23,7 +44,7 @@ public final class TruffleInstanceFactory
             classPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "")
                     .replace("org.finos.legend.pure.truffle.pdb.", "");
         }
-        String javaClassName = TRUFFLE_PREFIX + classPath.replace("::", ".") + "Impl";
+        String javaClassName = TRUFFLE_PREFIX + escapeJavaKeywords(classPath.replace("::", ".")) + "Impl";
         try
         {
             Class<?> implClass = Class.forName(javaClassName);
