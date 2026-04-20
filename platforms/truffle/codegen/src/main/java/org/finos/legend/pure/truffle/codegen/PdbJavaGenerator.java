@@ -772,7 +772,7 @@ public class PdbJavaGenerator
             else if (isStringPointerVector)
             {
                 sb.append("              String path = fb.").append(camel).append("(i);\n");
-                sb.append("              arr[i] = path != null ? resolver.getElement(path) : null;\n");
+                sb.append("              if (path != null) { arr[i] = resolver.getElement(path); if (arr[i] == null) arr[i] = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); }\n");
             }
             else
             {
@@ -788,7 +788,7 @@ public class PdbJavaGenerator
                 }
             }
             sb.append("            }\n");
-            sb.append("            __raw = new ObjectSequence(arr); } }\n");
+            sb.append("            __raw = new ObjectSequence(java.util.Arrays.stream(arr).filter(java.util.Objects::nonNull).toArray()); } }\n");
         }
         else if (pr.isMany && fbsField.isUnion())
         {

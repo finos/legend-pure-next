@@ -78,6 +78,18 @@ public final class EqualNode extends PureNode
             if (db == 0.0) db = 0.0;
             return Double.compare(da, db) == 0;
         }
+        // PureSequence comparison
+        if (a instanceof org.finos.legend.pure.truffle.types.PureSequence seqA
+                && b instanceof org.finos.legend.pure.truffle.types.PureSequence seqB)
+        {
+            if (seqA.size() != seqB.size()) return false;
+            for (int i = 0; i < seqA.size(); i++)
+            {
+                if (!callPureEquals(normalizeForEquals(seqA.getBoxed(i)), normalizeForEquals(seqB.getBoxed(i))))
+                    return false;
+            }
+            return true;
+        }
         // List comparison
         if (a instanceof java.util.List<?> la && b instanceof java.util.List<?> lb)
         {
@@ -384,19 +396,15 @@ public final class EqualNode extends PureNode
         }
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
         {
-            if (seq.size() == 0)
+            if (seq.isEmpty())
             {
-                return null;
+                return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             }
             if (seq.size() == 1)
             {
                 return normalizeForEquals(seq.getBoxed(0));
             }
-            return java.util.Arrays.asList(seq.toBoxedArray());
-        }
-        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())
-        {
-            return null;
+            return v; // keep PureSequence as-is for comparison
         }
         // MutableList normalization
         if (v instanceof org.eclipse.collections.api.list.MutableList<?> ml)
