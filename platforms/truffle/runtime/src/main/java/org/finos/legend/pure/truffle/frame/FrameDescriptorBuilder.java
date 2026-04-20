@@ -40,7 +40,7 @@ import java.util.Map;
  * Phase 6). LambdaFunctions themselves stay on the HashMap / Closure
  * path in the Java evaluator because their invocation model relies on
  * {@code closure.capturedScope()} being consulted in
- * {@link org.finos.legend.pure.execution.ValueSpecificationEvaluator#evaluateFunctionDefinition}.</p>
+ * the bootstrap evaluator's {@code evaluateFunctionDefinition}.</p>
  *
  * <p>Slot allocation: one Object-typed slot per parameter and per
  * {@code letFunction} target name. Control flow inside the FD may
@@ -119,7 +119,7 @@ public final class FrameDescriptorBuilder
      *
      * <p>The caller binds param slots from the invocation's arguments and
      * open-var slots from the
-     * {@link org.finos.legend.pure.execution.Closure#capturedScope()} map
+     * the closure's captured scope map
      * before executing the body. Reads of open vars inside the body then
      * resolve via {@link org.finos.legend.pure.truffle.ast.FrameVariableReadNode}
      * instead of falling through to the HashMap scope.</p>

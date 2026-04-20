@@ -19,7 +19,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
-import org.finos.legend.pure.execution.PureMap;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -51,11 +50,6 @@ public final class MapValuesNode extends PureNode
         if (map instanceof MapImpl mi)
         {
             Object[] values = mi.values().toArray();
-            return values.length == 0 ? PureSequence.EMPTY : new ObjectSequence(values);
-        }
-        if (map instanceof PureMap pureMap)
-        {
-            Object[] values = pureMap.getMap().values().toArray();
             return values.length == 0 ? PureSequence.EMPTY : new ObjectSequence(values);
         }
         return PureSequence.EMPTY;

@@ -19,7 +19,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 
@@ -79,7 +78,7 @@ public final class JoinStringsNode extends PureNode
                 sb.append(separator);
             }
             Object item = CollectionHelper.at(col, i);
-            sb.append(PureValuePrinter.printForOutput(item));
+            sb.append(String.valueOf(item));
         }
         if (suffix != null)
         {

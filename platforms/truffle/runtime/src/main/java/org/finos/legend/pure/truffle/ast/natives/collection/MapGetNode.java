@@ -55,11 +55,6 @@ public final class MapGetNode extends PureNode
             Object value = mi.get(key);
             return value != null ? value : PureSequence.EMPTY;
         }
-        if (map instanceof org.finos.legend.pure.execution.PureMap pureMap)
-        {
-            Object value = pureMap.getMap().get(key);
-            return value != null ? value : PureSequence.EMPTY;
-        }
         return PureSequence.EMPTY;
     }
 }

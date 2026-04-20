@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.cli.CompilerNatives;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
@@ -158,7 +157,6 @@ public final class PureCompileMain
 
         PureTruffleRuntime runtime = PureTruffleRuntime.builder()
                 .withResolver(resolver)
-                .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
                 .withParserExtensions(List.of(new CompiledGraphLanguageExtension()))
                 .build();
 

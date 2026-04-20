@@ -19,7 +19,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -152,7 +151,7 @@ public final class ToStringNode extends PureNode
         {
             return bd.toPlainString();
         }
-        return PureValuePrinter.printForOutput(v);
+        return String.valueOf(v);
     }
 
     public static boolean isDateString(String s)

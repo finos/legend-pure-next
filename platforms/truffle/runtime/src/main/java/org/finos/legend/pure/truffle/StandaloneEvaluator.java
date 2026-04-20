@@ -71,13 +71,10 @@ public final class StandaloneEvaluator
 
     public StandaloneEvaluator(TruffleMetadataAccess resolver, PureLanguage language,
                                NativeNodeRegistry registry,
-                               org.finos.legend.pure.execution.NativeRepository nativesFallback)
+                               Object nativesFallback)
     {
         this.resolver = resolver;
         this.language = language;
-        // NativeRepository is needed for PureASTBuilder.isLazy() checks
-        // and BridgedNativeCallNode fallback for the ~31 remaining bridge
-        // signatures. Once all natives are specialized, this becomes null.
         this.astBuilder = new PureASTBuilder(nativesFallback, registry);
     }
 
@@ -518,13 +515,6 @@ public final class StandaloneEvaluator
      */
     public void accessProperty(Object target, String propertyName, Object value)
     {
-        // DynamicInstance: put directly (unwrap for dynamic storage)
-        if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
-        {
-            di.put(propertyName, unwrapForSetter(value));
-            return;
-        }
-
         Object originalValue = (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()) ? null : value;
         Object rawValue = unwrapForSetter(value);
 
@@ -857,13 +847,6 @@ public final class StandaloneEvaluator
             {
                 return executeFunction(qp, new Object[]{target});
             }
-        }
-
-        // 5. DynamicInstance fallback
-        if (target instanceof org.finos.legend.pure.execution.DynamicInstance di)
-        {
-            Object val = di.get(propertyName);
-            return val != null ? val : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
 
         throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getName());

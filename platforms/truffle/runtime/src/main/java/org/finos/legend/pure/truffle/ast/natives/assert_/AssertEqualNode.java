@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.PureValuePrinter;
+import org.finos.legend.pure.truffle.ast.PureException;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -54,10 +54,10 @@ public final class AssertEqualNode extends PureNode
     {
         if (!deepEquals(expected, actual))
         {
-            throw new org.finos.legend.pure.execution.PureAssertionError(
+            throw new PureException.AssertionError(
                     "assertEqual failed:\nexpected: "
-                    + PureValuePrinter.printForOutput(expected)
-                    + "\nactual:   " + PureValuePrinter.printForOutput(actual));
+                    + String.valueOf(expected)
+                    + "\nactual:   " + String.valueOf(actual), null);
         }
         return true;
     }

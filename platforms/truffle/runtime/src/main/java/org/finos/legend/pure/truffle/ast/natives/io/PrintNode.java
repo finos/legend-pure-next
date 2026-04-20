@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.io;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.PureValuePrinter;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -54,7 +53,7 @@ public final class PrintNode extends PureNode
     @TruffleBoundary
     private static void doPrint(Object val)
     {
-        System.out.print(PureValuePrinter.printForOutput(val));
+        System.out.print(String.valueOf(val));
         System.out.flush();
     }
 }

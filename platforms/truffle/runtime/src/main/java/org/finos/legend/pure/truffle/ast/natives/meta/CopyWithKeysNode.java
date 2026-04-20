@@ -18,7 +18,6 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;

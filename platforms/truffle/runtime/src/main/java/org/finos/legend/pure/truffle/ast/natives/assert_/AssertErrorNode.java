@@ -18,7 +18,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.execution.PureAssertionError;
+import org.finos.legend.pure.truffle.ast.PureException;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.runtime.StandaloneEvaluatorHolder;
@@ -89,10 +89,10 @@ public final class AssertErrorNode extends PureNode
             {
                 throw new RuntimeException("assertError: argument is not a function");
             }
-            throw new PureAssertionError("Expected error with message containing: '"
-                    + expectedMessage + "' but no error was thrown");
+            throw new PureException.AssertionError("Expected error with message containing: '"
+                    + expectedMessage + "' but no error was thrown", null);
         }
-        catch (PureAssertionError pae)
+        catch (PureException.AssertionError pae)
         {
             throw pae;
         }
@@ -101,9 +101,9 @@ public final class AssertErrorNode extends PureNode
             String actualMessage = e.getMessage();
             if (actualMessage == null || !actualMessage.contains(expectedMessage))
             {
-                throw new PureAssertionError(
+                throw new PureException.AssertionError(
                         "Expected error message containing: '" + expectedMessage
-                                + "' but got: '" + actualMessage + "'");
+                                + "' but got: '" + actualMessage + "'", null);
             }
             return true;
         }

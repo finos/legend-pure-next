@@ -61,8 +61,8 @@ public final class TruffleInstanceFactory
             }
             catch (Exception e2)
             {
-                // Last resort: DynamicInstance for classes without generated Impls
-                return new org.finos.legend.pure.execution.DynamicInstance(classPath);
+                throw new RuntimeException("No Impl class found for: " + classPath
+                        + " (tried " + javaClassName + " and " + classPath.replace("::", ".") + "Impl)", e2);
             }
         }
     }

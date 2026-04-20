@@ -21,7 +21,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**

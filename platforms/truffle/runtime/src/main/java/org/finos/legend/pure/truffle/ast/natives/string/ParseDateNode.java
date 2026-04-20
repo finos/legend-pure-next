@@ -19,8 +19,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.execution.natives.string.StringNatives;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.natives.date.DateHelper;
 import org.finos.legend.pure.truffle.types.PureDate;
 
 /**
@@ -56,7 +56,7 @@ public final class ParseDateNode extends PureNode
     private static PureDate parseDate(String s)
     {
         String dateStr = s.trim();
-        String result = StringNatives.normalizePureDate(dateStr);
+        String result = DateHelper.normalizePureDate(dateStr);
         if (result != null && result.endsWith("Z"))
         {
             result = result.substring(0, result.length() - 1);

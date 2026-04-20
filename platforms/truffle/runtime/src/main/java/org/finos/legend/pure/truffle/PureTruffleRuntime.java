@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.nodes.RootNode;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.execution.NativeExtension;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -45,7 +44,6 @@ public final class PureTruffleRuntime
     private final TruffleMetadataAccess resolver;
 
     private PureTruffleRuntime(TruffleMetadataAccess resolver,
-                               Iterable<? extends NativeExtension> nativeExtensions,
                                List<? extends ParserExtension> parserExtensions)
     {
         this.resolver = resolver;
@@ -63,21 +61,11 @@ public final class PureTruffleRuntime
     public static final class Builder
     {
         private TruffleMetadataAccess resolver;
-        private final List<NativeExtension> nativeExtensions = new ArrayList<>();
         private final List<ParserExtension> parserExtensions = new ArrayList<>();
 
         public Builder withResolver(TruffleMetadataAccess resolver)
         {
             this.resolver = resolver;
-            return this;
-        }
-
-        public Builder withNativeExtensions(Iterable<? extends NativeExtension> extensions)
-        {
-            if (extensions != null)
-            {
-                extensions.forEach(nativeExtensions::add);
-            }
             return this;
         }
 
@@ -92,7 +80,7 @@ public final class PureTruffleRuntime
 
         public PureTruffleRuntime build()
         {
-            return new PureTruffleRuntime(resolver, nativeExtensions, parserExtensions);
+            return new PureTruffleRuntime(resolver, parserExtensions);
         }
     }
 

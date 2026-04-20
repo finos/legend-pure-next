@@ -18,7 +18,6 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.natives.meta.MetaNatives;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
@@ -110,9 +109,6 @@ public final class NewWithKeysNode extends PureNode
         Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
 
         // Set classifier generic type from the type holder's first type argument
-        System.err.println("[CGT-HOLDER] " + classPath + " holder=" + (typeHolder == null ? "null" : typeHolder.getClass().getSimpleName())
-                + " isGTMH=" + (typeHolder instanceof GenericTypeAndMultiplicityHolder)
-                + " gt=" + (typeHolder instanceof GenericTypeAndMultiplicityHolder g ? (g._genericType() != null) : "N/A"));
         if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh
                 && gtmh._genericType() != null)
         {
@@ -123,7 +119,6 @@ public final class NewWithKeysNode extends PureNode
                 if (instance instanceof Any any && firstArg instanceof GenericTypeValue gtv)
                 {
                     any._classifierGenericType(gtv);
-                    System.err.println("[CGT-SET-OK] " + classPath);
                 }
             }
             else if (instance instanceof Any any && !"Unknown".equals(classPath))
@@ -134,7 +129,6 @@ public final class NewWithKeysNode extends PureNode
                 {
                     var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
                     cgt._type(t);
-                    System.err.println("[CGT-FALLBACK] " + classPath + " type=" + t.getClass().getSimpleName());
                     any._classifierGenericType(cgt);
                 }
             }

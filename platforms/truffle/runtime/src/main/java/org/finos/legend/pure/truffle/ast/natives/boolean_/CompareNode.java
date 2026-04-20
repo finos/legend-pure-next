@@ -121,8 +121,8 @@ public final class CompareNode extends PureNode
             // Try date comparison if both look like dates
             if (looksLikeDate(sA) && looksLikeDate(sB))
             {
-                String n1 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(sA);
-                String n2 = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(sB);
+                String n1 = org.finos.legend.pure.truffle.ast.natives.date.DateHelper.normalizePureDate(sA);
+                String n2 = org.finos.legend.pure.truffle.ast.natives.date.DateHelper.normalizePureDate(sB);
                 return (long) Math.signum(comparePureDates(n1, n2));
             }
             return (long) Math.signum(sA.compareTo(sB));

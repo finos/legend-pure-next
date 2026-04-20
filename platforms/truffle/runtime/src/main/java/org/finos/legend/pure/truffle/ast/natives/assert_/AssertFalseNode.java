@@ -16,7 +16,7 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.execution.PureAssertionError;
+import org.finos.legend.pure.truffle.ast.PureException;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 
@@ -49,9 +49,9 @@ public final class AssertFalseNode extends PureNode
             if (messageArg != null)
             {
                 String msg = StringHelper.asString(messageArg.executeGeneric(frame), "assertFalse");
-                throw new PureAssertionError(msg);
+                throw new PureException.AssertionError(msg, null);
             }
-            throw new PureAssertionError("assertFalse failed: value was true");
+            throw new PureException.AssertionError("assertFalse failed: value was true", null);
         }
         return true;
     }
