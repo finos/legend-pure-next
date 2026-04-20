@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.io;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -47,7 +46,6 @@ public final class ReadFileNode extends PureNode
         return readFile(path);
     }
 
-    @TruffleBoundary
     private static String readFile(String path)
     {
         try

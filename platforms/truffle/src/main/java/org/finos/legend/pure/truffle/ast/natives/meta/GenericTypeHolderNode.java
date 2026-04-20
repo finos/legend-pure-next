@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -52,7 +51,6 @@ public final class GenericTypeHolderNode extends PureNode
         return doGenericTypeHolder(result, genericType, multiplicity);
     }
 
-    @TruffleBoundary
     private static Object doGenericTypeHolder(Object result, GenericType genericType, Multiplicity multiplicity)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

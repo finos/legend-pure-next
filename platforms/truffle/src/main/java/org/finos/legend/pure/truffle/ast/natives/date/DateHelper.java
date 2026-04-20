@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.date;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import meta.pure.metamodel.valuespecification.AtomicValue;
 import org.finos.legend.pure.execution.natives.string.StringNatives;
 
@@ -46,7 +45,6 @@ public final class DateHelper
     {
     }
 
-    @TruffleBoundary
     public static String asDateString(Object v, String signature)
     {
         if (v instanceof String s)
@@ -64,7 +62,6 @@ public final class DateHelper
         throw new ClassCastException(signature + " expected Date string, got: null");
     }
 
-    @TruffleBoundary
     public static LocalDateTime parseDate(String pureDateStr)
     {
         String normalized = StringNatives.normalizePureDate(pureDateStr);

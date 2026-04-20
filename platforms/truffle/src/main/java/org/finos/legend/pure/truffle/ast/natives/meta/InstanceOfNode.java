@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.type.Type;
@@ -51,7 +50,6 @@ public final class InstanceOfNode extends PureNode
         return doInstanceOf(valResult, typeResult);
     }
 
-    @TruffleBoundary
     private static boolean doInstanceOf(Object rawVal, Object typeResult)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

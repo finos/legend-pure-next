@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.date;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -56,7 +55,6 @@ public final class DateDiffNode extends PureNode
         return doDiff(d1, d2, unit);
     }
 
-    @TruffleBoundary
     private static long doDiff(Object d1, Object d2, Object unit)
     {
         String d1Str = DateHelper.asDateString(d1, SIG);

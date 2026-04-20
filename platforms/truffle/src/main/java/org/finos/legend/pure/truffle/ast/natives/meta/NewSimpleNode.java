@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -56,7 +55,6 @@ public final class NewSimpleNode extends PureNode
         return doNew(result);
     }
 
-    @TruffleBoundary
     private static Object doNew(Object result)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

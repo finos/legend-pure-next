@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.date;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -49,7 +48,6 @@ public final class DateComponentNode extends PureNode
         return extract(v);
     }
 
-    @TruffleBoundary
     private long extract(Object v)
     {
         String dateStr = DateHelper.asDateString(v, signature);

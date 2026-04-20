@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -65,7 +64,6 @@ public final class RangeNode extends PureNode
         return build(start, stop, step);
     }
 
-    @TruffleBoundary
     private Object build(long start, long stop, long step)
     {
         int capacity = (int) Math.max(0, step > 0 ? (stop - start + step - 1) / step : (start - stop - step - 1) / (-step));

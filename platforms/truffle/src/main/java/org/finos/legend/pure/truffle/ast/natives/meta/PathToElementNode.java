@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
@@ -63,7 +62,6 @@ public final class PathToElementNode extends PureNode
         return doPathToElement(values, lenient);
     }
 
-    @TruffleBoundary
     private static Object doPathToElement(Object[] values, boolean lenient)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

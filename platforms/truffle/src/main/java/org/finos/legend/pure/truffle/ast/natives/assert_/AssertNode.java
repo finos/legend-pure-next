@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.assert_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.function.LambdaFunction;
@@ -63,7 +62,6 @@ public final class AssertNode extends PureNode
         return true;
     }
 
-    @TruffleBoundary
     private static void throwWithMessage(Object msgFn)
     {
         Object message;

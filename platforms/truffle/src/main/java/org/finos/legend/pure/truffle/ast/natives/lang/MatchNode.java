@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.function.FunctionDefinition;
@@ -54,7 +53,6 @@ public final class MatchNode extends PureNode
         return invokeMatch(values);
     }
 
-    @TruffleBoundary
     private static Object invokeMatch(Object[] values)
     {
         // values[0] = value to match

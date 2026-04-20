@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.valuespecification.AtomicValue;
@@ -56,7 +55,6 @@ public final class EvaluateNode extends PureNode
         return invokeEvaluate(values);
     }
 
-    @TruffleBoundary
     private static Object invokeEvaluate(Object[] values)
     {
         Object fn = values[0];

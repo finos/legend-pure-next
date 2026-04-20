@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.function.FunctionDefinition;
@@ -52,7 +51,6 @@ public final class RawPropertyAccessNode extends PureNode
         return doAccess(fe, argValues);
     }
 
-    @TruffleBoundary
     private static Object doAccess(FunctionExpression fe, Object[] argValues)
     {
         meta.pure.metamodel.function.Function func;

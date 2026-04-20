@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -63,7 +62,6 @@ public final class IsNode extends PureNode
         return false;
     }
 
-    @TruffleBoundary
     private static boolean callPureEquals(Object a, Object b)
     {
         return Objects.equals(a, b);

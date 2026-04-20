@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -51,7 +50,6 @@ public final class ParseDateNode extends PureNode
         return parseDate(s);
     }
 
-    @TruffleBoundary
     private static String parseDate(String s)
     {
         String dateStr = s.trim();

@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
@@ -55,7 +54,6 @@ public final class CopyWithKeysNode extends PureNode
         return invoke();
     }
 
-    @TruffleBoundary
     private Object invoke()
     {
         org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluatorHolder.current();

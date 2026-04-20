@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.functions.collection.MapImpl;
@@ -55,7 +54,6 @@ public final class MapPutNode extends PureNode
         return doPut(map, key, value);
     }
 
-    @TruffleBoundary
     private static Object doPut(Object map, Object key, Object value)
     {
         MapImpl newMap = new MapImpl();

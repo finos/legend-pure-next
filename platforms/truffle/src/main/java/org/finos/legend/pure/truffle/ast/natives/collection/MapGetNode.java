@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.functions.collection.MapImpl;
@@ -47,7 +46,6 @@ public final class MapGetNode extends PureNode
         return doGet(map, key);
     }
 
-    @TruffleBoundary
     private static Object doGet(Object map, Object key)
     {
         if (map instanceof MapImpl mi)

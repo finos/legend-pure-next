@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.function.FunctionDefinition;
@@ -49,7 +48,6 @@ public final class RawUserFunctionCallNode extends PureNode
         return doCall(fd, args);
     }
 
-    @TruffleBoundary
     private static Object doCall(FunctionDefinition fd, Object[] args)
     {
         return StandaloneEvaluatorHolder.current().executeFunction(fd, args);

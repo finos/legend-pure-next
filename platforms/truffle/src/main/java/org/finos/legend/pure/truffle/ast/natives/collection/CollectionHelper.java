@@ -21,7 +21,6 @@ import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
  * Boundary-free collection helpers. Every method is inlineable by
- * Graal's partial evaluator — no {@code @TruffleBoundary}, no Eclipse
  * Collections, no {@code ValueSpecification} allocation.
  *
  * <p>Callers iterate via {@link #size} + {@link #at} instead of

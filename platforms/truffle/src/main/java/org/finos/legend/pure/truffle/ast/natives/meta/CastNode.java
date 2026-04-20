@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
@@ -55,7 +54,6 @@ public final class CastNode extends PureNode
         return doCast(inputResult, targetResult);
     }
 
-    @TruffleBoundary
     private static Object doCast(Object inputResult, Object targetResult)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

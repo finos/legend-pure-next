@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.StandaloneEvaluator;
@@ -78,7 +77,6 @@ public final class LetFunctionFallbackNode extends PureNode
         return -1;
     }
 
-    @TruffleBoundary
     private static int resolveSlotInLayout(String name)
     {
         StandaloneEvaluator eval = StandaloneEvaluatorHolder.current();

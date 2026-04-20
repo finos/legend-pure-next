@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.PackageableElement;
@@ -54,7 +53,6 @@ public final class CopySimpleNode extends PureNode
         return doCopy(result);
     }
 
-    @TruffleBoundary
     private static Object doCopy(Object original)
     {
         MetadataAccess resolver = StandaloneEvaluatorHolder.current().resolver();

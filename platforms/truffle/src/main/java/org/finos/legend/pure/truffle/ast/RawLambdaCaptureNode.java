@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
@@ -72,7 +71,6 @@ public final class RawLambdaCaptureNode extends PureNode
         return new RawClosure(lambda, capturedValues, openVarNames, ct);
     }
 
-    @TruffleBoundary
     private RootCallTarget lookupCallTarget()
     {
         return StandaloneEvaluatorHolder.current().callTargetForLambda(lambda);

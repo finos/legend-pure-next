@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -28,7 +27,6 @@ import java.util.Arrays;
  * -- sort with optional key extractor and comparator lambdas.
  *
  * <p>Element access and key extraction are boundary-free. The actual
- * {@link Arrays#sort} call is behind a single {@code @TruffleBoundary}
  * since it allocates internally.</p>
  */
 @NodeInfo(shortName = "sort")
@@ -121,7 +119,6 @@ public final class SortNode extends PureNode
         }
     }
 
-    @TruffleBoundary
     @SuppressWarnings("unchecked")
     private static void insertionSortNatural(Object[] arr, Object[] keys)
     {

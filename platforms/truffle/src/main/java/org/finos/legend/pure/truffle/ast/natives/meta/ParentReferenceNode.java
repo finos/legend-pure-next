@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import meta.pure.metamodel.multiplicity.Multiplicity;
@@ -55,7 +54,6 @@ public final class ParentReferenceNode extends PureNode
         return doParentReference(depthResult);
     }
 
-    @TruffleBoundary
     private static Object doParentReference(Object depthResult)
     {
         int depth = (int) IntegerHelper.asLong(depthResult, "parentReference");

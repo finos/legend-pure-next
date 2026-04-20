@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.nodes.DirectCallNode;
@@ -101,13 +100,11 @@ public final class RawLambdaCallNode extends Node
         return null;
     }
 
-    @TruffleBoundary
     private static RootCallTarget lookupCallTarget(LambdaFunction lambda)
     {
         return StandaloneEvaluatorHolder.current().callTargetForLambda(lambda);
     }
 
-    @TruffleBoundary
     private static Object fallback(Object lambdaOrClosure, Object[] args)
     {
         // Extract the LambdaFunction and execute inline via StandaloneEvaluator

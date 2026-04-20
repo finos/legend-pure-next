@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -54,7 +53,6 @@ public final class EvalNode extends PureNode
         return invokeEval(values);
     }
 
-    @TruffleBoundary
     private static Object invokeEval(Object[] values)
     {
         Object fn = values[0];
@@ -79,7 +77,6 @@ public final class EvalNode extends PureNode
      * Dispatch a function call with pre-unwrapped args. Used by both
      * {@link EvalNode} and {@link EvaluateNode}.
      */
-    @TruffleBoundary
     public static Object dispatch(Object fn, Object[] args)
     {
         if (fn instanceof AtomicValue av)
@@ -116,7 +113,6 @@ public final class EvalNode extends PureNode
         throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
     }
 
-    @TruffleBoundary
     private static Object executeNativeViaRegistry(NativeFunction nf, Object[] args)
     {
         String signature = nf._name();
