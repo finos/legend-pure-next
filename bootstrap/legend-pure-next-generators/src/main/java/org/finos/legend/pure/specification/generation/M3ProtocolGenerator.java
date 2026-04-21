@@ -1227,8 +1227,9 @@ public class M3ProtocolGenerator
             model.add(pointerType, packageProp, origPkgStmt.getObject().asResource());
         }
 
-        // Add generalization: Type_Pointer -> Type_Protocol
+        // Add generalization: Type_Pointer -> Type_Protocol, Any
         addGeneralization(pointerType, protocolType);
+        addGeneralization(pointerType, m3Any);
 
         // Create "pointerValue" property on Type_Pointer
         String valuePropId = pointerTypeName + "_pointerValue";

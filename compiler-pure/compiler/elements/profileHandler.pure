@@ -42,7 +42,7 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
             )->cast(@Tag);
             ^$tagInst(value = $t.value, profile = ~.~);
         ),
-        sourceInformation = $pr.sourceInformation->map(si | ^SourceInformation(
+        sourceInformation = $pr.p_sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,

@@ -56,8 +56,8 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             let allMatches = $context->resolveAllElements($p.pointerValue);
             let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
             let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
-            let siCtx = if($p.sourceInformation->isNotEmpty(),
-                | formatSourceInfo($p.sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+            let siCtx = if($p.p_sourceInformation->isNotEmpty(),
+                | formatSourceInfo($p.p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
                 | ''
             );
             if($allMatches->size() > 1,
@@ -97,8 +97,8 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                   ),
                 | let tElemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
                   let tOwnerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
-                  let siCtx = if($t.sourceInformation->isNotEmpty(),
-                      | formatSourceInfo($t.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                  let siCtx = if($t.p_sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($t.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
                       | ''
                   );
                   let errorMsg = 'The type \'' + $t.name + '\' can\'t be found' + $tElemCtx + $tOwnerCtx + $siCtx;

@@ -69,7 +69,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                     package = ^Package(name = $packagePath, package = $rootPkg),
                     typeParameters = $typeParams,
                     multiplicityParameters = $mulParams,
-                    sourceInformation = $c.sourceInformation->map(si | ^SourceInformation(
+                    sourceInformation = $c.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
                         startColumn = $si.startColumn,
@@ -88,7 +88,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 let assocSkeleton = ^$emptyAssoc(
                     name = $a.name,
                     package = ^Package(name = $packagePath, package = $rootPkg),
-                    sourceInformation = $a.sourceInformation->map(si | ^SourceInformation(
+                    sourceInformation = $a.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
                         startColumn = $si.startColumn,
@@ -107,7 +107,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 let enumSkeletonInt = ^$emptyEnum(
                     name = $en.name,
                     package = ^Package(name = $packagePath, package = $rootPkg),
-                    sourceInformation = $en.sourceInformation->map(si | ^SourceInformation(
+                    sourceInformation = $en.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
                         startColumn = $si.startColumn,
@@ -139,7 +139,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 let primSkeleton = ^$emptyPrim(
                     name = $p.name,
                     package = ^Package(name = $packagePath, package = $rootPkg),
-                    sourceInformation = $p.sourceInformation->map(si | ^SourceInformation(
+                    sourceInformation = $p.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
                         startColumn = $si.startColumn,
@@ -269,6 +269,7 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($cls, $ctx1);
     let ctx3 = meta::pure::compiler::structural::constraintCompiler::compileConstraints($cls, $ctx2);
     let ctx4 = meta::pure::compiler::structural::propertyCompiler::compilePropertyDefaultValues($cls.properties, $ctx3);
+    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($cls, $ctx4);
     // Clear ownerTypeParams — matches Java clearEnclosingOwner
-    ^$ctx4(ownerTypeParams = []);
+    ^$ctx5(ownerTypeParams = []);
 }

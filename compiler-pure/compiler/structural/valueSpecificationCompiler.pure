@@ -159,7 +159,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                       values = [^$wrappedLambda(
                           genericType = $inferredGT,
                           multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
-                          sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                          sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
                       )],
                       openVariables = $lambdaResult.openVariables,
                       context = $lambdaResult.context
@@ -168,7 +168,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
         pp:meta::pure::protocol::grammar::Package_Pointer[1] |
             let resolved = $ctx->resolveElement($pp.pointerValue);
             if($resolved->isEmpty(),
-                | let siCtx = if($vs.sourceInformation->isNotEmpty(), | formatSourceInfo($vs.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+                | let siCtx = if($vs.p_sourceInformation->isNotEmpty(), | formatSourceInfo($vs.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
                   ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.pointerValue + '\' can\'t be found' + $siCtx));,
                 | let element = $resolved->toOne();
                   ^ValueCompileResult(
@@ -176,7 +176,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                           value = $element,
                           genericType = ^InferredGenericType(type = $element->type()),
                           multiplicity = PureOne,
-                          sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                          sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
                       )],
                       openVariables = []
                   );
@@ -193,7 +193,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                     value = $rawValue,
                     genericType = $inferredGT,
                     multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
-                    sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                    sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
                 )],
                 openVariables = []
             );
@@ -213,7 +213,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
                   name = $v.name,
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
-                  sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = []
           ),
@@ -224,7 +224,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileVa
                   name = $v.name,
                   genericType = asInferredGenericType($varGT),
                   multiplicity = asInferredMultiplicity($varMul),
-                  sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = []
           );
@@ -250,7 +250,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
                   parametersValues = $paramValues->cast(@ValueSpecification),
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
-                  sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = $openVars
           );
@@ -276,7 +276,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
                   parametersValues = $paramValues->cast(@ValueSpecification),
                   genericType = ^CompilerNotSetGenericType(),
                   multiplicity = PureOne,
-                  sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = $openVars
           );
@@ -303,7 +303,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
             parametersValues = $compiledParams.values,
             genericType = ^CompilerNotSetGenericType(),
             multiplicity = PureOne,
-            sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+            sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
         )],
         openVariables = $paramResults->map(r | $r.openVariables),
         context = $updatedCtx
@@ -331,7 +331,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
                   values = $compiledValues.values,
                   genericType = $collGenType,
                   multiplicity = $collMult,
-                  sourceInformation = $c.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = $c.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
               )],
               openVariables = []
           );
@@ -358,7 +358,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
     let holderWithProps = ^$holder(
         genericType = $classifierGT,
         multiplicity = PureOne,
-        sourceInformation = $vs.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+        sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
     );
     ^ValueCompileResult(
         values = [$holderWithProps],

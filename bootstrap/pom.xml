@@ -68,6 +68,7 @@
         <module>legend-pure-next-execution</module>
         <module>legend-pure-next-ide</module>
         <module>legend-pure-next-cli</module>
+        <module>legend-pure-next-test-compiler-pure</module>
     </modules>
 
     <build>

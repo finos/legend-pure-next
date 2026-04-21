@@ -30,7 +30,7 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:CompilerContext[1], scope:VariableExpression[*], mGenType:GenericType[0..1], mMult:Multiplicity[0..1]): ValueCompileResult[1]
 {
-    let siCtx = if($l.sourceInformation->isNotEmpty(), | formatSourceInfo($l.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+    let siCtx = if($l.p_sourceInformation->isNotEmpty(), | formatSourceInfo($l.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
     // Check for duplicate parameter names
     let dupNames = $l.parameters->map(p | $p.name)->filter(n | $l.parameters->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
@@ -115,7 +115,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               expressionSequence = $compiledSequence.specs,
               openVariables = $openVariables,
               classifierGenericType = $lambdaCGT,
-              sourceInformation = $l.sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+              sourceInformation = $l.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
           );
 
           let wrappedLambda = ^AtomicValue(

@@ -44,7 +44,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
         name = $mangledName,
         functionName = $fn.name,
         package = ^Package(name = $packagePath, package = $rootPkg),
-        sourceInformation = $fn.sourceInformation->map(si | ^SourceInformation(
+        sourceInformation = $fn.p_sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -63,7 +63,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
     let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@UserDefinedFunction<Any>);
     let ownerCtx = 'function \'' + $fName + '\'';
-    let siCtx = if($fn.sourceInformation->isNotEmpty(), | formatSourceInfo($fn.sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
+    let siCtx = if($fn.p_sourceInformation->isNotEmpty(), | formatSourceInfo($fn.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
 
     // Check for duplicate parameter names
     let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);

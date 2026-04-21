@@ -73,7 +73,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
               multiplicity = $mMult,
               stereotypes = $stereoResult.values,
               taggedValues = $tvResult.values,
-              sourceInformation = $protocolProperty.sourceInformation->map(si | ^SourceInformation(
+              sourceInformation = $protocolProperty.p_sourceInformation->map(si | ^SourceInformation(
                   sourceId = $si.sourceId,
                   startLine = $si.startLine,
                   startColumn = $si.startColumn,
@@ -209,7 +209,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
                 )
             ]
         ),
-        sourceInformation = $p.sourceInformation->map(si | ^SourceInformation(
+        sourceInformation = $p.p_sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
             startColumn = $si.startColumn,
@@ -217,4 +217,27 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
             endColumn = $si.endColumn
         ))
     );
+}
+
+function meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    $cls.properties->fold({prop, pCtx |
+        let superProp = $cls.generalizations
+            ->map(g | $g.general->genericTypeRawType())
+            ->map(superType | meta::pure::compiler::helper::class::findProperty($superType, $prop.name->toOne()))
+            ->filter(p | $p->isNotEmpty())
+            ->head();
+        if($superProp->isEmpty(),
+            | $pCtx,
+            | let subType = meta::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne());
+              let subMul = meta::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne());
+              let superType = meta::pure::compiler::helper::genericType::printGenericType($superProp->toOne().genericType->toOne());
+              let superMul = meta::pure::compiler::helper::multiplicity::printMultiplicity($superProp->toOne().multiplicity->toOne());
+              if($subType != $superType || $subMul != $superMul,
+                  | let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $pCtx);
+                    ^$pCtx(errors += 'Property override variance mismatch for \'' + $prop.name->toOne() + '\'. Overridden property has type \'' + $superType + $superMul + '\', but overriding property has type \'' + $subType + $subMul + '\'. Simple property overrides must be strictly invariant in type and multiplicity.' + $siCtx);,
+                  | $pCtx
+              );
+        );
+    }, $context);
 }
