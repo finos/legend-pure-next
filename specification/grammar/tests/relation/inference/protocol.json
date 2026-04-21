@@ -17,7 +17,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Relation",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 93,
               "endLine" : 2,
@@ -45,7 +45,7 @@
           }
         },
         "name" : "r",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 99,
           "endLine" : 2,
@@ -59,7 +59,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 113,
               "endLine" : 2,
@@ -100,7 +100,7 @@
                       }
                     },
                     "nameWildCard" : true,
-                    "sourceInformation" : {
+                    "p_sourceInformation" : {
                       "_type" : "SourceInformation",
                       "endColumn" : 120,
                       "endLine" : 2,
@@ -140,7 +140,7 @@
           }
         },
         "name" : "old",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 127,
           "endLine" : 2,
@@ -154,7 +154,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "ColSpec",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 141,
               "endLine" : 2,
@@ -193,7 +193,7 @@
                     }
                   },
                   "nameWildCard" : true,
-                  "sourceInformation" : {
+                  "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 148,
                     "endLine" : 2,
@@ -217,7 +217,7 @@
           }
         },
         "name" : "new",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 153,
           "endLine" : 2,
@@ -230,7 +230,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Relation",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 164,
             "endLine" : 2,
@@ -293,7 +293,7 @@
           "value" : 1
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 175,
         "endLine" : 2,
@@ -304,7 +304,7 @@
         "_type" : "Stereotype_PointerImpl",
         "extraPointerValues" : [ {
           "_type" : "PointerValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 30,
             "endLine" : 2,
@@ -314,7 +314,7 @@
           "value" : "function"
         } ],
         "pointerValue" : "PCT",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 21,
           "endLine" : 2,

@@ -7,7 +7,7 @@
       "name" : "AProfile",
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 4,
@@ -17,7 +17,7 @@
         "value" : "flag"
       }, {
         "_type" : "Stereotype",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 29,
           "endLine" : 4,
@@ -28,7 +28,7 @@
       } ],
       "p_tags" : [ {
         "_type" : "Tag",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 13,
           "endLine" : 5,
@@ -38,7 +38,7 @@
         "value" : "tag1"
       }, {
         "_type" : "Tag",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 5,
@@ -51,7 +51,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 6,

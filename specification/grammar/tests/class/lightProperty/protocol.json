@@ -16,7 +16,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 4,
@@ -37,7 +37,7 @@
           }
         },
         "name" : "value",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 4,
@@ -45,7 +45,7 @@
           "startLine" : 4
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,

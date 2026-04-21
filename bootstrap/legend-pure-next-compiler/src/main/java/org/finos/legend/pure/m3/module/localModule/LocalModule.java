@@ -363,7 +363,7 @@ public class LocalModule implements Module
                     if (!(entry.element() instanceof Package) && dep.hasElement(path))
                     {
                         SourceInformation si = entry.grammarElement() != null
-                                ? SourceInformationCompiler.compile(entry.grammarElement()._sourceInformation())
+                                ? SourceInformationCompiler.compile(entry.grammarElement()._p_sourceInformation())
                                 : null;
                         compilationContext.errors().add(new org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError(
                                 "Element '" + path + "' is already defined in a dependency module", si));

@@ -16,7 +16,6 @@ package org.finos.legend.pure.m3.extensions.error;
 
 import meta.pure.protocol.grammar.Package_Pointer;
 import meta.pure.protocol.grammar.PackageableElement;
-import meta.pure.protocol.grammar.SourceInformation;
 import meta.pure.protocol.grammar.extension.ElementWithStereotypes;
 import meta.pure.protocol.grammar.extension.ElementWithTaggedValues;
 import meta.pure.protocol.grammar.extension.Stereotype_Pointer;
@@ -69,15 +68,15 @@ public class Error implements PackageableElement
     }
 
     @Override
-    public SourceInformation _sourceInformation()
+    public meta.pure.protocol.grammar.SourceInformation _p_sourceInformation()
     {
-        throw new UnsupportedOperationException("Error does not support sourceInformation");
+        return null;
     }
 
     @Override
-    public Any _sourceInformation(SourceInformation value)
+    public Any _p_sourceInformation(meta.pure.protocol.grammar.SourceInformation value)
     {
-        throw new UnsupportedOperationException("Error does not support sourceInformation");
+        return this;
     }
 
     @Override

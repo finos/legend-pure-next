@@ -27,7 +27,7 @@
           "name" : "m"
         },
         "name" : "val",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 14,
           "endLine" : 4,
@@ -35,7 +35,7 @@
           "startLine" : 4
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,

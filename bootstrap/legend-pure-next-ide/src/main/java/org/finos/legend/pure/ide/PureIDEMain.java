@@ -55,7 +55,7 @@ public class PureIDEMain
         // Add LocalModule for compiler-pure
         String compilerPurePathStr = args.length > 1
                 ? args[1]
-                : "../../compiler-pure/src";
+                : "../../compiler-pure";
         System.out.println("Loading compiler pure from: " + compilerPurePathStr);
         LocalModule compilerPureModule = new LocalModule(
                 "next-compiler-pure", "*",

@@ -33,9 +33,9 @@ public final class PrimitiveTypeHandler
     public static PrimitiveType firstPass(meta.pure.protocol.grammar.type.PrimitiveType grammar, MetadataAccess model)
     {
         PrimitiveTypeImpl result = new PrimitiveTypeImpl(model)._name(grammar._name());
-        if (grammar._sourceInformation() != null)
+        if (grammar._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
         }
         return result;
     }

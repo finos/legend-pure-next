@@ -161,7 +161,7 @@ public class TopLevelCompiler
                 if (!(entry.element() instanceof Package) && !regex.matcher(path).matches())
                 {
                     SourceInformation si = entry.grammarElement() != null
-                            ? SourceInformationCompiler.compile(entry.grammarElement()._sourceInformation())
+                            ? SourceInformationCompiler.compile(entry.grammarElement()._p_sourceInformation())
                             : null;
                     context.errors().add(new CompilationError("Element '" + path + "' does not match module package pattern '" + packagePattern + "'", si));
                 }
@@ -249,7 +249,7 @@ public class TopLevelCompiler
                                 : name;
                         if (elementIndex.containsKey(fullPath))
                         {
-                            meta.pure.protocol.grammar.SourceInformation si = grammarElement._sourceInformation();
+                            meta.pure.protocol.grammar.SourceInformation si = grammarElement._p_sourceInformation();
                             throw new RuntimeException("The element '" + fullPath + "' already exists at: " + si._sourceId() + " " + si._startLine() + ":" + si._startColumn());
                         }
                         long t0 = System.nanoTime();

@@ -221,17 +221,14 @@ public final class RelationColumnResolver
         context.debug("tryResolveSubsetForTypeHolder: resolved Z=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
         // Set the TypeHolder's GT to the resolved Z
-        return expr._parametersValues(
-                Lists.mutable.with(
-                        paramValues.get(0),
-                        paramValues.get(1)
-                                ._genericType(
-                                        _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
-                                                ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                                                ._typeArguments(Lists.mutable.with(enrichedGT))
-                                )
-                )
+        ValueSpecification typeHolder = paramValues.get(1);
+        typeHolder._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model));
+        typeHolder._genericType(
+                _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                        ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
+                        ._typeArguments(Lists.mutable.with(enrichedGT))
         );
+        return expr._parametersValues(Lists.mutable.with(paramValues.get(0), typeHolder));
     }
 
     /**
@@ -282,9 +279,7 @@ public final class RelationColumnResolver
         context.debug("resolveFromEqualWithWildcard: resolved V=%s", lazy(() -> _GenericType.print(enrichedGT)));
 
         return expr._parametersValues(
-                Lists.mutable.with(
-                        paramValues.get(0),
-                        paramValues.get(1)
+                Lists.mutable.with(paramValues.get(0), setCgt(paramValues.get(1), model)
                                 ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                                         ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                                         ._typeArguments(Lists.mutable.with(enrichedGT))
@@ -357,7 +352,7 @@ public final class RelationColumnResolver
         return expr._parametersValues(
                 Lists.mutable.with(
                         paramValues.get(0),
-                        paramValues.get(1)
+                        setCgt(paramValues.get(1), model)
                                 ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                                         ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                                         ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl(model)._type(mergedRT))))
@@ -417,11 +412,19 @@ public final class RelationColumnResolver
                     );
 
         return expr._parametersValues(paramValues.collectWithIndex((x, y) ->
-                        y == typeHolderIdx ? x._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
+                        y == typeHolderIdx ? setCgt(x, model)._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                                                             ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
                                                             ._typeArguments(Lists.mutable.with(ownerGT)))
                                 : x
                 ).toList()
         );
+    }
+
+    /** Set CGT on a CompilerGenericTypeAndMultiplicityHolder so it can be serialized to PDB. */
+    private static ValueSpecification setCgt(ValueSpecification vs, MetadataAccess model)
+    {
+        vs._classifierGenericType(_GenericType.buildUserDefinedGenericType(
+                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model));
+        return vs;
     }
 }

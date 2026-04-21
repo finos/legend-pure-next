@@ -11,7 +11,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 42,
               "endLine" : 2,
@@ -20,7 +20,7 @@
             }
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 42,
           "endLine" : 2,
@@ -33,7 +33,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 42,
         "endLine" : 2,

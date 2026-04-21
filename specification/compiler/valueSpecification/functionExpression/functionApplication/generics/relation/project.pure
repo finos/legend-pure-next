@@ -41,7 +41,7 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
         DotApplication Firm.legalName :#String##[1]#  ~DotApplication  @14:35-14:44
           Variable x :#Firm##[1]#  ~VariableExpression  @14:33-14:34
       AtomicValue  'legal' :String[1]  ~AtomicValue  @14:25-14:29
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
   ArrowInvocation project_Z_MANY__FuncColSpecArray_1__Relation_1_ :#Relation<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#>##[1]#  ~ArrowInvocation  @15:14-15:69
     typeParam T -> #(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#
     typeParam Z -> #Firm#
@@ -60,7 +60,7 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
             DotApplication Firm.legalName :#String##[1]#  ~DotApplication  @15:36-15:45
               Variable x :#Firm##[1]#  ~VariableExpression  @15:34-15:35
           AtomicValue  'legal' :String[1]  ~AtomicValue  @15:26-15:30
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
         FunctionInvocation funcColSpec_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Firm#[1]->Any[1]}#, #(numeric:#x::Numeric##[1]#)#>##[1]#  ~FunctionInvocation  @15:48-15:67
           typeParam T -> #(numeric:#x::Numeric##[1]#)#
           typeParam U -> #Firm#
@@ -68,8 +68,8 @@ function f__Relation_1_():Relation<(legal:String[1])>[1]  ~UserDefinedFunction<{
             DotApplication Firm.numeric :#x::Numeric##[1]#  ~DotApplication  @15:60-15:67
               Variable x :#Firm##[1]#  ~VariableExpression  @15:58-15:59
           AtomicValue  'numeric' :String[1]  ~AtomicValue  @15:48-15:54
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(numeric:#x::Numeric##[1]#)#|1>[1]
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#|1>[1]
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(numeric:#x::Numeric##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:#String##[1]#, numeric:#x::Numeric##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
 
 native function project_Z_MANY__FuncColSpec_1__Relation_1_(cl:Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], x:FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]):Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]  ~NativeFunction<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[*], FuncColSpec<{Z~project_Z_MANY__FuncColSpec_1__Relation_1_[1]->Any[*]}, T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]->Relation<T~project_Z_MANY__FuncColSpec_1__Relation_1_>[1]}>
 

@@ -13,7 +13,7 @@
             "pointerValue" : "String"
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 4,
@@ -33,7 +33,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 26,
             "endLine" : 2,
@@ -53,7 +53,7 @@
           "value" : 1
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,

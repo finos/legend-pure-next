@@ -69,13 +69,13 @@ public class CompiledGraph implements PackageableElement
     }
 
     @Override
-    public SourceInformation _sourceInformation()
+    public SourceInformation _p_sourceInformation()
     {
         return null;
     }
 
     @Override
-    public Any _sourceInformation(SourceInformation value)
+    public Any _p_sourceInformation(SourceInformation value)
     {
         return this;
     }

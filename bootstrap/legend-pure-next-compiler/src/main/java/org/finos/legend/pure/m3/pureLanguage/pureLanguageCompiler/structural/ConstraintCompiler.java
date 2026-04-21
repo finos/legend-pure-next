@@ -46,9 +46,9 @@ public final class ConstraintCompiler
         {
             c._enforcementLevel(grammarConstraint._enforcementLevel());
         }
-        if (grammarConstraint._sourceInformation() != null)
+        if (grammarConstraint._p_sourceInformation() != null)
         {
-            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._sourceInformation(), model));
+            c._sourceInformation(SourceInformationCompiler.compile(grammarConstraint._p_sourceInformation(), model));
         }
         return c;
     }

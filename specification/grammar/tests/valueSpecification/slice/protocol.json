@@ -16,7 +16,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 4,
@@ -25,7 +25,7 @@
           },
           "value" : 10
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 7,
           "endLine" : 4,
@@ -44,7 +44,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 5,
@@ -61,7 +61,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 5,
@@ -70,7 +70,7 @@
           },
           "value" : 10
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 8,
           "endLine" : 5,
@@ -89,7 +89,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 6,
@@ -106,7 +106,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 6,
@@ -123,7 +123,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 9,
             "endLine" : 6,
@@ -132,7 +132,7 @@
           },
           "value" : 2
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 6,
@@ -151,7 +151,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 42,
             "endLine" : 2,
@@ -167,7 +167,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,

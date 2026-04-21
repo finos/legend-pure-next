@@ -67,11 +67,11 @@ public final class PackageableFunctionCompiler
                         .collect(p -> VariableCompiler.compileParameter(p, imports, model, context))
                         .select(Objects::nonNull));
 
-        _Function.validateFunctionParameters(result._parameters(), context, SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+        _Function.validateFunctionParameters(result._parameters(), context, SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
 
         result._returnGenericType(GenericTypeCompiler.compile(grammar._returnGenericType(), imports, model, context))
               ._returnMultiplicity(MultiplicityCompiler.compile(grammar._returnMultiplicity(), model))
-              ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model))
+              ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model))
               ._classifierGenericType(
                   _GenericType.buildUserDefinedGenericType((Type) model.getElement(
                                 result instanceof NativeFunction ? "meta::pure::metamodel::function::NativeFunction"

@@ -143,7 +143,7 @@ public class M3ProtocolBuilder
     public Object visitClassDefinition(final M3Parser.ClassDefinitionContext ctx)
     {
         ClassImpl classDef = setNameAndPackage(new ClassImpl(), ctx.qualifiedName().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Collect type and multiplicity parameters (e.g., Class<T, -V|m>)
         M3Parser.TypeParametersWithVarianceAndMultiplicityParametersContext tpCtx = ctx.typeParametersWithVarianceAndMultiplicityParameters();
@@ -175,7 +175,7 @@ public class M3ProtocolBuilder
                     ListAdapter.adapt(ctx.type()).collect(typeCtx ->
                             new GeneralizationImpl()
                                     ._general(buildGenericType(typeCtx, typeParamNames))
-                                    ._sourceInformation(buildSourceInfo(typeCtx))));
+                                    ._p_sourceInformation(buildSourceInfo(typeCtx))));
         }
 
         // Parse stereotypes and tagged values for class
@@ -207,7 +207,7 @@ public class M3ProtocolBuilder
     public Object visitPrimitiveDefinition(final M3Parser.PrimitiveDefinitionContext ctx)
     {
         PrimitiveTypeImpl primDef = setNameAndPackage(new PrimitiveTypeImpl(), ctx.qualifiedName().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Handle stereotypes and tagged values
         parseStereotypesAndTaggedValues(primDef, ctx.stereotypes(), ctx.taggedValues());
@@ -227,7 +227,7 @@ public class M3ProtocolBuilder
             primDef._generalizations(Lists.mutable.with(
                     new GeneralizationImpl()
                             ._general(buildGenericType(ctx.type(), java.util.Collections.emptySet()))
-                            ._sourceInformation(buildSourceInfo(ctx.type()))));
+                            ._p_sourceInformation(buildSourceInfo(ctx.type()))));
         }
 
         // Handle constraints
@@ -249,7 +249,7 @@ public class M3ProtocolBuilder
     private ConstraintImpl buildConstraint(final M3Parser.ConstraintContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
         ConstraintImpl c = new ConstraintImpl()
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         if (ctx.simpleConstraint() != null)
         {
@@ -261,7 +261,7 @@ public class M3ProtocolBuilder
             }
             // The function body is the combinedExpression
             c._functionDefinition(new LambdaFunctionImpl()
-                    ._sourceInformation(buildSourceInfo(sc))
+                    ._p_sourceInformation(buildSourceInfo(sc))
                     ._expressionSequence(Lists.mutable.with(visitCombinedExpr(sc.combinedExpression(), typeParamNames, multParamNames))));
         }
         else if (ctx.complexConstraint() != null)
@@ -284,7 +284,7 @@ public class M3ProtocolBuilder
             }
             // Function
             c._functionDefinition(new LambdaFunctionImpl()
-                    ._sourceInformation(buildSourceInfo(cc.constraintFunction()))
+                    ._p_sourceInformation(buildSourceInfo(cc.constraintFunction()))
                     ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintFunction().combinedExpression(), typeParamNames, multParamNames))));
 
             // Enforcement level
@@ -296,7 +296,7 @@ public class M3ProtocolBuilder
             if (cc.constraintMessage() != null)
             {
                 c._messageFunction(new LambdaFunctionImpl()
-                        ._sourceInformation(buildSourceInfo(cc.constraintMessage()))
+                        ._p_sourceInformation(buildSourceInfo(cc.constraintMessage()))
                         ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintMessage().combinedExpression(), typeParamNames, multParamNames))));
             }
         }
@@ -308,7 +308,7 @@ public class M3ProtocolBuilder
     {
         PropertyImpl prop = new PropertyImpl()
                 ._name(ctx.propertyName().getText())
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._genericType(buildGenericType(ctx.propertyReturnType().type(), typeParamNames))
                 ._multiplicity(parseMultiplicity(ctx.propertyReturnType().multiplicity().getText(), multParamNames));
 
@@ -328,7 +328,7 @@ public class M3ProtocolBuilder
         if (ctx.defaultValue() != null)
         {
             prop._defaultValue(new LambdaFunctionImpl()
-                    ._sourceInformation(buildSourceInfo(ctx.defaultValue()))
+                    ._p_sourceInformation(buildSourceInfo(ctx.defaultValue()))
                     ._expressionSequence(Lists.mutable.with(
                             visitCombinedExpr(ctx.defaultValue().combinedExpression(), typeParamNames, multParamNames))));
         }
@@ -340,7 +340,7 @@ public class M3ProtocolBuilder
     {
         QualifiedPropertyImpl qp = new QualifiedPropertyImpl()
                 ._name(ctx.identifier().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotypes and tagged values
         parseStereotypesAndTaggedValues(qp, ctx.stereotypes(), ctx.taggedValues());
@@ -416,7 +416,7 @@ public class M3ProtocolBuilder
     public Object visitEnumDefinition(final M3Parser.EnumDefinitionContext ctx)
     {
         EnumerationImpl enumDef = setNameAndPackage(new EnumerationImpl(), ctx.qualifiedName().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotypes and tagged values for enumeration
         parseStereotypesAndTaggedValues(enumDef, ctx.stereotypes(), ctx.taggedValues());
@@ -426,7 +426,7 @@ public class M3ProtocolBuilder
                 {
                     PropertyImpl prop = new PropertyImpl()
                             ._name(valueCtx.identifier().getText())
-                            ._sourceInformation(buildSourceInfo(valueCtx));
+                            ._p_sourceInformation(buildSourceInfo(valueCtx));
                     parseStereotypesAndTaggedValues(prop, valueCtx.stereotypes(), valueCtx.taggedValues());
                     return prop;
                 }));
@@ -439,7 +439,7 @@ public class M3ProtocolBuilder
     public Object visitAssociation(final M3Parser.AssociationContext ctx)
     {
         AssociationImpl assoc = setNameAndPackage(new AssociationImpl(), ctx.qualifiedName().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotypes and tagged values for association
         parseStereotypesAndTaggedValues(assoc, ctx.stereotypes(), ctx.taggedValues());
@@ -463,7 +463,7 @@ public class M3ProtocolBuilder
     public Object visitProfile(final M3Parser.ProfileContext ctx)
     {
         ProfileImpl profile = setNameAndPackage(new ProfileImpl(), ctx.qualifiedName().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotype definitions
         // Note: Do NOT set profile back-reference to avoid circular reference
@@ -473,7 +473,7 @@ public class M3ProtocolBuilder
                     ListAdapter.adapt(ctx.stereotypeDefinitions().identifier()).collect(idCtx ->
                             new StereotypeImpl()
                                     ._value(idCtx.getText())
-                                    ._sourceInformation(buildSourceInfo(idCtx))));
+                                    ._p_sourceInformation(buildSourceInfo(idCtx))));
         }
 
         // Parse tag definitions
@@ -484,7 +484,7 @@ public class M3ProtocolBuilder
                     ListAdapter.adapt(ctx.tagDefinitions().identifier()).collect(idCtx ->
                             new TagImpl()
                                     ._value(idCtx.getText())
-                                    ._sourceInformation(buildSourceInfo(idCtx))));
+                                    ._p_sourceInformation(buildSourceInfo(idCtx))));
         }
 
         elements.add(profile);
@@ -551,8 +551,8 @@ public class M3ProtocolBuilder
                 ._extraPointerValues(Lists.mutable.with(
                         new PointerValueImpl()
                                 ._value(ctx.identifier().getText())
-                                ._sourceInformation(buildSourceInfo(ctx.identifier()))))
-                ._sourceInformation(buildSourceInfo(ctx.qualifiedName()));
+                                ._p_sourceInformation(buildSourceInfo(ctx.identifier()))))
+                ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName()));
     }
 
     /**
@@ -575,8 +575,8 @@ public class M3ProtocolBuilder
                         ._extraPointerValues(Lists.mutable.with(
                                 new PointerValueImpl()
                                         ._value(ctx.identifier().getText())
-                                        ._sourceInformation(buildSourceInfo(ctx.identifier()))))
-                        ._sourceInformation(buildSourceInfo(ctx.qualifiedName())))
+                                        ._p_sourceInformation(buildSourceInfo(ctx.identifier()))))
+                        ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName())))
                 ._value(sb.toString());
     }
 
@@ -589,7 +589,7 @@ public class M3ProtocolBuilder
     {
         String fullName = ctx.qualifiedName().getText();
         UserDefinedFunctionImpl func = setNameAndPackage(new UserDefinedFunctionImpl(), fullName)
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotypes and tagged values
         parseStereotypesAndTaggedValues(func, ctx.stereotypes(), ctx.taggedValues());
@@ -647,7 +647,7 @@ public class M3ProtocolBuilder
     {
         String fullName = ctx.qualifiedName().getText();
         NativeFunctionImpl func = setNameAndPackage(new NativeFunctionImpl(), fullName)
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
 
         // Parse stereotypes and tagged values
         parseStereotypesAndTaggedValues(func, ctx.stereotypes(), ctx.taggedValues());
@@ -703,11 +703,11 @@ public class M3ProtocolBuilder
     {
         // let x = expr  →  FunctionExpression(functionName="letFunction", params=[name, value])
         return new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName("letFunction")
                 ._parametersValues(Lists.mutable.with(
                         new AtomicValueImpl()
-                                ._sourceInformation(buildSourceInfo(ctx.identifier()))
+                                ._p_sourceInformation(buildSourceInfo(ctx.identifier()))
                                 ._genericType(buildPrimitiveGenericType("String"))
                                 ._value(ctx.identifier().getText()),
                         visitCombinedExpr(ctx.combinedExpression(), typeParamNames, multParamNames)));
@@ -804,7 +804,7 @@ public class M3ProtocolBuilder
         else if (ctx.notExpression() != null)
         {
             return new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(ctx.notExpression()))
+                    ._p_sourceInformation(buildSourceInfo(ctx.notExpression()))
                     ._functionName("not")
                     ._parametersValues(Lists.mutable.with(
                             visitSimpleExpr(ctx.notExpression().simpleExpression(), typeParamNames, multParamNames)));
@@ -822,7 +822,7 @@ public class M3ProtocolBuilder
                     return av._value(negated);
                 }
                 return new FunctionInvocationImpl()
-                        ._sourceInformation(buildSourceInfo(signCtx))
+                        ._p_sourceInformation(buildSourceInfo(signCtx))
                         ._functionName("minus")
                         ._parametersValues(Lists.mutable.with(inner));
             }
@@ -832,7 +832,7 @@ public class M3ProtocolBuilder
         {
             M3Parser.SliceExpressionContext sliceCtx = ctx.sliceExpression();
             return new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(sliceCtx))
+                    ._p_sourceInformation(buildSourceInfo(sliceCtx))
                     ._functionName("slice")
                     ._parametersValues(
                             ListAdapter.adapt(sliceCtx.expression())
@@ -876,7 +876,7 @@ public class M3ProtocolBuilder
         {
             // DSL block: #{...}# -> Collection wrapping the text
             return new AtomicValueImpl()
-                    ._sourceInformation(buildSourceInfo(ctx.dsl()))
+                    ._p_sourceInformation(buildSourceInfo(ctx.dsl()))
                     ._genericType(buildPrimitiveGenericType("String"))
                     ._value(ctx.dsl().DSL_TEXT().getText());
         }
@@ -922,7 +922,7 @@ public class M3ProtocolBuilder
 
                 // Column name (String)
                 paramVals.add(new AtomicValueImpl()
-                        ._sourceInformation(buildSourceInfo(colSpec.columnName()))
+                        ._p_sourceInformation(buildSourceInfo(colSpec.columnName()))
                         ._genericType(buildPrimitiveGenericType("String"))
                         ._value(colSpec.columnName().getText()));
 
@@ -958,7 +958,7 @@ public class M3ProtocolBuilder
                     paramVals.add(holder);
                 }
                 return (ValueSpecification) new FunctionInvocationImpl()
-                        ._sourceInformation(buildSourceInfo(colSpec))
+                        ._p_sourceInformation(buildSourceInfo(colSpec))
                         ._functionName(funcName)
                         ._parametersValues(paramVals);
             });
@@ -1002,7 +1002,7 @@ public class M3ProtocolBuilder
                     arrayParams.add(holder);
 
                     return new FunctionInvocationImpl()
-                            ._sourceInformation(buildSourceInfo(cbCtx))
+                            ._p_sourceInformation(buildSourceInfo(cbCtx))
                             ._functionName(arrayFuncName)
                             ._parametersValues(arrayParams);
                 }
@@ -1014,7 +1014,7 @@ public class M3ProtocolBuilder
                     // Collect all column names as String values
                     MutableList<ValueSpecification> nameValues = ListAdapter.adapt(colSpecs).collect(colSpec ->
                             (ValueSpecification) new AtomicValueImpl()
-                                    ._sourceInformation(buildSourceInfo(colSpec.columnName()))
+                                    ._p_sourceInformation(buildSourceInfo(colSpec.columnName()))
                                     ._genericType(buildPrimitiveGenericType("String"))
                                     ._value(colSpec.columnName().getText()));
                     arrayParams.add(new CollectionImpl()
@@ -1057,7 +1057,7 @@ public class M3ProtocolBuilder
                     }
 
                     return new FunctionInvocationImpl()
-                            ._sourceInformation(buildSourceInfo(cbCtx))
+                            ._p_sourceInformation(buildSourceInfo(cbCtx))
                             ._functionName("colSpecArray")
                             ._parametersValues(arrayParams);
                 }
@@ -1067,7 +1067,7 @@ public class M3ProtocolBuilder
         {
             // @Type|mul, @Type, @|mul, or @[mul]
             UserDefinedGenericTypeAndMultiplicityHolderImpl holder = new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                    ._sourceInformation(buildSourceInfo(ctx));
+                    ._p_sourceInformation(buildSourceInfo(ctx));
             if (ctx.type() != null)
             {
                 holder._genericType(buildGenericType(ctx.type(), typeParamNames));
@@ -1118,7 +1118,7 @@ public class M3ProtocolBuilder
             params = Lists.mutable.with(
                     new VariableExpressionImpl()
                             ._name(ctx.variable().identifier().getText())
-                            ._sourceInformation(buildSourceInfo(ctx.variable())));
+                            ._p_sourceInformation(buildSourceInfo(ctx.variable())));
         }
         else
         {
@@ -1153,7 +1153,7 @@ public class M3ProtocolBuilder
 
             params = Lists.mutable.with(
                     new UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                            ._sourceInformation(buildSourceInfo(ctx))
+                            ._p_sourceInformation(buildSourceInfo(ctx))
                             ._genericType(genericType)
                             ._multiplicity(buildPureOne()));
         }
@@ -1166,7 +1166,7 @@ public class M3ProtocolBuilder
             {
                     MutableList<ValueSpecification> keParams = Lists.mutable.with(
                             new AtomicValueImpl()
-                                    ._sourceInformation(buildSourceInfo(assignCtx))
+                                    ._p_sourceInformation(buildSourceInfo(assignCtx))
                                     ._genericType(buildPrimitiveGenericType("String"))
                                     ._value(
                                             ListAdapter.adapt(assignCtx.propertyName())
@@ -1176,17 +1176,17 @@ public class M3ProtocolBuilder
                     if (assignCtx.PLUS() != null)
                     {
                         keParams.add(new AtomicValueImpl()
-                                ._sourceInformation(buildSourceInfo(assignCtx))
+                                ._p_sourceInformation(buildSourceInfo(assignCtx))
                                 ._genericType(buildPrimitiveGenericType("Boolean"))
                                 ._value(true));
                     }
                     return (ValueSpecification) new FunctionInvocationImpl()
-                            ._sourceInformation(buildSourceInfo(assignCtx))
+                            ._p_sourceInformation(buildSourceInfo(assignCtx))
                             ._functionName("keyExpression")
                             ._parametersValues(keParams);
             });
             params.add(new CollectionImpl()
-                    ._sourceInformation(buildSourceInfo(ctx))
+                    ._p_sourceInformation(buildSourceInfo(ctx))
                     ._values(keyExprs)
                     ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                             ._lowerBound(multVal(keyExprs.size()))
@@ -1194,7 +1194,7 @@ public class M3ProtocolBuilder
         }
 
         return new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName(isCopy ? "copy" : "new")
                 ._parametersValues(params);
     }
@@ -1220,16 +1220,16 @@ public class M3ProtocolBuilder
 
             MutableList<ValueSpecification> params = Lists.mutable.with(
                     new AtomicValueImpl()
-                            ._sourceInformation(buildSourceInfo(parentRef))
+                            ._p_sourceInformation(buildSourceInfo(parentRef))
                             ._genericType(buildPrimitiveGenericType("Integer"))
                             ._value((long) depth),
                     new AtomicValueImpl()
-                            ._sourceInformation(buildSourceInfo(parentRef))
+                            ._p_sourceInformation(buildSourceInfo(parentRef))
                             ._genericType(buildPrimitiveGenericType("String"))
                             ._value(propPath));
 
             return new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(parentRef))
+                    ._p_sourceInformation(buildSourceInfo(parentRef))
                     ._functionName("parentReference")
                     ._parametersValues(params);
         }
@@ -1246,7 +1246,7 @@ public class M3ProtocolBuilder
             // qualifiedName as a type/enum reference
             return new VariableExpressionImpl()
                     ._name(atomic.qualifiedName().getText())
-                    ._sourceInformation(buildSourceInfo(atomic));
+                    ._p_sourceInformation(buildSourceInfo(atomic));
         }
         throw new RuntimeException("Unsupported expressionInstanceRightSide: " + ctx.getText());
     }
@@ -1259,7 +1259,7 @@ public class M3ProtocolBuilder
     {
         return new VariableExpressionImpl()
                 ._name(ctx.identifier().getText())
-                ._sourceInformation(buildSourceInfo(ctx));
+                ._p_sourceInformation(buildSourceInfo(ctx));
     }
 
     // ========================================================================
@@ -1317,7 +1317,7 @@ public class M3ProtocolBuilder
         }
 
         return new AtomicValueImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._value(value)
                 ._genericType(buildPrimitiveGenericType(genericTypeName));
     }
@@ -1371,7 +1371,7 @@ public class M3ProtocolBuilder
 
         // Wrap lambda in an AtomicValue since LambdaFunction is not a ValueSpecification
         return new AtomicValueImpl()
-                ._sourceInformation(lambda._sourceInformation())
+                ._p_sourceInformation(lambda._p_sourceInformation())
                 ._value(lambda);
     }
 
@@ -1384,7 +1384,7 @@ public class M3ProtocolBuilder
     private LambdaFunctionImpl buildLambda(final List<M3Parser.LambdaParamContext> paramCtxs, final M3Parser.LambdaPipeContext pipeCtx, final ParserRuleContext outerCtx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
         return new LambdaFunctionImpl()
-                ._sourceInformation(buildSourceInfo(outerCtx))
+                ._p_sourceInformation(buildSourceInfo(outerCtx))
                 ._parameters(
                         ListAdapter.adapt(paramCtxs).collect(paramCtx ->
                         {
@@ -1392,7 +1392,7 @@ public class M3ProtocolBuilder
                                     ._name(paramCtx.identifier().getText());
                             if (paramCtx.lambdaParamType() != null)
                             {
-                                param._sourceInformation(buildSourceInfo(paramCtx))
+                                param._p_sourceInformation(buildSourceInfo(paramCtx))
                                         ._genericType(buildGenericType(paramCtx.lambdaParamType().type(), typeParamNames))
                                         ._multiplicity(parseMultiplicity(paramCtx.lambdaParamType().multiplicity().getText(), multParamNames));
                             }
@@ -1434,7 +1434,7 @@ public class M3ProtocolBuilder
                     : ctx.getText();
 
             FunctionInvocationImpl sfe = new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(ctx))
+                    ._p_sourceInformation(buildSourceInfo(ctx))
                     ._functionName(name);
 
             M3Parser.FunctionExpressionParametersContext paramsCtx = ctx.allOrFunction().functionExpressionParameters();
@@ -1476,7 +1476,7 @@ public class M3ProtocolBuilder
 
         // Simple qualified name reference (class, enum, etc.)
         return new AtomicValueImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._value(new Package_PointerImpl()
                         ._pointerValue(name));
     }
@@ -1493,11 +1493,11 @@ public class M3ProtocolBuilder
                 ? ctx.qualifiedName().getText()
                 : ctx.getText().split("\\.")[0];
         return new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName(functionName)
                 ._parametersValues(Lists.mutable.<ValueSpecification>with(
                                 new AtomicValueImpl()
-                                        ._sourceInformation(buildSourceInfo(ctx))
+                                        ._p_sourceInformation(buildSourceInfo(ctx))
                                         ._value(new Package_PointerImpl()
                                                 ._pointerValue(className)))
                         .withAll(additionalParams));
@@ -1529,7 +1529,7 @@ public class M3ProtocolBuilder
                             .collect(ctx2 -> visitCombinedExpr(ctx2, typeParamNames, multParamNames)));
         }
         return new DotApplicationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName(ctx.propertyName().getText())
                 ._parametersValues(params);
     }
@@ -1543,7 +1543,7 @@ public class M3ProtocolBuilder
                 {
                     int idx = ctx.qualifiedName().indexOf(qn);
                     ArrowInvocationImpl sfe = new ArrowInvocationImpl()
-                            ._sourceInformation(buildSourceInfo(ctx))
+                            ._p_sourceInformation(buildSourceInfo(ctx))
                             ._functionName(qn.getText());
                     MutableList<ValueSpecification> params = Lists.mutable.with(current);
                     params.addAllIterable(
@@ -1649,7 +1649,7 @@ public class M3ProtocolBuilder
         for (int i = 1; i < allOperands.size(); i++)
         {
             result = new FunctionInvocationImpl()
-                    ._sourceInformation(buildSourceInfo(ctx))
+                    ._p_sourceInformation(buildSourceInfo(ctx))
                     ._functionName(funcName)
                     ._parametersValues(Lists.mutable.with(result, allOperands.get(i)));
         }
@@ -1758,7 +1758,7 @@ public class M3ProtocolBuilder
     private FunctionInvocationImpl buildBoolSfe(final M3Parser.BooleanPartContext ctx, final String funcName, final ValueSpecification initialValue, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
         return new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName(funcName)
                 ._parametersValues(Lists.mutable.with(initialValue, processCombinedArithmeticOnly(ctx.combinedArithmeticOnly(), typeParamNames, multParamNames)));
     }
@@ -1838,7 +1838,7 @@ public class M3ProtocolBuilder
     {
         // equalNotEqual: (TEST_EQUAL | TEST_NOT_EQUAL) combinedArithmeticOnly
         FunctionInvocationImpl equalSfe = new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName("equal")
                 ._parametersValues(Lists.mutable.with(
                         left,
@@ -1851,7 +1851,7 @@ public class M3ProtocolBuilder
 
         // != is not(equal(a, b))
         return new FunctionInvocationImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._functionName("not")
                 ._parametersValues(Lists.mutable.with(equalSfe));
     }
@@ -1877,7 +1877,7 @@ public class M3ProtocolBuilder
                 .collect(exprCtx -> visitCombinedExpr(exprCtx, typeParamNames, multParamNames));
 
         return new CollectionImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._values(vals)
                 ._multiplicity(new UserDefinedAdHocMultiplicityImpl()
                         ._lowerBound(multVal(vals.size()))
@@ -1892,7 +1892,7 @@ public class M3ProtocolBuilder
     {
         return new VariableExpressionImpl()
                 ._name(ctx.identifier().getText())
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._genericType(buildGenericType(ctx.type(), typeParamNames, multParamNames))
                 ._multiplicity(
                         parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
@@ -2047,7 +2047,7 @@ public class M3ProtocolBuilder
             {
                 gt._type(new Type_PointerImpl()
                         ._pointerValue(typeName)
-                        ._sourceInformation(buildSourceInfo(ctx.qualifiedName())));
+                        ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName())));
             }
 
             if (ctx.typeArguments() != null)
@@ -2145,7 +2145,7 @@ public class M3ProtocolBuilder
                                 col._multiplicity(parseMultiplicity(colCtx.multiplicity().getText(), multParamNames));
                             }
 
-                            return col._sourceInformation(buildSourceInfo(colCtx));
+                            return col._p_sourceInformation(buildSourceInfo(colCtx));
                         }));
     }
 
@@ -2241,7 +2241,7 @@ public class M3ProtocolBuilder
         }
 
         return new AtomicValueImpl()
-                ._sourceInformation(buildSourceInfo(ctx))
+                ._p_sourceInformation(buildSourceInfo(ctx))
                 ._value(value)
                 ._genericType(buildPrimitiveGenericType(genericTypeName));
     }

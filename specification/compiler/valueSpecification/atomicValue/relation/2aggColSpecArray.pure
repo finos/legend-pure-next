@@ -44,7 +44,7 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @9:67-9:74
               Variable y :#Integer##[*]#  ~VariableExpression  @9:65-9:66
           AtomicValue  'name' :String[1]  ~AtomicValue  @9:48-9:51
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
         FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~FunctionInvocation  @9:77-9:109
           typeParam K -> #String#
           typeParam T -> #(other:#String##[1]#)#
@@ -56,5 +56,5 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~ArrowInvocation  @9:99-9:109
               Variable y :#String##[*]#  ~VariableExpression  @9:97-9:98
           AtomicValue  'other' :String[1]  ~AtomicValue  @9:77-9:81
-          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:#String##[1]#)#|1>[1]
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#, other:#String##[1]#)#|1>[1]
+          TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#, other:#String##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

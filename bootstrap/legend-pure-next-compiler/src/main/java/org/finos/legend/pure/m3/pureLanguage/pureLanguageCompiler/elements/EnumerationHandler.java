@@ -74,7 +74,7 @@ public final class EnumerationHandler
                 .toBag().selectDuplicates().toSet()
                 .each(name -> context.addError(new CompilationError(
                         "Duplicate enum value '" + name + "'",
-                        SourceInformationCompiler.compile(grammar._sourceInformation(), model))));
+                        SourceInformationCompiler.compile(grammar._p_sourceInformation(), model))));
 
         // Create one Property per enum value, each with a defaultValue containing the Enum instance
         var properties = grammar._properties().collect(grammarProp ->
@@ -83,7 +83,7 @@ public final class EnumerationHandler
             EnumImpl enumInstance = new EnumImpl()  // the classifierGenericType is set below
                     ._name(grammarProp._name())
                     ._classifierGenericType(enumGT)
-                    ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
+                    ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model));
 
             // Create a parameterless lambda whose body is the AtomicValue
 
@@ -100,7 +100,7 @@ public final class EnumerationHandler
             LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
             defaultValueLambda._expressionSequence(Lists.mutable.with(
                     new AtomicValueImpl(model)
-                                ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model))
+                                ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model))
                                 ._value(enumInstance)
                                 ._genericType(enumGT)
                                 ._multiplicity(pureOne)
@@ -127,7 +127,7 @@ public final class EnumerationHandler
                          ._taggedValues(grammarProp._taggedValues()
                                  .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                                  .select(Objects::nonNull))
-                         ._sourceInformation(SourceInformationCompiler.compile(grammarProp._sourceInformation(), model));
+                         ._sourceInformation(SourceInformationCompiler.compile(grammarProp._p_sourceInformation(), model));
         });
 
         org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> props =
@@ -145,7 +145,7 @@ public final class EnumerationHandler
                 ._taggedValues(grammar._taggedValues()
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(Objects::nonNull))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
 
         context.enrichCurrentErrors("enumeration '" + _G_PackageableElement.fullPath(grammar) + "'");
         return result;

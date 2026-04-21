@@ -17,7 +17,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Number",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 43,
               "endLine" : 2,
@@ -38,7 +38,7 @@
           }
         },
         "name" : "left",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 46,
           "endLine" : 2,
@@ -52,7 +52,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Number",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 61,
               "endLine" : 2,
@@ -73,7 +73,7 @@
           }
         },
         "name" : "right",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 64,
           "endLine" : 2,
@@ -86,7 +86,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Number",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 73,
             "endLine" : 2,
@@ -106,7 +106,7 @@
           "value" : 1
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 77,
         "endLine" : 2,
@@ -128,7 +128,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Any",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 45,
               "endLine" : 4,
@@ -149,7 +149,7 @@
           }
         },
         "name" : "value",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 48,
           "endLine" : 4,
@@ -162,7 +162,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "String",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 57,
             "endLine" : 4,
@@ -182,7 +182,7 @@
           "value" : 1
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 61,
         "endLine" : 4,

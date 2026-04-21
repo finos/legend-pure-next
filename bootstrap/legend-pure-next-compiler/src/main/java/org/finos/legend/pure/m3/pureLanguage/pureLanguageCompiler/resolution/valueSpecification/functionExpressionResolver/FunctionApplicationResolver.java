@@ -539,8 +539,10 @@ public class FunctionApplicationResolver
         // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
         // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
         GenericType concreteGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
-        GenericType innerGT = _GenericType.typeArguments(concreteGT).getFirst();
-        if (_GenericType.type(innerGT) instanceof FunctionType ft)
+        var typeArgs = _GenericType.typeArguments(concreteGT);
+        if (typeArgs == null || typeArgs.isEmpty()) return lambda;
+        GenericType innerGT = typeArgs.getFirst();
+        if (innerGT != null && _GenericType.type(innerGT) instanceof FunctionType ft)
         {
             lambda =  ((LambdaFunctionImpl) lambda._copy())
                     ._parameters(ft._parameters().zip(lambda._parameters()).collect(pair ->

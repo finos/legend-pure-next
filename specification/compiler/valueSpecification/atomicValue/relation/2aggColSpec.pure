@@ -34,4 +34,4 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
         ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @8:66-8:73
           Variable y :#Integer##[*]#  ~VariableExpression  @8:64-8:65
       AtomicValue  'name' :String[1]  ~AtomicValue  @8:47-8:50
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

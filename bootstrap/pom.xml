@@ -26,7 +26,7 @@
     <artifactId>bootstrap</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Legend Pure - Next - Bootstrap</name>
+    <name>Bootstrap</name>
     <description>Java bootstrap modules for Legend Pure Next.</description>
 
     <properties>

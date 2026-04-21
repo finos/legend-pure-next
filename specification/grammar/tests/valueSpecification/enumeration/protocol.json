@@ -9,7 +9,7 @@
         "functionName" : "A",
         "parametersValues" : [ {
           "_type" : "AtomicValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 8,
             "endLine" : 5,
@@ -20,7 +20,7 @@
             "pointerValue" : "myEnum"
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 5,
@@ -32,7 +32,7 @@
         "functionName" : "B",
         "parametersValues" : [ {
           "_type" : "AtomicValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 8,
             "endLine" : 6,
@@ -43,7 +43,7 @@
             "pointerValue" : "myEnum"
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 10,
           "endLine" : 6,
@@ -63,7 +63,7 @@
             "value" : 2
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 22,
           "endLine" : 7,
@@ -75,7 +75,7 @@
           "functionName" : "A",
           "parametersValues" : [ {
             "_type" : "AtomicValue",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 7,
@@ -86,7 +86,7 @@
               "pointerValue" : "myEnum"
             }
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 7,
@@ -98,7 +98,7 @@
           "functionName" : "B",
           "parametersValues" : [ {
             "_type" : "AtomicValue",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 19,
               "endLine" : 7,
@@ -109,7 +109,7 @@
               "pointerValue" : "myEnum"
             }
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 21,
             "endLine" : 7,
@@ -129,7 +129,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 3,
@@ -145,7 +145,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,
@@ -162,7 +162,7 @@
       "properties" : [ {
         "_type" : "Property",
         "name" : "A",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 3,
           "endLine" : 12,
@@ -172,7 +172,7 @@
       }, {
         "_type" : "Property",
         "name" : "B",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 3,
           "endLine" : 13,
@@ -180,7 +180,7 @@
           "startLine" : 13
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 14,

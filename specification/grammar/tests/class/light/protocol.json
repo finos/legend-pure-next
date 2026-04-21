@@ -9,7 +9,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 4,

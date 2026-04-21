@@ -67,7 +67,7 @@ public final class PropertyCompiler
                 ._taggedValues(grammarProperty._taggedValues()
                         .collect(tv -> AnnotationCompiler.resolveTaggedValue(tv, imports, model, context))
                         .select(java.util.Objects::nonNull))
-                ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammarProperty._p_sourceInformation(), model));
         context.enrichCurrentErrorsFrom(annotErrorsBefore, "property '" + grammarProperty._name() + "'");
         if (grammarProperty._defaultValue() != null)
         {

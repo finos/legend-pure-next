@@ -70,9 +70,9 @@ public final class ValueSpecificationCompiler
                 ._functionName(arrow._functionName())
                 ._parametersValues(arrow._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
-        if (arrow._sourceInformation() != null)
+        if (arrow._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(arrow._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(arrow._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -86,9 +86,9 @@ public final class ValueSpecificationCompiler
                 ._functionName(fa._functionName())
                 ._parametersValues(fa._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
-        if (fa._sourceInformation() != null)
+        if (fa._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(fa._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -102,9 +102,9 @@ public final class ValueSpecificationCompiler
                 ._functionName(dot._functionName())
                 ._parametersValues(dot._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
-        if (dot._sourceInformation() != null)
+        if (dot._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(dot._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(dot._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
     }
@@ -143,7 +143,7 @@ public final class ValueSpecificationCompiler
                     ._classifierGenericType(classifierGT)
                     ._genericType(classifierGT)
                     ._multiplicity((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne"))
-                    ._sourceInformation(holder._sourceInformation() != null ? SourceInformationCompiler.compile(holder._sourceInformation(), context.getSourceId(), model) : null);
+                    ._sourceInformation(holder._p_sourceInformation() != null ? SourceInformationCompiler.compile(holder._p_sourceInformation(), context.getSourceId(), model) : null);
         }
         else
         {
@@ -159,9 +159,9 @@ public final class ValueSpecificationCompiler
                 ._name(var._name() != null ? var._name() : "")
                 ._genericType(new CompilerNotSetGenericTypeImpl())
                 ._multiplicity(new CompilerNotSetMultiplicityImpl());
-        if (var._sourceInformation() != null)
+        if (var._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(var._sourceInformation(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(var._p_sourceInformation(), model));
         }
         return result;
     }
@@ -172,9 +172,9 @@ public final class ValueSpecificationCompiler
     {
         AtomicValueImpl result = new AtomicValueImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
-        if (av._sourceInformation() != null)
+        if (av._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(av._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(av._p_sourceInformation(), context.getSourceId(), model));
         }
         result._genericType(av._genericType() != null
                 ? GenericTypeCompiler.compile(av._genericType(), imports, model, context)
@@ -257,9 +257,9 @@ public final class ValueSpecificationCompiler
     {
         CollectionImpl result = new CollectionImpl(model)
                 ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::Collection"), model));
-        if (col._sourceInformation() != null)
+        if (col._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(col._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(col._p_sourceInformation(), context.getSourceId(), model));
         }
         if (col._multiplicity() != null)
         {

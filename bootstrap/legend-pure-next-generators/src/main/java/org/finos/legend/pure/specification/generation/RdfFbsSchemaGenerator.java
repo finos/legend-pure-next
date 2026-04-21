@@ -73,8 +73,10 @@ public class RdfFbsSchemaGenerator
         sb.append("\n");
 
         // Pointer reference table for union pointer fields
+        sb.append("enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }\n\n");
         sb.append("table PointerRef {\n");
-        sb.append("    path: string;\n");
+        sb.append("    kind: PointerKind;\n");
+        sb.append("    path: [string];\n");
         sb.append("}\n\n");
 
         // Ancestor reference table for cycle back-references
@@ -251,7 +253,7 @@ public class RdfFbsSchemaGenerator
     {
         if (isPointer)
         {
-            return isMany ? "[string]" : "string";
+            return isMany ? "[PointerRef]" : "PointerRef";
         }
 
         // For properties of mainTaxonomy types, use the union

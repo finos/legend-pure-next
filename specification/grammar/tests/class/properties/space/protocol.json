@@ -16,7 +16,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 6,
@@ -37,7 +37,7 @@
           }
         },
         "name" : "'default Value'",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 29,
           "endLine" : 6,
@@ -51,7 +51,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 7,
@@ -72,7 +72,7 @@
           }
         },
         "name" : "graph",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 7,
@@ -80,7 +80,7 @@
           "startLine" : 7
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,

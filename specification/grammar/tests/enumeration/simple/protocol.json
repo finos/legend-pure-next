@@ -12,7 +12,7 @@
       "properties" : [ {
         "_type" : "Property",
         "name" : "Val",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 5,
           "endLine" : 6,
@@ -22,7 +22,7 @@
       }, {
         "_type" : "Property",
         "name" : "Val2",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 6,
           "endLine" : 7,
@@ -30,7 +30,7 @@
           "startLine" : 7
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,

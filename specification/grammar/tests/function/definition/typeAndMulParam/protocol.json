@@ -19,7 +19,7 @@
                 "pointerValue" : "String"
               }
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 7,
               "endLine" : 4,
@@ -39,7 +39,7 @@
             "multiplicity" : {
               "_type" : "UndefinedMultiplicity"
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 4,
@@ -47,7 +47,7 @@
               "startLine" : 4
             }
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 38,
             "endLine" : 4,
@@ -63,7 +63,7 @@
             "_type" : "UserDefinedMultiplicityParameter",
             "name" : "m"
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 37,
             "endLine" : 4,
@@ -71,7 +71,7 @@
             "startLine" : 4
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 38,
           "endLine" : 4,
@@ -103,7 +103,7 @@
           "name" : "m"
         },
         "name" : "t",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 47,
           "endLine" : 2,
@@ -122,7 +122,7 @@
         "_type" : "UserDefinedMultiplicityParameter",
         "name" : "m"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,

@@ -11,7 +11,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::SuperClass",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 60,
               "endLine" : 3,
@@ -20,7 +20,7 @@
             }
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 60,
           "endLine" : 3,
@@ -34,7 +34,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Light",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 67,
               "endLine" : 3,
@@ -43,7 +43,7 @@
             }
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 67,
           "endLine" : 3,
@@ -56,7 +56,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
@@ -72,7 +72,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::Light",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 60,
               "endLine" : 7,
@@ -81,7 +81,7 @@
             }
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 60,
           "endLine" : 7,
@@ -94,7 +94,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 9,
@@ -108,7 +108,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 13,
@@ -129,7 +129,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 17,
@@ -150,7 +150,7 @@
           }
         },
         "name" : "property",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 17,
@@ -172,7 +172,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 18,
@@ -193,7 +193,7 @@
           }
         },
         "name" : "val",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 25,
           "endLine" : 18,
@@ -201,7 +201,7 @@
           "startLine" : 18
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 19,

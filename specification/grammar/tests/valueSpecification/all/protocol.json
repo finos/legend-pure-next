@@ -9,7 +9,7 @@
         "functionName" : "getAll",
         "parametersValues" : [ {
           "_type" : "AtomicValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 4,
@@ -20,7 +20,7 @@
             "pointerValue" : "protocol::MyClass"
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 27,
           "endLine" : 4,
@@ -39,7 +39,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 30,
             "endLine" : 2,
@@ -55,7 +55,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
@@ -69,7 +69,7 @@
         "functionName" : "getAllVersions",
         "parametersValues" : [ {
           "_type" : "AtomicValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 35,
             "endLine" : 9,
@@ -80,7 +80,7 @@
             "pointerValue" : "protocol::MyClass"
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 35,
           "endLine" : 9,
@@ -99,7 +99,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 31,
             "endLine" : 7,
@@ -115,7 +115,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 10,
@@ -129,7 +129,7 @@
         "functionName" : "getAllVersionsInRange",
         "parametersValues" : [ {
           "_type" : "AtomicValue",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 54,
             "endLine" : 14,
@@ -142,7 +142,7 @@
         }, {
           "_type" : "VariableExpression",
           "name" : "start",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 47,
             "endLine" : 14,
@@ -152,7 +152,7 @@
         }, {
           "_type" : "VariableExpression",
           "name" : "end",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 53,
             "endLine" : 14,
@@ -160,7 +160,7 @@
             "startLine" : 14
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 54,
           "endLine" : 14,
@@ -181,7 +181,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Date",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 36,
               "endLine" : 12,
@@ -202,7 +202,7 @@
           }
         },
         "name" : "start",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 39,
           "endLine" : 12,
@@ -216,7 +216,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Date",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 50,
               "endLine" : 12,
@@ -237,7 +237,7 @@
           }
         },
         "name" : "end",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 53,
           "endLine" : 12,
@@ -250,7 +250,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 59,
             "endLine" : 12,
@@ -266,7 +266,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 15,

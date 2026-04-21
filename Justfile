@@ -28,26 +28,27 @@ build-bootstrap:
 
 # --- Copy artifacts to build/ for downstream (CLI, truffle, etc.) ---
 stage: build-bootstrap
-    mkdir -p {{out}}/cli
+    mkdir -p {{out}}/cli {{out}}/specification/protocol
     cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
     cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
+    cp -r {{boot}}/legend-pure-next-generators/target/generated-specification/* {{out}}/specification/
 
 # --- Compile compiler.pdb from compiler-pure sources ---
 build-compiler-pdb: stage
     java -jar {{cli}} compile \
         --base-pdb {{out}}/core.pdb \
-        --source {{compiler}}/src \
+        --source {{compiler}} \
         --output {{out}}/compiler.pdb
 
 # --- Platforms ---
 build-typescript:
     @if [ -d "{{ts}}" ]; then cd {{ts}} && pnpm install && pnpm run build; else echo "platforms/typescript/ not present, skipping"; fi
 
-truffle_codegen := truffle / "codegen"
-truffle_runtime := truffle / "runtime"
+truffle_codegen := truffle / "legend-pure-next-truffle-codegen"
+truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 
 # --- Build codegen module and generate PDB classes ---
-generate-pdb-classes: build-bootstrap
+generate-pdb-classes: stage
     cd {{truffle_codegen}} && mvn package -DskipTests -q
     # Remove hand-written MapImpl (uses LinkedHashMap, lives in runtime src)
     rm -f {{truffle_runtime}}/target/generated-pdb-sources/org/finos/legend/pure/truffle/pdb/meta/pure/functions/collection/MapImpl.java
@@ -87,9 +88,17 @@ build-truffle-native: build-bootstrap
 
 # --- Tests ---
 # Bootstrap Java tests run as part of `mvn install` in build-bootstrap.
-# This target adds the Pure-level tests on top.
-test: build-compiler-pdb
+# This target runs Pure-level tests on both bootstrap and Truffle interpreters.
+test: test-compiler-pure-truffle
     java -jar {{cli}} execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
+        --args "{{spec}}/compiler"
+
+# Run the compiler-pure tests via the Truffle interpreter.
+test-compiler-pure-truffle: build-truffle build-compiler-pdb
+    java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \

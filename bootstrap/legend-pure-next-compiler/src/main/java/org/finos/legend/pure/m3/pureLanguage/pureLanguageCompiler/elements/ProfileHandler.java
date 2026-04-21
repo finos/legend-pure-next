@@ -48,7 +48,7 @@ public final class ProfileHandler
                         new TagImpl(model)
                                 ._value(t._value())
                                 ._profile(result)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
     }
 
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)

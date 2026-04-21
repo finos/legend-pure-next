@@ -30,9 +30,9 @@ public final class LambdaCompiler
     public static LambdaFunctionImpl compile(LambdaFunction grammarLambda, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         LambdaFunctionImpl result = new LambdaFunctionImpl();
-        if (grammarLambda._sourceInformation() != null)
+        if (grammarLambda._p_sourceInformation() != null)
         {
-            result._sourceInformation(SourceInformationCompiler.compile(grammarLambda._sourceInformation(), context.getSourceId(), model));
+            result._sourceInformation(SourceInformationCompiler.compile(grammarLambda._p_sourceInformation(), context.getSourceId(), model));
         }
 
         MutableList<? extends meta.pure.protocol.grammar.valuespecification.VariableExpression> grammarParams = grammarLambda._parameters();
@@ -53,9 +53,9 @@ public final class LambdaCompiler
     private static VariableExpression compileParameter(meta.pure.protocol.grammar.valuespecification.VariableExpression gp, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         VariableExpressionImpl cp = _VariableExpression.newVariableExpression(model)._name(gp._name() != null ? gp._name() : "");
-        if (gp._sourceInformation() != null)
+        if (gp._p_sourceInformation() != null)
         {
-            cp._sourceInformation(SourceInformationCompiler.compile(gp._sourceInformation(), model));
+            cp._sourceInformation(SourceInformationCompiler.compile(gp._p_sourceInformation(), model));
         }
         cp._genericType(gp._genericType() != null
                 ? GenericTypeCompiler.compile(gp._genericType(), imports, model, context)

@@ -545,6 +545,7 @@ public final class CompiledGraphPrinter
     private static void printFunctionExpression(FunctionExpression fe, int depth, StringBuilder sb)
     {
         String kind = fe.getClass().getSimpleName()
+                         .replace("FlatBufferWrapper", "")
                          .replace("Impl", "")
                          .replace("Application", "Application");
         indent(sb, depth)

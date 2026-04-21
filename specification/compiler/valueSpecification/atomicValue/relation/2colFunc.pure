@@ -23,4 +23,4 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  ~AtomicValue  @6:52-6:63
         AtomicValue  'ok' :String[1]  ~AtomicValue  @6:59-6:62
       AtomicValue  'name' :String[1]  ~AtomicValue  @6:47-6:50
-      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1])#|1>[1]
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

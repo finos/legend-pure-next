@@ -17,7 +17,7 @@
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "this",
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 9,
                   "endLine" : 4,
@@ -25,7 +25,7 @@
                   "startLine" : 4
                 }
               } ],
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 19,
                 "endLine" : 4,
@@ -35,7 +35,7 @@
             }, {
               "_type" : "VariableExpression",
               "name" : "x",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 24,
                 "endLine" : 4,
@@ -43,7 +43,7 @@
                 "startLine" : 4
               }
             } ],
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 24,
               "endLine" : 4,
@@ -51,7 +51,7 @@
               "startLine" : 4
             }
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 24,
             "endLine" : 4,
@@ -59,7 +59,7 @@
             "startLine" : 4
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 24,
           "endLine" : 4,
@@ -74,7 +74,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 57,
               "endLine" : 2,
@@ -83,7 +83,7 @@
             }
           }
         },
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 57,
           "endLine" : 2,
@@ -96,7 +96,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
@@ -110,7 +110,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "Integer",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 38,
               "endLine" : 2,
@@ -131,7 +131,7 @@
           }
         },
         "name" : "x",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 41,
           "endLine" : 2,

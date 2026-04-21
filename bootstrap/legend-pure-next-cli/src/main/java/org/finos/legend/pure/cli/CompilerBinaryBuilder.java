@@ -79,11 +79,11 @@ public class CompilerBinaryBuilder
 
         System.out.println(result.statistics().summary());
 
-        // Collect elements from the local module only
+        // Collect elements from the local module only, excluding those already in core.pdb
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
         for (String path : localModule.elementPaths())
         {
-            if (!elementsByPath.containsKey(path))
+            if (!elementsByPath.containsKey(path) && !coreModule.hasElement(path))
             {
                 PackageableElement element = localModule.getElement(path);
                 if (element != null)

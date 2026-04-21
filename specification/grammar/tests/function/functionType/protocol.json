@@ -10,7 +10,7 @@
         "parametersValues" : [ {
           "_type" : "VariableExpression",
           "name" : "f",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 4,
@@ -26,7 +26,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 17,
             "endLine" : 4,
@@ -35,7 +35,7 @@
           },
           "value" : "test"
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 18,
           "endLine" : 4,
@@ -62,7 +62,7 @@
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
-                  "sourceInformation" : {
+                  "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 43,
                     "endLine" : 2,
@@ -99,7 +99,7 @@
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 55,
                   "endLine" : 2,
@@ -122,7 +122,7 @@
           }
         },
         "name" : "f",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 62,
           "endLine" : 2,
@@ -135,7 +135,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 72,
             "endLine" : 2,
@@ -151,7 +151,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
@@ -166,7 +166,7 @@
         "parametersValues" : [ {
           "_type" : "VariableExpression",
           "name" : "f",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 4,
             "endLine" : 9,
@@ -182,7 +182,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 17,
             "endLine" : 9,
@@ -199,7 +199,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 9,
@@ -208,7 +208,7 @@
           },
           "value" : 1
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 21,
           "endLine" : 9,
@@ -235,7 +235,7 @@
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "String",
-                  "sourceInformation" : {
+                  "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 45,
                     "endLine" : 7,
@@ -262,7 +262,7 @@
                 "type" : {
                   "_type" : "Type_Pointer",
                   "pointerValue" : "Integer",
-                  "sourceInformation" : {
+                  "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 56,
                     "endLine" : 7,
@@ -299,7 +299,7 @@
               "type" : {
                 "_type" : "Type_Pointer",
                 "pointerValue" : "Boolean",
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 68,
                   "endLine" : 7,
@@ -322,7 +322,7 @@
           }
         },
         "name" : "f",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 75,
           "endLine" : 7,
@@ -335,7 +335,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Boolean",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 85,
             "endLine" : 7,
@@ -351,7 +351,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 10,

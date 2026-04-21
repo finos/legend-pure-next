@@ -437,12 +437,20 @@ public class M3ProtocolGenerator
         }
     }
 
+    private static final java.util.Set<String> ANY_PROPERTY_NAMES = java.util.Set.of(
+            "sourceInformation", "classifierGenericType", "elementOverride");
+
     private void writeProperty(BufferedWriter w, Resource r) throws IOException
     {
         String name = getLocalName(r);
         w.write("\n:" + name + " a :Property ;\n");
 
         String nameValue = getNameValue(r);
+        // Prefix properties that conflict with Any's inherited properties
+        if (nameValue != null && ANY_PROPERTY_NAMES.contains(nameValue))
+        {
+            nameValue = "p_" + nameValue;
+        }
         if (nameValue != null)
         {
             w.write("    :name \"" + nameValue + "\" ;\n");

@@ -55,11 +55,11 @@ public final class AssociationHandler
     {
         if (grammar._properties().size() != 2)
         {
-            context.addError(new CompilationError("Association '" + _G_PackageableElement.fullPath(grammar) + "' must have exactly 2 properties, found " + grammar._properties().size(), SourceInformationCompiler.compile(grammar._sourceInformation(), model)));
+            context.addError(new CompilationError("Association '" + _G_PackageableElement.fullPath(grammar) + "' must have exactly 2 properties, found " + grammar._properties().size(), SourceInformationCompiler.compile(grammar._p_sourceInformation(), model)));
             return result;
         }
 
-        result._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+        result._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
 
         // Compile both properties without classifierGenericType first
         MutableList<Property> compiled = grammar._properties()

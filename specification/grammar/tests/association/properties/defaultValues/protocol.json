@@ -16,7 +16,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassA",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 5,
@@ -37,7 +37,7 @@
           }
         },
         "name" : "a",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 45,
           "endLine" : 5,
@@ -61,7 +61,7 @@
                 "value" : 2
               }
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 94,
               "endLine" : 6,
@@ -91,7 +91,7 @@
                     "value" : 1
                   }
                 },
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 71,
                   "endLine" : 6,
@@ -99,7 +99,7 @@
                   "startLine" : 6
                 }
               } ],
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 71,
                 "endLine" : 6,
@@ -129,7 +129,7 @@
                     "value" : 1
                   }
                 },
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 93,
                   "endLine" : 6,
@@ -137,7 +137,7 @@
                   "startLine" : 6
                 }
               } ],
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 93,
                 "endLine" : 6,
@@ -146,7 +146,7 @@
               }
             } ]
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 94,
             "endLine" : 6,
@@ -159,7 +159,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "protocol::support::AssociationClassB",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 6,
@@ -176,7 +176,7 @@
           }
         },
         "name" : "b",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 95,
           "endLine" : 6,
@@ -184,7 +184,7 @@
           "startLine" : 6
         }
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
@@ -198,7 +198,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 11,
@@ -212,7 +212,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 15,

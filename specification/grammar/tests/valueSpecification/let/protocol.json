@@ -16,7 +16,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 4,
@@ -33,7 +33,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 11,
             "endLine" : 4,
@@ -42,7 +42,7 @@
           },
           "value" : 1
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 4,
@@ -61,7 +61,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 5,
@@ -78,7 +78,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 5,
@@ -87,7 +87,7 @@
           },
           "value" : "hello"
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 5,
@@ -106,7 +106,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 6,
@@ -123,7 +123,7 @@
               "pointerValue" : "Boolean"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 17,
             "endLine" : 6,
@@ -132,7 +132,7 @@
           },
           "value" : true
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 17,
           "endLine" : 6,
@@ -151,7 +151,7 @@
               "pointerValue" : "String"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 7,
@@ -171,7 +171,7 @@
                 "pointerValue" : "Integer"
               }
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 16,
               "endLine" : 7,
@@ -188,7 +188,7 @@
                 "pointerValue" : "Integer"
               }
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 20,
               "endLine" : 7,
@@ -197,7 +197,7 @@
             },
             "value" : 3
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 20,
             "endLine" : 7,
@@ -205,7 +205,7 @@
             "startLine" : 7
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 7,
@@ -224,7 +224,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 40,
             "endLine" : 2,
@@ -240,7 +240,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 8,

@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.finos.legend.pure</groupId>
-    <artifactId>legend-pure-next-truffle</artifactId>
+    <artifactId>truffle</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Legend Pure - Next - Truffle</name>
+    <name>Truffle</name>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -18,7 +18,7 @@
     </properties>
 
     <modules>
-        <module>codegen</module>
-        <module>runtime</module>
+        <module>legend-pure-next-truffle-codegen</module>
+        <module>legend-pure-next-truffle-runtime</module>
     </modules>
 </project>

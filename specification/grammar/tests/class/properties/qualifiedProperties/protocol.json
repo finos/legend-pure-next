@@ -23,7 +23,7 @@
                 "pointerValue" : "String"
               }
             },
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 9,
               "endLine" : 6,
@@ -46,7 +46,7 @@
                     "pointerValue" : "String"
                   }
                 },
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 16,
                   "endLine" : 6,
@@ -57,7 +57,7 @@
               }, {
                 "_type" : "VariableExpression",
                 "name" : "param",
-                "sourceInformation" : {
+                "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 25,
                   "endLine" : 6,
@@ -65,7 +65,7 @@
                   "startLine" : 6
                 }
               } ],
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 35,
                 "endLine" : 6,
@@ -75,7 +75,7 @@
             }, {
               "_type" : "VariableExpression",
               "name" : "param2",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 35,
                 "endLine" : 6,
@@ -83,7 +83,7 @@
                 "startLine" : 6
               }
             } ],
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 35,
               "endLine" : 6,
@@ -91,7 +91,7 @@
               "startLine" : 6
             }
           } ],
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 35,
             "endLine" : 6,
@@ -101,7 +101,7 @@
         }, {
           "_type" : "VariableExpression",
           "name" : "x",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 6,
             "endLine" : 7,
@@ -114,7 +114,7 @@
           "type" : {
             "_type" : "Type_Pointer",
             "pointerValue" : "String",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 11,
               "endLine" : 8,
@@ -142,7 +142,7 @@
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 154,
                 "endLine" : 5,
@@ -163,7 +163,7 @@
             }
           },
           "name" : "param",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 157,
             "endLine" : 5,
@@ -177,7 +177,7 @@
             "type" : {
               "_type" : "Type_Pointer",
               "pointerValue" : "String",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 173,
                 "endLine" : 5,
@@ -198,7 +198,7 @@
             }
           },
           "name" : "param2",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 176,
             "endLine" : 5,
@@ -206,7 +206,7 @@
             "startLine" : 5
           }
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 15,
           "endLine" : 8,
@@ -217,7 +217,7 @@
           "_type" : "Stereotype_PointerImpl",
           "extraPointerValues" : [ {
             "_type" : "PointerValue",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 17,
               "endLine" : 5,
@@ -227,7 +227,7 @@
             "value" : "flag"
           } ],
           "pointerValue" : "AProfile",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 12,
             "endLine" : 5,
@@ -238,7 +238,7 @@
           "_type" : "Stereotype_PointerImpl",
           "extraPointerValues" : [ {
             "_type" : "PointerValue",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 54,
               "endLine" : 5,
@@ -248,7 +248,7 @@
             "value" : "newFlag"
           } ],
           "pointerValue" : "protocol::support::AProfile",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 46,
             "endLine" : 5,
@@ -262,7 +262,7 @@
             "_type" : "Tag_PointerImpl",
             "extraPointerValues" : [ {
               "_type" : "PointerValue",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 90,
                 "endLine" : 5,
@@ -272,7 +272,7 @@
               "value" : "tag1"
             } ],
             "pointerValue" : "protocol::support::AProfile",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 85,
               "endLine" : 5,
@@ -287,7 +287,7 @@
             "_type" : "Tag_PointerImpl",
             "extraPointerValues" : [ {
               "_type" : "PointerValue",
-              "sourceInformation" : {
+              "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 114,
                 "endLine" : 5,
@@ -297,7 +297,7 @@
               "value" : "tag2"
             } ],
             "pointerValue" : "AProfile",
-            "sourceInformation" : {
+            "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 109,
               "endLine" : 5,
@@ -308,7 +308,7 @@
           "value" : "ok"
         } ]
       } ],
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 9,
@@ -320,7 +320,7 @@
       "name" : "AProfile",
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 13,
@@ -330,7 +330,7 @@
         "value" : "flag"
       }, {
         "_type" : "Stereotype",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 29,
           "endLine" : 13,
@@ -341,7 +341,7 @@
       } ],
       "p_tags" : [ {
         "_type" : "Tag",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 13,
           "endLine" : 14,
@@ -351,7 +351,7 @@
         "value" : "tag1"
       }, {
         "_type" : "Tag",
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 14,
@@ -364,7 +364,7 @@
         "_type" : "Package_PointerImpl",
         "pointerValue" : "protocol::support"
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 15,

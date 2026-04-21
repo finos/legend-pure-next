@@ -125,7 +125,7 @@ public final class ClassHandler
                 ._classifierGenericType(
                         _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::Class"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGenericType)))
-                ._sourceInformation(SourceInformationCompiler.compile(grammar._sourceInformation(), model));
+                ._sourceInformation(SourceInformationCompiler.compile(grammar._p_sourceInformation(), model));
 
         // Compile type variables (e.g., Class Foo(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())
@@ -247,11 +247,6 @@ public final class ClassHandler
                             meta.pure.metamodel.function.property.Property superProp = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class.findProperty(superOwner, prop._name());
                             if (superProp != null)
                             {
-                                // Exempt inherited properties from Any (such as sourceInformation) which use protocol-level covariance
-                                if (superOwner == model.getElement("meta::pure::metamodel::type::Any"))
-                                {
-                                    continue;
-                                }
 
                                 GenericType receiverGT = cls._classifierGenericType() != null && _GenericType.typeArguments(cls._classifierGenericType()) != null && _GenericType.typeArguments(cls._classifierGenericType()).notEmpty()
                                         ? _GenericType.typeArguments(cls._classifierGenericType()).getFirst()

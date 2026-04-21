@@ -194,6 +194,11 @@ public class RdfFbsJavaGenerator
                 boolean isPointer = hasStereotype(prop.stereotypes, "pointer");
                 boolean isClassType = m3Model.classInfoMap().containsKey(prop.typeName) && !isPointer && !"Any".equals(prop.typeName);
 
+                if (isPointer)
+                {
+                    imports.add("org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef");
+                }
+
                 // For mainTaxonomy union types, import all subtype Defs and Wrappers
                 if (isMainTaxonomyType(prop.typeName))
                 {
@@ -398,10 +403,8 @@ public class RdfFbsJavaGenerator
                 sb.append("        if (vType == 6)\n");
                 sb.append("        {\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef pr = (org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef) fb.value(new org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef());\n");
-                sb.append("            if (pr == null) { return null; }\n");
-                sb.append("            String path = pr.path();\n");
-                sb.append("            if (path == null) { return null; }\n");
-                sb.append("            cached_value = resolver.getElement(path);\n");
+                sb.append("            if (pr == null || pr.pathLength() == 0) { return null; }\n");
+                sb.append("            cached_value = org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(pr, resolver);\n");
                 sb.append("            return cached_value;\n");
                 sb.append("        }\n");
                 sb.append("        if (vType == 1)\n");
@@ -621,12 +624,12 @@ public class RdfFbsJavaGenerator
             sb.append("            PointerRef ref = (PointerRef) fb.").append(accessor).append("(new PointerRef());\n");
             if (cacheField != null)
             {
-                sb.append("            ").append(cacheField).append(" = ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
+                sb.append("            ").append(cacheField).append(" = ref != null && ref.pathLength() > 0 ? (").append(javaType).append(") org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(ref, resolver) : null;\n");
                 sb.append("        return ").append(cacheField).append(";\n");
             }
             else
             {
-                sb.append("            return ref != null && ref.path() != null ? (").append(javaType).append(") resolver.getElement(ref.path()) : null;\n");
+                sb.append("            return ref != null && ref.pathLength() > 0 ? (").append(javaType).append(") org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(ref, resolver) : null;\n");
             }
             sb.append("        }\n");
             sb.append("        return null;\n");
@@ -642,123 +645,17 @@ public class RdfFbsJavaGenerator
             sb.append("        MutableList<").append(boxType(innerType)).append("> result = Lists.mutable.ofInitialCapacity(len);\n");
             sb.append("        for (int i = 0; i < len; i++)\n");
             sb.append("        {\n");
-            sb.append("            String path = fb.").append(fbField).append("(i);\n");
-
-            if ("Stereotype".equals(prop.typeName))
-            {
-                // Stereotypes use composite paths: "profilePath.stereotypeName"
-                sb.append("            if (path != null)\n");
-                sb.append("            {\n");
-                sb.append("                int dotIdx = path.lastIndexOf('.');\n");
-                sb.append("                if (dotIdx > 0)\n");
-                sb.append("                {\n");
-                sb.append("                    meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, dotIdx));\n");
-                sb.append("                    if (p != null)\n");
-                sb.append("                    {\n");
-                sb.append("                        String stName = path.substring(dotIdx + 1);\n");
-                sb.append("                        meta.pure.metamodel.extension.Stereotype st = p._p_stereotypes().detect(s -> stName.equals(s._value()));\n");
-                sb.append("                        if (st != null) { result.add(st); }\n");
-                sb.append("                    }\n");
-                sb.append("                }\n");
-                sb.append("            }\n");
-            }
-            else if ("Tag".equals(prop.typeName))
-            {
-                // Tags use composite paths: "profilePath#tagName"
-                sb.append("            if (path != null)\n");
-                sb.append("            {\n");
-                sb.append("                int hashIdx = path.lastIndexOf('#');\n");
-                sb.append("                if (hashIdx > 0)\n");
-                sb.append("                {\n");
-                sb.append("                    meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, hashIdx));\n");
-                sb.append("                    if (p != null)\n");
-                sb.append("                    {\n");
-                sb.append("                        String tName = path.substring(hashIdx + 1);\n");
-                sb.append("                        meta.pure.metamodel.extension.Tag t = p._p_tags().detect(s -> tName.equals(s._value()));\n");
-                sb.append("                        if (t != null) { result.add(t); }\n");
-                sb.append("                    }\n");
-                sb.append("                }\n");
-                sb.append("            }\n");
-            }
-            else
-            {
-                // Property pointers: "ownerPath.propertyName" — resolve through owner
-                sb.append("            if (path != null)\n");
-                sb.append("            {\n");
-                sb.append("                int dotIdx = path.lastIndexOf('.');\n");
-                sb.append("                if (dotIdx > 0 && path.indexOf(\"::\") < dotIdx)\n");
-                sb.append("                {\n");
-                sb.append("                    String ownerPath = path.substring(0, dotIdx);\n");
-                sb.append("                    String propName = path.substring(dotIdx + 1);\n");
-                sb.append("                    meta.pure.metamodel.PackageableElement owner = resolver.getElement(ownerPath);\n");
-                sb.append("                    if (owner instanceof meta.pure.metamodel.PropertyOwner po)\n");
-                sb.append("                    {\n");
-                sb.append("                        meta.pure.metamodel.function.property.AbstractProperty found = po._properties().detect(p -> propName.equals(p._name()));\n");
-                sb.append("                        if (found == null) { found = po._qualifiedProperties().detect(p -> propName.equals(p._name())); }\n");
-                sb.append("                        if (found != null) { result.add((").append(innerType).append(") found); }\n");
-                sb.append("                    }\n");
-                sb.append("                }\n");
-                sb.append("                else\n");
-                sb.append("                {\n");
-                sb.append("                    ").append(innerType).append(" resolved = (").append(innerType).append(") resolver.getElement(path);\n");
-                sb.append("                    if (resolved != null) { result.add(resolved); }\n");
-                sb.append("                }\n");
-                sb.append("            }\n");
-            }
+            sb.append("            PointerRef ref = fb.").append(fbField).append("(new PointerRef(), i);\n");
+            sb.append("            if (ref != null && ref.pathLength() > 0) { Object _resolved = org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(ref, resolver); if (_resolved != null) result.add((").append(innerType).append(") _resolved); }\n");
 
             sb.append("        }\n");
             sb.append("        return result;\n");
         }
         else
         {
-            sb.append("        String path = fb.").append(fbField).append("();\n");
-            sb.append("        if (path == null) { return null; }\n");
-            if ("Stereotype".equals(prop.typeName))
-            {
-                sb.append("        int dotIdx = path.lastIndexOf('.');\n");
-                sb.append("        if (dotIdx > 0)\n");
-                sb.append("        {\n");
-                sb.append("            meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, dotIdx));\n");
-                sb.append("            if (p != null)\n");
-                sb.append("            {\n");
-                sb.append("                String stName = path.substring(dotIdx + 1);\n");
-                sb.append("                meta.pure.metamodel.extension.Stereotype st = p._p_stereotypes().detect(s -> stName.equals(s._value()));\n");
-                sb.append("                if (st != null) { return st; }\n");
-                sb.append("            }\n");
-                sb.append("        }\n");
-            }
-            else if ("Tag".equals(prop.typeName))
-            {
-                sb.append("        int hashIdx = path.lastIndexOf('#');\n");
-                sb.append("        if (hashIdx > 0)\n");
-                sb.append("        {\n");
-                sb.append("            meta.pure.metamodel.extension.Profile p = (meta.pure.metamodel.extension.Profile) resolver.getElement(path.substring(0, hashIdx));\n");
-                sb.append("            if (p != null)\n");
-                sb.append("            {\n");
-                sb.append("                String tName = path.substring(hashIdx + 1);\n");
-                sb.append("                meta.pure.metamodel.extension.Tag t = p._p_tags().detect(s -> tName.equals(s._value()));\n");
-                sb.append("                if (t != null) { return t; }\n");
-                sb.append("            }\n");
-                sb.append("        }\n");
-            }
-            else
-            {
-                sb.append("        int dotIdx = path.lastIndexOf('.');\n");
-                sb.append("        if (dotIdx > 0 && path.indexOf(\"::\") < dotIdx)\n");
-                sb.append("        {\n");
-                sb.append("            // Property pointer: ownerPath.propertyName\n");
-                sb.append("            String ownerPath = path.substring(0, dotIdx);\n");
-                sb.append("            String propName = path.substring(dotIdx + 1);\n");
-                sb.append("            meta.pure.metamodel.PackageableElement owner = resolver.getElement(ownerPath);\n");
-                sb.append("            if (owner instanceof meta.pure.metamodel.SimplePropertyOwner spo)\n");
-                sb.append("            {\n");
-                sb.append("                meta.pure.metamodel.function.property.AbstractProperty found = spo._properties().detect(p -> propName.equals(p._name()));\n");
-                sb.append("                if (found == null && owner instanceof meta.pure.metamodel.PropertyOwner po) { found = po._qualifiedProperties().detect(p -> propName.equals(p._name())); }\n");
-                sb.append("                if (found != null) { return (").append(javaType).append(") found; }\n");
-                sb.append("            }\n");
-                sb.append("        }\n");
-            }
-            sb.append("        return (").append(javaType).append(") resolver.getElement(path);\n");
+            sb.append("        PointerRef ref = fb.").append(fbField).append("();\n");
+            sb.append("        if (ref == null || ref.pathLength() == 0) { return null; }\n");
+            sb.append("        return (").append(javaType).append(") org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(ref, resolver);\n");
         }
     }
 
@@ -908,10 +805,10 @@ public class RdfFbsJavaGenerator
         sb.append("            switch (uType)\n");
         sb.append("            {\n");
 
-        // PointerRef = 1 (resolve via MetadataAccess)
+        // PointerRef = 1 (resolve via typed PointerRef)
         sb.append("                case 1: { PointerRef ref = (PointerRef) fb.").append(fbField)
-          .append("(new PointerRef(), i); if (ref != null && ref.path() != null) result.add((").append(innerType)
-          .append(") resolver.getElement(ref.path())); break; }\n");
+          .append("(new PointerRef(), i); if (ref != null && ref.pathLength() > 0) { Object _resolved = org.finos.legend.pure.m3.pureLanguage.PointerRefResolver.resolve(ref, resolver); if (_resolved != null) result.add((").append(innerType)
+          .append(") _resolved); } break; }\n");
 
         // AncestorRef = 2 (cycle back-reference)
         sb.append("                case 2: { AncestorRef ar = (AncestorRef) fb.").append(fbField)
@@ -1099,10 +996,54 @@ public class RdfFbsJavaGenerator
         sb.append("    private static String pointerPath(Object obj)\n");
         sb.append("    {\n");
         sb.append("        if (obj instanceof PackageableElement pe) { return _PackageableElement.path(pe); }\n");
+        sb.append("        if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".qp:\" + qp._name(); }\n");
         sb.append("        if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner) { return _PackageableElement.path(owner) + \".\" + ap._name(); }\n");
         sb.append("        if (obj instanceof Stereotype s && s._profile() != null) { return _PackageableElement.path(s._profile()) + \".\" + s._value(); }\n");
         sb.append("        if (obj instanceof Tag t && t._profile() != null) { return _PackageableElement.path(t._profile()) + \"#\" + t._value(); }\n");
         sb.append("        return String.valueOf(obj);\n");
+        sb.append("    }\n\n");
+        // writePointerRef: typed pointer for union PointerRef fields
+        sb.append("    private int writePointerRef(Object obj)\n");
+        sb.append("    {\n");
+        sb.append("        byte kind;\n");
+        sb.append("        String[] segments;\n");
+        sb.append("        if (obj instanceof meta.pure.metamodel.function.property.QualifiedProperty qp && qp._owner() instanceof PackageableElement owner)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 2; // QualifiedProperty\n");
+        sb.append("            segments = new String[]{_PackageableElement.path(owner), qp._name()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof AbstractProperty ap && ap._owner() instanceof PackageableElement owner)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 1; // Property\n");
+        sb.append("            segments = new String[]{_PackageableElement.path(owner), ap._name()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof Stereotype s && s._profile() != null)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 3; // Stereotype\n");
+        sb.append("            segments = new String[]{_PackageableElement.path(s._profile()), s._value()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof Tag t && t._profile() != null)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 4; // Tag\n");
+        sb.append("            segments = new String[]{_PackageableElement.path(t._profile()), t._value()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof PackageableElement pe)\n");
+        sb.append("        {\n");
+        sb.append("            kind = 0; // Element\n");
+        sb.append("            segments = new String[]{_PackageableElement.path(pe)};\n");
+        sb.append("        }\n");
+        sb.append("        else\n");
+        sb.append("        {\n");
+        sb.append("            kind = 0;\n");
+        sb.append("            segments = new String[]{String.valueOf(obj)};\n");
+        sb.append("        }\n");
+        sb.append("        int[] segOffsets = new int[segments.length];\n");
+        sb.append("        for (int i = 0; i < segments.length; i++) { segOffsets[i] = builder.createString(segments[i]); }\n");
+        sb.append("        int pathVector = PointerRef.createPathVector(builder, segOffsets);\n");
+        sb.append("        PointerRef.startPointerRef(builder);\n");
+        sb.append("        PointerRef.addKind(builder, kind);\n");
+        sb.append("        PointerRef.addPath(builder, pathVector);\n");
+        sb.append("        return PointerRef.endPointerRef(builder);\n");
         sb.append("    }\n\n");
         sb.append("    private static String sourceInfo(Object obj)\n");
         sb.append("    {\n");
@@ -1187,12 +1128,9 @@ public class RdfFbsJavaGenerator
                         sb.append("            {\n");
                         sb.append("                var _item = ").append(fbField).append("List.get(i);\n");
                         // PackageableElement → PointerRef (index 1)
-                        sb.append("                if (_item instanceof meta.pure.metamodel.PackageableElement)\n");
+                        sb.append("                if (_item instanceof meta.pure.metamodel.PackageableElement || _item instanceof AbstractProperty || _item instanceof Stereotype || _item instanceof Tag)\n");
                         sb.append("                {\n");
-                        sb.append("                    int pathOff = builder.createString(pointerPath(_item));\n");
-                        sb.append("                    PointerRef.startPointerRef(builder);\n");
-                        sb.append("                    PointerRef.addPath(builder, pathOff);\n");
-                        sb.append("                    ").append(fbField).append("Offsets[i] = PointerRef.endPointerRef(builder);\n");
+                        sb.append("                    ").append(fbField).append("Offsets[i] = writePointerRef(_item);\n");
                         sb.append("                    ").append(fbField).append("Types[i] = 1;\n");
                         sb.append("                }\n");
                         MutableList<String> orderedNpsMany = orderMostSpecificFirst(npsMany);
@@ -1227,7 +1165,21 @@ public class RdfFbsJavaGenerator
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
-                    else if (isPointer || "String".equals(prop.typeName) || (!isClassType && !"Boolean".equals(prop.typeName) && !"Integer".equals(prop.typeName) && !"Float".equals(prop.typeName)))
+                    else if (isPointer)
+                    {
+                        // Pointer many-valued → [PointerRef]
+                        sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
+                        sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
+                        sb.append("        {\n");
+                        sb.append("            var ").append(fbField).append("List = obj._").append(prop.name).append("();\n");
+                        sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
+                        sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
+                        sb.append("            {\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = writePointerRef(").append(fbField).append("List.get(i));\n");
+                        sb.append("            }\n");
+                        sb.append("        }\n");
+                    }
+                    else if ("String".equals(prop.typeName) || (!isClassType && !"Boolean".equals(prop.typeName) && !"Integer".equals(prop.typeName) && !"Float".equals(prop.typeName)))
                     {
                         sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
                         sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
@@ -1236,7 +1188,7 @@ public class RdfFbsJavaGenerator
                         sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
                         sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
                         sb.append("            {\n");
-                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createString(pointerPath(").append(fbField).append("List.get(i)));\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createString(String.valueOf(").append(fbField).append("List.get(i)));\n");
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
@@ -1310,12 +1262,9 @@ public class RdfFbsJavaGenerator
                         sb.append("        if (obj._").append(prop.name).append("() != null)\n");
                         sb.append("        {\n");
                         // Named elements (PackageableElement) must always use PointerRef regardless of subtype
-                        sb.append("            if (obj._").append(prop.name).append("() instanceof meta.pure.metamodel.PackageableElement)\n");
+                        sb.append("            if (obj._").append(prop.name).append("() instanceof meta.pure.metamodel.PackageableElement || obj._").append(prop.name).append("() instanceof AbstractProperty || obj._").append(prop.name).append("() instanceof Stereotype || obj._").append(prop.name).append("() instanceof Tag)\n");
                         sb.append("            {\n");
-                        sb.append("                int pathOff = builder.createString(pointerPath(obj._").append(prop.name).append("()));\n");
-                        sb.append("                PointerRef.startPointerRef(builder);\n");
-                        sb.append("                PointerRef.addPath(builder, pathOff);\n");
-                        sb.append("                ").append(fbField).append("Offset = PointerRef.endPointerRef(builder);\n");
+                        sb.append("                ").append(fbField).append("Offset = writePointerRef(obj._").append(prop.name).append("());\n");
                         sb.append("                ").append(fbField).append("UnionType = 1;\n");
                         sb.append("            }\n");
                         // Cycle check: if already being written, write AncestorRef (index 2)
@@ -1335,10 +1284,7 @@ public class RdfFbsJavaGenerator
                         });
                         sb.append("            else\n");
                         sb.append("            {\n");
-                        sb.append("                int pathOff = builder.createString(pointerPath(obj._").append(prop.name).append("()));\n");
-                        sb.append("                PointerRef.startPointerRef(builder);\n");
-                        sb.append("                PointerRef.addPath(builder, pathOff);\n");
-                        sb.append("                ").append(fbField).append("Offset = PointerRef.endPointerRef(builder);\n");
+                        sb.append("                ").append(fbField).append("Offset = writePointerRef(obj._").append(prop.name).append("());\n");
                         sb.append("                ").append(fbField).append("UnionType = 1;\n");
                         sb.append("            }\n");
                         sb.append("        }\n");
@@ -1348,7 +1294,7 @@ public class RdfFbsJavaGenerator
                         sb.append("        int ").append(fbField).append("Offset = 0;\n");
                         if (isPointer)
                         {
-                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createString(pointerPath(obj._").append(prop.name).append("())); }\n");
+                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = writePointerRef(obj._").append(prop.name).append("()); }\n");
                         }
                         else if (isEnumType)
                         {
@@ -1413,11 +1359,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.PackageableElement pe)\n");
                 sb.append("        {\n");
-                sb.append("            // PackageableElement: write as PointerRef (type 6) so reader resolves without genericType\n");
-                sb.append("            int pathOff = builder.createString(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe));\n");
-                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.startPointerRef(builder);\n");
-                sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.addPath(builder, pathOff);\n");
-                sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.PointerRef.endPointerRef(builder);\n");
+                sb.append("            valueUnionOffset = writePointerRef(pe);\n");
                 sb.append("            valueUnionType = 6;\n");
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof meta.pure.metamodel.type.Enum ev)\n");

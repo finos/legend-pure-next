@@ -16,7 +16,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 5,
@@ -25,7 +25,7 @@
           },
           "value" : 1
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 8,
           "endLine" : 5,
@@ -44,7 +44,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 6,
@@ -61,7 +61,7 @@
               "pointerValue" : "Integer"
             }
           },
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 6,
@@ -70,7 +70,7 @@
           },
           "value" : 2
         } ],
-        "sourceInformation" : {
+        "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 11,
           "endLine" : 6,
@@ -89,7 +89,7 @@
         "type" : {
           "_type" : "Type_Pointer",
           "pointerValue" : "Any",
-          "sourceInformation" : {
+          "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 30,
             "endLine" : 3,
@@ -105,7 +105,7 @@
           "value" : 0
         }
       },
-      "sourceInformation" : {
+      "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 7,
