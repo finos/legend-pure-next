@@ -128,15 +128,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   ]),
                                 | $cls
                             );
-                            // Look up property on the owner type
-                            let prop = findProperty($resolvedOwner, $functionName);
-                            if($prop->isEmpty(),
+                            // Look up property or qualified property on the owner type
+                            let paramCount = $resolvedParams->size();
+                            let foundFunc = if($paramCount == 1,
+                                | // Simple property: just receiver
+                                  let prop = findProperty($resolvedOwner, $functionName);
+                                  if($prop->isEmpty(), | []->cast(@AbstractProperty<Any>), | $prop->toOne());,
+                                | // Qualified property: receiver + additional params — match by name and arity
+                                  let qps = $resolvedOwner->cast(@Class<Any>).qualifiedProperties->concatenate($resolvedOwner->cast(@Class<Any>).qualifiedPropertiesFromAssociations)
+                                      ->filter(qp | $qp.name == $functionName && $qp.parameters->size() == $paramCount);
+                                  if($qps->isEmpty(), | []->cast(@AbstractProperty<Any>), | $qps->at(0));
+                            );
+                            if($foundFunc->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(
                                       value = $dot,
                                       context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' in class \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx)
                                   ),
-                                | debug($context, | '  property found: ' + $prop->toOne().name->toOne());
-                                  let resolvedProp = $prop->toOne();
+                                | debug($context, | '  property found: ' + $foundFunc->toOne().name->toOne());
+                                  let resolvedProp = $foundFunc->toOne();
                                   let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
                                   let propGT = $propResolved.first;
                                   let propMul = $propResolved.second;
