@@ -27,8 +27,18 @@ function meta::pure::compiler::resolution::valueSpecification::collectionResolve
     }, ^meta::pure::compiler::CompilerListResult<ValueSpecification>(context = $context));
 
     // Compute common genericType from resolved elements (mirrors Java CollectionResolver)
+    // Pass a resolver that looks up types from the element map to get fully compiled versions with generalizations
+    let resolvedCtx = $result.context;
+    let typeResolver = {t:Type[1] |
+        if($t->instanceOf(PackageableElement),
+            | let path = $t->cast(@PackageableElement)->elementToPath();
+              let fromMap = $resolvedCtx.elementMap->get($path);
+              if($fromMap->isNotEmpty(), | $fromMap->toOne()->cast(@Type), | $t);,
+            | $t
+        );
+    };
     let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(CompilerNotSetGenericType))->map(gt | $gt->toOne());
-    let commonGT = asInferredGenericType(findCommonGenericType($elementTypes)->toOne());
+    let commonGT = asInferredGenericType(findCommonGenericType($elementTypes, $typeResolver)->toOne());
 
     ^meta::pure::compiler::CompilerResult<ValueSpecification>(
         value = ^$col(values = $result.values, genericType = $commonGT),

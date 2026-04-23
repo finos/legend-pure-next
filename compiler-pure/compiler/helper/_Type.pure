@@ -37,12 +37,18 @@ function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1
 
 function meta::pure::compiler::helper::type::linearize(t:Type[1]):Type[*]
 {
-    let parents = $t->directSupertypes();
+    linearize($t, {x:Type[1] | $x});
+}
+
+function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Function<{Type[1]->Type[1]}>[1]):Type[*]
+{
+    let resolved = $resolve->eval($t);
+    let parents = $resolved->directSupertypes();
     if($parents->isEmpty(),
-        | $t,
-        | let parentLins = $parents->map(p | $p->linearize()->list());
+        | $resolved,
+        | let parentLins = $parents->map(p | $p->linearize($resolve)->list());
           let listsToMerge = $parentLins->concatenate($parents->list());
-          $t->concatenate($listsToMerge->c3merge());
+          $resolved->concatenate($listsToMerge->c3merge());
     );
 }
 
@@ -77,6 +83,11 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*]):Type[
 
 function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1]):Type[0..1]
 {
+    findCommonType($types, $contravariant, {x:Type[1] | $x});
+}
+
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], resolve:Function<{Type[1]->Type[1]}>[1]):Type[0..1]
+{
     if([pair(| $types->isEmpty(), | []),
         pair(| $types->size() == 1, | $types->at(0))],
        | let first = $types->at(0);
@@ -87,10 +98,10 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
                    | // Nil is present
                      if([pair(| $contravariant, | Nil),
                          pair(| $nonNil->isEmpty(), | Nil)],
-                        | $nonNil->findCommonType(false)
+                        | $nonNil->findCommonType(false, $resolve)
                      ),
                    | // RelationType logic blocked here since it is Tier 3
-                     let linearizations = $types->map(t | $t->linearize()->list());
+                     let linearizations = $types->map(t | $t->linearize($resolve)->list());
                      let firstLin = $linearizations->at(0).values;
 
                      if($contravariant,

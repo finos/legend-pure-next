@@ -531,6 +531,11 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
     findCommonGenericType($genericTypes, false);
 }
 
+function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], resolve:Function<{Type[1]->Type[1]}>[1]):GenericType[0..1]
+{
+    findCommonGenericType($genericTypes, false, $resolve);
+}
+
 function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(resultType:GenericType[1], projectedValues:GenericTypeValue[*], withArgs:GenericTypeValue[*], common:Type[1], contravariant:Boolean[1]):GenericType[1]
 {
     if($withArgs->size() == $projectedValues->size() && $withArgs->isNotEmpty(),
@@ -558,6 +563,11 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType_Args(r
 
 
 function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1]):GenericType[0..1]
+{
+    findCommonGenericType($genericTypes, $contravariant, {x:Type[1] | $x});
+}
+
+function meta::pure::compiler::helper::genericType::findCommonGenericType(genericTypes:GenericType[*], contravariant:Boolean[1], resolve:Function<{Type[1]->Type[1]}>[1]):GenericType[0..1]
 {
     if($genericTypes->isEmpty(),
         | ^InferredGenericType(type = Nil),
@@ -587,7 +597,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                           | let common = findCommonFunctionType($rawFunctionTypes);
                             if($common->isNotEmpty(), | ^InferredGenericType(type = $common->toOne()), | []);,
                           |
-                      let commonType = findCommonType($rawTypes, $contravariant);
+                      let commonType = findCommonType($rawTypes, $contravariant, $resolve);
                       if($commonType->isEmpty(),
                           | [],
                           | let common = $commonType->toOne();
