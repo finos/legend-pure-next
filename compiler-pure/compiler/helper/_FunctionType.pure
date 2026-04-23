@@ -128,7 +128,7 @@ function meta::pure::compiler::helper::functionType::collectTypeParameterBinding
 
 function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(genericType:GenericType[1], ft:FunctionType[1], bindings:ParametersBinding[1]):GenericType[0..1]
 {
-    let newParams = $ft.parameters->map(p | 
+    let newParams = $ft.parameters->map(p |
         let rGT = makeAsConcreteAsPossible($p.genericType, $bindings);
         let rMul = makeAsConcreteAsPossible($p.multiplicity, $bindings);
         if($rGT == $p.genericType && $rMul == $p.multiplicity,
@@ -278,11 +278,11 @@ function meta::pure::compiler::helper::functionType::compareFunctionTypes(f1:Fun
               let typeCmp = if([
                   pair(| $t1IsTP && !$t2IsTP && $t2->isNotEmpty(), | if(meta::pure::compiler::helper::type::isTopType($t2->toOne()), | -1, | 1)),
                   pair(| !$t1IsTP && $t1->isNotEmpty() && $t2IsTP, | if(meta::pure::compiler::helper::type::isTopType($t1->toOne()), | 1, | -1)),
-                  pair(| !$t1IsTP && $t1->isNotEmpty() && !$t2IsTP && $t2->isNotEmpty() && $t1->toOne() != $t2->toOne(),
+                  pair(| !$t1IsTP && $t1->isNotEmpty() && !$t2IsTP && $t2->isNotEmpty() && !meta::pure::compiler::helper::type::typeEquals($t1->toOne(), $t2->toOne()),
                        | let lin1 = meta::pure::compiler::helper::type::linearize($t1->toOne());
                          let lin2 = meta::pure::compiler::helper::type::linearize($t2->toOne());
-                         if($lin1->contains($t2->toOne()), | -1,
-                             | if($lin2->contains($t1->toOne()), | 1,
+                         if($lin1->exists(l | meta::pure::compiler::helper::type::typeEquals($l, $t2->toOne())), | -1,
+                             | if($lin2->exists(l | meta::pure::compiler::helper::type::typeEquals($l, $t1->toOne())), | 1,
                                  | let n1 = if($t1->toOne()->instanceOf(PackageableElement), | $t1->toOne()->cast(@PackageableElement).name->toOne(), | '');
                                    let n2 = if($t2->toOne()->instanceOf(PackageableElement), | $t2->toOne()->cast(@PackageableElement).name->toOne(), | '');
                                    $n1->compare($n2);

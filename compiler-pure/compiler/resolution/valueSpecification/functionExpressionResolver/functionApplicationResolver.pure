@@ -511,9 +511,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let checkpoint = $context->errorCheckpoint();
     let result = resolveParameterValue($parameterValue, $paramGT, $paramMul, $bindings, $scope, $context);
 
-    if($result.resolved,
-        | debug($context, | '=> RESOLVED gt=' + if($result.newParam.genericType->isNotEmpty(), | printGenericType($result.newParam.genericType->toOne()), | '?'));
-          $result;,
+    // TypeHolder (GenericTypeAndMultiplicityHolder) is always considered resolved — compiler-managed, enriched later
+    // (mirrors Java isSuccessfullyProcessed line 683: parameterValue instanceof CompilerGenericTypeAndMultiplicityHolder)
+    let isResolved = $result.resolved || $parameterValue->instanceOf(GenericTypeAndMultiplicityHolder);
+
+    if($isResolved,
+        | if($parameterValue->instanceOf(GenericTypeAndMultiplicityHolder),
+              | debug($context, | '=> RESOLVED (TypeHolder = compiler-managed, enriched later)');,
+              | debug($context, | '=> RESOLVED gt=' + if($result.newParam.genericType->isNotEmpty(), | printGenericType($result.newParam.genericType->toOne()), | '?'));
+          );
+          ^ResolveOneParamResult(resolved = true, newParam = $result.newParam, bindings = $result.bindings, context = $result.context, savedErrors = []);,
         | // Not resolved: snapshot errors and rollback (Java lines 263-266)
           let savedErrors = $result.context->snapshotErrors($checkpoint);
           let rolledBackCtx = $result.context->rollbackErrors($checkpoint);
@@ -561,7 +568,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let paramRawType = $paramGT->match([gtv:GenericTypeValue[1] | $gtv.type, a:Any[1] | []]);
           let argRawType = $rawArgGT->match([gtv:GenericTypeValue[1] | $gtv.type, a:Any[1] | []]);
           let argGT = if($paramRawType->isNotEmpty() && !$paramRawType->toOne()->instanceOf(TypeParameter)
-                         && $argRawType->isNotEmpty() && $paramRawType->toOne() != $argRawType->toOne(),
+                         && $argRawType->isNotEmpty() && !typeEquals($paramRawType->toOne(), $argRawType->toOne()),
               | let resolved = resolveForTarget($rawArgGT, $paramRawType->toOne());
                 if($resolved->isEmpty(), | $rawArgGT, | $resolved->toOne());,
               | $rawArgGT
@@ -936,12 +943,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   pair(| $t1->isEmpty() && $t2->isNotEmpty(), | if(isTopType($t2->toOne()), | -1, | 1)),
                   pair(| $t1IsTp && !$t2IsTp, | if(isTopType($t2->toOne()), | -1, | 1)),
                   pair(| !$t1IsTp && $t2IsTp, | if(isTopType($t1->toOne()), | 1, | -1)),
-                  pair(| $t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && $t1->toOne() != $t2->toOne(),
+                  pair(| $t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && !typeEquals($t1->toOne(), $t2->toOne()),
                        | let lin1 = linearize($t1->toOne());
-                         if($lin1->contains($t2->toOne()),
+                         if($lin1->exists(l | typeEquals($l, $t2->toOne())),
                              | -1,
                              | let lin2 = linearize($t2->toOne());
-                               if($lin2->contains($t1->toOne()), | 1, | 0);
+                               if($lin2->exists(l | typeEquals($l, $t1->toOne())), | 1, | 0);
                          );)],
                  | 0
               );

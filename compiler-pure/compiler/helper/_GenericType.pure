@@ -498,7 +498,7 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
     if($src.type->isEmpty(),
         | [],
         | let sourceType = $src.type->toOne();
-          if($sourceType == $targetType,
+          if(typeEquals($sourceType, $targetType),
               | $src,
               | let initialBindings = newPlainParametersBinding();
                 let bindings = $sourceType->match([
@@ -513,7 +513,7 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
 
                 let validGens = $sourceType.generalizations->filter(g |
                     $g.general->match([
-                        gtv : GenericTypeValue[1] | $gtv.type->isNotEmpty() && $gtv.type->toOne()->linearize()->contains($targetType),
+                        gtv : GenericTypeValue[1] | $gtv.type->isNotEmpty() && $gtv.type->toOne()->linearize()->exists(l | typeEquals($l, $targetType)),
                         other : GenericType[1] | false
                     ])
                 );
@@ -603,7 +603,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                           | let common = $commonType->toOne();
                             let resultType = ^InferredGenericType(type = $common);
                             
-                            let projected = if($rawTypes->forAll(t | $t == $common),
+                            let projected = if($rawTypes->forAll(t | typeEquals($t, $common)),
                                 | $nonNullValues,
                                 | $genericTypes->map(gt | resolveForTarget($gt, $common))->filter(p | $p->isNotEmpty())->map(p | $p->toOne())
                             );
@@ -740,7 +740,7 @@ function meta::pure::compiler::helper::genericType::isCompatibleGenericTypeValue
           );
           if(!$rawCompatible,
               | false,
-              | let resolvedActual = if($declaredType != $actualType,
+              | let resolvedActual = if(!typeEquals($declaredType, $actualType),
                     | resolveForTarget($actual, $declaredType),
                     | $actual
                 );
@@ -826,7 +826,7 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
                     let actualType = $actualV.type;
                     if($expectedType->isEmpty() || $actualType->isEmpty(),
                         | $actual,
-                        | if($expectedType->toOne() != $actualType->toOne(),
+                        | if(!typeEquals($expectedType->toOne(), $actualType->toOne()),
                             | let resolvedExpected = resolveForTarget($expected, $actualType->toOne());
                               if($resolvedExpected->isNotEmpty(),
                                   | reconcileInferred($resolvedExpected->toOne(), $actual),

@@ -1,5 +1,19 @@
 import meta::pure::compiler::helper::type::*;
 
+// Compare two types by path — equivalent to Java's pointer equality since Java resolves to unique singletons.
+// In Pure, types loaded from PDB may be different instances for the same type, so we compare by path.
+function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):Boolean[1]
+{
+    if($t1 == $t2,
+        | true,
+        | $t1->match([
+              pa:PackageableElement[1] | $t2->match([pb:PackageableElement[1] | $pa->elementToPath() == $pb->elementToPath(), other:Any[1] | false]),
+              tp1:TypeParameter[1] | $t2->match([tp2:TypeParameter[1] | $tp1.name == $tp2.name, other:Any[1] | false]),
+              other:Any[1] | false
+          ])
+    );
+}
+
 function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
 {
     $t->match(
@@ -52,27 +66,27 @@ function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Functi
     );
 }
 
-function meta::pure::compiler::helper::type::c3merge(lists:List<Any>[*]):Type[*]
+function meta::pure::compiler::helper::type::c3merge(lists:List<Type>[*]):Type[*]
 {
     let nonEmpty = $lists->filter(l | $l.values->isNotEmpty());
     if($nonEmpty->isEmpty(),
         | [],
         | let heads = $nonEmpty->map(l | $l.values->at(0));
-          let goodHead = $heads->filter(h | $nonEmpty->filter(l | if($l.values->size() <= 1, | true, | $l.values->tail()->filter(v | $v == $h)->isEmpty()))->size() == $nonEmpty->size());
+          let goodHead = $heads->filter(h | $nonEmpty->filter(l | if($l.values->size() <= 1, | true, | $l.values->tail()->filter(v | typeEquals($v, $h))->isEmpty()))->size() == $nonEmpty->size());
           if($goodHead->isEmpty(),
               | [],
               | let c = $goodHead->at(0);
-                let reduced = $nonEmpty->map(l | if($l.values->at(0) == $c, | $l.values->tail()->list(), | $l));
-                $c->match([t : Type[1] | $t])->concatenate($reduced->c3merge());
+                let reduced = $nonEmpty->map(l | if(typeEquals($l.values->at(0), $c), | ^List<Type>(values = $l.values->tail()), | $l));
+                $c->concatenate($reduced->c3merge());
           );
     );
 }
 
 function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1]):Boolean[1]
 {
-    if([pair(| $sub == $super, | true),
+    if([pair(| typeEquals($sub, $super), | true),
         pair(| $sub->isBottomType() || $super->isTopType(), | true)],
-       | $sub->linearize()->filter(t | $t == $super)->isNotEmpty();
+       | $sub->linearize()->exists(t | typeEquals($t, $super));
     );
 }
 
@@ -91,7 +105,7 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
     if([pair(| $types->isEmpty(), | []),
         pair(| $types->size() == 1, | $types->at(0))],
        | let first = $types->at(0);
-         if($types->forAll(t | $t == $first),
+         if($types->forAll(t | typeEquals($t, $first)),
              | $first,
              | let nonNil = $types->filter(t | !$t->isBottomType());
                if($nonNil->size() < $types->size(),
@@ -107,7 +121,7 @@ function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contr
                      if($contravariant,
                          | Nil, // GLB of unrelated types defaults to Nil
                          | let commonList = $firstLin->filter(candidate |
-                               $linearizations->forAll(lin | $lin.values->contains($candidate))
+                               $linearizations->forAll(lin | $lin.values->exists(v | typeEquals($v, $candidate)))
                            );
                            if($commonList->isEmpty(),
                                | Any,
