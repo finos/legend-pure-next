@@ -813,3 +813,45 @@ function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1
         | ^UndefinedGenericType()
     );
 }
+
+// Mirrors Java _GenericType.reconcileInferred
+// Reconciles expected type with actual type, preserving inferred markers from actual.
+function meta::pure::compiler::helper::genericType::reconcileInferred(expected:GenericType[1], actual:GenericType[1]):GenericType[1]
+{
+    $expected->match([
+        expectedV:GenericTypeValue[1] |
+            $actual->match([
+                actualV:GenericTypeValue[1] |
+                    let expectedType = $expectedV.type;
+                    let actualType = $actualV.type;
+                    if($expectedType->isEmpty() || $actualType->isEmpty(),
+                        | $actual,
+                        | if($expectedType->toOne() != $actualType->toOne(),
+                            | let resolvedExpected = resolveForTarget($expected, $actualType->toOne());
+                              if($resolvedExpected->isNotEmpty(),
+                                  | reconcileInferred($resolvedExpected->toOne(), $actual),
+                                  | $actual
+                              );,
+                            | let newType = $actualType->toOne()->match([
+                                  ft:FunctionType[1] |
+                                      $expectedType->toOne()->match([
+                                          eft:FunctionType[1] | meta::pure::compiler::helper::functionType::reconcileInferredFT($eft, $ft),
+                                          a:Any[1] | $ft
+                                      ]),
+                                  a:Any[1] | $actualType->toOne()
+                              ]);
+                              let reconciledTypeArgs = if($expectedV.typeArguments->size() == $actualV.typeArguments->size(),
+                                  | $expectedV.typeArguments->zip($actualV.typeArguments)->map(p | reconcileInferred($p.first, $p.second)),
+                                  | $actualV.typeArguments
+                              );
+                              if($actual->instanceOf(Inferred),
+                                  | ^InferredGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments),
+                                  | ^UserDefinedGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments)
+                              );
+                          );
+                    );,
+                other:GenericType[1] | $actual
+            ]),
+        other:GenericType[1] | $actual
+    ]);
+}

@@ -244,6 +244,24 @@ function meta::pure::compiler::helper::functionType::isCompatibleFunctionType(de
     );
 }
 
+// Mirrors Java _FunctionType.reconcileInferred
+function meta::pure::compiler::helper::functionType::reconcileInferredFT(expected:FunctionType[1], actual:FunctionType[1]):FunctionType[1]
+{
+    let newParams = if($expected.parameters->size() == $actual.parameters->size(),
+        | $expected.parameters->zip($actual.parameters)->map(p |
+            let actualParam = $p.second;
+            let rGT = meta::pure::compiler::helper::genericType::reconcileInferred($p.first.genericType->toOne(), $actualParam.genericType->toOne());
+            ^$actualParam(genericType = $rGT);
+        ),
+        | $actual.parameters
+    );
+    let newReturnType = if($expected.returnType->isNotEmpty() && $actual.returnType->isNotEmpty(),
+        | meta::pure::compiler::helper::genericType::reconcileInferred($expected.returnType->toOne(), $actual.returnType->toOne()),
+        | $actual.returnType
+    );
+    ^$actual(parameters = $newParams, returnType = $newReturnType->toOne());
+}
+
 // Mirrors Java FunctionIndexEntry.compareFunctionTypes — compare two FunctionTypes by parameter specificity.
 // Returns -1 if f1 is more specific, 1 if f2 is more specific, 0 if equal.
 function meta::pure::compiler::helper::functionType::compareFunctionTypes(f1:FunctionType[1], f2:FunctionType[1]):Integer[1]
