@@ -346,7 +346,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // Build resolved type/multiplicity parameters from validated bindings
           // Filter by ownTypeParamNames — only include this function's own params (mirrors Java populateResolvedParameters lines 97-99)
           // Use findCommonGenericType for multi-valued bindings (mirrors Java populateResolvedParameters)
-          let resolvedTypeParams = $validatedBindings.typeBindings->keys()->filter(k | $ownTypeParamNames->contains($k))->map(k |
+          let resolvedTypeParams = $validatedBindings.typeBindings->keys()->map(k |
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
               let boundGT = if($vals->size() == 1,
                   | $vals->at(0),
@@ -358,7 +358,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   value = $boundGT
               );
           );
-          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->filter(k | $ownMulParamNames->contains($k))->map(k |
+          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->map(k |
               let vals = $validatedBindings.multiplicityBindings->get($k)->toOne().values;
               ^ResolvedMultiplicityParameter(
                   name = $k,
