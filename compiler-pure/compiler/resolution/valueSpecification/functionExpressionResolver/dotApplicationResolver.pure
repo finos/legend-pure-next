@@ -149,7 +149,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                             value = ^$dot(
                                                 func = $resolvedProp,
                                                 genericType = $propGT,
-                                                multiplicity = $propMul
+                                                multiplicity = $propMul,
+                                                parametersValues = $resolvedParams->cast(@ValueSpecification)
                                             ),
                                             context = $ctx1
                                         );,

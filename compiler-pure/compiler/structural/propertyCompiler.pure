@@ -127,9 +127,18 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
               let lambda = $prop.defaultValue->toOne()->cast(@LambdaFunction<Any>);
               if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $accCtx.errors->size(),
                   | ^$acc(values += $prop, context = $ctx1),
-                  | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  | // Build a 'this' variable of the owning class type and push it into scope
+                    let ownerGenericType = if($prop.owner->isEmpty(), | ^CompilerNotSetGenericType(),
+                        | let ownerCls = $prop.owner->toOne()->cast(@Class<Any>);
+                          if($ownerCls.classifierGenericType->isEmpty(), | ^UserDefinedGenericType(type = $ownerCls),
+                              | $ownerCls.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0)
+                          );
+                    );
+                    let thisVar = ^VariableExpression(name = 'this', genericType = $ownerGenericType, multiplicity = PureOne);
+                    let scope = $lambda.parameters->cast(@VariableExpression)->concatenate($thisVar);
+                    let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                         $lambda.expressionSequence,
-                        $lambda.parameters->cast(@VariableExpression),
+                        $scope,
                         $ctx1
                     );
                     let ctx2 = $resolveResult.context;

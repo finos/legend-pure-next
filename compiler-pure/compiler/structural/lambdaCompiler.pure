@@ -33,15 +33,14 @@ import meta::pure::compiler::*;
 function meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(lambda:LambdaFunction<Any>[1]):LambdaFunction<Any>[1]
 {
     let params = $lambda.parameters->cast(@VariableExpression);
-    let bodyReturnGT = if($lambda.expressionSequence->isEmpty(),
+    let lastExpr = if($lambda.expressionSequence->isEmpty(), | [], | $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1));
+    let bodyReturnGT = if($lastExpr->isEmpty() || $lastExpr->toOne().genericType->isEmpty(),
         | ^CompilerNotSetGenericType(),
-        | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
-          if($lastExpr.genericType->isEmpty(), | ^CompilerNotSetGenericType(), | asInferredGenericType($lastExpr.genericType->toOne()));
+        | $lastExpr->toOne().genericType->toOne()
     );
-    let bodyReturnMul = if($lambda.expressionSequence->isEmpty(),
+    let bodyReturnMul = if($lastExpr->isEmpty() || $lastExpr->toOne().multiplicity->isEmpty(),
         | PureOne,
-        | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
-          if($lastExpr.multiplicity->isEmpty(), | PureOne, | asInferredMultiplicity($lastExpr.multiplicity->toOne()));
+        | $lastExpr->toOne().multiplicity->toOne()
     );
     let ft = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
     let rebuiltFT = ^$ft(parameters = $params, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
