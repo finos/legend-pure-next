@@ -85,11 +85,6 @@ Class meta::pure::compiler::resolution::valueSpecification::functionExpressionRe
     firstErrors : String[*];
 }
 
-Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ValidationAccumulator
-{
-    failed : Boolean[1];
-}
-
 Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ResolveOneParamResult
 {
     resolved : Boolean[1];
@@ -334,19 +329,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let validatedParams = $validationResult.reconciledParams;
           let validatedBindings = $validationResult.bindings;
           if($validationCtx.errors->size() > $enrichedCtx.errors->size(),
-              | // Preserve func on validation failure (matches Java where func survives validation)
-                // so that reverseMatch can still be triggered by the parent fixpoint.
+              | // Preserve func on validation failure
                 ^CompilerResult<ValueSpecification>(
                     value = ^$fi(func = $entry, parametersValues = $validatedParams->cast(@ValueSpecification)),
                     context = $validationCtx);,
               |
-          // Build return type using bindings (now includes reconciled bindings)
+          // Build return type using validated bindings (includes reconciled inferred values)
           let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $validatedBindings);
           let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $validatedBindings);
           let inferredReturnGT = asInferredGenericType($returnGT);
           let inferredReturnMul = asInferredMultiplicity($returnMul);
 
-          // Build resolved type/multiplicity parameters from validated bindings (includes reconciled inferred values)
+          // Build resolved type/multiplicity parameters from validated bindings
           let resolvedTypeParams = $validatedBindings.typeBindings->keys()->map(k |
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
               ^ResolvedTypeParameter(
@@ -379,12 +373,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 // Mirrors Java validateParameterValuesToFunctionType
 // Mirrors Java validateParameterValuesToFunctionType — validates AND reconciles arg types.
-// Returns reconciled params, updated bindings, and context with any errors.
 Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ValidationResult
 {
     reconciledParams: ValueSpecification[*];
     bindings: ParametersBinding[1];
     context: CompilerContext[1];
+}
+
+Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ValidationAccumulator
+{
+    reconciledParams: ValueSpecification[*];
+    bindings: ParametersBinding[1];
+    failed: Boolean[1];
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::validateParameterTypes(
@@ -407,10 +407,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | ^$acc(reconciledParams += $argVS),
                   | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $acc.bindings);
                     let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $acc.bindings);
-                    // Reconcile: align expected with actual, then collect additional bindings from reconciled type
+                    // Reconcile expected with actual (mirrors Java reconcileInferred)
                     let reconciledArgGT = reconcileInferred($expectedGT, $argGT);
                     let reconciledVS = ^$argVS(genericType = $reconciledArgGT);
-                    // Collect bindings from reconciled type (mirrors Java reconcileInferred → resolveForTarget → collectTypeParameterBindings)
+                    // Collect additional bindings from reconciled type
                     let updatedBindings = collectTypeParameterBindings($expectedGT, $reconciledArgGT, $acc.bindings);
                     let typeOk = isCompatibleGenericType($expectedGT, $reconciledArgGT);
                     let mulOk = multiplicitySubsumes($expectedMul, $argMul);
@@ -420,20 +420,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     );
               );
         );
-    }, ^ValidationAccumulatorWithParams(failed = false, bindings = $bindings));
+    }, ^ValidationAccumulator(failed = false, bindings = $bindings));
     let finalCtx = if($result.failed,
         | let argDesc = $result.reconciledParams->map(vs | printGenericType($vs.genericType->toOne()) + printMultiplicity($vs.multiplicity->toOne()))->joinStrings(', ');
           ^$context(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx);,
         | $context
     );
     ^ValidationResult(reconciledParams = $result.reconciledParams, bindings = $result.bindings, context = $finalCtx);
-}
-
-Class meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::ValidationAccumulatorWithParams
-{
-    reconciledParams: ValueSpecification[*];
-    bindings: ParametersBinding[1];
-    failed: Boolean[1];
 }
 
 // ============================================================================
@@ -551,10 +544,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         && $processed.multiplicity->toOne()->isConcreteMultiplicity();
 
     if($isConcrete,
-        | // CONCRETE: collect bindings (Java line 427-440)
+        | // CONCRETE: collect bindings (Java lines 427-440)
           debug($context, | 'resolveArg: CONCRETE gt=' + printGenericType($processed.genericType->toOne()));
-          let argGT = $processed.genericType->toOne();
+          let rawArgGT = $processed.genericType->toOne();
           let argMul = $processed.multiplicity->toOne();
+          // When arg type differs from param type, resolve to param's raw type level (Java lines 435-438)
+          let paramRawType = $paramGT->match([gtv:GenericTypeValue[1] | $gtv.type, a:Any[1] | []]);
+          let argRawType = $rawArgGT->match([gtv:GenericTypeValue[1] | $gtv.type, a:Any[1] | []]);
+          let argGT = if($paramRawType->isNotEmpty() && !$paramRawType->toOne()->instanceOf(TypeParameter)
+                         && $argRawType->isNotEmpty() && $paramRawType->toOne() != $argRawType->toOne(),
+              | let resolved = resolveForTarget($rawArgGT, $paramRawType->toOne());
+                if($resolved->isEmpty(), | $rawArgGT, | $resolved->toOne());,
+              | $rawArgGT
+          );
           let b1 = collectTypeParameterBindings($paramGT, $argGT, $bindings);
           let b2 = collectMultiplicityParameterBindings($paramMul, $argMul, $b1);
           ^ResolveOneParamResult(resolved = true, newParam = $processed, bindings = $b2, context = $ctx1, savedErrors = []);,
