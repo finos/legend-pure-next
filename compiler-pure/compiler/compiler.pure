@@ -270,12 +270,17 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
                 );
           );
           // Resolve function constraints
-          let preCtx = meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints($fn.preConstraints, $validatedCtx);
-          let postCtx = meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints($fn.postConstraints, $preCtx);
+          let preResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($fn.preConstraints, $validatedCtx);
+          let postResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($fn.postConstraints, $preResult.context);
           // Store resolved function back into the map
-          let resolvedFn = ^$fn(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification));
+          let resolvedFn = ^$fn(
+              expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification),
+              preConstraints = $preResult.values,
+              postConstraints = $postResult.values
+          );
           let fnPath = $fn->elementToPath();
-          let updatedCtx = ^$postCtx(elementMap = $postCtx.elementMap->put($fnPath, $resolvedFn));
+          let finalCtx = $postResult.context;
+          let updatedCtx = ^$finalCtx(elementMap = $finalCtx.elementMap->put($fnPath, $resolvedFn));
           // Clear ownerTypeParams — matches Java clearEnclosingOwner
           ^$updatedCtx(debugState = $context.debugState, ownerTypeParams = []);
     );
