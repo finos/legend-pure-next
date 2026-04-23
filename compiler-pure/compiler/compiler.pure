@@ -228,7 +228,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
             assoc:Association[1] |
                 resolveAssociation($assoc, $ctx);,
             pt:PrimitiveType[1] |
-                meta::pure::compiler::structural::constraintCompiler::compileConstraints($pt, $ctx);,
+                resolvePrimitive($pt, $ctx);,
             a:Any[1] | $ctx
         ]);
     }, $pass2.context);
@@ -321,4 +321,13 @@ function meta::pure::compiler::resolveAssociation(assoc:Association[1], context:
           let qpCtx = $qpResult.context;
           ^$qpCtx(elementMap = $qpCtx.elementMap->put($assocPath, $resolvedAssoc));
     );
+}
+
+function meta::pure::compiler::resolvePrimitive(pt:PrimitiveType[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($pt.constraints, $context);
+    let resolvedPt = ^$pt(constraints = $constraintResult.values);
+    let ptPath = $pt->elementToPath();
+    let crCtx = $constraintResult.context;
+    ^$crCtx(elementMap = $crCtx.elementMap->put($ptPath, $resolvedPt));
 }
