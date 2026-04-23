@@ -221,7 +221,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         let typeParamName = $tp.name;
                         let enrichedTypeArgs = $enrichedGT->toOne()->genericTypeTypeArguments();
                         if($enrichedTypeArgs->isNotEmpty(),
-                            | collectTypeParameterBindings(^UserDefinedGenericType(type = ^TypeParameter(name = $typeParamName, contravariant = false)), $enrichedTypeArgs->at(0), $bindings);,
+                            | // Clear existing binding before adding enriched value (mirrors Java updateTypeHolderBinding line 378: bound.clear())
+                              let cleared = ^$bindings(typeBindings = $bindings.typeBindings->put($typeParamName, ^List<GenericType>(values = [])));
+                              collectTypeParameterBindings(^UserDefinedGenericType(type = ^TypeParameter(name = $typeParamName, contravariant = false)), $enrichedTypeArgs->at(0), $cleared);,
                             | $bindings
                         );,
                     a:Any[1] | $bindings
