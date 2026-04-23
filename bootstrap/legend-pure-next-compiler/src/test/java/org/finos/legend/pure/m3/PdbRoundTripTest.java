@@ -212,7 +212,7 @@ public class PdbRoundTripTest
                     }
                     String name = grammarElement._name();
                     String packagePath = grammarElement._package() != null
-                            ? grammarElement._package()._pointerValue()
+                            ? grammarElement._package()._value()
                             : null;
                     String fullPath = packagePath != null
                             ? packagePath + "::" + name

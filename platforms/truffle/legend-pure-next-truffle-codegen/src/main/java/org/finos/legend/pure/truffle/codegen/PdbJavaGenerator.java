@@ -32,6 +32,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Generi
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -178,6 +179,7 @@ public class PdbJavaGenerator
             {
                 collectEnum(path, enumElem);
             }
+            // Associations are handled via _propertiesFromAssociations() on each Class
         }
         System.out.println("  " + paths.size() + " paths, " + nullCount + " null elements");
         System.out.println("  Element types: " + typeCounts);
@@ -227,15 +229,7 @@ public class PdbJavaGenerator
                         meta.pure.metamodel.type.Type rawType = _GenericType.type(gt);
                         if (rawType instanceof meta.pure.metamodel.PackageableElement pe)
                         {
-                            String parentPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
-                            if (parentPath != null && !parentPath.isEmpty())
-                            {
-                                cr.generalizations.add(parentPath);
-                            }
-                            else if (pe._name() != null)
-                            {
-                                cr.generalizations.add(pe._name());
-                            }
+                            cr.generalizations.add(_PackageableElement.path(pe));
                         }
                     }
                 }
@@ -243,7 +237,7 @@ public class PdbJavaGenerator
         }
         catch (Exception e)
         {
-            System.out.println("  WARN generalization access failed for " + fullPath + ": " + e.getClass().getName() + ": " + e.getMessage());
+            throw new RuntimeException("Generalization access failed for " + fullPath, e);
         }
 
         // Check abstract
@@ -290,8 +284,7 @@ public class PdbJavaGenerator
                             meta.pure.metamodel.type.Type propType = _GenericType.type(propGt);
                             if (propType instanceof meta.pure.metamodel.PackageableElement pe && pe._name() != null)
                             {
-                                String propFullPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
-                                pr.typeName = (propFullPath != null && !propFullPath.isEmpty()) ? propFullPath : pe._name();
+                                pr.typeName = _PackageableElement.path(pe);
                             }
                             else
                             {
@@ -312,16 +305,16 @@ public class PdbJavaGenerator
 
                         cr.properties.add(pr);
                     }
-                    catch (Exception ignored)
+                    catch (Exception e)
                     {
-                        // Skip individual property if FlatBuffer data is corrupt
+                        throw new RuntimeException("Failed to read property on " + fullPath, e);
                     }
                 }
             }
         }
-        catch (Exception ignored)
+        catch (Exception e)
         {
-            // FlatBuffer property access can fail
+            throw new RuntimeException("Failed to access properties on " + fullPath, e);
         }
 
         // Association properties (e.g., firm on LA_Person from LA_Person_Firm association)
@@ -347,8 +340,7 @@ public class PdbJavaGenerator
                             meta.pure.metamodel.type.Type propType = _GenericType.type(propGt);
                             if (propType instanceof meta.pure.metamodel.PackageableElement pe && pe._name() != null)
                             {
-                                String propFullPath = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
-                                pr.typeName = (propFullPath != null && !propFullPath.isEmpty()) ? propFullPath : pe._name();
+                                pr.typeName = _PackageableElement.path(pe);
                             }
                             else
                             {
@@ -365,14 +357,16 @@ public class PdbJavaGenerator
 
                         cr.properties.add(pr);
                     }
-                    catch (Exception ignored)
+                    catch (Exception e)
                     {
+                        throw new RuntimeException("Failed to read association property on " + fullPath, e);
                     }
                 }
             }
         }
-        catch (Exception ignored)
+        catch (Exception e)
         {
+            throw new RuntimeException("Failed to access propertiesFromAssociations on " + fullPath, e);
         }
 
         classes.put(cr.fullPath, cr);
@@ -445,15 +439,19 @@ public class PdbJavaGenerator
                 findClass(g) != null || implExistsOnClasspath(resolveFullPath(g)));
         if (validExtends.isEmpty() && !"Any".equals(cr.name))
         {
-            // Use truffle-namespaced Any if available, otherwise bootstrap
+            if (!cr.generalizations.isEmpty())
+            {
+                // Generalizations were declared but couldn't resolve — hard fail
+                throw new RuntimeException("[CODEGEN] Generalizations declared but not resolved for " + cr.fullPath
+                        + " (raw: " + cr.generalizations
+                        + ", findClass: " + cr.generalizations.collect(g -> g + "=" + (findClass(g) != null))
+                        + ")");
+            }
+            // No generalizations declared — implicitly extends Any
             ClassRecord anyRecord = findClass("meta::pure::metamodel::type::Any");
             if (anyRecord != null)
             {
                 sb.append(" extends ").append(toJavaPackage(anyRecord.packagePath)).append(".Any");
-            }
-            else
-            {
-                sb.append(" extends meta.pure.metamodel.type.Any");
             }
         }
         else if (!validExtends.isEmpty())
@@ -540,7 +538,14 @@ public class PdbJavaGenerator
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(pr.name).append("()\n");
             sb.append("    {\n");
-            sb.append("        return this.").append(fieldName).append(";\n");
+            if (pr.isMany)
+            {
+                sb.append("        return this.").append(fieldName).append(" != null ? this.").append(fieldName).append(" : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+            }
+            else
+            {
+                sb.append("        return this.").append(fieldName).append(";\n");
+            }
             sb.append("    }\n\n");
 
             // Setter

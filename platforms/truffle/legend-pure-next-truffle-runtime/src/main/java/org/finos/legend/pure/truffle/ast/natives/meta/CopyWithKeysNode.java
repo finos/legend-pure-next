@@ -133,7 +133,7 @@ public final class CopyWithKeysNode extends PureNode
                         java.util.List<Object> merged = new java.util.ArrayList<>();
                         addToMergedList(merged, existing);
                         addToMergedList(merged, propValue);
-                        propValue = org.eclipse.collections.api.factory.Lists.mutable.withAll(merged);
+                        propValue = new org.finos.legend.pure.truffle.types.ObjectSequence(merged.toArray());
                     }
                     if (propName.contains("."))
                     {
@@ -144,7 +144,10 @@ public final class CopyWithKeysNode extends PureNode
                     {
                         eval.accessProperty(copy, propName, propValue);
                     }
-                    keyValues.add(java.util.Map.entry(propName, propValue));
+                    if (propValue != null)
+                    {
+                        keyValues.add(java.util.Map.entry(propName, propValue));
+                    }
                 }
             }
 
@@ -378,8 +381,9 @@ public final class CopyWithKeysNode extends PureNode
                     }
                 }
             }
-            catch (Exception ignored)
+            catch (Exception e)
             {
+                throw new RuntimeException("Failed during equality key property set in copy", e);
             }
         }
     }
@@ -415,7 +419,8 @@ public final class CopyWithKeysNode extends PureNode
             if (hasSelfRef && copy instanceof Type copyType)
             {
                 // Build a new CGT with updated self-references
-                var newCgt = _GenericType.buildUserDefinedGenericType(cgt._type(), null);
+                var _resolver = org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver();
+                var newCgt = _GenericType.buildUserDefinedGenericType(cgt._type(), _resolver);
                 org.finos.legend.pure.truffle.types.ObjectSequence newArgs =
                         new org.finos.legend.pure.truffle.types.ObjectSequence(
                                 java.util.Arrays.stream(typeArgs.toBoxedArray())
@@ -426,7 +431,7 @@ public final class CopyWithKeysNode extends PureNode
                                                 Type argType = _GenericType.type(argV);
                                                 if (argType != null && argType == original)
                                                 {
-                                                    return (Object) _GenericType.buildUserDefinedGenericType(copyType, null);
+                                                    return (Object) _GenericType.buildUserDefinedGenericType(copyType, _resolver);
                                                 }
                                             }
                                             return arg;
@@ -572,8 +577,9 @@ public final class CopyWithKeysNode extends PureNode
                     keyValues.add(java.util.Map.entry(propName, propValue));
                 }
             }
-            catch (Exception ignored)
+            catch (Exception e)
             {
+                throw new RuntimeException("Failed to read property for key values in copy", e);
             }
         }
     }

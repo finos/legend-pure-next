@@ -295,9 +295,9 @@ public class M3ProtocolSerializer
         serializeTaggedValues(sb, func._taggedValues());
 
         // Package and base function name
-        if (func._package() != null && func._package()._pointerValue() != null)
+        if (func._package() != null && func._package()._value() != null)
         {
-            String pkg = String.valueOf(func._package()._pointerValue());
+            String pkg = String.valueOf(func._package()._value());
             if (!pkg.isEmpty())
             {
                 sb.append(pkg);
@@ -385,9 +385,9 @@ public class M3ProtocolSerializer
         serializeTaggedValues(sb, func._taggedValues());
 
         // Package and base function name
-        if (func._package() != null && func._package()._pointerValue() != null)
+        if (func._package() != null && func._package()._value() != null)
         {
-            String pkg = String.valueOf(func._package()._pointerValue());
+            String pkg = String.valueOf(func._package()._value());
             if (!pkg.isEmpty())
             {
                 sb.append(pkg);
@@ -816,7 +816,7 @@ public class M3ProtocolSerializer
     {
         return switch (rawType)
         {
-            case Type_Pointer tp -> String.valueOf(tp._pointerValue());
+            case Type_Pointer tp -> String.valueOf(tp._value());
             case FunctionType ft -> "FunctionType";
             case RelationType rt -> "RelationType";
             default -> "Unknown";
@@ -1096,7 +1096,7 @@ public class M3ProtocolSerializer
         }
         else if (v instanceof Package_Pointer pp)
         {
-            sb.append(pp._pointerValue());
+            sb.append(pp._value());
         }
         else if (v instanceof String str)
         {
@@ -1404,7 +1404,7 @@ public class M3ProtocolSerializer
             {
                 throw new IllegalArgumentException("Expected GenericTypeValue for new expression, got: " + gt.getClass());
             }
-            String typeName = ((Type_Pointer) gtvNew._type())._pointerValue();
+            String typeName = ((Type_Pointer) gtvNew._type())._value();
             sb.append("^").append(typeName);
 
             // Serialize type arguments / multiplicity arguments if present
@@ -2063,7 +2063,7 @@ private void serializeQualifiedProperty(
             sb.append("<<");
             appendJoining(sb, stereotypes, ", ", (b, st) ->
             {
-                b.append(st._pointerValue());
+                b.append(st._value());
                 if (st._extraPointerValues() != null && !st._extraPointerValues().isEmpty())
                 {
                     b.append(".").append(st._extraPointerValues().getFirst()._value());
@@ -2082,7 +2082,7 @@ private void serializeQualifiedProperty(
             {
                 if (tv._tag() != null)
                 {
-                    b.append(tv._tag()._pointerValue());
+                    b.append(tv._tag()._value());
                     if (tv._tag()._extraPointerValues() != null && !tv._tag()._extraPointerValues().isEmpty())
                     {
                         b.append(".").append(tv._tag()._extraPointerValues().getFirst()._value());
@@ -2099,9 +2099,9 @@ private void serializeQualifiedProperty(
     private String getFullQualifiedName(final meta.pure.protocol.grammar.PackageableElement element)
     {
         StringBuilder sb = new StringBuilder();
-        if (element._package() != null && element._package()._pointerValue() != null)
+        if (element._package() != null && element._package()._value() != null)
         {
-            String packageName = String.valueOf(element._package()._pointerValue());
+            String packageName = String.valueOf(element._package()._value());
             if (!packageName.isEmpty())
             {
                 sb.append(packageName);
@@ -2177,7 +2177,7 @@ private void serializeQualifiedProperty(
         }
         if (mp instanceof Multiplicity_Pointer ptr)
         {
-            return multiplicityPathToNotation(ptr._pointerValue());
+            return multiplicityPathToNotation(ptr._value());
         }
         return "[1]";
     }

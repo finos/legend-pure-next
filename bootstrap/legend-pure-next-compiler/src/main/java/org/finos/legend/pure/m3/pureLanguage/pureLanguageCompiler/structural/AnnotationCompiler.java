@@ -49,7 +49,7 @@ public final class AnnotationCompiler
      */
     public static Stereotype resolveStereotype(Stereotype_Pointer pointer, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        String profilePath = pointer._pointerValue();
+        String profilePath = pointer._value();
         if (pointer._extraPointerValues() == null || pointer._extraPointerValues().isEmpty())
         {
             context.addError(new CompilationError("Invalid stereotype reference '" + profilePath + "'", SourceInformationCompiler.compile(pointer._p_sourceInformation(), model)));
@@ -84,7 +84,7 @@ public final class AnnotationCompiler
     public static TaggedValue resolveTaggedValue(meta.pure.protocol.grammar.extension.TaggedValue grammarTV, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         Tag_Pointer tagPointer = grammarTV._tag();
-        String profilePath = tagPointer._pointerValue();
+        String profilePath = tagPointer._value();
         if (tagPointer._extraPointerValues() == null || tagPointer._extraPointerValues().isEmpty())
         {
             context.addError(new CompilationError("Invalid tag reference '" + profilePath + "'", SourceInformationCompiler.compile(tagPointer._p_sourceInformation(), model)));

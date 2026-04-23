@@ -28,4 +28,14 @@ public interface TruffleMetadataAccess
     boolean hasElement(String path);
 
     Set<String> elementPaths();
+
+    /**
+     * Reverse lookup: return the PDB path for an element previously loaded
+     * via {@link #getElement(String)}.  Returns {@code null} if the element
+     * was not loaded through this resolver (e.g. runtime-created Impl).
+     */
+    default String pathOf(Object element)
+    {
+        return null;
+    }
 }

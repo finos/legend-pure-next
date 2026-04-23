@@ -94,3 +94,40 @@ function <<test.Test>> meta::pure::functions::tests::openVariables::testClosedVa
     let result = meta::pure::functions::tests::openVariables::applyWithShadow(['a', 'b'], x | $x + $suffix);
     assertEquals(['a_correct', 'b_correct'], $result);
 }
+
+
+function <<test.Test>> meta::pure::functions::tests::openVariables::testLetInsideIfBranch():Boolean[1]
+{
+    let x = 1;
+    let result = if($x == 0,
+        | 'zero',
+        | let y = $x + 1;
+          let z = $y + 2;
+          $z;
+    );
+    assertEquals(4, $result);
+}
+
+function <<test.Test>> meta::pure::functions::tests::openVariables::testNestedLetInFold():Boolean[1]
+{
+    let items = [1, 2, 3];
+    let result = $items->fold({e, acc |
+        let sum = $acc + $e;
+        let doubled = $sum * 2;
+        $doubled;
+    }, 0);
+    // fold: 0 -> (0+1)*2=2 -> (2+2)*2=8 -> (8+3)*2=22
+    assertEquals(22, $result);
+}
+
+function <<test.Test>> meta::pure::functions::tests::openVariables::testLetUsedAcrossNestedBlocks():Boolean[1]
+{
+    let items = [1, 2, 3];
+    let result = $items->fold({e, acc |
+        let prefix = 'item';
+        $e->match([
+            i:Integer[1] | $prefix + ':' + $acc + ':' + toString($i)
+        ]);
+    }, '');
+    assertEquals('item:item:item::1:2:3', $result);
+}

@@ -242,7 +242,7 @@ public class TopLevelCompiler
                     {
                         String name = grammarElement._name();
                         String packagePath = grammarElement._package() != null
-                                ? grammarElement._package()._pointerValue()
+                                ? grammarElement._package()._value()
                                 : null;
                         String fullPath = packagePath != null
                                 ? packagePath + "::" + name
@@ -380,7 +380,7 @@ public class TopLevelCompiler
             if (entry.grammarElement() != null)
             {
                 String packagePath = entry.grammarElement()._package() != null
-                        ? entry.grammarElement()._package()._pointerValue()
+                        ? entry.grammarElement()._package()._value()
                         : null;
                 Package parent = packagePath != null
                         ? getOrCreatePackage(root, packagePath, _GenericType.buildUserDefinedGenericType((Type)model.getElement("meta::pure::metamodel::Package"), model), model)

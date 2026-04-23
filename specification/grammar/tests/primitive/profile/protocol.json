@@ -11,9 +11,23 @@
           "expressionSequence" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "lessThan",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 24,
+              "endLine" : 5,
+              "startColumn" : 21,
+              "startLine" : 5
+            },
             "parametersValues" : [ {
               "_type" : "ArrowInvocation",
               "functionName" : "length",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 5,
+                "startColumn" : 10,
+                "startLine" : 5
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "this",
@@ -24,14 +38,7 @@
                   "startColumn" : 5,
                   "startLine" : 5
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 19,
-                "endLine" : 5,
-                "startColumn" : 10,
-                "startLine" : 5
-              }
+              } ]
             }, {
               "_type" : "VariableExpression",
               "name" : "x",
@@ -42,14 +49,7 @@
                 "startColumn" : 23,
                 "startLine" : 5
               }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 24,
-              "endLine" : 5,
-              "startColumn" : 21,
-              "startLine" : 5
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -73,14 +73,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 100,
               "endLine" : 3,
               "startColumn" : 95,
               "startLine" : 3
-            }
+            },
+            "value" : "String"
           }
         },
         "p_sourceInformation" : {
@@ -92,10 +92,6 @@
         }
       } ],
       "name" : "Varchar",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
@@ -103,8 +99,12 @@
         "startColumn" : 1,
         "startLine" : 3
       },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
       "stereotypes" : [ {
-        "_type" : "Stereotype_PointerImpl",
+        "_type" : "Stereotype_Pointer",
         "extraPointerValues" : [ {
           "_type" : "PointerValue",
           "p_sourceInformation" : {
@@ -116,19 +116,19 @@
           },
           "value" : "flag"
         } ],
-        "pointerValue" : "AProfile",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 20,
           "endLine" : 3,
           "startColumn" : 13,
           "startLine" : 3
-        }
+        },
+        "value" : "AProfile"
       } ],
       "taggedValues" : [ {
         "_type" : "TaggedValue",
         "tag" : {
-          "_type" : "Tag_PointerImpl",
+          "_type" : "Tag_Pointer",
           "extraPointerValues" : [ {
             "_type" : "PointerValue",
             "p_sourceInformation" : {
@@ -140,14 +140,14 @@
             },
             "value" : "tag1"
           } ],
-          "pointerValue" : "AProfile",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 37,
             "endLine" : 3,
             "startColumn" : 30,
             "startLine" : 3
-          }
+          },
+          "value" : "AProfile"
         },
         "value" : "yeah"
       } ],
@@ -157,14 +157,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Integer",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 81,
               "endLine" : 3,
               "startColumn" : 75,
               "startLine" : 3
-            }
+            },
+            "value" : "Integer"
           }
         },
         "multiplicity" : {
@@ -190,6 +190,13 @@
     }, {
       "_type" : "Profile",
       "name" : "AProfile",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 12,
+        "startColumn" : 1,
+        "startLine" : 8
+      },
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
         "p_sourceInformation" : {
@@ -213,15 +220,8 @@
         "value" : "tag1"
       } ],
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 12,
-        "startColumn" : 1,
-        "startLine" : 8
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     } ],
     "imports" : [ "protocol::support::*" ],

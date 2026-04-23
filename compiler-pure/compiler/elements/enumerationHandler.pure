@@ -27,7 +27,7 @@ import meta::pure::functions::lang::*;
 
 function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:CompilerContext[1]):CompilerResult<Enumeration<Any>>[1]
 {
-    let packagePath = $protocolEnum.package->toOne().pointerValue;
+    let packagePath = $protocolEnum.package->toOne().value;
     let enumName = $packagePath + '::' + $protocolEnum.name;
     let skeleton = $context->resolveElement($enumName)->toOne()->cast(@Enumeration<Any>);
 

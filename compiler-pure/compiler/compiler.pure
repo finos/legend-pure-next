@@ -58,7 +58,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
     let pass1Context = $allElements->fold({e, ctx |
         $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
-                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().pointerValue);
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
                 let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
                 let rootPkg = ^Package(name = 'Root');
                 let typeParams = $c.typeParameters->map(tp | ^TypeParameter(name = $tp.name, contravariant = false)->cast(@TypeParameter));
@@ -79,7 +79,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 );
                 ^$ctx(elementMap=$ctx.elementMap->put($className, $skeleton));,
             a:meta::pure::protocol::grammar::relationship::Association[1] |
-                let packagePath = $a.package->toOne().pointerValue;
+                let packagePath = $a.package->toOne().value;
                 let aName = $packagePath + '::' + $a.name;
                 let rootPkg = ^Package(name = 'Root');
                 let emptyAssoc = new(
@@ -98,7 +98,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 );
                 ^$ctx(elementMap=$ctx.elementMap->put($aName, $assocSkeleton));,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
-                let packagePath = $en.package->toOne().pointerValue;
+                let packagePath = $en.package->toOne().value;
                 let enName = $packagePath + '::' + $en.name;
                 let rootPkg = ^Package(name = 'Root');
                 let emptyEnum = new(
@@ -130,7 +130,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
             fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
                 $fd->compileUserDefinedFunctionPass1($ctx);,
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
-                let packagePath = $p.package->toOne().pointerValue;
+                let packagePath = $p.package->toOne().value;
                 let pName = $packagePath + '::' + $p.name;
                 let rootPkg = ^Package(name = 'Root');
                 let emptyPrim = new(
@@ -158,7 +158,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
             c:meta::pure::protocol::grammar::type::Class[1] |
                 let r = $c->compileClass($acc.context);
                 let compiledClass = $r.value->toOne()->cast(@PackageableElement);
-                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().pointerValue);
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
                 let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
                 let ctx = $r.context;
                 let newMap = $ctx.elementMap->put($className, $compiledClass);
@@ -167,7 +167,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
                 let r = $p->compilePrimitive($acc.context);
                 let compiledPrim = $r.value->toOne()->cast(@PackageableElement);
-                let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().pointerValue);
+                let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().value);
                 let primName = if($primPackagePath == '', | $p.name, | $primPackagePath + '::' + $p.name);
                 let primRCtx = $r.context;
                 let primNewMap = $primRCtx.elementMap->put($primName, $compiledPrim);
@@ -175,14 +175,26 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 ^$acc(values += $compiledPrim, context = $primCtx);,
             assoc:meta::pure::protocol::grammar::relationship::Association[1] |
                 let r = $assoc->compileAssociation($acc.context);
-                ^$acc(values += $r.value->cast(@PackageableElement), context = $r.context);,
+                let compiledAssoc = $r.value->toOne()->cast(@PackageableElement);
+                let assocPackagePath = if($assoc.package->isEmpty(), | '', | $assoc.package->toOne().value);
+                let assocName = if($assocPackagePath == '', | $assoc.name, | $assocPackagePath + '::' + $assoc.name);
+                let assocRCtx = $r.context;
+                let assocNewMap = $assocRCtx.elementMap->put($assocName, $compiledAssoc);
+                let assocCtx = ^$assocRCtx(elementMap = $assocNewMap);
+                ^$acc(values += $compiledAssoc, context = $assocCtx);,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
                 let r = $en->compileEnumeration($acc.context);
-                ^$acc(values += $r.value->cast(@PackageableElement), context = $r.context);,
+                let compiledEnum = $r.value->toOne()->cast(@PackageableElement);
+                let enumPackagePath = if($en.package->isEmpty(), | '', | $en.package->toOne().value);
+                let enumName = if($enumPackagePath == '', | $en.name, | $enumPackagePath + '::' + $en.name);
+                let enumRCtx = $r.context;
+                let enumNewMap = $enumRCtx.elementMap->put($enumName, $compiledEnum);
+                let enumCtx = ^$enumRCtx(elementMap = $enumNewMap);
+                ^$acc(values += $compiledEnum, context = $enumCtx);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
                 let r = $fn->compileNativeFunctionPass2($acc.context);
                 let compiledFn = $r.value->toOne()->cast(@PackageableElement);
-                let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+                let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
                 let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
                 let fnRCtx = $r.context;
                 let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
@@ -191,14 +203,14 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
             fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
                 let r = $fd->compileUserDefinedFunctionPass2($acc.context);
                 let compiledFd = $r.value->toOne()->cast(@PackageableElement);
-                let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().pointerValue);
+                let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().value);
                 let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
                 let fdRCtx = $r.context;
                 let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
                 let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
                 ^$acc(values += $compiledFd, context = $fdCtx);,
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
-                let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
+                let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
                 let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
                 ^$acc(values += $acc.context.elementMap->get($prName)->toOne()->cast(@PackageableElement));,
             a:meta::pure::protocol::grammar::PackageableElement[1] |
@@ -219,7 +231,9 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
         ]);
     }, $pass2.context);
 
-    ^CompilationResult(elements = $pass2.values, errors = $pass3Ctx.errors);
+    // Return elements from the map (source of truth after resolution)
+    let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
+    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors);
 }
 
 function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<Any>[1], context:CompilerContext[1]):CompilerContext[1]
@@ -256,8 +270,12 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
           // Resolve function constraints
           let preCtx = meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints($fn.preConstraints, $validatedCtx);
           let postCtx = meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints($fn.postConstraints, $preCtx);
+          // Store resolved function back into the map
+          let resolvedFn = ^$fn(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification));
+          let fnPath = $fn->elementToPath();
+          let updatedCtx = ^$postCtx(elementMap = $postCtx.elementMap->put($fnPath, $resolvedFn));
           // Clear ownerTypeParams — matches Java clearEnclosingOwner
-          ^$postCtx(debugState = $context.debugState, ownerTypeParams = []);
+          ^$updatedCtx(debugState = $context.debugState, ownerTypeParams = []);
     );
 }
 
@@ -265,11 +283,19 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
 {
     // Set ownerTypeParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
     let ctxWithOwner = ^$context(ownerTypeParams = $cls.typeParameters->cast(@TypeParameter));
-    let ctx1 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($cls.qualifiedProperties, $ctxWithOwner);
-    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($cls, $ctx1);
-    let ctx3 = meta::pure::compiler::structural::constraintCompiler::compileConstraints($cls, $ctx2);
-    let ctx4 = meta::pure::compiler::structural::propertyCompiler::compilePropertyDefaultValues($cls.properties, $ctx3);
-    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($cls, $ctx4);
+    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($cls.qualifiedProperties, $ctxWithOwner);
+    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($cls, $qpResult.context);
+    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls.constraints, $ctx2);
+    let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $constraintResult.context);
+    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($cls, $propResult.context);
+    // Store resolved class back into the map
+    let resolvedCls = ^$cls(
+        qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~)),
+        constraints = $constraintResult.values,
+        properties = $propResult.values->map(p | ^$p(owner = ~.~))
+    );
+    let clsPath = $cls->elementToPath();
+    let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
     // Clear ownerTypeParams — matches Java clearEnclosingOwner
-    ^$ctx5(ownerTypeParams = []);
+    ^$updatedCtx(ownerTypeParams = []);
 }

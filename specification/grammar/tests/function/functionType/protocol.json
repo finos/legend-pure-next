@@ -7,6 +7,13 @@
       "expressionSequence" : [ {
         "_type" : "ArrowInvocation",
         "functionName" : "eval",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 18,
+          "endLine" : 4,
+          "startColumn" : 5,
+          "startLine" : 4
+        },
         "parametersValues" : [ {
           "_type" : "VariableExpression",
           "name" : "f",
@@ -23,7 +30,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "String"
+              "value" : "String"
             }
           },
           "p_sourceInformation" : {
@@ -34,20 +41,20 @@
             "startLine" : 4
           },
           "value" : "test"
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 18,
-          "endLine" : 4,
-          "startColumn" : 5,
-          "startLine" : 4
-        }
+        } ]
       } ],
       "functionName" : "takesFunction",
       "name" : "takesFunction_UNKNOWN_1__Boolean_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "parameters" : [ {
         "_type" : "VariableExpression",
@@ -61,14 +68,14 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "String",
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 43,
                     "endLine" : 2,
                     "startColumn" : 38,
                     "startLine" : 2
-                  }
+                  },
+                  "value" : "String"
                 }
               },
               "multiplicity" : {
@@ -98,14 +105,14 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean",
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 55,
                   "endLine" : 2,
                   "startColumn" : 49,
                   "startLine" : 2
-                }
+                },
+                "value" : "Boolean"
               }
             }
           }
@@ -134,14 +141,14 @@
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Boolean",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 72,
             "endLine" : 2,
             "startColumn" : 66,
             "startLine" : 2
-          }
+          },
+          "value" : "Boolean"
         }
       },
       "returnMultiplicity" : {
@@ -150,19 +157,19 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 5,
-        "startColumn" : 1,
-        "startLine" : 2
       }
     }, {
       "_type" : "UserDefinedFunction",
       "expressionSequence" : [ {
         "_type" : "ArrowInvocation",
         "functionName" : "eval",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 21,
+          "endLine" : 9,
+          "startColumn" : 5,
+          "startLine" : 9
+        },
         "parametersValues" : [ {
           "_type" : "VariableExpression",
           "name" : "f",
@@ -179,7 +186,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "String"
+              "value" : "String"
             }
           },
           "p_sourceInformation" : {
@@ -196,7 +203,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -207,20 +214,20 @@
             "startLine" : 9
           },
           "value" : 1
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 21,
-          "endLine" : 9,
-          "startColumn" : 5,
-          "startLine" : 9
-        }
+        } ]
       } ],
       "functionName" : "takesBiFunction",
       "name" : "takesBiFunction_UNKNOWN_1__Boolean_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 7
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "parameters" : [ {
         "_type" : "VariableExpression",
@@ -234,14 +241,14 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "String",
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 45,
                     "endLine" : 7,
                     "startColumn" : 40,
                     "startLine" : 7
-                  }
+                  },
+                  "value" : "String"
                 }
               },
               "multiplicity" : {
@@ -261,14 +268,14 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer",
                   "p_sourceInformation" : {
                     "_type" : "SourceInformation",
                     "endColumn" : 56,
                     "endLine" : 7,
                     "startColumn" : 50,
                     "startLine" : 7
-                  }
+                  },
+                  "value" : "Integer"
                 }
               },
               "multiplicity" : {
@@ -298,14 +305,14 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean",
                 "p_sourceInformation" : {
                   "_type" : "SourceInformation",
                   "endColumn" : 68,
                   "endLine" : 7,
                   "startColumn" : 62,
                   "startLine" : 7
-                }
+                },
+                "value" : "Boolean"
               }
             }
           }
@@ -334,14 +341,14 @@
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Boolean",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 85,
             "endLine" : 7,
             "startColumn" : 79,
             "startLine" : 7
-          }
+          },
+          "value" : "Boolean"
         }
       },
       "returnMultiplicity" : {
@@ -350,13 +357,6 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 10,
-        "startColumn" : 1,
-        "startLine" : 7
       }
     } ],
     "parserName" : "Pure"

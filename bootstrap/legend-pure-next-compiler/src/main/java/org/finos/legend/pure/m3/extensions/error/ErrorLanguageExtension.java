@@ -51,7 +51,7 @@ public final class ErrorLanguageExtension implements LanguageExtension
         return List.of(
                 new Error()
                         ._value(content)
-                        ._package(new Package_PointerImpl()._pointerValue(sourceId)));
+                        ._package(new Package_PointerImpl()._value(sourceId)));
     }
 
     @Override

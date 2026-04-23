@@ -47,6 +47,6 @@ function meta::pure::compiler::structural::packageableFunctionCompiler::validate
 
 function meta::pure::compiler::structural::packageableFunctionCompiler::fullPath(fn:meta::pure::protocol::grammar::function::PackageableFunction[1]):String[1]
 {
-    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
     if($packagePath == '', | $fn.name, | $packagePath + '::' + $fn.name);
 }

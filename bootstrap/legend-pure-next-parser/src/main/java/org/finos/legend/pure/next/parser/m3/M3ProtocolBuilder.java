@@ -499,7 +499,7 @@ public class M3ProtocolBuilder
         {
             element._name(fullName.substring(lastSep + 2));
             element._package(new Package_PointerImpl()
-                    ._pointerValue(fullName.substring(0, lastSep)));
+                    ._value(fullName.substring(0, lastSep)));
         }
         else
         {
@@ -547,7 +547,7 @@ public class M3ProtocolBuilder
     private Stereotype_PointerImpl buildStereotypePointer(final M3Parser.StereotypeContext ctx)
     {
         return new Stereotype_PointerImpl()
-                ._pointerValue(ctx.qualifiedName().getText())
+                ._value(ctx.qualifiedName().getText())
                 ._extraPointerValues(Lists.mutable.with(
                         new PointerValueImpl()
                                 ._value(ctx.identifier().getText())
@@ -571,7 +571,7 @@ public class M3ProtocolBuilder
         });
         return new TaggedValueImpl()
                 ._tag(new Tag_PointerImpl()
-                        ._pointerValue(ctx.qualifiedName().getText())
+                        ._value(ctx.qualifiedName().getText())
                         ._extraPointerValues(Lists.mutable.with(
                                 new PointerValueImpl()
                                         ._value(ctx.identifier().getText())
@@ -1128,7 +1128,7 @@ public class M3ProtocolBuilder
                     : "Unknown";
 
             UserDefinedGenericTypeImpl genericType = new UserDefinedGenericTypeImpl()
-                    ._type(new Type_PointerImpl()._pointerValue(typeName));
+                    ._type(new Type_PointerImpl()._value(typeName));
 
             // Type arguments and multiplicity arguments: ^Type<Args|MultArgs>(...)
             if (ctx.typeArguments() != null)
@@ -1325,7 +1325,7 @@ public class M3ProtocolBuilder
     private UserDefinedGenericTypeImpl buildPrimitiveGenericType(final String typeName)
     {
         return new UserDefinedGenericTypeImpl()
-                ._type(new Type_PointerImpl()._pointerValue(typeName));
+                ._type(new Type_PointerImpl()._value(typeName));
     }
 
     private UserDefinedAdHocMultiplicityImpl buildPureOne()
@@ -1478,7 +1478,7 @@ public class M3ProtocolBuilder
         return new AtomicValueImpl()
                 ._p_sourceInformation(buildSourceInfo(ctx))
                 ._value(new Package_PointerImpl()
-                        ._pointerValue(name));
+                        ._value(name));
     }
 
     private FunctionInvocationImpl buildAllFunction(final M3Parser.InstanceReferenceContext ctx, final String functionName)
@@ -1499,7 +1499,7 @@ public class M3ProtocolBuilder
                                 new AtomicValueImpl()
                                         ._p_sourceInformation(buildSourceInfo(ctx))
                                         ._value(new Package_PointerImpl()
-                                                ._pointerValue(className)))
+                                                ._value(className)))
                         .withAll(additionalParams));
     }
 
@@ -2046,7 +2046,7 @@ public class M3ProtocolBuilder
             else
             {
                 gt._type(new Type_PointerImpl()
-                        ._pointerValue(typeName)
+                        ._value(typeName)
                         ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName())));
             }
 
@@ -2274,7 +2274,7 @@ public class M3ProtocolBuilder
     {
         PointerValueImpl pv = new PointerValueImpl()._value(valueName);
         return new Enum_PointerImpl()
-                ._pointerValue(enumerationName)
+                ._value(enumerationName)
                 ._extraPointerValues(org.eclipse.collections.impl.factory.Lists.mutable.with(pv));
     }
 

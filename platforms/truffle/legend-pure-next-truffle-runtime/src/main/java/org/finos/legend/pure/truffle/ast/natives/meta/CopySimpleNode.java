@@ -194,7 +194,8 @@ public final class CopySimpleNode extends PureNode
     private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy)
     {
         if (gtv == null) return null;
-        var result = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+        var result = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
+                null, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver());
         // Copy type — substitute self-references
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type = gtv._type();
         if (type == original && copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)

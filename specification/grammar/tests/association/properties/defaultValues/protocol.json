@@ -5,9 +5,16 @@
     "elements" : [ {
       "_type" : "Association",
       "name" : "AnAssociation4",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -15,14 +22,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::AssociationClassA",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 5,
               "startColumn" : 6,
               "startLine" : 5
-            }
+            },
+            "value" : "protocol::support::AssociationClassA"
           }
         },
         "multiplicity" : {
@@ -71,13 +78,20 @@
             "values" : [ {
               "_type" : "FunctionInvocation",
               "functionName" : "new",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 71,
+                "endLine" : 6,
+                "startColumn" : 52,
+                "startLine" : 6
+              },
               "parametersValues" : [ {
                 "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
                 "genericType" : {
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "pointerValue" : "AssociationClassB"
+                    "value" : "AssociationClassB"
                   }
                 },
                 "multiplicity" : {
@@ -98,24 +112,24 @@
                   "startColumn" : 52,
                   "startLine" : 6
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 71,
-                "endLine" : 6,
-                "startColumn" : 52,
-                "startLine" : 6
-              }
+              } ]
             }, {
               "_type" : "FunctionInvocation",
               "functionName" : "new",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 93,
+                "endLine" : 6,
+                "startColumn" : 74,
+                "startLine" : 6
+              },
               "parametersValues" : [ {
                 "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
                 "genericType" : {
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "pointerValue" : "AssociationClassB"
+                    "value" : "AssociationClassB"
                   }
                 },
                 "multiplicity" : {
@@ -136,14 +150,7 @@
                   "startColumn" : 74,
                   "startLine" : 6
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 93,
-                "endLine" : 6,
-                "startColumn" : 74,
-                "startLine" : 6
-              }
+              } ]
             } ]
           } ],
           "p_sourceInformation" : {
@@ -158,14 +165,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::AssociationClassB",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 6,
               "startColumn" : 6,
               "startLine" : 6
-            }
+            },
+            "value" : "protocol::support::AssociationClassB"
           }
         },
         "multiplicity" : {
@@ -183,41 +190,34 @@
           "startColumn" : 3,
           "startLine" : 6
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 7,
-        "startColumn" : 1,
-        "startLine" : 3
-      }
+      } ]
     }, {
       "_type" : "Class",
       "name" : "AssociationClassA",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 11,
         "startColumn" : 1,
         "startLine" : 9
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     }, {
       "_type" : "Class",
       "name" : "AssociationClassB",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 15,
         "startColumn" : 1,
         "startLine" : 13
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     } ],
     "imports" : [ "protocol::support::*" ],

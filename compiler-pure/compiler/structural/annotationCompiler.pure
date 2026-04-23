@@ -22,17 +22,17 @@ import meta::pure::compiler::*;
 function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
 {
     let ctx = $acc.context;
-    let profileOpt = $ctx->resolveElement($s.pointerValue);
+    let profileOpt = $ctx->resolveElement($s.value);
     if($profileOpt->isEmpty(),
         | let siCtx = formatSourceInfo($s->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $ctx);
-          let newCtx = ^$ctx(errors += 'The profile \'' + $s.pointerValue + '\' can\'t be found in ' + $ownerCtx + $siCtx);
+          let newCtx = ^$ctx(errors += 'The profile \'' + $s.value + '\' can\'t be found in ' + $ownerCtx + $siCtx);
           ^$acc(context = $newCtx);,
         | let profile = $profileOpt->toOne()->cast(@Profile);
           let stereotypeName = $s.extraPointerValues->at(0).value;
           let matched = $profile.p_stereotypes->filter(x | $x.value == $stereotypeName);
           if($matched->isEmpty(),
               | let siCtx = formatSourceInfo($s.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
-                let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.pointerValue + '\' in ' + $ownerCtx + $siCtx);
+                let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
               | ^$acc(values += $matched->toOne())
           );
@@ -58,7 +58,7 @@ function meta::pure::compiler::structural::annotationCompiler::compilePropertyTa
 function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
 {
     let ctx = $acc.context;
-    let profileOpt = $ctx->resolveElement($t.tag.pointerValue);
+    let profileOpt = $ctx->resolveElement($t.tag.value);
     if($profileOpt->isEmpty(),
         | $acc,
         | let profile = $profileOpt->toOne()->cast(@Profile);
@@ -66,7 +66,7 @@ function meta::pure::compiler::structural::annotationCompiler::compileTaggedValu
           let matched = $profile.p_tags->filter(x | $x.value == $tagName);
           if($matched->isEmpty(),
               | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
-                let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.pointerValue + '\' in ' + $ownerCtx + $siCtx);
+                let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.value + '\' in ' + $ownerCtx + $siCtx);
                 ^$acc(context = $newCtx);,
               | let tvGT = ^UserDefinedGenericType(type = TaggedValue);
                 let inst = new($tvGT)->cast(@TaggedValue);

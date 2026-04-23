@@ -16,8 +16,10 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 /**
@@ -50,9 +52,30 @@ public final class PutAllNode extends PureNode
         return doPutAll(map, other);
     }
 
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
+
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT()
+    {
+        if (mapCGT == null)
+        {
+            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
+            Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
+            if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+            {
+                mapCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
+            }
+            else
+            {
+                throw new RuntimeException("[PutAllNode] Cannot resolve Map type from PDB");
+            }
+        }
+        return mapCGT;
+    }
+
     private static Object doPutAll(Object map, Object other)
     {
         MapImpl newMap = new MapImpl();
+        newMap._classifierGenericType(getMapCGT());
         if (map instanceof MapImpl mi)
         {
             newMap.putAll(mi);

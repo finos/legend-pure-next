@@ -46,12 +46,22 @@ public final class CompiledGraphLanguageExtension implements LanguageExtension
     }
 
     @Override
+    public String resolveType(Object protocolObject)
+    {
+        if (protocolObject instanceof CompiledGraph)
+        {
+            return "meta::pure::compiler::test::CompiledGraph";
+        }
+        return null;
+    }
+
+    @Override
     public List<meta.pure.protocol.grammar.PackageableElement> parseSection(String content, String sourceId, int lineOffset)
     {
         return List.of(
                 new CompiledGraph()
                         ._value(content)
-                        ._package(new Package_PointerImpl()._pointerValue(sourceId)));
+                        ._package(new Package_PointerImpl()._value(sourceId)));
     }
 
     @Override

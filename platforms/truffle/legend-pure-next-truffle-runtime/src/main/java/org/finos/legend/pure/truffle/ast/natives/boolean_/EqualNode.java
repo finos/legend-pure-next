@@ -16,6 +16,7 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
@@ -191,11 +192,27 @@ public final class EqualNode extends PureNode
         {
             if (a.getClass() == b.getClass() || samePureType(anyA, anyB))
             {
-                return equalByProperties(anyA, anyB, resolver);
+                // Guard against circular property references (e.g. Property→owner→Property)
+                int depth = EQUALS_DEPTH.get();
+                if (depth > 10)
+                {
+                    return a == b;
+                }
+                EQUALS_DEPTH.set(depth + 1);
+                try
+                {
+                    return equalByProperties(anyA, anyB, resolver);
+                }
+                finally
+                {
+                    EQUALS_DEPTH.set(depth);
+                }
             }
         }
         return Objects.equals(a, b);
     }
+
+    private static final ThreadLocal<Integer> EQUALS_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     /**
      * Check if two Any instances represent the same Pure type.
@@ -258,35 +275,12 @@ public final class EqualNode extends PureNode
                         return false;
                     }
                 }
-                catch (Exception ignored)
+                catch (Exception e)
                 {
+                    throw new RuntimeException("Equality comparison failed for property '" + propName + "' on " + a.getClass().getSimpleName(), e);
                 }
             }
             return true;
-        }
-
-        // No equality keys found — compare all property getter methods
-        for (java.lang.reflect.Method m : a.getClass().getMethods())
-        {
-            String name = m.getName();
-            if (name.startsWith("_") && m.getParameterCount() == 0
-                    && !name.equals("_classifierGenericType") && !name.equals("_sourceInformation")
-                    && !name.equals("_elementOverride") && !name.equals("_copy")
-                    && !name.equals("_class") && !name.equals("_hashCode"))
-            {
-                try
-                {
-                    Object va = m.invoke(a);
-                    Object vb = m.invoke(b);
-                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb), resolver))
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception ignored)
-                {
-                }
-            }
         }
         return true;
     }
@@ -328,7 +322,15 @@ public final class EqualNode extends PureNode
         {
             return null;
         }
-        collectEqualityKeysRecursive(spo, keys, seen);
+        try
+        {
+            collectEqualityKeysRecursive(spo, keys, seen);
+        }
+        catch (StackOverflowError ignored)
+        {
+            // FlatBuffer wrapper cycles — fall back to no equality keys
+            return null;
+        }
         return keys;
     }
 
@@ -336,6 +338,21 @@ public final class EqualNode extends PureNode
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner owner,
             java.util.Set<String> keys, java.util.Set<String> seen)
     {
+        collectEqualityKeysRecursive(owner, keys, seen, 0);
+    }
+
+    private static void collectEqualityKeysRecursive(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner owner,
+            java.util.Set<String> keys, java.util.Set<String> seen,
+            int depth)
+    {
+        // Guard against cycles in the generalization hierarchy.
+        // FlatBuffer wrappers create new Java objects per access, so identity
+        // and name checks can fail. A depth limit is the robust safety net.
+        if (depth > 10)
+        {
+            return;
+        }
         if (owner._properties() != null)
         {
             for (Object p : owner._properties().toBoxedArray())
@@ -357,9 +374,9 @@ public final class EqualNode extends PureNode
                     {
                         if (st instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype ster
                                 && "Key".equals(ster._value())
-                                && ster._profile() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe
+                                && ster._profile() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ppe
                                 && "meta::pure::profiles::equality".equals(
-                                org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe)))
+                                org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ppe)))
                         {
                             keys.add(propName);
                             break;
@@ -377,7 +394,7 @@ public final class EqualNode extends PureNode
                     var superType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general());
                     if (superType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner superOwner)
                     {
-                        collectEqualityKeysRecursive(superOwner, keys, seen);
+                        collectEqualityKeysRecursive(superOwner, keys, seen, depth + 1);
                     }
                 }
             }

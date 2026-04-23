@@ -46,6 +46,13 @@ public final class FrameLetFunctionNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object value = valueNode.executeGeneric(frame);
+        // In Pure, null is not a valid value — it represents the empty set.
+        // Store EMPTY instead of null so FrameVariableReadNode can distinguish
+        // "set to empty" from "not yet set" (Java-null default).
+        if (value == null)
+        {
+            value = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        }
         frame.setObject(slot, value);
         return value;
     }

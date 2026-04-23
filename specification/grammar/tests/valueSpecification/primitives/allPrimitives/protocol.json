@@ -10,7 +10,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Integer"
+            "value" : "Integer"
           }
         },
         "p_sourceInformation" : {
@@ -27,7 +27,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Integer"
+            "value" : "Integer"
           }
         },
         "p_sourceInformation" : {
@@ -44,7 +44,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Float"
+            "value" : "Float"
           }
         },
         "p_sourceInformation" : {
@@ -61,7 +61,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Float"
+            "value" : "Float"
           }
         },
         "p_sourceInformation" : {
@@ -78,7 +78,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Decimal"
+            "value" : "Decimal"
           }
         },
         "p_sourceInformation" : {
@@ -95,7 +95,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Decimal"
+            "value" : "Decimal"
           }
         },
         "p_sourceInformation" : {
@@ -112,7 +112,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Boolean"
+            "value" : "Boolean"
           }
         },
         "p_sourceInformation" : {
@@ -129,7 +129,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String"
+            "value" : "String"
           }
         },
         "p_sourceInformation" : {
@@ -146,7 +146,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "StrictDate"
+            "value" : "StrictDate"
           }
         },
         "p_sourceInformation" : {
@@ -163,7 +163,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "DateTime"
+            "value" : "DateTime"
           }
         },
         "p_sourceInformation" : {
@@ -180,7 +180,7 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "StrictTime"
+            "value" : "StrictTime"
           }
         },
         "p_sourceInformation" : {
@@ -217,7 +217,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -234,7 +234,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -251,7 +251,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Float"
+              "value" : "Float"
             }
           },
           "p_sourceInformation" : {
@@ -268,7 +268,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Float"
+              "value" : "Float"
             }
           },
           "p_sourceInformation" : {
@@ -285,7 +285,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Decimal"
+              "value" : "Decimal"
             }
           },
           "p_sourceInformation" : {
@@ -302,7 +302,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Decimal"
+              "value" : "Decimal"
             }
           },
           "p_sourceInformation" : {
@@ -319,7 +319,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Boolean"
+              "value" : "Boolean"
             }
           },
           "p_sourceInformation" : {
@@ -336,7 +336,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "String"
+              "value" : "String"
             }
           },
           "p_sourceInformation" : {
@@ -353,7 +353,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "StrictDate"
+              "value" : "StrictDate"
             }
           },
           "p_sourceInformation" : {
@@ -370,7 +370,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "DateTime"
+              "value" : "DateTime"
             }
           },
           "p_sourceInformation" : {
@@ -387,7 +387,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "StrictTime"
+              "value" : "StrictTime"
             }
           },
           "p_sourceInformation" : {
@@ -402,22 +402,29 @@
       } ],
       "functionName" : "f",
       "name" : "f__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 16,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Any",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 2,
             "startColumn" : 25,
             "startLine" : 2
-          }
+          },
+          "value" : "Any"
         }
       },
       "returnMultiplicity" : {
@@ -426,13 +433,6 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 16,
-        "startColumn" : 1,
-        "startLine" : 2
       }
     } ],
     "parserName" : "Pure"

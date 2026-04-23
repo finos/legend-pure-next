@@ -66,7 +66,18 @@ public class CompilerNatives implements NativeExtension
 
             PureFile pureFile = parser.parse(sourceId, content);
 
-            ProtocolToDynamicInstance translator = new ProtocolToDynamicInstance(resolver);
+            ProtocolToDynamicInstance translator = new ProtocolToDynamicInstance(resolver, obj ->
+            {
+                for (ParserExtension ext : extensions)
+                {
+                    String resolved = ext.resolveType(obj);
+                    if (resolved != null)
+                    {
+                        return resolved;
+                    }
+                }
+                return ProtocolToDynamicInstance.defaultTypeResolutionStrategy(obj);
+            });
             Object resultValue = translator.convert(pureFile);
 
             return _E_ValueSpecification.wrap(resultValue, genericType, multiplicity, resolver);

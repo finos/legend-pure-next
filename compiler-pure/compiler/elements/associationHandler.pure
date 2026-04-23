@@ -25,7 +25,7 @@ import meta::pure::functions::lang::*;
 
 function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::pure::protocol::grammar::relationship::Association[1], context:CompilerContext[1]):CompilerResult<Association>[1]
 {
-    let packagePath = $protocolAssoc.package->toOne().pointerValue;
+    let packagePath = $protocolAssoc.package->toOne().value;
     let assocName = $packagePath + '::' + $protocolAssoc.name;
     let skeleton = $context->resolveElement($assocName)->toOne()->cast(@Association);
 

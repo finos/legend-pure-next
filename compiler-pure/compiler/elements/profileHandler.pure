@@ -20,7 +20,7 @@ import meta::pure::functions::lang::*;
 
 function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
-    let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().pointerValue);
+    let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
     let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
     let rootPkg = ^Package(name = 'Root');
     let emptyProfile = new(

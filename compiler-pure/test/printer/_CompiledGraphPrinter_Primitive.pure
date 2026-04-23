@@ -25,12 +25,11 @@ function meta::pure::compiler::test::printer::primitive::printPrimitive(p:Primit
 {
     [
         'primitive ', $p->fullPath(),
-        $p.classifierGenericType->printClassifierGenericType(),
+        $p->classifierGT(),
         $p.sourceInformation->printSourceInfo(),
-        if($p.typeVariables->isEmpty(), | '', 
-            | [ '\n', $p.typeVariables->cast(@VariableExpression)->map(tv2 |
-                [ '  typeVariable ', $tv2.name->toOne(), ' :', $tv2.genericType->toOne()->printType(), $tv2.multiplicity->toOne()->printMul() ]->joinStrings('');
-              )->joinStrings('\n') ]->joinStrings('')
-        )
+        '\n',
+        $p->printAnnotations('  '),
+        $p->printTypeVariables('  '),
+        $p->printConstraints('  ')
     ]->joinStrings('');
 }

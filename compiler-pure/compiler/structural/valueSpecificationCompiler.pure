@@ -166,10 +166,10 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   );
             );,
         pp:meta::pure::protocol::grammar::Package_Pointer[1] |
-            let resolved = $ctx->resolveElement($pp.pointerValue);
+            let resolved = $ctx->resolveElement($pp.value);
             if($resolved->isEmpty(),
                 | let siCtx = if($vs.p_sourceInformation->isNotEmpty(), | formatSourceInfo($vs.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
-                  ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.pointerValue + '\' can\'t be found' + $siCtx));,
+                  ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.value + '\' can\'t be found' + $siCtx));,
                 | let element = $resolved->toOne();
                   ^ValueCompileResult(
                       values = [^AtomicValue(
@@ -271,7 +271,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAr
         | let paramValues = $paramsCompilation.values;
           let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
           ^ValueCompileResult(
-              values = [^FunctionInvocation(
+              values = [^ArrowInvocation(
                   functionName = $arrow.functionName,
                   parametersValues = $paramValues->cast(@ValueSpecification),
                   genericType = ^CompilerNotSetGenericType(),

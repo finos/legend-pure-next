@@ -23,7 +23,7 @@ import meta::pure::metamodel::extension::*;
 
 function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta::pure::protocol::grammar::type::PrimitiveType[1], context:CompilerContext[1]):CompilerResult<PrimitiveType>[1]
 {
-    let packagePath = if($protocolPrimitive.package->isEmpty(), | '', | $protocolPrimitive.package->toOne().pointerValue);
+    let packagePath = if($protocolPrimitive.package->isEmpty(), | '', | $protocolPrimitive.package->toOne().value);
     let primitiveName = if($packagePath == '', | $protocolPrimitive.name, | $packagePath + '::' + $protocolPrimitive.name);
     let skeleton = $context->resolveElement($primitiveName)->toOne()->cast(@PrimitiveType);
     let ownerCtx = 'primitive type \'' + $primitiveName + '\'';
@@ -33,7 +33,7 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
 
     let typeVariables = if($protocolPrimitive.typeVariables->isEmpty(), | [],
         | $protocolPrimitive.typeVariables->map(tv |
-            let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).pointerValue;
+            let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
             let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^VariableExpression(
                 name = $tv.name,

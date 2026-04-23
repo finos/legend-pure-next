@@ -7,6 +7,13 @@
       "expressionSequence" : [ {
         "_type" : "DotApplication",
         "functionName" : "A",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 5,
+          "startColumn" : 9,
+          "startLine" : 5
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "p_sourceInformation" : {
@@ -17,19 +24,19 @@
             "startLine" : 5
           },
           "value" : {
-            "pointerValue" : "myEnum"
+            "value" : "myEnum"
           }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 10,
-          "endLine" : 5,
-          "startColumn" : 9,
-          "startLine" : 5
-        }
+        } ]
       }, {
         "_type" : "DotApplication",
         "functionName" : "B",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 6,
+          "startColumn" : 9,
+          "startLine" : 6
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "p_sourceInformation" : {
@@ -40,16 +47,9 @@
             "startLine" : 6
           },
           "value" : {
-            "pointerValue" : "myEnum"
+            "value" : "myEnum"
           }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 10,
-          "endLine" : 6,
-          "startColumn" : 9,
-          "startLine" : 6
-        }
+        } ]
       }, {
         "_type" : "Collection",
         "multiplicity" : {
@@ -73,6 +73,13 @@
         "values" : [ {
           "_type" : "DotApplication",
           "functionName" : "A",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 11,
+            "endLine" : 7,
+            "startColumn" : 10,
+            "startLine" : 7
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "p_sourceInformation" : {
@@ -83,19 +90,19 @@
               "startLine" : 7
             },
             "value" : {
-              "pointerValue" : "myEnum"
+              "value" : "myEnum"
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 11,
-            "endLine" : 7,
-            "startColumn" : 10,
-            "startLine" : 7
-          }
+          } ]
         }, {
           "_type" : "DotApplication",
           "functionName" : "B",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 21,
+            "endLine" : 7,
+            "startColumn" : 20,
+            "startLine" : 7
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "p_sourceInformation" : {
@@ -106,36 +113,36 @@
               "startLine" : 7
             },
             "value" : {
-              "pointerValue" : "myEnum"
+              "value" : "myEnum"
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 21,
-            "endLine" : 7,
-            "startColumn" : 20,
-            "startLine" : 7
-          }
+          } ]
         } ]
       } ],
       "functionName" : "f",
       "name" : "f__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Any",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 3,
             "startColumn" : 25,
             "startLine" : 3
-          }
+          },
+          "value" : "Any"
         }
       },
       "returnMultiplicity" : {
@@ -144,20 +151,20 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 8,
-        "startColumn" : 1,
-        "startLine" : 3
       }
     }, {
       "_type" : "Enumeration",
       "name" : "myEnum",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 10
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -179,14 +186,7 @@
           "startColumn" : 3,
           "startLine" : 13
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 14,
-        "startColumn" : 1,
-        "startLine" : 10
-      }
+      } ]
     } ],
     "imports" : [ "protocol::support::*" ],
     "parserName" : "Pure"

@@ -16,13 +16,17 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.StandaloneEvaluator;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.runtime.helper._GenericType;
+import org.finos.legend.pure.truffle.runtime.helper._Type;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -76,6 +80,13 @@ public final class MatchNode extends PureNode
         for (int i = 0; i < fnCount; i++)
         {
             Object mfRaw = CollectionHelper.at(matchFns, i);
+            // Unwrap AtomicValue wrapper — FlatBuffer-based collections may
+            // deliver match lambdas still wrapped in their VS envelope.
+            if (mfRaw instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
+                    && av._value() != null)
+            {
+                mfRaw = av._value();
+            }
             // Extract the FunctionDefinition for type matching, but keep the
             // original (possibly RawClosure) for invocation so captured open
             // variables are preserved.
@@ -90,8 +101,9 @@ public final class MatchNode extends PureNode
             }
             else
             {
-                continue;
+                throw new RuntimeException("Not possible");
             }
+
             if (!matchesBranch(fd, valueType, valueCount, resolver))
             {
                 continue;
@@ -112,7 +124,11 @@ public final class MatchNode extends PureNode
             Object matchResult = matchCallNode.callWithArgs(mfRaw, args);
             return matchResult;
         }
-        throw new RuntimeException("No match function matched the value: " + value);
+        String vtPath = (valueType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe) : "n/a";
+        Object cgt = (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any) ? any._classifierGenericType() : null;
+        throw new RuntimeException("No match function matched the value: " + value
+                + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getSimpleName()) + ", fnCount=" + fnCount + "]");
     }
 
     private static int getRawValueCount(Object value)
@@ -125,7 +141,7 @@ public final class MatchNode extends PureNode
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object value,
-                                                                  org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+                                                                                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
@@ -153,8 +169,25 @@ public final class MatchNode extends PureNode
             }
             return org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
         }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
         {
+            if (any._classifierGenericType() == null)
+            {
+                String detail = value.getClass().getName();
+                if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+                {
+                    var t = gtv._type();
+                    detail += " _type=" + (t != null ? org.finos.legend.pure.truffle.runtime.helper._Type.print(t, resolver) : "null");
+                }
+                if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+                {
+                    detail += " _name=" + pe._name();
+                    detail += " pathOf=" + resolver.pathOf(value);
+                }
+                detail += " isFBW=" + value.getClass().getSimpleName().contains("FlatBuffer");
+                detail += " id=" + System.identityHashCode(value);
+                throw new RuntimeException("No classifierGenericType on: " + detail);
+            }
             return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(any._classifierGenericType());
         }
         if (value instanceof Long)
@@ -225,7 +258,7 @@ public final class MatchNode extends PureNode
         Object paramObj = fd._parameters().getBoxed(0);
         if (!(paramObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression param))
         {
-            return true;
+            throw new RuntimeException("Error");
         }
 
         // For null/empty values (count=0), skip type check — Nil is compatible with everything.
@@ -241,21 +274,10 @@ public final class MatchNode extends PureNode
 
         if (param._genericType() != null)
         {
-            try
+            Type paramType = _GenericType.type(param._genericType());
+            if (paramType != null && valueType != null && !_Type.subtypeOf(valueType, paramType, resolver))
             {
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type paramType =
-                        org.finos.legend.pure.truffle.runtime.helper._GenericType.type(param._genericType());
-                if (paramType != null && valueType != null
-                        && !org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(valueType, paramType, resolver))
-                {
-                    return false;
-                }
-            }
-            catch (NullPointerException ignored)
-            {
-                // GenericType may have null type in FlatBuffer wrappers.
-                // When type information is unavailable, accept the branch
-                // and let the runtime decide.
+                return false;
             }
         }
 

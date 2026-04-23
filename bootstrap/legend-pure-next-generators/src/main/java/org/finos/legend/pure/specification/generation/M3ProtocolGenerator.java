@@ -1227,21 +1227,12 @@ public class M3ProtocolGenerator
             model.add(pointerType, packageProp, origPkgStmt.getObject().asResource());
         }
 
-        // Add generalization: Type_Pointer -> Type_Protocol, Any
+        // Add generalization: Type_Pointer -> Type_Protocol, PointerValue
         addGeneralization(pointerType, protocolType);
-        addGeneralization(pointerType, m3Any);
+        ensurePointerValueClass();
+        addGeneralization(pointerType, pointerValueClass);
 
-        // Create "pointerValue" property on Type_Pointer
-        String valuePropId = pointerTypeName + "_pointerValue";
-        Resource valuePropRes = model.createResource(M3_NS + valuePropId);
-        model.add(valuePropRes, rdfType, m3Property);
-        model.add(valuePropRes, nameProp, "pointerValue");
-        model.add(valuePropRes, ownerProp, pointerType);
-        model.add(valuePropRes, multiplicityProp, m3PureOne);
-
-        Resource valueGenType = model.createResource();
-        model.add(valueGenType, rawTypeProp, m3String);
-        model.add(valuePropRes, genericTypeProp, valueGenType);
+        // No pointerValue property — use inherited value from PointerValue
 
         // Create "extraPointerValues" property on Pointer
         addExtraPointerValuesProperty(pointerType, pointerTypeName);
@@ -1288,18 +1279,11 @@ public class M3ProtocolGenerator
             model.add(pointerType, packageProp, origPkgStmt.getObject().asResource());
         }
 
-        // Create "pointerValue" property with type String
-        String valuePropId = pointerTypeName + "_pointerValue";
-        Resource valuePropRes = model.createResource(M3_NS + valuePropId);
-        model.add(valuePropRes, rdfType, m3Property);
-        model.add(valuePropRes, nameProp, "pointerValue");
-        model.add(valuePropRes, ownerProp, pointerType);
-        model.add(valuePropRes, multiplicityProp, m3PureOne);
+        // Generalization: Pointer -> PointerValue (inherits value: String[1] and p_sourceInformation)
+        ensurePointerValueClass();
+        addGeneralization(pointerType, pointerValueClass);
 
-        // Add genericType pointing to String
-        Resource valueGenType = model.createResource();
-        model.add(valueGenType, rawTypeProp, m3String);
-        model.add(valuePropRes, genericTypeProp, valueGenType);
+        // No pointerValue property — use inherited value from PointerValue
 
         // Create "extraPointerValues" property on Pointer
         addExtraPointerValuesProperty(pointerType, pointerTypeName);

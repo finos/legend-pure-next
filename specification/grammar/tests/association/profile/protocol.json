@@ -5,9 +5,16 @@
     "elements" : [ {
       "_type" : "Association",
       "name" : "AnAssociation1",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -15,14 +22,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::AssociationClassA",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 5,
               "startColumn" : 6,
               "startLine" : 5
-            }
+            },
+            "value" : "protocol::support::AssociationClassA"
           }
         },
         "multiplicity" : {
@@ -50,14 +57,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::AssociationClassB",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 6,
               "startColumn" : 6,
               "startLine" : 6
-            }
+            },
+            "value" : "protocol::support::AssociationClassB"
           }
         },
         "multiplicity" : {
@@ -76,15 +83,8 @@
           "startLine" : 6
         }
       } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 7,
-        "startColumn" : 1,
-        "startLine" : 3
-      },
       "stereotypes" : [ {
-        "_type" : "Stereotype_PointerImpl",
+        "_type" : "Stereotype_Pointer",
         "extraPointerValues" : [ {
           "_type" : "PointerValue",
           "p_sourceInformation" : {
@@ -96,16 +96,16 @@
           },
           "value" : "flag"
         } ],
-        "pointerValue" : "AProfile",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 22,
           "endLine" : 3,
           "startColumn" : 15,
           "startLine" : 3
-        }
+        },
+        "value" : "AProfile"
       }, {
-        "_type" : "Stereotype_PointerImpl",
+        "_type" : "Stereotype_Pointer",
         "extraPointerValues" : [ {
           "_type" : "PointerValue",
           "p_sourceInformation" : {
@@ -117,19 +117,19 @@
           },
           "value" : "newFlag"
         } ],
-        "pointerValue" : "protocol::support::AProfile",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 56,
           "endLine" : 3,
           "startColumn" : 30,
           "startLine" : 3
-        }
+        },
+        "value" : "protocol::support::AProfile"
       } ],
       "taggedValues" : [ {
         "_type" : "TaggedValue",
         "tag" : {
-          "_type" : "Tag_PointerImpl",
+          "_type" : "Tag_Pointer",
           "extraPointerValues" : [ {
             "_type" : "PointerValue",
             "p_sourceInformation" : {
@@ -141,20 +141,20 @@
             },
             "value" : "tag1"
           } ],
-          "pointerValue" : "protocol::support::AProfile",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 95,
             "endLine" : 3,
             "startColumn" : 69,
             "startLine" : 3
-          }
+          },
+          "value" : "protocol::support::AProfile"
         },
         "value" : "yeah"
       }, {
         "_type" : "TaggedValue",
         "tag" : {
-          "_type" : "Tag_PointerImpl",
+          "_type" : "Tag_Pointer",
           "extraPointerValues" : [ {
             "_type" : "PointerValue",
             "p_sourceInformation" : {
@@ -166,20 +166,27 @@
             },
             "value" : "tag2"
           } ],
-          "pointerValue" : "AProfile",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 119,
             "endLine" : 3,
             "startColumn" : 112,
             "startLine" : 3
-          }
+          },
+          "value" : "AProfile"
         },
         "value" : "ok"
       } ]
     }, {
       "_type" : "Profile",
       "name" : "AProfile",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 13,
+        "startColumn" : 1,
+        "startLine" : 9
+      },
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
         "p_sourceInformation" : {
@@ -223,43 +230,36 @@
         "value" : "tag2"
       } ],
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 13,
-        "startColumn" : 1,
-        "startLine" : 9
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     }, {
       "_type" : "Class",
       "name" : "AssociationClassA",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 17,
         "startColumn" : 1,
         "startLine" : 15
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     }, {
       "_type" : "Class",
       "name" : "AssociationClassB",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 21,
         "startColumn" : 1,
         "startLine" : 19
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     } ],
     "imports" : [ "protocol::support::*" ],

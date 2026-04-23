@@ -16,7 +16,7 @@ import meta::pure::metamodel::valuespecification::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::*;
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::checkLetDuplicate(fi:FunctionInvocation[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::letResolver::checkLetDuplicate(fi:FunctionApplication[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerContext[1]
 {
     if(!$fi.functionName->toOne()->startsWith('letFunction'),
         | $context,

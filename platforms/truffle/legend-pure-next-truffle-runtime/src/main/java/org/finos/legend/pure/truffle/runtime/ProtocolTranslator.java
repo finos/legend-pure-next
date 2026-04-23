@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public final class ProtocolTranslator
 {
-    private static final String BOOTSTRAP_PREFIX = "meta.pure.protocol.";
+    private static final String BOOTSTRAP_PREFIX = "meta.pure.";
     private static final String TRUFFLE_PREFIX = "org.finos.legend.pure.truffle.pdb.";
     private final TruffleMetadataAccess resolver;
 
@@ -55,7 +55,7 @@ public final class ProtocolTranslator
     {
         if (source == null)
         {
-            return null;
+            return null; // null stays null — setter handles it
         }
 
         // Primitives — pass through
@@ -126,6 +126,21 @@ public final class ProtocolTranslator
             seen.put(source, target);
 
             // Copy properties via _xxx() getters and _xxx(value) setters
+            if (className.contains("Property"))
+            {
+                // Trace any Property with stereotypes
+                try
+                {
+                    Method sg = source.getClass().getMethod("_stereotypes");
+                    Object sv = sg.invoke(source);
+                    if (sv instanceof java.util.Collection<?> c && !c.isEmpty())
+                    {
+                        Method ng = source.getClass().getMethod("_name");
+                        System.out.println("PROTO-TRACE Property '" + ng.invoke(source) + "' has " + c.size() + " stereotypes before translation");
+                    }
+                }
+                catch (Exception ignored) {}
+            }
             for (Method getter : source.getClass().getMethods())
             {
                 String name = getter.getName();
@@ -138,15 +153,17 @@ public final class ProtocolTranslator
                 try
                 {
                     Object value = getter.invoke(source);
+                    // Don't skip null — let translate() handle it
+
                     if (value == null)
                     {
-                        continue;
+                        continue; // null optional property — skip
                     }
-
                     Object translated = translate(value);
                     if (translated == null)
                     {
-                        continue;
+                        throw new RuntimeException("translate() returned null for non-null property '" + name + "' on " + className
+                                + " (value type: " + value.getClass().getName() + ")");
                     }
 
                     // Find setter on target
@@ -155,10 +172,15 @@ public final class ProtocolTranslator
                     {
                         setter.invoke(target, translated);
                     }
+                    else
+                    {
+                        throw new RuntimeException("No setter found for '" + name + "' on " + truffleClass.getSimpleName()
+                                + " (value type: " + translated.getClass().getName() + ")");
+                    }
                 }
-                catch (Exception ignored)
+                catch (Exception e)
                 {
-                    // Skip property if translation fails
+                    throw new RuntimeException("Failed to translate property '" + name + "' on " + source.getClass().getName(), e);
                 }
             }
 
@@ -184,6 +206,11 @@ public final class ProtocolTranslator
         {
             return;
         }
+        // Already has CGT (e.g. copied from source) — don't overwrite
+        if (any._classifierGenericType() != null)
+        {
+            return;
+        }
         // "meta.pure.protocol.grammar.relationship.AssociationImpl" → "meta::pure::protocol::grammar::relationship::Association"
         String purePath = bootstrapClassName;
         if (purePath.endsWith("Impl"))
@@ -195,9 +222,12 @@ public final class ProtocolTranslator
         Object classType = resolver.getElement(purePath);
         if (classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type)
         {
-            var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-            cgt._type(type);
-            any._classifierGenericType(cgt);
+            any._classifierGenericType(org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver));
+        }
+        else
+        {
+            throw new RuntimeException("[ProtocolTranslator] Cannot resolve classifierGenericType for "
+                    + bootstrapClassName + " (purePath=" + purePath + ")");
         }
     }
 

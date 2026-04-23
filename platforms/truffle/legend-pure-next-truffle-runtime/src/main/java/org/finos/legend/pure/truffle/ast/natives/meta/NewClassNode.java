@@ -51,8 +51,7 @@ public final class NewClassNode extends PureNode
         cls._multiplicityParameters(mpSeq);
 
         // Build self-referencing CGT: Class<cls>
-        var selfGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        selfGT._type(cls);
+        var selfGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(cls, resolver);
         // Add type parameter GTs as typeArguments on the self-GT
         if (!tpSeq.isEmpty())
         {
@@ -67,8 +66,7 @@ public final class NewClassNode extends PureNode
                     {
                         tpImpl._owner(cls);
                     }
-                    var tpGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-                    tpGT._type(tParam);
+                    var tpGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(tParam, resolver);
                     tpGTs[i] = tpGT;
                 }
                 else
@@ -80,11 +78,8 @@ public final class NewClassNode extends PureNode
         }
 
         Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
-        var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        if (classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-        {
-            cgt._type(t);
-        }
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
+                classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t ? t : null, resolver);
         cgt._typeArguments(new ObjectSequence(new Object[]{selfGT}));
 
         cls._classifierGenericType(cgt);

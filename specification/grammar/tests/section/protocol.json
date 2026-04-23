@@ -5,9 +5,16 @@
     "elements" : [ {
       "_type" : "Class",
       "name" : "MyClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "x::b"
+        "_type" : "Package_Pointer",
+        "value" : "x::b"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -15,14 +22,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Prop",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 6,
               "startColumn" : 11,
               "startLine" : 6
-            }
+            },
+            "value" : "Prop"
           }
         },
         "multiplicity" : {
@@ -44,27 +51,20 @@
           "startColumn" : 5,
           "startLine" : 6
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 7,
-        "startColumn" : 1,
-        "startLine" : 4
-      }
+      } ]
     }, {
       "_type" : "Class",
       "name" : "Prop",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "x::b"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 11,
         "startColumn" : 1,
         "startLine" : 9
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "x::b"
       }
     } ],
     "imports" : [ "x::b::*" ],
@@ -74,9 +74,16 @@
     "elements" : [ {
       "_type" : "Class",
       "name" : "MyOtherClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 16
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "a::b"
+        "_type" : "Package_Pointer",
+        "value" : "a::b"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -84,14 +91,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Prop",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 18,
               "startColumn" : 11,
               "startLine" : 18
-            }
+            },
+            "value" : "Prop"
           }
         },
         "multiplicity" : {
@@ -113,27 +120,20 @@
           "startColumn" : 5,
           "startLine" : 18
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 19,
-        "startColumn" : 1,
-        "startLine" : 16
-      }
+      } ]
     }, {
       "_type" : "Class",
       "name" : "Prop",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "a::b"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 23,
         "startColumn" : 1,
         "startLine" : 21
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "a::b"
       }
     } ],
     "imports" : [ "a::b::*" ],

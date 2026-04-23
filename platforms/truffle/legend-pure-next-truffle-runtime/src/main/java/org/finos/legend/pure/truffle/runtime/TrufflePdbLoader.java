@@ -38,6 +38,7 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
 {
     private final CompressedArchiveReader archive;
     private final Map<String, Object> cache = new HashMap<>();
+    private final java.util.IdentityHashMap<Object, String> reverseCache = new java.util.IdentityHashMap<>();
     private TruffleMetadataAccess resolver = this; // default: self. Set to composite for multi-module.
 
     public TrufflePdbLoader(Path pdbPath) throws IOException
@@ -83,8 +84,15 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
         else
         {
             cache.put(path, element);
+            reverseCache.put(element, path);
         }
         return element;
+    }
+
+    @Override
+    public String pathOf(Object element)
+    {
+        return reverseCache.get(element);
     }
 
     @Override
@@ -139,7 +147,7 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
             }
             catch (Exception e2)
             {
-                return null;
+                throw new RuntimeException("Failed to deserialize element type=" + typeName + ": " + e.getMessage() + " / " + e2.getMessage());
             }
         }
     }

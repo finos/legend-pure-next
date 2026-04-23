@@ -118,7 +118,7 @@ public final class GenericTypeCompiler
         }
 
         Type_Pointer pointer = (Type_Pointer) rawType;
-        String pointerValue = pointer._pointerValue();
+        String pointerValue = pointer._value();
 
         int checkpoint = context.currentErrorCount();
         SourceInformation sourceInfo = SourceInformationCompiler.compile(pointer._p_sourceInformation(), model);

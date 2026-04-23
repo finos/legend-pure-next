@@ -91,9 +91,9 @@ public class _G_PackageableFunction
                 {
                     yield tp._name();
                 }
-                if (gtv._type() instanceof Type_Pointer tp && tp._pointerValue() != null)
+                if (gtv._type() instanceof Type_Pointer tp && tp._value() != null)
                 {
-                    String fullPath = tp._pointerValue();
+                    String fullPath = tp._value();
                     yield fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
                 }
                 yield "UNKNOWN";
@@ -114,7 +114,7 @@ public class _G_PackageableFunction
         }
         if (mp instanceof Multiplicity_Pointer ptr)
         {
-            String path = ptr._pointerValue();
+            String path = ptr._value();
             String name = path != null && path.contains("::") ? path.substring(path.lastIndexOf("::") + 2) : path;
             return switch (name != null ? name : "")
             {

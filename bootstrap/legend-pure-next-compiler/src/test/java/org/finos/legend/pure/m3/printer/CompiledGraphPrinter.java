@@ -58,6 +58,7 @@ import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.List;
@@ -130,6 +131,7 @@ public final class CompiledGraphPrinter
             case Enumeration e -> printEnumeration(e, sb);
             case Profile p -> printProfile(p, sb);
             case PrimitiveType p -> printPrimitiveType(p, sb);
+            case CompiledGraphImpl c -> {}
             default -> sb.append("// unsupported: ").append(element.getClass().getSimpleName())
                          .append(' ').append(fullPath(element)).append('\n');
         }
@@ -1131,7 +1133,7 @@ public final class CompiledGraphPrinter
         }
         if (value instanceof Package_Pointer pp)
         {
-            return pp._pointerValue();
+            return pp._value();
         }
         if (value instanceof PackageableElement pe)
         {

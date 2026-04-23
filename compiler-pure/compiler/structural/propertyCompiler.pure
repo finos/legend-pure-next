@@ -110,28 +110,31 @@ function meta::pure::compiler::structural::propertyCompiler::compileAggregationK
     );
 }
 
-function meta::pure::compiler::structural::propertyCompiler::compilePropertyDefaultValues(properties:Property<Nil, Any|*>[*], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues(properties:Property<Nil, Any|*>[*], context:CompilerContext[1]):CompilerListResult<Property<Nil, Any|*>>[1]
 {
-    $properties->fold({prop, pCtx |
+    $properties->fold({prop, acc |
+        let accCtx = $acc.context;
         if($prop.defaultValue->isEmpty(),
-            | $pCtx,
-            | let siCtx = if($prop.sourceInformation->isEmpty(), | '', | meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $pCtx));
+            | ^$acc(values += $prop),
+            | let siCtx = if($prop.sourceInformation->isEmpty(), | '', | meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($prop.sourceInformation, $accCtx));
               // Validate: lower bound must be >= 1 for properties with defaults
               let lowerBound = meta::pure::compiler::helper::multiplicity::multiplicityLowerBound($prop.multiplicity->toOne());
               let ctx1 = if($lowerBound == 0,
-                  | ^$pCtx(errors += 'Property with a default value cannot have a multiplicity with a lower bound of 0' + $siCtx),
-                  | $pCtx
+                  | ^$accCtx(errors += 'Property with a default value cannot have a multiplicity with a lower bound of 0' + $siCtx),
+                  | $accCtx
               );
               // Resolve the default value lambda
               let lambda = $prop.defaultValue->toOne()->cast(@LambdaFunction<Any>);
-              if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $pCtx.errors->size(),
-                  | $ctx1,
+              if($lambda.expressionSequence->isEmpty() || $ctx1.errors->size() > $accCtx.errors->size(),
+                  | ^$acc(values += $prop, context = $ctx1),
                   | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                         $lambda.expressionSequence,
                         $lambda.parameters->cast(@VariableExpression),
                         $ctx1
                     );
                     let ctx2 = $resolveResult.context;
+                    let resolvedLambda = ^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification));
+                    let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
                     // Validate type and multiplicity of the resolved default value
                     let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
                     // For Collections, compute the actual element type (resolver can't propagate it back)
@@ -152,15 +155,21 @@ function meta::pure::compiler::structural::propertyCompiler::compilePropertyDefa
                                        | $ctx2)],
                                  | ^$ctx2(errors += 'Default value type mismatch: expected ' + meta::pure::compiler::helper::genericType::printGenericType($prop.genericType->toOne()) + ' but got ' + meta::pure::compiler::helper::genericType::printGenericType($exprGT->toOne()) + $siCtx)
                     );
-                    if([pair(| $lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
+                    let ctx4 = if([pair(| $lastExpr.multiplicity->isEmpty() || $prop.multiplicity->isEmpty(),
                             | $ctx3),
                         pair(| meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($prop.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
                              | $ctx3)],
                        | ^$ctx3(errors += 'Default value multiplicity mismatch: expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($prop.multiplicity->toOne()) + ' but got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
                     );
+                    ^$acc(values += $resolvedProp, context = $ctx4);
               );
         );
-    }, $context);
+    }, ^CompilerListResult<Property<Nil, Any|*>>(context = $context));
+}
+
+function meta::pure::compiler::structural::propertyCompiler::compilePropertyDefaultValues(properties:Property<Nil, Any|*>[*], context:CompilerContext[1]):CompilerContext[1]
+{
+    resolvePropertyDefaultValues($properties, $context).context;
 }
 
 function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty(p:meta::pure::protocol::grammar::function::property::Property[1], skeleton:Enumeration<Any>[1], selfGenType:GenericType[1], context:CompilerContext[1], ownerCtx:String[1]):Property<Nil, Any|*>[1]

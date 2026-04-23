@@ -112,6 +112,37 @@ function meta::pure::compiler::structural::constraintCompiler::compileFunctionCo
     }, $context);
 }
 
+function meta::pure::compiler::structural::constraintCompiler::resolveConstraints(constraints:Constraint[*], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
+{
+    $constraints->fold({constraint, acc |
+        if($constraint.functionDefinition->isEmpty(),
+            | ^$acc(values += $constraint),
+            | let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+              let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $lambda.expressionSequence,
+                  $lambda.parameters->cast(@VariableExpression),
+                  $acc.context
+              );
+              let resolvedLambda = ^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification));
+              let resolvedMsgFn = if($constraint.messageFunction->isEmpty(),
+                  | [],
+                  | let msgLambda = $constraint.messageFunction->toOne()->cast(@LambdaFunction<Any>);
+                    let msgResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                        $msgLambda.expressionSequence,
+                        $msgLambda.parameters->cast(@VariableExpression),
+                        $result.context
+                    );
+                    ^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification));
+              );
+              let resolvedConstraint = ^$constraint(
+                  functionDefinition = $resolvedLambda,
+                  messageFunction = $resolvedMsgFn
+              );
+              ^$acc(values += $resolvedConstraint, context = $result.context);
+        );
+    }, ^CompilerListResult<Constraint>(context = $context));
+}
+
 function meta::pure::compiler::structural::constraintCompiler::compileConstraints(elem:Any[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let constraints = $elem->match(
@@ -121,15 +152,5 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
             a : Any[1]            | []
         ]
     );
-    $constraints->fold({constraint, cCtx |
-        if($constraint.functionDefinition->isEmpty(),
-            | $cCtx,
-            | let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
-              meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
-                  $lambda.expressionSequence,
-                  $lambda.parameters->cast(@VariableExpression),
-                  $cCtx
-              ).context;
-        );
-    }, $context);
+    resolveConstraints($constraints, $context).context;
 }

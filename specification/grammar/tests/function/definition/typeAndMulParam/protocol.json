@@ -7,16 +7,30 @@
       "expressionSequence" : [ {
         "_type" : "ArrowInvocation",
         "functionName" : "toMultiplicity",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 38,
+          "endLine" : 4,
+          "startColumn" : 8,
+          "startLine" : 4
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "cast",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 38,
+            "endLine" : 4,
+            "startColumn" : 8,
+            "startLine" : 4
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "String"
+                "value" : "String"
               }
             },
             "p_sourceInformation" : {
@@ -46,14 +60,7 @@
               "startColumn" : 15,
               "startLine" : 4
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 38,
-            "endLine" : 4,
-            "startColumn" : 8,
-            "startLine" : 4
-          }
+          } ]
         }, {
           "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
           "genericType" : {
@@ -70,14 +77,7 @@
             "startColumn" : 35,
             "startLine" : 4
           }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 38,
-          "endLine" : 4,
-          "startColumn" : 8,
-          "startLine" : 4
-        }
+        } ]
       } ],
       "functionName" : "with",
       "multiplicityParameters" : [ {
@@ -85,9 +85,16 @@
         "name" : "m"
       } ],
       "name" : "with_T_m__T_m_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "meta::pure::mapping"
+        "_type" : "Package_Pointer",
+        "value" : "meta::pure::mapping"
       },
       "parameters" : [ {
         "_type" : "VariableExpression",
@@ -121,13 +128,6 @@
       "returnMultiplicity" : {
         "_type" : "UserDefinedMultiplicityParameter",
         "name" : "m"
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 5,
-        "startColumn" : 1,
-        "startLine" : 2
       },
       "typeParameters" : [ {
         "_type" : "TypeParameter",

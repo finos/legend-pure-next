@@ -78,7 +78,7 @@ public final class MultiplicityCompiler
         }
         if (grammarMultiplicity instanceof Multiplicity_Pointer ptr)
         {
-            return (Multiplicity) model.getElement(ptr._pointerValue());
+            return (Multiplicity) model.getElement(ptr._value());
         }
         return (Multiplicity) model.getElement(MULTIPLICITY_PACKAGE + "PureOne");
     }

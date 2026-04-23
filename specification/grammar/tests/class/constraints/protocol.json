@@ -11,9 +11,23 @@
           "expressionSequence" : [ {
             "_type" : "ArrowInvocation",
             "functionName" : "startsWith",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 30,
+              "endLine" : 4,
+              "startColumn" : 14,
+              "startLine" : 4
+            },
             "parametersValues" : [ {
               "_type" : "DotApplication",
               "functionName" : "other",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 13,
+                "endLine" : 4,
+                "startColumn" : 8,
+                "startLine" : 4
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "this",
@@ -24,21 +38,14 @@
                   "startColumn" : 3,
                   "startLine" : 4
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 13,
-                "endLine" : 4,
-                "startColumn" : 8,
-                "startLine" : 4
-              }
+              } ]
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "String"
+                  "value" : "String"
                 }
               },
               "p_sourceInformation" : {
@@ -49,14 +56,7 @@
                 "startLine" : 4
               },
               "value" : "x"
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 30,
-              "endLine" : 4,
-              "startColumn" : 14,
-              "startLine" : 4
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -80,9 +80,23 @@
           "expressionSequence" : [ {
             "_type" : "ArrowInvocation",
             "functionName" : "endsWith",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 32,
+              "endLine" : 5,
+              "startColumn" : 18,
+              "startLine" : 5
+            },
             "parametersValues" : [ {
               "_type" : "DotApplication",
               "functionName" : "other",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 17,
+                "endLine" : 5,
+                "startColumn" : 12,
+                "startLine" : 5
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "this",
@@ -93,21 +107,14 @@
                   "startColumn" : 7,
                   "startLine" : 5
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 17,
-                "endLine" : 5,
-                "startColumn" : 12,
-                "startLine" : 5
-              }
+              } ]
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "String"
+                  "value" : "String"
                 }
               },
               "p_sourceInformation" : {
@@ -118,14 +125,7 @@
                 "startLine" : 5
               },
               "value" : "z"
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 32,
-              "endLine" : 5,
-              "startColumn" : 18,
-              "startLine" : 5
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -152,12 +152,33 @@
           "expressionSequence" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "greaterThan",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 40,
+              "endLine" : 10,
+              "startColumn" : 38,
+              "startLine" : 10
+            },
             "parametersValues" : [ {
               "_type" : "ArrowInvocation",
               "functionName" : "length",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 36,
+                "endLine" : 10,
+                "startColumn" : 27,
+                "startLine" : 10
+              },
               "parametersValues" : [ {
                 "_type" : "DotApplication",
                 "functionName" : "other",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 26,
+                  "endLine" : 10,
+                  "startColumn" : 21,
+                  "startLine" : 10
+                },
                 "parametersValues" : [ {
                   "_type" : "VariableExpression",
                   "name" : "this",
@@ -168,29 +189,15 @@
                     "startColumn" : 16,
                     "startLine" : 10
                   }
-                } ],
-                "p_sourceInformation" : {
-                  "_type" : "SourceInformation",
-                  "endColumn" : 26,
-                  "endLine" : 10,
-                  "startColumn" : 21,
-                  "startLine" : 10
-                }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 36,
-                "endLine" : 10,
-                "startColumn" : 27,
-                "startLine" : 10
-              }
+                } ]
+              } ]
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -201,14 +208,7 @@
                 "startLine" : 10
               },
               "value" : 2
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 40,
-              "endLine" : 10,
-              "startColumn" : 38,
-              "startLine" : 10
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -223,9 +223,23 @@
           "expressionSequence" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "plus",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 41,
+              "endLine" : 12,
+              "startColumn" : 27,
+              "startLine" : 12
+            },
             "parametersValues" : [ {
               "_type" : "DotApplication",
               "functionName" : "other",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 25,
+                "endLine" : 12,
+                "startColumn" : 20,
+                "startLine" : 12
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "this",
@@ -236,21 +250,14 @@
                   "startColumn" : 15,
                   "startLine" : 12
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 25,
-                "endLine" : 12,
-                "startColumn" : 20,
-                "startLine" : 12
-              }
+              } ]
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "String"
+                  "value" : "String"
                 }
               },
               "p_sourceInformation" : {
@@ -261,14 +268,7 @@
                 "startLine" : 12
               },
               "value" : " has issues"
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 41,
-              "endLine" : 12,
-              "startColumn" : 27,
-              "startLine" : 12
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -295,12 +295,33 @@
           "expressionSequence" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "lessThan",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 40,
+              "endLine" : 17,
+              "startColumn" : 38,
+              "startLine" : 17
+            },
             "parametersValues" : [ {
               "_type" : "ArrowInvocation",
               "functionName" : "length",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 36,
+                "endLine" : 17,
+                "startColumn" : 27,
+                "startLine" : 17
+              },
               "parametersValues" : [ {
                 "_type" : "DotApplication",
                 "functionName" : "other",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 26,
+                  "endLine" : 17,
+                  "startColumn" : 21,
+                  "startLine" : 17
+                },
                 "parametersValues" : [ {
                   "_type" : "VariableExpression",
                   "name" : "this",
@@ -311,29 +332,15 @@
                     "startColumn" : 16,
                     "startLine" : 17
                   }
-                } ],
-                "p_sourceInformation" : {
-                  "_type" : "SourceInformation",
-                  "endColumn" : 26,
-                  "endLine" : 17,
-                  "startColumn" : 21,
-                  "startLine" : 17
-                }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 36,
-                "endLine" : 17,
-                "startColumn" : 27,
-                "startLine" : 17
-              }
+                } ]
+              } ]
             }, {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -344,14 +351,7 @@
                 "startLine" : 17
               },
               "value" : 4
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 40,
-              "endLine" : 17,
-              "startColumn" : 38,
-              "startLine" : 17
-            }
+            } ]
           } ],
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
@@ -371,9 +371,16 @@
         }
       } ],
       "name" : "SuperClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 22,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -381,14 +388,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 21,
               "startColumn" : 10,
               "startLine" : 21
-            }
+            },
+            "value" : "String"
           }
         },
         "multiplicity" : {
@@ -410,14 +417,7 @@
           "startColumn" : 3,
           "startLine" : 21
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 22,
-        "startColumn" : 1,
-        "startLine" : 2
-      }
+      } ]
     } ],
     "parserName" : "Pure"
   } ],

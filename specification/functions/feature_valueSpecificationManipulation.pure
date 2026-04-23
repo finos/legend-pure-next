@@ -190,6 +190,55 @@ function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::te
     true;
 }
 
+// Walk expressionSequence and cast elements to ValueSpecification — reproduces
+// the compiler-pure pattern: $fn.expressionSequence->cast(@ValueSpecification)
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testExpressionSequenceCastToValueSpecification():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    let vsExprs = $exprs->cast(@meta::pure::metamodel::valuespecification::ValueSpecification);
+    assertEquals(3, $vsExprs->size());
+    true;
+}
+
+// Walk expressionSequence and cast elements to AtomicValue, then access .value —
+// reproduces the compiler printer pattern: $a->cast(@AtomicValue).value->toOne()
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testExpressionSequenceCastToAtomicValue():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    let first = $exprs->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
+    assertEquals(1, $first.value);
+    true;
+}
+
+// Walk expressionSequence and access .genericType on each element —
+// reproduces the compiler pattern: $a.genericType->toOne()->printType()
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testExpressionSequenceGenericType():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let exprs = $fn.expressionSequence;
+    let first = $exprs->at(0)->cast(@meta::pure::metamodel::valuespecification::AtomicValue);
+    assert($first.genericType->isNotEmpty());
+    true;
+}
+
+// Walk expressionSequence via match — reproduces the compiler printValueSpecification pattern
+function <<test.Test>> meta::pure::functions::valueSpecificationManipulation::testExpressionSequenceMatch():Boolean[1]
+{
+    let fn = meta::pure::functions::valueSpecificationManipulation::sampleFunction__Any_MANY_;
+    let results = $fn.expressionSequence->map(vs |
+        $vs->match([
+            a:meta::pure::metamodel::valuespecification::AtomicValue[1] | $a.value->toOne()->toString(),
+            v:meta::pure::metamodel::valuespecification::ValueSpecification[1] | 'vs'
+        ])
+    );
+    assertEquals('1', $results->at(0));
+    assertEquals('hello', $results->at(1));
+    assertEquals('true', $results->at(2));
+    true;
+}
+
 function meta::pure::functions::valueSpecificationManipulation::sampleFunction():Any[*]
 {
     1;

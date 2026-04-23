@@ -353,7 +353,7 @@ public final class ValueSpecificationCompiler
         if (gt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
         {
             var type = gtv._type();
-            if (type instanceof meta.pure.protocol.grammar.type.Type_Pointer ptr) { return ptr._pointerValue(); }
+            if (type instanceof meta.pure.protocol.grammar.type.Type_Pointer ptr) { return ptr._value(); }
             if (type instanceof PackageableElement pe) { return pe._name(); }
         }
         return null;

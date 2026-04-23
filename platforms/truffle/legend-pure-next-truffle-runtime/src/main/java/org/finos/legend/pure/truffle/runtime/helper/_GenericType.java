@@ -41,6 +41,97 @@ public final class _GenericType
     {
         var gt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         gt._type(type);
+        // Set CGT to Class<UserDefinedGenericType> so match/instanceOf works
+        if (resolver != null)
+        {
+            Object gtClass = resolver.getElement("meta::pure::metamodel::type::generics::UserDefinedGenericType");
+            if (gtClass instanceof Type gtType)
+            {
+                var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
+                cgt._type(gtType);
+                gt._classifierGenericType(cgt);
+            }
+        }
         return gt;
+    }
+
+    /**
+     * Human-readable representation of a GenericType for debugging.
+     * E.g. {@code Class<MyClass>}, {@code String}, {@code {String[1]->Boolean[1]}}.
+     */
+    public static String print(Object gt)
+    {
+        return print(gt, null);
+    }
+
+    public static String print(Object gt, TruffleMetadataAccess resolver)
+    {
+        if (gt == null)
+        {
+            return "null";
+        }
+        if (gt instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe
+                && !(gt instanceof GenericTypeValue))
+        {
+            String path = _PackageableElement.path(pe, resolver);
+            return "[Type:" + (path != null ? path : (pe._name() != null ? pe._name() : gt.getClass().getSimpleName())) + "]";
+        }
+        if (!(gt instanceof GenericTypeValue gtv))
+        {
+            return gt.getClass().getSimpleName();
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        // Raw type name
+        Type rawType = type(gt);
+        if (rawType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+        {
+            String path = _PackageableElement.path(pe, resolver);
+            sb.append(path != null ? path : (pe._name() != null ? pe._name() : "?"));
+        }
+        else if (rawType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.FunctionType ft)
+        {
+            sb.append("{");
+            PureSequence params = ft._parameters();
+            if (params != null)
+            {
+                for (int i = 0; i < params.size(); i++)
+                {
+                    if (i > 0) sb.append(", ");
+                    Object p = params.getBoxed(i);
+                    if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                    {
+                        sb.append(print(ve._genericType(), resolver));
+                    }
+                    else
+                    {
+                        sb.append("?");
+                    }
+                }
+            }
+            sb.append("->");
+            sb.append(print(ft._returnType(), resolver));
+            sb.append("}");
+        }
+        else
+        {
+            sb.append("?");
+        }
+
+        // Type arguments
+        PureSequence args = typeArguments(gt);
+        if (args != null && args.size() > 0)
+        {
+            sb.append("<");
+            for (int i = 0; i < args.size(); i++)
+            {
+                if (i > 0) sb.append(", ");
+                sb.append(print(args.getBoxed(i), resolver));
+            }
+            sb.append(">");
+        }
+
+        return sb.toString();
     }
 }

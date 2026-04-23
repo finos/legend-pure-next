@@ -53,7 +53,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     let protocolType = $protocolGT.type->toOne();
     let result = $protocolType->match([
         p:meta::pure::protocol::grammar::type::Type_Pointer[1] |
-            let allMatches = $context->resolveAllElements($p.pointerValue);
+            let allMatches = $context->resolveAllElements($p.value);
             let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
             let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
             let siCtx = if($p.p_sourceInformation->isNotEmpty(),
@@ -61,18 +61,18 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                 | ''
             );
             if($allMatches->size() > 1,
-                | let errorMsg = 'The element \'' + $p.pointerValue + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
+                | let errorMsg = 'The element \'' + $p.value + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
                   ^CompilerResult<GenericType>(
                       value = ^UserDefinedGenericType(type = Any),
                       context = ^$context(errors += $errorMsg)
                   );,
-                | let resolvedOpt = $context->resolveElement($p.pointerValue);
+                | let resolvedOpt = $context->resolveElement($p.value);
                   let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-                      | $context->resolveElement($packagePath + '::' + $p.pointerValue),
+                      | $context->resolveElement($packagePath + '::' + $p.value),
                       | $resolvedOpt
                   );
                   if($resolvedOptWithPackage->isEmpty(),
-                      | let errorMsg = 'The type \'' + $p.pointerValue + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+                      | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
                         ^CompilerResult<GenericType>(
                             value = ^UserDefinedGenericType(type = Any),
                             context = ^$context(errors += $errorMsg)

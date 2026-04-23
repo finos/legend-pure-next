@@ -30,7 +30,7 @@ import meta::pure::functions::lang::*;
 
 function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:CompilerContext[1]):CompilerContext[1]
 {
-    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
 
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
@@ -58,7 +58,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
 
 function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta::pure::protocol::grammar::function::UserDefinedFunction[1], ctx:CompilerContext[1]):CompilerResult<UserDefinedFunction<Any>>[1]
 {
-    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().pointerValue);
+    let packagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
     let skeleton = $ctx.elementMap->get($fName)->toOne()->cast(@UserDefinedFunction<Any>);

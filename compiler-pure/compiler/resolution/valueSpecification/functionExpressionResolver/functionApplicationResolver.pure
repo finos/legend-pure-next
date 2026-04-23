@@ -103,7 +103,7 @@ Class meta::pure::compiler::resolution::valueSpecification::functionExpressionRe
 // Entry point
 // ============================================================================
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplication(fi:FunctionInvocation[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplication(fi:FunctionApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     let functionName = $fi.functionName->toOne();
     let paramCount = $fi.parametersValues->size();
@@ -134,7 +134,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Mirrors Java resolveFunctionApplication multi-candidate path
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:FunctionInvocation[1], candidates:PackageableFunction<Any>[*], scope:VariableExpression[*], deepCtx:CompilerContext[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:FunctionApplication[1], candidates:PackageableFunction<Any>[*], scope:VariableExpression[*], deepCtx:CompilerContext[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94)
     // Lambdas are excluded because their param types depend on the candidate's type-parameter bindings.
@@ -221,7 +221,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 // Template function resolution with fixpoint
 // ============================================================================
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplicationUsingTemplateFunction(fi:FunctionInvocation[1], entry:PackageableFunction<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveFunctionApplicationUsingTemplateFunction(fi:FunctionApplication[1], entry:PackageableFunction<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Get the fully-compiled function from context (all PackageableElements should be resolved from context)
     let entryPath = $entry->elementToPath();
@@ -414,7 +414,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::fixpointResolveParams(
     infos:ParameterInfo[*],
-    expr:FunctionInvocation[1],
+    expr:FunctionApplication[1],
     funcParams:VariableExpression[*],
     bindings:ParametersBinding[1],
     scope:VariableExpression[*],

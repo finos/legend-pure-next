@@ -57,9 +57,6 @@ public final class FrameVariableReadNode extends PureNode
         if (value == null)
         {
             CompilerDirectives.transferToInterpreter();
-            // Try dynamic lookup before failing — the variable may be a
-            // parameter that was bound into a different frame context
-            // (e.g. due to WeakHashMap identity mismatch on PDB-loaded FDs).
             return readDynamic();
         }
         return value;

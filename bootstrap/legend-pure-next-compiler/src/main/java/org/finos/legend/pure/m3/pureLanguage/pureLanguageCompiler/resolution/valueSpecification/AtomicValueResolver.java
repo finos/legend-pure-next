@@ -57,7 +57,7 @@ public class AtomicValueResolver
 
     private static AtomicValue processPackagePointer(AtomicValue av, MetadataAccess model, CompilationContext context, Package_Pointer pp)
     {
-        String pointerValue = pp._pointerValue();
+        String pointerValue = pp._value();
         int checkpoint = context.currentErrorCount();
         PackageableElement element = _PackageableElement.findElementOrReportError(pointerValue, context.imports(), model, context, av._sourceInformation());
         if (element != null)

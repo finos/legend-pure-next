@@ -125,20 +125,21 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
     );
 }
 
-function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerContext[1]
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerListResult<QualifiedProperty<Any>>[1]
 {
-    $qualifiedProperties->fold({qp, qCtx |
+    $qualifiedProperties->fold({qp, acc |
         if($qp.expressionSequence->isEmpty(),
-            | $qCtx,
+            | ^$acc(values += $qp),
             | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                   $qp.expressionSequence,
                   $qp.parameters,
-                  $qCtx
+                  $acc.context
               );
               let ctx1 = $resolveResult.context;
+              let resolvedQP = ^$qp(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification));
               // Validate return type and multiplicity (only if resolution produced no new errors)
-              if($ctx1.errors->size() > $qCtx.errors->size() || $resolveResult.resolvedSpecs->isEmpty(),
-                  | $ctx1,
+              if($ctx1.errors->size() > $acc.context.errors->size() || $resolveResult.resolvedSpecs->isEmpty(),
+                  | ^$acc(values += $resolvedQP, context = $ctx1),
                   | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
                     let qpName = $qp.name->toOne();
                     let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $ctx1);
@@ -151,15 +152,16 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
                                  | ^$ctx1(errors += 'Return type error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($qp.genericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
                     );
                     // Multiplicity validation
-                    if([pair(| $lastExpr.multiplicity->isEmpty() || $qp.multiplicity->isEmpty(),
+                    let ctx3 = if([pair(| $lastExpr.multiplicity->isEmpty() || $qp.multiplicity->isEmpty(),
                              | $ctx2),
                         pair(| meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($qp.multiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
                              | $ctx2)],
                        | ^$ctx2(errors += 'Return multiplicity error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($qp.multiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
                     );
+                    ^$acc(values += $resolvedQP, context = $ctx3);
               );
         );
-    }, $context);
+    }, ^CompilerListResult<QualifiedProperty<Any>>(context = $context));
 }
 
 function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]

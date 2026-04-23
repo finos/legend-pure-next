@@ -183,7 +183,7 @@ public final class StandaloneEvaluator
                     }
                     rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
                 }
-                catch (Exception ignored) {}
+                catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
                 PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource);
                 cf.setCallTarget(root.getCallTarget());
             }
@@ -270,7 +270,7 @@ public final class StandaloneEvaluator
         }
         catch (RuntimeException e)
         {
-            return null;
+            throw new RuntimeException("Failed to compile lambda call target", e);
         }
     }
 
@@ -384,16 +384,8 @@ public final class StandaloneEvaluator
                             return;
                         }
                     }
-                    // VS wrapping
-                    if (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification.class.isAssignableFrom(paramType))
-                    {
-                        Object wrapped = wrapAsValueSpecification(rawValue);
-                        if (wrapped != null)
-                        {
-                            method.invoke(target, wrapped);
-                            return;
-                        }
-                    }
+                    // No VS wrapping — values flow through as-is.
+                    // If the compiler Pure code needs an AtomicValue, it creates one explicitly.
                 }
                 catch (java.lang.reflect.InvocationTargetException ite)
                 {
@@ -410,25 +402,54 @@ public final class StandaloneEvaluator
                 }
             }
         }
-        throw new RuntimeException("Property '" + propertyName + "' not found on " + target.getClass().getSimpleName());
+        // Fallback: map genericType → classifierGenericType for non-VS targets
+        // (e.g. LambdaFunction has _classifierGenericType but not _genericType)
+        if ("genericType".equals(propertyName)
+                && target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+        {
+            try
+            {
+                Object candidate = originalValue;
+                if (!(candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue))
+                {
+                    candidate = rawValue;
+                }
+                if (candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+                {
+                    any._classifierGenericType(gtv);
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException("Failed to set classifierGenericType via fallback on " + target.getClass().getSimpleName(), e);
+            }
+        }
+        // Debug: list available setter methods matching the name
+        StringBuilder debug = new StringBuilder("Property '" + propertyName + "' not found on " + target.getClass().getSimpleName());
+        debug.append(" (value type: ").append(originalValue != null ? originalValue.getClass().getName() : "null").append(")");
+        debug.append(" Available _").append(propertyName).append(" methods: ");
+        for (java.lang.reflect.Method m : target.getClass().getMethods())
+        {
+            if (m.getName().equals("_" + propertyName) && m.getParameterCount() == 1)
+            {
+                debug.append(m.getParameterTypes()[0].getName()).append(", ");
+            }
+        }
+        throw new RuntimeException(debug.toString());
     }
 
-    /** Unwrap ValueSpecification wrappers one level to get raw values. No recursion. */
+    /** Unwrap multiplicity wrappers only — no VS stripping. Values flow through as-is. */
     static Object unwrapForSetter(Object value)
     {
         if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
             return null;
         }
-        // Single-element PureSequence — unwrap one level
+        // Single-element PureSequence — unwrap multiplicity wrapper
         if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq && seq.size() == 1)
         {
             return seq.getBoxed(0);
-        }
-        // AtomicValue — unwrap to raw value
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
-        {
-            return av._value();
         }
         return value;
     }
@@ -533,54 +554,9 @@ public final class StandaloneEvaluator
         return null;
     }
 
-    /** Wrap a raw value as a ValueSpecification (CollectionImpl for lists, AtomicValueImpl for scalars). */
-    private static Object wrapAsValueSpecification(Object rawValue)
-    {
-        if (rawValue instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification)
-        {
-            return rawValue; // already a VS
-        }
-        if (rawValue instanceof org.eclipse.collections.api.list.MutableList<?> ml)
-        {
-            var col = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.CollectionImpl();
-            Object[] items = new Object[ml.size()];
-            for (int i = 0; i < ml.size(); i++)
-            {
-                Object item = ml.get(i);
-                if (!(item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification))
-                {
-                    var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
-                    av._value(item);
-                    item = av;
-                }
-                items[i] = item;
-            }
-            col._values(new org.finos.legend.pure.truffle.types.ObjectSequence(items));
-            return col;
-        }
-        if (rawValue instanceof java.util.List<?> list)
-        {
-            var col = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.CollectionImpl();
-            Object[] items = new Object[list.size()];
-            for (int i = 0; i < list.size(); i++)
-            {
-                Object item = list.get(i);
-                if (!(item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification))
-                {
-                    var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
-                    av._value(item);
-                    item = av;
-                }
-                items[i] = item;
-            }
-            col._values(new org.finos.legend.pure.truffle.types.ObjectSequence(items));
-            return col;
-        }
-        // Single scalar → wrap in AtomicValueImpl
-        var av = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
-        av._value(rawValue);
-        return av;
-    }
+    // No wrapAsValueSpecification — values flow through as-is.
+    // The execution layer strips VS wrappers at lowering time (PureASTBuilder.lowerAtomicValue).
+    // The meta layer preserves them. No wrapping/unwrapping at property access boundaries.
 
     public Object accessProperty(Object target, String propertyName)
     {
@@ -589,6 +565,10 @@ public final class StandaloneEvaluator
         {
             target = rc.lambda();
         }
+
+        // No VS property synthesis — values are not unwrapped, so AtomicValue/LambdaFunction
+        // objects retain their _value(), _genericType() etc. If a raw primitive reaches here,
+        // it's a bug in the caller (should have kept the VS wrapper).
 
         // 1. Try _propertyName() on the original target (preserves VS instances)
         String methodName = "_" + propertyName;

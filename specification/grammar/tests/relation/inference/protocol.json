@@ -6,9 +6,16 @@
       "_type" : "NativeFunction",
       "functionName" : "rename",
       "name" : "rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 175,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "meta::pure::functions::relation"
+        "_type" : "Package_Pointer",
+        "value" : "meta::pure::functions::relation"
       },
       "parameters" : [ {
         "_type" : "VariableExpression",
@@ -16,14 +23,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Relation",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 93,
               "endLine" : 2,
               "startColumn" : 86,
               "startLine" : 2
-            }
+            },
+            "value" : "Relation"
           },
           "typeArguments" : [ {
             "_type" : "UserDefinedGenericType",
@@ -58,14 +65,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "ColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 113,
               "endLine" : 2,
               "startColumn" : 107,
               "startLine" : 2
-            }
+            },
+            "value" : "ColSpec"
           },
           "typeArguments" : [ {
             "_type" : "GenericTypeOperation",
@@ -84,7 +91,7 @@
                   "_type" : "PointerValue",
                   "value" : "Equal"
                 } ],
-                "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+                "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
               },
               "right" : {
                 "_type" : "UserDefinedGenericType",
@@ -117,7 +124,7 @@
                 "_type" : "PointerValue",
                 "value" : "Subset"
               } ],
-              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
             },
             "right" : {
               "_type" : "UserDefinedGenericType",
@@ -153,14 +160,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "ColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 141,
               "endLine" : 2,
               "startColumn" : 135,
               "startLine" : 2
-            }
+            },
+            "value" : "ColSpec"
           },
           "typeArguments" : [ {
             "_type" : "GenericTypeOperation",
@@ -177,7 +184,7 @@
                 "_type" : "PointerValue",
                 "value" : "Equal"
               } ],
-              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
             },
             "right" : {
               "_type" : "UserDefinedGenericType",
@@ -229,14 +236,14 @@
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Relation",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 164,
             "endLine" : 2,
             "startColumn" : 157,
             "startLine" : 2
-          }
+          },
+          "value" : "Relation"
         },
         "typeArguments" : [ {
           "_type" : "GenericTypeOperation",
@@ -255,7 +262,7 @@
                 "_type" : "PointerValue",
                 "value" : "Difference"
               } ],
-              "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
             },
             "right" : {
               "_type" : "UserDefinedGenericType",
@@ -271,7 +278,7 @@
               "_type" : "PointerValue",
               "value" : "Union"
             } ],
-            "pointerValue" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
           },
           "right" : {
             "_type" : "UserDefinedGenericType",
@@ -293,15 +300,8 @@
           "value" : 1
         }
       },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 175,
-        "endLine" : 2,
-        "startColumn" : 1,
-        "startLine" : 2
-      },
       "stereotypes" : [ {
-        "_type" : "Stereotype_PointerImpl",
+        "_type" : "Stereotype_Pointer",
         "extraPointerValues" : [ {
           "_type" : "PointerValue",
           "p_sourceInformation" : {
@@ -313,14 +313,14 @@
           },
           "value" : "function"
         } ],
-        "pointerValue" : "PCT",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 21,
           "endLine" : 2,
           "startColumn" : 19,
           "startLine" : 2
-        }
+        },
+        "value" : "PCT"
       } ],
       "typeParameters" : [ {
         "_type" : "TypeParameter",

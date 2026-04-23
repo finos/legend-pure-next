@@ -42,4 +42,18 @@ public interface ParserExtension
      * @return parsed grammar elements
      */
     List<PackageableElement> parseSection(String content, String sourceId, int lineOffset);
+
+    /**
+     * Resolve the Pure class path for a protocol object produced by this extension.
+     * Called by the protocol-to-dynamic-instance translator to map extension-specific
+     * Java types to their Pure counterparts.
+     *
+     * @param protocolObject the object to resolve
+     * @return the fully-qualified Pure class path (e.g. {@code "meta::pure::compiler::test::CompiledGraph"}),
+     *         or {@code null} if this extension does not handle the object
+     */
+    default String resolveType(Object protocolObject)
+    {
+        return null;
+    }
 }

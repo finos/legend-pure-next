@@ -208,8 +208,6 @@ public final class TruffleHelpers
     public static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl
     buildUserDefinedGenericType(Type type, TruffleMetadataAccess resolver)
     {
-        var gt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        gt._type(type);
-        return gt;
+        return org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);
     }
 }

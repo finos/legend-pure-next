@@ -128,5 +128,9 @@ public final class MetaNodeFactories
         // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
         registry.register("parse_String_1__String_1__PureFile_1_",
                 (args, gt, mul, fe) -> new ParseNode(args[0], args[1]));
+
+        // findFunctionsByNameAndArity — compiler native: search resolver for functions
+        registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
+                (args, gt, mul, fe) -> new FindFunctionsByNameAndArityNode(args[0], args[1]));
     }
 }

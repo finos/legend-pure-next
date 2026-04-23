@@ -149,6 +149,8 @@ public final class FrameDescriptorBuilder
         }
 
         collectLetTargets(lambda._expressionSequence(), builder, slots);
+        // Safety net: scan for variable reads to catch let targets missed
+        collectVariableReads(lambda._expressionSequence(), builder, slots);
 
         return new FrameLayout(builder.build(), slots, paramSlots);
     }

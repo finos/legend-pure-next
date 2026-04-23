@@ -37,12 +37,12 @@ function meta::pure::compiler::resolution::functionDefinitionResolver::resolveEx
         let r = resolveValueSpecification($spec, $acc.scope, $acc.context);
         let resolved = if($r.value->isEmpty(), | $spec, | $r.value->toOne());
         let ctx2 = $spec->match([
-            fi:FunctionInvocation[1] |
+            fi:FunctionApplication[1] |
                 checkLetDuplicate($fi, $acc.scope, $r.context),
             a:Any[1] | $r.context
         ]);
         let newScope = $resolved->match([
-            fi:FunctionInvocation[1] |
+            fi:FunctionApplication[1] |
                 if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 1,
                     | let varName = $fi.parametersValues->at(0)->cast(@AtomicValue<String>).value->cast(@String);
                       $acc.scope->concatenate(^VariableExpression(

@@ -92,7 +92,7 @@ public final class NewWithKeysNode extends PureNode
                 var type = _GenericType.type(gt);
                 if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
                 {
-                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe, eval.resolver());
                     if (path != null && !path.isEmpty())
                     {
                         classPath = path;
@@ -100,7 +100,7 @@ public final class NewWithKeysNode extends PureNode
                 }
                 if ("Unknown".equals(classPath))
                 {
-                    System.err.println("[NEW] Unknown: gt=" + gt.getClass().getSimpleName()
+                    throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + gt.getClass().getSimpleName()
                             + " typeArgs=" + (typeArgs != null ? typeArgs.size() : "null")
                             + " type=" + (_GenericType.type(gt) != null ? _GenericType.type(gt).getClass().getSimpleName() : "null"));
                 }
@@ -129,11 +129,19 @@ public final class NewWithKeysNode extends PureNode
                 Object typeElement = eval.resolver().getElement(classPath);
                 if (typeElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
                 {
-                    var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-                    cgt._type(t);
-                    any._classifierGenericType(cgt);
+                    any._classifierGenericType(org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, eval.resolver()));
                 }
             }
+        }
+
+        // Verify CGT was set — null CGT causes downstream match failures
+        if (instance instanceof Any anyCheck && anyCheck._classifierGenericType() == null)
+        {
+            throw new RuntimeException("[NEW] classifierGenericType is NULL after creation of " + classPath
+                    + " (instance=" + instance.getClass().getSimpleName()
+                    + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getSimpleName() : "null")
+                    + ", gt=" + (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh2 ? _GenericType.print(gtmh2._genericType(), eval.resolver()) : "n/a")
+                    + ")");
         }
 
         // Push onto construction stack, evaluate key expressions, process them
@@ -175,7 +183,10 @@ public final class NewWithKeysNode extends PureNode
                         propValue = exprSeq;
                     }
                     eval.accessProperty(instance, propName, propValue);
-                    keyValues.add(java.util.Map.entry(propName, propValue));
+                    if (propValue != null)
+                    {
+                        keyValues.add(java.util.Map.entry(propName, propValue));
+                    }
                 }
             }
 
@@ -213,7 +224,7 @@ public final class NewWithKeysNode extends PureNode
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = _GenericType.type(typeArg);
         if (rawType instanceof PackageableElement pe)
         {
-            String path = _PackageableElement.path(pe);
+            String path = _PackageableElement.path(pe, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver());
             if (path != null && !path.isEmpty())
             {
                 return path;
@@ -308,7 +319,7 @@ public final class NewWithKeysNode extends PureNode
                             org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherProp._genericType());
                     if (targetType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
                     {
-                        String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+                        String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe, resolver);
                         if (classPath.equals(targetPath))
                         {
                             return otherProp._name();
@@ -321,7 +332,7 @@ public final class NewWithKeysNode extends PureNode
                             for (var ancestor : mro)
                             {
                                 if (ancestor instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ape
-                                        && targetPath.equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ape)))
+                                        && targetPath.equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ape, resolver)))
                                 {
                                     return otherProp._name();
                                 }
@@ -354,43 +365,69 @@ public final class NewWithKeysNode extends PureNode
             }
             return;
         }
-        // Get current value of the property
+        // Determine if the property is multi-valued by checking the setter parameter type
         try
         {
-            Object current = eval.accessProperty(target, propName);
-            boolean isEmpty = current == null
-                    || (current instanceof org.finos.legend.pure.truffle.types.PureSequence ps3 && ps3.isEmpty())
-                    || (current instanceof PureSequence seq && seq.isEmpty());
-            if (isEmpty)
+            boolean isMulti = false;
+            String setterName = "_" + propName;
+            for (java.lang.reflect.Method m : target.getClass().getMethods())
             {
-                eval.accessProperty(target, propName, value);
-            }
-            else if (current instanceof PureSequence seq)
-            {
-                // Append to existing PureSequence
-                Object[] items = new Object[seq.size() + 1];
-                for (int j = 0; j < seq.size(); j++)
+                if (m.getName().equals(setterName) && m.getParameterCount() == 1)
                 {
-                    items[j] = seq.getBoxed(j);
+                    Class<?> paramType = m.getParameterTypes()[0];
+                    if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType)
+                            || org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType)
+                            || java.util.Collection.class.isAssignableFrom(paramType))
+                    {
+                        isMulti = true;
+                    }
+                    break;
                 }
-                items[seq.size()] = value;
-                eval.accessProperty(target, propName, new org.finos.legend.pure.truffle.types.ObjectSequence(items));
             }
-            else if (current instanceof org.eclipse.collections.api.list.MutableList<?> list)
+
+            if (!isMulti)
             {
-                @SuppressWarnings("unchecked")
-                org.eclipse.collections.api.list.MutableList<Object> mlist =
-                        (org.eclipse.collections.api.list.MutableList<Object>) list;
-                mlist.add(value);
+                // [0..1] or [1] property — replace
+                eval.accessProperty(target, propName, value);
             }
             else
             {
-                eval.accessProperty(target, propName,
-                        org.eclipse.collections.api.factory.Lists.mutable.with(current, value));
+                // [*] or [1..*] property — append to existing
+                Object current = eval.accessProperty(target, propName);
+                boolean isEmpty = current == null
+                        || (current instanceof org.finos.legend.pure.truffle.types.PureSequence ps3 && ps3.isEmpty())
+                        || (current instanceof PureSequence seq && seq.isEmpty());
+                if (isEmpty)
+                {
+                    eval.accessProperty(target, propName, value);
+                }
+                else if (current instanceof PureSequence seq)
+                {
+                    Object[] items = new Object[seq.size() + 1];
+                    for (int j = 0; j < seq.size(); j++)
+                    {
+                        items[j] = seq.getBoxed(j);
+                    }
+                    items[seq.size()] = value;
+                    eval.accessProperty(target, propName, new org.finos.legend.pure.truffle.types.ObjectSequence(items));
+                }
+                else if (current instanceof org.eclipse.collections.api.list.MutableList<?> list)
+                {
+                    @SuppressWarnings("unchecked")
+                    org.eclipse.collections.api.list.MutableList<Object> mlist =
+                            (org.eclipse.collections.api.list.MutableList<Object>) list;
+                    mlist.add(value);
+                }
+                else
+                {
+                    eval.accessProperty(target, propName,
+                            new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[]{current, value}));
+                }
             }
         }
-        catch (Exception ignored)
+        catch (Exception e)
         {
+            throw new RuntimeException("Failed to set reverse association property '" + propName + "' on " + target.getClass().getSimpleName(), e);
         }
     }
 

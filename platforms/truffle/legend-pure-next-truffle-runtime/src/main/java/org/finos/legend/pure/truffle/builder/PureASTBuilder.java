@@ -324,9 +324,9 @@ public final class PureASTBuilder
                 return pe._name();
             }
         }
-        catch (Exception ignored)
+        catch (Exception e)
         {
-            // GenericType resolution may fail for some FlatBuffer entries
+            throw new RuntimeException("GenericType resolution failed", e);
         }
         return null;
     }

@@ -5,9 +5,16 @@
     "elements" : [ {
       "_type" : "Enumeration",
       "name" : "AnEnum",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -29,14 +36,7 @@
           "startColumn" : 3,
           "startLine" : 7
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 8,
-        "startColumn" : 1,
-        "startLine" : 4
-      }
+      } ]
     } ],
     "imports" : [ "protocol::support::*" ],
     "parserName" : "Pure"

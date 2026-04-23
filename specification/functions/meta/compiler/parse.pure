@@ -28,11 +28,16 @@ function <<test.Test>> meta::pure::functions::meta::testParseNativeIntegration()
 
     let cls = $section.elements->at(0)->cast(@meta::pure::protocol::grammar::type::Class);
     assertEquals('MyClass', $cls.name);
-    assertEquals('pkg', $cls.package->cast(@meta::pure::protocol::grammar::Package_Pointer).pointerValue);
+    assertEquals('pkg', $cls.package->cast(@meta::pure::protocol::grammar::Package_Pointer).value);
     assertEquals(1, $cls.properties->size());
 
     let prop = $cls.properties->at(0);
     assertEquals('name', $prop.name);
+}
+
+function <<test.Test>> meta::pure::functions::meta::testParseUnknownSectionThrows() : Boolean[1]
+{
+    assertError(|meta::pure::functions::meta::parse('test', '###Pure\nClass a::A {}\n\n###Unknown\nstuff\n'), 'No parser registered for section: ###Unknown');
 }
 
 function <<test.Test>> meta::pure::functions::meta::testParseEnumPropertyValues() : Boolean[1]
@@ -45,6 +50,6 @@ function <<test.Test>> meta::pure::functions::meta::testParseEnumPropertyValues(
     // The composite property's aggregation should be an Enum_Pointer referencing the metamodel enum
     let compositeProp = $cls.properties->filter(p | $p.name == 'child')->at(0);
     let enumPtr = $compositeProp.aggregation->cast(@meta::pure::protocol::grammar::Enum_Pointer);
-    assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.pointerValue);
+    assertEquals('meta::pure::metamodel::function::property::AggregationKind', $enumPtr.value);
     assertEquals('Composite', $enumPtr.extraPointerValues->at(0).value);
 }

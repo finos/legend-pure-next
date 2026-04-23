@@ -7,13 +7,20 @@
       "expressionSequence" : [ {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 5,
+          "startColumn" : 6,
+          "startLine" : 5
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -24,30 +31,44 @@
             "startLine" : 5
           },
           "value" : 1
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 10,
-          "endLine" : 5,
-          "startColumn" : 6,
-          "startLine" : 5
-        }
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "not",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 25,
+            "endLine" : 6,
+            "startColumn" : 21,
+            "startLine" : 6
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "equal",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 19,
+              "endLine" : 6,
+              "startColumn" : 12,
+              "startLine" : 6
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -64,7 +85,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -75,46 +96,46 @@
                 "startLine" : 6
               },
               "value" : false
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 19,
-              "endLine" : 6,
-              "startColumn" : 12,
-              "startLine" : 6
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 25,
-            "endLine" : 6,
-            "startColumn" : 21,
-            "startLine" : 6
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 25,
-          "endLine" : 6,
-          "startColumn" : 5,
-          "startLine" : 6
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 27,
+          "endLine" : 7,
+          "startColumn" : 23,
+          "startLine" : 7
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 21,
+            "endLine" : 7,
+            "startColumn" : 6,
+            "startLine" : 7
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "equal",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 20,
+              "endLine" : 7,
+              "startColumn" : 13,
+              "startLine" : 7
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -131,7 +152,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -142,46 +163,46 @@
                 "startLine" : 7
               },
               "value" : false
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 20,
-              "endLine" : 7,
-              "startColumn" : 13,
-              "startLine" : 7
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 21,
-            "endLine" : 7,
-            "startColumn" : 6,
-            "startLine" : 7
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 27,
-          "endLine" : 7,
-          "startColumn" : 23,
-          "startLine" : 7
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 24,
+          "endLine" : 8,
+          "startColumn" : 20,
+          "startLine" : 8
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 18,
+            "endLine" : 8,
+            "startColumn" : 11,
+            "startLine" : 8
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "equal",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 18,
+              "endLine" : 8,
+              "startColumn" : 11,
+              "startLine" : 8
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -198,7 +219,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -209,49 +230,56 @@
                 "startLine" : 8
               },
               "value" : false
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 18,
-              "endLine" : 8,
-              "startColumn" : 11,
-              "startLine" : 8
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 18,
-            "endLine" : 8,
-            "startColumn" : 11,
-            "startLine" : 8
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 24,
-          "endLine" : 8,
-          "startColumn" : 20,
-          "startLine" : 8
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 28,
+          "endLine" : 9,
+          "startColumn" : 24,
+          "startLine" : 9
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 22,
+            "endLine" : 9,
+            "startColumn" : 6,
+            "startLine" : 9
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "not",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 21,
+              "endLine" : 9,
+              "startColumn" : 13,
+              "startLine" : 9
+            },
             "parametersValues" : [ {
               "_type" : "FunctionInvocation",
               "functionName" : "equal",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 21,
+                "endLine" : 9,
+                "startColumn" : 13,
+                "startLine" : 9
+              },
               "parametersValues" : [ {
                 "_type" : "AtomicValue",
                 "genericType" : {
                   "_type" : "UserDefinedGenericType",
                   "type" : {
                     "_type" : "Type_Pointer",
-                    "pointerValue" : "Boolean"
+                    "value" : "Boolean"
                   }
                 },
                 "p_sourceInformation" : {
@@ -265,13 +293,20 @@
               }, {
                 "_type" : "FunctionInvocation",
                 "functionName" : "not",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 21,
+                  "endLine" : 9,
+                  "startColumn" : 16,
+                  "startLine" : 9
+                },
                 "parametersValues" : [ {
                   "_type" : "AtomicValue",
                   "genericType" : {
                     "_type" : "UserDefinedGenericType",
                     "type" : {
                       "_type" : "Type_Pointer",
-                      "pointerValue" : "Boolean"
+                      "value" : "Boolean"
                     }
                   },
                   "p_sourceInformation" : {
@@ -282,62 +317,48 @@
                     "startLine" : 9
                   },
                   "value" : false
-                } ],
-                "p_sourceInformation" : {
-                  "_type" : "SourceInformation",
-                  "endColumn" : 21,
-                  "endLine" : 9,
-                  "startColumn" : 16,
-                  "startLine" : 9
-                }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 21,
-                "endLine" : 9,
-                "startColumn" : 13,
-                "startLine" : 9
-              }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 21,
-              "endLine" : 9,
-              "startColumn" : 13,
-              "startLine" : 9
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 22,
-            "endLine" : 9,
-            "startColumn" : 6,
-            "startLine" : 9
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 28,
-          "endLine" : 9,
-          "startColumn" : 24,
-          "startLine" : 9
-        }
+                } ]
+              } ]
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 17,
+          "endLine" : 10,
+          "startColumn" : 13,
+          "startLine" : 10
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "greaterThan",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 11,
+            "endLine" : 10,
+            "startColumn" : 9,
+            "startLine" : 10
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "not",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 7,
+              "endLine" : 10,
+              "startColumn" : 6,
+              "startLine" : 10
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -348,21 +369,14 @@
                 "startLine" : 10
               },
               "value" : 1
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 7,
-              "endLine" : 10,
-              "startColumn" : 6,
-              "startLine" : 10
-            }
+            } ]
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Integer"
+                "value" : "Integer"
               }
             },
             "p_sourceInformation" : {
@@ -373,105 +387,112 @@
               "startLine" : 10
             },
             "value" : 2
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 11,
-            "endLine" : 10,
-            "startColumn" : 9,
-            "startLine" : 10
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 17,
-          "endLine" : 10,
-          "startColumn" : 13,
-          "startLine" : 10
-        }
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
-        "parametersValues" : [ {
-          "_type" : "FunctionInvocation",
-          "functionName" : "not",
-          "parametersValues" : [ {
-            "_type" : "FunctionInvocation",
-            "functionName" : "greaterThan",
-            "parametersValues" : [ {
-              "_type" : "AtomicValue",
-              "genericType" : {
-                "_type" : "UserDefinedGenericType",
-                "type" : {
-                  "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
-                }
-              },
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 8,
-                "endLine" : 11,
-                "startColumn" : 8,
-                "startLine" : 11
-              },
-              "value" : 1
-            }, {
-              "_type" : "AtomicValue",
-              "genericType" : {
-                "_type" : "UserDefinedGenericType",
-                "type" : {
-                  "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
-                }
-              },
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 12,
-                "endLine" : 11,
-                "startColumn" : 12,
-                "startLine" : 11
-              },
-              "value" : 2
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 12,
-              "endLine" : 11,
-              "startColumn" : 10,
-              "startLine" : 11
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 13,
-            "endLine" : 11,
-            "startColumn" : 6,
-            "startLine" : 11
-          }
-        } ],
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 19,
           "endLine" : 11,
           "startColumn" : 15,
           "startLine" : 11
-        }
-      }, {
-        "_type" : "ArrowInvocation",
-        "functionName" : "f",
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 11,
+            "startColumn" : 6,
+            "startLine" : 11
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
-            "functionName" : "lessThan",
+            "functionName" : "greaterThan",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 12,
+              "endLine" : 11,
+              "startColumn" : 10,
+              "startLine" : 11
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 8,
+                "endLine" : 11,
+                "startColumn" : 8,
+                "startLine" : 11
+              },
+              "value" : 1
+            }, {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "Integer"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 12,
+                "endLine" : 11,
+                "startColumn" : 12,
+                "startLine" : 11
+              },
+              "value" : 2
+            } ]
+          } ]
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 19,
+          "endLine" : 12,
+          "startColumn" : 15,
+          "startLine" : 12
+        },
+        "parametersValues" : [ {
+          "_type" : "FunctionInvocation",
+          "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 12,
+            "startColumn" : 6,
+            "startLine" : 12
+          },
+          "parametersValues" : [ {
+            "_type" : "FunctionInvocation",
+            "functionName" : "lessThan",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 12,
+              "endLine" : 12,
+              "startColumn" : 10,
+              "startLine" : 12
+            },
+            "parametersValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -488,7 +509,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -499,46 +520,46 @@
                 "startLine" : 12
               },
               "value" : 2
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 12,
-              "endLine" : 12,
-              "startColumn" : 10,
-              "startLine" : 12
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 13,
-            "endLine" : 12,
-            "startColumn" : 6,
-            "startLine" : 12
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 19,
-          "endLine" : 12,
-          "startColumn" : 15,
-          "startLine" : 12
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 13,
+          "startColumn" : 21,
+          "startLine" : 13
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "and",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 19,
+            "endLine" : 13,
+            "startColumn" : 12,
+            "startLine" : 13
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "not",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 10,
+              "endLine" : 13,
+              "startColumn" : 6,
+              "startLine" : 13
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Boolean"
+                  "value" : "Boolean"
                 }
               },
               "p_sourceInformation" : {
@@ -549,21 +570,14 @@
                 "startLine" : 13
               },
               "value" : true
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 10,
-              "endLine" : 13,
-              "startColumn" : 6,
-              "startLine" : 13
-            }
+            } ]
           }, {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean"
+                "value" : "Boolean"
               }
             },
             "p_sourceInformation" : {
@@ -574,35 +588,35 @@
               "startLine" : 13
             },
             "value" : false
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 19,
-            "endLine" : 13,
-            "startColumn" : 12,
-            "startLine" : 13
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 25,
-          "endLine" : 13,
-          "startColumn" : 21,
-          "startLine" : 13
-        }
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "and",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 23,
+          "endLine" : 14,
+          "startColumn" : 11,
+          "startLine" : 14
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 9,
+            "endLine" : 14,
+            "startColumn" : 5,
+            "startLine" : 14
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean"
+                "value" : "Boolean"
               }
             },
             "p_sourceInformation" : {
@@ -613,24 +627,24 @@
               "startLine" : 14
             },
             "value" : true
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 9,
-            "endLine" : 14,
-            "startColumn" : 5,
-            "startLine" : 14
-          }
+          } ]
         }, {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 23,
+            "endLine" : 14,
+            "startColumn" : 19,
+            "startLine" : 14
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean"
+                "value" : "Boolean"
               }
             },
             "p_sourceInformation" : {
@@ -641,35 +655,35 @@
               "startLine" : 14
             },
             "value" : false
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 23,
-            "endLine" : 14,
-            "startColumn" : 19,
-            "startLine" : 14
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 23,
-          "endLine" : 14,
-          "startColumn" : 11,
-          "startLine" : 14
-        }
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "minus",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 11,
+          "endLine" : 15,
+          "startColumn" : 5,
+          "startLine" : 15
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 11,
+            "endLine" : 15,
+            "startColumn" : 7,
+            "startLine" : 15
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Integer"
+                "value" : "Integer"
               }
             },
             "p_sourceInformation" : {
@@ -680,32 +694,25 @@
               "startLine" : 15
             },
             "value" : 1
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 11,
-            "endLine" : 15,
-            "startColumn" : 7,
-            "startLine" : 15
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 11,
-          "endLine" : 15,
-          "startColumn" : 5,
-          "startLine" : 15
-        }
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 13,
+          "endLine" : 16,
+          "startColumn" : 9,
+          "startLine" : 16
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -716,27 +723,34 @@
             "startLine" : 16
           },
           "value" : -1
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 13,
-          "endLine" : 16,
-          "startColumn" : 9,
-          "startLine" : 16
-        }
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 16,
+          "endLine" : 17,
+          "startColumn" : 12,
+          "startLine" : 17
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "minus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 10,
+            "endLine" : 17,
+            "startColumn" : 8,
+            "startLine" : 17
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Integer"
+                "value" : "Integer"
               }
             },
             "p_sourceInformation" : {
@@ -753,7 +767,7 @@
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Integer"
+                "value" : "Integer"
               }
             },
             "p_sourceInformation" : {
@@ -764,38 +778,45 @@
               "startLine" : 17
             },
             "value" : 1
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 10,
-            "endLine" : 17,
-            "startColumn" : 8,
-            "startLine" : 17
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 16,
-          "endLine" : 17,
-          "startColumn" : 12,
-          "startLine" : 17
-        }
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "minus",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 17,
+          "endLine" : 18,
+          "startColumn" : 5,
+          "startLine" : 18
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 17,
+            "endLine" : 18,
+            "startColumn" : 13,
+            "startLine" : 18
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "minus",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 11,
+              "endLine" : 18,
+              "startColumn" : 9,
+              "startLine" : 18
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -812,7 +833,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -823,46 +844,46 @@
                 "startLine" : 18
               },
               "value" : 1
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 11,
-              "endLine" : 18,
-              "startColumn" : 9,
-              "startLine" : 18
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 17,
-            "endLine" : 18,
-            "startColumn" : 13,
-            "startLine" : 18
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 17,
-          "endLine" : 18,
-          "startColumn" : 5,
-          "startLine" : 18
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 19,
+          "endLine" : 19,
+          "startColumn" : 15,
+          "startLine" : 19
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "minus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 13,
+            "endLine" : 19,
+            "startColumn" : 6,
+            "startLine" : 19
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "minus",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 12,
+              "endLine" : 19,
+              "startColumn" : 10,
+              "startLine" : 19
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -879,7 +900,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -890,46 +911,46 @@
                 "startLine" : 19
               },
               "value" : 1
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 12,
-              "endLine" : 19,
-              "startColumn" : 10,
-              "startLine" : 19
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 13,
-            "endLine" : 19,
-            "startColumn" : 6,
-            "startLine" : 19
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 19,
-          "endLine" : 19,
-          "startColumn" : 15,
-          "startLine" : 19
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 20,
+          "startColumn" : 16,
+          "startLine" : 20
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "minus",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 14,
+            "endLine" : 20,
+            "startColumn" : 6,
+            "startLine" : 20
+          },
           "parametersValues" : [ {
             "_type" : "FunctionInvocation",
             "functionName" : "times",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 13,
+              "endLine" : 20,
+              "startColumn" : 10,
+              "startLine" : 20
+            },
             "parametersValues" : [ {
               "_type" : "AtomicValue",
               "genericType" : {
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -946,7 +967,7 @@
                 "_type" : "UserDefinedGenericType",
                 "type" : {
                   "_type" : "Type_Pointer",
-                  "pointerValue" : "Integer"
+                  "value" : "Integer"
                 }
               },
               "p_sourceInformation" : {
@@ -957,43 +978,36 @@
                 "startLine" : 20
               },
               "value" : -1
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 13,
-              "endLine" : 20,
-              "startColumn" : 10,
-              "startLine" : 20
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 14,
-            "endLine" : 20,
-            "startColumn" : 6,
-            "startLine" : 20
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 20,
-          "endLine" : 20,
-          "startColumn" : 16,
-          "startLine" : 20
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 16,
+          "endLine" : 21,
+          "startColumn" : 12,
+          "startLine" : 21
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 10,
+            "endLine" : 21,
+            "startColumn" : 6,
+            "startLine" : 21
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean"
+                "value" : "Boolean"
               }
             },
             "p_sourceInformation" : {
@@ -1004,35 +1018,35 @@
               "startLine" : 21
             },
             "value" : true
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 10,
-            "endLine" : 21,
-            "startColumn" : 6,
-            "startLine" : 21
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 16,
-          "endLine" : 21,
-          "startColumn" : 12,
-          "startLine" : 21
-        }
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "not",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 14,
+          "endLine" : 22,
+          "startColumn" : 5,
+          "startLine" : 22
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 14,
+            "endLine" : 22,
+            "startColumn" : 10,
+            "startLine" : 22
+          },
           "parametersValues" : [ {
             "_type" : "AtomicValue",
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
                 "_type" : "Type_Pointer",
-                "pointerValue" : "Boolean"
+                "value" : "Boolean"
               }
             },
             "p_sourceInformation" : {
@@ -1043,34 +1057,48 @@
               "startLine" : 22
             },
             "value" : true
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 14,
-            "endLine" : 22,
-            "startColumn" : 10,
-            "startLine" : 22
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 14,
-          "endLine" : 22,
-          "startColumn" : 5,
-          "startLine" : 22
-        }
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "not",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 40,
+          "endLine" : 23,
+          "startColumn" : 5,
+          "startLine" : 23
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "in",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 40,
+            "endLine" : 23,
+            "startColumn" : 29,
+            "startLine" : 23
+          },
           "parametersValues" : [ {
             "_type" : "DotApplication",
             "functionName" : "lastName",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 28,
+              "endLine" : 23,
+              "startColumn" : 20,
+              "startLine" : 23
+            },
             "parametersValues" : [ {
               "_type" : "DotApplication",
               "functionName" : "salesPerson",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 23,
+                "startColumn" : 8,
+                "startLine" : 23
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "c",
@@ -1081,22 +1109,8 @@
                   "startColumn" : 6,
                   "startLine" : 23
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 19,
-                "endLine" : 23,
-                "startColumn" : 8,
-                "startLine" : 23
-              }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 28,
-              "endLine" : 23,
-              "startColumn" : 20,
-              "startLine" : 23
-            }
+              } ]
+            } ]
           }, {
             "_type" : "VariableExpression",
             "name" : "names",
@@ -1107,34 +1121,48 @@
               "startColumn" : 34,
               "startLine" : 23
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 40,
-            "endLine" : 23,
-            "startColumn" : 29,
-            "startLine" : 23
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 40,
-          "endLine" : 23,
-          "startColumn" : 5,
-          "startLine" : 23
-        }
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "in",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 42,
+          "endLine" : 24,
+          "startColumn" : 31,
+          "startLine" : 24
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 29,
+            "endLine" : 24,
+            "startColumn" : 6,
+            "startLine" : 24
+          },
           "parametersValues" : [ {
             "_type" : "DotApplication",
             "functionName" : "lastName",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 29,
+              "endLine" : 24,
+              "startColumn" : 21,
+              "startLine" : 24
+            },
             "parametersValues" : [ {
               "_type" : "DotApplication",
               "functionName" : "salesPerson",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 20,
+                "endLine" : 24,
+                "startColumn" : 9,
+                "startLine" : 24
+              },
               "parametersValues" : [ {
                 "_type" : "VariableExpression",
                 "name" : "c",
@@ -1145,30 +1173,9 @@
                   "startColumn" : 7,
                   "startLine" : 24
                 }
-              } ],
-              "p_sourceInformation" : {
-                "_type" : "SourceInformation",
-                "endColumn" : 20,
-                "endLine" : 24,
-                "startColumn" : 9,
-                "startLine" : 24
-              }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 29,
-              "endLine" : 24,
-              "startColumn" : 21,
-              "startLine" : 24
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 29,
-            "endLine" : 24,
-            "startColumn" : 6,
-            "startLine" : 24
-          }
+              } ]
+            } ]
+          } ]
         }, {
           "_type" : "VariableExpression",
           "name" : "names",
@@ -1179,23 +1186,37 @@
             "startColumn" : 36,
             "startLine" : 24
           }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 42,
-          "endLine" : 24,
-          "startColumn" : 31,
-          "startLine" : 24
-        }
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "f",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 26,
+          "endLine" : 25,
+          "startColumn" : 22,
+          "startLine" : 25
+        },
         "parametersValues" : [ {
           "_type" : "FunctionInvocation",
           "functionName" : "not",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 20,
+            "endLine" : 25,
+            "startColumn" : 6,
+            "startLine" : 25
+          },
           "parametersValues" : [ {
             "_type" : "ArrowInvocation",
             "functionName" : "isNumber",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 20,
+              "endLine" : 25,
+              "startColumn" : 9,
+              "startLine" : 25
+            },
             "parametersValues" : [ {
               "_type" : "VariableExpression",
               "name" : "x",
@@ -1206,39 +1227,39 @@
                 "startColumn" : 7,
                 "startLine" : 25
               }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 20,
-              "endLine" : 25,
-              "startColumn" : 9,
-              "startLine" : 25
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 20,
-            "endLine" : 25,
-            "startColumn" : 6,
-            "startLine" : 25
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 26,
-          "endLine" : 25,
-          "startColumn" : 22,
-          "startLine" : 25
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "not",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 24,
+          "endLine" : 26,
+          "startColumn" : 5,
+          "startLine" : 26
+        },
         "parametersValues" : [ {
           "_type" : "ArrowInvocation",
           "functionName" : "f",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 24,
+            "endLine" : 26,
+            "startColumn" : 8,
+            "startLine" : 26
+          },
           "parametersValues" : [ {
             "_type" : "ArrowInvocation",
             "functionName" : "isNumber",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 24,
+              "endLine" : 26,
+              "startColumn" : 8,
+              "startLine" : 26
+            },
             "parametersValues" : [ {
               "_type" : "VariableExpression",
               "name" : "x",
@@ -1249,49 +1270,35 @@
                 "startColumn" : 6,
                 "startLine" : 26
               }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 24,
-              "endLine" : 26,
-              "startColumn" : 8,
-              "startLine" : 26
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 24,
-            "endLine" : 26,
-            "startColumn" : 8,
-            "startLine" : 26
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 24,
-          "endLine" : 26,
-          "startColumn" : 5,
-          "startLine" : 26
-        }
+            } ]
+          } ]
+        } ]
       } ],
       "functionName" : "f",
       "name" : "f__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 27,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Any",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 27,
             "endLine" : 3,
             "startColumn" : 25,
             "startLine" : 3
-          }
+          },
+          "value" : "Any"
         }
       },
       "returnMultiplicity" : {
@@ -1300,13 +1307,6 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 27,
-        "startColumn" : 1,
-        "startLine" : 3
       }
     } ],
     "imports" : [ "protocol::support::*" ],

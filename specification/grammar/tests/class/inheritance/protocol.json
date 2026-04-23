@@ -10,14 +10,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::SuperClass",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 60,
               "endLine" : 3,
               "startColumn" : 32,
               "startLine" : 3
-            }
+            },
+            "value" : "protocol::support::SuperClass"
           }
         },
         "p_sourceInformation" : {
@@ -33,14 +33,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Light",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 67,
               "endLine" : 3,
               "startColumn" : 63,
               "startLine" : 3
-            }
+            },
+            "value" : "Light"
           }
         },
         "p_sourceInformation" : {
@@ -52,16 +52,16 @@
         }
       } ],
       "name" : "AClass",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 5,
         "startColumn" : 1,
         "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       }
     }, {
       "_type" : "Class",
@@ -71,14 +71,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "protocol::support::Light",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 60,
               "endLine" : 7,
               "startColumn" : 37,
               "startLine" : 7
-            }
+            },
+            "value" : "protocol::support::Light"
           }
         },
         "p_sourceInformation" : {
@@ -90,37 +90,44 @@
         }
       } ],
       "name" : "SimpleClass",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 9,
         "startColumn" : 1,
         "startLine" : 7
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       }
     }, {
       "_type" : "Class",
       "name" : "Light",
-      "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
-      },
       "p_sourceInformation" : {
         "_type" : "SourceInformation",
         "endColumn" : 1,
         "endLine" : 13,
         "startColumn" : 1,
         "startLine" : 11
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       }
     }, {
       "_type" : "Class",
       "name" : "SuperClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 15
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -128,14 +135,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 18,
               "endLine" : 17,
               "startColumn" : 13,
               "startLine" : 17
-            }
+            },
+            "value" : "String"
           }
         },
         "multiplicity" : {
@@ -165,20 +172,20 @@
             "_type" : "PointerValue",
             "value" : "None"
           } ],
-          "pointerValue" : "meta::pure::metamodel::function::property::AggregationKind"
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
         },
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "Integer",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 21,
               "endLine" : 18,
               "startColumn" : 15,
               "startLine" : 18
-            }
+            },
+            "value" : "Integer"
           }
         },
         "multiplicity" : {
@@ -200,14 +207,7 @@
           "startColumn" : 3,
           "startLine" : 18
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 19,
-        "startColumn" : 1,
-        "startLine" : 15
-      }
+      } ]
     } ],
     "imports" : [ "protocol::support::*" ],
     "parserName" : "Pure"

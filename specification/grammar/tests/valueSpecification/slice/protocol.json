@@ -7,13 +7,20 @@
       "expressionSequence" : [ {
         "_type" : "FunctionInvocation",
         "functionName" : "slice",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 7,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -24,69 +31,69 @@
             "startLine" : 4
           },
           "value" : 10
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 7,
-          "endLine" : 4,
-          "startColumn" : 3,
-          "startLine" : 4
-        }
+        } ]
       }, {
         "_type" : "FunctionInvocation",
         "functionName" : "slice",
-        "parametersValues" : [ {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
-            }
-          },
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 4,
-            "endLine" : 5,
-            "startColumn" : 4,
-            "startLine" : 5
-          },
-          "value" : 1
-        }, {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
-            }
-          },
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 7,
-            "endLine" : 5,
-            "startColumn" : 6,
-            "startLine" : 5
-          },
-          "value" : 10
-        } ],
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 8,
           "endLine" : 5,
           "startColumn" : 3,
           "startLine" : 5
-        }
-      }, {
-        "_type" : "FunctionInvocation",
-        "functionName" : "slice",
+        },
         "parametersValues" : [ {
           "_type" : "AtomicValue",
           "genericType" : {
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 5,
+            "startColumn" : 4,
+            "startLine" : 5
+          },
+          "value" : 1
+        }, {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
+            }
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 7,
+            "endLine" : 5,
+            "startColumn" : 6,
+            "startLine" : 5
+          },
+          "value" : 10
+        } ]
+      }, {
+        "_type" : "FunctionInvocation",
+        "functionName" : "slice",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -103,7 +110,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -120,7 +127,7 @@
             "_type" : "UserDefinedGenericType",
             "type" : {
               "_type" : "Type_Pointer",
-              "pointerValue" : "Integer"
+              "value" : "Integer"
             }
           },
           "p_sourceInformation" : {
@@ -131,33 +138,33 @@
             "startLine" : 6
           },
           "value" : 2
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 10,
-          "endLine" : 6,
-          "startColumn" : 3,
-          "startLine" : 6
-        }
+        } ]
       } ],
       "functionName" : "sliceExpressions",
       "name" : "sliceExpressions__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Any",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 42,
             "endLine" : 2,
             "startColumn" : 40,
             "startLine" : 2
-          }
+          },
+          "value" : "Any"
         }
       },
       "returnMultiplicity" : {
@@ -166,13 +173,6 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 7,
-        "startColumn" : 1,
-        "startLine" : 2
       }
     } ],
     "parserName" : "Pure"

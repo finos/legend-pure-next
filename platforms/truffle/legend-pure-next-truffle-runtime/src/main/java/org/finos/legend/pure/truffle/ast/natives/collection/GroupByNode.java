@@ -16,11 +16,13 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 
 import java.util.ArrayList;
@@ -71,6 +73,46 @@ public final class GroupByNode extends PureNode
         return buildMap(items, keys, sz);
     }
 
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
+
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT()
+    {
+        if (mapCGT == null)
+        {
+            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
+            Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
+            if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+            {
+                mapCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
+            }
+            else
+            {
+                throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
+            }
+        }
+        return mapCGT;
+    }
+
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCGT;
+
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getListCGT()
+    {
+        if (listCGT == null)
+        {
+            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
+            Object listType = resolver.getElement("meta::pure::functions::collection::List");
+            if (listType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+            {
+                listCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
+            }
+            else
+            {
+                throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
+            }
+        }
+        return listCGT;
+    }
+
     private static Object buildMap(Object[] items, Object[] keys, int sz)
     {
         LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();
@@ -98,10 +140,14 @@ public final class GroupByNode extends PureNode
         }
 
         // Build MapImpl backed by LinkedHashMap
+        var mapCgt = getMapCGT();
+        var listCgt = getListCGT();
         MapImpl mapInstance = new MapImpl();
+        mapInstance._classifierGenericType(mapCgt);
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
             ListImpl listInstance = new ListImpl();
+            listInstance._classifierGenericType(listCgt);
             listInstance._values(new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));
             mapInstance.put(e.getKey(), listInstance);
         }

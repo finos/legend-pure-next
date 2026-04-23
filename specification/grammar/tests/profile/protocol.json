@@ -5,6 +5,13 @@
     "elements" : [ {
       "_type" : "Profile",
       "name" : "AProfile",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 6,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
       "p_stereotypes" : [ {
         "_type" : "Stereotype",
         "p_sourceInformation" : {
@@ -48,15 +55,8 @@
         "value" : "tag2"
       } ],
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 6,
-        "startColumn" : 1,
-        "startLine" : 2
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       }
     } ],
     "parserName" : "Pure"

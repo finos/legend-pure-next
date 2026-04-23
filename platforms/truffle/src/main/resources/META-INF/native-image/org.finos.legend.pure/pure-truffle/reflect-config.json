@@ -354,12 +354,12 @@
 {
   "name":"meta.pure.protocol.grammar.Enum_PointerImpl",
   "queryAllPublicMethods":true,
-  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_pointerValue","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
+  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_value","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
 },
 {
   "name":"meta.pure.protocol.grammar.Package_PointerImpl",
   "queryAllPublicMethods":true,
-  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_pointerValue","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
+  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_value","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
 },
 {
   "name":"meta.pure.protocol.grammar.PointerValueImpl",
@@ -389,7 +389,7 @@
 {
   "name":"meta.pure.protocol.grammar.extension.Stereotype_PointerImpl",
   "queryAllPublicMethods":true,
-  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_pointerValue","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
+  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_value","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
 },
 {
   "name":"meta.pure.protocol.grammar.extension.TagImpl",
@@ -399,7 +399,7 @@
 {
   "name":"meta.pure.protocol.grammar.extension.Tag_PointerImpl",
   "queryAllPublicMethods":true,
-  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_pointerValue","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
+  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_value","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
 },
 {
   "name":"meta.pure.protocol.grammar.extension.TaggedValueImpl",
@@ -499,7 +499,7 @@
 {
   "name":"meta.pure.protocol.grammar.type.Type_PointerImpl",
   "queryAllPublicMethods":true,
-  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_pointerValue","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
+  "methods":[{"name":"_extraPointerValues","parameterTypes":[] }, {"name":"_value","parameterTypes":[] }, {"name":"_sourceInformation","parameterTypes":[] }]
 },
 {
   "name":"meta.pure.protocol.grammar.type.generics.TypeParameterImpl",

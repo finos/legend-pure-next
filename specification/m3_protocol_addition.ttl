@@ -68,14 +68,9 @@
     :name [ :classifierGenericType :GenericType_String ; :data "Enum_Pointer" ] ;
     :classifierGenericType [ :type :Class ; :typeArguments [ :type :Enum_Pointer ] ] ;
     :package :meta_pure_protocol_grammar ;
-    :generalizations [ :general [ :type :Any ] ] .
+    :generalizations [ :general [ :type :PointerValue ] ] .
 
-:Enum_Pointer_pointerValue a :Property ;
-    :name [ :classifierGenericType :GenericType_String ; :data "pointerValue" ] ;
-    :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Enum_Pointer ] [ :type :String ] ) ; :multiplicityArguments :PureOne ] ;
-    :owner :Enum_Pointer ;
-    :genericType [ :type :String ] ;
-    :multiplicity :PureOne .
+## value is inherited from PointerValue
 
 :Enum_Pointer_extraPointerValues a :Property ;
     :name [ :classifierGenericType :GenericType_String ; :data "extraPointerValues" ] ;

@@ -48,7 +48,12 @@ function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1
     let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
     let result = meta::pure::compiler::compile($parsedFile);
 
-    let expectedGraphElement = $parsedFile.sections.elements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
+    let allElements = $parsedFile.sections.elements;
+    let expectedGraphElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
+    if($expectedGraphElement->isEmpty() && contains($content, '###CompiledGraph'),
+       | assert(false, 'Test file contains ###CompiledGraph section but CompiledGraph element was not found in parsed output for ' + $sourceId);,
+       | []
+    );
     if($expectedGraphElement->isNotEmpty(),
        | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
          let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements);

@@ -97,10 +97,9 @@ public final class CastNode extends PureNode
                             related = org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(sourceType, targetType, resolver)
                                     || org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(targetType, sourceType, resolver);
                         }
-                        catch (Exception ignored)
+                        catch (Exception e)
                         {
-                            // Type hierarchy check can fail for raw values — allow cast
-                            related = true;
+                            throw new RuntimeException("Type hierarchy check failed during cast", e);
                         }
                         if (!related)
                         {
@@ -273,8 +272,9 @@ public final class CastNode extends PureNode
                             message += ", Message: " + msgResult;
                         }
                     }
-                    catch (Exception ignored)
+                    catch (Exception e)
                     {
+                        throw new RuntimeException("Failed to execute constraint message function", e);
                     }
                 }
                 throw new RuntimeException(message);

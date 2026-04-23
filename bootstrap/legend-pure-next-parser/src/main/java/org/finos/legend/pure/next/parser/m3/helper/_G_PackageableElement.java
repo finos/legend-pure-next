@@ -35,7 +35,7 @@ public class _G_PackageableElement
     public static String fullPath(PackageableElement grammar)
     {
         return grammar._package() instanceof Package_Pointer pkg
-                ? pkg._pointerValue() + "::" + grammar._name()
+                ? pkg._value() + "::" + grammar._name()
                 : grammar._name();
     }
 }

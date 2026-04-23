@@ -33,6 +33,13 @@ stage: build-bootstrap
     cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
     cp -r {{boot}}/legend-pure-next-generators/target/generated-specification/* {{out}}/specification/
 
+# --- Copy pre-built artifacts to build/ (no rebuild) ---
+copy:
+    mkdir -p {{out}}/cli {{out}}/specification/protocol
+    cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
+    cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
+    cp -r {{boot}}/legend-pure-next-generators/target/generated-specification/* {{out}}/specification/
+
 # --- Compile compiler.pdb from compiler-pure sources ---
 build-compiler-pdb: stage
     java -jar {{cli}} compile \

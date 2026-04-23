@@ -5,9 +5,16 @@
     "elements" : [ {
       "_type" : "Class",
       "name" : "ClassWithPropertiesWithSpace",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -15,14 +22,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 25,
               "endLine" : 6,
               "startColumn" : 20,
               "startLine" : 6
-            }
+            },
+            "value" : "String"
           }
         },
         "multiplicity" : {
@@ -50,14 +57,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 15,
               "endLine" : 7,
               "startColumn" : 10,
               "startLine" : 7
-            }
+            },
+            "value" : "String"
           }
         },
         "multiplicity" : {
@@ -79,14 +86,7 @@
           "startColumn" : 3,
           "startLine" : 7
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 8,
-        "startColumn" : 1,
-        "startLine" : 4
-      }
+      } ]
     } ],
     "imports" : [ "protocol::support::*" ],
     "parserName" : "Pure"

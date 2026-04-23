@@ -7,6 +7,13 @@
       "expressionSequence" : [ {
         "_type" : "DotApplication",
         "functionName" : "name",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 9,
+          "endLine" : 5,
+          "startColumn" : 5,
+          "startLine" : 5
+        },
         "parametersValues" : [ {
           "_type" : "VariableExpression",
           "name" : "x",
@@ -17,20 +24,27 @@
             "startColumn" : 3,
             "startLine" : 5
           }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 9,
-          "endLine" : 5,
-          "startColumn" : 5,
-          "startLine" : 5
-        }
+        } ]
       }, {
         "_type" : "DotApplication",
         "functionName" : "city",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 17,
+          "endLine" : 6,
+          "startColumn" : 13,
+          "startLine" : 6
+        },
         "parametersValues" : [ {
           "_type" : "DotApplication",
           "functionName" : "address",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 12,
+            "endLine" : 6,
+            "startColumn" : 5,
+            "startLine" : 6
+          },
           "parametersValues" : [ {
             "_type" : "VariableExpression",
             "name" : "x",
@@ -41,31 +55,38 @@
               "startColumn" : 3,
               "startLine" : 6
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 12,
-            "endLine" : 6,
-            "startColumn" : 5,
-            "startLine" : 6
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 17,
-          "endLine" : 6,
-          "startColumn" : 13,
-          "startLine" : 6
-        }
+          } ]
+        } ]
       }, {
         "_type" : "DotApplication",
         "functionName" : "length",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 24,
+          "endLine" : 7,
+          "startColumn" : 18,
+          "startLine" : 7
+        },
         "parametersValues" : [ {
           "_type" : "DotApplication",
           "functionName" : "city",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 17,
+            "endLine" : 7,
+            "startColumn" : 13,
+            "startLine" : 7
+          },
           "parametersValues" : [ {
             "_type" : "DotApplication",
             "functionName" : "address",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 12,
+              "endLine" : 7,
+              "startColumn" : 5,
+              "startLine" : 7
+            },
             "parametersValues" : [ {
               "_type" : "VariableExpression",
               "name" : "x",
@@ -76,36 +97,29 @@
                 "startColumn" : 3,
                 "startLine" : 7
               }
-            } ],
-            "p_sourceInformation" : {
-              "_type" : "SourceInformation",
-              "endColumn" : 12,
-              "endLine" : 7,
-              "startColumn" : 5,
-              "startLine" : 7
-            }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 17,
-            "endLine" : 7,
-            "startColumn" : 13,
-            "startLine" : 7
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 24,
-          "endLine" : 7,
-          "startColumn" : 18,
-          "startLine" : 7
-        }
+            } ]
+          } ]
+        } ]
       }, {
         "_type" : "ArrowInvocation",
         "functionName" : "toUpper",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 8,
+          "startColumn" : 10,
+          "startLine" : 8
+        },
         "parametersValues" : [ {
           "_type" : "DotApplication",
           "functionName" : "name",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 9,
+            "endLine" : 8,
+            "startColumn" : 5,
+            "startLine" : 8
+          },
           "parametersValues" : [ {
             "_type" : "VariableExpression",
             "name" : "x",
@@ -116,41 +130,34 @@
               "startColumn" : 3,
               "startLine" : 8
             }
-          } ],
-          "p_sourceInformation" : {
-            "_type" : "SourceInformation",
-            "endColumn" : 9,
-            "endLine" : 8,
-            "startColumn" : 5,
-            "startLine" : 8
-          }
-        } ],
-        "p_sourceInformation" : {
-          "_type" : "SourceInformation",
-          "endColumn" : 20,
-          "endLine" : 8,
-          "startColumn" : 10,
-          "startLine" : 8
-        }
+          } ]
+        } ]
       } ],
       "functionName" : "dotExpressions",
       "name" : "dotExpressions__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol"
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
       },
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
           "_type" : "Type_Pointer",
-          "pointerValue" : "Any",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 40,
             "endLine" : 3,
             "startColumn" : 38,
             "startLine" : 3
-          }
+          },
+          "value" : "Any"
         }
       },
       "returnMultiplicity" : {
@@ -159,20 +166,20 @@
           "_type" : "MultiplicityValue",
           "value" : 0
         }
-      },
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 9,
-        "startColumn" : 1,
-        "startLine" : 3
       }
     }, {
       "_type" : "Class",
       "name" : "Address",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 11
+      },
       "package" : {
-        "_type" : "Package_PointerImpl",
-        "pointerValue" : "protocol::support"
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
       },
       "properties" : [ {
         "_type" : "Property",
@@ -180,14 +187,14 @@
           "_type" : "UserDefinedGenericType",
           "type" : {
             "_type" : "Type_Pointer",
-            "pointerValue" : "String",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 14,
               "endLine" : 13,
               "startColumn" : 9,
               "startLine" : 13
-            }
+            },
+            "value" : "String"
           }
         },
         "multiplicity" : {
@@ -209,14 +216,7 @@
           "startColumn" : 3,
           "startLine" : 13
         }
-      } ],
-      "p_sourceInformation" : {
-        "_type" : "SourceInformation",
-        "endColumn" : 1,
-        "endLine" : 14,
-        "startColumn" : 1,
-        "startLine" : 11
-      }
+      } ]
     } ],
     "imports" : [ "protocol::support::*" ],
     "parserName" : "Pure"

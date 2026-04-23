@@ -25,7 +25,7 @@ import meta::pure::metamodel::extension::*;
 
 function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:CompilerContext[1]):CompilerResult<Class<Any>>[1]
 {
-    let packagePath = if($protocolClass.package->isEmpty(), | '', | $protocolClass.package->toOne().pointerValue);
+    let packagePath = if($protocolClass.package->isEmpty(), | '', | $protocolClass.package->toOne().value);
     let className = if($packagePath == '', | $protocolClass.name, | $packagePath + '::' + $protocolClass.name);
     let skeleton = $context->resolveElement($className)->toOne()->cast(@Class<Any>);
 
@@ -54,8 +54,20 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
     let compiledTaggedValues = $tvAccum.values;
     let ctx4 = $tvAccum.context;
 
+    let typeVariables = if($protocolClass.typeVariables->isEmpty(), | [],
+        | $protocolClass.typeVariables->map(tv |
+            let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
+            let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            ^meta::pure::metamodel::valuespecification::VariableExpression(
+                name = $tv.name,
+                genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ctx4->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type)),
+                multiplicity = $mMult
+            );
+        )
+    );
+
     let ownerGenericType = $skeleton.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
-    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $ctx4);
+    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $typeVariables, $ctx4);
     let compiledConstraints = $constraintAccum.values;
     let ctx5 = $constraintAccum.context;
 
@@ -71,6 +83,7 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
         value = ^$skeleton(
             stereotypes = $compiledStereotypes,
             taggedValues = $compiledTaggedValues,
+            typeVariables = $typeVariables,
             generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
             properties = $compiledProperties->map(p | ^$p(owner = ~.~)),
             qualifiedProperties = $compiledQPs->map(qp | ^$qp(owner = ~.~)),
