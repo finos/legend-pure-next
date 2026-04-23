@@ -65,8 +65,8 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     // Check for duplicate parameter names
     let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
 
-    // Compile type parameters
-    let fnTypeParams = compileTypeParameters($fn.typeParameters);
+    // Compile type parameters — set owner to the function skeleton
+    let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
 
     // Compile parameters
     let paramAccum = compileParameters($fn.parameters, $ctx1, $packagePath, $fnTypeParams, $ownerCtx);

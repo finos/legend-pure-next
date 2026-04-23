@@ -68,8 +68,8 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     // Check for duplicate parameter names
     let ctx1 = validateDuplicateParameters($fn.parameters, $ctx, $ownerCtx, $siCtx);
 
-    // Compile type parameters and register them in the context (matches Java setEnclosingOwner)
-    let fnTypeParams = compileTypeParameters($fn.typeParameters);
+    // Compile type parameters — set owner to the function skeleton
+    let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
     let ctx1b = ^$ctx1(ownerTypeParams = $fnTypeParams);
 
     // Compile parameters
