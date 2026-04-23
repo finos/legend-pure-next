@@ -410,8 +410,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     // Reconcile expected with actual (mirrors Java reconcileInferred)
                     let reconciledArgGT = reconcileInferred($expectedGT, $argGT);
                     let reconciledVS = ^$argVS(genericType = $reconciledArgGT);
-                    // Collect additional bindings from reconciled type
-                    let updatedBindings = collectTypeParameterBindings($expectedGT, $reconciledArgGT, $acc.bindings);
+                    let updatedBindings = $acc.bindings;
                     let typeOk = isCompatibleGenericType($expectedGT, $reconciledArgGT);
                     let mulOk = multiplicitySubsumes($expectedMul, $argMul);
                     if(!$typeOk || !$mulOk,

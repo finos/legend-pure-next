@@ -63,22 +63,20 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                       let innerScope = $scope->concatenate($lambdaParams);
                       let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $conflictCtx);
                       let ctx1 = $resolveResult.context;
-                      // Compute lambda genericType from body return type.
-                      // Wrap return type/multiplicity as inferred — in Java, the equivalent happens through
-                      // mutation side effects where finalizeFunctionExpression sets child expression genericTypes
-                      // to inferred, and buildFunctionType later reads the mutated values.
+                      // Compute lambda genericType from body return type (mirrors Java _Lambda.buildFunctionType).
+                      // Use raw types from the last expression — no wrapping as inferred.
                       let bodyReturnGT = if($resolveResult.resolvedSpecs->isEmpty(),
                           | ^CompilerNotSetGenericType(),
                           | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
                             if($lastExpr.genericType->isEmpty() || $lastExpr.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
                                 | ^CompilerNotSetGenericType(),
-                                | asInferredGenericType($lastExpr.genericType->toOne())
+                                | $lastExpr.genericType->toOne()
                             );
                       );
                       let bodyReturnMul = if($resolveResult.resolvedSpecs->isEmpty(),
                           | PureOne,
                           | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);
-                            if($lastExpr.multiplicity->isEmpty(), | PureOne, | asInferredMultiplicity($lastExpr.multiplicity->toOne()));
+                            if($lastExpr.multiplicity->isEmpty(), | PureOne, | $lastExpr.multiplicity->toOne());
                       );
                       let lambdaFT = meta::pure::functions::lang::new(
                           ^UserDefinedGenericType(type = FunctionType)
