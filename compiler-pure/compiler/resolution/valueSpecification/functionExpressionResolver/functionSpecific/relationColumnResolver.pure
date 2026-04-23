@@ -70,7 +70,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     ]);
     let enrichedGT = ^InferredGenericType(type = $enrichedRT);
     let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
-    range($paramValues->size())->map(i | if($i == $typeHolderIdx, | let val = $paramValues->at($i); ^$val(genericType = $typeHolderGT);, | $paramValues->at($i)));
+    let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+    range($paramValues->size())->map(i | if($i == $typeHolderIdx, | let val = $paramValues->at($i); ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT);, | $paramValues->at($i)));
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::mergeColSpecArrayTypeHolder(paramValues:ValueSpecification[*]):ValueSpecification[*]
@@ -91,8 +92,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let mergedRT = ^RelationType<Any>(columns = $mergedColumns);
     let enrichedGT = ^InferredGenericType(type = $mergedRT);
     let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+    let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
     let val = $paramValues->at(1);
-    [$paramValues->at(0), ^$val(genericType = $typeHolderGT)];
+    [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)];
 }
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::tryResolveSubsetForTypeHolder(paramValues:ValueSpecification[*], ft:FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
@@ -149,8 +151,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let enrichedRT = ^RelationType<Any>(columns = $lookupResult.values->cast(@Column<Nil, Any|*>));
                   let enrichedGT = ^InferredGenericType(type = $enrichedRT);
                   let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+                  let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
                   let val = $paramValues->at(1);
-                  ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT)], bindings = $bindings, context = $lookupResult.context);,
+                  ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)], bindings = $bindings, context = $lookupResult.context);,
               a:Any[1] | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context)
           ]);
     );
@@ -172,8 +175,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let enrichedRT = ^RelationType<Any>(columns = $enrichedCols);
                   let enrichedGT = ^InferredGenericType(type = $enrichedRT);
                   let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+                  let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
                   let val = $paramValues->at(1);
-                  ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT)], bindings = $bindings, context = $context);,
+                  ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)], bindings = $bindings, context = $context);,
               a:Any[1] | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context)
           ]);
     );
