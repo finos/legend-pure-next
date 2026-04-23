@@ -60,8 +60,15 @@ function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1
 
          let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
-         if($cleanedExpected != $cleanedActual, | println('FAIL:' + $sourceId);, | []);
-         assertEquals($cleanedExpected, $cleanedActual);
+         if($cleanedExpected != $cleanedActual,
+             | println('FAIL:' + $sourceId);
+               let expLines = $cleanedExpected->split('\n');
+               let actLines = $cleanedActual->split('\n');
+               if($expLines->size() != $actLines->size(), |println('EXPECTED: ' + $expLines->size()->toString() + ' lines'), |[]);
+               if($expLines->size() != $actLines->size(), |println('ACTUAL:   ' + $actLines->size()->toString() + ' lines'), |[]);
+               assertEquals($expLines->joinStrings(' | '), $actLines->joinStrings(' | '));,
+             | []
+         );
          true;,
        | true
     );

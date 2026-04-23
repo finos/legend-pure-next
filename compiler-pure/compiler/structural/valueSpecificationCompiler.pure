@@ -171,10 +171,15 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                 | let siCtx = if($vs.p_sourceInformation->isNotEmpty(), | formatSourceInfo($vs.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
                   ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.value + '\' can\'t be found' + $siCtx));,
                 | let element = $resolved->toOne();
+                  // Use classifierGenericType if available (includes FunctionType type args for functions)
+                  // Otherwise fall back to InferredGenericType(element->type()) — mirrors Java where Package_Pointer gt=NotSet
+                  // and pass-3 resolveAtomicValue refreshes it from the map
+                  let elementCGT = $element->cast(@Any).classifierGenericType;
+                  let elementGT = if($elementCGT->isNotEmpty(), | asInferredGenericType($elementCGT->toOne()), | ^InferredGenericType(type = $element->type()));
                   ^ValueCompileResult(
                       values = [^AtomicValue(
                           value = $element,
-                          genericType = ^InferredGenericType(type = $element->type()),
+                          genericType = $elementGT,
                           multiplicity = PureOne,
                           sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
                       )],
