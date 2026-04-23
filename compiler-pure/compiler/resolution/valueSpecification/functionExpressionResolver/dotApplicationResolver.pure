@@ -90,7 +90,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 value = ^$dot(
                                     func = $matchedProp->at(0),
                                     genericType = $enumGT,
-                                    multiplicity = PureOne
+                                    multiplicity = PureOne,
+                                    parametersValues = $resolvedParams->cast(@ValueSpecification)
                                 ),
                                 context = $ctx1
                             );
