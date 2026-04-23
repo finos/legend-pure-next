@@ -346,7 +346,7 @@ function meta::pure::compiler::test::printer::printAtomicValue(av:AtomicValue[1]
          )->joinStrings('\n');
          let body = $lambda.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS($indent + '  '))->joinStrings('\n');
          [
-             $indent, 'Lambda(', $paramStr, ')', $retType,
+             $indent, 'Lambda', if($paramStr->length() > 0, | '(' + $paramStr + ')', | ''), $retType,
              $av->vsCGT(),
              $av.sourceInformation->printSourceInfo(),
              if($openVars == '', | '', | '\n' + $openVars),
