@@ -26,13 +26,9 @@ function meta::pure::compiler::resolution::valueSpecification::collectionResolve
         ^$acc(values += if($r.value->isEmpty(), | $v, | $r.value->at(0)), context = $r.context);
     }, ^meta::pure::compiler::CompilerListResult<ValueSpecification>(context = $context));
 
-    // Compute common genericType from resolved elements
-    let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(UndefinedGenericType) && !$gt->toOne()->instanceOf(CompilerNotSetGenericType))->map(gt | $gt->toOne());
-    let foundGT = if($elementTypes->isNotEmpty(), | findCommonGenericType($elementTypes), | []);
-    let commonGT = if($foundGT->isNotEmpty(),
-        | asInferredGenericType($foundGT->toOne()),
-        | $col.genericType->toOne()
-    );
+    // Compute common genericType from resolved elements (mirrors Java CollectionResolver)
+    let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(CompilerNotSetGenericType))->map(gt | $gt->toOne());
+    let commonGT = asInferredGenericType(findCommonGenericType($elementTypes)->toOne());
 
     ^meta::pure::compiler::CompilerResult<ValueSpecification>(
         value = ^$col(values = $result.values, genericType = $commonGT),

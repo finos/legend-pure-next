@@ -340,7 +340,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let inferredReturnGT = asInferredGenericType($returnGT);
           let inferredReturnMul = asInferredMultiplicity($returnMul);
 
-          // Build resolved type/multiplicity parameters (use raw binding value, not inferred-wrapped)
+          // Build resolved type/multiplicity parameters (use raw binding value — matches Java populateResolvedParameters)
           let resolvedTypeParams = $enrichedBindings.typeBindings->keys()->map(k |
               let vals = $enrichedBindings.typeBindings->get($k)->toOne().values;
               ^ResolvedTypeParameter(
@@ -642,8 +642,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 {
     // Re-resolve via VSR (now lambda has concrete param types)
     let r = resolveValueSpecification($vs, $scope, $context);
-    let resolved = if($r.value->isEmpty(), | $vs, | $r.value->toOne());
+    let reResolved = if($r.value->isEmpty(), | $vs, | $r.value->toOne());
     let ctx1 = $r.context;
+
+    // Mark child's resolved parameters as inferred (mirrors Java finishProcessing lines 507-520)
+    let resolved = $reResolved->match([
+        fe:FunctionExpression[1] |
+            let wrappedTP = $fe.resolvedTypeParameters->map(rtp | ^$rtp(value = asInferredGenericType($rtp.value)));
+            let wrappedMP = $fe.resolvedMultiplicityParameters->map(rmp | ^$rmp(value = asInferredMultiplicity($rmp.value)));
+            ^$fe(resolvedTypeParameters = $wrappedTP, resolvedMultiplicityParameters = $wrappedMP)->cast(@ValueSpecification);,
+        a:Any[1] | $reResolved
+    ]);
 
     // Collect bindings from the re-resolved type
     let b1 = if($resolved.genericType->isNotEmpty(),
