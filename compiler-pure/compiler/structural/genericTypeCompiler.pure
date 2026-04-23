@@ -154,9 +154,17 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         ^$acc(values += $argResult.value, context = $argResult.context);
     }, ^CompilerListResult<GenericType>(context = $result.context));
 
+    // Compile type variable values (e.g., Varchar(200)) — mirrors Java line 87
+    let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);
+
     let resultGT = $result.value->toOne();
     $resultGT->match(
         [
+            resultValue : UserDefinedGenericType[1] |
+                ^CompilerResult<GenericType>(
+                    value = ^$resultValue(typeArguments = $typeArgResult.values, typeVariableValues = $typeVarValues),
+                    context = $typeArgResult.context
+                ),
             resultValue : GenericTypeValue[1] |
                 ^CompilerResult<GenericType>(
                     value = ^$resultValue(typeArguments = $typeArgResult.values),

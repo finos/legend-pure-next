@@ -442,10 +442,12 @@ function meta::pure::compiler::test::printer::formatLiteral(value:Any[1], declar
 {
     if($value->instanceOf(PackageableElement),
         | $value->cast(@PackageableElement)->fullPath(),
-        | let str = $value->toString();
-          if($declaredType == 'Integer' || $declaredType == 'Float' || $declaredType == 'Boolean' || $declaredType == 'Decimal',
-              | $str,
-              | '\'' + $str + '\''
+        | if($declaredType == 'Integer' || $declaredType == 'Float' || $declaredType == 'Boolean' || $declaredType == 'Decimal',
+              | $value->toString(),
+              | if($declaredType == 'String',
+                  | '\'' + $value->cast(@String) + '\'',
+                  | '\'' + $value->toString() + '\''
+              )
           );
     );
 }
