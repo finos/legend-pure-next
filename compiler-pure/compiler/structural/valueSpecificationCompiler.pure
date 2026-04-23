@@ -344,7 +344,11 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):ValueCompileResult[1]
 {
-    let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@GenericType), | match($gmh.genericType->toOne(), [g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(), a:Any[1] | []->cast(@GenericType)]));
+    let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@GenericType), | match($gmh.genericType->toOne(), [
+        g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(),
+        u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | ^UndefinedGenericType(),
+        a:Any[1] | []->cast(@GenericType)
+    ]));
     let heldMul = if($gmh.multiplicity->isNotEmpty(),
         | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
         | []->cast(@Multiplicity)

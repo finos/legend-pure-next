@@ -576,7 +576,12 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
               | let rawTypes = $nonNullValues->filter(gt | $gt.type->isNotEmpty() && !$gt.type->toOne()->instanceOf(TypeParameter))->map(gt | $gt.type->toOne());
                 if($rawTypes->isEmpty(),
                     | [],
-                    | // If all raw types are FunctionType instances, use structural unification (like Java lines 177-184)
+                    | // If all raw types are RelationType instances, use structural unification (like Java lines 177-182)
+                      let rawRelationTypes = $rawTypes->filter(t | $t->instanceOf(RelationType))->cast(@RelationType<Any>);
+                      if($rawRelationTypes->size() == $rawTypes->size() && $rawRelationTypes->isNotEmpty(),
+                          | let common = meta::pure::compiler::helper::relationType::findCommonRelationType($rawRelationTypes, $contravariant);
+                            if($common->isNotEmpty(), | ^InferredGenericType(type = $common->toOne()), | []);,
+                          | // If all raw types are FunctionType instances, use structural unification (like Java lines 184-190)
                       let rawFunctionTypes = $rawTypes->filter(t | $t->instanceOf(FunctionType))->cast(@FunctionType);
                       if($rawFunctionTypes->size() == $rawTypes->size() && $rawFunctionTypes->isNotEmpty(),
                           | let common = findCommonFunctionType($rawFunctionTypes);
@@ -599,6 +604,7 @@ function meta::pure::compiler::helper::genericType::findCommonGenericType(generi
                             findCommonGenericType_Args($resultType, $projectedValues, $withArgs, $common, $contravariant);
                       );
                       ); // end FunctionType check
+                      ); // end RelationType check
                 );
           );
     );
