@@ -100,7 +100,19 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                       );
                 );,
             a : Any[1] |
-                ^CompilerResult<ValueSpecification>(value = $av, context = $context)
+                // For element references, refresh from the map to get up-to-date classifierGenericType
+                if($a->instanceOf(PackageableElement),
+                    | let path = $a->cast(@PackageableElement)->elementToPath();
+                      let fromMap = $context->resolveElement($path);
+                      if($fromMap->isNotEmpty(),
+                          | let resolved = $fromMap->toOne()->cast(@PackageableElement);
+                            let resolvedCGT = $resolved->cast(@Any).classifierGenericType;
+                            let updatedGT = if($resolvedCGT->isEmpty(), | $av.genericType, | asInferredGenericType($resolvedCGT->toOne()));
+                            ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $context);,
+                          | ^CompilerResult<ValueSpecification>(value = $av, context = $context)
+                      );,
+                    | ^CompilerResult<ValueSpecification>(value = $av, context = $context)
+                )
         ]
     );
 }
