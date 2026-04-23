@@ -309,54 +309,6 @@ public class NativeRepository
             return true;
         }
 
-        // GenericType — compare by their contained type path
-        if (a instanceof meta.pure.metamodel.type.generics.GenericType gtA
-                && b instanceof meta.pure.metamodel.type.generics.GenericType gtB)
-        {
-            meta.pure.metamodel.type.Type typeA = _GenericType.type(gtA);
-            meta.pure.metamodel.type.Type typeB = _GenericType.type(gtB);
-            if (typeA == null && typeB == null)
-            {
-                return true;
-            }
-            if (typeA == null || typeB == null)
-            {
-                return false;
-            }
-            return pureEquals(typeA, typeB);
-        }
-
-        // GenericTypeAndMultiplicityHolder — compare by their held GenericType
-        if (a instanceof GenericTypeAndMultiplicityHolder gthA
-                && b instanceof GenericTypeAndMultiplicityHolder gthB)
-        {
-            meta.pure.metamodel.type.generics.GenericType cgA = gthA._genericType();
-            meta.pure.metamodel.type.generics.GenericType cgB = gthB._genericType();
-            if (cgA == null && cgB == null)
-            {
-                return true;
-            }
-            if (cgA == null || cgB == null)
-            {
-                return false;
-            }
-            var taA = _GenericType.typeArguments(cgA);
-            var taB = _GenericType.typeArguments(cgB);
-            if (taA != null && !taA.isEmpty() && taB != null && !taB.isEmpty())
-            {
-                return pureEquals(taA.getFirst(), taB.getFirst());
-            }
-            return pureEquals(cgA, cgB);
-        }
-
-        // PackageableElement — compare by path
-        if (a instanceof PackageableElement peA && b instanceof PackageableElement peB)
-        {
-            String pathA = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA);
-            String pathB = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB);
-            return Objects.equals(pathA, pathB);
-        }
-
         // DynamicInstance — compare by class + equality key properties
         if (a instanceof DynamicInstance diA && b instanceof DynamicInstance diB)
         {

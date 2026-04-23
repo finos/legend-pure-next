@@ -654,7 +654,8 @@ function meta::pure::compiler::helper::genericType::makeAsConcreteAsPossible(gen
                           let mulArgsResolved = $gtv.multiplicityArguments->map(m | makeAsConcreteAsPossible($m, $bindings));
                           if($typeArgsResolved == $gtv.typeArguments && $mulArgsResolved == $gtv.multiplicityArguments,
                               | $genericType,
-                              | ^$gtv(typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
+                              // Wrap as InferredGenericType when type args changed (mirrors Java line 761: new InferredGenericTypeImpl)
+                              | ^InferredGenericType(type = $other, typeArguments = $typeArgsResolved, multiplicityArguments = $mulArgsResolved)
                           );
                   ])
             );,
