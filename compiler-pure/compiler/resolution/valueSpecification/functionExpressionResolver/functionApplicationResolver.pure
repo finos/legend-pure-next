@@ -199,7 +199,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                 // In Java (mutable), func is set to null on the resolved expression.
                 // In Pure (immutable), we create from the original $fi (which has no func, no genericType)
                 // and copy the resolved parametersValues. This ensures the expression gets re-resolved in candidate attempts.
-                let resolvedFI = $resolvedResult.value->toOne()->cast(@FunctionInvocation);
+                let resolvedFI = $resolvedResult.value->toOne()->cast(@FunctionApplication);
                 let ambiguousValue = ^$fi(parametersValues = $resolvedFI.parametersValues);
                 ^CompilerResult<ValueSpecification>(
                     value = $ambiguousValue,

@@ -40,10 +40,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         inv:FunctionApplication[1] |
             resolveFunctionApplication($inv, $scope, $deepCtx)
     ]);
-    // Enum value resolution returns an AtomicValue, not a FunctionExpression — finalize only FEs
+    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
     if($result.value->isNotEmpty(),
         | match($result.value->toOne(), [
-              fInv:FunctionApplication[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fInv, $checkpoint, $result.context),
+              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $result.context),
               a:Any[1] | $result
           ]),
         | $result
@@ -51,7 +51,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Mirrors Java FunctionExpressionResolver.finalizeFunctionExpression (lines 87-124)
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression(fi:FunctionApplication[1], checkpoint:Integer[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression(fi:FunctionExpression[1], checkpoint:Integer[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     if($fi.func->isNotEmpty(),
         | // func resolved — compute return type from FunctionType + bindings (like Java lines 89-107)
@@ -74,8 +74,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // Validate required properties for new expressions
           let fnName = $fi.functionName->toOne();
           let ctx1 = if([pair(| $context.errors->size() > $checkpoint, | $context),
-                         pair(| $fnName == 'new' || $fnName->startsWith('new_'), | validateNewFromFI($updated, $context)),
-                         pair(| $fnName == 'copy' || $fnName->startsWith('copy_'), | validateCopyFromFI($updated, $context))],
+                         pair(| ($fnName == 'new' || $fnName->startsWith('new_')) && $fi->instanceOf(FunctionApplication), | validateNewFromFI($fi->cast(@FunctionApplication), $context)),
+                         pair(| ($fnName == 'copy' || $fnName->startsWith('copy_')) && $fi->instanceOf(FunctionApplication), | validateCopyFromFI($fi->cast(@FunctionApplication), $context))],
                         | $context
                      );
           ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);,
