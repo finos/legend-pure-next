@@ -127,9 +127,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
              | // Single candidate — resolve directly, errors are legitimate
                debug($deepCtx, | '1 candidate');
                resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);)],
-       | // Multiple candidates — pre-resolve non-lambda params, then try each candidate
-         debug($deepCtx, | $candidates->size()->toString() + ' candidates, pre-resolving non-lambda params');
-         resolveWithMultipleCandidates($fi, $candidates, $scope, $deepCtx, $context);
+       | // Multiple candidates — sort most-specific-first, pre-resolve non-lambda params, then try each candidate
+         let sorted = $candidates->sort({a, b | compareFunctionTypes($a->getFunctionType(), $b->getFunctionType())});
+         debug($deepCtx, | $sorted->size()->toString() + ' candidates, pre-resolving non-lambda params');
+         resolveWithMultipleCandidates($fi, $sorted, $scope, $deepCtx, $context);
     );
 }
 
@@ -392,7 +393,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | $acc,
                   | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $bindings);
                     let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $bindings);
-                    let typeOk = isCompatibleGenericType($expectedGT, $argGT) || isCompatibleGenericType($argGT, $expectedGT) || (printGenericType($expectedGT) == printGenericType($argGT));
+                    let typeOk = isCompatibleGenericType($expectedGT, $argGT);
                     let mulOk = multiplicitySubsumes($expectedMul, $argMul);
                     if(!$typeOk || !$mulOk,
                         | ^$acc(failed = true);,
