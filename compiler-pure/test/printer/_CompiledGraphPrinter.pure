@@ -320,7 +320,7 @@ function meta::pure::compiler::test::printer::printFunctionExpression(fe:Functio
     );
     let retType = if($fe.genericType->isEmpty(), | '', | ' :' + $fe.genericType->toOne()->printType() + $fe.multiplicity->toOne()->printMul());
     let resolvedTP = $fe.resolvedTypeParameters->sort({a,b | $a.name->compare($b.name)})->map(p | $indent + '  typeParam ' + $p.name + ' -> ' + $p.value->printType())->joinStrings('\n');
-    let resolvedMP = $fe.resolvedMultiplicityParameters->map(p | $indent + '  mulParam ' + $p.name + ' -> ' + $p.value->printMul())->joinStrings('\n');
+    let resolvedMP = $fe.resolvedMultiplicityParameters->sort({a,b | $a.name->compare($b.name)})->map(p | $indent + '  mulParam ' + $p.name + ' -> ' + $p.value->printMul())->joinStrings('\n');
     let children = $fe.parametersValues->cast(@ValueSpecification)->map(child | $child->printVS($indent + '  '))->joinStrings('\n');
     [
         $indent, $kind, ' ', $funcName, $retType,

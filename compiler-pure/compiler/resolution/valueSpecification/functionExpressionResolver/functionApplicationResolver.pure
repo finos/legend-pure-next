@@ -254,7 +254,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Initialize: all params start unresolved
     let initInfos = $fi.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
 
-    // Seed initial bindings from pre-resolved type/multiplicity parameters (like Java pushBindingNode line 148)
+    // Create FunctionCallParametersBinding with enclosingOwner (mirrors Java pushBindingNode line 149)
     let seedBindings = $fi.resolvedTypeParameters->fold({rtp, b |
         collectTypeParameterBindings(
             ^UserDefinedGenericType(type = ^TypeParameter(name = $rtp.name)),
@@ -269,47 +269,41 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             $b
         );
     }, $seedBindings);
+    let ownTypeParamNames = $entryTypeParams;
+    let ownMulParamNames = $entryMulParams;
+    let node = ^FunctionCallParametersBinding(
+        expr = $fi,
+        function = $entry,
+        ownTypeParams = newMap($ownTypeParamNames->map(n | pair($n, ^TypeParameter(name = $n, contravariant = false)))),
+        ownMulParams = newMap($ownMulParamNames->map(n | pair($n, ^UserDefinedMultiplicityParameter(name = $n)->cast(@MultiplicityParameter)))),
+        enclosingOwner = $deepCtx.enclosingOwnerBinding,
+        typeBindings = $seedBindings2.typeBindings,
+        multiplicityBindings = $seedBindings2.multiplicityBindings
+    );
 
     // Fixpoint: resolve params iteratively until no more progress
-    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, $seedBindings2, $scope, $deepCtx, 1);
+    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, $node->cast(@ParametersBinding), $scope, $deepCtx, 1);
     let resolvedInfos = $fixpointResult.infos;
-    // Unify: reduce multi-valued bindings to single values (like Java unify() common-type reduction)
-    let rawBindings = $fixpointResult.bindings;
-    let unifiedTypeBindings = $rawBindings.typeBindings->keys()->fold({k, acc |
-        let vals = $rawBindings.typeBindings->get($k)->toOne().values;
-        if($vals->size() <= 1,
-            | collectTypeParameterBindings(
-                  ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
-                  $vals->at(0), $acc),
-            | let common = findCommonGenericType($vals);
-              if($common->isNotEmpty(),
-                  | collectTypeParameterBindings(
-                        ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
-                        $common->toOne(), $acc),
-                  | $acc
-              );
-        );
-    }, newPlainParametersBinding()->cast(@ParametersBinding));
-    let bindings = $rawBindings.multiplicityBindings->keys()->fold({k, acc |
-        let vals = $rawBindings.multiplicityBindings->get($k)->toOne().values;
-        if($vals->size() <= 1,
-            | collectMultiplicityParameterBindings(
-                  ^UserDefinedMultiplicityParameter(name = $k),
-                  $vals->at(0), $acc),
-            | let common = findCommonMultiplicity($vals);
-              if($common->isNotEmpty(),
-                  | collectMultiplicityParameterBindings(
-                        ^UserDefinedMultiplicityParameter(name = $k),
-                        $common->toOne(), $acc),
-                  | $acc
-              );
-        );
-    }, $unifiedTypeBindings);
+    // Unify: cross-match, transitive resolution, pre-reduction, common-type reduction (like Java unify())
+    let bindings = $fixpointResult.bindings->match([
+        fcpb:FunctionCallParametersBinding[1] | unify($fcpb)->cast(@ParametersBinding),
+        other:ParametersBinding[1] | $other
+    ]);
     let ctx1 = $fixpointResult.context;
+
+    // Propagate enclosing owner bindings back to context (mirrors Java mutable enclosingOwnerParametersBinding)
+    let ctx1WithOwner = $bindings->match([
+        fcpb:FunctionCallParametersBinding[1] |
+            if($fcpb.enclosingOwner->isNotEmpty(),
+                | ^$ctx1(enclosingOwnerBinding = $fcpb.enclosingOwner->toOne()),
+                | $ctx1
+            ),
+        other:ParametersBinding[1] | $ctx1
+    ]);
 
     // Push back saved errors from all unresolved args
     let unresolvedErrors = $resolvedInfos->filter(info | !$info.resolved)->map(info | $info.savedErrors);
-    let ctx2 = ^$ctx1(errors += $unresolvedErrors);
+    let ctx2 = ^$ctx1WithOwner(errors += $unresolvedErrors);
 
     // Assemble result
     let resolvedParams = $resolvedInfos->map(info | $info.newParam);
@@ -350,8 +344,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let inferredReturnMul = asInferredMultiplicity($returnMul);
 
           // Build resolved type/multiplicity parameters from validated bindings
+          // Filter by ownTypeParamNames — only include this function's own params (mirrors Java populateResolvedParameters lines 97-99)
           // Use findCommonGenericType for multi-valued bindings (mirrors Java populateResolvedParameters)
-          let resolvedTypeParams = $validatedBindings.typeBindings->keys()->map(k |
+          let resolvedTypeParams = $validatedBindings.typeBindings->keys()->filter(k | $ownTypeParamNames->contains($k))->map(k |
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
               let boundGT = if($vals->size() == 1,
                   | $vals->at(0),
@@ -363,7 +358,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   value = $boundGT
               );
           );
-          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->map(k |
+          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->filter(k | $ownMulParamNames->contains($k))->map(k |
               let vals = $validatedBindings.multiplicityBindings->get($k)->toOne().values;
               ^ResolvedMultiplicityParameter(
                   name = $k,

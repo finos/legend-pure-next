@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
+import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
@@ -244,7 +245,8 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
         | $context,
         | debug($context, | 'resolveAndValidate: function \'' + $fn.functionName->toOne() + '\'');
           // Set ownerTypeParams/ownerMulParams for pass 3 — matches Java UserDefinedFunctionHandler.thirdPass setEnclosingOwner
-          let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@TypeParameter), ownerMulParams = $fn.multiplicityParameters->cast(@MultiplicityParameter));
+          let enclosingBinding = ^EnclosingOwnerParametersBinding(owner = $fn, typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>)));
+          let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@TypeParameter), ownerMulParams = $fn.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
           let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@VariableExpression), $ctxWithOwner->debugSpaceInc());
           let resultCtx = $result.context;
           // Validate return type and multiplicity of the last expression
@@ -282,7 +284,7 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
           let finalCtx = $postResult.context;
           let updatedCtx = ^$finalCtx(elementMap = $finalCtx.elementMap->put($fnPath, $resolvedFn));
           // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner
-          ^$updatedCtx(debugState = $context.debugState, ownerTypeParams = [], ownerMulParams = []);
+          ^$updatedCtx(debugState = $context.debugState, ownerTypeParams = [], ownerMulParams = [], enclosingOwnerBinding = []);
     );
 }
 
@@ -292,7 +294,8 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     let clsPath = $cls->elementToPath();
     let currentCls = $context.elementMap->get($clsPath)->toOne()->cast(@Class<Any>);
     // Set ownerTypeParams/ownerMulParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
-    let ctxWithOwner = ^$context(ownerTypeParams = $currentCls.typeParameters->cast(@TypeParameter), ownerMulParams = $currentCls.multiplicityParameters->cast(@MultiplicityParameter));
+    let enclosingBinding = ^EnclosingOwnerParametersBinding(owner = $currentCls, typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>)));
+    let ctxWithOwner = ^$context(ownerTypeParams = $currentCls.typeParameters->cast(@TypeParameter), ownerMulParams = $currentCls.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
     let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($currentCls.qualifiedProperties, $currentCls.typeVariables->cast(@VariableExpression), $ctxWithOwner);
     let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($currentCls, $qpResult.context);
     let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
@@ -306,7 +309,7 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     );
     let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
     // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner
-    ^$updatedCtx(ownerTypeParams = [], ownerMulParams = []);
+    ^$updatedCtx(ownerTypeParams = [], ownerMulParams = [], enclosingOwnerBinding = []);
 }
 
 function meta::pure::compiler::resolveAssociation(assoc:Association[1], context:CompilerContext[1]):CompilerContext[1]

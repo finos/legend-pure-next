@@ -20,8 +20,8 @@ function test::foldMatchOpenVar__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any
     Lambda(e:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~AtomicValue  @4:21-8:5
       ArrowInvocation match_Any_MANY__Function_$1_MANY$__T_m_ :#Integer##[1]#  ~ArrowInvocation  @5:11-7:10
         typeParam T -> #Integer#
-        mulParam n -> [1]
         mulParam m -> #[1]#
+        mulParam n -> [1]
         Variable e :#Integer##[1]#  ~VariableExpression  @5:9-5:10
         Collection :#LambdaFunction<#{Integer[1]->#Integer##[1]#}#>#[1]  ~Collection  @5:19-7:9
           Lambda(i:Integer[1]) :#LambdaFunction<#{Integer[1]->#Integer##[1]#}#>#[1]  ~AtomicValue  @6:13-6:36

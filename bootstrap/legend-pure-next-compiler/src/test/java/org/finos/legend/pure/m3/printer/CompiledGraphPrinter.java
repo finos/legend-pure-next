@@ -629,7 +629,7 @@ public final class CompiledGraphPrinter
         MutableList<ResolvedMultiplicityParameter> rmp = fe._resolvedMultiplicityParameters();
         if (rmp != null && rmp.notEmpty())
         {
-            rmp.forEach(p -> indent(sb, depth + 1)
+            rmp.toSortedListBy(p -> p._name()).forEach(p -> indent(sb, depth + 1)
                     .append("mulParam ").append(p._name())
                     .append(" -> ").append(printMul(p._value()))
                     .append('\n'));

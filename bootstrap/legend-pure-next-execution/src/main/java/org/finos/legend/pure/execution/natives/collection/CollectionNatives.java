@@ -514,6 +514,24 @@ public class CollectionNatives
             return makeCollection(new ArrayList<>(pureMap.getMap().values()), resolver);
         });
 
+        // keyValues(Map<U,V>[1]) : Pair<U,V>[*]
+        natives.put("keyValues_Map_1__Pair_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap pureMap = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            List<ValueSpecification> pairs = new ArrayList<>();
+            for (Map.Entry<ValueSpecification, ValueSpecification> entry : pureMap.getMap().entrySet())
+            {
+                DynamicInstance pair = makePair(
+                        entry.getKey(), entry.getValue(),
+                        entry.getKey()._genericType(), entry.getValue()._genericType(), resolver);
+                pairs.add(new AtomicValueImpl(resolver)
+                        ._value(pair)
+                        ._genericType(pair.getClassifierGenericType())
+                        ._multiplicity(_Multiplicity.concreteMultiplicity(1, 1, resolver)));
+            }
+            return makeCollection(pairs, resolver);
+        });
+
         // putAll(Map<U,V>[1], Pair<U,V>[*]) : Map<U,V>[1]
         natives.put("putAll_Map_1__Pair_MANY__Map_1_", (args, eval, genericType, multiplicity) ->
         {

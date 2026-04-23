@@ -106,8 +106,8 @@ function test::testChainedAutomap_Function_1__Boolean_1_(f:Function<{Function<{-
     ArrowInvocation eval_Function_1__T_n__V_m_ :#String##[*]#  ~ArrowInvocation  @30:49-30:84
       typeParam T -> #Function<#{->#String##[*]#}#>#
       typeParam V -> #String#
-      mulParam n -> #[1]#
       mulParam m -> #[*]#
+      mulParam n -> #[1]#
       Variable f :#Function<{Function<{->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>[1]->Z~test::testChainedAutomap_Function_1__Boolean_1_[y]}>##[1]#  ~VariableExpression  @30:47-30:48
       Lambda :#LambdaFunction<#{->#String##[*]#}#>#[1]  ~AtomicValue  @30:56-30:83
         openVar smith :#test::CA_Person##[1]#
