@@ -33,7 +33,7 @@ function x::testF__String_1_():String[1]  ~UserDefinedFunction<{->String[1]}>
       AtomicValue  'b' :String[1]  ~AtomicValue  @16:17-16:19
     AtomicValue  'b' :String[1]  ~AtomicValue  @16:23-16:25
   FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~FunctionInvocation  @17:5-17:20
-    mulParam m -> [1]
+    mulParam m -> #[1]#
     AtomicValue  'a' :String[1]  ~AtomicValue  @17:12-17:14
     AtomicValue  'b' :String[1]  ~AtomicValue  @17:17-17:19
   FunctionInvocation x::myFunc_String_m__String_m__String_1_ :#String##[1]#  ~FunctionInvocation  @18:5-18:32

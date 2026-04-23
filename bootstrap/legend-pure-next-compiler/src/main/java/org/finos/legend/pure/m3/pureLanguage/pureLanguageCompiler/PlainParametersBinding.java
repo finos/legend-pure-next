@@ -38,6 +38,6 @@ public class PlainParametersBinding extends ParametersBinding
     public void addTypeBinding(TypeParameter typeParam, GenericType argGT)
     {
         typeBindings.computeIfAbsent(typeParam._name(),
-                k -> org.eclipse.collections.impl.factory.Sets.mutable.empty()).add(argGT);
+                k -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).add(argGT);
     }
 }

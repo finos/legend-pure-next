@@ -69,13 +69,13 @@ public class FunctionCallParametersBinding extends ParametersBinding
         // Copy seed bindings (pre-resolved type/mul params) into this.
         if (seed != null)
         {
-            for (Map.Entry<String, MutableSet<GenericType>> e : seed.typeBindings().entrySet())
+            for (Map.Entry<String, MutableList<GenericType>> e : seed.typeBindings().entrySet())
             {
-                this.typeBindings.put(e.getKey(), e.getValue().clone());
+                this.typeBindings.put(e.getKey(), Lists.mutable.withAll(e.getValue()));
             }
-            for (Map.Entry<String, MutableSet<Multiplicity>> e : seed.multiplicityBindings().entrySet())
+            for (Map.Entry<String, MutableList<Multiplicity>> e : seed.multiplicityBindings().entrySet())
             {
-                this.multiplicityBindings.put(e.getKey(), e.getValue().clone());
+                this.multiplicityBindings.put(e.getKey(), Lists.mutable.withAll(e.getValue()));
             }
         }
     }
@@ -115,7 +115,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
             }
         }
         typeBindings.computeIfAbsent(typeParam._name(),
-                k -> org.eclipse.collections.impl.factory.Sets.mutable.empty()).add(argGT);
+                k -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).add(argGT);
     }
 
     /**
@@ -166,7 +166,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     if (gt instanceof GenericTypeValue && _GenericType.type(gt) instanceof TypeParameter tp)
                     {
                         String targetName = tp._name();
-                        MutableSet<GenericType> targetBinding = typeBindings.get(targetName);
+                        MutableList<GenericType> targetBinding = typeBindings.get(targetName);
 
                         if ((targetBinding == null || targetBinding.isEmpty()) && enclosingOwner != null)
                         {
@@ -205,7 +205,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                     if (mul instanceof MultiplicityParameter mulParam)
                     {
                         String targetName = mulParam._name();
-                        MutableSet<Multiplicity> targetBinding = multiplicityBindings.get(targetName);
+                        MutableList<Multiplicity> targetBinding = multiplicityBindings.get(targetName);
                         if (targetBinding != null && targetBinding.size() == 1)
                         {
                             Multiplicity resolved = targetBinding.getFirst();
@@ -237,7 +237,7 @@ public class FunctionCallParametersBinding extends ParametersBinding
                         if (_GenericType.type(gt) instanceof TypeParameter tp
                                 && tp._owner() == enclosingOwner.owner())
                         {
-                            MutableSet<GenericType> ownerBinding = enclosingOwner.typeBindings()
+                            MutableList<GenericType> ownerBinding = enclosingOwner.typeBindings()
                                     .get(tp._name());
                             if (ownerBinding != null && ownerBinding.size() == 1)
                             {

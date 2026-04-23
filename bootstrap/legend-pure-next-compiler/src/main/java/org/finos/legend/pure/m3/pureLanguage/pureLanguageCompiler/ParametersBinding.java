@@ -19,7 +19,7 @@ import meta.pure.metamodel.type.generics.GenericType;
 import meta.pure.metamodel.type.generics.TypeParameter;
 import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.map.MutableMap;
-import org.eclipse.collections.api.set.MutableSet;
+import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
 
@@ -41,15 +41,15 @@ import java.util.Map;
  */
 public abstract class ParametersBinding
 {
-    protected final MutableMap<String, MutableSet<GenericType>> typeBindings = Maps.mutable.empty();
-    protected final MutableMap<String, MutableSet<Multiplicity>> multiplicityBindings = Maps.mutable.empty();
+    protected final MutableMap<String, MutableList<GenericType>> typeBindings = Maps.mutable.empty();
+    protected final MutableMap<String, MutableList<Multiplicity>> multiplicityBindings = Maps.mutable.empty();
 
-    public MutableMap<String, MutableSet<GenericType>> typeBindings()
+    public MutableMap<String, MutableList<GenericType>> typeBindings()
     {
         return this.typeBindings;
     }
 
-    public MutableMap<String, MutableSet<Multiplicity>> multiplicityBindings()
+    public MutableMap<String, MutableList<Multiplicity>> multiplicityBindings()
     {
         return this.multiplicityBindings;
     }
@@ -68,13 +68,13 @@ public abstract class ParametersBinding
     public ParametersBinding copy()
     {
         PlainParametersBinding result = PlainParametersBinding.empty();
-        for (Map.Entry<String, MutableSet<GenericType>> e : typeBindings.entrySet())
+        for (Map.Entry<String, MutableList<GenericType>> e : typeBindings.entrySet())
         {
-            result.typeBindings.put(e.getKey(), e.getValue().clone());
+            result.typeBindings.put(e.getKey(), org.eclipse.collections.impl.factory.Lists.mutable.withAll(e.getValue()));
         }
-        for (Map.Entry<String, MutableSet<Multiplicity>> e : multiplicityBindings.entrySet())
+        for (Map.Entry<String, MutableList<Multiplicity>> e : multiplicityBindings.entrySet())
         {
-            result.multiplicityBindings.put(e.getKey(), e.getValue().clone());
+            result.multiplicityBindings.put(e.getKey(), org.eclipse.collections.impl.factory.Lists.mutable.withAll(e.getValue()));
         }
         return result;
     }
@@ -85,7 +85,7 @@ public abstract class ParametersBinding
     {
         StringBuilder sb = new StringBuilder("{");
         boolean first = true;
-        for (Map.Entry<String, MutableSet<GenericType>> e : typeBindings.entrySet())
+        for (Map.Entry<String, MutableList<GenericType>> e : typeBindings.entrySet())
         {
             if (!first)
             {
@@ -93,7 +93,7 @@ public abstract class ParametersBinding
             }
             first = false;
             sb.append(e.getKey()).append("=");
-            sb.append(e.getValue().collect(_GenericType::print).makeString("/"));
+            sb.append(e.getValue().collect(gt -> gt instanceof meta.pure.metamodel.Inferred ? "#" + _GenericType.print(gt) + "#" : _GenericType.print(gt)).makeString("/"));
         }
         if (!multiplicityBindings.isEmpty())
         {
@@ -102,7 +102,7 @@ public abstract class ParametersBinding
                 sb.append(" | ");
             }
             boolean firstMul = true;
-            for (Map.Entry<String, MutableSet<Multiplicity>> e : multiplicityBindings.entrySet())
+            for (Map.Entry<String, MutableList<Multiplicity>> e : multiplicityBindings.entrySet())
             {
                 if (!firstMul)
                 {
@@ -110,7 +110,7 @@ public abstract class ParametersBinding
                 }
                 firstMul = false;
                 sb.append(e.getKey()).append("=");
-                sb.append(e.getValue().collect(_Multiplicity::print).makeString("/"));
+                sb.append(e.getValue().collect(m -> m instanceof meta.pure.metamodel.Inferred ? "#" + _Multiplicity.print(m) + "#" : _Multiplicity.print(m)).makeString("/"));
             }
         }
         sb.append("}");

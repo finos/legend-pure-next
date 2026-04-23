@@ -64,7 +64,8 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                       let resolveResult = resolveExpressionSequence($lambda.expressionSequence, $innerScope, $conflictCtx);
                       let ctx1 = $resolveResult.context;
                       // Compute lambda genericType from body return type (mirrors Java _Lambda.buildFunctionType).
-                      // Use raw types from the last expression — no wrapping as inferred.
+                      // In Java, FunctionExpression body expressions have InferredGenericType from finalizeFunctionExpression.
+                      // Only wrap as inferred when the last expression is a FunctionExpression (which went through finalize).
                       let bodyReturnGT = if($resolveResult.resolvedSpecs->isEmpty(),
                           | ^CompilerNotSetGenericType(),
                           | let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);

@@ -33,10 +33,10 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Any#
       Collection :#AggColSpec<#{#(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Nil##[*]#->#Any##[0..1]#}#, #Any#>#[2]  ~Collection
-        FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:String[1])#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~FunctionInvocation  @9:48-9:68
+        FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~FunctionInvocation  @9:48-9:68
           typeParam K -> #Integer#
           typeParam T -> #(name:#Integer##[1]#)#
-          typeParam U -> #(ok:String[1])#
+          typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #Integer#
           Lambda(x:#(ok:String[1])##[1]#) :#LambdaFunction<#{#(ok:String[1])##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @9:53-9:55
             AtomicValue  1 :Integer[1]  ~AtomicValue  @9:55-9:55
@@ -45,10 +45,10 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
               Variable y :#Integer##[*]#  ~VariableExpression  @9:59-9:60
           AtomicValue  'name' :String[1]  ~AtomicValue  @9:48-9:51
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~FunctionInvocation  @9:71-9:97
+        FunctionInvocation aggColSpec_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~FunctionInvocation  @9:71-9:97
           typeParam K -> #String#
           typeParam T -> #(other:#String##[1]#)#
-          typeParam U -> #(ok:String[1])#
+          typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #String#
           Lambda(x:#(ok:String[1])##[1]#) :#LambdaFunction<#{#(ok:String[1])##[1]#->String[1]}#>#[1]  ~AtomicValue  @9:77-9:81
             AtomicValue  'e' :String[1]  ~AtomicValue  @9:79-9:81

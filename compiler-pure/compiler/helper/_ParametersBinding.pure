@@ -79,7 +79,7 @@ function meta::pure::compiler::helper::parametersBinding::putMapList<K,V>(map:Ma
     let currentList = $map->get($key);
     let newList = if($currentList->isEmpty(),
         | ^List<V>(values = [$value]),
-        | ^List<V>(values = $currentList->toOne().values->concatenate([$value])->removeDuplicates())
+        | ^List<V>(values = $currentList->toOne().values->concatenate([$value]))
     );
     $map->put($key, $newList);
 }

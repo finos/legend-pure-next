@@ -33,24 +33,24 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       typeParam U -> #(ok:#String##[1]#)#
       typeParam V -> #Any#
       Collection :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[0..1]#}#, #{#Nil##[*]#->#Any##[0..1]#}#, #Any#>#[2]  ~Collection
-        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~FunctionInvocation  @9:48-9:74
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#Integer#[0..1]}#, #{#Integer#[*]->#Integer#[0..1]}#, #(name:#Integer##[1]#)#>##[1]#  ~FunctionInvocation  @9:48-9:74
           typeParam K -> #Integer#
           typeParam T -> #(name:#Integer##[1]#)#
-          typeParam U -> #(ok:String[1])#
+          typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #Integer#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @9:53-9:61
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @9:53-9:61
             AtomicValue  1 :Integer[1]  ~AtomicValue  @9:60-9:60
           Lambda(y:#Integer##[*]#) :#LambdaFunction<#{#Integer##[*]#->#Integer##[1]#}#>#[1]  ~AtomicValue  @9:63-9:74
             ArrowInvocation _sum_Integer_MANY__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @9:67-9:74
               Variable y :#Integer##[*]#  ~VariableExpression  @9:65-9:66
           AtomicValue  'name' :String[1]  ~AtomicValue  @9:48-9:51
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:#Integer##[1]#)#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~FunctionInvocation  @9:77-9:109
+        FunctionInvocation aggColSpec2_Function_1__Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__AggColSpec_1_ :#AggColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->#String#[0..1]}#, #{#String#[*]->#String#[0..1]}#, #(other:#String##[1]#)#>##[1]#  ~FunctionInvocation  @9:77-9:109
           typeParam K -> #String#
           typeParam T -> #(other:#String##[1]#)#
-          typeParam U -> #(ok:String[1])#
+          typeParam U -> #(ok:#String##[1]#)#
           typeParam V -> #String#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  ~AtomicValue  @9:83-9:93
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->String[1]}#>#[1]  ~AtomicValue  @9:83-9:93
             AtomicValue  'p' :String[1]  ~AtomicValue  @9:90-9:92
           Lambda(y:#String##[*]#) :#LambdaFunction<#{#String##[*]#->#String##[1]#}#>#[1]  ~AtomicValue  @9:95-9:109
             ArrowInvocation _concat_String_MANY__String_1_ :#String##[1]#  ~ArrowInvocation  @9:99-9:109

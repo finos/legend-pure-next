@@ -22,17 +22,17 @@ function test__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
       typeParam T -> #Any#
       typeParam U -> #(ok:#String##[1]#)#
       Collection :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->#Any##[1]#}#, #Any#>#[2]  ~Collection
-        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(name:String[1])#>##[1]#  ~FunctionInvocation  @6:48-6:64
+        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[1]}#, #(name:String[1])#>##[1]#  ~FunctionInvocation  @6:48-6:64
           typeParam T -> #(name:String[1])#
-          typeParam U -> #(ok:String[1])#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->String[1]}#>#[1]  ~AtomicValue  @6:53-6:64
+          typeParam U -> #(ok:#String##[1]#)#
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->String[1]}#>#[1]  ~AtomicValue  @6:53-6:64
             AtomicValue  'ok' :String[1]  ~AtomicValue  @6:60-6:63
           AtomicValue  'name' :String[1]  ~AtomicValue  @6:48-6:51
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(name:String[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
-        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:String[1])#>#[1], #Window<#(ok:String[1])#>#[1], #(ok:String[1])#[1]->Any[1]}#, #(other:Integer[1])#>##[1]#  ~FunctionInvocation  @6:67-6:81
+        FunctionInvocation funcColSpec2_Function_1__String_1__CompilerGenericTypeAndMultiplicityHolder_1__FuncColSpec_1_ :#FuncColSpec<#{#Relation<#(ok:#String##[1]#)#>#[1], #Window<#(ok:#String##[1]#)#>#[1], #(ok:#String##[1]#)#[1]->Any[1]}#, #(other:Integer[1])#>##[1]#  ~FunctionInvocation  @6:67-6:81
           typeParam T -> #(other:Integer[1])#
-          typeParam U -> #(ok:String[1])#
-          Lambda(p:#Relation<#(ok:String[1])#>##[1]#, f:#Window<#(ok:String[1])#>##[1]#, r:#(ok:String[1])##[1]#) :#LambdaFunction<#{#Relation<#(ok:String[1])#>##[1]#, #Window<#(ok:String[1])#>##[1]#, #(ok:String[1])##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @6:73-6:81
+          typeParam U -> #(ok:#String##[1]#)#
+          Lambda(p:#Relation<#(ok:#String##[1]#)#>##[1]#, f:#Window<#(ok:#String##[1]#)#>##[1]#, r:#(ok:#String##[1]#)##[1]#) :#LambdaFunction<#{#Relation<#(ok:#String##[1]#)#>##[1]#, #Window<#(ok:#String##[1]#)#>##[1]#, #(ok:#String##[1]#)##[1]#->Integer[1]}#>#[1]  ~AtomicValue  @6:73-6:81
             AtomicValue  1 :Integer[1]  ~AtomicValue  @6:80-6:80
           AtomicValue  'other' :String[1]  ~AtomicValue  @6:67-6:71
           TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(other:Integer[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder

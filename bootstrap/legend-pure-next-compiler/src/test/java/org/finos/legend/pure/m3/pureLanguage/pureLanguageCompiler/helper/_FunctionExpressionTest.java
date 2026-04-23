@@ -75,9 +75,9 @@ public class _FunctionExpressionTest
         meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.getModule("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
-        bindings.typeBindings().put("T", Sets.mutable.with(targetGT));
-        bindings.typeBindings().put("Z", Sets.mutable.with(targetGT)); // Will be written but not extracted as own if we filtered later
-        bindings.multiplicityBindings().put("m", Sets.mutable.with(mul));
+        bindings.typeBindings().put("T", Lists.mutable.with(targetGT));
+        bindings.typeBindings().put("Z", Lists.mutable.with(targetGT)); // Will be written but not extracted as own if we filtered later
+        bindings.multiplicityBindings().put("m", Lists.mutable.with(mul));
 
         _FunctionExpression.populateResolvedParameters(expr, bindings, new ScopedMetadataAccess(model.getModule("test"), model));
 
@@ -127,10 +127,10 @@ public class _FunctionExpressionTest
         meta.pure.metamodel.multiplicity.Multiplicity mul = (meta.pure.metamodel.multiplicity.Multiplicity) model.getModule("m3").getElement("meta::pure::metamodel::multiplicity::PureOne");
 
         ParametersBinding bindings = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding.empty();
-        bindings.typeBindings().put("T", Sets.mutable.with(targetGT));
-        bindings.typeBindings().put("Z", Sets.mutable.with(targetGT)); // Should be filtered out
-        bindings.multiplicityBindings().put("m", Sets.mutable.with(mul));
-        bindings.multiplicityBindings().put("n", Sets.mutable.with(mul)); // Should be filtered out
+        bindings.typeBindings().put("T", Lists.mutable.with(targetGT));
+        bindings.typeBindings().put("Z", Lists.mutable.with(targetGT)); // Should be filtered out
+        bindings.multiplicityBindings().put("m", Lists.mutable.with(mul));
+        bindings.multiplicityBindings().put("n", Lists.mutable.with(mul)); // Should be filtered out
 
         _FunctionExpression.populateResolvedParameters(expr, bindings, Sets.mutable.with("T"), Sets.mutable.with("m"), new ScopedMetadataAccess(model.getModule("test"), model));
 

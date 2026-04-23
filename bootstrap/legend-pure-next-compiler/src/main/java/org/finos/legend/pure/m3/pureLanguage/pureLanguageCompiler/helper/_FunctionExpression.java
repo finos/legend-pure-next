@@ -24,7 +24,6 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
-import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
@@ -50,7 +49,7 @@ public final class _FunctionExpression
         {
             for (ResolvedTypeParameter rtp : resolvedTypeParameters)
             {
-                bindings.typeBindings().computeIfAbsent(rtp._name(), k -> Sets.mutable.empty()).add(rtp._value());
+                bindings.typeBindings().computeIfAbsent(rtp._name(), k -> Lists.mutable.empty()).add(rtp._value());
             }
         }
         MutableList<? extends ResolvedMultiplicityParameter> resolvedMultiplicityParameters = expr._resolvedMultiplicityParameters();
@@ -58,7 +57,7 @@ public final class _FunctionExpression
         {
             for (ResolvedMultiplicityParameter rmp : resolvedMultiplicityParameters)
             {
-                bindings.multiplicityBindings().computeIfAbsent(rmp._name(), k -> Sets.mutable.empty()).add(rmp._value());
+                bindings.multiplicityBindings().computeIfAbsent(rmp._name(), k -> Lists.mutable.empty()).add(rmp._value());
             }
         }
         return bindings;
@@ -98,7 +97,7 @@ public final class _FunctionExpression
                 {
                     continue;
                 }
-                MutableSet<GenericType> boundTypes = entry.getValue();
+                MutableList<GenericType> boundTypes = entry.getValue();
                 if (boundTypes != null && boundTypes.notEmpty())
                 {
                     GenericType boundGT = boundTypes.size() == 1
@@ -128,7 +127,7 @@ public final class _FunctionExpression
                 {
                     continue;
                 }
-                MutableSet<Multiplicity> boundMuls = entry.getValue();
+                MutableList<Multiplicity> boundMuls = entry.getValue();
                 if (boundMuls != null && boundMuls.notEmpty() && boundMuls.size() == 1)
                 {
                     resolvedMuls.add(new ResolvedMultiplicityParameterImpl(model)

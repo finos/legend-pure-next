@@ -9,7 +9,7 @@ import meta.pure.metamodel.multiplicity.UserDefinedAdHocMultiplicityImpl;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
-import org.eclipse.collections.impl.factory.Sets;
+import org.eclipse.collections.impl.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 
@@ -262,7 +262,7 @@ public final class _Multiplicity
         if (paramMul instanceof MultiplicityParameter mp)
         {
             String name = mp._name();
-            bindings.multiplicityBindings().computeIfAbsent(name, k -> Sets.mutable.empty())
+            bindings.multiplicityBindings().computeIfAbsent(name, k -> Lists.mutable.empty())
                     .add(argMul);
         }
     }
@@ -288,7 +288,7 @@ public final class _Multiplicity
         if (multiplicity instanceof MultiplicityParameter mp)
         {
             String name = mp._name();
-            MutableSet<Multiplicity> boundMuls = bindings.multiplicityBindings().get(name);
+            MutableList<Multiplicity> boundMuls = bindings.multiplicityBindings().get(name);
             if (boundMuls != null && boundMuls.notEmpty())
             {
                 // Use the first binding (all should be consistent if matching passed)

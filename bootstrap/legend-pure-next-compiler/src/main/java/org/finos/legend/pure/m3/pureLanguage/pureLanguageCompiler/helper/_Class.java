@@ -8,7 +8,6 @@ import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.type.generics.GenericType;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
-import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PlainParametersBinding;
 
@@ -37,14 +36,14 @@ public final class _Class
         {
             ownerClass._typeParameters().zip(_GenericType.typeArguments(receiverType)).forEach(pair ->
                     bindings.typeBindings()
-                            .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                            .computeIfAbsent(pair.getOne()._name(), k -> Lists.mutable.empty())
                             .add(pair.getTwo()));
         }
         if (ownerClass._multiplicityParameters().notEmpty())
         {
             ownerClass._multiplicityParameters().zip(_GenericType.multiplicityArguments(receiverType)).forEach(pair ->
                     bindings.multiplicityBindings()
-                            .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                            .computeIfAbsent(pair.getOne()._name(), k -> Lists.mutable.empty())
                             .add(pair.getTwo()));
         }
         return bindings;

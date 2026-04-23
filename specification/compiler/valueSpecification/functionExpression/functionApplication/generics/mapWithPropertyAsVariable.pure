@@ -48,14 +48,14 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():Boolean[1]  ~UserDefi
           FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @15:86-15:97
             AtomicValue  'lastName' :String[1]  ~AtomicValue  @15:86-15:97
             AtomicValue  'b' :String[1]  ~AtomicValue  @15:95-15:97
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Property<Nil, Any|*>##[1]#  ~FunctionInvocation  @16:5-16:84
-    typeParam T -> #Property<Nil, Any|*>#
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Property<#Nil#, #Any#>##[1]#  ~FunctionInvocation  @16:5-16:84
+    typeParam T -> #Property<#Nil#, #Any#>#
     mulParam m -> #[1]#
     AtomicValue  'property' :String[1]  ~AtomicValue  @16:9-16:16
-    ArrowInvocation toOne_T_MANY__T_1_ :#Property<Nil, Any|*>##[1]#  ~ArrowInvocation  @16:41-16:84
-      typeParam T -> #Property<Nil, Any|*>#
-      ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Property<Nil, Any|*>##[*]#  ~ArrowInvocation  @16:41-16:84
-        typeParam T -> #Property<Nil, Any|*>#
+    ArrowInvocation toOne_T_MANY__T_1_ :#Property<#Nil#, #Any#>##[1]#  ~ArrowInvocation  @16:41-16:84
+      typeParam T -> #Property<#Nil#, #Any#>#
+      ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#Property<#Nil#, #Any#>##[*]#  ~ArrowInvocation  @16:41-16:84
+        typeParam T -> #Property<#Nil#, #Any#>#
         DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<Nil, Any|*>##[*]#  ~DotApplication  @16:30-16:40
           AtomicValue  test::MPV_Person :#Class<test::MPV_Person>#[1]  ~AtomicValue  @16:20-16:29
         Lambda(p:#Property<Nil, Any|*>##[1]#) :#LambdaFunction<#{#Property<Nil, Any|*>##[1]#->#Boolean##[1]#}#>#[1]  ~AtomicValue  @16:50-16:74
@@ -67,8 +67,9 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():Boolean[1]  ~UserDefi
     Collection :#String#[2]  ~Collection  @17:18-17:26
       AtomicValue  'a' :String[1]  ~AtomicValue  @17:19-17:21
       AtomicValue  'b' :String[1]  ~AtomicValue  @17:23-17:25
-    ArrowInvocation map_T_MANY__Function_1__V_MANY_ :#Any##[*]#  ~ArrowInvocation  @17:34-17:49
+    ArrowInvocation map_T_m__Function_1__V_m_ :#Any##[2]#  ~ArrowInvocation  @17:34-17:49
       typeParam T -> #test::MPV_Person#
-      typeParam V -> Any
+      typeParam V -> #Any#
+      mulParam m -> #[2]#
       Variable vals :#test::MPV_Person##[2]#  ~VariableExpression  @17:29-17:33
-      Variable property :#Property<Nil, Any|*>##[1]#  ~VariableExpression  @17:40-17:48
+      Variable property :#Property<#Nil#, #Any#>##[1]#  ~VariableExpression  @17:40-17:48

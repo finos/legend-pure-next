@@ -350,11 +350,17 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let inferredReturnMul = asInferredMultiplicity($returnMul);
 
           // Build resolved type/multiplicity parameters from validated bindings
+          // Use findCommonGenericType for multi-valued bindings (mirrors Java populateResolvedParameters)
           let resolvedTypeParams = $validatedBindings.typeBindings->keys()->map(k |
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
+              let boundGT = if($vals->size() == 1,
+                  | $vals->at(0),
+                  | let common = findCommonGenericType($vals);
+                    if($common->isEmpty(), | $vals->at(0), | $common->toOne());
+              );
               ^ResolvedTypeParameter(
                   name = $k,
-                  value = $vals->at(0)
+                  value = $boundGT
               );
           );
           let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->map(k |

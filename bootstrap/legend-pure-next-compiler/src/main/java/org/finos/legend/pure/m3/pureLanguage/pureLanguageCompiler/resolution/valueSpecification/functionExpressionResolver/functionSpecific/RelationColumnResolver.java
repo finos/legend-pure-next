@@ -32,9 +32,7 @@ import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.list.ListIterable;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.impl.factory.Lists;
-import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
@@ -151,7 +149,7 @@ public final class RelationColumnResolver
         String typeParamName = ((TypeParameter) _GenericType.type(_GenericType.typeArguments(functionType._parameters().get(1)._genericType()).getFirst()))._name();
 
         // Check if bindings have T bound
-        MutableSet<GenericType> boundTypes = bindings.typeBindings().get(typeParamName);
+        MutableList<GenericType> boundTypes = bindings.typeBindings().get(typeParamName);
         if (boundTypes == null || boundTypes.isEmpty())
         {
             return expr;
@@ -376,7 +374,7 @@ public final class RelationColumnResolver
         {
             GenericType paramGT = functionType._parameters().get(typeHolderArgIdx)._genericType();
             String typeParamName = ((meta.pure.metamodel.type.generics.TypeParameter) _GenericType.type(_GenericType.typeArguments(paramGT).getFirst()))._name();
-            MutableSet<GenericType> bound = bindings.typeBindings().getIfAbsentPut(typeParamName, Sets.mutable::empty);
+            MutableList<GenericType> bound = bindings.typeBindings().getIfAbsentPut(typeParamName, Lists.mutable::empty);
             bound.clear();
             bound.add(_GenericType.typeArguments(enrichedGT).getFirst());
         }

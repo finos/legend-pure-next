@@ -707,7 +707,7 @@ public class _GenericType
                 if (gtv._type() instanceof TypeParameter tp)
                 {
                     String name = tp._name();
-                    MutableSet<GenericType> boundTypes = bindings.typeBindings().get(name);
+                    MutableList<GenericType> boundTypes = bindings.typeBindings().get(name);
                     if (boundTypes != null && boundTypes.notEmpty())
                     {
                         yield boundTypes.size() == 1
@@ -864,7 +864,7 @@ public class _GenericType
                     // Type parameter bindings: T → concrete type arg
                     cls._typeParameters().zip(src._typeArguments())
                             .forEach(pair -> bindings.typeBindings()
-                                    .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                                    .computeIfAbsent(pair.getOne()._name(), k -> Lists.mutable.empty())
                                     .add(pair.getTwo()));
 
                     // Multiplicity parameter bindings: m → concrete multiplicity arg
@@ -872,7 +872,7 @@ public class _GenericType
                     {
                         cls._multiplicityParameters().zip(src._multiplicityArguments())
                                 .forEach(pair -> bindings.multiplicityBindings()
-                                        .computeIfAbsent(pair.getOne()._name(), k -> Sets.mutable.empty())
+                                        .computeIfAbsent(pair.getOne()._name(), k -> Lists.mutable.empty())
                                         .add(pair.getTwo()));
                     }
                 }
