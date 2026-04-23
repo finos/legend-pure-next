@@ -60,6 +60,7 @@ function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1
 
          let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
+         if($cleanedExpected != $cleanedActual && $sourceId->startsWith('association'), | println('--- DIFF in ' + $sourceId + ' ---\nEXPECTED:\n' + $cleanedExpected + '\nACTUAL:\n' + $cleanedActual + '\n--- END ---');, | []);
          assertEquals($cleanedExpected, $cleanedActual);
          true;,
        | true

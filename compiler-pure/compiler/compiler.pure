@@ -225,6 +225,8 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
                 resolveFunctionDefinition($fn, $ctx);,
             cls:Class<Any>[1] |
                 resolveClass($cls, $ctx);,
+            assoc:Association[1] |
+                resolveAssociation($assoc, $ctx);,
             pt:PrimitiveType[1] |
                 meta::pure::compiler::structural::constraintCompiler::compileConstraints($pt, $ctx);,
             a:Any[1] | $ctx
@@ -281,21 +283,37 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
 
 function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
 {
+    // Read the current class from the map (may have propertiesFromAssociations set by association handler)
+    let clsPath = $cls->elementToPath();
+    let currentCls = $context.elementMap->get($clsPath)->toOne()->cast(@Class<Any>);
     // Set ownerTypeParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
-    let ctxWithOwner = ^$context(ownerTypeParams = $cls.typeParameters->cast(@TypeParameter));
-    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($cls.qualifiedProperties, $ctxWithOwner);
-    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($cls, $qpResult.context);
-    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($cls.constraints, $ctx2);
-    let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($cls.properties, $constraintResult.context);
-    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($cls, $propResult.context);
-    // Store resolved class back into the map
-    let resolvedCls = ^$cls(
+    let ctxWithOwner = ^$context(ownerTypeParams = $currentCls.typeParameters->cast(@TypeParameter));
+    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($currentCls.qualifiedProperties, $ctxWithOwner);
+    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($currentCls, $qpResult.context);
+    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
+    let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($currentCls.properties, $constraintResult.context);
+    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($currentCls, $propResult.context);
+    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls)
+    let resolvedCls = ^$currentCls(
         qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~)),
         constraints = $constraintResult.values,
         properties = $propResult.values->map(p | ^$p(owner = ~.~))
     );
-    let clsPath = $cls->elementToPath();
     let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
     // Clear ownerTypeParams — matches Java clearEnclosingOwner
     ^$updatedCtx(ownerTypeParams = []);
+}
+
+function meta::pure::compiler::resolveAssociation(assoc:Association[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    if($assoc.qualifiedProperties->isEmpty(),
+        | $context,
+        | let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($assoc.qualifiedProperties, $context);
+          let resolvedAssoc = ^$assoc(
+              qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~))
+          );
+          let assocPath = $assoc->elementToPath();
+          let qpCtx = $qpResult.context;
+          ^$qpCtx(elementMap = $qpCtx.elementMap->put($assocPath, $resolvedAssoc));
+    );
 }
