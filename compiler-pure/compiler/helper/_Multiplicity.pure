@@ -288,9 +288,14 @@ function meta::pure::compiler::helper::multiplicity::makeAsConcreteAsPossible(mu
 
 function meta::pure::compiler::helper::multiplicity::asInferredMultiplicity(mul:Multiplicity[1]):Multiplicity[1]
 {
-    if($mul->instanceOf(InferredAdHocMultiplicity),
+    if($mul->instanceOf(Inferred),
         | $mul,
         | $mul->match([
+              mp:MultiplicityParameter[1] |
+                  ^InferredMultiplicityParameter(
+                      name = $mp.name,
+                      owner = $mp.owner
+                  ),
               cm:ConcreteMultiplicity[1] |
                   ^InferredAdHocMultiplicity(
                       lowerBound = $cm.lowerBound,
