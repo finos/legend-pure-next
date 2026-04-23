@@ -133,7 +133,7 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
                         $ctx1
                     );
                     let ctx2 = $resolveResult.context;
-                    let resolvedLambda = ^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification));
+                    let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification)));
                     let resolvedProp = ^$prop(defaultValue = $resolvedLambda);
                     // Validate type and multiplicity of the resolved default value
                     let lastExpr = $resolveResult.resolvedSpecs->at($resolveResult.resolvedSpecs->size() - 1);

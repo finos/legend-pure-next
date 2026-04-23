@@ -28,6 +28,27 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::multiplicity::*;
 import meta::pure::compiler::*;
 
+// Rebuild a lambda's classifierGenericType from its resolved parameters and body.
+// Called after pass-3 resolution to update the CGT with concrete types.
+function meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(lambda:LambdaFunction<Any>[1]):LambdaFunction<Any>[1]
+{
+    let params = $lambda.parameters->cast(@VariableExpression);
+    let bodyReturnGT = if($lambda.expressionSequence->isEmpty(),
+        | ^CompilerNotSetGenericType(),
+        | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
+          if($lastExpr.genericType->isEmpty(), | ^CompilerNotSetGenericType(), | asInferredGenericType($lastExpr.genericType->toOne()));
+    );
+    let bodyReturnMul = if($lambda.expressionSequence->isEmpty(),
+        | PureOne,
+        | let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
+          if($lastExpr.multiplicity->isEmpty(), | PureOne, | asInferredMultiplicity($lastExpr.multiplicity->toOne()));
+    );
+    let ft = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
+    let rebuiltFT = ^$ft(parameters = $params, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
+    let rebuiltCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $rebuiltFT)]);
+    ^$lambda(classifierGenericType = $rebuiltCGT);
+}
+
 function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta::pure::protocol::grammar::function::LambdaFunction[1], ctx:CompilerContext[1], scope:VariableExpression[*], mGenType:GenericType[0..1], mMult:Multiplicity[0..1]): ValueCompileResult[1]
 {
     let siCtx = if($l.p_sourceInformation->isNotEmpty(), | formatSourceInfo($l.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');

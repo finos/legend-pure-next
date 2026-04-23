@@ -123,7 +123,7 @@ function meta::pure::compiler::structural::constraintCompiler::resolveConstraint
                   $lambda.parameters->cast(@VariableExpression),
                   $acc.context
               );
-              let resolvedLambda = ^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification));
+              let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification)));
               let resolvedMsgFn = if($constraint.messageFunction->isEmpty(),
                   | [],
                   | let msgLambda = $constraint.messageFunction->toOne()->cast(@LambdaFunction<Any>);
@@ -132,7 +132,7 @@ function meta::pure::compiler::structural::constraintCompiler::resolveConstraint
                         $msgLambda.parameters->cast(@VariableExpression),
                         $result.context
                     );
-                    ^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification));
+                    meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification)));
               );
               let resolvedConstraint = ^$constraint(
                   functionDefinition = $resolvedLambda,

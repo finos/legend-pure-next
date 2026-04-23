@@ -260,9 +260,9 @@ function meta::pure::compiler::test::printer::printConstraint(c:Constraint[1], l
         '\n';
     let body = $c.functionDefinition->toOne()->printLambda($indent + '  ');
     let msgFn = if($c.messageFunction->isEmpty(), | '',
-        | $indent + '  messageFunction\n' + $c.messageFunction->toOne()->cast(@LambdaFunction<Any>)->printLambda($indent + '    ')
+        | '\n' + $indent + '  messageFunction\n' + $c.messageFunction->toOne()->cast(@LambdaFunction<Any>)->printLambda($indent + '    ')
     );
-    $header + $body + $msgFn;
+    $header + $body + $msgFn + '\n';
 }
 
 function meta::pure::compiler::test::printer::printAnnotations(element:Any[1], indent:String[1]):String[1]
