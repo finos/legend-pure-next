@@ -15,6 +15,7 @@
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::metamodel::relation::*;
 import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
@@ -155,7 +156,16 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     }, ^CompilerListResult<GenericType>(context = $result.context));
 
     // Compile multiplicity arguments — mirrors Java line 86
-    let mulArgs = $protocolGT.multiplicityArguments->map(m | $m->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
+    // Resolve multiplicity parameters against ownerMulParams (matches Java MultiplicityCompiler.resolveOrCreateMultiplicityParameter)
+    let mulArgs = $protocolGT.multiplicityArguments->map(m |
+        let compiled = $m->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+        if($compiled->instanceOf(MultiplicityParameter),
+            | let mp = $compiled->cast(@MultiplicityParameter);
+              let fromOwner = $typeArgResult.context.ownerMulParams->filter(p | $p.name == $mp.name);
+              if($fromOwner->isNotEmpty(), | $fromOwner->toOne(), | $mp);,
+            | $compiled
+        );
+    );
 
     // Compile type variable values (e.g., Varchar(200)) — mirrors Java line 87
     let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);

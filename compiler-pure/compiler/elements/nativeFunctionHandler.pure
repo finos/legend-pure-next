@@ -21,6 +21,7 @@ import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
 import meta::pure::metamodel::function::*;
 import meta::pure::metamodel::extension::*;
 import meta::pure::functions::lang::*;
@@ -68,8 +69,14 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
     // Compile type parameters — set owner to the function skeleton
     let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
 
+    // Compile multiplicity parameters — set owner to the function skeleton (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
+    let fnMulParams = $fn.multiplicityParameters->map(mp | ^UserDefinedMultiplicityParameter(name = $mp.name, owner = $skeleton)->cast(@MultiplicityParameter));
+
+    // Set ownerMulParams on context so compileGenericType can resolve multiplicity parameter references
+    let ctx1b = ^$ctx1(ownerMulParams = $fnMulParams);
+
     // Compile parameters
-    let paramAccum = compileParameters($fn.parameters, $ctx1, $packagePath, $fnTypeParams, $ownerCtx);
+    let paramAccum = compileParameters($fn.parameters, $ctx1b, $packagePath, $fnTypeParams, $ownerCtx);
     let compiledParams = $paramAccum.values;
     let ctx2 = $paramAccum.context;
 
@@ -96,6 +103,8 @@ function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pur
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,
+            typeParameters = $fnTypeParams,
+            multiplicityParameters = $fnMulParams,
             parameters = $compiledParams,
             returnGenericType = $rMGenType,
             returnMultiplicity = $rMMult,

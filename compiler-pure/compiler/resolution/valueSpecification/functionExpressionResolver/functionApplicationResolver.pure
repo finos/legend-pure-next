@@ -123,7 +123,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                debug($deepCtx, | '1 candidate');
                resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);)],
        | // Multiple candidates — sort most-specific-first, pre-resolve non-lambda params, then try each candidate
-         let sorted = $candidates->sort({a, b | compareFunctionTypes($a->getFunctionType(), $b->getFunctionType())});
+         // Sort most-specific-first: by parameter specificity, then fewer type/multiplicity params = more specific (mirrors Java mostSpecificFirst)
+         let sorted = $candidates->sort({a, b |
+             let cmp = compareFunctionTypes($a->getFunctionType(), $b->getFunctionType());
+             if($cmp != 0, | $cmp,
+                 | let tpCmp = $a.typeParameters->size() - $b.typeParameters->size();
+                   if($tpCmp != 0, | $tpCmp,
+                       | $a.multiplicityParameters->size() - $b.multiplicityParameters->size()
+                   );
+             );
+         });
          debug($deepCtx, | $sorted->size()->toString() + ' candidates, pre-resolving non-lambda params');
          resolveWithMultipleCandidates($fi, $sorted, $scope, $deepCtx, $context);
     );

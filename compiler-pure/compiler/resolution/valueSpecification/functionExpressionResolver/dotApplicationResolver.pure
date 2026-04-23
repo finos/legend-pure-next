@@ -215,11 +215,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         multiplicity = PureOne
     );
 
-    // Build lambda body: $v_automap.propertyName (direct DotApplication with [1] receiver)
+    // Build lambda body: $v_automap.propertyName (unresolved — matching Java where varRef has no genericType)
     let varRef = ^VariableExpression(
         name = 'v_automap',
-        genericType = $receiver.genericType->toOne(),
-        multiplicity = PureOne
+        genericType = ^CompilerNotSetGenericType(),
+        multiplicity = ^CompilerNotSetMultiplicity()
     );
     let innerDot = meta::pure::functions::lang::new(
         ^UserDefinedGenericType(type = DotApplication)
