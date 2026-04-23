@@ -127,12 +127,17 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
 
 function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], context:CompilerContext[1]):CompilerListResult<QualifiedProperty<Any>>[1]
 {
+    compileQualifiedProperties($qualifiedProperties, [], $context);
+}
+
+function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties(qualifiedProperties:QualifiedProperty<Any>[*], extraScope:VariableExpression[*], context:CompilerContext[1]):CompilerListResult<QualifiedProperty<Any>>[1]
+{
     $qualifiedProperties->fold({qp, acc |
         if($qp.expressionSequence->isEmpty(),
             | ^$acc(values += $qp),
             | let resolveResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
                   $qp.expressionSequence,
-                  $qp.parameters,
+                  $qp.parameters->concatenate($extraScope),
                   $acc.context
               );
               let ctx1 = $resolveResult.context;

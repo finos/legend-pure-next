@@ -288,7 +288,7 @@ function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerC
     let currentCls = $context.elementMap->get($clsPath)->toOne()->cast(@Class<Any>);
     // Set ownerTypeParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
     let ctxWithOwner = ^$context(ownerTypeParams = $currentCls.typeParameters->cast(@TypeParameter));
-    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($currentCls.qualifiedProperties, $ctxWithOwner);
+    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($currentCls.qualifiedProperties, $currentCls.typeVariables->cast(@VariableExpression), $ctxWithOwner);
     let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($currentCls, $qpResult.context);
     let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
     let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($currentCls.properties, $constraintResult.context);

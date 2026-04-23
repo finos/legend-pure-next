@@ -339,19 +339,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let inferredReturnGT = asInferredGenericType($returnGT);
           let inferredReturnMul = asInferredMultiplicity($returnMul);
 
-          // Build resolved type/multiplicity parameters
+          // Build resolved type/multiplicity parameters (use raw binding value, not inferred-wrapped)
           let resolvedTypeParams = $enrichedBindings.typeBindings->keys()->map(k |
               let vals = $enrichedBindings.typeBindings->get($k)->toOne().values;
               ^ResolvedTypeParameter(
                   name = $k,
-                  value = asInferredGenericType($vals->at(0))
+                  value = $vals->at(0)
               );
           );
           let resolvedMulParams = $enrichedBindings.multiplicityBindings->keys()->map(k |
               let vals = $enrichedBindings.multiplicityBindings->get($k)->toOne().values;
               ^ResolvedMultiplicityParameter(
                   name = $k,
-                  value = asInferredMultiplicity($vals->at(0))
+                  value = $vals->at(0)
               );
           );
 
