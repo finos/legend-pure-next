@@ -85,9 +85,17 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                           type = LambdaFunction,
                           typeArguments = [^InferredGenericType(type = $ft)]
                       );
+                      // Collect open variables by walking the resolved expression tree
+                      let paramNames = $lambdaParams->map(p | $p.name->toOne());
+                      let resolvedOpenVars = meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables($resolveResult.resolvedSpecs->cast(@ValueSpecification), $paramNames);
+                      let resolvedLambda = ^$lambda(
+                          expressionSequence = $resolveResult.resolvedSpecs->cast(@ValueSpecification),
+                          classifierGenericType = $lambdaGT,
+                          openVariables = $resolvedOpenVars
+                      );
                       debug($context, | 'resolveAtomicValue: LAMBDA gt=' + printGenericType($lambdaGT));
                       ^CompilerResult<ValueSpecification>(
-                          value = ^$av(genericType = $lambdaGT),
+                          value = ^$av(value = $resolvedLambda, genericType = $lambdaGT),
                           context = $ctx1
                       );
                 );,
@@ -95,4 +103,30 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                 ^CompilerResult<ValueSpecification>(value = $av, context = $context)
         ]
     );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables(specs:ValueSpecification[*], paramNames:String[*]):VariableExpression[*]
+{
+    let result = $specs->fold({vs, acc |
+        $vs->match([
+            ve:VariableExpression[1] |
+                if($paramNames->contains($ve.name->toOne()) || $acc->exists(a | $a.name == $ve.name),
+                    | $acc,
+                    | $acc->concatenate($ve)
+                ),
+            fe:FunctionExpression[1] |
+                $acc->concatenate(meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables($fe.parametersValues->cast(@ValueSpecification), $paramNames)),
+            av:AtomicValue[1] |
+                if($av.value->toOne()->instanceOf(LambdaFunction),
+                    | let innerLambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
+                      let innerParamNames = $paramNames->concatenate($innerLambda.parameters->cast(@VariableExpression)->map(p | $p.name->toOne()));
+                      $acc->concatenate(meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables($innerLambda.expressionSequence->cast(@ValueSpecification), $innerParamNames));,
+                    | $acc
+                ),
+            col:Collection[1] |
+                $acc->concatenate(meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables($col.values->cast(@ValueSpecification), $paramNames)),
+            a:Any[1] | $acc
+        ]);
+    }, []->cast(@VariableExpression));
+    $result->removeDuplicatesBy(v | $v.name->toOne());
 }
