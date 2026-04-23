@@ -154,6 +154,9 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         ^$acc(values += $argResult.value, context = $argResult.context);
     }, ^CompilerListResult<GenericType>(context = $result.context));
 
+    // Compile multiplicity arguments — mirrors Java line 86
+    let mulArgs = $protocolGT.multiplicityArguments->map(m | $m->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity());
+
     // Compile type variable values (e.g., Varchar(200)) — mirrors Java line 87
     let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);
 
@@ -162,12 +165,12 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
         [
             resultValue : UserDefinedGenericType[1] |
                 ^CompilerResult<GenericType>(
-                    value = ^$resultValue(typeArguments = $typeArgResult.values, typeVariableValues = $typeVarValues),
+                    value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs, typeVariableValues = $typeVarValues),
                     context = $typeArgResult.context
                 ),
             resultValue : GenericTypeValue[1] |
                 ^CompilerResult<GenericType>(
-                    value = ^$resultValue(typeArguments = $typeArgResult.values),
+                    value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs),
                     context = $typeArgResult.context
                 ),
             a : Any[1] |
