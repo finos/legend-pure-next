@@ -200,9 +200,9 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
         returnType = $selfGenType,
         returnMultiplicity = $pureOne
     );
-    let defaultLambdaGT = ^UserDefinedGenericType(
+    let defaultLambdaGT = ^InferredGenericType(
         type = LambdaFunction,
-        typeArguments = [^UserDefinedGenericType(type = $lambdaReturn)]
+        typeArguments = [^InferredGenericType(type = $lambdaReturn)]
     );
     let emptyLambda = new($defaultLambdaGT)->cast(@LambdaFunction<Any>);
 
