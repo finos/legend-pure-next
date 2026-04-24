@@ -64,8 +64,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           );
           let ft = $resolvedFunc->getFunctionType();
           let bindings = extractResolvedParametersBinding($fi);
-          let returnGT = asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings));
-          let returnMul = asInferredMultiplicity(makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings));
+          // For Properties/AbstractProperties, the DotApplicationResolver already computed
+          // the resolved return type (applying class type parameter bindings).
+          // Skip re-computation to avoid overriding with the unresolved template type.
+          let alreadyResolved = $fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType)
+                                && $resolvedFunc->instanceOf(AbstractProperty);
+          let returnGT = if($alreadyResolved,
+              | asInferredGenericType($fi.genericType->toOne()),
+              | asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings))
+          );
+          let returnMul = if($alreadyResolved,
+              | asInferredMultiplicity($fi.multiplicity->toOne()),
+              | asInferredMultiplicity(makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings))
+          );
           debug($context, | 'finalize: ' + $fi.functionName->toOne()
               + ' gt=' + printGenericType($returnGT)
               + ' mul=' + printMultiplicity($returnMul));
