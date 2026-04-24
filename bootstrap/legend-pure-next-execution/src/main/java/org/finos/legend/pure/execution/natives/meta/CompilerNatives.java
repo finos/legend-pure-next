@@ -97,5 +97,14 @@ public class CompilerNatives implements NativeExtension
             }
             return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
         });
+
+        // meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
+        // Normalizes date literals: zero-pads components and converts timezone offsets to UTC.
+        natives.put("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String dateStr = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String result = org.finos.legend.pure.execution.natives.string.StringNatives.normalizePureDate(dateStr);
+            return _E_ValueSpecification.wrap(result != null ? result : dateStr, genericType, multiplicity, resolver);
+        });
     }
 }

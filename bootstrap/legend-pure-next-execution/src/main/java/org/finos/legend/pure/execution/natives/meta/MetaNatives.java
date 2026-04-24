@@ -1509,7 +1509,12 @@ public class MetaNatives
         {
             if (col._values().isEmpty())
             {
-                return; // empty collection = no value
+                // Empty collection assignment:
+                //   [*]    → clear to empty list
+                //   [0..1] → set to null
+                //   [1]    → error (cannot clear a required property)
+                setEmptyValue(instance, key);
+                return;
             }
             org.eclipse.collections.api.list.MutableList<Object> items = col._values().collect(_E_ValueSpecification::unwrap);
             setPropertyViaReflection(instance, key, items);
@@ -1559,6 +1564,45 @@ public class MetaNatives
                     }
                     throw new RuntimeException("Failed to set property '" + key + "' on " + instance.getClass().getSimpleName() + " value type: " + (rawValue == null ? "null" : rawValue.getClass().getSimpleName()), e);
                 }
+            }
+        }
+    }
+
+    /**
+     * Handle empty collection assignment on compiled Java targets.
+     * <ul>
+     *   <li>[*] property (setter takes Collection/RichIterable) → clear to empty list</li>
+     *   <li>[0..1] property (setter takes nullable scalar) → set to null</li>
+     *   <li>[1] property (setter takes non-nullable scalar) → throw</li>
+     * </ul>
+     */
+    private static void setEmptyValue(Object instance, String key)
+    {
+        String setterName = "_" + key;
+        for (java.lang.reflect.Method method : instance.getClass().getMethods())
+        {
+            if (method.getName().equals(setterName) && method.getParameterCount() == 1)
+            {
+                Class<?> paramType = method.getParameterTypes()[0];
+                if (org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType)
+                        || java.util.Collection.class.isAssignableFrom(paramType))
+                {
+                    // [*] property → clear to empty list
+                    setPropertyViaReflection(instance, key, org.eclipse.collections.api.factory.Lists.mutable.empty());
+                }
+                else if (!paramType.isPrimitive())
+                {
+                    // [0..1] property (nullable reference type) → set to null
+                    setPropertyViaReflection(instance, key, (Object) null);
+                }
+                else
+                {
+                    // [1] property (primitive: long, boolean, etc.) → cannot clear
+                    throw new RuntimeException("Cannot set property '" + key + "' on "
+                            + instance.getClass().getSimpleName()
+                            + " to an empty collection — the property has multiplicity [1]");
+                }
+                return;
             }
         }
     }

@@ -251,8 +251,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
     let deepCtx = $scopedCtx->debugSpaceInc();
 
+    // Clear stale resolved params — they've been seeded into the node (mirrors Java cleanExpr lines 152-154)
+    // Clear stale resolved params — they've been seeded into the node (mirrors Java cleanExpr lines 152-154).
+    let cleanFI = ^$fi(resolvedTypeParameters = [], resolvedMultiplicityParameters = []);
+
     // Initialize: all params start unresolved
-    let initInfos = $fi.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
+    let initInfos = $cleanFI.parametersValues->map(pv | ^ParameterInfo(resolved = false, newParam = $pv, savedErrors = []));
 
     // Create FunctionCallParametersBinding with enclosingOwner (mirrors Java pushBindingNode line 149)
     let seedBindings = $fi.resolvedTypeParameters->fold({rtp, b |
@@ -282,7 +286,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 
     // Fixpoint: resolve params iteratively until no more progress
-    let fixpointResult = fixpointResolveParams($initInfos, $fi, $funcParams, $node->cast(@ParametersBinding), $scope, $deepCtx, 1);
+    let fixpointResult = fixpointResolveParams($initInfos, $cleanFI, $funcParams, $node->cast(@ParametersBinding), $scope, $deepCtx, 1);
     let resolvedInfos = $fixpointResult.infos;
     // Unify: cross-match, transitive resolution, pre-reduction, common-type reduction (like Java unify())
     let bindings = $fixpointResult.bindings->match([
@@ -310,8 +314,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let hasUnresolved = $resolvedInfos->exists(info | !$info.resolved);
 
     if($hasUnresolved,
-        | ^CompilerResult<ValueSpecification>(
-              value = ^$fi(func = $entry, parametersValues = $resolvedParams),
+        | // Clear resolvedTypeParameters when unresolved — mirrors Java where bindings={} on failed fixpoint.
+          // This prevents finalizeFunctionExpression from substituting the return type with partial bindings
+          // that came from a previous reverse match attempt (e.g. W={K[1]->Boolean[1]} when K is not yet resolved).
+          ^CompilerResult<ValueSpecification>(
+              value = ^$cleanFI(func = $entry, parametersValues = $resolvedParams),
               context = $ctx2),
         | // Compiler-tracked enrichment: for relation column functions, the TypeHolder's RelationType
           // can't be inferred from bindings alone — mirrors Java RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions
@@ -334,7 +341,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           if($validationCtx.errors->size() > $enrichedCtx.errors->size(),
               | // Preserve func on validation failure
                 ^CompilerResult<ValueSpecification>(
-                    value = ^$fi(func = $entry, parametersValues = $validatedParams->cast(@ValueSpecification)),
+                    value = ^$cleanFI(func = $entry, parametersValues = $validatedParams->cast(@ValueSpecification)),
                     context = $validationCtx);,
               |
           // Build return type using validated bindings (includes reconciled inferred values)
@@ -367,7 +374,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           );
 
           ^CompilerResult<ValueSpecification>(
-              value = ^$fi(
+              value = ^$cleanFI(
                   func = $entry,
                   parametersValues = $validatedParams->cast(@ValueSpecification),
                   genericType = $inferredReturnGT,
@@ -411,6 +418,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         if($acc.failed,
             | ^$acc(reconciledParams += $resolvedParams->at($i)),
             | let argVS = $resolvedParams->at($i);
+              if($argVS.genericType->isEmpty(),
+                  | ^$acc(reconciledParams += $argVS),
+                  |
               let argGT = $argVS.genericType->toOne();
               let argMul = $argVS.multiplicity->toOne();
               if($argGT->instanceOf(UndefinedGenericType) || $argGT->instanceOf(CompilerNotSetGenericType),
@@ -428,10 +438,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         | ^$acc(reconciledParams += $reconciledVS, bindings = $updatedBindings)
                     );
               );
+              );
         );
     }, ^ValidationAccumulator(failed = false, bindings = $bindings));
     let finalCtx = if($result.failed,
-        | let argDesc = $result.reconciledParams->map(vs | printGenericType($vs.genericType->toOne()) + printMultiplicity($vs.multiplicity->toOne()))->joinStrings(', ');
+        | let argDesc = $result.reconciledParams->map(vs | if($vs.genericType->isEmpty(), |'?', |printGenericType($vs.genericType->toOne())) + if($vs.multiplicity->isEmpty(), |'[?]', |printMultiplicity($vs.multiplicity->toOne())))->joinStrings(', ');
           ^$context(errors += 'No matching function \'' + $functionName + '\' found for argument types (' + $argDesc + ')' + $siCtx);,
         | $context
     );
@@ -553,7 +564,6 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
-    // Check if concrete (Java line 427)
     let isConcrete = $processed.genericType->isNotEmpty()
         && $processed.genericType->toOne()->isConcreteGenericType()
         && $processed.multiplicity->isNotEmpty()

@@ -150,7 +150,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   ),
                                 | debug($context, | '  property found: ' + $foundFunc->toOne().name->toOne());
                                   let resolvedProp = $foundFunc->toOne();
-                                  let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne());
+                                  let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne(), $resolvedOwner);
                                   let propGT = $propResolved.first;
                                   let propMul = $propResolved.second;
                                   let receiverMul = $receiver.multiplicity;
@@ -184,24 +184,25 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java DotApplicationResolver lines 106-113: apply class type bindings to property type and multiplicity
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1]):Pair<GenericType, Multiplicity>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1], resolvedOwnerClass:Class<Any>[0..1]):Pair<GenericType, Multiplicity>[1]
 {
     let rawGT = $prop.genericType->toOne();
     let rawMul = $prop.multiplicity->toOne();
-    let ownerType = $ownerGT->match([
-        gtv:GenericTypeValue[1] | $gtv.type,
-        a:Any[1] | []
-    ]);
-    if($ownerType->isNotEmpty(),
-        | $ownerType->toOne()->match([
-              ownerClass:Class<Any>[1] |
-                  let bindings = $ownerClass->buildBindingsFromGenericType($ownerGT);
-                  if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
-                      | pair($rawGT, $rawMul),
-                      | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
-                  );,
-              a:Any[1] | pair($rawGT, $rawMul)
-          ]),
+    // Use resolvedOwnerClass (from element map, with typeParameters) if available.
+    // Falls back to the GenericType's raw type — but that instance may lack typeParameters.
+    let ownerClass = if($resolvedOwnerClass->isNotEmpty(),
+        | $resolvedOwnerClass->toOne(),
+        | $ownerGT->match([
+              gtv:GenericTypeValue[1] | if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(Class), | $gtv.type->toOne()->cast(@Class<Any>), | []),
+              a:Any[1] | []
+          ])
+    );
+    if($ownerClass->isNotEmpty(),
+        | let bindings = $ownerClass->toOne()->buildBindingsFromGenericType($ownerGT);
+          if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
+              | pair($rawGT, $rawMul),
+              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
+          );,
         | pair($rawGT, $rawMul)
     );
 }

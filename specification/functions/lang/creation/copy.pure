@@ -334,3 +334,32 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopySelfRef
     assertEquals(1, $c.value);
     assertIs($c, $c.next->toOne());
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearToManyProperty():Boolean[1]
+{
+    // [*] property: setting to [] should clear the list
+    let person = ^LA_Person(firstName='Pierre', lastName='Doe', otherNames=['A', 'B', 'C']);
+    assertSize($person.otherNames, 3);
+
+    let cleared = ^$person(otherNames = []);
+    assertEquals('Pierre', $cleared.firstName);
+    assertEquals('Doe', $cleared.lastName);
+    assertSize($cleared.otherNames, 0);
+
+    // Verify original unchanged
+    assertSize($person.otherNames, 3);
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty():Boolean[1]
+{
+    // [0..1] property: setting to [] should set to empty (no value)
+    let pierre = ^LA_Person(firstName='Pierre', lastName='Doe', firm=^LA_Firm(legalName='FirmX'));
+    assert($pierre.firm->isNotEmpty());
+
+    let noFirm = ^$pierre(firm = []);
+    assertEquals('Pierre', $noFirm.firstName);
+    assert($noFirm.firm->isEmpty());
+
+    // Verify original unchanged
+    assert($pierre.firm->isNotEmpty());
+}

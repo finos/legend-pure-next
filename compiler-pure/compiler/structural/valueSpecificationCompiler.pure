@@ -193,10 +193,44 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                 | if($mGenType->isEmpty(), | ^CompilerNotSetGenericType(), | $mGenType->toOne()),
                 | $compiledGT.value->toOne()
             );
+            // Unescape string literals and normalize date literals.
+            // Uses genericType name to determine the type of the raw value.
+            // (mirrors Java ValueSpecificationCompiler lines 197-249)
+            let typeName = getGenericTypeName($inferredGT);
+            let isString = $typeName == 'String';
+            let isDate = $typeName == 'DateTime' || $typeName == 'StrictDate' || $typeName == 'Date' || $typeName == 'StrictTime';
+            let processedValue = if($isString,
+                | // Parser leaves escape sequences as literal two-char sequences
+                  $rawValue->cast(@String)
+                    ->replace('\\\'', '\'')
+                    ->replace('\\n', '\n')
+                    ->replace('\\t', '\t')
+                    ->replace('\\r', '\r'),
+                | if($isDate,
+                    | normalizeDateString($rawValue->cast(@String)),
+                    | $rawValue
+                )
+            );
+            let finalGT = if($isDate,
+                | let ds = $processedValue->cast(@String);
+                  let dateTypePath = if($ds->contains('T'),
+                      | 'meta::pure::metamodel::type::primitives::DateTime',
+                      | if($ds->length() <= 7,
+                          | 'meta::pure::metamodel::type::primitives::Date',
+                          | 'meta::pure::metamodel::type::primitives::StrictDate'
+                      )
+                  );
+                  let dateType = $ctx->resolveElement($dateTypePath);
+                  if($dateType->isEmpty(),
+                      | $inferredGT,
+                      | ^UserDefinedGenericType(type = $dateType->toOne()->cast(@Type))
+                  );,
+                | $inferredGT
+            );
             ^ValueCompileResult(
                 values = [^AtomicValue(
-                    value = $rawValue,
-                    genericType = $inferredGT,
+                    value = $processedValue,
+                    genericType = $finalGT,
                     multiplicity = if($mMult->isEmpty(), | PureOne, | $mMult->toOne()),
                     sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
                 )],
@@ -374,3 +408,23 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
         openVariables = []
     );
 }
+
+// ============================================================================
+// Date literal helpers
+// ============================================================================
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::getGenericTypeName(gt:GenericType[1]):String[0..1]
+{
+    $gt->match([
+        gtv:GenericTypeValue[1] |
+            if($gtv.type->isEmpty(), | [],
+                | $gtv.type->toOne()->match([
+                    pe:PackageableElement[1] | $pe.name,
+                    a:Any[1] | []
+                ])
+            ),
+        a:Any[1] | []
+    ]);
+}
+
+native function meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1];

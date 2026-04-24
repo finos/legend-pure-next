@@ -80,7 +80,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let mergedColumns = $collection.values->map(v |
         let innerFE = $v->cast(@FunctionInvocation);
         let lastParam = $innerFE.parametersValues->at($innerFE.parametersValues->size() - 1);
-        let typeArgs = $lastParam.genericType->toOne()->genericTypeTypeArguments();
+        let lastParamGT = if($lastParam.genericType->isNotEmpty(), | $lastParam.genericType->toOne(), | $lastParam->cast(@Any).classifierGenericType->toOne());
+        let typeArgs = $lastParamGT->genericTypeTypeArguments();
         if($typeArgs->isNotEmpty() && $typeArgs->at(0)->genericTypeRawType()->isNotEmpty(),
             | $typeArgs->at(0)->genericTypeRawType()->toOne()->match([
                   rt:RelationType<Any>[1] | $rt.columns->cast(@Column<Nil, Any|*>),
