@@ -805,6 +805,32 @@ function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:Gen
     ]);
 }
 
+// Mirrors Java isConcreteInContext (line 504-514) + inScopeTypeParamNames (line 206-210):
+// A type is concrete in context if it is fully concrete OR all referenced type parameters
+// belong to the enclosing owner (the function/class being compiled).
+// Java uses enclosingOwnerParametersBinding.owner()._typeParameters() — NOT the accumulated
+// scope from nested function resolutions.
+function meta::pure::compiler::helper::genericType::isConcreteInContext(gt:GenericType[0..1], mul:Multiplicity[0..1], context:CompilerContext[1]):Boolean[1]
+{
+    if($gt->isEmpty() || $mul->isEmpty(),
+        | false,
+        | let gtConcrete = $gt->toOne()->isConcreteGenericType();
+          let mulConcrete = $mul->toOne()->isConcreteMultiplicity();
+          if($gtConcrete && $mulConcrete,
+              | true,
+              | let referencedTypeParams = collectReferencedTypeParameterNames($gt->toOne());
+                let referencedMulParams = $mul->toOne()->match([mp:MultiplicityParameter[1] | [$mp.name], a:Any[1] | []]);
+                // Use ownerTypeParams (enclosing function/class being compiled), not scopeTypeParams (accumulated)
+                let ownerTypeParamNames = $context.ownerTypeParams->map(tp | $tp.name);
+                let ownerMulParamNames = $context.ownerMulParams->map(mp | $mp.name);
+                let allTypeParamsInScope = $referencedTypeParams->forAll(n | $ownerTypeParamNames->contains($n));
+                let allMulParamsInScope = $referencedMulParams->forAll(n | $ownerMulParamNames->contains($n));
+                ($referencedTypeParams->isNotEmpty() || $referencedMulParams->isNotEmpty())
+                    && $allTypeParamsInScope && $allMulParamsInScope;
+          );
+    );
+}
+
 function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1], ctx:CompilerContext[1]):GenericType[1]
 {
     let pureName = $value->genericType().type->cast(@NamedType).name;

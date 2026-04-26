@@ -34,7 +34,8 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::enrichRelationTypeHolderForMagicalFunctions(funcName:String[1], resolvedParams:ValueSpecification[*], ft:FunctionType[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
-    debug($context, | 'enrichRelationTypeHolder: ' + $funcName);
+    let bindingsDebug = $bindings.typeBindings->keys()->map(k | $k + '=' + printGenericType($bindings.typeBindings->get($k)->toOne().values->at(0)));
+    debug($context, | 'enrichRelationTypeHolder: ' + $funcName + ' bindings={' + $bindingsDebug->joinStrings(',') + '}');
     let paramCount = $resolvedParams->size();
     if([pair(| ($funcName == 'funcColSpec' || $funcName == 'funcColSpec2') && $paramCount == 3,
              | let enriched = enrichColumnTypeHolder($resolvedParams, 0, 1, 2);
@@ -111,6 +112,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     tp:TypeParameter[1] |
                         let typeParamName = $tp.name;
                         let boundTypes = $bindings.typeBindings->get($typeParamName);
+                        debug($context, | 'tryResolveSubsetForTypeHolder: tp=' + $typeParamName + ' bound=' + if($boundTypes->isEmpty(), |'empty', | printGenericType($boundTypes->toOne().values->at(0)) + ' isGTO=' + $boundTypes->toOne().values->at(0)->instanceOf(GenericTypeOperation)->toString()));
                         if($boundTypes->isEmpty() || $boundTypes->toOne().values->isEmpty(),
                             | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
                             | let boundGT = $boundTypes->toOne().values->at(0);

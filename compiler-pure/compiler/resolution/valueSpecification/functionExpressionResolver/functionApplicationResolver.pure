@@ -313,21 +313,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let resolvedParams = $resolvedInfos->map(info | $info.newParam);
     let hasUnresolved = $resolvedInfos->exists(info | !$info.resolved);
 
-    if($hasUnresolved,
-        | // Clear resolvedTypeParameters when unresolved — mirrors Java where bindings={} on failed fixpoint.
-          // This prevents finalizeFunctionExpression from substituting the return type with partial bindings
-          // that came from a previous reverse match attempt (e.g. W={K[1]->Boolean[1]} when K is not yet resolved).
-          ^CompilerResult<ValueSpecification>(
-              value = ^$cleanFI(func = $entry, parametersValues = $resolvedParams),
-              context = $ctx2),
-        | // Compiler-tracked enrichment: for relation column functions, the TypeHolder's RelationType
-          // can't be inferred from bindings alone — mirrors Java RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions
-          let enrichResult = enrichRelationTypeHolderForMagicalFunctions($fi.functionName->toOne(), $resolvedParams, $ft, $bindings, $ctx2, $fi.sourceInformation);
-          let enrichedParams = $enrichResult.resolvedParams;
-          let enrichedBindings = $enrichResult.bindings;
-          let enrichedCtx = $enrichResult.context;
+    // Compiler-tracked enrichment: for relation column functions, the TypeHolder's RelationType
+    // can't be inferred from bindings alone — mirrors Java RelationColumnResolver.enrichRelationTypeHolderForMagicalFunctions.
+    // Must run regardless of hasUnresolved — Java calls this even when the TypeHolder is unresolved.
+    let enrichResult = enrichRelationTypeHolderForMagicalFunctions($fi.functionName->toOne(), $resolvedParams, $ft, $bindings, $ctx2, $fi.sourceInformation);
+    let enrichedParams = $enrichResult.resolvedParams;
+    let enrichedBindings = $enrichResult.bindings;
+    let enrichedCtx = $enrichResult.context;
 
-          // All resolved — validate arg types against param types (like Java validateParameterValuesToFunctionType)
+    if($hasUnresolved,
+        | ^CompilerResult<ValueSpecification>(
+              value = ^$cleanFI(func = $entry, parametersValues = $enrichedParams),
+              context = $enrichedCtx),
+        | // All resolved — validate arg types against param types (like Java validateParameterValuesToFunctionType)
           // Skip validation if fixpoint already produced errors (body resolution errors are the right errors)
           let fiSrcInfo = $fi.sourceInformation;
           let fixpointProducedErrors = $enrichedCtx.errors->size() > $context.errors->size();
@@ -564,10 +562,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let processed = if($r.value->isEmpty(), | $parameterValue, | $r.value->toOne());
     let ctx1 = $r.context;
 
-    let isConcrete = $processed.genericType->isNotEmpty()
-        && $processed.genericType->toOne()->isConcreteGenericType()
-        && $processed.multiplicity->isNotEmpty()
-        && $processed.multiplicity->toOne()->isConcreteMultiplicity();
+    let isConcrete = isConcreteInContext($processed.genericType, $processed.multiplicity, $context);
 
     if($isConcrete,
         | // CONCRETE: collect bindings (Java lines 427-440)
