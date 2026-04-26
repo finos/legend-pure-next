@@ -385,9 +385,9 @@ function meta::pure::compiler::test::printer::printVariable(v:VariableExpression
 
 function meta::pure::compiler::test::printer::printHolder(gmh:GenericTypeAndMultiplicityHolder[1], indent:String[1]):String[1]
 {
-    // TypeHolder's genericType may be empty (matches Java where it's null).
+    // TypeHolder's genericType may be empty or CompilerNotSetGenericType (matches Java where it's null).
     // Read type info from classifierGenericType instead.
-    let gt = if($gmh.genericType->isNotEmpty(), | $gmh.genericType->toOne(), | $gmh->cast(@Any).classifierGenericType->toOne());
+    let gt = if($gmh.genericType->isNotEmpty() && !$gmh.genericType->toOne()->instanceOf(CompilerNotSetGenericType), | $gmh.genericType->toOne(), | $gmh->cast(@Any).classifierGenericType->toOne());
     let mul = if($gmh.multiplicity->isNotEmpty(), | $gmh.multiplicity->toOne(), | PureOne);
     [
         $indent, 'TypeHolder',

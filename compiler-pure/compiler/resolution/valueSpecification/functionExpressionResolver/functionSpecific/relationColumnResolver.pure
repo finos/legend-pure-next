@@ -81,7 +81,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let mergedColumns = $collection.values->map(v |
         let innerFE = $v->cast(@FunctionInvocation);
         let lastParam = $innerFE.parametersValues->at($innerFE.parametersValues->size() - 1);
-        let lastParamGT = if($lastParam.genericType->isNotEmpty(), | $lastParam.genericType->toOne(), | $lastParam->cast(@Any).classifierGenericType->toOne());
+        let lastParamGT = if($lastParam.genericType->isNotEmpty() && !$lastParam.genericType->toOne()->instanceOf(CompilerNotSetGenericType), | $lastParam.genericType->toOne(), | $lastParam->cast(@Any).classifierGenericType->toOne());
         let typeArgs = $lastParamGT->genericTypeTypeArguments();
         if($typeArgs->isNotEmpty() && $typeArgs->at(0)->genericTypeRawType()->isNotEmpty(),
             | $typeArgs->at(0)->genericTypeRawType()->toOne()->match([
@@ -215,7 +215,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::updateTypeHolderBinding(ft:FunctionType[1], paramValues:ValueSpecification[*], typeHolderArgIdx:Integer[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1]):meta::pure::compiler::helper::parametersBinding::ParametersBinding[1]
 {
     let enrichedGT = $paramValues->at($typeHolderArgIdx).genericType;
-    if($enrichedGT->isNotEmpty(),
+    if($enrichedGT->isNotEmpty() && !$enrichedGT->toOne()->instanceOf(CompilerNotSetGenericType),
         | let paramGT = $ft.parameters->at($typeHolderArgIdx)->cast(@VariableExpression).genericType->toOne();
           let typeArgs = $paramGT->genericTypeTypeArguments();
           if($typeArgs->isNotEmpty() && $typeArgs->at(0)->genericTypeRawType()->isNotEmpty(),

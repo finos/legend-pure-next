@@ -383,29 +383,41 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileCo
 
 function meta::pure::compiler::structural::valueSpecificationCompiler::compileGenericTypeAndMultiplicityHolder(gmh:meta::pure::protocol::grammar::valuespecification::GenericTypeAndMultiplicityHolder[1], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):ValueCompileResult[1]
 {
-    let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@GenericType), | match($gmh.genericType->toOne(), [
-        g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(),
-        u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | ^UndefinedGenericType(),
-        a:Any[1] | []->cast(@GenericType)
-    ]));
-    let heldMul = if($gmh.multiplicity->isNotEmpty(),
-        | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
-        | []->cast(@Multiplicity)
-    );
-    let classifierGT = ^UserDefinedGenericType(
-        type = UserDefinedGenericTypeAndMultiplicityHolder,
-        typeArguments = $heldGT,
-        multiplicityArguments = $heldMul
-    );
-    let holder = new($classifierGT)->cast(@UserDefinedGenericTypeAndMultiplicityHolder);
-    let holderWithProps = ^$holder(
-        genericType = $classifierGT,
-        multiplicity = PureOne,
-        sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
-    );
-    ^ValueCompileResult(
-        values = [$holderWithProps],
-        openVariables = []
+    // Mirrors Java ValueSpecificationCompiler.compileGenericTypeAndMultiplicityHolder (lines 112-140):
+    // CompilerGenericTypeAndMultiplicityHolder → bare instance (gt=null, compiler-managed, enriched later)
+    // UserDefinedGenericTypeAndMultiplicityHolder → full compilation with genericType set
+    if($gmh->instanceOf(meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder),
+        | // Compiler-managed TypeHolder — bare instance with no genericType (matches Java line 118)
+          let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+          let holder = new($compilerCGT)->cast(@CompilerGenericTypeAndMultiplicityHolder);
+          let holderWithProps = ^$holder(
+              genericType = ^CompilerNotSetGenericType(),
+              multiplicity = PureOne,
+              sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+          );
+          ^ValueCompileResult(values = [$holderWithProps], openVariables = []);,
+        | // User-defined TypeHolder — compile held type (matches Java lines 120-140)
+          let heldGT = if($gmh.genericType->isEmpty(), | []->cast(@GenericType), | match($gmh.genericType->toOne(), [
+              g:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1] | $g->compileGenericType($ctx, '', []).value->toOne(),
+              u:meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] | ^UndefinedGenericType(),
+              a:Any[1] | []->cast(@GenericType)
+          ]));
+          let heldMul = if($gmh.multiplicity->isNotEmpty(),
+              | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
+              | []->cast(@Multiplicity)
+          );
+          let classifierGT = ^UserDefinedGenericType(
+              type = UserDefinedGenericTypeAndMultiplicityHolder,
+              typeArguments = $heldGT,
+              multiplicityArguments = $heldMul
+          );
+          let holder = new($classifierGT)->cast(@UserDefinedGenericTypeAndMultiplicityHolder);
+          let holderWithProps = ^$holder(
+              genericType = $classifierGT,
+              multiplicity = PureOne,
+              sourceInformation = $vs.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+          );
+          ^ValueCompileResult(values = [$holderWithProps], openVariables = []);
     );
 }
 
