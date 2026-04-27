@@ -1,0 +1,61 @@
+###Pure
+Class test::GrandParent
+{
+    name : String[1];
+}
+
+Class test::Parent extends test::GrandParent
+{
+}
+
+Class test::Child extends test::Parent
+{
+}
+
+Class test::Tag
+{
+    label : String[1];
+}
+
+Association test::GrandParentTag
+{
+    gp : test::GrandParent[*];
+    tag : test::Tag[0..1];
+}
+
+function test::use():Any[*]
+{
+    let c = ^test::Child(name='Alice');
+    $c.tag;
+}
+
+
+###CompiledGraph
+class test::GrandParent extends Any  ~Class<test::GrandParent>  @2:1-5:1
+  property name :String[1]  ~Property<test::GrandParent, String|1>
+
+class test::Parent extends test::GrandParent  ~Class<test::Parent>  @7:1-9:1
+
+class test::Child extends test::Parent  ~Class<test::Child>  @11:1-13:1
+
+class test::Tag extends Any  ~Class<test::Tag>  @15:1-18:1
+  property label :String[1]  ~Property<test::Tag, String|1>
+
+association test::GrandParentTag  ~Association  @20:1-24:1
+  property gp :test::GrandParent[*]  ~Property<test::Tag, test::GrandParent|*>
+  property tag :test::Tag[0..1]  ~Property<test::GrandParent, test::Tag|0..1>
+
+function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~FunctionInvocation  @28:5-28:38
+    typeParam T -> #test::Child#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :String[1]  ~AtomicValue  @28:9-28:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~FunctionInvocation  @28:13-28:38
+      typeParam T -> test::Child
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @28:13-28:38
+      Collection :#KeyExpression#[1]  ~Collection  @28:13-28:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @28:26-28:37
+          AtomicValue  'name' :String[1]  ~AtomicValue  @28:26-28:37
+          AtomicValue  'Alice' :String[1]  ~AtomicValue  @28:31-28:37
+  DotApplication test::GrandParentTag.tag :#test::Tag##[0..1]#  ~DotApplication  @29:7-29:10
+    Variable c :#test::Child##[1]#  ~VariableExpression  @29:5-29:6

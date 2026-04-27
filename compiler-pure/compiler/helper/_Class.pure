@@ -16,6 +16,7 @@ import meta::pure::compiler::helper::functionType::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::*;
 
 // Class helpers — property lookup across inheritance hierarchy
 
@@ -46,6 +47,41 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
     )
 }
 
+// Context-aware findProperty: resolves each parent class from the element map
+// so that association properties (registered during pass 2) are visible.
+function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:String[1], context:CompilerContext[1]):Property<Nil, Any|*>[0..1]
+{
+    $owner->match(
+        [
+            cls : Class<Any>[1] |
+                let directMatch = $cls.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | let assocMatch = $cls.propertiesFromAssociations->filter(p | $p.name == $name);
+                      if($assocMatch->isNotEmpty(),
+                          | $assocMatch->head(),
+                          | let inherited = $cls.generalizations
+                                ->map(g | $g.general->genericTypeRawType())
+                                ->filter(t | $t->instanceOf(Class))
+                                ->map(t |
+                                    let superPath = $t->cast(@PackageableElement)->elementToPath();
+                                    let resolved = $context->resolveElement($superPath);
+                                    let superCls = if($resolved->isNotEmpty(),
+                                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, a:Any[1] | $t]),
+                                        | $t
+                                    );
+                                    $superCls->findProperty($name, $context);
+                                )
+                                ->filter(p | $p->isNotEmpty())
+                                ->head();
+                            $inherited;
+                      );
+                );,
+            a : Any[1] | []
+        ]
+    )
+}
+
 function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[*]
 {
     // Direct qualified properties
@@ -55,6 +91,25 @@ function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<
         ->map(g | $g.general->genericTypeRawType())
         ->filter(t | $t->instanceOf(Class))
         ->map(t | $t->cast(@Class<Any>)->findQualifiedProperties($name));
+    $directMatch->concatenate($inherited);
+}
+
+// Context-aware findQualifiedProperties: resolves each parent class from the element map.
+function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1], context:CompilerContext[1]):QualifiedProperty<Any>[*]
+{
+    let directMatch = $cls.qualifiedProperties->filter(qp | $qp.name == $name);
+    let inherited = $cls.generalizations
+        ->map(g | $g.general->genericTypeRawType())
+        ->filter(t | $t->instanceOf(Class))
+        ->map(t |
+            let superPath = $t->cast(@PackageableElement)->elementToPath();
+            let resolved = $context->resolveElement($superPath);
+            let superCls = if($resolved->isNotEmpty(),
+                | $resolved->toOne()->match([c:Class<Any>[1] | $c, a:Any[1] | $t->cast(@Class<Any>)]),
+                | $t->cast(@Class<Any>)
+            );
+            $superCls->findQualifiedProperties($name, $context);
+        );
     $directMatch->concatenate($inherited);
 }
 
