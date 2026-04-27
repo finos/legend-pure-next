@@ -14,6 +14,7 @@
 
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relation::*;
 import meta::pure::metamodel::function::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
 import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
@@ -68,7 +69,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // the resolved return type (applying class type parameter bindings).
           // Skip re-computation to avoid overriding with the unresolved template type.
           let alreadyResolved = $fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType)
-                                && $resolvedFunc->instanceOf(AbstractProperty);
+                                && ($resolvedFunc->instanceOf(AbstractProperty) || $resolvedFunc->instanceOf(Column));
           let returnGT = if($alreadyResolved,
               | asInferredGenericType($fi.genericType->toOne()),
               | asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings))

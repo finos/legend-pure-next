@@ -96,7 +96,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 context = $ctx1
                             );
                       );,
-                    | // Column access on a RelationType — mirrors Java DotApplicationResolver.lookupFunction lines 300-313
+                    | // Column access on a RelationType — mirrors Java DotApplicationResolver lines 305-148
                       $ownerType->match([
                           rt:RelationType<Any>[1] |
                             let col = $rt.columns->cast(@Column<Any,Any|*>)->filter(c | $c.name == $functionName);
@@ -105,13 +105,23 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 | let resolvedCol = $col->at(0);
                                   let colGT = if($resolvedCol.genericType->isNotEmpty(), | asInferredGenericType($resolvedCol.genericType->toOne()), | ^CompilerNotSetGenericType());
                                   let colMul = if($resolvedCol.multiplicity->isNotEmpty(), | $resolvedCol.multiplicity->toOne(), | PureOne);
-                                  ^CompilerResult<ValueSpecification>(
-                                      value = ^$dot(
-                                          func = $resolvedCol,
-                                          genericType = $colGT,
-                                          multiplicity = $colMul
-                                      ),
-                                      context = $ctx1
+                                  let receiverMul = $receiver.multiplicity;
+                                  // Check if automap needed: receiver multiplicity is NOT [1] (mirrors Java lines 131-148)
+                                  if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
+                                      | // Direct access — receiver is [1]
+                                        debug($context, | '  direct access [1]');
+                                        ^CompilerResult<ValueSpecification>(
+                                            value = ^$dot(
+                                                parametersValues = $resolvedParams->cast(@ValueSpecification),
+                                                func = $resolvedCol,
+                                                genericType = $colGT,
+                                                multiplicity = $colMul
+                                            ),
+                                            context = $ctx1
+                                        );,
+                                      | // Automap — rewrite as map(receiver, {v:T[1] | $v.columnName})
+                                        debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
+                                        buildAutomap($dot, $receiver, $functionName, $colGT, $colMul, $scope, $ctx1);
                                   );,
                                 | ^CompilerResult<ValueSpecification>(
                                       value = $dot,
@@ -169,7 +179,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                         );,
                                       | // Automap — rewrite as map(receiver, {v:T[1] | $v.prop})
                                         debug($context, | '  AUTOMAP: receiverMul=' + if($receiverMul->isEmpty(), | '?', | printMultiplicity($receiverMul->toOne())));
-                                        buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $resolvedProp, $scope, $ctx1);
+                                        buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $scope, $ctx1);
                                   );
                             );,
                           a:Any[1] |
@@ -207,7 +217,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
 }
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], prop:AbstractProperty<Any>[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::buildAutomap(dot:DotApplication[1], receiver:ValueSpecification[1], functionName:String[1], propGT:GenericType[1], propMul:Multiplicity[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
     // Build lambda parameter: v_automap:ReceiverElementType[1]
     let lambdaParam = ^VariableExpression(
@@ -228,9 +238,6 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let dotBody = ^$innerDot(
         functionName = $functionName,
         parametersValues = [$varRef],
-        func = $prop,
-        genericType = $propGT,
-        multiplicity = $propMul,
         sourceInformation = $dot.sourceInformation
     );
 

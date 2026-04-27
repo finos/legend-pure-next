@@ -162,6 +162,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedTypeParamet
                         [
                             tp : TypeParameter[1]  | $tp.name,
                             ft : FunctionType[1]   | $ft->collectFunctionTypeReferencedTypeParameterNames(),
+                            rt : RelationType<Any>[1] | $rt->collectRelationTypeReferencedTypeParameterNames(),
                             a  : Any[1]            | []->cast(@String)
                         ]
                       )
@@ -189,6 +190,7 @@ function meta::pure::compiler::helper::genericType::collectReferencedMultiplicit
                     | $rawType->toOne()->match(
                         [
                             ft : FunctionType[1] | $ft->collectFunctionTypeReferencedMultiplicityParameterNames(),
+                            rt : RelationType<Any>[1] | $rt->collectRelationTypeReferencedMultiplicityParameterNames(),
                             a  : Any[1]          | []->cast(@String)
                         ]
                       )
