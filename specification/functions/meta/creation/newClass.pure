@@ -70,6 +70,25 @@ function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClas
     assertIs($cls, $cls.typeParameters->at(1).owner->toOne());
 }
 
+function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassCGTSurvivesCopy():Boolean[1]
+{
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+    let named = ^$cls(name='MyClass');
+
+    // The CGT on the copy should be Class<MyClass<T~MyClass>>
+    let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
+    assertIs(Class, $cgt.type->toOne());
+    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
+    assertIs($named, $selfGT.type->toOne());
+
+    // The self-GT should carry the TypeParameter as a type argument
+    assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
+    let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
+    let tpType = $tpGT.type->toOne();
+    assert($tpType->instanceOf(TypeParameter), 'type arg should be TypeParameter');
+}
+
 function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassOwnerSurvivesCopy():Boolean[1]
 {
     let tp = ^TypeParameter(name='T', contravariant=false);

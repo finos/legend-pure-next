@@ -433,7 +433,19 @@ public final class CopyWithKeysNode extends PureNode
                                                 Type argType = _GenericType.type(argV);
                                                 if (argType != null && argType == original)
                                                 {
-                                                    return (Object) _GenericType.buildUserDefinedGenericType(copyType, _resolver);
+                                                    var selfRef = _GenericType.buildUserDefinedGenericType(copyType, _resolver);
+                                                    // Carry over inner type arguments (e.g., TypeParameter GTs)
+                                                    PureSequence innerTA = _GenericType.typeArguments(argV);
+                                                    if (innerTA != null && !innerTA.isEmpty())
+                                                    {
+                                                        selfRef._typeArguments(innerTA);
+                                                    }
+                                                    PureSequence innerMA = argV._multiplicityArguments();
+                                                    if (innerMA != null && !innerMA.isEmpty())
+                                                    {
+                                                        selfRef._multiplicityArguments(innerMA);
+                                                    }
+                                                    return (Object) selfRef;
                                                 }
                                             }
                                             return arg;
