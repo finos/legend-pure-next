@@ -55,7 +55,7 @@ truffle_codegen := truffle / "legend-pure-next-truffle-codegen"
 truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 
 # --- Build codegen module and generate PDB classes ---
-generate-pdb-classes: stage
+generate-pdb-classes: build-compiler-pdb
     cd {{truffle_codegen}} && mvn package -DskipTests -q
     # Remove hand-written MapImpl (uses LinkedHashMap, lives in runtime src)
     rm -f {{truffle_runtime}}/target/generated-pdb-sources/org/finos/legend/pure/truffle/pdb/meta/pure/functions/collection/MapImpl.java

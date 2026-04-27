@@ -338,19 +338,7 @@ public class NativeRepository
                     }
                 }
             }
-            // Fallback: compare all values
-            Map<String, Object> valsA = diA.getValues();
-            Map<String, Object> valsB = diB.getValues();
-            if (valsA.size() != valsB.size()) return false;
-            for (Map.Entry<String, Object> e : valsA.entrySet())
-            {
-                if (!pureEquals(_E_ValueSpecification.unwrap(e.getValue()),
-                                _E_ValueSpecification.unwrap(valsB.get(e.getKey()))))
-                {
-                    return false;
-                }
-            }
-            return true;
+            return false;
         }
 
         // PureMap — delegate to PureMap.equals which uses structural equality

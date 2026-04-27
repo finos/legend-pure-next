@@ -311,6 +311,21 @@ function meta::pure::functions::boolean::tests::equality::equal::testEqualEmptyC
     assert(equal([], $top.nickName));
 }
 
+// Instances of a class without <<equality.Key>> properties are never equal
+// (only identity makes them equal). The old fallback incorrectly returned true.
+function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassInstancesNotEqual():Boolean[1]
+{
+    let a = ^NoKeyClass(name='x', value=1);
+    let b = ^NoKeyClass(name='x', value=1);
+    assertFalse($a == $b);
+}
+
+function <<test.Test>> meta::pure::functions::boolean::tests::equality::equal::testEqualNoKeyClassSameInstanceEqual():Boolean[1]
+{
+    let a = ^NoKeyClass(name='x', value=1);
+    assert($a == $a);
+}
+
 function <<PCT.test>> meta::pure::functions::boolean::tests::equality::equal::testEqualPrimitiveExtension<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
 {
     assert($f->eval(|equal(1, 1->cast(@ExtendedInteger))));

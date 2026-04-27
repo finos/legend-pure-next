@@ -19,7 +19,6 @@ package org.finos.legend.pure.truffle;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.execution.PureAssertionError;
 import org.finos.legend.pure.m3.PureModel;
-import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
@@ -129,6 +128,15 @@ class TrufflePureTestRunner
         for (String path : coreLoader.elementPaths())
         {
             Object element = coreLoader.getElement(path);
+            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd && isTestStereotype(element) && isZeroArg(fd))
+            {
+                tests.add(createTest(path, fd, null));
+            }
+        }
+        // Also scan compiler.pdb for test functions
+        for (String path : compilerLoader.elementPaths())
+        {
+            Object element = compilerLoader.getElement(path);
             if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd && isTestStereotype(element) && isZeroArg(fd))
             {
                 tests.add(createTest(path, fd, null));

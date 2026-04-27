@@ -282,7 +282,10 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
-        return true;
+        // No equality key properties — only identity makes them equal.
+        // Top-level PDB elements are cached singletons (via TrufflePdbLoader),
+        // so identity comparison is correct and matches Java runtime behavior.
+        return false;
     }
 
     /**

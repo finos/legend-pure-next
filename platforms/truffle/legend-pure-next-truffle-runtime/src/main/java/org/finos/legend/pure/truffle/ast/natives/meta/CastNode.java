@@ -76,9 +76,10 @@ public final class CastNode extends PureNode
             targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
         }
 
-        // Validate type compatibility
+        // Validate type compatibility for scalar values.
+        // Skip collections — their common element type is lossy and cast is per-element.
         if (inputResult != null
-                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())
+                && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence)
                 && targetType instanceof PackageableElement targetPe)
         {
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetPe);
