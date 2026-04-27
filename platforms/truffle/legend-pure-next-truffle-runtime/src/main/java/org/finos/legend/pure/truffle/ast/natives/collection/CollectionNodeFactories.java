@@ -126,6 +126,8 @@ public final class CollectionNodeFactories
                 (args, gt, mul, fe) -> new MapKeysNode(args[0]));
         registry.register("values_Map_1__V_MANY_",
                 (args, gt, mul, fe) -> new MapValuesNode(args[0]));
+        registry.register("keyValues_Map_1__Pair_MANY_",
+                (args, gt, mul, fe) -> new MapKeyValuesNode(args[0]));
         registry.register("putAll_Map_1__Pair_MANY__Map_1_",
                 (args, gt, mul, fe) -> new PutAllNode("putAll_Map_1__Pair_MANY__Map_1_", args[0], args[1]));
         registry.register("putAll_Map_1__Map_1__Map_1_",

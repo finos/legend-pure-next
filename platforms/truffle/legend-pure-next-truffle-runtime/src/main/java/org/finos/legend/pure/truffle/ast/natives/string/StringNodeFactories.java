@@ -103,5 +103,9 @@ public final class StringNodeFactories
 
         registry.register("parseDecimal_String_1__Integer_1__Integer_1__Decimal_1_",
                 (args, gt, mul, fe) -> new ParseDecimalNode(args[0], args[1], args[2]));
+
+        // Compiler-internal native: normalizes date literal strings
+        registry.register("normalizeDateString_String_1__String_1_",
+                (args, gt, mul, fe) -> new NormalizeDateStringNode(args[0]));
     }
 }
