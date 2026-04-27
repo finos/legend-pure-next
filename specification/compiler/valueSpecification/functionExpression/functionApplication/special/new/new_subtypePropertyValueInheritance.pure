@@ -1,0 +1,45 @@
+###Pure
+function test::new::testNew(): Any[*]
+{
+  ^test::new::Holder(animal=^test::new::Dog(breed='Lab'));
+}
+
+Class test::new::Animal
+{
+  name: String[0..1];
+}
+
+Class test::new::Dog extends test::new::Animal
+{
+  breed: String[1];
+}
+
+Class test::new::Holder
+{
+  animal: test::new::Animal[1];
+}
+
+###CompiledGraph
+function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Holder##[1]#  ~FunctionInvocation  @4:3-4:57
+    typeParam T -> test::new::Holder
+    TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Holder|1>  @4:3-4:57
+    Collection :#KeyExpression#[1]  ~Collection  @4:3-4:57
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @4:22-4:56
+        AtomicValue  'animal' :String[1]  ~AtomicValue  @4:22-4:56
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::Dog##[1]#  ~FunctionInvocation  @4:29-4:56
+          typeParam T -> test::new::Dog
+          TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::Dog|1>  @4:29-4:56
+          Collection :#KeyExpression#[1]  ~Collection  @4:29-4:56
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @4:45-4:55
+              AtomicValue  'breed' :String[1]  ~AtomicValue  @4:45-4:55
+              AtomicValue  'Lab' :String[1]  ~AtomicValue  @4:51-4:55
+
+class test::new::Animal extends Any  ~Class<test::new::Animal>  @7:1-10:1
+  property name :String[0..1]  ~Property<test::new::Animal, String|0..1>
+
+class test::new::Dog extends test::new::Animal  ~Class<test::new::Dog>  @12:1-15:1
+  property breed :String[1]  ~Property<test::new::Dog, String|1>
+
+class test::new::Holder extends Any  ~Class<test::new::Holder>  @17:1-20:1
+  property animal :test::new::Animal[1]  ~Property<test::new::Holder, test::new::Animal|1>
