@@ -181,7 +181,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::checkMissingProperties(cls:Class<Any>[1], providedNames:String[*], fi:FunctionApplication[1], context:CompilerContext[1]):CompilerContext[1]
 {
     let requiredProps = $cls.properties
-        ->filter(p | $p.multiplicity == PureOne || $p.multiplicity == OneMany)
+        ->filter(p | $p.multiplicity->isNotEmpty() && multiplicityLowerBound($p.multiplicity->toOne()) >= 1)
         ->filter(p | $p.defaultValue->isEmpty())
         ->filter(p | !$p.stereotypes->exists(s | $s.value == 'inferred' || $s.value == 'excluded' || $s.value == 'pointer'))
         ->filter(p | !$providedNames->contains($p.name));
