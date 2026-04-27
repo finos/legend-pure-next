@@ -516,10 +516,37 @@ public final class StandaloneEvaluator
         {
             if (constant instanceof java.lang.Enum<?> e && e.name().equals(name))
             {
+                ensureEnumCGT(constant, enumClass);
                 return constant;
             }
         }
         return null;
+    }
+
+    /**
+     * Ensure a Java enum constant has its classifierGenericType set.
+     * Resolves the Enumeration type from the PDB using the enum's interface name.
+     */
+    private static void ensureEnumCGT(Object constant, Class<?> enumClass)
+    {
+        if (constant instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyConst
+                && anyConst._classifierGenericType() == null
+                && INSTANCE != null)
+        {
+            Class<?>[] ifaces = enumClass.getInterfaces();
+            if (ifaces.length > 0)
+            {
+                String purePath = ifaces[0].getName()
+                        .replace("org.finos.legend.pure.truffle.pdb.", "")
+                        .replace(".", "::");
+                Object enumType = INSTANCE.resolver().getElement(purePath);
+                if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+                {
+                    anyConst._classifierGenericType(
+                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, INSTANCE.resolver()));
+                }
+            }
+        }
     }
 
     private static Object coerceEnumToInterface(Class<?> targetInterface, String name)
@@ -675,6 +702,7 @@ public final class StandaloneEvaluator
                     {
                         if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
                         {
+                            ensureEnumCGT(constant, enumClass);
                             return constant;
                         }
                     }

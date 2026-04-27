@@ -207,12 +207,12 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                     ->replace('\\t', '\t')
                     ->replace('\\r', '\r'),
                 | if($isDate,
-                    | normalizeDateString($rawValue->cast(@String)),
+                    | normalizeDateString($rawValue->toString()),
                     | $rawValue
                 )
             );
             let finalGT = if($isDate,
-                | let ds = $processedValue->cast(@String);
+                | let ds = $processedValue->toString();
                   let dateTypePath = if($ds->contains('T'),
                       | 'meta::pure::metamodel::type::primitives::DateTime',
                       | if($ds->length() <= 7,

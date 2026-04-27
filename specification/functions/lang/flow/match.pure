@@ -184,3 +184,12 @@ function <<PCT.test>> meta::pure::functions::lang::tests::match::testMatchWithMi
     let z = $f->eval(|^LA_Location(place='Hoboken, NJ', type=LA_GeographicEntityType.CITY)->match([a:LA_Address[1] | 'address', l:LA_Location[1] | 1, a:Any[1] | 'Any1']));
     assertIs(Integer, $z->genericType().type->toOne());
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchEnumValue():Boolean[1]
+{
+    let result = LA_GeographicEntityType.CITY->match([
+        e:LA_GeographicEntityType[1] | 'enum:' + $e->toString(),
+        a:Any[1] | 'other'
+    ]);
+    assertEquals('enum:CITY', $result);
+}

@@ -174,21 +174,92 @@ public final class ToStringNode extends PureNode
 
     static String normalizeDateString(String s)
     {
-        // Strip leading + for large years
         String input = s.startsWith("+") ? s.substring(1) : s;
         try
         {
-            if (input.contains("T"))
-            {
-                String[] parts = input.split("T", 2);
-                String datePart = normalizeStrictDate(parts[0]);
-                String timePart = normalizeTimePart(parts[1]);
-                return datePart + "T" + timePart;
-            }
-            else
+            int tIdx = input.indexOf('T');
+            if (tIdx < 0)
             {
                 return normalizeStrictDate(input);
             }
+
+            String datePart = input.substring(0, tIdx);
+            String timeAndTz = input.substring(tIdx + 1);
+
+            // Extract timezone if present
+            String timePart;
+            String tzStr = null;
+            int plusIdx = timeAndTz.lastIndexOf('+');
+            int minusIdx = timeAndTz.lastIndexOf('-');
+            int tzIdx = Math.max(plusIdx, minusIdx);
+            if (tzIdx > 0)
+            {
+                timePart = timeAndTz.substring(0, tzIdx);
+                tzStr = timeAndTz.substring(tzIdx);
+            }
+            else
+            {
+                timePart = timeAndTz;
+            }
+
+            // Parse date
+            String[] dp = datePart.split("-");
+            int year = Integer.parseInt(dp[0]);
+            int month = dp.length > 1 ? Integer.parseInt(dp[1]) : 1;
+            int day = dp.length > 2 ? Integer.parseInt(dp[2]) : 1;
+
+            // Parse time
+            String[] tp = timePart.split(":");
+            int hour = Integer.parseInt(tp[0]);
+            int minute = tp.length > 1 ? Integer.parseInt(tp[1]) : 0;
+            boolean hasSeconds = tp.length > 2;
+            int second = 0;
+            String fracStr = "";
+            if (hasSeconds)
+            {
+                String secPart = tp[2];
+                int dotIdx = secPart.indexOf('.');
+                if (dotIdx >= 0)
+                {
+                    second = Integer.parseInt(secPart.substring(0, dotIdx));
+                    fracStr = secPart.substring(dotIdx);
+                }
+                else
+                {
+                    second = Integer.parseInt(secPart);
+                }
+            }
+
+            // Convert timezone to UTC
+            if (tzStr != null)
+            {
+                int tzSign = tzStr.charAt(0) == '-' ? -1 : 1;
+                int tzHours = Integer.parseInt(tzStr.substring(1, 3));
+                int tzMinutes = tzStr.length() > 3 ? Integer.parseInt(tzStr.substring(3, 5)) : 0;
+                int tzOffsetMinutes = tzSign * (tzHours * 60 + tzMinutes);
+                if (tzOffsetMinutes != 0)
+                {
+                    java.time.ZoneOffset offset = java.time.ZoneOffset.ofTotalSeconds(tzOffsetMinutes * 60);
+                    java.time.LocalDateTime ldt = java.time.LocalDateTime.of(year, month, day, hour, minute, second);
+                    java.time.OffsetDateTime odt = java.time.OffsetDateTime.of(ldt, offset);
+                    java.time.OffsetDateTime utc = odt.withOffsetSameInstant(java.time.ZoneOffset.UTC);
+                    year = utc.getYear();
+                    month = utc.getMonthValue();
+                    day = utc.getDayOfMonth();
+                    hour = utc.getHour();
+                    minute = utc.getMinute();
+                    second = utc.getSecond();
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("%04d-%02d-%02dT%02d:%02d", year, month, day, hour, minute));
+            if (hasSeconds)
+            {
+                sb.append(String.format(":%02d", second));
+                sb.append(fracStr);
+            }
+            return sb.toString();
         }
         catch (Exception e)
         {

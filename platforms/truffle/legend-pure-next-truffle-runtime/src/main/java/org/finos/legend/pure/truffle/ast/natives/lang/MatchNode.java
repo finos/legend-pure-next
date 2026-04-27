@@ -173,20 +173,8 @@ public final class MatchNode extends PureNode
         {
             if (any._classifierGenericType() == null)
             {
-                String detail = value.getClass().getName();
-                if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv)
-                {
-                    var t = gtv._type();
-                    detail += " _type=" + (t != null ? org.finos.legend.pure.truffle.runtime.helper._Type.print(t, resolver) : "null");
-                }
-                if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-                {
-                    detail += " _name=" + pe._name();
-                    detail += " pathOf=" + resolver.pathOf(value);
-                }
-                detail += " isFBW=" + value.getClass().getSimpleName().contains("FlatBuffer");
-                detail += " id=" + System.identityHashCode(value);
-                throw new RuntimeException("No classifierGenericType on: " + detail);
+                throw new RuntimeException("No classifierGenericType on: " + value.getClass().getName()
+                        + " id=" + System.identityHashCode(value));
             }
             return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(any._classifierGenericType());
         }
