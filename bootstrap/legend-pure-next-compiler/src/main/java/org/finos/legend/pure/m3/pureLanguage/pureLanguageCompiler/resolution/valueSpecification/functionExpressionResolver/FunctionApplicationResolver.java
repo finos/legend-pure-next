@@ -322,7 +322,9 @@ public class FunctionApplicationResolver
             }
             GenericType expectedGT = _GenericType.makeAsConcreteAsPossible(declaredParam._genericType(), bindings, model);
             Multiplicity expectedMul = _Multiplicity.makeAsConcreteAsPossible(declaredParam._multiplicity(), bindings);
+            context.debug("validateParam: expected=%s actual=%s", lazy(() -> _GenericType.print(expectedGT)), lazy(() -> _GenericType.print(argGT)));
             GenericType reconciledArgGT = _GenericType.reconcileInferred(expectedGT, argGT, model);
+            context.debug("validateParam: reconciled=%s sameAsActual=%s", lazy(() -> _GenericType.print(reconciledArgGT)), reconciledArgGT == argGT);
             ValueSpecification reconciled = rebuildWithReconciledType(argVS, reconciledArgGT, model);
             if (!errorReported[0] && (!_GenericType.isCompatible(expectedGT, reconciledArgGT, model) || !_Multiplicity.subsumes(expectedMul, argMul)))
             {
@@ -519,7 +521,8 @@ public class FunctionApplicationResolver
                             ._value(_Multiplicity.asInferred(rmp._value(), model))));
         }
 
-        // Collect bindings from the re-resolved child type, mapped to the
+        ValueSpecification resolvedVS = vs; // effectively final for lambda
+        context.debug("finishProcessing: paramGT=%s resolvedGT=%s", lazy(() -> _GenericType.print(paramGT)), lazy(() -> _GenericType.print(resolvedVS._genericType())));
         _GenericType.collectTypeParameterBindings(paramGT, vs._genericType(), bindings);
         _Multiplicity.collectMultiplicityParameterBindings(paramMul, vs._multiplicity(), bindings);
 

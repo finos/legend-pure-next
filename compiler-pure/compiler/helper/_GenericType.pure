@@ -517,10 +517,35 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
                         other : GenericType[1] | false
                     ])
                 );
-                if($validGens->isEmpty(),
-                    | [],
-                    | let resolvedGT = makeAsConcreteAsPossible($validGens->at(0).general, $bindings);
-                      resolveForTarget($resolvedGT, $targetType);
+                if($validGens->isNotEmpty(),
+                    | // Upward: walk generalizations toward target (supertype)
+                      let resolvedGT = makeAsConcreteAsPossible($validGens->at(0).general, $bindings);
+                      resolveForTarget($resolvedGT, $targetType);,
+                    | // Downward: target is a subtype of source (mirrors Java lines 908-946)
+                      // Java checks: targetType instanceof Class. At runtime, M3 type objects for
+                      // Class-defined types (like LambdaFunction, Function) are ClassImpl instances,
+                      // so instanceof Class returns true. PrimitiveTypeImpl does not implement Class.
+                      // In Pure, instanceOf(Class) matches the M3 meta-classifier, which is true for
+                      // all Class-defined types but false for PrimitiveType instances.
+                      let targetIsSubtype = $targetType->instanceOf(Class) && $targetType->linearize()->exists(l | typeEquals($l, $sourceType));
+                      if($targetIsSubtype,
+                          | let targetCls = $targetType->cast(@Class<Any>);
+                            let templateTypeArgs = $targetCls.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp));
+                            let templateMulArgs = $targetCls.multiplicityParameters->map(mp | $mp->cast(@Multiplicity));
+                            let templateGT = ^UserDefinedGenericType(type = $targetType, typeArguments = $templateTypeArgs, multiplicityArguments = $templateMulArgs);
+                            let resolvedTemplate = resolveForTarget($templateGT, $sourceType);
+                            if($resolvedTemplate->isNotEmpty(),
+                                | let downBindings = newPlainParametersBinding()->cast(@ParametersBinding);
+                                  let db1 = collectTypeParameterBindings($resolvedTemplate->toOne(), $src, $downBindings);
+                                  let db2 = if($resolvedTemplate->toOne()->instanceOf(GenericTypeValue) && $resolvedTemplate->toOne()->cast(@GenericTypeValue).multiplicityArguments->isNotEmpty() && $src.multiplicityArguments->isNotEmpty(),
+                                      | $resolvedTemplate->toOne()->cast(@GenericTypeValue).multiplicityArguments->zip($src.multiplicityArguments)->fold({pair, bb | collectMultiplicityParameterBindings($pair.first, $pair.second, $bb)}, $db1),
+                                      | $db1
+                                  );
+                                  makeAsConcreteAsPossible($templateGT, $db2);,
+                                | []
+                            );,
+                          | []
+                      );
                 );
           );
     );
@@ -865,15 +890,22 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
                                           eft:FunctionType[1] | meta::pure::compiler::helper::functionType::reconcileInferredFT($eft, $ft),
                                           a:Any[1] | $ft
                                       ]),
+                                  rt:RelationType<Any>[1] |
+                                      $expectedType->toOne()->match([
+                                          ert:RelationType<Any>[1] | reconcileInferredRT($ert, $rt),
+                                          a:Any[1] | $rt
+                                      ]),
                                   a:Any[1] | $actualType->toOne()
                               ]);
                               let reconciledTypeArgs = if($expectedV.typeArguments->size() == $actualV.typeArguments->size(),
                                   | $expectedV.typeArguments->zip($actualV.typeArguments)->map(p | reconcileInferred($p.first, $p.second)),
                                   | $actualV.typeArguments
                               );
+                              // Preserve typeVariableValues from actual (mirrors Java line 1196)
+                              let actualTVV = $actual->match([u:UserDefinedGenericType[1] | $u.typeVariableValues, a:Any[1] | []->cast(@ValueSpecification)]);
                               if($actual->instanceOf(Inferred),
                                   | ^InferredGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments),
-                                  | ^UserDefinedGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments)
+                                  | ^UserDefinedGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments, typeVariableValues = $actualTVV)
                               );
                           );
                     );,
@@ -881,4 +913,34 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
             ]),
         other:GenericType[1] | $actual
     ]);
+}
+
+// Mirrors Java _RelationType.reconcileInferred (lines 274-307):
+// Reconciles inferred markers in RelationType columns — when an actual column's type/multiplicity
+// is Inferred, propagate that to the expected column's type/multiplicity.
+function meta::pure::compiler::helper::genericType::reconcileInferredRT(expectedRT:RelationType<Any>[1], actualRT:RelationType<Any>[1]):RelationType<Any>[1]
+{
+    let expectedCols = $expectedRT.columns->cast(@Column<Any,Any|*>);
+    let actualCols = $actualRT.columns->cast(@Column<Any,Any|*>);
+    if($expectedCols->isEmpty() || $actualCols->isEmpty(),
+        | $actualRT,
+        | let newCols = $expectedCols->zip($actualCols)->map(p |
+              let expectedCol = $p.first;
+              let actualCol = $p.second;
+              let reconciledGT = if($actualCol.genericType->isNotEmpty() && $actualCol.genericType->toOne()->instanceOf(Inferred)
+                                     && $expectedCol.genericType->isNotEmpty()
+                                     && isCompatibleGenericType($expectedCol.genericType->toOne(), $actualCol.genericType->toOne()),
+                  | reconcileInferred($expectedCol.genericType->toOne(), asInferredGenericType($expectedCol.genericType->toOne())),
+                  | if($actualCol.genericType->isNotEmpty(), | $actualCol.genericType->toOne(), | $expectedCol.genericType->toOne())
+              );
+              let reconciledMul = if($actualCol.multiplicity->isNotEmpty() && $actualCol.multiplicity->toOne()->instanceOf(Inferred)
+                                      && $expectedCol.multiplicity->isNotEmpty()
+                                      && multiplicitySubsumes($expectedCol.multiplicity->toOne(), $actualCol.multiplicity->toOne()),
+                  | asInferredMultiplicity($expectedCol.multiplicity->toOne()),
+                  | if($actualCol.multiplicity->isNotEmpty(), | $actualCol.multiplicity->toOne(), | PureOne)
+              );
+              ^Column<Any,Any|*>(name = $actualCol.name, nameWildCard = if($actualCol.nameWildCard->isEmpty(), | false, | $actualCol.nameWildCard), genericType = $reconciledGT, multiplicity = $reconciledMul);
+          );
+          ^RelationType<Any>(columns = $newCols);
+    );
 }

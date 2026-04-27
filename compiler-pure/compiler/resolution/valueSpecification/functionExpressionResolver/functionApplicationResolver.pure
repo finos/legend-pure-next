@@ -351,7 +351,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // Build resolved type/multiplicity parameters from validated bindings
           // Filter by ownTypeParamNames — only include this function's own params (mirrors Java populateResolvedParameters lines 97-99)
           // Use findCommonGenericType for multi-valued bindings (mirrors Java populateResolvedParameters)
-          let resolvedTypeParams = $validatedBindings.typeBindings->keys()->map(k |
+          let resolvedTypeParams = $validatedBindings.typeBindings->keys()
+              ->filter(k | $ownTypeParamNames->isEmpty() || $ownTypeParamNames->contains($k))
+              ->map(k |
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
               let boundGT = if($vals->size() == 1,
                   | $vals->at(0),
@@ -363,7 +365,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   value = $boundGT
               );
           );
-          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()->map(k |
+          let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()
+              ->filter(k | $ownMulParamNames->isEmpty() || $ownMulParamNames->contains($k))
+              ->map(k |
               let vals = $validatedBindings.multiplicityBindings->get($k)->toOne().values;
               ^ResolvedMultiplicityParameter(
                   name = $k,
@@ -426,8 +430,27 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $acc.bindings);
                     let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $acc.bindings);
                     // Reconcile expected with actual (mirrors Java reconcileInferred)
+                    debug($context, | 'validateParam[' + $i->toString() + ']: expected=' + printGenericType($expectedGT) + ' actual=' + printGenericType($argGT));
                     let reconciledArgGT = reconcileInferred($expectedGT, $argGT);
-                    let reconciledVS = ^$argVS(genericType = $reconciledArgGT);
+                    debug($context, | 'validateParam[' + $i->toString() + ']: reconciled=' + printGenericType($reconciledArgGT) + ' sameAsActual=' + ($reconciledArgGT == $argGT)->toString());
+                    // Mirrors Java rebuildWithReconciledType: for lambdas, rebuild with reconciled FunctionType params
+                    let reconciledVS = $argVS->match([
+                        av:AtomicValue[1] |
+                            if($av.value->toOne()->instanceOf(LambdaFunction),
+                                | let lambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
+                                  let reconciledFT = $reconciledArgGT->genericTypeTypeArguments()->at(0)->match([
+                                      ftGT:GenericTypeValue[1] | if($ftGT.type->isNotEmpty() && $ftGT.type->toOne()->instanceOf(FunctionType), | $ftGT.type->toOne()->cast(@FunctionType), | []),
+                                      a:Any[1] | []
+                                  ]);
+                                  if($reconciledFT->isNotEmpty() && $reconciledFT->toOne().parameters->isNotEmpty(),
+                                      | let newLambda = ^$lambda(parameters = $reconciledFT->toOne().parameters);
+                                        ^$av(value = $newLambda, genericType = $reconciledArgGT);,
+                                      | ^$argVS(genericType = $reconciledArgGT)
+                                  );,
+                                | ^$argVS(genericType = $reconciledArgGT)
+                            ),
+                        other:Any[1] | ^$argVS(genericType = $reconciledArgGT)
+                    ]);
                     let updatedBindings = $acc.bindings;
                     let typeOk = isCompatibleGenericType($expectedGT, $reconciledArgGT);
                     let mulOk = multiplicitySubsumes($expectedMul, $argMul);
@@ -705,6 +728,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     ]);
 
     // Collect bindings from the re-resolved type
+    debug($context, | 'finishProcessing: paramGT=' + printGenericType($paramGT) + ' resolvedGT=' + if($resolved.genericType->isEmpty(), |'?', |printGenericType($resolved.genericType->toOne())));
     let b1 = if($resolved.genericType->isNotEmpty(),
         | collectTypeParameterBindings($paramGT, $resolved.genericType->toOne(), $bindings),
         | $bindings
@@ -741,25 +765,31 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
     let b2 = collectMultiplicityParameterBindings($childExpr.multiplicity->toOne(), $resolvedParamMul, $b1);
 
-    // Make child bindings concrete using parent bindings, then push into child expr
+    // Make child bindings concrete using parent bindings, then push into child expr.
+    // Push ALL values (not just the first) so that populateResolvedParameters can fold
+    // them via findCommonGenericType — mirrors Java's replaceAll + populateResolvedParameters.
     let concreteChildTypeBindings = $b2.typeBindings->keys()->fold({k, acc |
         let vals = $b2.typeBindings->get($k)->toOne().values;
         let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings)));
-        collectTypeParameterBindings(
-            ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
-            $concreteVals->at(0),
-            $acc
-        );
+        $concreteVals->fold({cv, a |
+            collectTypeParameterBindings(
+                ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
+                $cv,
+                $a
+            );
+        }, $acc);
     }, newPlainParametersBinding()->cast(@ParametersBinding));
     // Also push multiplicity bindings
     let concreteChildBindings = $b2.multiplicityBindings->keys()->fold({k, acc |
         let vals = $b2.multiplicityBindings->get($k)->toOne().values;
         let concreteVals = $vals->map(m | asInferredMultiplicity(makeAsConcreteAsPossible($m, $bindings)));
-        collectMultiplicityParameterBindings(
-            ^UserDefinedMultiplicityParameter(name = $k),
-            $concreteVals->at(0),
-            $acc
-        );
+        $concreteVals->fold({cv, a |
+            collectMultiplicityParameterBindings(
+                ^UserDefinedMultiplicityParameter(name = $k),
+                $cv,
+                $a
+            );
+        }, $acc);
     }, $concreteChildTypeBindings);
 
     populateResolvedParameters($childExpr, $concreteChildBindings)->cast(@FunctionInvocation);
