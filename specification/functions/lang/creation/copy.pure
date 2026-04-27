@@ -382,6 +382,23 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreserv
     assertEquals('MyClass', $copiedTp.owner->toOne()->cast(@PackageableElement).name->toOne());
 }
 
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesEnumPropertyOwnerAndCGT():Boolean[1]
+{
+    let en = meta::pure::functions::meta::creation::newEnumeration('TestEnum', ^Package(name='test', package=^Package(name='Root')), ['A', 'B']);
+    let copied = ^$en(name='CopiedEnum');
+
+    // Properties should have owner pointing to the copy
+    let prop = $copied.properties->at(0);
+    assertIs($copied, $prop.owner->toOne());
+
+    // Enum value inside defaultValue should have CGT pointing to the copy
+    let lambda = $prop.defaultValue->toOne();
+    let av = $lambda.expressionSequence->at(0)->cast(@AtomicValue);
+    let enumVal = $av.value->toOne();
+    let enumCGT = $enumVal->cast(@Any).classifierGenericType->toOne()->cast(@GenericTypeValue);
+    assertIs($copied, $enumCGT.type->toOne());
+}
+
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty():Boolean[1]
 {
     // [0..1] property: setting to [] should set to empty (no value)

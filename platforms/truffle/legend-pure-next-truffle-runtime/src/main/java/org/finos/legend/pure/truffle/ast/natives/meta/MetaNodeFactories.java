@@ -125,6 +125,10 @@ public final class MetaNodeFactories
         registry.register("newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_",
                 (args, gt, mul, fe) -> new NewClassNode(args[0], args[1]));
 
+        // newEnumeration — creates a fully constructed Enumeration with all enum values
+        registry.register("newEnumeration_String_1__Package_1__String_MANY__Enumeration_1_",
+                (args, gt, mul, fe) -> new NewEnumNode(args[0], args[1], args[2]));
+
         // parse — invokes the Pure parser (TODO: implement without DynamicInstance)
         registry.register("parse_String_1__String_1__PureFile_1_",
                 (args, gt, mul, fe) -> new ParseNode(args[0], args[1]));

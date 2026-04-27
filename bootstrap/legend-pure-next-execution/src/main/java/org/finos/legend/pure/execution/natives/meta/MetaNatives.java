@@ -399,6 +399,7 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
+            fixPropertyOwners(original, copy, resolver);
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
 
@@ -451,6 +452,7 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
+            fixPropertyOwners(original, copy, resolver);
 
             // Step 3: Push onto construction stack, then evaluate key expressions
             eval.pushConstruction(copy);
@@ -681,11 +683,166 @@ public class MetaNatives
 
             return _E_ValueSpecification.wrap(newClass, genericType, multiplicity, resolver);
         });
+
+        // newEnumeration(String[1], Package[1], String[*]) : Enumeration<Any>[1]
+        natives.put("newEnumeration_String_1__Package_1__String_MANY__Enumeration_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String name = (String) _E_ValueSpecification.unwrap(args.get(0));
+            Object pkg = _E_ValueSpecification.unwrap(args.get(1));
+            Object valueNamesRaw = _E_ValueSpecification.unwrap(args.get(2));
+            List<String> valueNames = new ArrayList<>();
+            if (valueNamesRaw instanceof List<?> list)
+            {
+                list.forEach(v -> valueNames.add((String) v));
+            }
+            else if (valueNamesRaw instanceof String s)
+            {
+                valueNames.add(s);
+            }
+
+            meta.pure.metamodel.type.EnumerationImpl enumeration = new meta.pure.metamodel.type.EnumerationImpl();
+            enumeration._name(name);
+            if (pkg instanceof meta.pure.metamodel.Package p)
+            {
+                enumeration._package(p);
+            }
+
+            // Add generalization: every user-defined enumeration extends Enum
+            meta.pure.metamodel.type.Type enumType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Enum");
+            meta.pure.metamodel.relationship.GeneralizationImpl gen = new meta.pure.metamodel.relationship.GeneralizationImpl();
+            gen._general(_GenericType.buildUserDefinedGenericType(enumType, resolver));
+            gen._specific(enumeration);
+            meta.pure.metamodel.type.Type genType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::relationship::Generalization");
+            if (genType != null)
+            {
+                gen._classifierGenericType(_GenericType.buildUserDefinedGenericType(genType, resolver));
+            }
+            enumeration._generalizations(org.eclipse.collections.impl.factory.Lists.mutable.with(gen));
+
+            // Self-referencing CGT: Enumeration<self>
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
+            meta.pure.metamodel.type.Type enumerationType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Enumeration");
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(enumerationType, resolver);
+            cgt._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(selfRef));
+            enumeration._classifierGenericType(cgt);
+
+            // GenericType for this enumeration (used as CGT for enum values)
+            meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl enumGT = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
+
+            meta.pure.metamodel.multiplicity.Multiplicity pureOne = (meta.pure.metamodel.multiplicity.Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne");
+            meta.pure.metamodel.type.Type propertyType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::function::property::Property");
+
+            // Build properties for each value
+            org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.function.property.Property> properties = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+            for (String valueName : valueNames)
+            {
+                // Create Enum instance
+                meta.pure.metamodel.type.EnumImpl enumInstance = new meta.pure.metamodel.type.EnumImpl();
+                enumInstance._name(valueName);
+                enumInstance._classifierGenericType(enumGT);
+
+                // Build defaultValue lambda
+                meta.pure.metamodel.type.FunctionTypeImpl ft = new meta.pure.metamodel.type.FunctionTypeImpl();
+                meta.pure.metamodel.type.Type ftType = (meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::FunctionType");
+                if (ftType != null) ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(ftType, resolver));
+                ft._returnType(enumGT);
+                ft._returnMultiplicity(pureOne);
+                meta.pure.metamodel.type.generics.InferredGenericTypeImpl lambdaCGT = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver);
+                lambdaCGT._type((meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::function::LambdaFunction"));
+                lambdaCGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
+                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(resolver)._type(ft)));
+
+                meta.pure.metamodel.function.LambdaFunctionImpl lambda = new meta.pure.metamodel.function.LambdaFunctionImpl();
+                lambda._classifierGenericType(lambdaCGT);
+                lambda._expressionSequence(org.eclipse.collections.impl.factory.Lists.mutable.with(
+                        new meta.pure.metamodel.valuespecification.AtomicValueImpl(resolver)
+                                ._value(enumInstance)
+                                ._genericType(enumGT)
+                                ._multiplicity(pureOne)));
+
+                // Build Property
+                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl propCGT = _GenericType.buildUserDefinedGenericType(propertyType, resolver);
+                propCGT._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(cgt, enumGT));
+                propCGT._multiplicityArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(pureOne));
+
+                meta.pure.metamodel.function.property.PropertyImpl prop = new meta.pure.metamodel.function.property.PropertyImpl();
+                prop._name(valueName);
+                prop._classifierGenericType(propCGT);
+                prop._genericType(enumGT);
+                prop._multiplicity(pureOne);
+                prop._owner(enumeration);
+                // AggregationKind.None — resolve from the PDB
+                Object aggNone = resolver.getElement("meta::pure::metamodel::function::property::AggregationKind");
+                if (aggNone instanceof meta.pure.metamodel.type.Enumeration aggEnum && aggEnum._properties() != null)
+                {
+                    for (meta.pure.metamodel.function.property.Property aggProp : aggEnum._properties())
+                    {
+                        if ("None".equals(aggProp._name()) && aggProp._defaultValue() != null)
+                        {
+                            Object aggVal = _E_ValueSpecification.unwrap(aggProp._defaultValue()._expressionSequence().getFirst());
+                            if (aggVal instanceof meta.pure.metamodel.function.property.AggregationKind ak)
+                            {
+                                prop._aggregation(ak);
+                            }
+                            break;
+                        }
+                    }
+                }
+                prop._defaultValue(lambda);
+                properties.add(prop);
+            }
+
+            enumeration._properties(properties);
+            return _E_ValueSpecification.wrap(enumeration, genericType, multiplicity, resolver);
+        });
     }
 
     // =========================================================================
     // Helper methods
     // =========================================================================
+
+    /**
+     * After copying a SimplePropertyOwner, update property owners and nested
+     * enum value CGTs to point to the copy instead of the original.
+     */
+    private static void fixPropertyOwners(Object original, Object copy, MetadataAccess resolver)
+    {
+        if (!(copy instanceof meta.pure.metamodel.SimplePropertyOwner spo))
+        {
+            return;
+        }
+        if (spo._properties() == null)
+        {
+            return;
+        }
+        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl copyGT = null;
+        if (copy instanceof meta.pure.metamodel.type.Type copyType)
+        {
+            copyGT = _GenericType.buildUserDefinedGenericType(copyType, resolver);
+        }
+        for (meta.pure.metamodel.function.property.Property prop : spo._properties())
+        {
+            if (prop._owner() == original)
+            {
+                prop._owner(spo);
+            }
+            if (copyGT != null && prop._defaultValue() != null
+                    && prop._defaultValue()._expressionSequence() != null
+                    && !prop._defaultValue()._expressionSequence().isEmpty())
+            {
+                Object vs = prop._defaultValue()._expressionSequence().getFirst();
+                if (vs instanceof meta.pure.metamodel.valuespecification.AtomicValue av
+                        && av._value() instanceof Any enumVal)
+                {
+                    var enumCgt = enumVal._classifierGenericType();
+                    if (enumCgt != null && _GenericType.type(enumCgt) == original)
+                    {
+                        enumVal._classifierGenericType(copyGT);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Fix self-referential classifierGenericType during copy.
@@ -709,11 +866,14 @@ public class MetaNatives
             boolean hasSelfRef = false;
             for (meta.pure.metamodel.type.generics.GenericType arg : typeArgs)
             {
-                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                        && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
+                if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV)
                 {
-                    hasSelfRef = true;
-                    break;
+                    var argType = argV._type();
+                    if (argType == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argType, original))
+                    {
+                        hasSelfRef = true;
+                        break;
+                    }
                 }
             }
             if (hasSelfRef && copy instanceof meta.pure.metamodel.type.Type copyType)
@@ -723,7 +883,7 @@ public class MetaNatives
                         typeArgs.collect(arg ->
                         {
                             if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                                    && org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original))
+                                    && (argV._type() == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original)))
                             {
                                 meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
                                         _GenericType.buildUserDefinedGenericType(copyType, resolver);

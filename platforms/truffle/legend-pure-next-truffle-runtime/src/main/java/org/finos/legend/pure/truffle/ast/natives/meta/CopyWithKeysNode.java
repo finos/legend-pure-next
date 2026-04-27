@@ -96,6 +96,8 @@ public final class CopyWithKeysNode extends PureNode
         }
         // Fix TypeParameter/MultiplicityParameter owners to point to the copy
         fixTypeParameterOwners(copy);
+        // Fix property owners and nested enum value CGTs to point to the copy
+        fixPropertyOwners(original, copy);
 
         // Step 3: Push onto construction stack, then evaluate key expressions
         eval.pushConstruction(copy);
@@ -594,6 +596,60 @@ public final class CopyWithKeysNode extends PureNode
             catch (Exception e)
             {
                 throw new RuntimeException("Failed to read property for key values in copy", e);
+            }
+        }
+    }
+
+    /**
+     * After copying a SimplePropertyOwner, update property owners and nested
+     * enum value CGTs to point to the copy instead of the original.
+     */
+    private static void fixPropertyOwners(Object original, Object copy)
+    {
+        if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner spo))
+        {
+            return;
+        }
+        PureSequence props = spo._properties();
+        if (props == null)
+        {
+            return;
+        }
+        var copyGT = (copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
+                ? org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
+                        copyType, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver())
+                : null;
+
+        for (int i = 0; i < props.size(); i++)
+        {
+            Object p = props.getBoxed(i);
+            if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+            {
+                // Fix owner reference
+                if (prop._owner() == original)
+                {
+                    prop._owner(spo);
+                }
+                // Fix enum value CGT inside defaultValue lambda
+                if (copyGT != null && prop._defaultValue() != null
+                        && prop._defaultValue()._expressionSequence() != null
+                        && !prop._defaultValue()._expressionSequence().isEmpty())
+                {
+                    Object vs = prop._defaultValue()._expressionSequence().getBoxed(0);
+                    if (vs instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
+                            && av._value() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any enumVal)
+                    {
+                        var enumCgt = enumVal._classifierGenericType();
+                        if (enumCgt != null)
+                        {
+                            var enumCgtType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(enumCgt);
+                            if (enumCgtType == original)
+                            {
+                                enumVal._classifierGenericType(copyGT);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

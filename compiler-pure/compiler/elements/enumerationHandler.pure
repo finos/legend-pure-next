@@ -31,10 +31,6 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
     let enumName = $packagePath + '::' + $protocolEnum.name;
     let skeleton = $context->resolveElement($enumName)->toOne()->cast(@Enumeration<Any>);
 
-    let selfGenType = ^UserDefinedGenericType(type = $skeleton);
-
-    let pureOne = PureOne;
-
     let ownerCtx = 'enumeration \'' + $enumName + '\'';
     let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $context);
 
@@ -44,8 +40,22 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
         ^$c(errors += 'Duplicate enum value \'' + $d + '\' in ' + $ownerCtx + $siCtx);
     }, $context);
 
-    // Build the enum value properties (with annotations on each value)
-    let enumValues = $protocolEnum.properties->map(p | $p->meta::pure::compiler::structural::propertyCompiler::compileEnumProperty($skeleton, $selfGenType, $ctx0, $ownerCtx));
+    // Add stereotypes/taggedValues to existing enum value properties (created by newEnumeration in pass 1)
+    let updatedProps = $skeleton.properties->map(prop |
+        let protocolProp = $protocolEnum.properties->filter(p | $p.name == $prop.name);
+        if($protocolProp->isEmpty(),
+            | $prop,
+            | let pp = $protocolProp->head()->toOne();
+              let stereoResult = compilePropertyStereotypes($pp, $ctx0, $ownerCtx);
+              let tvResult = compilePropertyTaggedValues($pp, $ctx0, $ownerCtx);
+              let si = $pp.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn));
+              ^$prop(
+                  stereotypes = $stereoResult.values,
+                  taggedValues = $tvResult.values,
+                  sourceInformation = $si
+              );
+        );
+    );
 
     // Compile stereotypes and tagged values on the enumeration itself
     let stereoAccum = $protocolEnum.stereotypes->fold({s, acc |
@@ -55,11 +65,19 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
                                 compileTaggedValue($t, $acc, $ownerCtx);
                             }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
 
+    let si = $protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation->map(si | ^SourceInformation(
+        sourceId = $si.sourceId,
+        startLine = $si.startLine,
+        startColumn = $si.startColumn,
+        endLine = $si.endLine,
+        endColumn = $si.endColumn
+    ));
     ^CompilerResult<Enumeration<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,
             taggedValues = $tvAccum.values,
-            properties = $enumValues
+            properties = $updatedProps,
+            sourceInformation = $si
         ),
         context = $tvAccum.context
     );

@@ -163,7 +163,7 @@ function meta::pure::compiler::test::printer::printEnumerationProperty(p:Any[1],
     let enumFullName = $en->cast(@PackageableElement)->fullPath();
     let defaultStr = if($p2.defaultValue->isEmpty(), | '',
         | let expr = $p2.defaultValue->toOne()->cast(@LambdaFunction<Any>).expressionSequence->at(0);
-          let val = $expr->match([a:AtomicValue[1] | $a.value->toOne()->cast(@Enumeration<Any>), e:Enumeration<Any>[1] | $e]);
+          let val = $expr->match([a:AtomicValue[1] | $a.value->toOne()->cast(@Enum), e:Enum[1] | $e]);
           let lambdaCgt = $p2.defaultValue->toOne()->cast(@Any).classifierGenericType;
           '  = ^' + $enumFullName + '(name=\'' + $val.name->toOne() + '\')' + if($lambdaCgt->isEmpty(), | '', | '  ~lambda:' + $lambdaCgt->toOne()->printType());
     );
