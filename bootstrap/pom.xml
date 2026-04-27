@@ -45,6 +45,7 @@
         <junit-jupiter.version>5.14.2</junit-jupiter.version>
         <jena.version>6.0.0</jena.version>
         <commons-lang.version>3.20.0</commons-lang.version>
+        <gson.version>2.14.0</gson.version>
         <apache.maven.version>3.9.12</apache.maven.version>
 
         <!-- Plugin versions -->
@@ -276,6 +277,13 @@
                 <groupId>org.apache.maven.plugin-tools</groupId>
                 <artifactId>maven-plugin-annotations</artifactId>
                 <version>3.6.0</version>
+            </dependency>
+
+            <!-- Gson — pin version to resolve convergence between Jena and LSP4J -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
             </dependency>
 
             <!-- JUnit 5 -->

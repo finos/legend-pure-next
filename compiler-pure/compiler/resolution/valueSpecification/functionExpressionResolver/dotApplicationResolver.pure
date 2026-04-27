@@ -30,7 +30,6 @@ import meta::pure::compiler::helper::relationType::*;
 import meta::pure::compiler::helper::class::*;
 import meta::pure::compiler::helper::property::*;
 import meta::pure::compiler::helper::parametersBinding::*;
-import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolveDotApplication(dot:DotApplication[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
@@ -169,15 +168,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                             )
                                                         }, true);
                                                         if(!$paramsMatch, | false,
-                                                            | // Compare return types and multiplicity — child must be covariant subtype of parent
+                                                            | // Compare return types and multiplicity — mirrors Java isCompatible(otherReturnGT, msReturnGT)
                                                               let msRetGT = makeAsConcreteAsPossible($mostSpecific.genericType->toOne(), $classBindings);
                                                               let otRetGT = makeAsConcreteAsPossible($other.genericType->toOne(), $classBindings);
-                                                              let msType = $msRetGT->genericTypeRawType();
-                                                              let otType = $otRetGT->genericTypeRawType();
-                                                              let typesCompatible = if($msType->isNotEmpty() && $otType->isNotEmpty(),
-                                                                  | subtypeOf($msType->toOne(), $otType->toOne()),
-                                                                  | printGenericType($msRetGT) == printGenericType($otRetGT)
-                                                              );
+                                                              let typesCompatible = isCompatibleGenericType($otRetGT, $msRetGT);
                                                               let mulMatch = multiplicitySubsumes(makeAsConcreteAsPossible($other.multiplicity->toOne(), $classBindings), makeAsConcreteAsPossible($mostSpecific.multiplicity->toOne(), $classBindings));
                                                               $typesCompatible && $mulMatch;
                                                         );

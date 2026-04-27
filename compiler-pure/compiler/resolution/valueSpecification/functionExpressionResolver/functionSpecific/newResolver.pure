@@ -247,7 +247,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
                                                         | let pName = $propType->toOne()->cast(@PackageableElement).name->toOne();
                                                           let vName = $valType->toOne()->cast(@PackageableElement).name->toOne();
-                                                          let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil' || $pName == $vName
+                                                          let skip = $pName == 'Any' || $vName == 'Any' || $vName == 'Nil'
+                                                              || $pName == 'Unknown' || $vName == 'Unknown'
+                                                              || $pName == $vName
                                                               || $propType->toOne()->instanceOf(TypeParameter)
                                                               || $valType->toOne()->instanceOf(TypeParameter);
                                                           if(!$skip && !isCompatibleType($resolvedPropGT, $keyValueVS.genericType->toOne()),
