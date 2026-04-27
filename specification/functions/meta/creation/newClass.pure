@@ -70,36 +70,23 @@ function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClas
     assertIs($cls, $cls.typeParameters->at(1).owner->toOne());
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassCGTSurvivesCopy():Boolean[1]
+function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassWithMultiplicityParameter():Boolean[1]
 {
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
-    let named = ^$cls(name='MyClass');
+    let tp = ^TypeParameter(name='K', contravariant=false);
+    let mp = ^UserDefinedMultiplicityParameter(name='m');
+    let cls = meta::pure::functions::meta::creation::newClass([$tp], [$mp]);
 
-    // The CGT on the copy should be Class<MyClass<T~MyClass>>
-    let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
-    assertIs(Class, $cgt.type->toOne());
+    assertEquals(1, $cls.typeParameters->size());
+    assertEquals(1, $cls.multiplicityParameters->size());
+
+    // MultiplicityParameter owner should be the created class
+    assertIs($cls, $cls.multiplicityParameters->at(0).owner->toOne());
+
+    // Self-referencing CGT should include both type arg and multiplicity arg
+    let cgt = $cls.classifierGenericType->toOne()->cast(@GenericTypeValue);
     let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
-    assertIs($named, $selfGT.type->toOne());
-
-    // The self-GT should carry the TypeParameter as a type argument
-    assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
-    let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
-    let tpType = $tpGT.type->toOne();
-    assert($tpType->instanceOf(TypeParameter), 'type arg should be TypeParameter');
+    assertIs($cls, $selfGT.type->toOne());
+    assertEquals(1, $selfGT.typeArguments->size(), 'selfGT should have 1 type arg');
+    assertEquals(1, $selfGT.multiplicityArguments->size(), 'selfGT should have 1 multiplicity arg');
 }
 
-function <<test.Test>> meta::pure::functions::meta::tests::creation::testNewClassOwnerSurvivesCopy():Boolean[1]
-{
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
-
-    // Copy the class with a name — simulates what the compiler does
-    let named = ^$cls(name='MyClass');
-
-    // The TypeParameter from the COPIED class should still have owner pointing to the copy
-    let copiedTp = $named.typeParameters->at(0);
-    assert($copiedTp.owner->isNotEmpty(), 'TypeParameter owner should survive copy');
-    assertIs($named, $copiedTp.owner->toOne());
-    assertEquals('MyClass', $copiedTp.owner->toOne()->cast(@PackageableElement).name->toOne());
-}

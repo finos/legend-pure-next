@@ -350,6 +350,38 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearTo
     assertSize($person.otherNames, 3);
 }
 
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCGTTypeArgs():Boolean[1]
+{
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+    let named = ^$cls(name='MyClass');
+
+    // The CGT on the copy should be Class<MyClass<T~MyClass>>
+    let cgt = $named.classifierGenericType->toOne()->cast(@GenericTypeValue);
+    assertIs(Class, $cgt.type->toOne());
+    let selfGT = $cgt.typeArguments->at(0)->cast(@GenericTypeValue);
+    assertIs($named, $selfGT.type->toOne());
+
+    // The self-GT should carry the TypeParameter as a type argument
+    assertEquals(1, $selfGT.typeArguments->size(), 'self-GT should have 1 type arg (the TypeParameter)');
+    let tpGT = $selfGT.typeArguments->at(0)->cast(@GenericTypeValue);
+    let tpType = $tpGT.type->toOne();
+    assert($tpType->instanceOf(TypeParameter), 'type arg should be TypeParameter');
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesTypeParameterOwner():Boolean[1]
+{
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let cls = meta::pure::functions::meta::creation::newClass([$tp], []);
+    let named = ^$cls(name='MyClass');
+
+    // The TypeParameter from the COPIED class should have owner pointing to the copy
+    let copiedTp = $named.typeParameters->at(0);
+    assert($copiedTp.owner->isNotEmpty(), 'TypeParameter owner should survive copy');
+    assertIs($named, $copiedTp.owner->toOne());
+    assertEquals('MyClass', $copiedTp.owner->toOne()->cast(@PackageableElement).name->toOne());
+}
+
 function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOptionalProperty():Boolean[1]
 {
     // [0..1] property: setting to [] should set to empty (no value)

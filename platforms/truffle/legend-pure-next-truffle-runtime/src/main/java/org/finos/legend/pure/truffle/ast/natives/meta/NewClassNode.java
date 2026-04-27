@@ -61,11 +61,7 @@ public final class NewClassNode extends PureNode
                 Object tp = tpSeq.getBoxed(i);
                 if (tp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tParam)
                 {
-                    // Set owner to the new class
-                    if (tParam instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameterImpl tpImpl)
-                    {
-                        tpImpl._owner(cls);
-                    }
+                    tParam._owner(cls);
                     var tpGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(tParam, resolver);
                     tpGTs[i] = tpGT;
                 }
@@ -75,6 +71,22 @@ public final class NewClassNode extends PureNode
                 }
             }
             selfGT._typeArguments(new ObjectSequence(tpGTs));
+        }
+
+        // Add multiplicity parameter as multiplicityArguments on the self-GT
+        if (!mpSeq.isEmpty())
+        {
+            Object[] mpArgs = new Object[mpSeq.size()];
+            for (int i = 0; i < mpSeq.size(); i++)
+            {
+                Object mp = mpSeq.getBoxed(i);
+                if (mp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter mpParam)
+                {
+                    mpParam._owner(cls);
+                }
+                mpArgs[i] = mp;
+            }
+            selfGT._multiplicityArguments(new ObjectSequence(mpArgs));
         }
 
         Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
