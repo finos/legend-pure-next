@@ -93,3 +93,17 @@ function <<test.Test>> meta::pure::functions::lang::tests::cast::testExtendedPri
 {
    assertError(|10->cast(@StringP), 'Cast exception: Integer cannot be cast to StringP')
 }
+
+// TypeParameters and collections should pass through cast without type-check errors
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testCastTypeParameter():Boolean[1]
+{
+   let tp = Class.typeParameters->at(0);
+   let result = $tp->cast(@Any);
+   assert($result->instanceOf(TypeParameter));
+}
+
+function <<test.Test>> meta::pure::functions::lang::tests::cast::testCastCollection():Boolean[1]
+{
+   let result = [Integer, String]->cast(@Type);
+   assertEquals(2, $result->size());
+}

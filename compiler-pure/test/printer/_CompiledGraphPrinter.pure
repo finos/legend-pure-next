@@ -540,3 +540,37 @@ function meta::pure::compiler::test::printer::printMul(mul:Multiplicity[1]):Stri
     ]);
     if($isInferred, | '#' + $coreMul + '#', | $coreMul);
 }
+
+// --- Tests for printType on synthetic GenericTypes ---
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameter():Boolean[1]
+{
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    assertEquals('T', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameterWithOwner():Boolean[1]
+{
+    let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+    let builtOwner = ^$owner(name='MyClass', package=^Package(name='test', package=^Package(name='Root')));
+    let tp = ^TypeParameter(name='T', contravariant=false, owner=$builtOwner);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    assertEquals('T~test::MyClass', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintConcreteType():Boolean[1]
+{
+    let gt = ^UserDefinedGenericType(type=String);
+    assertEquals('String', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintGenericTypeWithArgs():Boolean[1]
+{
+    // Wrapper<String> — a Class with one type argument
+    let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+    let builtOwner = ^$owner(name='Wrapper', package=^Package(name='test', package=^Package(name='Root')));
+    let gt = ^UserDefinedGenericType(type=$builtOwner, typeArguments=[^UserDefinedGenericType(type=String)]);
+    assertEquals('test::Wrapper<String>', $gt->printType());
+}
+

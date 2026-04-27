@@ -94,6 +94,8 @@ public final class CopyWithKeysNode extends PureNode
         {
             anyC._classifierGenericType(copyCgt);
         }
+        // Fix TypeParameter/MultiplicityParameter owners to point to the copy
+        fixTypeParameterOwners(copy);
 
         // Step 3: Push onto construction stack, then evaluate key expressions
         eval.pushConstruction(copy);
@@ -580,6 +582,43 @@ public final class CopyWithKeysNode extends PureNode
             catch (Exception e)
             {
                 throw new RuntimeException("Failed to read property for key values in copy", e);
+            }
+        }
+    }
+
+    /**
+     * After copying a TypeAndMultiplicityParametersOwner (e.g. Class, Function),
+     * update the owner back-reference on its TypeParameters and MultiplicityParameters
+     * to point to the copy instead of the original.
+     */
+    private static void fixTypeParameterOwners(Object copy)
+    {
+        if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner))
+        {
+            return;
+        }
+        PureSequence typeParams = owner._typeParameters();
+        if (typeParams != null)
+        {
+            for (int i = 0; i < typeParams.size(); i++)
+            {
+                Object tp = typeParams.getBoxed(i);
+                if (tp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tpObj)
+                {
+                    tpObj._owner(owner);
+                }
+            }
+        }
+        PureSequence mulParams = owner._multiplicityParameters();
+        if (mulParams != null)
+        {
+            for (int i = 0; i < mulParams.size(); i++)
+            {
+                Object mp = mulParams.getBoxed(i);
+                if (mp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
+                {
+                    mpObj._owner(owner);
+                }
             }
         }
     }

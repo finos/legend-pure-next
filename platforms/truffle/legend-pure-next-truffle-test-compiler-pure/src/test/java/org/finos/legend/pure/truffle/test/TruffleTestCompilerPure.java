@@ -161,7 +161,7 @@ class TruffleTestCompilerPure
             catch (org.finos.legend.pure.truffle.ast.PureException e)
             {
                 throw new org.opentest4j.AssertionFailedError(
-                        "[" + testName + "] " + e.getMessage(), e);
+                        "[" + testName + "] " + e.getMessage() + formatPureStack(e), e);
             }
             catch (RuntimeException e)
             {
@@ -174,6 +174,34 @@ class TruffleTestCompilerPure
                         "[" + testName + "] " + cause.getMessage(), e);
             }
         });
+    }
+
+    private static String formatPureStack(Throwable e)
+    {
+        StringBuilder sb = new StringBuilder();
+        try
+        {
+            var frames = com.oracle.truffle.api.TruffleStackTrace.getStackTrace(e);
+            if (frames != null)
+            {
+                for (var frame : frames)
+                {
+                    var target = frame.getTarget();
+                    var rootNode = target.getRootNode();
+                    if (rootNode != null)
+                    {
+                        String name = rootNode.getName();
+                        var src = rootNode.getSourceSection();
+                        String loc = src != null ? " (" + src.getSource().getName() + ":" + src.getStartLine() + ":" + src.getStartColumn() + ")" : "";
+                        sb.append("\n  at ").append(name != null ? name : "<unknown>").append(loc);
+                    }
+                }
+            }
+        }
+        catch (Exception ignored)
+        {
+        }
+        return sb.length() > 0 ? "\nPure stack:" + sb : "";
     }
 
     private static Path locateTestsRoot()

@@ -77,9 +77,11 @@ public final class CastNode extends PureNode
         }
 
         // Validate type compatibility for scalar values.
-        // Skip collections — their common element type is lossy and cast is per-element.
+        // Skip collections (common element type is lossy), TypeParameters and MultiplicityParameters.
         if (inputResult != null
                 && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence)
+                && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter)
+                && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter)
                 && targetType instanceof PackageableElement targetPe)
         {
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetPe);
