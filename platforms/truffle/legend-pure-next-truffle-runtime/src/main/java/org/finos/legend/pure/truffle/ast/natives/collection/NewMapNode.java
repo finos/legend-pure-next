@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -52,16 +51,15 @@ public final class NewMapNode extends PureNode
         {
             propertiesArg.executeGeneric(frame);
         }
-        return buildMap(pairs);
+        return buildMap(pairs, getResolver());
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT()
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
     {
         if (mapCGT == null)
         {
-            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
             Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
             if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
             {
@@ -75,10 +73,10 @@ public final class NewMapNode extends PureNode
         return mapCGT;
     }
 
-    private static Object buildMap(Object pairs)
+    private static Object buildMap(Object pairs, TruffleMetadataAccess resolver)
     {
         MapImpl map = new MapImpl();
-        map._classifierGenericType(getMapCGT());
+        map._classifierGenericType(getMapCGT(resolver));
         int sz = CollectionHelper.size(pairs);
         for (int i = 0; i < sz; i++)
         {

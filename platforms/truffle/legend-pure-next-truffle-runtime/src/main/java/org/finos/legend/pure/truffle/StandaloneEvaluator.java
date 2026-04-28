@@ -52,12 +52,6 @@ import org.finos.legend.pure.next.parser.PureParser;
  */
 public final class StandaloneEvaluator
 {
-    /**
-     * Global instance — set before execution begins (e.g. in PureTruffleRuntime
-     * or TrufflePureTestRunner). AST nodes read this directly instead of going
-     * through a holder/ThreadLocal.
-     */
-    public static StandaloneEvaluator INSTANCE;
 
     private final TruffleMetadataAccess resolver;
     private final PureLanguage language;
@@ -496,7 +490,7 @@ public final class StandaloneEvaluator
         return org.eclipse.collections.api.factory.Lists.mutable.with(value);
     }
 
-    private static Object coerceToJavaEnumConstant(Class<?> enumClass, String name)
+    private Object coerceToJavaEnumConstant(Class<?> enumClass, String name)
     {
         if (name == null)
         {
@@ -506,7 +500,7 @@ public final class StandaloneEvaluator
         {
             if (constant instanceof java.lang.Enum<?> e && e.name().equals(name))
             {
-                ensureEnumCGT(constant, enumClass);
+                ensureEnumCGT(constant, enumClass, resolver);
                 return constant;
             }
         }
@@ -517,11 +511,11 @@ public final class StandaloneEvaluator
      * Ensure a Java enum constant has its classifierGenericType set.
      * Resolves the Enumeration type from the PDB using the enum's interface name.
      */
-    private static void ensureEnumCGT(Object constant, Class<?> enumClass)
+    private static void ensureEnumCGT(Object constant, Class<?> enumClass, TruffleMetadataAccess resolver)
     {
         if (constant instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyConst
                 && anyConst._classifierGenericType() == null
-                && INSTANCE != null)
+                && resolver != null)
         {
             Class<?>[] ifaces = enumClass.getInterfaces();
             if (ifaces.length > 0)
@@ -529,17 +523,17 @@ public final class StandaloneEvaluator
                 String purePath = ifaces[0].getName()
                         .replace("org.finos.legend.pure.truffle.pdb.", "")
                         .replace(".", "::");
-                Object enumType = INSTANCE.resolver().getElement(purePath);
+                Object enumType = resolver.getElement(purePath);
                 if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
                 {
                     anyConst._classifierGenericType(
-                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, INSTANCE.resolver()));
+                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver));
                 }
             }
         }
     }
 
-    private static Object coerceEnumToInterface(Class<?> targetInterface, String name)
+    private Object coerceEnumToInterface(Class<?> targetInterface, String name)
     {
         if (name == null)
         {
@@ -704,7 +698,7 @@ public final class StandaloneEvaluator
     /**
      * Coerce a PDB enum value to the generated Java enum constant for identity preservation.
      */
-    public static Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
+    public Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
     {
         if (en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
         {
@@ -719,7 +713,7 @@ public final class StandaloneEvaluator
                     {
                         if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
                         {
-                            ensureEnumCGT(constant, enumClass);
+                            ensureEnumCGT(constant, enumClass, resolver());
                             return constant;
                         }
                     }

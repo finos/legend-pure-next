@@ -47,10 +47,10 @@ public final class CopySimpleNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doCopy(result);
+        return doCopy(result, getResolver());
     }
 
-    private static Object doCopy(Object original)
+    private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         GenericTypeValue cgt;
         String classPath;
@@ -128,7 +128,7 @@ public final class CopySimpleNode extends PureNode
         {
             if (hasSelfReference(cgt, original))
             {
-                anyC._classifierGenericType(deepCopyCgt(cgt, original, copy));
+                anyC._classifierGenericType(deepCopyCgt(cgt, original, copy, resolver));
             }
             else
             {
@@ -191,11 +191,12 @@ public final class CopySimpleNode extends PureNode
      * Deep-copy a GenericTypeValue tree, replacing all references to {@code original}
      * with {@code copy}. Handles type pointers and TypeParameter owner pointers.
      */
-    private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy)
+    private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy,
+                                                org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (gtv == null) return null;
         var result = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
-                null, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver());
+                null, resolver);
         // Copy type — substitute self-references
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type = gtv._type();
         if (type == original && copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
@@ -225,7 +226,7 @@ public final class CopySimpleNode extends PureNode
                 Object ta = typeArgs.getBoxed(i);
                 if (ta instanceof GenericTypeValue innerGtv)
                 {
-                    copied[i] = deepCopyCgt(innerGtv, original, copy);
+                    copied[i] = deepCopyCgt(innerGtv, original, copy, resolver);
                 }
                 else
                 {

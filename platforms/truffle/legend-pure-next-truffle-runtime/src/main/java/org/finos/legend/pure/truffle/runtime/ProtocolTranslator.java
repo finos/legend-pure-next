@@ -126,21 +126,6 @@ public final class ProtocolTranslator
             seen.put(source, target);
 
             // Copy properties via _xxx() getters and _xxx(value) setters
-            if (className.contains("Property"))
-            {
-                // Trace any Property with stereotypes
-                try
-                {
-                    Method sg = source.getClass().getMethod("_stereotypes");
-                    Object sv = sg.invoke(source);
-                    if (sv instanceof java.util.Collection<?> c && !c.isEmpty())
-                    {
-                        Method ng = source.getClass().getMethod("_name");
-                        System.out.println("PROTO-TRACE Property '" + ng.invoke(source) + "' has " + c.size() + " stereotypes before translation");
-                    }
-                }
-                catch (Exception ignored) {}
-            }
             for (Method getter : source.getClass().getMethods())
             {
                 String name = getter.getName();

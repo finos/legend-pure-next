@@ -86,8 +86,12 @@ class TruffleTestCompilerPure
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
 
-        evaluator = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
-        StandaloneEvaluator.INSTANCE = evaluator;
+        org.finos.legend.pure.truffle.PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
+        org.graalvm.polyglot.Context polyglotCtx = org.graalvm.polyglot.Context.newBuilder(
+                org.finos.legend.pure.truffle.PureLanguage.ID).allowAllAccess(true).build();
+        polyglotCtx.initialize(org.finos.legend.pure.truffle.PureLanguage.ID);
+        polyglotCtx.enter();
+        evaluator = org.finos.legend.pure.truffle.PureLanguage.get(null).getEvaluator();
 
         // Configure the PureParser with CompiledGraph and Error section support
         List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new ArrayList<>();
@@ -146,7 +150,6 @@ class TruffleTestCompilerPure
     {
         return DynamicTest.dynamicTest(testName, () ->
         {
-            StandaloneEvaluator.INSTANCE = evaluator;
             try
             {
                 evaluator.executeFunction(

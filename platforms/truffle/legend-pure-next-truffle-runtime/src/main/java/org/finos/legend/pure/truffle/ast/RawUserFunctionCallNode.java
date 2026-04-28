@@ -20,7 +20,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * Calls a user-defined FunctionDefinition via Truffle {@link IndirectCallNode}.
@@ -73,26 +72,26 @@ public final class RawUserFunctionCallNode extends PureNode
         if (ct == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            ct = StandaloneEvaluator.INSTANCE.getCallTarget(fd);
+            ct = getEvaluator().getCallTarget(fd);
             cachedCallTarget = ct;
         }
         if (ct != null)
         {
             return callNode.call(ct, args);
         }
-        return StandaloneEvaluator.INSTANCE.executeFunction(fd, args);
+        return getEvaluator().executeFunction(fd, args);
     }
 
     private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
     {
         // Resolve the actual QP from the target's runtime type
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition resolved =
-                StandaloneEvaluator.INSTANCE.resolveQpDispatch(staticQp, args);
-        RootCallTarget ct = StandaloneEvaluator.INSTANCE.getCallTarget(resolved);
+                getEvaluator().resolveQpDispatch(staticQp, args);
+        RootCallTarget ct = getEvaluator().getCallTarget(resolved);
         if (ct != null)
         {
             return callNode.call(ct, args);
         }
-        return StandaloneEvaluator.INSTANCE.executeFunction(resolved, args);
+        return getEvaluator().executeFunction(resolved, args);
     }
 }

@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -53,16 +52,15 @@ public final class MapPutNode extends PureNode
         Object map = mapArg.executeGeneric(frame);
         Object key = keyArg.executeGeneric(frame);
         Object value = valueArg.executeGeneric(frame);
-        return doPut(map, key, value);
+        return doPut(map, key, value, getResolver());
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT()
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
     {
         if (mapCGT == null)
         {
-            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
             Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
             if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
             {
@@ -76,10 +74,10 @@ public final class MapPutNode extends PureNode
         return mapCGT;
     }
 
-    private static Object doPut(Object map, Object key, Object value)
+    private static Object doPut(Object map, Object key, Object value, TruffleMetadataAccess resolver)
     {
         MapImpl newMap = new MapImpl();
-        newMap._classifierGenericType(getMapCGT());
+        newMap._classifierGenericType(getMapCGT(resolver));
         if (map instanceof MapImpl mi)
         {
             newMap.putAll(mi);

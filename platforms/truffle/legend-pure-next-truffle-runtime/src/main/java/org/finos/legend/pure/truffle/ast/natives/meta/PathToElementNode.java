@@ -22,7 +22,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.Gener
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code pathToElement(String[1], String[1]) : PackageableElement[1]}.
@@ -37,7 +36,6 @@ public final class PathToElementNode extends PureNode
     private final GenericType genericType;
     private final Multiplicity multiplicity;
     private final boolean lenient;
-    private final TruffleMetadataAccess resolver;
 
     public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
     {
@@ -50,7 +48,6 @@ public final class PathToElementNode extends PureNode
         this.genericType = genericType;
         this.multiplicity = multiplicity;
         this.lenient = lenient;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -61,7 +58,7 @@ public final class PathToElementNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doPathToElement(values, lenient, resolver);
+        return doPathToElement(values, lenient, getResolver());
     }
 
     private static Object doPathToElement(Object[] values, boolean lenient, TruffleMetadataAccess resolver)

@@ -15,28 +15,32 @@
 package org.finos.legend.pure.truffle;
 
 import com.oracle.truffle.api.TruffleLanguage;
+import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
 /**
  * Per-context state for the Pure Truffle language.
- *
- * <p>Minimal in Phase A: just holds a reference to the environment. Later
- * phases will add:
- * <ul>
- *   <li>{@code TruffleMetadataAccess resolver} — element lookup from loaded PDBs</li>
- *   <li>{@code NativeRepository natives} — bridged native function registry</li>
- *   <li>{@code ASTCache astCache} — {@code FunctionDefinition} → {@code CallTarget}</li>
- * </ul>
- * </p>
+ * Holds the evaluator, resolver, and all runtime services.
  */
 public final class PureContext
 {
     private final PureLanguage language;
     private final TruffleLanguage.Env env;
+    private StandaloneEvaluator evaluator;
 
     public PureContext(PureLanguage language, TruffleLanguage.Env env)
     {
         this.language = language;
         this.env = env;
+    }
+
+    /**
+     * Initialize the context with runtime configuration.
+     * Called from {@link PureLanguage#createContext} with the pending configuration.
+     */
+    void initialize(TruffleMetadataAccess resolver, NativeNodeRegistry registry)
+    {
+        this.evaluator = new StandaloneEvaluator(resolver, language, registry, null);
     }
 
     public PureLanguage getLanguage()
@@ -47,5 +51,15 @@ public final class PureContext
     public TruffleLanguage.Env getEnv()
     {
         return env;
+    }
+
+    public StandaloneEvaluator getEvaluator()
+    {
+        return evaluator;
+    }
+
+    public TruffleMetadataAccess resolver()
+    {
+        return evaluator != null ? evaluator.resolver() : null;
     }
 }

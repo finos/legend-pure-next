@@ -4,7 +4,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
@@ -26,14 +25,11 @@ public final class NewEnumNode extends PureNode
     @Child
     private PureNode valueNamesArg;
 
-    private final TruffleMetadataAccess resolver;
-
     public NewEnumNode(PureNode nameArg, PureNode packageArg, PureNode valueNamesArg)
     {
         this.nameArg = nameArg;
         this.packageArg = packageArg;
         this.valueNamesArg = valueNamesArg;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -42,7 +38,7 @@ public final class NewEnumNode extends PureNode
         Object name = nameArg.executeGeneric(frame);
         Object pkg = packageArg.executeGeneric(frame);
         Object valueNames = valueNamesArg.executeGeneric(frame);
-        return doNewEnumeration(name, pkg, valueNames, resolver);
+        return doNewEnumeration(name, pkg, valueNames, getResolver());
     }
 
     private static Object doNewEnumeration(Object name, Object pkg, Object valueNames, TruffleMetadataAccess resolver)

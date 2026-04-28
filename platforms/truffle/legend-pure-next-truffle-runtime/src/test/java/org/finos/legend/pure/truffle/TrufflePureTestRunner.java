@@ -89,8 +89,12 @@ class TrufflePureTestRunner
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
 
-        evaluator = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
-        StandaloneEvaluator.INSTANCE = evaluator;
+        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
+        org.graalvm.polyglot.Context polyglotCtx = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+                .allowAllAccess(true).build();
+        polyglotCtx.initialize(PureLanguage.ID);
+        polyglotCtx.enter();
+        evaluator = PureLanguage.get(null).getEvaluator();
 
         // Keep bootstrap PDB modules for element path discovery
         coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", Lists.mutable.empty());
@@ -170,7 +174,6 @@ class TrufflePureTestRunner
     {
         return DynamicTest.dynamicTest(path, () ->
         {
-            StandaloneEvaluator.INSTANCE = evaluator;
             try
             {
                 if (adapter != null)

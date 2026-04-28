@@ -28,7 +28,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -68,11 +67,10 @@ public final class NewWithKeysNode extends PureNode
 
     private Object invoke(VirtualFrame frame)
     {
-        // Delegate to StandaloneEvaluator which manages the construction
+        // Delegate to the evaluator which manages the construction
         // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
         // We evaluate them lazily through the evaluator.
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval =
-                StandaloneEvaluator.INSTANCE;
+        org.finos.legend.pure.truffle.StandaloneEvaluator eval = getEvaluator();
 
         // Evaluate type holder (first param) — pre-compiled as child node
         Object typeHolder = typeHolderNode.executeGeneric(frame);
@@ -86,7 +84,7 @@ public final class NewWithKeysNode extends PureNode
             PureSequence typeArgs = _GenericType.typeArguments(gt);
             if (typeArgs != null && typeArgs.size() > 0)
             {
-                classPath = resolveClassPathFromTypeArg(typeArgs.getBoxed(0));
+                classPath = resolveClassPathFromTypeArg(typeArgs.getBoxed(0), eval.resolver());
             }
             if ("Unknown".equals(classPath))
             {
@@ -220,12 +218,13 @@ public final class NewWithKeysNode extends PureNode
      * Resolve a class path from a type argument (Object from PureSequence.getBoxed).
      * Uses truffle-namespaced helpers.
      */
-    private static String resolveClassPathFromTypeArg(Object typeArg)
+    private static String resolveClassPathFromTypeArg(Object typeArg,
+                                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = _GenericType.type(typeArg);
         if (rawType instanceof PackageableElement pe)
         {
-            String path = _PackageableElement.path(pe, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver());
+            String path = _PackageableElement.path(pe, resolver);
             if (path != null && !path.isEmpty())
             {
                 return path;

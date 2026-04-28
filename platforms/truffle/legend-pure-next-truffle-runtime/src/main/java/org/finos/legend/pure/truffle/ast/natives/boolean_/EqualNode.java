@@ -16,9 +16,7 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -38,13 +36,10 @@ public final class EqualNode extends PureNode
     @Child
     private PureNode right;
 
-    private final TruffleMetadataAccess resolver;
-
     public EqualNode(PureNode left, PureNode right)
     {
         this.left = left;
         this.right = right;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -54,7 +49,7 @@ public final class EqualNode extends PureNode
         Object b = right.executeGeneric(frame);
         Object rawA = normalizeForEquals(a);
         Object rawB = normalizeForEquals(b);
-        return callPureEquals(rawA, rawB, resolver);
+        return callPureEquals(rawA, rawB, getResolver());
     }
 
     private static boolean callPureEquals(Object a, Object b, TruffleMetadataAccess resolver)

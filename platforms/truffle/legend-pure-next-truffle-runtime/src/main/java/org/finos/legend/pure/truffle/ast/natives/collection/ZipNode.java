@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
@@ -46,16 +45,15 @@ public final class ZipNode extends PureNode
     {
         Object left = leftArg.executeGeneric(frame);
         Object right = rightArg.executeGeneric(frame);
-        return doZip(left, right);
+        return doZip(left, right, getResolver());
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT;
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getPairCGT()
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getPairCGT(TruffleMetadataAccess resolver)
     {
         if (pairCGT == null)
         {
-            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
             Object pairType = resolver.getElement("meta::pure::functions::collection::Pair");
             if (pairType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
             {
@@ -69,7 +67,7 @@ public final class ZipNode extends PureNode
         return pairCGT;
     }
 
-    private static Object doZip(Object left, Object right)
+    private static Object doZip(Object left, Object right, TruffleMetadataAccess resolver)
     {
         int leftSz = CollectionHelper.size(left);
         int rightSz = CollectionHelper.size(right);
@@ -78,7 +76,7 @@ public final class ZipNode extends PureNode
         {
             return PureSequence.EMPTY;
         }
-        var cgt = getPairCGT();
+        var cgt = getPairCGT(resolver);
         Object[] pairs = new Object[sz];
         for (int i = 0; i < sz; i++)
         {

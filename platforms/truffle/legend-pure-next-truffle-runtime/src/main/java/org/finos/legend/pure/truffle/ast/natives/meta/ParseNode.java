@@ -51,59 +51,17 @@ public final class ParseNode extends PureNode
     {
         String sourceId = StringHelper.asString(sourceIdNode.executeGeneric(frame), "parse");
         String content = StringHelper.asString(contentNode.executeGeneric(frame), "parse");
-        return doParse(sourceId, content);
+        return doParse(getEvaluator(), sourceId, content);
     }
 
-    private static Object doParse(String sourceId, String content)
+    private static Object doParse(StandaloneEvaluator eval, String sourceId, String content)
     {
-        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         PureParser parser = eval.pureParser();
         if (parser == null)
         {
             throw new RuntimeException("parse native: no PureParser configured on StandaloneEvaluator");
         }
         Object bootstrapResult = parser.parse(sourceId, content);
-        // DEBUG: trace stereotypes on parsed properties
-        if (bootstrapResult instanceof meta.pure.protocol.PureFile pf && pf._sections() != null)
-        {
-            for (var section : pf._sections())
-            {
-                if (section._elements() != null)
-                {
-                    for (var elem : section._elements())
-                    {
-                        // Use reflection to find _properties() on any element
-                        try
-                        {
-                            java.lang.reflect.Method propsMethod = elem.getClass().getMethod("_properties");
-                            Object propsResult = propsMethod.invoke(elem);
-                            if (propsResult instanceof org.eclipse.collections.api.list.MutableList<?> propsList)
-                            {
-                                for (Object prop : propsList)
-                                {
-                                    try
-                                    {
-                                        java.lang.reflect.Method stereoMethod = prop.getClass().getMethod("_stereotypes");
-                                        Object stereos = stereoMethod.invoke(prop);
-                                        if (stereos instanceof org.eclipse.collections.api.list.MutableList<?> stList && !stList.isEmpty())
-                                        {
-                                            java.lang.reflect.Method nameMethod = prop.getClass().getMethod("_name");
-                                            System.out.println("PARSE-DEBUG elem=" + elem._name()
-                                                    + " prop=" + nameMethod.invoke(prop)
-                                                    + "@" + System.identityHashCode(prop)
-                                                    + " stereotypes=" + stList.size());
-                                        }
-                                    }
-                                    catch (NoSuchMethodException ignored) {}
-                                }
-                            }
-                        }
-                        catch (NoSuchMethodException ignored) {}
-                        catch (Exception e) { System.err.println("PARSE-DEBUG error: " + e); }
-                    }
-                }
-            }
-        }
         return new ProtocolTranslator(eval.resolver()).translate(bootstrapResult);
     }
 }

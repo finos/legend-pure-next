@@ -50,10 +50,10 @@ public final class EvaluateNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeEvaluate(values);
+        return invokeEvaluate(getEvaluator(), values);
     }
 
-    private static Object invokeEvaluate(Object[] values)
+    private static Object invokeEvaluate(org.finos.legend.pure.truffle.StandaloneEvaluator evaluator, Object[] values)
     {
         Object fn = values[0];
         if (fn == null || (fn instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
@@ -75,7 +75,7 @@ public final class EvaluateNode extends PureNode
         }
 
         Object[] args = unwrappedArgs.toArray();
-        return EvalNode.dispatch(fn, args);
+        return EvalNode.dispatch(evaluator, fn, args);
     }
 
     private static void unwrapListValues(Object listObj, List<Object> out)

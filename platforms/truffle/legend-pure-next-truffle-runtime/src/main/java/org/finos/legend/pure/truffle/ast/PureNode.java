@@ -52,4 +52,20 @@ public abstract class PureNode extends Node
      * Evaluate this node in the given Truffle frame.
      */
     public abstract Object executeGeneric(VirtualFrame frame);
+
+    /**
+     * Access the evaluator via the Truffle language context.
+     */
+    protected final org.finos.legend.pure.truffle.StandaloneEvaluator getEvaluator()
+    {
+        return org.finos.legend.pure.truffle.PureLanguage.get(this).getEvaluator();
+    }
+
+    /**
+     * Access the metadata resolver from this node.
+     */
+    protected final org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess getResolver()
+    {
+        return getEvaluator().resolver();
+    }
 }

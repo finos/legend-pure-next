@@ -25,7 +25,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -62,7 +61,7 @@ public final class CopyWithKeysNode extends PureNode
 
     private Object invoke(VirtualFrame frame)
     {
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
+        org.finos.legend.pure.truffle.StandaloneEvaluator eval = getEvaluator();
 
         // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
         Object original = sourceNode.executeGeneric(frame);
@@ -92,7 +91,7 @@ public final class CopyWithKeysNode extends PureNode
         // Step 2: Create the copy
         Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
         shallowCopyProperties(original, copy, cgt);
-        GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy);
+        GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
         if (copy instanceof Any anyC && copyCgt != null)
         {
             anyC._classifierGenericType(copyCgt);
@@ -100,7 +99,7 @@ public final class CopyWithKeysNode extends PureNode
         // Fix TypeParameter/MultiplicityParameter owners to point to the copy
         fixTypeParameterOwners(copy);
         // Fix property owners and nested enum value CGTs to point to the copy
-        fixPropertyOwners(original, copy);
+        fixPropertyOwners(original, copy, eval.resolver());
 
         // Step 3: Push onto construction stack, then evaluate key expressions
         eval.pushConstruction(copy);
@@ -401,7 +400,8 @@ public final class CopyWithKeysNode extends PureNode
      * (e.g., Class&lt;self&gt;), create a new CGT with the typeArgument pointing to the copy.
      * Returns the updated CGT, or the original if no self-reference was found.
      */
-    private static GenericTypeValue fixSelfReferentialCGT(GenericTypeValue cgt, Object original, Object copy)
+    private static GenericTypeValue fixSelfReferentialCGT(GenericTypeValue cgt, Object original, Object copy,
+                                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (cgt == null)
         {
@@ -426,8 +426,7 @@ public final class CopyWithKeysNode extends PureNode
             if (hasSelfRef && copy instanceof Type copyType)
             {
                 // Build a new CGT with updated self-references
-                var _resolver = org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver();
-                var newCgt = _GenericType.buildUserDefinedGenericType(cgt._type(), _resolver);
+                var newCgt = _GenericType.buildUserDefinedGenericType(cgt._type(), resolver);
                 org.finos.legend.pure.truffle.types.ObjectSequence newArgs =
                         new org.finos.legend.pure.truffle.types.ObjectSequence(
                                 java.util.Arrays.stream(typeArgs.toBoxedArray())
@@ -438,7 +437,7 @@ public final class CopyWithKeysNode extends PureNode
                                                 Type argType = _GenericType.type(argV);
                                                 if (argType != null && argType == original)
                                                 {
-                                                    var selfRef = _GenericType.buildUserDefinedGenericType(copyType, _resolver);
+                                                    var selfRef = _GenericType.buildUserDefinedGenericType(copyType, resolver);
                                                     // Carry over inner type arguments (e.g., TypeParameter GTs)
                                                     PureSequence innerTA = _GenericType.typeArguments(argV);
                                                     if (innerTA != null && !innerTA.isEmpty())
@@ -607,7 +606,8 @@ public final class CopyWithKeysNode extends PureNode
      * After copying a SimplePropertyOwner, update property owners and nested
      * enum value CGTs to point to the copy instead of the original.
      */
-    private static void fixPropertyOwners(Object original, Object copy)
+    private static void fixPropertyOwners(Object original, Object copy,
+                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner spo))
         {
@@ -620,7 +620,7 @@ public final class CopyWithKeysNode extends PureNode
         }
         var copyGT = (copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
                 ? org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
-                        copyType, org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE.resolver())
+                        copyType, resolver)
                 : null;
 
         for (int i = 0; i < props.size(); i++)

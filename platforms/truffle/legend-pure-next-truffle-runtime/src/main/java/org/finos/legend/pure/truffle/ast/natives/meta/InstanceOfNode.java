@@ -19,7 +19,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code instanceOf(Any[1], Type[1]) : Boolean[1]}.
@@ -33,13 +32,10 @@ public final class InstanceOfNode extends PureNode
     @Child
     private PureNode typeArg;
 
-    private final TruffleMetadataAccess resolver;
-
     public InstanceOfNode(PureNode value, PureNode typeArg)
     {
         this.value = value;
         this.typeArg = typeArg;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -47,7 +43,7 @@ public final class InstanceOfNode extends PureNode
     {
         Object valResult = value.executeGeneric(frame);
         Object typeResult = typeArg.executeGeneric(frame);
-        return doInstanceOf(valResult, typeResult, resolver);
+        return doInstanceOf(valResult, typeResult, getResolver());
     }
 
     private static boolean doInstanceOf(Object rawVal, Object typeResult, TruffleMetadataAccess resolver)

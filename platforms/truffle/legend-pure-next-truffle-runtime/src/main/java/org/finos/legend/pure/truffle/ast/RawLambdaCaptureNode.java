@@ -20,7 +20,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -83,7 +82,7 @@ public final class RawLambdaCaptureNode extends PureNode
         {
             return cachedCallTarget;
         }
-        cachedCallTarget = StandaloneEvaluator.INSTANCE.callTargetForLambda(lambda);
+        cachedCallTarget = getEvaluator().callTargetForLambda(lambda);
         return cachedCallTarget;
     }
 }

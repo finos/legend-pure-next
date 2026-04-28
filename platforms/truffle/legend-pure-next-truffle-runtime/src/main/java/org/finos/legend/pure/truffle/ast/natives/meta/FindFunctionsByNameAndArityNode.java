@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
@@ -46,13 +45,10 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
     @Child
     private PureNode arityNode;
 
-    private final TruffleMetadataAccess resolver;
-
     public FindFunctionsByNameAndArityNode(PureNode nameNode, PureNode arityNode)
     {
         this.nameNode = nameNode;
         this.arityNode = arityNode;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -60,7 +56,7 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
     {
         String name = StringHelper.asString(nameNode.executeGeneric(frame), SIG);
         long arity = IntegerHelper.asLong(arityNode.executeGeneric(frame), SIG);
-        return findFunctions(name, (int) arity, resolver);
+        return findFunctions(name, (int) arity, getResolver());
     }
 
     private static Object findFunctions(String name, int arity, TruffleMetadataAccess resolver)

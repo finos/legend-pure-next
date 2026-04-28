@@ -39,6 +39,7 @@ import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
  */
 public final class PureTruffleRuntime
 {
+    private final org.graalvm.polyglot.Context polyglotContext;
     private final StandaloneEvaluator standalone;
     private final TruffleMetadataAccess resolver;
 
@@ -46,7 +47,17 @@ public final class PureTruffleRuntime
                                List<? extends ParserExtension> parserExtensions)
     {
         this.resolver = resolver;
-        this.standalone = new StandaloneEvaluator(resolver, null, NativeNodeRegistry.createDefault(), null);
+
+        // Configure and create the Truffle polyglot context
+        PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
+        this.polyglotContext = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+                .allowAllAccess(true)
+                .build();
+        this.polyglotContext.initialize(PureLanguage.ID);
+        this.polyglotContext.enter();
+
+        // Get the evaluator from the PureContext created by the language
+        this.standalone = PureLanguage.get(null).getEvaluator();
 
         // Build the PureParser with the standard Pure language parser + any extra extensions
         List<ParserExtension> allExtensions = new ArrayList<>();
@@ -96,20 +107,12 @@ public final class PureTruffleRuntime
      */
     public Object execute(FunctionDefinition function, Object... args)
     {
-        StandaloneEvaluator.INSTANCE = standalone;
-        try
+        Object result = standalone.executeFunction(function, args);
+        if (result instanceof PureSequence ps && ps.isEmpty())
         {
-            Object result = standalone.executeFunction(function, args);
-            if (result instanceof PureSequence ps && ps.isEmpty())
-            {
-                return null;
-            }
-            return result;
+            return null;
         }
-        finally
-        {
-            StandaloneEvaluator.INSTANCE = null;
-        }
+        return result;
     }
 
     /**

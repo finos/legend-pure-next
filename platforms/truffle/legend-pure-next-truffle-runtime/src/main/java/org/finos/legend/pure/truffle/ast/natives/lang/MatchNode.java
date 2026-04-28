@@ -22,7 +22,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunc
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
@@ -45,12 +44,9 @@ public final class MatchNode extends PureNode
     @Child
     private RawLambdaCallNode matchCallNode = new RawLambdaCallNode();
 
-    private final TruffleMetadataAccess resolver;
-
     public MatchNode(PureNode[] children)
     {
         this.children = children;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -61,7 +57,7 @@ public final class MatchNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeMatch(values, resolver, matchCallNode);
+        return invokeMatch(values, getResolver(), matchCallNode);
     }
 
     private static Object invokeMatch(Object[] values, TruffleMetadataAccess resolver, RawLambdaCallNode matchCallNode)

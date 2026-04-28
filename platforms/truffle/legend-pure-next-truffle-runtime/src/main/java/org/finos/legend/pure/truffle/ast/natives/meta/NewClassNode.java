@@ -3,7 +3,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -21,13 +20,10 @@ public final class NewClassNode extends PureNode
     @Child
     private PureNode multParamsArg;
 
-    private final TruffleMetadataAccess resolver;
-
     public NewClassNode(PureNode typeParamsArg, PureNode multParamsArg)
     {
         this.typeParamsArg = typeParamsArg;
         this.multParamsArg = multParamsArg;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -35,7 +31,7 @@ public final class NewClassNode extends PureNode
     {
         Object typeParams = typeParamsArg.executeGeneric(frame);
         Object multParams = multParamsArg.executeGeneric(frame);
-        return doNewClass(typeParams, multParams, resolver);
+        return doNewClass(typeParams, multParams, getResolver());
     }
 
     private static Object doNewClass(Object typeParams, Object multParams, TruffleMetadataAccess resolver)

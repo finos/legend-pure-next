@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
 import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
@@ -70,16 +69,15 @@ public final class GroupByNode extends PureNode
             items[i] = CollectionHelper.at(col, i);
             keys[i] = callNode.call(keyFn, items[i]);
         }
-        return buildMap(items, keys, sz);
+        return buildMap(items, keys, sz, getResolver());
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT()
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
     {
         if (mapCGT == null)
         {
-            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
             Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
             if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
             {
@@ -95,11 +93,10 @@ public final class GroupByNode extends PureNode
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCGT;
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getListCGT()
+    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getListCGT(TruffleMetadataAccess resolver)
     {
         if (listCGT == null)
         {
-            TruffleMetadataAccess resolver = StandaloneEvaluator.INSTANCE.resolver();
             Object listType = resolver.getElement("meta::pure::functions::collection::List");
             if (listType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
             {
@@ -113,7 +110,7 @@ public final class GroupByNode extends PureNode
         return listCGT;
     }
 
-    private static Object buildMap(Object[] items, Object[] keys, int sz)
+    private static Object buildMap(Object[] items, Object[] keys, int sz, TruffleMetadataAccess resolver)
     {
         LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();
         List<Object> canonicalKeys = new ArrayList<>();
@@ -140,8 +137,8 @@ public final class GroupByNode extends PureNode
         }
 
         // Build MapImpl backed by LinkedHashMap
-        var mapCgt = getMapCGT();
-        var listCgt = getListCGT();
+        var mapCgt = getMapCGT(resolver);
+        var listCgt = getListCGT(resolver);
         MapImpl mapInstance = new MapImpl();
         mapInstance._classifierGenericType(mapCgt);
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())

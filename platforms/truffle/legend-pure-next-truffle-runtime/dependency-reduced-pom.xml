@@ -35,6 +35,8 @@
         <version>3.5.4</version>
         <configuration>
           <trimStackTrace>false</trimStackTrace>
+          <argLine>--add-opens=java.base/sun.misc=ALL-UNNAMED
+                        --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED</argLine>
         </configuration>
       </plugin>
       <plugin>

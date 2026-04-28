@@ -15,23 +15,15 @@
 package org.finos.legend.pure.truffle;
 
 import com.oracle.truffle.api.TruffleLanguage;
+import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
 /**
  * Truffle language registration for Pure.
  *
- * <p>This is a minimal scaffolding registration. We don't currently parse
- * source strings via this language (Pure source is parsed by the Java ANTLR
- * front-end in {@code legend-pure-next-parser}). Instead callers invoke
- * {@link PureTruffleRuntime#execute} with a {@code FunctionDefinition}
- * loaded from a PDB and the runtime builds Truffle ASTs on demand.</p>
- *
- * <p>Registering a language is still useful:
- * <ul>
- *   <li>Gives us a {@link PureContext} lifecycle that Graal understands</li>
- *   <li>Enables {@code native-image --language:pure} packaging</li>
- *   <li>Opens the door to a future Polyglot front-end (Phase post-G)</li>
- * </ul>
- * </p>
+ * <p>Configuration is passed via {@link #configure(TruffleMetadataAccess, NativeNodeRegistry)}
+ * before the polyglot {@code Context} is created. The {@link #createContext} method
+ * consumes the pending configuration and builds the {@link PureContext}.</p>
  */
 @TruffleLanguage.Registration(
         id = PureLanguage.ID,
@@ -46,19 +38,41 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
     public static final String ID = "pure";
     public static final String MIME_TYPE = "application/x-pure";
 
+    // One-shot configuration bridge — set before Context.create(), consumed by createContext()
+    private static volatile PendingConfig pendingConfig;
+
+    /**
+     * Configure the Pure language before creating a polyglot Context.
+     * The configuration is consumed by {@link #createContext} and cleared.
+     */
+    public static void configure(TruffleMetadataAccess resolver, NativeNodeRegistry registry)
+    {
+        pendingConfig = new PendingConfig(resolver, registry);
+    }
+
     @Override
     protected PureContext createContext(Env env)
     {
-        return new PureContext(this, env);
+        PendingConfig config = pendingConfig;
+        pendingConfig = null;
+        PureContext ctx = new PureContext(this, env);
+        if (config != null)
+        {
+            ctx.initialize(config.resolver, config.registry);
+        }
+        return ctx;
     }
+
+    private static final ContextReference<PureContext> CONTEXT_REF =
+            ContextReference.create(PureLanguage.class);
 
     /**
      * Lookup the current {@link PureContext} from inside an AST node.
      */
-    public static PureContext currentContext()
+    public static PureContext get(com.oracle.truffle.api.nodes.Node node)
     {
-        return com.oracle.truffle.api.TruffleLanguage.ContextReference
-                .create(PureLanguage.class)
-                .get(null);
+        return CONTEXT_REF.get(node);
     }
+
+    private record PendingConfig(TruffleMetadataAccess resolver, NativeNodeRegistry registry) {}
 }

@@ -20,7 +20,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code genericType(Any[*]) : GenericTypeValue[1]}.
@@ -34,21 +33,19 @@ public final class GenericTypeNode extends PureNode
 
     private final GenericType genericType;
     private final Multiplicity multiplicity;
-    private final TruffleMetadataAccess resolver;
 
     public GenericTypeNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
         this.multiplicity = multiplicity;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doGenericType(result, resolver);
+        return doGenericType(result, getResolver());
     }
 
     private static Object doGenericType(Object result, TruffleMetadataAccess resolver)

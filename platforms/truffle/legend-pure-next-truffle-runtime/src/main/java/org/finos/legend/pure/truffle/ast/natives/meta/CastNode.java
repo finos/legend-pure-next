@@ -22,7 +22,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code cast(Any[m], GenericTypeAndMultiplicityHolder[1]) : T[m]}.
@@ -40,13 +39,10 @@ public final class CastNode extends PureNode
     @Child
     private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
 
-    private final TruffleMetadataAccess resolver;
-
     public CastNode(PureNode inputChild, PureNode targetChild)
     {
         this.inputChild = inputChild;
         this.targetChild = targetChild;
-        this.resolver = StandaloneEvaluator.INSTANCE.resolver();
     }
 
     @Override
@@ -54,7 +50,7 @@ public final class CastNode extends PureNode
     {
         Object inputResult = inputChild.executeGeneric(frame);
         Object targetResult = targetChild.executeGeneric(frame);
-        return doCast(inputResult, targetResult, resolver, constraintCallNode);
+        return doCast(inputResult, targetResult, getResolver(), constraintCallNode);
     }
 
     private static Object doCast(Object inputResult, Object targetResult, TruffleMetadataAccess resolver, RawLambdaCallNode constraintCallNode)

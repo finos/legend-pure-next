@@ -20,7 +20,6 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multip
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
 
 /**
  * {@code parentReference(Integer[1], String[1]) : Any[1]}.
@@ -51,13 +50,14 @@ public final class ParentReferenceNode extends PureNode
     {
         Object depthResult = depthChild.executeGeneric(frame);
         Object propNameResult = propNameChild.executeGeneric(frame);
-        return doParentReference(depthResult);
+        return doParentReference(depthResult, getEvaluator());
     }
 
-    private static Object doParentReference(Object depthResult)
+    private static Object doParentReference(Object depthResult,
+                                             org.finos.legend.pure.truffle.StandaloneEvaluator eval)
     {
         int depth = (int) IntegerHelper.asLong(depthResult, "parentReference");
-        Object target = StandaloneEvaluator.INSTANCE.peekConstruction(depth);
+        Object target = eval.peekConstruction(depth);
         if (target == null)
         {
             throw new RuntimeException("Parent reference ~ at depth " + depth

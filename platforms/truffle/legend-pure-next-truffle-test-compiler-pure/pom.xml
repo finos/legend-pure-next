@@ -62,6 +62,14 @@
             <version>${eclipsecollections.version}</version>
         </dependency>
 
+        <!-- Truffle Polyglot -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${truffle.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -144,7 +152,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>-Duser.timezone=UTC</argLine>
+                    <argLine>-Duser.timezone=UTC --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED</argLine>
                     <trimStackTrace>false</trimStackTrace>
                     <includes>
                         <include>**/*CompilerPure.java</include>
