@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.truffle.ast;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
@@ -28,14 +30,52 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 public final class RawPropertyAccessNode extends PureNode
 {
     private final FunctionExpression fe;
+    private final boolean isQualifiedProperty;
+    private final String propertyName;
 
     @Children
     private PureNode[] argNodes;
+
+    // Monomorphic inline cache for the getter MethodHandle
+    @CompilationFinal
+    private Class<?> cachedTargetClass;
+
+    @CompilationFinal
+    private java.lang.invoke.MethodHandle cachedGetter;
+
+    // Cached enum value — monomorphic cache by Enumeration identity
+    @CompilationFinal
+    private Object cachedEnumTarget;
+
+    @CompilationFinal
+    private Object cachedEnumValue;
 
     public RawPropertyAccessNode(FunctionExpression fe, PureNode[] argNodes)
     {
         this.fe = fe;
         this.argNodes = argNodes;
+
+        // Pre-resolve property name and kind at construction time
+        var func = fe._func();
+        this.isQualifiedProperty = func instanceof QualifiedProperty;
+        if (!isQualifiedProperty)
+        {
+            String name = null;
+            if (func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+            {
+                name = prop._name();
+            }
+            if (name == null) name = fe._functionName();
+            if (name == null && func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+            {
+                name = pe._name();
+            }
+            this.propertyName = name;
+        }
+        else
+        {
+            this.propertyName = null;
+        }
     }
 
     @Override
@@ -46,37 +86,13 @@ public final class RawPropertyAccessNode extends PureNode
         {
             argValues[i] = argNodes[i].executeGeneric(frame);
         }
-        return doAccess(fe, argValues, getEvaluator());
-    }
 
-    private static Object doAccess(FunctionExpression fe, Object[] argValues,
-                                    org.finos.legend.pure.truffle.StandaloneEvaluator eval)
-    {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
-        if (func == null)
+        if (isQualifiedProperty)
         {
-            throw new RuntimeException("_func() returned null for FunctionExpression: " + fe._functionName() + " class=" + fe.getClass().getSimpleName());
+            return getEvaluator().executeFunction((FunctionDefinition) fe._func(), argValues);
         }
 
-        if (func instanceof QualifiedProperty qp)
-        {
-            return eval.executeFunction((FunctionDefinition) qp, argValues);
-        }
-
-        // Simple property: derive property name
-        String propName = null;
-        if (func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
-        {
-            propName = prop._name();
-        }
-        if (propName == null)
-        {
-            propName = fe._functionName();
-        }
-        if (propName == null && func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-        {
-            propName = pe._name();
-        }
+        String propName = propertyName;
         if (propName != null && argValues.length > 0)
         {
             Object target = argValues[0];
@@ -84,46 +100,67 @@ public final class RawPropertyAccessNode extends PureNode
             {
                 return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             }
-            // Enum value access: look up enum value by searching the
-            // Enumeration's properties for one matching propName and
-            // extracting its defaultValue expression.
+            // Enum value access — cached per Enumeration identity
             if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en)
             {
-                if (en._properties() != null)
+                if (cachedEnumTarget == en && cachedEnumValue != null)
                 {
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property foundProp = null;
-                    for (Object pObj : en._properties().toBoxedArray())
-                    {
-                        if (pObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property p
-                                && propName.equals(p._name()))
-                        {
-                            foundProp = p;
-                            break;
-                        }
-                    }
-                    if (foundProp != null && foundProp._defaultValue() != null
-                            && foundProp._defaultValue()._expressionSequence() != null
-                            && !foundProp._defaultValue()._expressionSequence().isEmpty())
-                    {
-                        Object vsObj = foundProp._defaultValue()._expressionSequence().getBoxed(0);
-                        // Lower and execute the VS expression
-                        if (vsObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
-                        {
-                            org.finos.legend.pure.truffle.ast.PureNode node =
-                                    eval.astBuilder().lower(vs);
-                            com.oracle.truffle.api.frame.VirtualFrame tmpFrame =
-                                    com.oracle.truffle.api.Truffle.getRuntime().createVirtualFrame(
-                                            new Object[0],
-                                            com.oracle.truffle.api.frame.FrameDescriptor.newBuilder().build());
-                            return node.executeGeneric(tmpFrame);
-                        }
-                    }
+                    return cachedEnumValue;
                 }
-                // Fall through to try regular property access
+                Object enumVal = getEvaluator().coerceToJavaEnum(en, propName);
+                if (enumVal != null)
+                {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    cachedEnumTarget = en;
+                    cachedEnumValue = enumVal;
+                    return enumVal;
+                }
+                // Fall through to regular property access
             }
-            return eval.accessProperty(target, propName);
+            return invokeGetter(target, propName);
         }
 
-        throw new RuntimeException("Cannot access property: func=" + (func == null ? "null" : func.getClass().getName()));
+        throw new RuntimeException("Cannot access property: " + propName);
+    }
+
+    private Object invokeGetter(Object target, String propName)
+    {
+        // Monomorphic inline cache: if target class matches, use cached handle
+        Class<?> targetClass = target.getClass();
+        if (targetClass == cachedTargetClass && cachedGetter != null)
+        {
+            try
+            {
+                return cachedGetter.invoke(target);
+            }
+            catch (Throwable t)
+            {
+                throw new RuntimeException("Error accessing '" + propName + "'", t);
+            }
+        }
+        // Slow path: lookup and cache
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        return lookupAndCache(target, propName, targetClass);
+    }
+
+    private Object lookupAndCache(Object target, String propName, Class<?> targetClass)
+    {
+        String methodName = "_" + propName;
+        try
+        {
+            java.lang.reflect.Method method = targetClass.getMethod(methodName);
+            cachedGetter = java.lang.invoke.MethodHandles.lookup().unreflect(method);
+            cachedTargetClass = targetClass;
+            return cachedGetter.invoke(target);
+        }
+        catch (NoSuchMethodException e)
+        {
+            // Fallback to evaluator for complex cases (enum, QP, etc.)
+            return getEvaluator().accessProperty(target, propName);
+        }
+        catch (Throwable t)
+        {
+            throw new RuntimeException("Error accessing '" + propName + "' on " + targetClass.getName(), t);
+        }
     }
 }
