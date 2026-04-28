@@ -28,11 +28,7 @@ import org.finos.legend.pure.truffle.builder.PureASTBuilder;
 import org.finos.legend.pure.truffle.frame.CompiledFunction;
 import org.finos.legend.pure.truffle.frame.FrameDescriptorBuilder;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
-import org.finos.legend.pure.truffle.types.PureSequence;
-import org.finos.legend.pure.truffle.types.RawClosure;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.WeakHashMap;
 
 import org.finos.legend.pure.next.parser.PureParser;
@@ -62,9 +58,6 @@ public final class StandaloneEvaluator
     private final WeakHashMap<FunctionDefinition, CompiledFunction> functionCache = new WeakHashMap<>();
     // Per-lambda RootCallTarget cache (lambdas don't have stable paths)
     private final WeakHashMap<LambdaFunction, RootCallTarget> lambdaCache = new WeakHashMap<>();
-
-    // Construction stack for new/copy (~) parent references
-    private final Deque<Object> constructionStack = new ArrayDeque<>();
 
     // Current frame context (for sub-expression re-lowering under active layout)
 
@@ -264,34 +257,6 @@ public final class StandaloneEvaluator
         {
             throw new RuntimeException("Failed to compile lambda call target", e);
         }
-    }
-
-    // ---------------------------------------------------------------
-    // Construction stack (for new/copy parent references)
-    // ---------------------------------------------------------------
-
-    public void pushConstruction(Object instance)
-    {
-        constructionStack.push(instance);
-    }
-
-    public void popConstruction()
-    {
-        constructionStack.pop();
-    }
-
-    public Object peekConstruction(int depth)
-    {
-        int i = 0;
-        for (Object obj : constructionStack)
-        {
-            if (i == depth)
-            {
-                return obj;
-            }
-            i++;
-        }
-        throw new RuntimeException("Construction stack depth " + depth + " exceeds stack size " + constructionStack.size());
     }
 
     // ---------------------------------------------------------------

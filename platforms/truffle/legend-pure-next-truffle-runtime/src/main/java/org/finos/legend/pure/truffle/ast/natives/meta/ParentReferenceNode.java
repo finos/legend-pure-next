@@ -49,15 +49,8 @@ public final class ParentReferenceNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object depthResult = depthChild.executeGeneric(frame);
-        Object propNameResult = propNameChild.executeGeneric(frame);
-        return doParentReference(depthResult, getEvaluator());
-    }
-
-    private static Object doParentReference(Object depthResult,
-                                             org.finos.legend.pure.truffle.StandaloneEvaluator eval)
-    {
         int depth = (int) IntegerHelper.asLong(depthResult, "parentReference");
-        Object target = eval.peekConstruction(depth);
+        Object target = org.finos.legend.pure.truffle.PureLanguage.get(this).peekConstruction(depth);
         if (target == null)
         {
             throw new RuntimeException("Parent reference ~ at depth " + depth

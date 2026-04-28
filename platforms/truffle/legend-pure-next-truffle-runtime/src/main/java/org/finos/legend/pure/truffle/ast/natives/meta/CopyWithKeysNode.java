@@ -117,7 +117,8 @@ public final class CopyWithKeysNode extends PureNode
         fixPropertyOwners(original, copy, eval.resolver());
 
         // Step 3: Push onto construction stack, evaluate and set key properties
-        eval.pushConstruction(copy);
+        var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        ctx.pushConstruction(copy);
         try
         {
             java.util.List<java.util.Map.Entry<String, Object>> keyValues = new java.util.ArrayList<>();
@@ -197,7 +198,7 @@ public final class CopyWithKeysNode extends PureNode
         }
         finally
         {
-            eval.popConstruction();
+            ctx.popConstruction();
         }
     }
 

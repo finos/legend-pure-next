@@ -28,6 +28,23 @@ public final class PureContext
     private final TruffleLanguage.Env env;
     private StandaloneEvaluator evaluator;
 
+    // Construction stack for new/copy parent references (~)
+    private final java.util.ArrayDeque<Object> constructionStack = new java.util.ArrayDeque<>();
+
+    public void pushConstruction(Object instance) { constructionStack.push(instance); }
+    public void popConstruction() { constructionStack.pop(); }
+    public Object peekConstruction(int depth)
+    {
+        int i = 0;
+        for (Object obj : constructionStack)
+        {
+            if (i == depth) return obj;
+            i++;
+        }
+        throw new RuntimeException("Parent reference ~ at depth " + depth
+                + " exceeds stack size " + constructionStack.size());
+    }
+
     public PureContext(PureLanguage language, TruffleLanguage.Env env)
     {
         this.language = language;

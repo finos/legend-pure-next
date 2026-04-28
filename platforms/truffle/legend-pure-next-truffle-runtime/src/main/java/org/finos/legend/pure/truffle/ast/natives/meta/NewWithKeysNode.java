@@ -147,8 +147,9 @@ public final class NewWithKeysNode extends PureNode
                     + ")");
         }
 
-        // Push onto construction stack, evaluate and set key properties
-        eval.pushConstruction(instance);
+        // Push onto construction stack for parentReference() access across call boundaries
+        var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
+        ctx.pushConstruction(instance);
         try
         {
             java.util.List<java.util.Map.Entry<String, Object>> keyValues = new java.util.ArrayList<>();
@@ -182,7 +183,7 @@ public final class NewWithKeysNode extends PureNode
         }
         finally
         {
-            eval.popConstruction();
+            ctx.popConstruction();
         }
     }
 
