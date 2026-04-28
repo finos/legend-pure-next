@@ -44,16 +44,20 @@ public final class NewWithKeysNode extends PureNode
     @CompilationFinal
     private final String signature;
 
-    @CompilationFinal
-    private final FunctionExpression fe;
+    @Child
+    private PureNode typeHolderNode;
+
+    @Child
+    private PureNode keyExprsNode;
 
     @Child
     private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
 
-    public NewWithKeysNode(String signature, FunctionExpression fe)
+    public NewWithKeysNode(String signature, PureNode typeHolderNode, PureNode keyExprsNode)
     {
         this.signature = signature;
-        this.fe = fe;
+        this.typeHolderNode = typeHolderNode;
+        this.keyExprsNode = keyExprsNode;
     }
 
     @Override
@@ -70,10 +74,8 @@ public final class NewWithKeysNode extends PureNode
         org.finos.legend.pure.truffle.StandaloneEvaluator eval =
                 StandaloneEvaluator.INSTANCE;
 
-        // Evaluate type holder (first param)
-        // _parametersValues() returns PureSequence; getBoxed() returns Object
-        Object typeHolder = eval.astBuilder().lower(fe._parametersValues().getBoxed(0))
-                .executeGeneric(frame);
+        // Evaluate type holder (first param) — pre-compiled as child node
+        Object typeHolder = typeHolderNode.executeGeneric(frame);
 
         // Extract class path from type holder
         String classPath = "Unknown";
@@ -148,9 +150,8 @@ public final class NewWithKeysNode extends PureNode
         eval.pushConstruction(instance);
         try
         {
-            // Evaluate key expressions (second param)
-            Object keyExprsResult = eval.astBuilder().lower(fe._parametersValues().getBoxed(1))
-                    .executeGeneric(frame);
+            // Evaluate key expressions (second param) — pre-compiled as child node
+            Object keyExprsResult = keyExprsNode.executeGeneric(frame);
 
             // Process key expressions — each is a KeyExpression with {name, expression}
             int sz = CollectionHelper.size(keyExprsResult);

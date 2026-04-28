@@ -38,10 +38,10 @@ public final class MetaNodeFactories
         // because they control evaluation order.
         registry.register("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new NewWithKeysNode(
-                        "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", fe));
+                        "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", args[0], args[1]));
         registry.register("copy_T_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new CopyWithKeysNode(
-                        "copy_T_1__KeyExpression_MANY__T_1_", fe));
+                        "copy_T_1__KeyExpression_MANY__T_1_", args[0], args[1]));
 
         // --- Meta natives ---
 

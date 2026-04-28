@@ -93,22 +93,12 @@ public final class PureFunctionRootNode extends RootNode
             StandaloneEvaluator.bindQpTypeVariablesStatic(arguments[0], frame, layout);
         }
 
-        // Push layout for lazy compilation (NewWithKeysNode/CopyWithKeysNode)
-        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
-        FrameLayout prevBuilderLayout = eval.astBuilder().pushLayout(layout);
-        try
+        Object result = PureSequence.EMPTY;
+        for (int i = 0; i < body.length; i++)
         {
-            Object result = PureSequence.EMPTY;
-            for (int i = 0; i < body.length; i++)
-            {
-                result = ((PureNode) body[i]).executeGeneric(frame);
-            }
-            return result;
+            result = ((PureNode) body[i]).executeGeneric(frame);
         }
-        finally
-        {
-            eval.astBuilder().popLayout(prevBuilderLayout);
-        }
+        return result;
     }
 
     @Override

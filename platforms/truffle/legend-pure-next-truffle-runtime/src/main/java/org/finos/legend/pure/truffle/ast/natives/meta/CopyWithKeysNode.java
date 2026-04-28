@@ -41,13 +41,17 @@ public final class CopyWithKeysNode extends PureNode
     @CompilationFinal
     private final String signature;
 
-    @CompilationFinal
-    private final FunctionExpression fe;
+    @Child
+    private PureNode sourceNode;
 
-    public CopyWithKeysNode(String signature, FunctionExpression fe)
+    @Child
+    private PureNode keyExprsNode;
+
+    public CopyWithKeysNode(String signature, PureNode sourceNode, PureNode keyExprsNode)
     {
         this.signature = signature;
-        this.fe = fe;
+        this.sourceNode = sourceNode;
+        this.keyExprsNode = keyExprsNode;
     }
 
     @Override
@@ -60,9 +64,8 @@ public final class CopyWithKeysNode extends PureNode
     {
         org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
 
-        // Step 1: Evaluate the source object (first arg)
-        // _parametersValues() returns PureSequence; getBoxed() returns Object
-        Object original = eval.astBuilder().lower(fe._parametersValues().getBoxed(0)).executeGeneric(frame);
+        // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
+        Object original = sourceNode.executeGeneric(frame);
 
         String classPath;
         GenericTypeValue cgt;
@@ -103,7 +106,7 @@ public final class CopyWithKeysNode extends PureNode
         eval.pushConstruction(copy);
         try
         {
-            Object keyExprsResult = eval.astBuilder().lower(fe._parametersValues().getBoxed(1)).executeGeneric(frame);
+            Object keyExprsResult = keyExprsNode.executeGeneric(frame);
 
             // Step 4: Process key expressions — each is a KeyExpression with {name, expression}
             int sz = CollectionHelper.size(keyExprsResult);

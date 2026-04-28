@@ -97,22 +97,12 @@ public final class RawLambdaRootNode extends RootNode
             }
         }
 
-        // Execute body with layout context for lazy compilation
-        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
-        FrameLayout prevLayout = eval.astBuilder().pushLayout(layout);
-        try
+        Object result = PureSequence.EMPTY;
+        for (int i = 0; i < body.length; i++)
         {
-            Object result = PureSequence.EMPTY;
-            for (int i = 0; i < body.length; i++)
-            {
-                result = ((PureNode) body[i]).executeGeneric(frame);
-            }
-            return result;
+            result = ((PureNode) body[i]).executeGeneric(frame);
         }
-        finally
-        {
-            eval.astBuilder().popLayout(prevLayout);
-        }
+        return result;
     }
 
     @Override
