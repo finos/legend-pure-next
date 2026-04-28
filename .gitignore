@@ -19,6 +19,7 @@ website/npm-debug.log*
 website/yarn-debug.log*
 website/yarn-error.log*
 **/target/
+**/dependency-reduced-pom.xml
 /.idea/
 /.vscode/
 /.agent/

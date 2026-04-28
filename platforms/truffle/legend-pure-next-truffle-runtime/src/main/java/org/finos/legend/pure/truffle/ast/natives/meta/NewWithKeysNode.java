@@ -220,13 +220,6 @@ public final class NewWithKeysNode extends PureNode
         {
             return;
         }
-        // resolver.getElement() returns a bootstrap type at compile time,
-        // but at runtime via PdbMaterializer returns truffle-typed objects.
-        Object classElement = eval.resolver().getElement(classPath);
-        if (!(classElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls))
-        {
-            return;
-        }
         for (java.util.Map.Entry<String, Object> kv : keyValues)
         {
             String propName = kv.getKey();
@@ -236,7 +229,6 @@ public final class NewWithKeysNode extends PureNode
                 continue;
             }
 
-            // Find the reverse property name by scanning associations
             String reversePropName = findReverseAssociationProperty(propName, classPath, eval.resolver());
             if (reversePropName != null)
             {
