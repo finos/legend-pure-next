@@ -40,7 +40,7 @@ import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 public final class PureTruffleRuntime
 {
     private final org.graalvm.polyglot.Context polyglotContext;
-    private final StandaloneEvaluator standalone;
+    private final PureContext context;
     private final TruffleMetadataAccess resolver;
 
     private PureTruffleRuntime(TruffleMetadataAccess resolver,
@@ -56,14 +56,14 @@ public final class PureTruffleRuntime
         this.polyglotContext.initialize(PureLanguage.ID);
         this.polyglotContext.enter();
 
-        // Get the evaluator from the PureContext created by the language
-        this.standalone = PureLanguage.get(null).getEvaluator();
+        // Get the PureContext created by the language
+        this.context = PureLanguage.get(null);
 
         // Build the PureParser with the standard Pure language parser + any extra extensions
         List<ParserExtension> allExtensions = new ArrayList<>();
         allExtensions.add(new PureLanguageParser());
         parserExtensions.forEach(allExtensions::add);
-        this.standalone.setPureParser(PureParser.builder()
+        this.context.setPureParser(PureParser.builder()
                 .withExtensions(allExtensions)
                 .build());
     }
@@ -107,7 +107,7 @@ public final class PureTruffleRuntime
      */
     public Object execute(FunctionDefinition function, Object... args)
     {
-        Object result = standalone.executeFunction(function, args);
+        Object result = context.executeFunction(function, args);
         if (result instanceof PureSequence ps && ps.isEmpty())
         {
             return null;

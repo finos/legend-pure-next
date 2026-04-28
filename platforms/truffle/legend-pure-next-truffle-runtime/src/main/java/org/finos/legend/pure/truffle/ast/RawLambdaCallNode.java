@@ -21,7 +21,7 @@ import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.Node;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
+import org.finos.legend.pure.truffle.PureContext;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -48,9 +48,9 @@ public final class RawLambdaCallNode extends Node
     @CompilerDirectives.CompilationFinal
     private Object cachedTarget;
 
-    private StandaloneEvaluator getEvaluator()
+    private org.finos.legend.pure.truffle.PureContext getContext()
     {
-        return org.finos.legend.pure.truffle.PureLanguage.get(this).getEvaluator();
+        return org.finos.legend.pure.truffle.PureLanguage.get(this);
     }
 
     public Object call(Object lambdaOrClosure)
@@ -118,7 +118,7 @@ public final class RawLambdaCallNode extends Node
 
     private RootCallTarget lookupCallTarget(LambdaFunction lambda)
     {
-        return getEvaluator().callTargetForLambda(lambda);
+        return getContext().callTargetForLambda(lambda);
     }
 
     private Object fallback(Object lambdaOrClosure, Object[] args)
@@ -129,7 +129,7 @@ public final class RawLambdaCallNode extends Node
             com.oracle.truffle.api.RootCallTarget ct = rc.callTarget();
             if (ct == null)
             {
-                ct = getEvaluator().callTargetForLambda(rc.lambda());
+                ct = getContext().callTargetForLambda(rc.lambda());
             }
             if (ct != null)
             {
@@ -139,7 +139,7 @@ public final class RawLambdaCallNode extends Node
         }
         if (lambdaOrClosure instanceof LambdaFunction lf)
         {
-            com.oracle.truffle.api.RootCallTarget ct = getEvaluator().callTargetForLambda(lf);
+            com.oracle.truffle.api.RootCallTarget ct = getContext().callTargetForLambda(lf);
             if (ct != null)
             {
                 Object[] fullArgs = new Object[args.length];
@@ -161,12 +161,12 @@ public final class RawLambdaCallNode extends Node
         if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
         {
             Object[] rawArgs = extractArgs(args);
-            return getEvaluator().executeFunction(fd, rawArgs);
+            return getContext().executeFunction(fd, rawArgs);
         }
         if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction nf)
         {
             Object[] rawArgs = extractArgs(args);
-            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getEvaluator(), nf, rawArgs, propertyReader);
+            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getContext(), nf, rawArgs, propertyReader);
         }
         throw new RuntimeException("Cannot call: " + lambdaOrClosure.getClass().getName());
     }

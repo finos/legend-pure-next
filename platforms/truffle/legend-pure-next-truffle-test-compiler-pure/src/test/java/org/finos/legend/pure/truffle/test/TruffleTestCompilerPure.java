@@ -14,7 +14,7 @@
 
 package org.finos.legend.pure.truffle.test;
 
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
+import org.finos.legend.pure.truffle.PureContext;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
@@ -36,19 +36,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Runs the {@code specification/compiler} tests using the Pure-written
- * compiler ({@code compiler.pdb}) via the Truffle evaluator.
+ * compiler ({@code compiler.pdb}) via the Truffle context.
  */
 class TruffleTestCompilerPure
 {
     private static final String ASSERT_FN_PATH =
             "meta::pure::compiler::test::assertCompiledGraph_String_1__String_1__Boolean_1_";
 
-    private static StandaloneEvaluator evaluator;
+    private static PureContext context;
     private static Object assertCompiledGraphFn;
 
     private static synchronized void ensureSetup() throws IOException
     {
-        if (evaluator != null)
+        if (context != null)
         {
             return;
         }
@@ -91,14 +91,14 @@ class TruffleTestCompilerPure
                 org.finos.legend.pure.truffle.PureLanguage.ID).allowAllAccess(true).build();
         polyglotCtx.initialize(org.finos.legend.pure.truffle.PureLanguage.ID);
         polyglotCtx.enter();
-        evaluator = org.finos.legend.pure.truffle.PureLanguage.get(null).getEvaluator();
+        context = org.finos.legend.pure.truffle.PureLanguage.get(null);
 
         // Configure the PureParser with CompiledGraph and Error section support
         List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new ArrayList<>();
         parserExts.add(new org.finos.legend.pure.next.parser.m3.PureLanguageParser());
         parserExts.add(new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension());
         parserExts.add(new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension());
-        evaluator.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
+        context.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
                 .withExtensions(parserExts)
                 .build());
 
@@ -152,7 +152,7 @@ class TruffleTestCompilerPure
         {
             try
             {
-                evaluator.executeFunction(
+                context.executeFunction(
                         (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition) assertCompiledGraphFn,
                         new Object[]{content, testName});
             }

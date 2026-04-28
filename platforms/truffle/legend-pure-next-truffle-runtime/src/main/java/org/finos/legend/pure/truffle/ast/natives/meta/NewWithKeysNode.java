@@ -73,7 +73,7 @@ public final class NewWithKeysNode extends PureNode
         // Delegate to the evaluator which manages the construction
         // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
         // We evaluate them lazily through the evaluator.
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval = getEvaluator();
+        org.finos.legend.pure.truffle.PureContext eval = getContext();
 
         // Evaluate type holder (first param) — pre-compiled as child node
         Object typeHolder = typeHolderNode.executeGeneric(frame);
@@ -212,7 +212,7 @@ public final class NewWithKeysNode extends PureNode
      */
     static void setReverseAssociationPointers(Object instance, String classPath,
                                               java.util.List<java.util.Map.Entry<String, Object>> keyValues,
-                                              org.finos.legend.pure.truffle.StandaloneEvaluator eval,
+                                              org.finos.legend.pure.truffle.PureContext eval,
                                               org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
                                               org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)
     {

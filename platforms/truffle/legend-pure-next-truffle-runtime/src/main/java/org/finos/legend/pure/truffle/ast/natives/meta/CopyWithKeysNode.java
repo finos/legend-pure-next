@@ -76,7 +76,7 @@ public final class CopyWithKeysNode extends PureNode
 
     private Object invoke(VirtualFrame frame)
     {
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval = getEvaluator();
+        org.finos.legend.pure.truffle.PureContext eval = getContext();
 
         // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
         Object original = sourceNode.executeGeneric(frame);
@@ -525,7 +525,7 @@ public final class CopyWithKeysNode extends PureNode
     private static void addCopiedAssociationProps(Object copy, String classPath,
                                                    java.util.Set<String> existingKeys,
                                                    java.util.List<java.util.Map.Entry<String, Object>> keyValues,
-                                                   org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+                                                   org.finos.legend.pure.truffle.PureContext eval)
     {
         // Get all getter methods on the copy
         for (java.lang.reflect.Method m : copy.getClass().getMethods())

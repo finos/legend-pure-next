@@ -17,7 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.next.parser.PureParser;
-import org.finos.legend.pure.truffle.StandaloneEvaluator;
+import org.finos.legend.pure.truffle.PureContext;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.runtime.ProtocolTranslator;
@@ -51,15 +51,15 @@ public final class ParseNode extends PureNode
     {
         String sourceId = StringHelper.asString(sourceIdNode.executeGeneric(frame), "parse");
         String content = StringHelper.asString(contentNode.executeGeneric(frame), "parse");
-        return doParse(getEvaluator(), sourceId, content);
+        return doParse(getContext(), sourceId, content);
     }
 
-    private static Object doParse(StandaloneEvaluator eval, String sourceId, String content)
+    private static Object doParse(PureContext eval, String sourceId, String content)
     {
         PureParser parser = eval.pureParser();
         if (parser == null)
         {
-            throw new RuntimeException("parse native: no PureParser configured on StandaloneEvaluator");
+            throw new RuntimeException("parse native: no PureParser configured on PureContext");
         }
         Object bootstrapResult = parser.parse(sourceId, content);
         return new ProtocolTranslator(eval.resolver()).translate(bootstrapResult);

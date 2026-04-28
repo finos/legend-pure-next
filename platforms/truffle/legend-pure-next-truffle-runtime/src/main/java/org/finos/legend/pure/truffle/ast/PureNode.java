@@ -22,10 +22,6 @@ import com.oracle.truffle.api.source.SourceSection;
 
 /**
  * Base class for all Pure Truffle AST nodes.
- *
- * <p>Each node carries an optional {@link SourceSection} derived from the
- * PDB's {@code SourceInformation}. Truffle uses this to build guest-language
- * stack traces automatically when exceptions propagate.</p>
  */
 @NodeInfo(language = "pure")
 public abstract class PureNode extends Node
@@ -33,10 +29,6 @@ public abstract class PureNode extends Node
     @CompilationFinal
     private SourceSection pureSourceSection;
 
-    /**
-     * Set the Pure source location for this node. Called by the AST builder
-     * after node creation, before the node is adopted.
-     */
     public void setPureSourceSection(SourceSection section)
     {
         this.pureSourceSection = section;
@@ -48,24 +40,15 @@ public abstract class PureNode extends Node
         return pureSourceSection;
     }
 
-    /**
-     * Evaluate this node in the given Truffle frame.
-     */
     public abstract Object executeGeneric(VirtualFrame frame);
 
-    /**
-     * Access the evaluator via the Truffle language context.
-     */
-    protected final org.finos.legend.pure.truffle.StandaloneEvaluator getEvaluator()
+    protected final org.finos.legend.pure.truffle.PureContext getContext()
     {
-        return org.finos.legend.pure.truffle.PureLanguage.get(this).getEvaluator();
+        return org.finos.legend.pure.truffle.PureLanguage.get(this);
     }
 
-    /**
-     * Access the metadata resolver from this node.
-     */
     protected final org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess getResolver()
     {
-        return getEvaluator().resolver();
+        return getContext().resolver();
     }
 }

@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * JUnit 5 test factory that discovers and runs Pure tests via the
- * standalone Truffle evaluator. Each {@code <<test.Test>>} and
+ * standalone Truffle context. Each {@code <<test.Test>>} and
  * {@code <<PCT.test>>} function becomes an individual dynamic test
  * with independent pass/fail — no fail-fast.
  *
@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class TrufflePureTestRunner
 {
-    private static StandaloneEvaluator evaluator;
+    private static PureContext context;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader coreLoader;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader compilerLoader;
     private static PDBModule coreModule;
@@ -51,7 +51,7 @@ class TrufflePureTestRunner
 
     private static void ensureSetup() throws java.io.IOException
     {
-        if (evaluator != null)
+        if (context != null)
         {
             return;
         }
@@ -94,7 +94,7 @@ class TrufflePureTestRunner
                 .allowAllAccess(true).build();
         polyglotCtx.initialize(PureLanguage.ID);
         polyglotCtx.enter();
-        evaluator = PureLanguage.get(null).getEvaluator();
+        context = PureLanguage.get(null);
 
         // Keep bootstrap PDB modules for element path discovery
         coreModule = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", Lists.mutable.empty());
@@ -107,7 +107,7 @@ class TrufflePureTestRunner
         // Configure the PureParser for the parse native
         java.util.List<org.finos.legend.pure.next.parser.ParserExtension> parserExts = new java.util.ArrayList<>();
         parserExts.add(new org.finos.legend.pure.next.parser.m3.PureLanguageParser());
-        evaluator.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
+        context.setPureParser(org.finos.legend.pure.next.parser.PureParser.builder()
                 .withExtensions(parserExts)
                 .build());
 
@@ -178,11 +178,11 @@ class TrufflePureTestRunner
             {
                 if (adapter != null)
                 {
-                    evaluator.executeFunction(fd, new Object[]{adapter});
+                    context.executeFunction(fd, new Object[]{adapter});
                 }
                 else
                 {
-                    evaluator.executeFunction(fd, new Object[0]);
+                    context.executeFunction(fd, new Object[0]);
                 }
             }
             catch (org.finos.legend.pure.truffle.ast.PureException.AssertionError e)

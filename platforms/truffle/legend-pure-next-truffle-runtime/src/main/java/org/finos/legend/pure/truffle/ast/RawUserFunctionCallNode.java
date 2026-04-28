@@ -72,26 +72,26 @@ public final class RawUserFunctionCallNode extends PureNode
         if (ct == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            ct = getEvaluator().getCallTarget(fd);
+            ct = getContext().getCallTarget(fd);
             cachedCallTarget = ct;
         }
         if (ct != null)
         {
             return callNode.call(ct, args);
         }
-        return getEvaluator().executeFunction(fd, args);
+        return getContext().executeFunction(fd, args);
     }
 
     private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
     {
         // Resolve the actual QP from the target's runtime type
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition resolved =
-                getEvaluator().resolveQpDispatch(staticQp, args);
-        RootCallTarget ct = getEvaluator().getCallTarget(resolved);
+                getContext().resolveQpDispatch(staticQp, args);
+        RootCallTarget ct = getContext().getCallTarget(resolved);
         if (ct != null)
         {
             return callNode.call(ct, args);
         }
-        return getEvaluator().executeFunction(resolved, args);
+        return getContext().executeFunction(resolved, args);
     }
 }

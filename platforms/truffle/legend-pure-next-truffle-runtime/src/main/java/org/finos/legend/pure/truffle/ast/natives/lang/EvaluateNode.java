@@ -53,10 +53,10 @@ public final class EvaluateNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeEvaluate(getEvaluator(), values, dispatchReader);
+        return invokeEvaluate(getContext(), values, dispatchReader);
     }
 
-    private static Object invokeEvaluate(org.finos.legend.pure.truffle.StandaloneEvaluator evaluator, Object[] values,
+    private static Object invokeEvaluate(org.finos.legend.pure.truffle.PureContext evaluator, Object[] values,
                                           org.finos.legend.pure.truffle.ast.PropertyReadNode propertyReader)
     {
         Object fn = values[0];

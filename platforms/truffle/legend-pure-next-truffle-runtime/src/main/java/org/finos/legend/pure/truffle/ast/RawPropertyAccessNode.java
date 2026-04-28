@@ -85,7 +85,7 @@ public final class RawPropertyAccessNode extends PureNode
 
         if (isQualifiedProperty)
         {
-            return getEvaluator().executeFunction((FunctionDefinition) fe._func(), argValues);
+            return getContext().executeFunction((FunctionDefinition) fe._func(), argValues);
         }
 
         String propName = propertyName;
@@ -103,7 +103,7 @@ public final class RawPropertyAccessNode extends PureNode
                 {
                     return cachedEnumValue;
                 }
-                Object enumVal = getEvaluator().coerceToJavaEnum(en, propName);
+                Object enumVal = getContext().coerceToJavaEnum(en, propName);
                 if (enumVal != null)
                 {
                     CompilerDirectives.transferToInterpreterAndInvalidate();

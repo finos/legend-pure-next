@@ -82,7 +82,7 @@ public final class RawLambdaCaptureNode extends PureNode
         {
             return cachedCallTarget;
         }
-        cachedCallTarget = getEvaluator().callTargetForLambda(lambda);
+        cachedCallTarget = getContext().callTargetForLambda(lambda);
         return cachedCallTarget;
     }
 }

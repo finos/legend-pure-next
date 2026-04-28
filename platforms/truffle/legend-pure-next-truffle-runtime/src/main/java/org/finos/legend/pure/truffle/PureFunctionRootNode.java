@@ -90,7 +90,7 @@ public final class PureFunctionRootNode extends RootNode
         // Bind type variables from the target's CGT (for QPs with type parameters)
         if (arguments.length > 0 && arguments[0] != null)
         {
-            StandaloneEvaluator.bindQpTypeVariablesStatic(arguments[0], frame, layout);
+            PureContext.bindQpTypeVariablesStatic(arguments[0], frame, layout);
         }
 
         Object result = PureSequence.EMPTY;
