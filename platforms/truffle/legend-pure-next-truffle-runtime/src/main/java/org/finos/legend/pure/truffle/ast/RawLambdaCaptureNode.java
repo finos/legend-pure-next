@@ -74,8 +74,16 @@ public final class RawLambdaCaptureNode extends PureNode
         return new RawClosure(lambda, capturedValues, openVarNames, ct);
     }
 
+    @CompilationFinal
+    private RootCallTarget cachedCallTarget;
+
     private RootCallTarget lookupCallTarget()
     {
-        return StandaloneEvaluator.INSTANCE.callTargetForLambda(lambda);
+        if (cachedCallTarget != null)
+        {
+            return cachedCallTarget;
+        }
+        cachedCallTarget = StandaloneEvaluator.INSTANCE.callTargetForLambda(lambda);
+        return cachedCallTarget;
     }
 }

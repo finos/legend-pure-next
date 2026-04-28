@@ -53,10 +53,6 @@ public final class LetFunctionFallbackNode extends PureNode
         String name = nameObj instanceof String s ? s : String.valueOf(nameObj);
         // Look up the slot in the frame's own descriptor first
         int slot = resolveSlotInFrame(name, frame.getFrameDescriptor());
-        if (slot < 0)
-        {
-            slot = resolveSlotInLayout(name);
-        }
         if (slot >= 0)
         {
             frame.setObject(slot, value);
@@ -76,17 +72,4 @@ public final class LetFunctionFallbackNode extends PureNode
         return -1;
     }
 
-    private static int resolveSlotInLayout(String name)
-    {
-        StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
-        if (eval != null && eval.currentLayout() != null)
-        {
-            Integer slot = eval.currentLayout().slotFor(name);
-            if (slot != null)
-            {
-                return slot;
-            }
-        }
-        return -1;
-    }
 }

@@ -75,14 +75,15 @@ public final class RawLambdaCallNode extends Node
         {
             return fallback(lambdaOrClosure, args);
         }
-        if (cachedTarget == lambdaOrClosure && directCallNode != null)
+        // Cache by CallTarget identity (stable) not by closure identity (ephemeral)
+        if (directCallNode != null && cachedTarget == target)
         {
             return directCallNode.call(args);
         }
         if (cachedTarget == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            cachedTarget = lambdaOrClosure;
+            cachedTarget = target;
             directCallNode = insert(Truffle.getRuntime().createDirectCallNode(target));
             return directCallNode.call(args);
         }

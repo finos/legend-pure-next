@@ -59,10 +59,10 @@ public final class NewWithKeysNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return invoke();
+        return invoke(frame);
     }
 
-    private Object invoke()
+    private Object invoke(VirtualFrame frame)
     {
         // Delegate to StandaloneEvaluator which manages the construction
         // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
@@ -73,7 +73,7 @@ public final class NewWithKeysNode extends PureNode
         // Evaluate type holder (first param)
         // _parametersValues() returns PureSequence; getBoxed() returns Object
         Object typeHolder = eval.astBuilder().lower(fe._parametersValues().getBoxed(0))
-                .executeGeneric(eval.currentFrame());
+                .executeGeneric(frame);
 
         // Extract class path from type holder
         String classPath = "Unknown";
@@ -150,7 +150,7 @@ public final class NewWithKeysNode extends PureNode
         {
             // Evaluate key expressions (second param)
             Object keyExprsResult = eval.astBuilder().lower(fe._parametersValues().getBoxed(1))
-                    .executeGeneric(eval.currentFrame());
+                    .executeGeneric(frame);
 
             // Process key expressions — each is a KeyExpression with {name, expression}
             int sz = CollectionHelper.size(keyExprsResult);

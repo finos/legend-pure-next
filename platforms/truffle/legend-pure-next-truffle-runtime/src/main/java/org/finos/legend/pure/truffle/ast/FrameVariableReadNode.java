@@ -51,54 +51,40 @@ public final class FrameVariableReadNode extends PureNode
     {
         if (slot < 0)
         {
-            return readDynamic();
+            CompilerDirectives.transferToInterpreter();
+            int dynSlot = findSlotByName(frame.getFrameDescriptor());
+            if (dynSlot >= 0)
+            {
+                Object v = frame.getObject(dynSlot);
+                if (v != null) return v;
+            }
+            throw new org.finos.legend.pure.truffle.ast.PureException("Unknown variable: " + name, this);
         }
         Object value = frame.getObject(slot);
         if (value == null)
         {
             CompilerDirectives.transferToInterpreter();
-            return readDynamic();
+            int dynSlot = findSlotByName(frame.getFrameDescriptor());
+            if (dynSlot >= 0)
+            {
+                Object v = frame.getObject(dynSlot);
+                if (v != null) return v;
+            }
+            throw new org.finos.legend.pure.truffle.ast.PureException("Unknown variable: " + name, this);
         }
         return value;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private Object readDynamic()
+    private int findSlotByName(com.oracle.truffle.api.frame.FrameDescriptor desc)
     {
-        // Dynamic variable (e.g. type variable from QP dispatch, or a parameter
-        // not visible in the layout at lower time due to cross-function lowering).
-        // In standalone mode, these should have been bound into frame slots
-        // by StandaloneEvaluator.bindQpTypeVariables. If we reach here,
-        // the variable was not bound in the lowering layout but may exist
-        // in the actual execution frame.
-        org.finos.legend.pure.truffle.StandaloneEvaluator eval =
-                org.finos.legend.pure.truffle.StandaloneEvaluator.INSTANCE;
-        if (eval != null && eval.currentFrame() != null && eval.currentLayout() != null)
+        for (int i = 0; i < desc.getNumberOfSlots(); i++)
         {
-            Integer dynSlot = eval.currentLayout().slotFor(name);
-            if (dynSlot != null)
+            if (name.equals(desc.getSlotName(i)))
             {
-                Object v = eval.currentFrame().getObject(dynSlot);
-                if (v != null)
-                {
-                    return v;
-                }
-            }
-            // Try all slots by name in the frame descriptor
-            com.oracle.truffle.api.frame.FrameDescriptor desc = eval.currentFrame().getFrameDescriptor();
-            for (int i = 0; i < desc.getNumberOfSlots(); i++)
-            {
-                Object slotName = desc.getSlotName(i);
-                if (name.equals(slotName))
-                {
-                    Object v = eval.currentFrame().getObject(i);
-                    if (v != null)
-                    {
-                        return v;
-                    }
-                }
+                return i;
             }
         }
-        throw new org.finos.legend.pure.truffle.ast.PureException("Unknown variable: " + name, this);
+        return -1;
     }
 }

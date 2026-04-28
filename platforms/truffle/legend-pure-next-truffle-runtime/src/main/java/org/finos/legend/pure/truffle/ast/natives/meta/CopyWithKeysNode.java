@@ -53,16 +53,16 @@ public final class CopyWithKeysNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return invoke();
+        return invoke(frame);
     }
 
-    private Object invoke()
+    private Object invoke(VirtualFrame frame)
     {
         org.finos.legend.pure.truffle.StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
 
         // Step 1: Evaluate the source object (first arg)
         // _parametersValues() returns PureSequence; getBoxed() returns Object
-        Object original = eval.astBuilder().lower(fe._parametersValues().getBoxed(0)).executeGeneric(eval.currentFrame());
+        Object original = eval.astBuilder().lower(fe._parametersValues().getBoxed(0)).executeGeneric(frame);
 
         String classPath;
         GenericTypeValue cgt;
@@ -103,7 +103,7 @@ public final class CopyWithKeysNode extends PureNode
         eval.pushConstruction(copy);
         try
         {
-            Object keyExprsResult = eval.astBuilder().lower(fe._parametersValues().getBoxed(1)).executeGeneric(eval.currentFrame());
+            Object keyExprsResult = eval.astBuilder().lower(fe._parametersValues().getBoxed(1)).executeGeneric(frame);
 
             // Step 4: Process key expressions — each is a KeyExpression with {name, expression}
             int sz = CollectionHelper.size(keyExprsResult);

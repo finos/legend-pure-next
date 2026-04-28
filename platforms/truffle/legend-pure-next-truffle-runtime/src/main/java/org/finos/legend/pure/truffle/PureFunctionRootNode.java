@@ -93,12 +93,8 @@ public final class PureFunctionRootNode extends RootNode
             StandaloneEvaluator.bindQpTypeVariablesStatic(arguments[0], frame, layout);
         }
 
-        // Set evaluator context for nodes that need dynamic layout lookup
+        // Push layout for lazy compilation (NewWithKeysNode/CopyWithKeysNode)
         StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
-        FrameLayout prevLayout = eval.currentLayout();
-        VirtualFrame prevFrame = eval.currentFrame();
-        eval.setCurrentLayout(layout);
-        eval.setCurrentFrame(frame);
         FrameLayout prevBuilderLayout = eval.astBuilder().pushLayout(layout);
         try
         {
@@ -112,8 +108,6 @@ public final class PureFunctionRootNode extends RootNode
         finally
         {
             eval.astBuilder().popLayout(prevBuilderLayout);
-            eval.setCurrentLayout(prevLayout);
-            eval.setCurrentFrame(prevFrame);
         }
     }
 

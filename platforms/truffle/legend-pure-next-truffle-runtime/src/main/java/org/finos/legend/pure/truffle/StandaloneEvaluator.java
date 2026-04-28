@@ -73,8 +73,6 @@ public final class StandaloneEvaluator
     private final Deque<Object> constructionStack = new ArrayDeque<>();
 
     // Current frame context (for sub-expression re-lowering under active layout)
-    private VirtualFrame currentFrame;
-    private FrameLayout currentLayout;
 
     public StandaloneEvaluator(TruffleMetadataAccess resolver, PureLanguage language,
                                NativeNodeRegistry registry,
@@ -326,31 +324,23 @@ public final class StandaloneEvaluator
             {
                 try
                 {
+                    Class<?> paramType = method.getParameterTypes()[0];
+
                     // 1. Try original value (preserves VS instances like Collection, AtomicValue)
-                    try
+                    if (originalValue == null || paramType.isInstance(originalValue))
                     {
                         method.invoke(target, originalValue);
                         return;
                     }
-                    catch (IllegalArgumentException ignored)
-                    {
-                    }
 
                     // 2. Try unwrapped value
-                    if (rawValue != originalValue)
+                    if (rawValue != originalValue && (rawValue == null || paramType.isInstance(rawValue)))
                     {
-                        try
-                        {
-                            method.invoke(target, rawValue);
-                            return;
-                        }
-                        catch (IllegalArgumentException ignored)
-                        {
-                        }
+                        method.invoke(target, rawValue);
+                        return;
                     }
 
                     // 3. Coercion fallbacks
-                    Class<?> paramType = method.getParameterTypes()[0];
                     if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType))
                     {
                         method.invoke(target, toPureSequence(rawValue));
@@ -661,21 +651,48 @@ public final class StandaloneEvaluator
     }
 
     private static final Object GETTER_NOT_FOUND = new Object();
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.lang.reflect.Method> METHOD_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.lang.reflect.Method NO_METHOD;
+    static
+    {
+        try { NO_METHOD = Object.class.getMethod("hashCode"); }
+        catch (Exception e) { throw new RuntimeException(e); }
+    }
 
-    /** Try to invoke a no-arg getter method. Returns GETTER_NOT_FOUND if not found. */
     private static Object tryInvokeGetter(Object target, String methodName)
     {
+        String cacheKey = target.getClass().getName() + "#" + methodName;
+        java.lang.reflect.Method method = METHOD_CACHE.get(cacheKey);
+        if (method == NO_METHOD)
+        {
+            return GETTER_NOT_FOUND;
+        }
+        if (method != null)
+        {
+            try
+            {
+                return method.invoke(target);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException("Error accessing '" + methodName + "' on " + target.getClass().getName(), e);
+            }
+        }
         try
         {
-            java.lang.reflect.Method method = target.getClass().getMethod(methodName);
+            method = target.getClass().getMethod(methodName);
             if (method.getDeclaringClass() == Object.class)
             {
+                METHOD_CACHE.put(cacheKey, NO_METHOD);
                 return GETTER_NOT_FOUND;
             }
+            METHOD_CACHE.put(cacheKey, method);
             return method.invoke(target);
         }
         catch (NoSuchMethodException e)
         {
+            METHOD_CACHE.put(cacheKey, NO_METHOD);
             return GETTER_NOT_FOUND;
         }
         catch (Exception e)
@@ -919,26 +936,6 @@ public final class StandaloneEvaluator
     // ---------------------------------------------------------------
     // Accessors for nodes
     // ---------------------------------------------------------------
-
-    public VirtualFrame currentFrame()
-    {
-        return currentFrame;
-    }
-
-    public void setCurrentFrame(VirtualFrame frame)
-    {
-        this.currentFrame = frame;
-    }
-
-    public FrameLayout currentLayout()
-    {
-        return currentLayout;
-    }
-
-    public void setCurrentLayout(FrameLayout layout)
-    {
-        this.currentLayout = layout;
-    }
 
     public PureASTBuilder astBuilder()
     {

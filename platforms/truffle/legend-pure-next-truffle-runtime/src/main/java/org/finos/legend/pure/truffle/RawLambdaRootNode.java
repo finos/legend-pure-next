@@ -86,28 +86,20 @@ public final class RawLambdaRootNode extends RootNode
         if (closureOrLambda instanceof RawClosure rc)
         {
             Object[] captured = rc.capturedValues();
-            String[] names = rc.capturedNames();
-            for (int i = 0; i < names.length; i++)
+            // Fast path: captured values align with openVarSlots by index
+            int count = Math.min(captured.length, openVarSlots.length);
+            for (int i = 0; i < count; i++)
             {
-                boolean bound = false;
-                for (int j = 0; j < openVarNames.length; j++)
+                if (openVarSlots[i] >= 0)
                 {
-                    if (openVarNames[j].equals(names[i]) && openVarSlots[j] >= 0)
-                    {
-                        frame.setObject(openVarSlots[j], captured[i]);
-                        bound = true;
-                        break;
-                    }
+                    frame.setObject(openVarSlots[i], captured[i]);
                 }
-                // DEBUG: trace failed bindings for actual/expected
             }
         }
 
-        // Execute body with layout context
+        // Execute body with layout context for lazy compilation
         StandaloneEvaluator eval = StandaloneEvaluator.INSTANCE;
         FrameLayout prevLayout = eval.astBuilder().pushLayout(layout);
-        com.oracle.truffle.api.frame.VirtualFrame prevFrame = eval.currentFrame();
-        eval.setCurrentFrame(frame);
         try
         {
             Object result = PureSequence.EMPTY;
@@ -119,7 +111,6 @@ public final class RawLambdaRootNode extends RootNode
         }
         finally
         {
-            eval.setCurrentFrame(prevFrame);
             eval.astBuilder().popLayout(prevLayout);
         }
     }
