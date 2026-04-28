@@ -246,13 +246,57 @@ public final class NewWithKeysNode extends PureNode
     }
 
     /**
-     * Find the reverse association property for a given property on a class.
-     * Scans all Association elements from the resolver to find the one that
-     * owns the property, then returns the OTHER property's name.
+     * Reverse association index: maps propertyName → list of (otherPropName, targetClassPath) pairs.
+     * Built lazily on first access, then O(1) lookup per property.
      */
+    private static volatile java.util.Map<String, java.util.List<String[]>> reverseAssocIndex;
+
     static String findReverseAssociationProperty(String propName, String classPath,
                                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
+        java.util.Map<String, java.util.List<String[]>> index = reverseAssocIndex;
+        if (index == null)
+        {
+            index = buildReverseAssocIndex(resolver);
+            reverseAssocIndex = index;
+        }
+
+        java.util.List<String[]> candidates = index.get(propName);
+        if (candidates == null)
+        {
+            return null;
+        }
+
+        for (String[] pair : candidates)
+        {
+            String otherPropName = pair[0];
+            String targetPath = pair[1];
+            if (classPath.equals(targetPath))
+            {
+                return otherPropName;
+            }
+            // Check subtype
+            Object classElement = resolver.getElement(classPath);
+            if (classElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type classType)
+            {
+                var mro = org.finos.legend.pure.truffle.runtime.helper._Type.linearize(classType, resolver);
+                for (var ancestor : mro)
+                {
+                    if (ancestor instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ape
+                            && targetPath.equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ape, resolver)))
+                    {
+                        return otherPropName;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static java.util.Map<String, java.util.List<String[]>> buildReverseAssocIndex(
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        java.util.Map<String, java.util.List<String[]>> index = new java.util.HashMap<>();
         for (String path : resolver.elementPaths())
         {
             Object element = resolver.getElement(path);
@@ -265,60 +309,34 @@ public final class NewWithKeysNode extends PureNode
             {
                 continue;
             }
-            // Check if one of the association's properties matches propName
-            Property matchProp = null;
-            Property otherProp = null;
             Object p0 = props.getBoxed(0);
             Object p1 = props.getBoxed(1);
             if (p0 instanceof Property prop0 && p1 instanceof Property prop1)
             {
-                if (propName.equals(prop0._name()))
-                {
-                    matchProp = prop0;
-                    otherProp = prop1;
-                }
-                else if (propName.equals(prop1._name()))
-                {
-                    matchProp = prop1;
-                    otherProp = prop0;
-                }
-            }
-            if (matchProp != null && otherProp != null)
-            {
-                // Verify that the OTHER property's target type matches the class being constructed.
-                // otherProp points TO classPath. matchProp points AWAY from classPath.
-                // We check that otherProp's genericType resolves to a type whose path matches classPath.
-                if (otherProp._genericType() != null)
-                {
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType =
-                            org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherProp._genericType());
-                    if (targetType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-                    {
-                        String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe, resolver);
-                        if (classPath.equals(targetPath))
-                        {
-                            return otherProp._name();
-                        }
-                        // Check subtype: classPath may be a subtype of targetPath
-                        Object classElement = resolver.getElement(classPath);
-                        if (classElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type classType)
-                        {
-                            var mro = org.finos.legend.pure.truffle.runtime.helper._Type.linearize(classType, resolver);
-                            for (var ancestor : mro)
-                            {
-                                if (ancestor instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ape
-                                        && targetPath.equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ape, resolver)))
-                                {
-                                    return otherProp._name();
-                                }
-                            }
-                        }
-                    }
-                }
-                // If type check fails, still return if no better match found later
+                addAssocEntry(index, prop0, prop1, resolver);
+                addAssocEntry(index, prop1, prop0, resolver);
             }
         }
-        return null;
+        return index;
+    }
+
+    private static void addAssocEntry(java.util.Map<String, java.util.List<String[]>> index,
+                                       Property matchProp, Property otherProp,
+                                       org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        String propName = matchProp._name();
+        if (propName == null || otherProp._genericType() == null) return;
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType =
+                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherProp._genericType());
+        if (targetType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+        {
+            String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe, resolver);
+            if (targetPath != null)
+            {
+                index.computeIfAbsent(propName, k -> new java.util.ArrayList<>(2))
+                        .add(new String[]{otherProp._name(), targetPath});
+            }
+        }
     }
 
     static void appendToProperty(Object target, String propName, Object value,

@@ -37,13 +37,31 @@ import java.util.Set;
 public final class TrufflePdbLoader implements TruffleMetadataAccess
 {
     private final CompressedArchiveReader archive;
-    private final Map<String, Object> cache = new HashMap<>();
-    private final java.util.IdentityHashMap<Object, String> reverseCache = new java.util.IdentityHashMap<>();
+    private final Map<String, Object> cache;
+    private final java.util.IdentityHashMap<Object, String> reverseCache;
     private TruffleMetadataAccess resolver = this; // default: self. Set to composite for multi-module.
 
     public TrufflePdbLoader(Path pdbPath) throws IOException
     {
         this.archive = new CompressedArchiveReader(pdbPath);
+        int elementCount = archive.elementPaths().size();
+        // Pre-size to avoid resize: capacity = count / 0.75 + 1
+        int capacity = (int) (elementCount / 0.75) + 1;
+        this.cache = new HashMap<>(capacity);
+        this.reverseCache = new java.util.IdentityHashMap<>(elementCount);
+    }
+
+    /**
+     * Pre-load all elements from the PDB into the cache.
+     * Call after setResolver() to ensure FBWs get the composite resolver.
+     * Eliminates lazy deserialization during execution.
+     */
+    public void preloadAll()
+    {
+        for (String path : archive.elementPaths())
+        {
+            getElement(path);
+        }
     }
 
     /**
@@ -55,17 +73,20 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
         this.resolver = compositeResolver;
     }
 
+    private static final Object ABSENT = new Object(); // sentinel for negative cache
+
     @Override
     public Object getElement(String path)
     {
         Object cached = cache.get(path);
         if (cached != null)
         {
-            return cached;
+            return cached == ABSENT ? null : cached;
         }
 
         if (!archive.hasElement(path))
         {
+            cache.put(path, ABSENT);
             return null;
         }
 
@@ -168,7 +189,7 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
 
     private static Map<String, String> buildTypeMap()
     {
-        Map<String, String> m = new HashMap<>();
+        Map<String, String> m = new HashMap<>(64);
         String p = "org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.";
 
         // Functions

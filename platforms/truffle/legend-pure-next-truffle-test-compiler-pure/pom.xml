@@ -152,7 +152,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>-Duser.timezone=UTC --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED</argLine>
+                    <argLine>-Duser.timezone=UTC -Dpolyglot.engine.WarnInterpreterOnly=false</argLine>
                     <trimStackTrace>false</trimStackTrace>
                     <includes>
                         <include>**/*CompilerPure.java</include>

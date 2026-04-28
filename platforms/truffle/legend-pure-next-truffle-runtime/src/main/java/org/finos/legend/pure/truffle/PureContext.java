@@ -46,7 +46,7 @@ public final class PureContext
 
     // Per-FD compilation cache: layout + lowered body
     private final WeakHashMap<FunctionDefinition, CompiledFunction> functionCache = new WeakHashMap<>();
-    // Per-lambda RootCallTarget cache
+    // Per-lambda caches
     private final WeakHashMap<LambdaFunction, RootCallTarget> lambdaCache = new WeakHashMap<>();
 
     // Construction stack for new/copy parent references (~)
@@ -101,6 +101,7 @@ public final class PureContext
     {
         return compile(fd).callTarget();
     }
+
 
     public Object executeFunction(FunctionDefinition fd, Object[] rawArgs)
     {

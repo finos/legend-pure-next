@@ -57,7 +57,10 @@ import java.util.stream.Stream;
 public final class PureFeature implements Feature
 {
     private static final String[] REFLECTIVE_PACKAGE_ROOTS = new String[]{
-            "meta/pure"  // covers metamodel, protocol, compiler, functions, etc.
+            "meta/pure",  // covers metamodel, protocol, compiler, functions, etc.
+            "org/finos/legend/pure/m3/module/pdbModule/fbs",  // FlatBuffer Def classes for PDB loading
+            "org/finos/legend/pure/truffle/pdb",  // Truffle PDB wrapper/impl classes
+            "org/finos/legend/pure/truffle/runtime"  // TruffleInstanceFactory targets
     };
 
     @Override

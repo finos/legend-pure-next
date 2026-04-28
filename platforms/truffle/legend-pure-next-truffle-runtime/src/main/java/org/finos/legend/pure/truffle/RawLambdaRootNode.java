@@ -110,4 +110,10 @@ public final class RawLambdaRootNode extends RootNode
     {
         return name;
     }
+
+    @Override
+    protected com.oracle.truffle.api.nodes.ExecutionSignature prepareForAOT()
+    {
+        return com.oracle.truffle.api.nodes.ExecutionSignature.create(Object.class, new Class<?>[]{Object[].class});
+    }
 }

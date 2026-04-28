@@ -16,12 +16,10 @@ package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.RootCallTarget;
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.Node;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.PureContext;
 import org.finos.legend.pure.truffle.types.RawClosure;
 
 /**
@@ -92,13 +90,13 @@ public final class RawLambdaCallNode extends Node
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             cachedTarget = target;
-            directCallNode = insert(Truffle.getRuntime().createDirectCallNode(target));
+            directCallNode = insert(DirectCallNode.create(target));
             return directCallNode.call(args);
         }
         if (indirectCallNode == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            indirectCallNode = insert(Truffle.getRuntime().createIndirectCallNode());
+            indirectCallNode = insert(IndirectCallNode.create());
         }
         return indirectCallNode.call(target, args);
     }

@@ -59,6 +59,13 @@
             <artifactId>polyglot</artifactId>
             <version>${truffle.version}</version>
         </dependency>
+        <!-- Truffle Runtime — enables Graal JIT compilation of guest language ASTs -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-runtime</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Eclipse Collections -->
         <dependency>

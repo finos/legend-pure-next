@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle;
 
-import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
@@ -156,10 +155,13 @@ public final class PureCompileMain
         };
         // Wire composite resolver into each loader for cross-module FBW resolution
         for (var loader : loaders) loader.setResolver(resolver);
+        for (var loader : loaders) loader.preloadAll();
 
         PureTruffleRuntime runtime = PureTruffleRuntime.builder()
                 .withResolver(resolver)
-                .withParserExtensions(List.of(new CompiledGraphLanguageExtension()))
+                .withParserExtensions(List.of(
+                        new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
+                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 
         FunctionDefinition fd = (FunctionDefinition) resolver.getElement(function);

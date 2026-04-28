@@ -63,6 +63,15 @@ public final class PureLanguage extends TruffleLanguage<PureContext>
         return ctx;
     }
 
+    @Override
+    protected boolean patchContext(PureContext context, Env newEnv)
+    {
+        // Support context pre-initialization in native image.
+        // The context was created at build time; patch with runtime env.
+        return true;
+    }
+
+
     private static final ContextReference<PureContext> CONTEXT_REF =
             ContextReference.create(PureLanguage.class);
 

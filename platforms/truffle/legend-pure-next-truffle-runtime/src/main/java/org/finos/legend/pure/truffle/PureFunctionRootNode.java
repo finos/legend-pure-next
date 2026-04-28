@@ -113,4 +113,9 @@ public final class PureFunctionRootNode extends RootNode
         return "PureFunctionRootNode[" + name + "]";
     }
 
+    @Override
+    protected com.oracle.truffle.api.nodes.ExecutionSignature prepareForAOT()
+    {
+        return com.oracle.truffle.api.nodes.ExecutionSignature.create(Object.class, new Class<?>[]{Object[].class});
+    }
 }

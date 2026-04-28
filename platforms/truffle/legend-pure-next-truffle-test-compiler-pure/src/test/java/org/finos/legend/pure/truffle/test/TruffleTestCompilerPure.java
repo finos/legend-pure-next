@@ -85,6 +85,8 @@ class TruffleTestCompilerPure
 
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
+        coreLoader.preloadAll();
+        compilerLoader.preloadAll();
 
         org.finos.legend.pure.truffle.PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
         org.graalvm.polyglot.Context polyglotCtx = org.graalvm.polyglot.Context.newBuilder(
