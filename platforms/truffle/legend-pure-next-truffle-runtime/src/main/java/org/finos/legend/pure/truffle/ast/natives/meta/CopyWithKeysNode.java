@@ -21,10 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -43,14 +40,32 @@ public final class CopyWithKeysNode extends PureNode
     @Child
     private PureNode sourceNode;
 
-    @Child
-    private PureNode keyExprsNode;
+    @Children
+    private org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments;
 
-    public CopyWithKeysNode(String signature, PureNode sourceNode, PureNode keyExprsNode)
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode deepReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyWriteNode deepWriter = new org.finos.legend.pure.truffle.ast.PropertyWriteNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode topPropReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode subCopyReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode appendReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyWriteNode appendWriter = new org.finos.legend.pure.truffle.ast.PropertyWriteNode();
+
+    public CopyWithKeysNode(String signature, PureNode sourceNode, org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments)
     {
         this.signature = signature;
         this.sourceNode = sourceNode;
-        this.keyExprsNode = keyExprsNode;
+        this.assignments = assignments;
     }
 
     @Override
@@ -101,55 +116,27 @@ public final class CopyWithKeysNode extends PureNode
         // Fix property owners and nested enum value CGTs to point to the copy
         fixPropertyOwners(original, copy, eval.resolver());
 
-        // Step 3: Push onto construction stack, then evaluate key expressions
+        // Step 3: Push onto construction stack, evaluate and set key properties
         eval.pushConstruction(copy);
         try
         {
-            Object keyExprsResult = keyExprsNode.executeGeneric(frame);
-
-            // Step 4: Process key expressions — each is a KeyExpression with {name, expression}
-            int sz = CollectionHelper.size(keyExprsResult);
             java.util.List<java.util.Map.Entry<String, Object>> keyValues = new java.util.ArrayList<>();
-            for (int i = 0; i < sz; i++)
+            for (int i = 0; i < assignments.length; i++)
             {
-                Object ke = CollectionHelper.at(keyExprsResult, i);
-                if (ke instanceof KeyExpression keImpl)
+                String propName = assignments[i].propertyName();
+                if (propName.contains("."))
                 {
-                    String propName = keImpl._name();
-                    org.finos.legend.pure.truffle.types.PureSequence exprSeq = keImpl._expression();
-                    Object propValue;
-                    if (exprSeq == null || exprSeq.isEmpty())
+                    // Deep property path: evaluate value, handle add, then navigate and copy sub-objects
+                    Object propValue = assignments[i].execute(frame, copy);
+                    setDeepProperty(copy, propName, propValue, deepReader, deepWriter);
+                    if (propValue != null)
                     {
-                        propValue = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+                        keyValues.add(java.util.Map.entry(propName, propValue));
                     }
-                    else if (exprSeq.size() == 1)
-                    {
-                        propValue = exprSeq.getBoxed(0);
-                    }
-                    else
-                    {
-                        propValue = exprSeq;
-                    }
-                    boolean isAdd = keImpl._add() != null && keImpl._add();
-                    if (isAdd)
-                    {
-                        // += operator: append new value(s) to existing property value.
-                        // Must preserve original types (no AtomicValue unwrapping).
-                        Object existing = eval.accessProperty(copy, propName);
-                        java.util.List<Object> merged = new java.util.ArrayList<>();
-                        addToMergedList(merged, existing);
-                        addToMergedList(merged, propValue);
-                        propValue = new org.finos.legend.pure.truffle.types.ObjectSequence(merged.toArray());
-                    }
-                    if (propName.contains("."))
-                    {
-                        // Deep property path: navigate and copy sub-objects
-                        setDeepProperty(copy, propName, propValue, eval);
-                    }
-                    else
-                    {
-                        eval.accessProperty(copy, propName, propValue);
-                    }
+                }
+                else
+                {
+                    Object propValue = assignments[i].execute(frame, copy);
                     if (propValue != null)
                     {
                         keyValues.add(java.util.Map.entry(propName, propValue));
@@ -173,7 +160,7 @@ public final class CopyWithKeysNode extends PureNode
                 boolean alreadyPresent = keyValues.stream().anyMatch(kv -> topProp.equals(kv.getKey()));
                 if (!alreadyPresent)
                 {
-                    Object topValue = eval.accessProperty(copy, topProp);
+                    Object topValue = topPropReader.execute(copy, topProp);
                     if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
                     {
                         keyValues.add(java.util.Map.entry(topProp, topValue));
@@ -187,12 +174,12 @@ public final class CopyWithKeysNode extends PureNode
             for (var kv : keyValues) keyPropNames.add(kv.getKey());
             addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
 
-            NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval);
+            NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval, appendReader, appendWriter);
 
             // Also set reverse associations for sub-copies created by deep property paths
             for (String topProp : topLevelDeepProps)
             {
-                Object subCopy = eval.accessProperty(copy, topProp);
+                Object subCopy = subCopyReader.execute(copy, topProp);
                 if (subCopy instanceof Any subAny && subAny._classifierGenericType() != null)
                 {
                     var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subAny._classifierGenericType());
@@ -201,7 +188,7 @@ public final class CopyWithKeysNode extends PureNode
                         String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subPe);
                         java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
                         addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
-                        NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval);
+                        NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
                     }
                 }
             }
@@ -472,14 +459,15 @@ public final class CopyWithKeysNode extends PureNode
      * Navigates to each sub-object, creating copies as needed, and sets the leaf property.
      */
     private static void setDeepProperty(Object root, String dottedPath, Object value,
-                                         org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+                                         org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
+                                         org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)
     {
         String[] parts = dottedPath.split("\\.");
         Object current = root;
         // Navigate to the parent of the leaf, copying sub-objects along the way
         for (int i = 0; i < parts.length - 1; i++)
         {
-            Object child = eval.accessProperty(current, parts[i]);
+            Object child = reader.execute(current, parts[i]);
             if (child == null || (child instanceof org.finos.legend.pure.truffle.types.PureSequence ps3 && ps3.isEmpty()))
             {
                 return; // Sub-object doesn't exist — nothing to set
@@ -492,7 +480,7 @@ public final class CopyWithKeysNode extends PureNode
                 {
                     anyCopy._classifierGenericType(any._classifierGenericType());
                 }
-                eval.accessProperty(current, parts[i], childCopy);
+                writer.execute(current, parts[i], childCopy);
                 current = childCopy;
             }
             else
@@ -501,7 +489,7 @@ public final class CopyWithKeysNode extends PureNode
             }
         }
         // Set the leaf property
-        eval.accessProperty(current, parts[parts.length - 1], value);
+        writer.execute(current, parts[parts.length - 1], value);
     }
 
     /**
@@ -529,33 +517,6 @@ public final class CopyWithKeysNode extends PureNode
      * original types (no AtomicValue unwrapping). Handles empty sequence (skip),
      * PureSequence (flatten), MutableList (flatten), and scalar (add as-is).
      */
-    private static void addToMergedList(java.util.List<Object> target, Object value)
-    {
-        if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps4 && ps4.isEmpty()))
-        {
-            return;
-        }
-        if (value instanceof PureSequence ps)
-        {
-            for (int i = 0; i < ps.size(); i++)
-            {
-                target.add(ps.getBoxed(i));
-            }
-        }
-        else if (value instanceof org.eclipse.collections.api.list.MutableList<?> ml)
-        {
-            target.addAll(ml);
-        }
-        else if (value instanceof java.util.List<?> list)
-        {
-            target.addAll(list);
-        }
-        else
-        {
-            target.add(value);
-        }
-    }
-
     /**
      * After shallow copy, find all association properties on the copy that have non-null values
      * and add them to keyValues for reverse pointer binding.

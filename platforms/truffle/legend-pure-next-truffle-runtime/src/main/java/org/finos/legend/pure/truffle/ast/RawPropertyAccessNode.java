@@ -36,12 +36,8 @@ public final class RawPropertyAccessNode extends PureNode
     @Children
     private PureNode[] argNodes;
 
-    // Monomorphic inline cache for the getter MethodHandle
-    @CompilationFinal
-    private Class<?> cachedTargetClass;
-
-    @CompilationFinal
-    private java.lang.invoke.MethodHandle cachedGetter;
+    @Child
+    private PropertyReadNode reader = new PropertyReadNode();
 
     // Cached enum value — monomorphic cache by Enumeration identity
     @CompilationFinal
@@ -117,50 +113,9 @@ public final class RawPropertyAccessNode extends PureNode
                 }
                 // Fall through to regular property access
             }
-            return invokeGetter(target, propName);
+            return reader.execute(target, propName);
         }
 
         throw new RuntimeException("Cannot access property: " + propName);
-    }
-
-    private Object invokeGetter(Object target, String propName)
-    {
-        // Monomorphic inline cache: if target class matches, use cached handle
-        Class<?> targetClass = target.getClass();
-        if (targetClass == cachedTargetClass && cachedGetter != null)
-        {
-            try
-            {
-                return cachedGetter.invoke(target);
-            }
-            catch (Throwable t)
-            {
-                throw new RuntimeException("Error accessing '" + propName + "'", t);
-            }
-        }
-        // Slow path: lookup and cache
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        return lookupAndCache(target, propName, targetClass);
-    }
-
-    private Object lookupAndCache(Object target, String propName, Class<?> targetClass)
-    {
-        String methodName = "_" + propName;
-        try
-        {
-            java.lang.reflect.Method method = targetClass.getMethod(methodName);
-            cachedGetter = java.lang.invoke.MethodHandles.lookup().unreflect(method);
-            cachedTargetClass = targetClass;
-            return cachedGetter.invoke(target);
-        }
-        catch (NoSuchMethodException e)
-        {
-            // Fallback to evaluator for complex cases (enum, QP, etc.)
-            return getEvaluator().accessProperty(target, propName);
-        }
-        catch (Throwable t)
-        {
-            throw new RuntimeException("Error accessing '" + propName + "' on " + targetClass.getName(), t);
-        }
     }
 }

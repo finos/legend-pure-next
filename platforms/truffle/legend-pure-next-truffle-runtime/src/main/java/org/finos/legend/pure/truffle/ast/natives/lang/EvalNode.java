@@ -72,7 +72,8 @@ public final class EvalNode extends PureNode
      * Dispatch a function call with pre-unwrapped args. Used by both
      * {@link EvalNode} and {@link EvaluateNode}.
      */
-    public static Object dispatch(org.finos.legend.pure.truffle.StandaloneEvaluator evaluator, Object fn, Object[] args)
+    public static Object dispatch(org.finos.legend.pure.truffle.StandaloneEvaluator evaluator, Object fn, Object[] args,
+                                    org.finos.legend.pure.truffle.ast.PropertyReadNode propertyReader)
     {
         if (fn instanceof RawClosure rc)
         {
@@ -114,7 +115,7 @@ public final class EvalNode extends PureNode
             // property on the first argument
             if (args.length > 0)
             {
-                return evaluator.accessProperty(args[0], prop._name());
+                return propertyReader.execute(args[0], prop._name());
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }

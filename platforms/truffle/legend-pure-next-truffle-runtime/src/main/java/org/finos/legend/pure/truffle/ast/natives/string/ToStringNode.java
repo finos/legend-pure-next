@@ -27,6 +27,9 @@ public final class ToStringNode extends PureNode
     @Child
     private PureNode arg;
 
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode toStringReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
     private final GenericType genericType;
     private final Multiplicity multiplicity;
 
@@ -41,16 +44,16 @@ public final class ToStringNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object v = arg.executeGeneric(frame);
-        return convert(v, getEvaluator());
+        return convert(v, toStringReader);
     }
 
-    private static String convert(Object v, org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+    private static String convert(Object v, org.finos.legend.pure.truffle.ast.PropertyReadNode reader)
     {
         if (v == null)
         {
             return "";
         }
-        return pureToString(v, eval);
+        return pureToString(v, reader);
     }
 
     static String pureToString(Object v)
@@ -58,7 +61,7 @@ public final class ToStringNode extends PureNode
         return pureToString(v, null);
     }
 
-    static String pureToString(Object v, org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+    static String pureToString(Object v, org.finos.legend.pure.truffle.ast.PropertyReadNode reader)
     {
         if (v == null)
         {
@@ -82,14 +85,14 @@ public final class ToStringNode extends PureNode
             for (int i = 0; i < values.size(); i++)
             {
                 if (i > 0) sb.append(", ");
-                sb.append(pureToString(values.getBoxed(i), eval));
+                sb.append(pureToString(values.getBoxed(i), reader));
             }
             return sb.append("]").toString();
         }
         // Pair — <a, b>
         if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.Pair pair)
         {
-            return "<" + pureToString(pair._first(), eval) + ", " + pureToString(pair._second(), eval) + ">";
+            return "<" + pureToString(pair._first(), reader) + ", " + pureToString(pair._second(), reader) + ">";
         }
         // Named metamodel elements — return just the name
         if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe && pe._name() != null)
@@ -99,11 +102,11 @@ public final class ToStringNode extends PureNode
         // For class instances (Any), try to invoke Pure's toString() QP
         if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
         {
-            if (eval != null)
+            if (reader != null)
             {
                 try
                 {
-                    Object result = eval.accessProperty(any, "toString");
+                    Object result = reader.execute(any, "toString");
                     if (result instanceof String s)
                     {
                         return s;

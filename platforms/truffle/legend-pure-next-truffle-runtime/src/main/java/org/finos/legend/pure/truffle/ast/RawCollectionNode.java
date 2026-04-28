@@ -29,6 +29,8 @@ public final class RawCollectionNode extends PureNode
     @Children
     private PureNode[] children;
 
+    public int childCount() { return children.length; }
+
     public RawCollectionNode(PureNode[] children)
     {
         this.children = children;

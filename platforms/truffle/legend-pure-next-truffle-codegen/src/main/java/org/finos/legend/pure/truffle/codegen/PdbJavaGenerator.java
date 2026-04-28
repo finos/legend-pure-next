@@ -738,9 +738,26 @@ public class PdbJavaGenerator
             }
             else
             {
-                // Pointer path — resolve via MetadataAccess
-                sb.append("        { String path = fb.").append(camel).append("();\n");
-                sb.append("          if (path != null) { __raw = resolver.getElement(path); if (__raw == null) __raw = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); } }\n");
+                // Check if the target type is an enum — if so, resolve by valueOf
+                EnumRecord enumRec = findEnum(pr.typeName);
+                if (enumRec == null)
+                {
+                    // Short-name fallback
+                    String shortName = pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName;
+                    enumRec = findEnumByShortName(shortName);
+                }
+                if (enumRec != null)
+                {
+                    String enumFqn = toJavaPackage(enumRec.packagePath) + "." + enumRec.name + "Enum";
+                    sb.append("        { String __enumName = fb.").append(camel).append("();\n");
+                    sb.append("          if (__enumName != null) { try { __raw = ").append(enumFqn).append(".valueOf(__enumName); } catch (IllegalArgumentException e) { __raw = null; } } }\n");
+                }
+                else
+                {
+                    // Pointer path — resolve via MetadataAccess
+                    sb.append("        { String path = fb.").append(camel).append("();\n");
+                    sb.append("          if (path != null) { __raw = resolver.getElement(path); if (__raw == null) __raw = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); } }\n");
+                }
             }
         }
         else if (fbsField.type().equals("long") || fbsField.type().equals("int")

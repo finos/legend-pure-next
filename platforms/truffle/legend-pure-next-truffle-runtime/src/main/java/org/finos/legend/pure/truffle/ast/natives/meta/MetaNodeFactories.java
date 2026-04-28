@@ -14,6 +14,11 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
+import org.finos.legend.pure.truffle.ast.AtomicValueNode;
+import org.finos.legend.pure.truffle.ast.ConstantNode;
+import org.finos.legend.pure.truffle.ast.PropertyAssignNode;
+import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawCollectionNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 
 /**
@@ -38,10 +43,12 @@ public final class MetaNodeFactories
         // because they control evaluation order.
         registry.register("new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new NewWithKeysNode(
-                        "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_", args[0], args[1]));
+                        "new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_",
+                        args[0], decomposeAssignments(args[1])));
         registry.register("copy_T_1__KeyExpression_MANY__T_1_",
                 (args, gt, mul, fe) -> new CopyWithKeysNode(
-                        "copy_T_1__KeyExpression_MANY__T_1_", args[0], args[1]));
+                        "copy_T_1__KeyExpression_MANY__T_1_",
+                        args[0], decomposeAssignments(args[1])));
 
         // --- Meta natives ---
 
@@ -136,5 +143,70 @@ public final class MetaNodeFactories
         // findFunctionsByNameAndArity — compiler native: search resolver for functions
         registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
                 (args, gt, mul, fe) -> new FindFunctionsByNameAndArityNode(args[0], args[1]));
+    }
+
+    // =========================================================================
+    // Key expression decomposition — extract property names and value
+    // expressions at build time from RawCollectionNode<KeyExpressionNode>.
+    // =========================================================================
+
+    private static KeyExpressionNode[] extractKeyNodes(PureNode keysNode)
+    {
+        if (keysNode instanceof RawCollectionNode col)
+        {
+            // Access children via the collection node
+            KeyExpressionNode[] result = new KeyExpressionNode[col.childCount()];
+            // We need to get the children — execute in a null frame won't work.
+            // Instead, read the children field reflectively since RawCollectionNode
+            // doesn't expose them. Better: use the node's child array.
+            com.oracle.truffle.api.nodes.Node[] children = new com.oracle.truffle.api.nodes.Node[col.childCount()];
+            int idx = 0;
+            for (com.oracle.truffle.api.nodes.Node child : col.getChildren())
+            {
+                if (child instanceof KeyExpressionNode ken)
+                {
+                    result[idx++] = ken;
+                }
+            }
+            if (idx == result.length)
+            {
+                return result;
+            }
+        }
+        else if (keysNode instanceof KeyExpressionNode ken)
+        {
+            // Single key expression (not wrapped in collection)
+            return new KeyExpressionNode[]{ken};
+        }
+        return new KeyExpressionNode[0];
+    }
+
+    static PropertyAssignNode[] decomposeAssignments(PureNode keysNode)
+    {
+        KeyExpressionNode[] nodes = extractKeyNodes(keysNode);
+        PropertyAssignNode[] result = new PropertyAssignNode[nodes.length];
+        for (int i = 0; i < nodes.length; i++)
+        {
+            String name = extractConstantString(nodes[i].nameNode());
+            PureNode valueExpr = nodes[i].valueNode();
+            boolean isAdd = extractBoolean(nodes[i].addNode());
+            result[i] = new PropertyAssignNode(name, valueExpr, isAdd);
+        }
+        return result;
+    }
+
+    private static String extractConstantString(PureNode node)
+    {
+        if (node instanceof ConstantNode cn && cn.value() instanceof String s) return s;
+        if (node instanceof AtomicValueNode av && av.value() instanceof String s) return s;
+        throw new RuntimeException("Key expression name is not a constant string: " + node.getClass().getSimpleName());
+    }
+
+    private static boolean extractBoolean(PureNode node)
+    {
+        if (node == null) return false;
+        if (node instanceof ConstantNode cn && cn.value() instanceof Boolean b) return b;
+        if (node instanceof AtomicValueNode av && av.value() instanceof Boolean b) return b;
+        return false;
     }
 }

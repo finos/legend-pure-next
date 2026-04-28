@@ -42,6 +42,9 @@ public final class RawLambdaCallNode extends Node
     @Child
     private IndirectCallNode indirectCallNode;
 
+    @Child
+    private PropertyReadNode propertyReader = new PropertyReadNode();
+
     @CompilerDirectives.CompilationFinal
     private Object cachedTarget;
 
@@ -151,7 +154,7 @@ public final class RawLambdaCallNode extends Node
             Object[] rawArgs = extractArgs(args);
             if (rawArgs.length > 0)
             {
-                return getEvaluator().accessProperty(rawArgs[0], prop._name());
+                return propertyReader.execute(rawArgs[0], prop._name());
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
@@ -163,7 +166,7 @@ public final class RawLambdaCallNode extends Node
         if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction nf)
         {
             Object[] rawArgs = extractArgs(args);
-            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getEvaluator(), nf, rawArgs);
+            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getEvaluator(), nf, rawArgs, propertyReader);
         }
         throw new RuntimeException("Cannot call: " + lambdaOrClosure.getClass().getName());
     }

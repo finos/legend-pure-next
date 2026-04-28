@@ -33,6 +33,8 @@ public final class ConstantNode extends PureNode
         this.value = value;
     }
 
+    public Object value() { return value; }
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {

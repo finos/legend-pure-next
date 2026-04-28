@@ -22,12 +22,9 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
-import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -46,17 +43,23 @@ public final class NewWithKeysNode extends PureNode
     @Child
     private PureNode typeHolderNode;
 
-    @Child
-    private PureNode keyExprsNode;
+    @Children
+    private org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments;
 
     @Child
     private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
 
-    public NewWithKeysNode(String signature, PureNode typeHolderNode, PureNode keyExprsNode)
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyReadNode appendReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyWriteNode appendWriter = new org.finos.legend.pure.truffle.ast.PropertyWriteNode();
+
+    public NewWithKeysNode(String signature, PureNode typeHolderNode, org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments)
     {
         this.signature = signature;
         this.typeHolderNode = typeHolderNode;
-        this.keyExprsNode = keyExprsNode;
+        this.assignments = assignments;
     }
 
     @Override
@@ -144,53 +147,22 @@ public final class NewWithKeysNode extends PureNode
                     + ")");
         }
 
-        // Push onto construction stack, evaluate key expressions, process them
+        // Push onto construction stack, evaluate and set key properties
         eval.pushConstruction(instance);
         try
         {
-            // Evaluate key expressions (second param) — pre-compiled as child node
-            Object keyExprsResult = keyExprsNode.executeGeneric(frame);
-
-            // Process key expressions — each is a KeyExpression with {name, expression}
-            int sz = CollectionHelper.size(keyExprsResult);
             java.util.List<java.util.Map.Entry<String, Object>> keyValues = new java.util.ArrayList<>();
-            for (int i = 0; i < sz; i++)
+            for (int i = 0; i < assignments.length; i++)
             {
-                Object ke = CollectionHelper.at(keyExprsResult, i);
-                if (ke instanceof KeyExpression keImpl)
+                Object propValue = assignments[i].execute(frame, instance);
+                if (propValue != null)
                 {
-                    String propName = keImpl._name();
-                    if ("classifierGenericType".equals(propName))
-                    {
-                        throw new RuntimeException("Cannot set 'classifierGenericType' directly. "
-                                + "This field is system-managed and derived from the instantiation. "
-                                + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances "
-                                + "with a specific classifierGenericType.");
-                    }
-                    org.finos.legend.pure.truffle.types.PureSequence exprSeq = keImpl._expression();
-                    Object propValue;
-                    if (exprSeq == null || exprSeq.isEmpty())
-                    {
-                        propValue = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
-                    }
-                    else if (exprSeq.size() == 1)
-                    {
-                        propValue = exprSeq.getBoxed(0);
-                    }
-                    else
-                    {
-                        propValue = exprSeq;
-                    }
-                    eval.accessProperty(instance, propName, propValue);
-                    if (propValue != null)
-                    {
-                        keyValues.add(java.util.Map.entry(propName, propValue));
-                    }
+                    keyValues.add(java.util.Map.entry(assignments[i].propertyName(), propValue));
                 }
             }
 
             // Set reverse association pointers (bidirectional binding)
-            setReverseAssociationPointers(instance, classPath, keyValues, eval);
+            setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
 
             // Validate constraints after all properties are set
             if (instance instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
@@ -239,7 +211,9 @@ public final class NewWithKeysNode extends PureNode
      */
     static void setReverseAssociationPointers(Object instance, String classPath,
                                               java.util.List<java.util.Map.Entry<String, Object>> keyValues,
-                                              org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+                                              org.finos.legend.pure.truffle.StandaloneEvaluator eval,
+                                              org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
+                                              org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)
     {
         if (keyValues.isEmpty())
         {
@@ -265,7 +239,7 @@ public final class NewWithKeysNode extends PureNode
             String reversePropName = findReverseAssociationProperty(propName, classPath, eval.resolver());
             if (reversePropName != null)
             {
-                appendToProperty(propValue, reversePropName, instance, eval);
+                appendToProperty(propValue, reversePropName, instance, reader, writer);
             }
         }
     }
@@ -346,14 +320,15 @@ public final class NewWithKeysNode extends PureNode
         return null;
     }
 
-    private static void appendToProperty(Object target, String propName, Object value,
-                                          org.finos.legend.pure.truffle.StandaloneEvaluator eval)
+    static void appendToProperty(Object target, String propName, Object value,
+                                          org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
+                                          org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)
     {
         if (target instanceof java.util.List<?> targets)
         {
             for (Object t : targets)
             {
-                appendToProperty(t, propName, value, eval);
+                appendToProperty(t, propName, value, reader, writer);
             }
             return;
         }
@@ -361,7 +336,7 @@ public final class NewWithKeysNode extends PureNode
         {
             for (int i = 0; i < seq.size(); i++)
             {
-                appendToProperty(seq.getBoxed(i), propName, value, eval);
+                appendToProperty(seq.getBoxed(i), propName, value, reader, writer);
             }
             return;
         }
@@ -388,18 +363,18 @@ public final class NewWithKeysNode extends PureNode
             if (!isMulti)
             {
                 // [0..1] or [1] property — replace
-                eval.accessProperty(target, propName, value);
+                writer.execute(target, propName, value);
             }
             else
             {
                 // [*] or [1..*] property — append to existing
-                Object current = eval.accessProperty(target, propName);
+                Object current = reader.execute(target, propName);
                 boolean isEmpty = current == null
                         || (current instanceof org.finos.legend.pure.truffle.types.PureSequence ps3 && ps3.isEmpty())
                         || (current instanceof PureSequence seq && seq.isEmpty());
                 if (isEmpty)
                 {
-                    eval.accessProperty(target, propName, value);
+                    writer.execute(target, propName, value);
                 }
                 else if (current instanceof PureSequence seq)
                 {
@@ -409,7 +384,7 @@ public final class NewWithKeysNode extends PureNode
                         items[j] = seq.getBoxed(j);
                     }
                     items[seq.size()] = value;
-                    eval.accessProperty(target, propName, new org.finos.legend.pure.truffle.types.ObjectSequence(items));
+                    writer.execute(target, propName, new org.finos.legend.pure.truffle.types.ObjectSequence(items));
                 }
                 else if (current instanceof org.eclipse.collections.api.list.MutableList<?> list)
                 {
@@ -420,7 +395,7 @@ public final class NewWithKeysNode extends PureNode
                 }
                 else
                 {
-                    eval.accessProperty(target, propName,
+                    writer.execute(target, propName,
                             new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[]{current, value}));
                 }
             }

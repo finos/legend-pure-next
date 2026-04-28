@@ -41,6 +41,15 @@ public final class KeyExpressionNode extends PureNode
         this.multiplicity = multiplicity;
     }
 
+    /** Property name node (children[0] — typically a ConstantNode with a String). */
+    public PureNode nameNode() { return children[0]; }
+
+    /** Value expression node (children[1]). */
+    public PureNode valueNode() { return children[1]; }
+
+    /** Whether this is an add (+=) expression (children[2] if present). */
+    public PureNode addNode() { return children.length > 2 ? children[2] : null; }
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
