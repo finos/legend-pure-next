@@ -159,9 +159,6 @@ public class RdfJavaGenerator
         {
         });
 
-        // Check if this class has subtypes (is a taxonomy interface)
-        boolean hasSubtypes = m3Model.classesWithSubtypes().contains(classInfo.name);
-
         // Add imports for generalization types in different packages
         classInfo.generalizations.forEach(parent ->
         {
@@ -198,12 +195,6 @@ public class RdfJavaGenerator
             }
         }
 
-        // Add JsonTypeInfo import for interfaces that have subtypes and non-base parents
-        if (hasSubtypes && needsTypeAnnotations(classInfo))
-        {
-            imports.add("com.fasterxml.jackson.annotation.JsonTypeInfo");
-        }
-
         // Write imports
         imports.forEach(imp -> sb.append("import ").append(imp).append(";\n"));
         sb.append("\n");
@@ -216,13 +207,6 @@ public class RdfJavaGenerator
             sb.append(" * Pure package: ").append(classInfo.packagePath).append("\n");
         }
         sb.append(" */\n");
-
-        // Add @JsonTypeInfo to interfaces for polymorphic serialization
-        if (hasSubtypes && needsTypeAnnotations(classInfo))
-        {
-            sb.append("@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, ")
-                .append("property = \"_type\")\n");
-        }
 
         // Add Pure stereotype/tagged value annotations
         appendPureAnnotations(sb, classInfo.stereotypes, classInfo.taggedValues, "");
@@ -313,17 +297,8 @@ public class RdfJavaGenerator
         // Collect all properties (own + inherited)
         MutableList<PropertyInfo> allProperties = collectAllProperties(m3Model, classInfo);
 
-        // Check if this class needs type annotations
-        boolean needsTypeAnnotations = needsTypeAnnotations(classInfo);
-
         // Collect imports
         MutableSortedSet<String> imports = SortedSets.mutable.empty();
-        imports.add("com.fasterxml.jackson.annotation.JsonProperty");
-        if (needsTypeAnnotations)
-        {
-            imports.add("com.fasterxml.jackson.annotation.JsonTypeInfo");
-            imports.add("com.fasterxml.jackson.annotation.JsonTypeName");
-        }
         imports.add("org.eclipse.collections.api.factory.Lists");
         imports.add("org.eclipse.collections.api.list.MutableList");
 
@@ -350,15 +325,6 @@ public class RdfJavaGenerator
         }
         sb.append(" */\n");
 
-        // Class declaration with @JsonTypeInfo and @JsonTypeName annotations
-        if (needsTypeAnnotations)
-        {
-            sb.append("@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, ")
-                .append("property = \"_type\")\n");
-            sb.append("@JsonTypeName(\"")
-                .append(classInfo.name).append("\")\n");
-        }
-
         // Add Pure stereotype/tagged value annotations
         appendPureAnnotations(sb, classInfo.stereotypes, classInfo.taggedValues, "");
 
@@ -366,12 +332,9 @@ public class RdfJavaGenerator
         sb.append(" implements ").append(classInfo.name);
         sb.append("\n{\n");
 
-        // Freeze support: once frozen, setters throw. Excluded from serialization.
-        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
+        // Freeze support: once frozen, setters throw.
         sb.append("    private boolean frozen;\n\n");
-        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
         sb.append("    public void freeze() { this.frozen = true; }\n\n");
-        sb.append("    @com.fasterxml.jackson.annotation.JsonIgnore\n");
         sb.append("    public boolean isFrozen() { return this.frozen; }\n\n");
         sb.append("    private void checkNotFrozen()\n");
         sb.append("    {\n");
@@ -440,8 +403,6 @@ public class RdfJavaGenerator
 
             // Getter (returns unmodifiable list view when frozen)
             appendPureAnnotations(sb, prop.stereotypes, prop.taggedValues, "    ");
-            sb.append("    @JsonProperty(\"")
-                .append(prop.name).append("\")\n");
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" ");
             sb.append(getterName).append("()\n");
@@ -687,36 +648,6 @@ public class RdfJavaGenerator
         // Use the original case from the metamodel (e.g., "Composite", "Subset")
         // so that Java enum name() matches the metamodel element name.
         return value;
-    }
-
-    /**
-     * Determines if a class needs @JsonTypeName / @JsonTypeInfo annotations.
-     * A class needs them if it is a mainTaxonomy class or a subtype of one.
-     */
-    private boolean needsTypeAnnotations(ClassInfo classInfo)
-    {
-        return m3Model.mainTaxonomyClasses().contains(classInfo.name) || isSubtypeOfMainTaxonomy(classInfo.name, Sets.mutable.empty());
-    }
-
-    /**
-     * Recursively check if a class is a subtype of any mainTaxonomy class.
-     */
-    private boolean isSubtypeOfMainTaxonomy(String className, MutableSet<String> visited)
-    {
-        if (visited.contains(className))
-        {
-            return false;
-        }
-        visited.add(className);
-
-        ClassInfo info = m3Model.classInfoMap().get(className);
-        if (info == null)
-        {
-            return false;
-        }
-
-        return info.generalizations.anySatisfy(parent ->
-                m3Model.mainTaxonomyClasses().contains(parent) || isSubtypeOfMainTaxonomy(parent, visited));
     }
 
     /**

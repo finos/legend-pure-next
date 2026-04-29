@@ -41,7 +41,6 @@
         <antlr.version>4.13.2</antlr.version>
         <eclipsecollections.version>13.0.0</eclipsecollections.version>
         <jackson3.version>3.0.4</jackson3.version>
-        <jackson.annotations.version>2.20</jackson.annotations.version>
         <junit-jupiter.version>5.14.2</junit-jupiter.version>
         <jena.version>6.0.0</jena.version>
         <commons-lang.version>3.20.0</commons-lang.version>
@@ -218,7 +217,7 @@
                 <version>${eclipsecollections.version}</version>
             </dependency>
 
-            <!-- Jackson 3 (annotations stays at com.fasterxml) -->
+            <!-- Jackson 3 (test-scope only — protocol JSON serializer in parser/src/test) -->
             <dependency>
                 <groupId>tools.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
@@ -228,11 +227,6 @@
                 <groupId>tools.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson3.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${jackson.annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>tools.jackson.datatype</groupId>
