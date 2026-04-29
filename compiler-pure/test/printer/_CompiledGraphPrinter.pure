@@ -1,0 +1,576 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::functions::meta::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::string::*;
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::test::printer::*;
+import meta::pure::compiler::test::printer::primitive::*;
+
+// -----------------------------------------------------------------------
+// Public entry point
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*]):String[1]
+{
+    $elements->map(e | $e->printElement()->stripTrailingNewlines())->joinStrings('\n\n')
+}
+
+function meta::pure::compiler::test::printer::stripTrailingNewlines(s:String[1]):String[1]
+{
+    if($s->endsWith('\n'), | $s->substring(0, $s->length() - 1)->stripTrailingNewlines(), | $s);
+}
+
+// -----------------------------------------------------------------------
+// Top-level element dispatch
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printElement(element:PackageableElement[1]):String[1]
+{
+    $element->match(
+        [
+            udf:UserDefinedFunction<Any>[1] | $udf->printUserDefinedFunction(),
+            fn:NativeFunction<Any>[1] | $fn->printNativeFunction(),
+            c:Class<Any>[1] | $c->printClass(),
+            assoc:Association[1] | $assoc->printAssociation(),
+            en:Enumeration<Any>[1] | $en->meta::pure::compiler::test::printer::printEnumeration(),
+            pr:Profile[1] | $pr->meta::pure::compiler::test::printer::printProfile(),
+            p:PrimitiveType[1] | $p->printPrimitive(),
+            a:Any[1] | 'unsupported: ' + $element->cast(@PackageableElement)->fullPath()
+        ]
+    )
+}
+
+// -----------------------------------------------------------------------
+// Functions
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printUserDefinedFunction(fn:UserDefinedFunction<Any>[1]):String[1]
+{
+    let sig = $fn->functionSignature();
+    let body = $fn.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS('  '))->joinStrings('\n');
+    [
+        'function ', $sig,
+        $fn->classifierGT(),
+        '\n',
+        $fn->printAnnotations('  '),
+        $fn->printPreConstraints('  '),
+        $fn->printPostConstraints('  '),
+        $body
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printNativeFunction(fn:NativeFunction<Any>[1]):String[1]
+{
+    [
+        'native function ', $fn->functionSignature(),
+        $fn->classifierGT(),
+        '\n',
+        $fn->printAnnotations('  ')
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::functionSignature(fn:PackageableFunction<Any>[1]):String[1]
+{
+    let paramStr = $fn.parameters->cast(@VariableExpression)->map(p |
+        $p.name->toOne() + ':' + $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul()
+    )->joinStrings(', ');
+    $fn->fullPath() + '(' + $paramStr + '):' + $fn.returnGenericType->toOne()->printType() + $fn.returnMultiplicity->toOne()->printMul();
+}
+
+// -----------------------------------------------------------------------
+// Classes
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printClass(c:Class<Any>[1]):String[1]
+{
+    [
+        'class ', $c->fullPath(),
+        if($c.generalizations->isEmpty(), | '', | ' extends ' + $c.generalizations->cast(@Any)->map(g | $g->cast(@Generalization).general->printType())->joinStrings(', ')),
+        $c->classifierGT(),
+        $c.sourceInformation->printSourceInfo(),
+        '\n',
+        $c->printAnnotations('  '),
+        $c->printTypeVariables('  '),
+        $c.properties->cast(@Any)->map(p | $p->cast(@Property<Nil, Any|*>)->printProperty('  '))->joinStrings(''),
+        $c->printQualifiedProperties('  '),
+        $c->printConstraints('  ')
+    ]->joinStrings('');
+}
+
+// -----------------------------------------------------------------------
+// Associations
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printAssociation(assoc:Association[1]):String[1]
+{
+    [
+        'association ', $assoc->fullPath(),
+        $assoc->classifierGT(),
+        $assoc.sourceInformation->printSourceInfo(),
+        '\n',
+        $assoc->printAnnotations('  '),
+        $assoc.properties->cast(@Any)->map(p | $p->cast(@Property<Nil, Any|*>)->printProperty('  '))->joinStrings(''),
+        $assoc->printQualifiedProperties('  ')
+    ]->joinStrings('');
+}
+
+// -----------------------------------------------------------------------
+// Enumerations
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printEnumeration(en:Enumeration<Any>[1]):String[1]
+{
+    [
+        'enumeration ', $en->fullPath(),
+        if($en.generalizations->isEmpty(), | ' extends Enum', | ' extends ' + $en.generalizations->cast(@Any)->map(g | $g->cast(@Generalization).general->printType())->joinStrings(', ')),
+        $en->classifierGT(),
+        $en.sourceInformation->printSourceInfo(),
+        '\n',
+        $en->printAnnotations('  '),
+        $en.properties->cast(@Any)->map(p | $p->printEnumerationProperty($en))->joinStrings('')
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printEnumerationProperty(p:Any[1], en:Enumeration<Any>[1]):String[1]
+{
+    let p2 = $p->cast(@Property<Nil, Any|*>);
+    let propCGT = $p2.classifierGenericType->printCGT();
+    let enumFullName = $en->cast(@PackageableElement)->fullPath();
+    let defaultStr = if($p2.defaultValue->isEmpty(), | '',
+        | let expr = $p2.defaultValue->toOne()->cast(@LambdaFunction<Any>).expressionSequence->at(0);
+          let val = $expr->match([a:AtomicValue[1] | $a.value->toOne()->cast(@Enum), e:Enum[1] | $e]);
+          let lambdaCgt = $p2.defaultValue->toOne()->cast(@Any).classifierGenericType;
+          '  = ^' + $enumFullName + '(name=\'' + $val.name->toOne() + '\')' + if($lambdaCgt->isEmpty(), | '', | '  ~lambda:' + $lambdaCgt->toOne()->printType());
+    );
+    '  property ' + $p2.name->toOne() + $propCGT + $defaultStr + $p2.sourceInformation->printSourceInfo() + '\n' +
+    $p2->printAnnotations('    ');
+}
+
+// -----------------------------------------------------------------------
+// Profiles
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printProfile(pr:Profile[1]):String[1]
+{
+    [
+        'profile ', $pr->fullPath(),
+        $pr->classifierGT(),
+        $pr.sourceInformation->printSourceInfo(),
+        '\n',
+        $pr.p_stereotypes->map(s | '  stereotype ' + $s.value + $s->classifierGT() + '\n')->joinStrings(''),
+        $pr.p_tags->map(t | '  tag ' + $t.value + $t->classifierGT() + '\n')->joinStrings('')
+    ]->joinStrings('');
+}
+
+// -----------------------------------------------------------------------
+// Shared: properties, qualified properties, constraints, annotations
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printProperty(p:Property<Nil, Any|*>[1], indent:String[1]):String[1]
+{
+    let agg = if($p.aggregation->isEmpty(), | '',
+        | let name = $p.aggregation->toOne()->toString();
+          if($name == 'None', | '', | ' (' + $name->toLower() + ')');
+    );
+    $indent + 'property ' + $p.name->toOne() + $agg +
+    ' :' + $p.genericType->printType() + $p.multiplicity->printMul() +
+    $p.classifierGenericType->printCGT() + '\n' +
+    $p->printAnnotations($indent + '  ') +
+    $p->printDefaultValue($indent + '  ');
+}
+
+function meta::pure::compiler::test::printer::printDefaultValue(p:Property<Nil, Any|*>[1], indent:String[1]):String[1]
+{
+    if($p.defaultValue->isEmpty(), | '',
+        | let lambda = $p.defaultValue->toOne()->cast(@LambdaFunction<Any>);
+          let paramStr = $lambda.parameters->cast(@VariableExpression)->map(lp |
+              $lp.name->toOne() + ':' + $lp.genericType->toOne()->printType() + $lp.multiplicity->toOne()->printMul()
+          )->joinStrings(', ');
+          let lambdaCgt = $lambda->cast(@Any).classifierGenericType;
+          let body = $lambda.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS($indent + '  '))->joinStrings('\n');
+          $indent + 'defaultValue Lambda(' + $paramStr + ')' + $lambdaCgt->printCGT() + '\n' + $body + '\n';
+    );
+}
+
+function meta::pure::compiler::test::printer::printQualifiedProperties(owner:Any[1], indent:String[1]):String[1]
+{
+    let qps = $owner->cast(@PropertyOwner).qualifiedProperties;
+    if($qps->isEmpty(), | '',
+        | $qps->map(qp |
+            let paramStr = $qp.parameters->tail()->cast(@VariableExpression)->map(p |
+                $p.name->toOne() + ':' + $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul()
+            )->joinStrings(', ');
+            $indent + 'qualifiedProperty ' + $qp.name->toOne() + '(' + $paramStr + ')' +
+            ' :' + $qp.genericType->printType() + $qp.multiplicity->printMul() + '\n' +
+            $qp->printAnnotations($indent + '  ') +
+            $qp.expressionSequence->cast(@ValueSpecification)->map(vs | $vs->printVS($indent + '  '))->joinStrings('\n') +
+            if($qp.expressionSequence->isEmpty(), | '', | '\n');
+        )->joinStrings('')
+    );
+}
+
+function meta::pure::compiler::test::printer::printConstraints(owner:Any[1], indent:String[1]):String[1]
+{
+    let constraints = $owner->match([c:Class<Any>[1] | $c.constraints, p:PrimitiveType[1] | $p.constraints, a:Any[1] | []->cast(@Constraint)]);
+    $constraints->map(c | $c->printConstraint('constraint', $indent))->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printPreConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1]):String[1]
+{
+    $fn.preConstraints->map(c | $c->printConstraint('preConstraint', $indent))->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printPostConstraints(fn:UserDefinedFunction<Any>[1], indent:String[1]):String[1]
+{
+    $fn.postConstraints->map(c | $c->printConstraint('postConstraint', $indent))->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printConstraint(c:Constraint[1], label:String[1], indent:String[1]):String[1]
+{
+    let header = $indent + $label +
+        if($c.name->isEmpty(), | '', | ' ' + $c.name->toOne()) +
+        if($c.owner->isEmpty(), | '', | ' ~owner:' + $c.owner->toOne()) +
+        if($c.externalId->isEmpty(), | '', | ' ~externalId:' + $c.externalId->toOne()) +
+        if($c.enforcementLevel->isEmpty(), | '', | ' ~enforcementLevel:' + $c.enforcementLevel->toOne()) +
+        '\n';
+    let body = $c.functionDefinition->toOne()->printLambda($indent + '  ');
+    let msgFn = if($c.messageFunction->isEmpty(), | '',
+        | '\n' + $indent + '  messageFunction\n' + $c.messageFunction->toOne()->cast(@LambdaFunction<Any>)->printLambda($indent + '    ')
+    );
+    $header + $body + $msgFn + '\n';
+}
+
+function meta::pure::compiler::test::printer::printAnnotations(element:Any[1], indent:String[1]):String[1]
+{
+    let stereos = $element->match([s:ElementWithStereotypes[1] | $s.stereotypes, a:Any[1] | []->cast(@Stereotype)]);
+    let tvs = $element->match([t:ElementWithTaggedValues[1] | $t.taggedValues, a:Any[1] | []->cast(@TaggedValue)]);
+    let stereoStr = if($stereos->isEmpty(), | '',
+        | $indent + '<<' + $stereos->map(s | $s.profile->toOne()->fullPath() + '.' + $s.value)->joinStrings(', ') + '>>\n'
+    );
+    let tvStr = if($tvs->isEmpty(), | '',
+        | $indent + '{' + $tvs->map(t | $t.tag.profile->toOne()->fullPath() + '.' + $t.tag.value + ' = \'' + $t.value + '\'')->joinStrings(', ') + '}\n'
+    );
+    $stereoStr + $tvStr;
+}
+
+function meta::pure::compiler::test::printer::printTypeVariables(owner:Any[1], indent:String[1]):String[1]
+{
+    let tvs = $owner->match([c:Class<Any>[1] | $c.typeVariables, p:PrimitiveType[1] | $p.typeVariables, a:Any[1] | []]);
+    $tvs->cast(@VariableExpression)->map(tv |
+        $indent + 'typeVariable ' + $tv.name->toOne() + ' :' + $tv.genericType->toOne()->printType() + $tv.multiplicity->toOne()->printMul() + '\n'
+    )->joinStrings('');
+}
+
+// -----------------------------------------------------------------------
+// ValueSpecification printing
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printVS(vs:ValueSpecification[1], indent:String[1]):String[1]
+{
+    $vs->match([
+        fe:FunctionExpression[1] | $fe->printFunctionExpression($indent),
+        a:AtomicValue[1] | $a->printAtomicValue($indent),
+        col:Collection[1] | $col->printCollection($indent),
+        v:VariableExpression[1] | $v->printVariable($indent),
+        gmh:GenericTypeAndMultiplicityHolder[1] | $gmh->printHolder($indent),
+        other:Any[1] | $indent + 'unsupported: ' + $other->type()->elementToPath()
+    ]);
+}
+
+function meta::pure::compiler::test::printer::printFunctionExpression(fe:FunctionExpression[1], indent:String[1]):String[1]
+{
+    let kind = $fe->type()->toString()->replace('FlatBufferWrapper', '')->replace('Impl', '');
+    let funcName = if($fe.func->isEmpty(),
+        | if($fe.functionName->isEmpty(), | '?', | $fe.functionName->toOne()),
+        | $fe.func->toOne()->match([
+            qp:QualifiedProperty<Any>[1] |
+                let ownerStr = if($qp.owner->isEmpty(), | '', | $qp.owner->toOne()->cast(@PackageableElement)->fullPath() + '.');
+                let qpParams = $qp.parameters->tail()->cast(@VariableExpression)->map(p | $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul())->joinStrings(', ');
+                $ownerStr + $qp.name->toOne() + '(' + $qpParams + ')';,
+            ap:AbstractProperty<Any>[1] |
+                if($ap.owner->isEmpty(), | $ap.name->toOne(), | $ap.owner->toOne()->cast(@PackageableElement)->fullPath() + '.' + $ap.name->toOne()),
+            pf:PackageableFunction<Any>[1] | $pf->shortPath(),
+            f:Function<Any>[1] | if($fe.functionName->isEmpty(), | '?', | $fe.functionName->toOne())
+        ])
+    );
+    let retType = if($fe.genericType->isEmpty(), | '', | ' :' + $fe.genericType->toOne()->printType() + $fe.multiplicity->toOne()->printMul());
+    let resolvedTP = $fe.resolvedTypeParameters->sort({a,b | $a.name->compare($b.name)})->map(p | $indent + '  typeParam ' + $p.name + ' -> ' + $p.value->printType())->joinStrings('\n');
+    let resolvedMP = $fe.resolvedMultiplicityParameters->sort({a,b | $a.name->compare($b.name)})->map(p | $indent + '  mulParam ' + $p.name + ' -> ' + $p.value->printMul())->joinStrings('\n');
+    let children = $fe.parametersValues->cast(@ValueSpecification)->map(child | $child->printVS($indent + '  '))->joinStrings('\n');
+    [
+        $indent, $kind, ' ', $funcName, $retType,
+        $fe->vsCGT(),
+        $fe.sourceInformation->printSourceInfo(),
+        if($resolvedTP == '', | '', | '\n' + $resolvedTP),
+        if($resolvedMP == '', | '', | '\n' + $resolvedMP),
+        if($children == '', | '', | '\n' + $children)
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printAtomicValue(av:AtomicValue[1], indent:String[1]):String[1]
+{
+    let val = $av.value->toOne();
+    if($val->instanceOf(LambdaFunction),
+       | let lambda = $val->cast(@LambdaFunction<Any>);
+         let paramStr = $lambda.parameters->cast(@VariableExpression)->map(p |
+             $p.name->toOne() + ':' + $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul()
+         )->joinStrings(', ');
+         let retType = if($av.genericType->isEmpty(), | '', | ' :' + $av.genericType->toOne()->printType() + $av.multiplicity->toOne()->printMul());
+         let openVars = $lambda.openVariables->cast(@VariableExpression)->map(v |
+             $indent + '  openVar ' + $v.name->toOne() + ' :' + $v.genericType->toOne()->printType() + $v.multiplicity->toOne()->printMul()
+         )->joinStrings('\n');
+         let body = $lambda.expressionSequence->cast(@ValueSpecification)->map(expr | $expr->printVS($indent + '  '))->joinStrings('\n');
+         [
+             $indent, 'Lambda', if($paramStr->length() > 0, | '(' + $paramStr + ')', | ''), $retType,
+             $av->vsCGT(),
+             $av.sourceInformation->printSourceInfo(),
+             if($openVars == '', | '', | '\n' + $openVars),
+             if($body == '', | '', | '\n' + $body)
+         ]->joinStrings('');,
+       | [
+             $indent, 'AtomicValue  ', $val->formatLiteral($av.genericType->toOne()->printType()),
+             if($av.genericType->isEmpty(), | '', | ' :' + $av.genericType->toOne()->printType() + $av.multiplicity->toOne()->printMul()),
+             $av->vsCGT(),
+             $av.sourceInformation->printSourceInfo()
+         ]->joinStrings('')
+    );
+}
+
+function meta::pure::compiler::test::printer::printCollection(col:Collection[1], indent:String[1]):String[1]
+{
+    let items = $col.values->cast(@ValueSpecification)->map(item | $item->printVS($indent + '  '))->joinStrings('\n');
+    [
+        $indent, 'Collection',
+        if($col.genericType->isEmpty(), | '', | ' :' + $col.genericType->toOne()->printType() + $col.multiplicity->toOne()->printMul()),
+        $col->vsCGT(),
+        $col.sourceInformation->printSourceInfo(),
+        if($items == '', | '', | '\n' + $items)
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printVariable(v:VariableExpression[1], indent:String[1]):String[1]
+{
+    [
+        $indent, 'Variable ', $v.name->toOne(),
+        if($v.genericType->isEmpty(), | '', | ' :' + $v.genericType->toOne()->printType() + $v.multiplicity->toOne()->printMul()),
+        $v->vsCGT(),
+        $v.sourceInformation->printSourceInfo()
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printHolder(gmh:GenericTypeAndMultiplicityHolder[1], indent:String[1]):String[1]
+{
+    // TypeHolder's genericType may be empty or CompilerNotSetGenericType (matches Java where it's null).
+    // Read type info from classifierGenericType instead.
+    let gt = if($gmh.genericType->isNotEmpty() && !$gmh.genericType->toOne()->instanceOf(CompilerNotSetGenericType), | $gmh.genericType->toOne(), | $gmh->cast(@Any).classifierGenericType->toOne());
+    let mul = if($gmh.multiplicity->isNotEmpty(), | $gmh.multiplicity->toOne(), | PureOne);
+    [
+        $indent, 'TypeHolder',
+        ' :' + $gt->printType() + $mul->printMul(),
+        $gmh->vsCGT(),
+        $gmh.sourceInformation->printSourceInfo()
+    ]->joinStrings('');
+}
+
+function meta::pure::compiler::test::printer::printLambda(lambda:FunctionDefinition<Any>[1], indent:String[1]):String[1]
+{
+    let l = $lambda->cast(@LambdaFunction<Any>);
+    let paramStr = $l.parameters->cast(@VariableExpression)->map(p |
+        $p.name->toOne() + ':' + $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul()
+    )->joinStrings(', ');
+    let body = $l.expressionSequence->cast(@ValueSpecification)->map(vs | $vs->printVS($indent + '  '))->joinStrings('\n');
+    $indent + 'Lambda(' + $paramStr + ')' + $l->cast(@Any).classifierGenericType->printCGT() + '\n' + $body;
+}
+
+// -----------------------------------------------------------------------
+// Shared helpers
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::shortPath(element:PackageableElement[1]):String[1]
+{
+    let path = $element->fullPath();
+    if([pair(| $path->startsWith('meta::pure::metamodel::type::primitives::'), | $path->substring(41)),
+        pair(| $path->startsWith('meta::pure::metamodel::') || $path->startsWith('meta::pure::functions::'), | $element.name->toOne())],
+       | $path
+    );
+}
+
+function meta::pure::compiler::test::printer::classifierGT(element:Any[1]):String[1]
+{
+    $element->cast(@Any).classifierGenericType->printCGT();
+}
+
+function meta::pure::compiler::test::printer::vsCGT(vs:ValueSpecification[1]):String[1]
+{
+    $vs->cast(@Any).classifierGenericType->printCGT();
+}
+
+function meta::pure::compiler::test::printer::printCGT(cgt:GenericType[0..1]):String[1]
+{
+    if($cgt->isEmpty(), | '', | '  ~' + $cgt->toOne()->printType());
+}
+
+function meta::pure::compiler::test::printer::printSourceInfo(si:SourceInformation[0..1]):String[1]
+{
+    if($si->isEmpty(), | '',
+        | '  @' + $si.startLine->toOne()->toString() + ':' + $si.startColumn->toOne()->toString() + '-' + $si.endLine->toOne()->toString() + ':' + $si.endColumn->toOne()->toString()
+    );
+}
+
+function meta::pure::compiler::test::printer::formatLiteral(value:Any[1], declaredType:String[1]):String[1]
+{
+    if($value->instanceOf(PackageableElement),
+        | $value->cast(@PackageableElement)->fullPath(),
+        | if($declaredType == 'Integer' || $declaredType == 'Float' || $declaredType == 'Boolean' || $declaredType == 'Decimal',
+              | $value->toString(),
+              | if($declaredType == 'String',
+                  | '\'' + $value->cast(@String) + '\'',
+                  | '\'' + $value->toString() + '\''
+              )
+          );
+    );
+}
+
+// -----------------------------------------------------------------------
+// Type / multiplicity helpers
+// -----------------------------------------------------------------------
+
+function meta::pure::compiler::test::printer::printType(gt:GenericType[1]):String[1]
+{
+    let isInferred = $gt->instanceOf(Inferred);
+    let coreType = $gt->match(
+        [
+            gto:GenericTypeOperation[1] |
+                let opName = $gto.operationType.name->toOne();
+                let op = if([pair(| $opName == 'Union', | '+'), pair(| $opName == 'Difference', | '-'), pair(| $opName == 'Equal', | '='), pair(| $opName == 'Subset', | '\u2286')], | '?');
+                $gto.left->printType() + $op + $gto.right->printType();,
+            gtv:GenericTypeValue[1] |
+                if($gtv.type->isEmpty(), | '?', |
+                    $gtv.type->toOne()->match(
+                        [
+                            tp:TypeParameter[1] | $tp.name + if($tp.owner->isEmpty(), | '', | '~' + $tp.owner->toOne()->match([ pe:PackageableElement[1] | $pe->shortPath(), a:Any[1] | '?' ])),
+                            ft:FunctionType[1] |
+                                let pStr = $ft.parameters->cast(@VariableExpression)->map(p | $p.genericType->toOne()->printType() + $p.multiplicity->toOne()->printMul())->joinStrings(', ');
+                                let rStr = $ft.returnType->toOne()->printType() + $ft.returnMultiplicity->toOne()->printMul();
+                                '{' + $pStr + '->' + $rStr + '}';,
+                            rt:RelationType<Any>[1] |
+                                let cols = $rt.columns->map(col |
+                                    let colName = if($col.nameWildCard == true, | '?', | $col.name->toOne());
+                                    let colType = if($col.genericType->isEmpty(), | '', | $col.genericType->toOne()->printType());
+                                    let colMul = if($col.multiplicity->isEmpty(), | '', | $col.multiplicity->toOne()->printMul());
+                                    $colName + ':' + $colType + $colMul;
+                                )->joinStrings(', ');
+                                '(' + $cols + ')';,
+                            pe:PackageableElement[1] |
+                                if($pe.name->isEmpty(), | '?', | $pe->shortPath()),
+                            a:Any[1] | '?'
+                        ]
+                    )
+                ),
+            a:Any[1] | '?'
+        ]
+    );
+    let typeArgs = $gt->genericTypeTypeArguments()->map(t | $t->printType())->joinStrings(', ');
+    let mulArgs = $gt->genericTypeMultiplicityArguments()->map(m | let s = $m->printMul(); if($s->startsWith('[') && $s->endsWith(']'), | $s->substring(1, $s->length() - 1), | $s);)->joinStrings(', ');
+    let args = if($typeArgs == '', | '', | $typeArgs) + if($mulArgs == '', | '', | '|' + $mulArgs);
+    let typeStr = if($args == '', | $coreType, | $coreType + '<' + $args + '>');
+    let withTVV = $gt->match([
+        cgt:UserDefinedGenericType[1] |
+            if($cgt.typeVariableValues->isEmpty(), | $typeStr,
+                | $typeStr + '(' + $cgt.typeVariableValues->cast(@ValueSpecification)->map(v | $v->printValueInline())->joinStrings(', ') + ')'
+            ),
+        a:Any[1] | $typeStr
+    ]);
+    if($isInferred, | '#' + $withTVV + '#', | $withTVV);
+}
+
+function meta::pure::compiler::test::printer::printValueInline(vs:ValueSpecification[1]):String[1]
+{
+    $vs->match([a:AtomicValue[1] | $a.value->toOne()->toString(), v:Any[1] | $v->toString()]);
+}
+
+function meta::pure::compiler::test::printer::printMul(mul:Multiplicity[1]):String[1]
+{
+    let isInferred = $mul->instanceOf(Inferred);
+    let coreMul = $mul->match([
+        pm:PackageableMultiplicity[1] |
+            let path = $pm->fullPath();
+            let strip1 = if($path->startsWith('meta::pure::metamodel::multiplicity::'), | $path->substring(37), | $path);
+            let strip2 = if($strip1->startsWith('Inferred'), | $strip1->substring(8), | $strip1);
+            if([pair(| $strip2 == 'PureOne', | '[1]'),
+                pair(| $strip2 == 'ZeroOne', | '[0..1]'),
+                pair(| $strip2 == 'ZeroMany', | '[*]'),
+                pair(| $strip2 == 'OneMany', | '[1..*]')],
+               | '[' + $strip2 + ']'
+            );,
+        cm:ConcreteMultiplicity[1] |
+            if([pair(| $cm.upperBound->isEmpty() && ($cm.lowerBound->isEmpty() || $cm.lowerBound.value == 0), | '[*]'),
+                pair(| $cm.upperBound->isEmpty(), | '[' + $cm.lowerBound.value->toOne()->toString() + '..*]'),
+                pair(| $cm.lowerBound.value == $cm.upperBound.value, | '[' + $cm.lowerBound.value->toOne()->toString() + ']')],
+               | '[' + $cm.lowerBound.value->toOne()->toString() + '..' + $cm.upperBound.value->toOne()->toString() + ']'
+            );,
+        mp:MultiplicityParameter[1] |
+            '[' + $mp.name + if($mp.owner->isEmpty(), | '', | '~' + $mp.owner->toOne()->match([ pe:PackageableElement[1] | $pe->shortPath(), a:Any[1] | '?' ])) + ']',
+        a:Any[1] | '[?]'
+    ]);
+    if($isInferred, | '#' + $coreMul + '#', | $coreMul);
+}
+
+// --- Tests for printType on synthetic GenericTypes ---
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameter():Boolean[1]
+{
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    assertEquals('T', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameterWithOwner():Boolean[1]
+{
+    let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+    let builtOwner = ^$owner(name='MyClass', package=^Package(name='test', package=^Package(name='Root')));
+    let tp = ^TypeParameter(name='T', contravariant=false, owner=$builtOwner);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    assertEquals('T~test::MyClass', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintConcreteType():Boolean[1]
+{
+    let gt = ^UserDefinedGenericType(type=String);
+    assertEquals('String', $gt->printType());
+}
+
+function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintGenericTypeWithArgs():Boolean[1]
+{
+    // Wrapper<String> — a Class with one type argument
+    let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+    let builtOwner = ^$owner(name='Wrapper', package=^Package(name='test', package=^Package(name='Root')));
+    let gt = ^UserDefinedGenericType(type=$builtOwner, typeArguments=[^UserDefinedGenericType(type=String)]);
+    assertEquals('test::Wrapper<String>', $gt->printType());
+}
+

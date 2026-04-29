@@ -1,0 +1,47 @@
+###Pure
+Class test::Animal
+{
+    describe() {
+        'animal'
+    }: String[1];
+}
+
+Class test::Dog extends test::Animal
+{
+    describe() {
+        'dog'
+    }: String[1];
+    breed : String[1];
+}
+
+function test::use():Any[*]
+{
+    let d = ^test::Dog(breed='Lab');
+    $d.describe();
+}
+
+
+###CompiledGraph
+class test::Animal extends Any  ~Class<test::Animal>  @2:1-7:1
+  qualifiedProperty describe() :String[1]
+    AtomicValue  'animal' :String[1]  ~AtomicValue  @5:9-5:16
+
+class test::Dog extends test::Animal  ~Class<test::Dog>  @9:1-15:1
+  property breed :String[1]  ~Property<test::Dog, String|1>
+  qualifiedProperty describe() :String[1]
+    AtomicValue  'dog' :String[1]  ~AtomicValue  @12:9-12:13
+
+function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Dog##[1]#  ~FunctionInvocation  @19:5-19:35
+    typeParam T -> #test::Dog#
+    mulParam m -> #[1]#
+    AtomicValue  'd' :String[1]  ~AtomicValue  @19:9-19:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Dog##[1]#  ~FunctionInvocation  @19:13-19:35
+      typeParam T -> test::Dog
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Dog|1>  @19:13-19:35
+      Collection :#KeyExpression#[1]  ~Collection  @19:13-19:35
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @19:24-19:34
+          AtomicValue  'breed' :String[1]  ~AtomicValue  @19:24-19:34
+          AtomicValue  'Lab' :String[1]  ~AtomicValue  @19:30-19:34
+  DotApplication test::Dog.describe() :#String##[1]#  ~DotApplication  @20:7-20:17
+    Variable d :#test::Dog##[1]#  ~VariableExpression  @20:5-20:6

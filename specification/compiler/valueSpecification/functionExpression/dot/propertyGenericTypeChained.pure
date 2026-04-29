@@ -1,0 +1,46 @@
+###Pure
+Class test::Wrapper<T>
+{
+    inner : T[1];
+}
+
+Class test::Box<U>
+{
+    value : U[1];
+}
+
+function test::use():Any[*]
+{
+    let w = ^test::Wrapper<test::Box<String>>(inner=^test::Box<String>(value='hello'));
+    $w.inner.value;
+}
+
+
+###CompiledGraph
+class test::Wrapper extends Any  ~Class<test::Wrapper<T~test::Wrapper>>  @2:1-5:1
+  property inner :T~test::Wrapper[1]  ~Property<test::Wrapper<T~test::Wrapper>, T~test::Wrapper|1>
+
+class test::Box extends Any  ~Class<test::Box<U~test::Box>>  @7:1-10:1
+  property value :U~test::Box[1]  ~Property<test::Box<U~test::Box>, U~test::Box|1>
+
+function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Wrapper<test::Box<String>>##[1]#  ~FunctionInvocation  @14:5-14:86
+    typeParam T -> #test::Wrapper<test::Box<String>>#
+    mulParam m -> #[1]#
+    AtomicValue  'w' :String[1]  ~AtomicValue  @14:9-14:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Wrapper<test::Box<String>>##[1]#  ~FunctionInvocation  @14:13-14:86
+      typeParam T -> test::Wrapper<test::Box<String>>
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Wrapper<test::Box<String>>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Wrapper<test::Box<String>>|1>  @14:13-14:86
+      Collection :#KeyExpression#[1]  ~Collection  @14:13-14:86
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @14:47-14:85
+          AtomicValue  'inner' :String[1]  ~AtomicValue  @14:47-14:85
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<String>##[1]#  ~FunctionInvocation  @14:53-14:85
+            typeParam T -> test::Box<String>
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Box<String>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Box<String>|1>  @14:53-14:85
+            Collection :#KeyExpression#[1]  ~Collection  @14:53-14:85
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @14:72-14:84
+                AtomicValue  'value' :String[1]  ~AtomicValue  @14:72-14:84
+                AtomicValue  'hello' :String[1]  ~AtomicValue  @14:78-14:84
+  DotApplication test::Box.value :#String##[1]#  ~DotApplication  @15:13-15:18
+    DotApplication test::Wrapper.inner :#test::Box<String>##[1]#  ~DotApplication  @15:7-15:12
+      Variable w :#test::Wrapper<test::Box<String>>##[1]#  ~VariableExpression  @15:5-15:6

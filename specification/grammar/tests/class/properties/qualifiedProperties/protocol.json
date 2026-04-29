@@ -1,0 +1,379 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "ClassWithQualifiedProperties",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "qualifiedProperties" : [ {
+        "_type" : "QualifiedProperty",
+        "expressionSequence" : [ {
+          "_type" : "FunctionInvocation",
+          "functionName" : "letFunction",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 35,
+            "endLine" : 6,
+            "startColumn" : 5,
+            "startLine" : 6
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "String"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 6,
+              "startColumn" : 9,
+              "startLine" : 6
+            },
+            "value" : "x"
+          }, {
+            "_type" : "FunctionInvocation",
+            "functionName" : "plus",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 35,
+              "endLine" : 6,
+              "startColumn" : 18,
+              "startLine" : 6
+            },
+            "parametersValues" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "plus",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 35,
+                "endLine" : 6,
+                "startColumn" : 18,
+                "startLine" : 6
+              },
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "String"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 16,
+                  "endLine" : 6,
+                  "startColumn" : 13,
+                  "startLine" : 6
+                },
+                "value" : "ok"
+              }, {
+                "_type" : "VariableExpression",
+                "name" : "param",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 25,
+                  "endLine" : 6,
+                  "startColumn" : 20,
+                  "startLine" : 6
+                }
+              } ]
+            }, {
+              "_type" : "VariableExpression",
+              "name" : "param2",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 35,
+                "endLine" : 6,
+                "startColumn" : 29,
+                "startLine" : 6
+              }
+            } ]
+          } ]
+        }, {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 6,
+            "endLine" : 7,
+            "startColumn" : 5,
+            "startLine" : 7
+          }
+        } ],
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 11,
+              "endLine" : 8,
+              "startColumn" : 6,
+              "startLine" : 8
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "qualifiedProperty",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 15,
+          "endLine" : 8,
+          "startColumn" : 3,
+          "startLine" : 5
+        },
+        "parameters" : [ {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 154,
+                "endLine" : 5,
+                "startColumn" : 149,
+                "startLine" : 5
+              },
+              "value" : "String"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "name" : "param",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 157,
+            "endLine" : 5,
+            "startColumn" : 142,
+            "startLine" : 5
+          }
+        }, {
+          "_type" : "VariableExpression",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 173,
+                "endLine" : 5,
+                "startColumn" : 168,
+                "startLine" : 5
+              },
+              "value" : "String"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UserDefinedAdHocMultiplicity",
+            "lowerBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            },
+            "upperBound" : {
+              "_type" : "MultiplicityValue",
+              "value" : 1
+            }
+          },
+          "name" : "param2",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 176,
+            "endLine" : 5,
+            "startColumn" : 160,
+            "startLine" : 5
+          }
+        } ],
+        "stereotypes" : [ {
+          "_type" : "Stereotype_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 17,
+              "endLine" : 5,
+              "startColumn" : 14,
+              "startLine" : 5
+            },
+            "value" : "flag"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 12,
+            "endLine" : 5,
+            "startColumn" : 5,
+            "startLine" : 5
+          },
+          "value" : "AProfile"
+        }, {
+          "_type" : "Stereotype_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 54,
+              "endLine" : 5,
+              "startColumn" : 48,
+              "startLine" : 5
+            },
+            "value" : "newFlag"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 46,
+            "endLine" : 5,
+            "startColumn" : 20,
+            "startLine" : 5
+          },
+          "value" : "protocol::support::AProfile"
+        } ],
+        "taggedValues" : [ {
+          "_type" : "TaggedValue",
+          "tag" : {
+            "_type" : "Tag_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 90,
+                "endLine" : 5,
+                "startColumn" : 87,
+                "startLine" : 5
+              },
+              "value" : "tag1"
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 85,
+              "endLine" : 5,
+              "startColumn" : 59,
+              "startLine" : 5
+            },
+            "value" : "protocol::support::AProfile"
+          },
+          "value" : "yeah"
+        }, {
+          "_type" : "TaggedValue",
+          "tag" : {
+            "_type" : "Tag_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 114,
+                "endLine" : 5,
+                "startColumn" : 111,
+                "startLine" : 5
+              },
+              "value" : "tag2"
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 109,
+              "endLine" : 5,
+              "startColumn" : 102,
+              "startLine" : 5
+            },
+            "value" : "AProfile"
+          },
+          "value" : "ok"
+        } ]
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 15,
+        "startColumn" : 1,
+        "startLine" : 11
+      },
+      "p_stereotypes" : [ {
+        "_type" : "Stereotype",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 13,
+          "startColumn" : 17,
+          "startLine" : 13
+        },
+        "value" : "flag"
+      }, {
+        "_type" : "Stereotype",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 29,
+          "endLine" : 13,
+          "startColumn" : 23,
+          "startLine" : 13
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "_type" : "Tag",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 13,
+          "endLine" : 14,
+          "startColumn" : 10,
+          "startLine" : 14
+        },
+        "value" : "tag1"
+      }, {
+        "_type" : "Tag",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 19,
+          "endLine" : 14,
+          "startColumn" : 16,
+          "startLine" : 14
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

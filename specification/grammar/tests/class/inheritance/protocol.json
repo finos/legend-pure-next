@@ -1,0 +1,216 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "generalizations" : [ {
+        "_type" : "Generalization",
+        "general" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 60,
+              "endLine" : 3,
+              "startColumn" : 32,
+              "startLine" : 3
+            },
+            "value" : "protocol::support::SuperClass"
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 60,
+          "endLine" : 3,
+          "startColumn" : 32,
+          "startLine" : 3
+        }
+      }, {
+        "_type" : "Generalization",
+        "general" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 67,
+              "endLine" : 3,
+              "startColumn" : 63,
+              "startLine" : 3
+            },
+            "value" : "Light"
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 67,
+          "endLine" : 3,
+          "startColumn" : 63,
+          "startLine" : 3
+        }
+      } ],
+      "name" : "AClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      }
+    }, {
+      "_type" : "Class",
+      "generalizations" : [ {
+        "_type" : "Generalization",
+        "general" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 60,
+              "endLine" : 7,
+              "startColumn" : 37,
+              "startLine" : 7
+            },
+            "value" : "protocol::support::Light"
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 60,
+          "endLine" : 7,
+          "startColumn" : 37,
+          "startLine" : 7
+        }
+      } ],
+      "name" : "SimpleClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 9,
+        "startColumn" : 1,
+        "startLine" : 7
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "Light",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 13,
+        "startColumn" : 1,
+        "startLine" : 11
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "SuperClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 15
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 18,
+              "endLine" : 17,
+              "startColumn" : 13,
+              "startLine" : 17
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 0
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "property",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 17,
+          "startColumn" : 3,
+          "startLine" : 17
+        }
+      }, {
+        "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 21,
+              "endLine" : 18,
+              "startColumn" : 15,
+              "startLine" : 18
+            },
+            "value" : "Integer"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "val",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 18,
+          "startColumn" : 3,
+          "startLine" : 18
+        }
+      } ]
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

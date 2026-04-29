@@ -1,0 +1,23 @@
+###Pure
+import meta::pure::metamodel::relation::*;
+
+function f(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1]):Any[*]
+{
+   $x->distinct(~[legal]);
+}
+
+native function distinct<X,T>(rel:Relation<T>[1], columns:ColSpecArray<X⊆T>[1]):Relation<X>[1];
+
+###CompiledGraph
+function f_Relation_1__Any_MANY_(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1]):Any[*]  ~UserDefinedFunction<{Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1]->Any[*]}>
+  ArrowInvocation distinct_Relation_1__ColSpecArray_1__Relation_1_ :#Relation<#(legal:String[1])#>##[1]#  ~ArrowInvocation  @6:6-6:25
+    typeParam T -> (legal:String[1], other:Integer[0..1], yeah:Float[1])
+    typeParam X -> #(legal:String[1])#
+    Variable x :#Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>##[1]#  ~VariableExpression  @6:4-6:5
+    FunctionInvocation colSpecArray_String_MANY__GenericTypeAndMultiplicityHolder_1__ColSpecArray_1_ :#ColSpecArray<#(legal:String[1])#>##[1]#  ~FunctionInvocation  @6:17-6:24
+      typeParam T -> #(legal:String[1])#
+      Collection :#String#[1]  ~Collection
+        AtomicValue  'legal' :String[1]  ~AtomicValue  @6:19-6:23
+      TypeHolder :CompilerGenericTypeAndMultiplicityHolder<#(legal:String[1])#|1>[1]  ~CompilerGenericTypeAndMultiplicityHolder
+
+native function distinct_Relation_1__ColSpecArray_1__Relation_1_(rel:Relation<T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1], columns:ColSpecArray<X~distinct_Relation_1__ColSpecArray_1__Relation_1_⊆T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]):Relation<X~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]  ~NativeFunction<{Relation<T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1], ColSpecArray<X~distinct_Relation_1__ColSpecArray_1__Relation_1_⊆T~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]->Relation<X~distinct_Relation_1__ColSpecArray_1__Relation_1_>[1]}>

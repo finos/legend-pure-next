@@ -1,0 +1,153 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "ClassWithPropertiesWithAggregationKind",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "None"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 23,
+              "endLine" : 4,
+              "startColumn" : 17,
+              "startLine" : 4
+            },
+            "value" : "Integer"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 27,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "Composite"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 29,
+              "endLine" : 5,
+              "startColumn" : 23,
+              "startLine" : 5
+            },
+            "value" : "Integer"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "value2",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 33,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "Shared"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 26,
+              "endLine" : 6,
+              "startColumn" : 20,
+              "startLine" : 6
+            },
+            "value" : "Integer"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "value3",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 30,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

@@ -1,0 +1,195 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "DotApplication",
+        "functionName" : "A",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 5,
+          "startColumn" : 9,
+          "startLine" : 5
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 8,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          },
+          "value" : {
+            "value" : "myEnum"
+          }
+        } ]
+      }, {
+        "_type" : "DotApplication",
+        "functionName" : "B",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 10,
+          "endLine" : 6,
+          "startColumn" : 9,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "AtomicValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 8,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          },
+          "value" : {
+            "value" : "myEnum"
+          }
+        } ]
+      }, {
+        "_type" : "Collection",
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 2
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 2
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 22,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        },
+        "values" : [ {
+          "_type" : "DotApplication",
+          "functionName" : "A",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 11,
+            "endLine" : 7,
+            "startColumn" : 10,
+            "startLine" : 7
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 9,
+              "endLine" : 7,
+              "startColumn" : 4,
+              "startLine" : 7
+            },
+            "value" : {
+              "value" : "myEnum"
+            }
+          } ]
+        }, {
+          "_type" : "DotApplication",
+          "functionName" : "B",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 21,
+            "endLine" : 7,
+            "startColumn" : 20,
+            "startLine" : 7
+          },
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 19,
+              "endLine" : 7,
+              "startColumn" : 14,
+              "startLine" : 7
+            },
+            "value" : {
+              "value" : "myEnum"
+            }
+          } ]
+        } ]
+      } ],
+      "functionName" : "f",
+      "name" : "f__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 27,
+            "endLine" : 3,
+            "startColumn" : 25,
+            "startLine" : 3
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    }, {
+      "_type" : "Enumeration",
+      "name" : "myEnum",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 10
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "name" : "A",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 3,
+          "endLine" : 12,
+          "startColumn" : 3,
+          "startLine" : 12
+        }
+      }, {
+        "_type" : "Property",
+        "name" : "B",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 3,
+          "endLine" : 13,
+          "startColumn" : 3,
+          "startLine" : 13
+        }
+      } ]
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

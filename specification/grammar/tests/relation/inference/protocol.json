@@ -1,0 +1,342 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "NativeFunction",
+      "functionName" : "rename",
+      "name" : "rename_Relation_1__ColSpec_1__ColSpec_1__Relation_1_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 175,
+        "endLine" : 2,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "meta::pure::functions::relation"
+      },
+      "parameters" : [ {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 93,
+              "endLine" : 2,
+              "startColumn" : 86,
+              "startLine" : 2
+            },
+            "value" : "Relation"
+          },
+          "typeArguments" : [ {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "TypeParameter",
+              "name" : "T"
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "r",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 99,
+          "endLine" : 2,
+          "startColumn" : 83,
+          "startLine" : 2
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 113,
+              "endLine" : 2,
+              "startColumn" : 107,
+              "startLine" : 2
+            },
+            "value" : "ColSpec"
+          },
+          "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
+            "left" : {
+              "_type" : "GenericTypeOperation",
+              "left" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "TypeParameter",
+                  "name" : "Z"
+                }
+              },
+              "operationType" : {
+                "_type" : "Enum_Pointer",
+                "extraPointerValues" : [ {
+                  "_type" : "PointerValue",
+                  "value" : "Equal"
+                } ],
+                "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+              },
+              "right" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "RelationType",
+                  "columns" : [ {
+                    "_type" : "Column",
+                    "genericType" : {
+                      "_type" : "UserDefinedGenericType",
+                      "type" : {
+                        "_type" : "TypeParameter",
+                        "name" : "K"
+                      }
+                    },
+                    "nameWildCard" : true,
+                    "p_sourceInformation" : {
+                      "_type" : "SourceInformation",
+                      "endColumn" : 120,
+                      "endLine" : 2,
+                      "startColumn" : 118,
+                      "startLine" : 2
+                    }
+                  } ]
+                }
+              }
+            },
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Subset"
+              } ],
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
+            "right" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
+                "name" : "T"
+              }
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "old",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 127,
+          "endLine" : 2,
+          "startColumn" : 102,
+          "startLine" : 2
+        }
+      }, {
+        "_type" : "VariableExpression",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 141,
+              "endLine" : 2,
+              "startColumn" : 135,
+              "startLine" : 2
+            },
+            "value" : "ColSpec"
+          },
+          "typeArguments" : [ {
+            "_type" : "GenericTypeOperation",
+            "left" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
+                "name" : "V"
+              }
+            },
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Equal"
+              } ],
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
+            "right" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "RelationType",
+                "columns" : [ {
+                  "_type" : "Column",
+                  "genericType" : {
+                    "_type" : "UserDefinedGenericType",
+                    "type" : {
+                      "_type" : "TypeParameter",
+                      "name" : "K"
+                    }
+                  },
+                  "nameWildCard" : true,
+                  "p_sourceInformation" : {
+                    "_type" : "SourceInformation",
+                    "endColumn" : 148,
+                    "endLine" : 2,
+                    "startColumn" : 146,
+                    "startLine" : 2
+                  }
+                } ]
+              }
+            }
+          } ]
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "new",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 153,
+          "endLine" : 2,
+          "startColumn" : 130,
+          "startLine" : 2
+        }
+      } ],
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 164,
+            "endLine" : 2,
+            "startColumn" : 157,
+            "startLine" : 2
+          },
+          "value" : "Relation"
+        },
+        "typeArguments" : [ {
+          "_type" : "GenericTypeOperation",
+          "left" : {
+            "_type" : "GenericTypeOperation",
+            "left" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
+                "name" : "T"
+              }
+            },
+            "operationType" : {
+              "_type" : "Enum_Pointer",
+              "extraPointerValues" : [ {
+                "_type" : "PointerValue",
+                "value" : "Difference"
+              } ],
+              "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+            },
+            "right" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "TypeParameter",
+                "name" : "Z"
+              }
+            }
+          },
+          "operationType" : {
+            "_type" : "Enum_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "value" : "Union"
+            } ],
+            "value" : "meta::pure::metamodel::relation::GenericTypeOperationType"
+          },
+          "right" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "TypeParameter",
+              "name" : "V"
+            }
+          }
+        } ]
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        },
+        "upperBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 1
+        }
+      },
+      "stereotypes" : [ {
+        "_type" : "Stereotype_Pointer",
+        "extraPointerValues" : [ {
+          "_type" : "PointerValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 30,
+            "endLine" : 2,
+            "startColumn" : 23,
+            "startLine" : 2
+          },
+          "value" : "function"
+        } ],
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 21,
+          "endLine" : 2,
+          "startColumn" : 19,
+          "startLine" : 2
+        },
+        "value" : "PCT"
+      } ],
+      "typeParameters" : [ {
+        "_type" : "TypeParameter",
+        "name" : "T"
+      }, {
+        "_type" : "TypeParameter",
+        "name" : "Z"
+      }, {
+        "_type" : "TypeParameter",
+        "name" : "K"
+      }, {
+        "_type" : "TypeParameter",
+        "name" : "V"
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

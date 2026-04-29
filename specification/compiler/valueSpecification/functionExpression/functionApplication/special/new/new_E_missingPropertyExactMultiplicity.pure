@@ -1,0 +1,13 @@
+###Error
+Missing required property 'pair' of type String in new expression (at valueSpecification/functionExpression/functionApplication/special/new/new_E_missingPropertyExactMultiplicity 7:3-7:22)
+
+###Pure
+function test::new::testNew(): Any[*]
+{
+  ^test::new::Holder();
+}
+
+Class test::new::Holder
+{
+  pair: String[2];
+}

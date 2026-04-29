@@ -1,0 +1,23 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "Light",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 4,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

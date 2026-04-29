@@ -1,0 +1,227 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Association",
+      "name" : "AnAssociation4",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 41,
+              "endLine" : 5,
+              "startColumn" : 6,
+              "startLine" : 5
+            },
+            "value" : "protocol::support::AssociationClassA"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "a",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 45,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      }, {
+        "_type" : "Property",
+        "defaultValue" : {
+          "_type" : "LambdaFunction",
+          "expressionSequence" : [ {
+            "_type" : "Collection",
+            "multiplicity" : {
+              "_type" : "UserDefinedAdHocMultiplicity",
+              "lowerBound" : {
+                "_type" : "MultiplicityValue",
+                "value" : 2
+              },
+              "upperBound" : {
+                "_type" : "MultiplicityValue",
+                "value" : 2
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 94,
+              "endLine" : 6,
+              "startColumn" : 51,
+              "startLine" : 6
+            },
+            "values" : [ {
+              "_type" : "FunctionInvocation",
+              "functionName" : "new",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 71,
+                "endLine" : 6,
+                "startColumn" : 52,
+                "startLine" : 6
+              },
+              "parametersValues" : [ {
+                "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "AssociationClassB"
+                  }
+                },
+                "multiplicity" : {
+                  "_type" : "UserDefinedAdHocMultiplicity",
+                  "lowerBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  },
+                  "upperBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 71,
+                  "endLine" : 6,
+                  "startColumn" : 52,
+                  "startLine" : 6
+                }
+              } ]
+            }, {
+              "_type" : "FunctionInvocation",
+              "functionName" : "new",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 93,
+                "endLine" : 6,
+                "startColumn" : 74,
+                "startLine" : 6
+              },
+              "parametersValues" : [ {
+                "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "AssociationClassB"
+                  }
+                },
+                "multiplicity" : {
+                  "_type" : "UserDefinedAdHocMultiplicity",
+                  "lowerBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  },
+                  "upperBound" : {
+                    "_type" : "MultiplicityValue",
+                    "value" : 1
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 93,
+                  "endLine" : 6,
+                  "startColumn" : 74,
+                  "startLine" : 6
+                }
+              } ]
+            } ]
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 94,
+            "endLine" : 6,
+            "startColumn" : 49,
+            "startLine" : 6
+          }
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 41,
+              "endLine" : 6,
+              "startColumn" : 6,
+              "startLine" : 6
+            },
+            "value" : "protocol::support::AssociationClassB"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "b",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 95,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      } ]
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassA",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 11,
+        "startColumn" : 1,
+        "startLine" : 9
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassB",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 15,
+        "startColumn" : 1,
+        "startLine" : 13
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

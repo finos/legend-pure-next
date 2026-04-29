@@ -1,0 +1,45 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Enumeration",
+      "name" : "AnEnum",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "name" : "Val",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 5,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "_type" : "Property",
+        "name" : "Val2",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 6,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        }
+      } ]
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

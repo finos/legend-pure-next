@@ -19,4 +19,14 @@ website/npm-debug.log*
 website/yarn-debug.log*
 website/yarn-error.log*
 **/target/
+**/dependency-reduced-pom.xml
 /.idea/
+/.vscode/
+/.agent/
+
+# Build outputs (includes specification artifacts generated from m3.ttl)
+/build/
+
+# Platforms
+/platforms/typescript/node_modules/
+/platforms/typescript/dist/

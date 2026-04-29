@@ -1,0 +1,92 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::test::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::date::*;
+import meta::pure::functions::io::*;
+import meta::pure::functions::meta::*;
+import meta::pure::functions::string::*;
+
+// ---------------------------------------------------------------------------
+// Pure-native test runner.
+//
+// Exposed to the CLI as:
+//   java -jar pure-cli.jar execute \
+//       --pdb build/core.pdb \
+//       --pdb build/compiler.pdb \
+//       --function "meta::pure::test::runCompiledGraphTests" \
+//       --args "specification/compiler"
+//
+// Walks the filesystem under the given directory, reads each .pure file,
+// and asserts it compiles correctly against the ###CompiledGraph or ###Error
+// section that documents the expected output.
+// ---------------------------------------------------------------------------
+// Render a progress bar using a precomputed fixed-width template.
+// barWidth is fixed at 30 via the BAR_FULL / BAR_EMPTY constants below.
+function meta::pure::test::renderBar(done:Integer[1], total:Integer[1]):String[1]
+{
+    let fullBar = '\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588';
+    let emptyBar = '\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591';
+    let width = 30;
+    // `/` returns Float in Pure — convert back to Integer via floor.
+    let filled = if($total == 0, |0, |floor($done * $width / $total));
+    let pct = if($total == 0, |100, |floor($done * 100 / $total));
+    // Each block char is 3 bytes in UTF-8 — substring operates on Java char indices,
+    // so taking first `filled` characters of the full/empty templates gives the right slice.
+    '[' + substring($fullBar, 0, $filled)
+        + substring($emptyBar, 0, $width - $filled)
+        + '] ' + $pct->toString() + '%  ('
+        + $done->toString() + '/' + $total->toString() + ')';
+}
+
+function meta::pure::test::runCompiledGraphTests(testDir:String[1]):Boolean[1]
+{
+    let files = directoryTree($testDir)
+        ->filter(f | $f->endsWith('.pure'));
+    let total = $files->size();
+    println('Running ' + $total->toString() + ' compiled-graph tests from ' + $testDir + '...');
+    // Reserve two lines for the progress bar + current-test display, then park
+    // the cursor on the bar line (= 2 lines above current position).
+    println('');
+    println('');
+    print('\u001B[2A');
+
+    let start = currentTimeMillis();
+
+    // Compute relative sourceId: strip the testDir prefix and the `.pure` extension
+    // so tests see e.g. `association/profile/profile_E_unknownProfile` instead of
+    // an absolute filesystem path.
+    let prefixLen = $testDir->length() + 1;
+    range(0, $total)->map(i |
+        let f = $files->at($i);
+        let name = substring($f, $prefixLen, $f->length() - 5);
+        // Invariant: on entry the cursor is at column 0 of the bar line.
+        //   \r\u001B[K<bar>     — clear bar line, write bar
+        //   \u001B[B\r\u001B[K  — cursor down (no scroll) to name line, col 0, clear
+        //   '  ' + $name        — write name
+        //   \u001B[K            — clear tail (in case previous name was longer)
+        //   \u001B[A\r          — cursor up back to bar line, col 0 (invariant restored)
+        print('\r\u001B[K' + meta::pure::test::renderBar($i + 1, $total)
+              + '\u001B[B\r\u001B[K  ' + $name + '\u001B[K\u001B[A\r');
+        meta::pure::compiler::test::assertCompiledGraph(readFile($f), $name);
+    );
+
+    let elapsedMs = currentTimeMillis() - $start;
+    // On loop exit cursor is at the bar line. Clear bar line, move to name line,
+    // clear it, then drop below the display area before printing the summary.
+    print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
+    println('OK: ' + $total->toString() + ' / ' + $total->toString() + ' tests passed in ' + $elapsedMs->toString() + ' ms');
+    true;
+}

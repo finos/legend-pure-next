@@ -1,0 +1,289 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Enumeration",
+      "name" : "AnEnum2",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 8,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "name" : "Val",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 5,
+          "endLine" : 6,
+          "startColumn" : 3,
+          "startLine" : 6
+        }
+      }, {
+        "_type" : "Property",
+        "name" : "Val2",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 127,
+          "endLine" : 7,
+          "startColumn" : 3,
+          "startLine" : 7
+        },
+        "stereotypes" : [ {
+          "_type" : "Stereotype_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 17,
+              "endLine" : 7,
+              "startColumn" : 14,
+              "startLine" : 7
+            },
+            "value" : "flag"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 12,
+            "endLine" : 7,
+            "startColumn" : 5,
+            "startLine" : 7
+          },
+          "value" : "AProfile"
+        }, {
+          "_type" : "Stereotype_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 54,
+              "endLine" : 7,
+              "startColumn" : 48,
+              "startLine" : 7
+            },
+            "value" : "newFlag"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 46,
+            "endLine" : 7,
+            "startColumn" : 20,
+            "startLine" : 7
+          },
+          "value" : "protocol::support::AProfile"
+        } ],
+        "taggedValues" : [ {
+          "_type" : "TaggedValue",
+          "tag" : {
+            "_type" : "Tag_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 90,
+                "endLine" : 7,
+                "startColumn" : 87,
+                "startLine" : 7
+              },
+              "value" : "tag1"
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 85,
+              "endLine" : 7,
+              "startColumn" : 59,
+              "startLine" : 7
+            },
+            "value" : "protocol::support::AProfile"
+          },
+          "value" : "yeah"
+        }, {
+          "_type" : "TaggedValue",
+          "tag" : {
+            "_type" : "Tag_Pointer",
+            "extraPointerValues" : [ {
+              "_type" : "PointerValue",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 114,
+                "endLine" : 7,
+                "startColumn" : 111,
+                "startLine" : 7
+              },
+              "value" : "tag2"
+            } ],
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 109,
+              "endLine" : 7,
+              "startColumn" : 102,
+              "startLine" : 7
+            },
+            "value" : "AProfile"
+          },
+          "value" : "ok"
+        } ]
+      } ],
+      "stereotypes" : [ {
+        "_type" : "Stereotype_Pointer",
+        "extraPointerValues" : [ {
+          "_type" : "PointerValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 20,
+            "endLine" : 4,
+            "startColumn" : 17,
+            "startLine" : 4
+          },
+          "value" : "flag"
+        } ],
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 15,
+          "endLine" : 4,
+          "startColumn" : 8,
+          "startLine" : 4
+        },
+        "value" : "AProfile"
+      }, {
+        "_type" : "Stereotype_Pointer",
+        "extraPointerValues" : [ {
+          "_type" : "PointerValue",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 57,
+            "endLine" : 4,
+            "startColumn" : 51,
+            "startLine" : 4
+          },
+          "value" : "newFlag"
+        } ],
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 49,
+          "endLine" : 4,
+          "startColumn" : 23,
+          "startLine" : 4
+        },
+        "value" : "protocol::support::AProfile"
+      } ],
+      "taggedValues" : [ {
+        "_type" : "TaggedValue",
+        "tag" : {
+          "_type" : "Tag_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 93,
+              "endLine" : 4,
+              "startColumn" : 90,
+              "startLine" : 4
+            },
+            "value" : "tag1"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 88,
+            "endLine" : 4,
+            "startColumn" : 62,
+            "startLine" : 4
+          },
+          "value" : "protocol::support::AProfile"
+        },
+        "value" : "yeah"
+      }, {
+        "_type" : "TaggedValue",
+        "tag" : {
+          "_type" : "Tag_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 117,
+              "endLine" : 4,
+              "startColumn" : 114,
+              "startLine" : 4
+            },
+            "value" : "tag2"
+          } ],
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 112,
+            "endLine" : 4,
+            "startColumn" : 105,
+            "startLine" : 4
+          },
+          "value" : "AProfile"
+        },
+        "value" : "ok"
+      } ]
+    }, {
+      "_type" : "Profile",
+      "name" : "AProfile",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 10
+      },
+      "p_stereotypes" : [ {
+        "_type" : "Stereotype",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 12,
+          "startColumn" : 17,
+          "startLine" : 12
+        },
+        "value" : "flag"
+      }, {
+        "_type" : "Stereotype",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 29,
+          "endLine" : 12,
+          "startColumn" : 23,
+          "startLine" : 12
+        },
+        "value" : "newFlag"
+      } ],
+      "p_tags" : [ {
+        "_type" : "Tag",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 13,
+          "endLine" : 13,
+          "startColumn" : 10,
+          "startLine" : 13
+        },
+        "value" : "tag1"
+      }, {
+        "_type" : "Tag",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 19,
+          "endLine" : 13,
+          "startColumn" : 16,
+          "startLine" : 13
+        },
+        "value" : "tag2"
+      } ],
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

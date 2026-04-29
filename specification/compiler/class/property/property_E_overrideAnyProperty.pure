@@ -1,0 +1,13 @@
+###Error
+Property override variance mismatch for 'sourceInformation'. Overridden property has type 'SourceInformation[0..1]', but overriding property has type 'test::override::MySourceInfo[0..1]'. Simple property overrides must be strictly invariant in type and multiplicity. (at class/property/property_E_overrideAnyProperty 12:3-12:56)
+
+###Pure
+Class test::override::MySourceInfo
+{
+  line: Integer[1];
+}
+
+Class test::override::MyClass
+{
+  sourceInformation: test::override::MySourceInfo[0..1];
+}

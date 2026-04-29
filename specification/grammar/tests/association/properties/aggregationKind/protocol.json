@@ -1,0 +1,126 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Association",
+      "name" : "AnAssociation3",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 6,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 41,
+              "endLine" : 4,
+              "startColumn" : 6,
+              "startLine" : 4
+            },
+            "value" : "protocol::support::AssociationClassA"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "a",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 45,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      }, {
+        "_type" : "Property",
+        "aggregation" : {
+          "_type" : "Enum_Pointer",
+          "extraPointerValues" : [ {
+            "_type" : "PointerValue",
+            "value" : "Composite"
+          } ],
+          "value" : "meta::pure::metamodel::function::property::AggregationKind"
+        },
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 53,
+              "endLine" : 5,
+              "startColumn" : 18,
+              "startLine" : 5
+            },
+            "value" : "protocol::support::AssociationClassB"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "b",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 60,
+          "endLine" : 5,
+          "startColumn" : 3,
+          "startLine" : 5
+        }
+      } ]
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassA",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 8
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "AssociationClassB",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 14,
+        "startColumn" : 1,
+        "startLine" : 12
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

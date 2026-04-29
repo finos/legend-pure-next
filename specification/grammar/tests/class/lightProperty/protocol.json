@@ -1,0 +1,59 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "LightProperty",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 5,
+        "startColumn" : 1,
+        "startLine" : 2
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 16,
+              "endLine" : 4,
+              "startColumn" : 10,
+              "startLine" : 4
+            },
+            "value" : "Integer"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "value",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 4,
+          "startColumn" : 3,
+          "startLine" : 4
+        }
+      } ]
+    } ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

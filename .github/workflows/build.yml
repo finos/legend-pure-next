@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
           java-package: jdk
           server-id: central
           server-username: CI_DEPLOY_USERNAME
@@ -57,6 +57,9 @@ jobs:
         with:
           version: "25.2.10"
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Configure git
         run: |
           git config --global committer.email "infra@finos.org"
@@ -64,25 +67,57 @@ jobs:
           git config --global author.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git config --global author.name "${GITHUB_ACTOR}"
 
-      - name: Download deps and plugins
-        run: mvn de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
-        env:
-          MAVEN_OPTS: -XX:MaxRAMPercentage=90.0
-
       - name: Collect Workflow Telemetry
         uses: runforesight/workflow-telemetry-action@v1
         with:
           theme: dark
 
-      - name: Build + Test
-        if: (github.repository != 'finos/legend-pure-next') || (github.ref != 'refs/heads/main')
-        run: mvn -B -e install javadoc:javadoc -DargLine="-XX:MaxRAMPercentage=25.0" -DforkCount=3 -DreuseForks=true -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
+      # The build is orchestrated by Just. It walks the following phases:
+      #   1. build-generators — Maven install of the generators module only
+      #   2. generate         — run generators to emit m3.pure / m3.fbs /
+      #                         m3_protocol.ttl / m3_protocol.pure into
+      #                         specification/generated/
+      #   3. build-bootstrap  — Maven install of the full bootstrap reactor
+      #                         (parser, compiler, execution, ide, cli)
+      #   4. build-cli        — copy pure-cli fat JAR to build/cli/
+      #   5. build-core-pdb   — CLI: specification Pure → build/core.pdb
+      #   6. build-compiler-pdb — CLI: compiler-pure Pure → build/compiler.pdb
+      - name: Build (just build)
+        run: just build
         env:
           MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 
-      - name: Build + Test + Sonar
+      # `just test` runs Java and Pure tests independently, aggregating status.
+      # Java tests are written to a single surefire-reports-aggregate directory.
+      - name: Test (just test)
+        if: (github.repository != 'finos/legend-pure-next') || (github.ref != 'refs/heads/main')
+        run: |
+          set -e
+          cd bootstrap
+          mvn -B -e test -fae \
+            -DargLine="-XX:MaxRAMPercentage=25.0" \
+            -DforkCount=3 -DreuseForks=true \
+            -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate \
+            -Dorg.slf4j.simpleLogger.showDateTime=true \
+            -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
+          cd ..
+          just test
+        env:
+          MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
+
+      - name: Test + Sonar
         if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
-        run: mvn -B -e install javadoc:javadoc -Psonar -DargLine="-XX:MaxRAMPercentage=25.0" -DforkCount=3 -DreuseForks=true -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
+        run: |
+          set -e
+          cd bootstrap
+          mvn -B -e install javadoc:javadoc -Psonar \
+            -DargLine="-XX:MaxRAMPercentage=25.0" \
+            -DforkCount=3 -DreuseForks=true \
+            -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate \
+            -Dorg.slf4j.simpleLogger.showDateTime=true \
+            -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
+          cd ..
+          just test
         env:
           MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 

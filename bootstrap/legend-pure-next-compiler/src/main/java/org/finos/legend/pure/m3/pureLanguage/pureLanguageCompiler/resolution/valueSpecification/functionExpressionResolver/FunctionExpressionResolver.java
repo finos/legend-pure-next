@@ -1,0 +1,175 @@
+package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver;
+
+import meta.pure.metamodel.function.property.AbstractProperty;
+import meta.pure.metamodel.multiplicity.Multiplicity;
+import meta.pure.metamodel.relation.Column;
+import meta.pure.metamodel.type.FunctionType;
+import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.valuespecification.DotApplication;
+import meta.pure.metamodel.valuespecification.FunctionApplication;
+import meta.pure.metamodel.valuespecification.FunctionExpression;
+import meta.pure.metamodel.valuespecification.ValueSpecification;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Class;
+import org.finos.legend.pure.m3.module.MetadataAccess;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericTypeImpl;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicity;
+import meta.pure.metamodel.multiplicity.CompilerNotSetMultiplicityImpl;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.FunctionCallParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerContext;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.NewResolver;
+
+import static org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext.lazy;
+import static org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific.LetResolver.registerLetVariable;
+
+/**
+ * Two-phase function resolution against call-site argument types.
+ *
+ * <p><b>Phase 1 — Candidate filtering:</b> Resolve non-lambda parameter values,
+ * then filter candidates using known (non-lambda) argument types. Arguments with
+ * unresolved types (e.g. lambdas) are skipped during filtering — they cannot
+ * narrow the candidate set yet.</p>
+ *
+ * <p><b>Phase 2 — Type inference and selection:</b> For each remaining candidate,
+ * resolve lambda parameters and bodies using the candidate's type bindings.
+ * Then re-collect parameter bindings (now including lambda-derived types) and
+ * re-validate the match. Pick the best candidate from those that still match.</p>
+ */
+public final class FunctionExpressionResolver
+{
+    private FunctionExpressionResolver()
+    {
+    }
+
+    // ========================================================================
+    // Entry point
+    // ========================================================================
+
+    /**
+     * Resolve a function call expression to the best matching function.
+     * Dispatches to {@link DotApplicationResolver#resolveDotApplication} for property/qualified-property
+     * access, or {@link FunctionApplicationResolver#resolveFunctionApplication} for regular function calls.
+     *
+     * @return the resolved expression — the same {@code expr} when no tree rewrite
+     * occurs, or a replacement {@code FunctionApplicationImpl} when an
+     * automap rewrites a DotApplication into a {@code map(...)} call.
+     */
+    public static ValueSpecification resolveFunctionExpression(FunctionExpression expr, MetadataAccess model, CompilationContext context)
+    {
+        context.debug("resolveFunctionExpression: %s (%s)", expr._functionName(), expr.getClass().getSimpleName());
+        context.debugDepthInc();
+        try
+        {
+            if (expr instanceof DotApplication dotApplication && expr._parametersValues().notEmpty())
+            {
+                int checkpoint = context.currentErrorCount();
+                ValueSpecification dotResult = DotApplicationResolver.resolveDotApplication(dotApplication, model, context);
+                // Enum value resolution returns an AtomicValue, not a FunctionExpression
+                if (dotResult instanceof FunctionExpression fe)
+                {
+                    return finalizeFunctionExpression(fe, checkpoint, model, context);
+                }
+                return dotResult;
+            }
+            else
+            {
+                int checkpoint = context.currentErrorCount();
+                FunctionExpression expression = FunctionApplicationResolver.resolveFunctionApplication((FunctionApplication) expr, model, context);
+                return finalizeFunctionExpression(expression, checkpoint, model, context);
+            }
+        }
+        finally
+        {
+            context.debugDepthDec();
+        }
+    }
+
+    public static FunctionExpression finalizeFunctionExpression(FunctionExpression resolved, int errorCheckpoint, MetadataAccess model, CompilationContext context)
+    {
+        if (resolved._func() != null)
+        {
+            ParametersBinding bindings = _FunctionExpression.extractResolvedParametersBinding(resolved);
+            // For class properties, enrich bindings with class type parameter bindings
+            // from the receiver's generic type so that T resolves to the concrete type argument.
+            boolean isProperty = resolved._func() instanceof AbstractProperty || resolved._func() instanceof Column;
+            boolean classBindingsApplied = false;
+            if (isProperty
+                    && resolved._parametersValues() != null && resolved._parametersValues().notEmpty())
+            {
+                ValueSpecification receiver = resolved._parametersValues().getFirst();
+                if (receiver._genericType() != null && !(receiver._genericType() instanceof CompilerNotSetGenericType))
+                {
+                    Type ownerType = _GenericType.type(receiver._genericType());
+                    if (ownerType instanceof meta.pure.metamodel.type.Class cls)
+                    {
+                        ParametersBinding classBindings = _Class.buildBindingsFromGenericType(cls, receiver._genericType());
+                        classBindings.typeBindings().forEachKeyValue((k, v) ->
+                                bindings.typeBindings().computeIfAbsent(k, x -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).addAll(v));
+                        classBindings.multiplicityBindings().forEachKeyValue((k, v) ->
+                                bindings.multiplicityBindings().computeIfAbsent(k, x -> org.eclipse.collections.impl.factory.Lists.mutable.empty()).addAll(v));
+                        classBindingsApplied = true;
+                    }
+                }
+            }
+            FunctionType ft = _Function.getFunctionType(resolved._func(), model);
+            // For non-class properties (e.g., Column on RelationType) where DotApplicationResolver
+            // already set the resolved type, preserve it rather than overwriting with unresolved template.
+            GenericType returnGT;
+            Multiplicity returnMul;
+            if (isProperty && !classBindingsApplied
+                    && resolved._genericType() != null && !(resolved._genericType() instanceof CompilerNotSetGenericType))
+            {
+                returnGT = _GenericType.asInferred(resolved._genericType(), model);
+                returnMul = _Multiplicity.asInferred(resolved._multiplicity(), model);
+            }
+            else
+            {
+                returnGT = _GenericType.asInferred(_GenericType.makeAsConcreteAsPossible(ft._returnType(), bindings, model), model);
+                returnMul = _Multiplicity.asInferred(_Multiplicity.makeAsConcreteAsPossible(ft._returnMultiplicity(), bindings), model);
+            }
+            FunctionCallParametersBinding currentNode = context.compilerContextExtensions(PureLanguageCompilerContext.class).currentFunctionCallNode();
+            context.debug("finalize: %s func=%s gt=%s mul=%s bindings=%s parentBindings=%s", resolved._functionName(), lazy(() -> CompilationContext.debugFunc(resolved._func())), lazy(() -> _GenericType.print(returnGT)), lazy(() -> _Multiplicity.print(returnMul)), bindings, lazy(() -> currentNode != null ? currentNode.printParentBindings() : "[]"));
+            FunctionExpression updated = (FunctionExpression) ((FunctionExpression)resolved._copy())
+                    ._genericType(returnGT)
+                    ._multiplicity(returnMul);
+
+            // Validate properties for new and copy expressions
+            if (updated._functionName() != null)
+            {
+                if (updated._functionName().equals("new"))
+                {
+                    NewResolver.validateNewRequiredProperties(updated, model, context);
+                }
+                else if (updated._functionName().equals("copy"))
+                {
+                    NewResolver.validateCopyProperties(updated, model, context);
+                }
+            }
+            registerLetVariable(updated, model, context);
+            return updated;
+        }
+        else
+        {
+            FunctionExpression updated = (FunctionExpression) ((FunctionExpression) resolved._copy())
+                    ._genericType(new CompilerNotSetGenericTypeImpl())
+                    ._multiplicity(new CompilerNotSetMultiplicityImpl());
+            // Only report if no specific error was already added by resolveFunctionApplication.
+            // This avoids duplicate errors when e.g. "No matching function 'X' found" was already reported.
+            if (context.currentErrorCount() == errorCheckpoint)
+            {
+                context.addError(new CompilationError(
+                        "Can't resolve the function '" + resolved._functionName() + "'",
+                        resolved._sourceInformation()));
+            }
+            return updated;
+        }
+    }
+}

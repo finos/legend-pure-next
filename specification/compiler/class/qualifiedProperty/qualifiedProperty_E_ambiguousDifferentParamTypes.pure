@@ -1,0 +1,23 @@
+###Error
+Ambiguous qualified property 'lookup' with 1 parameter(s) in class 'test::Derived' (at class/qualifiedProperty/qualifiedProperty_E_ambiguousDifferentParamTypes 22:7-22:22)
+
+###Pure
+Class test::Base
+{
+    lookup(key:Any[1]) {
+        'not found'
+    }: String[1];
+}
+
+Class test::Derived extends test::Base
+{
+    lookup(key:String[1]) {
+        'found: ' + $key
+    }: String[1];
+}
+
+function test::use():Any[*]
+{
+    let d = ^test::Derived();
+    $d.lookup('hello');
+}

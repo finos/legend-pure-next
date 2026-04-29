@@ -1,0 +1,64 @@
+###Pure
+import test::*;
+
+Class test::TPR_Person
+{
+    firstName : String[1];
+    lastName : String[1];
+}
+
+// Local function with same signature as assertEquals to force local resolution
+function test::myCheck(expected:Any[*], actual:Any[*]):Boolean[1]
+{
+    true;
+}
+
+// eval + let + automap inside local function call.
+// Z should be resolved transitively through eval, making $res.lastName valid.
+function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let res = $f->eval(|^TPR_Person(firstName='A', lastName='B')->head());
+    myCheck('B', $res.lastName);
+}
+
+###CompiledGraph
+class test::TPR_Person extends Any  ~Class<test::TPR_Person>  @4:1-8:1
+  property firstName :String[1]  ~Property<test::TPR_Person, String|1>
+  property lastName :String[1]  ~Property<test::TPR_Person, String|1>
+
+function test::myCheck_Any_MANY__Any_MANY__Boolean_1_(expected:Any[*], actual:Any[*]):Boolean[1]  ~UserDefinedFunction<{Any[*], Any[*]->Boolean[1]}>
+  AtomicValue  true :Boolean[1]  ~AtomicValue  @13:5-13:8
+
+function test::testTypeParamResolution_Function_1__Boolean_1_(f:Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]):Boolean[1]  ~UserDefinedFunction<{Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Boolean[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::TPR_Person##[0..1]#  ~FunctionInvocation  @20:5-20:73
+    typeParam T -> #test::TPR_Person#
+    mulParam m -> #[0..1]#
+    AtomicValue  'res' :String[1]  ~AtomicValue  @20:9-20:11
+    ArrowInvocation eval_Function_1__T_n__V_m_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:17-20:73
+      typeParam T -> #Function<#{->#test::TPR_Person##[*]#}#>#
+      typeParam V -> #test::TPR_Person#
+      mulParam m -> #[0..1]#
+      mulParam n -> #[1]#
+      Variable f :#Function<{Function<{->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>[1]->Z~test::testTypeParamResolution_Function_1__Boolean_1_[y]}>##[1]#  ~VariableExpression  @20:15-20:16
+      Lambda :#LambdaFunction<#{->#test::TPR_Person##[0..1]#}#>#[1]  ~AtomicValue  @20:24-20:72
+        ArrowInvocation head_T_MANY__T_$0_1$_ :#test::TPR_Person##[0..1]#  ~ArrowInvocation  @20:65-20:72
+          typeParam T -> #test::TPR_Person#
+          FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::TPR_Person##[1]#  ~FunctionInvocation  @20:25-20:64
+            typeParam T -> test::TPR_Person
+            TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::TPR_Person|1>  @20:25-20:64
+            Collection :#KeyExpression#[2]  ~Collection  @20:25-20:64
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @20:37-20:49
+                AtomicValue  'firstName' :String[1]  ~AtomicValue  @20:37-20:49
+                AtomicValue  'A' :String[1]  ~AtomicValue  @20:47-20:49
+              FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @20:52-20:63
+                AtomicValue  'lastName' :String[1]  ~AtomicValue  @20:52-20:63
+                AtomicValue  'B' :String[1]  ~AtomicValue  @20:61-20:63
+  FunctionInvocation test::myCheck_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @21:5-21:31
+    AtomicValue  'B' :String[1]  ~AtomicValue  @21:13-21:15
+    FunctionInvocation map_T_$0_1$__Function_1__V_$0_1$_ :#String##[0..1]#  ~FunctionInvocation  @21:22-21:30
+      typeParam T -> #test::TPR_Person#
+      typeParam V -> #String#
+      Variable res :#test::TPR_Person##[0..1]#  ~VariableExpression  @21:18-21:21
+      Lambda(v_automap:#test::TPR_Person#[1]) :#LambdaFunction<#{#test::TPR_Person#[1]->#String##[1]#}#>#[1]  ~AtomicValue
+        DotApplication test::TPR_Person.lastName :#String##[1]#  ~DotApplication  @21:22-21:30
+          Variable v_automap :#test::TPR_Person##[1]#  ~VariableExpression

@@ -1,0 +1,143 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "MyClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 7,
+        "startColumn" : 1,
+        "startLine" : 4
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "x::b"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 14,
+              "endLine" : 6,
+              "startColumn" : 11,
+              "startLine" : 6
+            },
+            "value" : "Prop"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "prop",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 18,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        }
+      } ]
+    }, {
+      "_type" : "Class",
+      "name" : "Prop",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 11,
+        "startColumn" : 1,
+        "startLine" : 9
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "x::b"
+      }
+    } ],
+    "imports" : [ "x::b::*" ],
+    "parserName" : "Pure"
+  }, {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "Class",
+      "name" : "MyOtherClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 19,
+        "startColumn" : 1,
+        "startLine" : 16
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "a::b"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 14,
+              "endLine" : 18,
+              "startColumn" : 11,
+              "startLine" : 18
+            },
+            "value" : "Prop"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "prop",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 18,
+          "endLine" : 18,
+          "startColumn" : 5,
+          "startLine" : 18
+        }
+      } ]
+    }, {
+      "_type" : "Class",
+      "name" : "Prop",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 23,
+        "startColumn" : 1,
+        "startLine" : 21
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "a::b"
+      }
+    } ],
+    "imports" : [ "a::b::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}

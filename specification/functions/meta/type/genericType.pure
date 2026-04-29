@@ -1,0 +1,124 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::tests::model::*;
+import meta::pure::test::pct::*;
+
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::genericType(any:Any[*]):GenericTypeValue[1];
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericType():Boolean[1]
+{
+    assertIs(Class, CC_Person->genericType().type->toOne());
+    assertIs(CC_Person, CC_Person->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeInstance():Boolean[1]
+{
+    assertIs(CC_Person, ^CC_Person(firstName='Pierre', lastName='Doe')->genericType().type->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnum():Boolean[1]
+{
+    assertIs(Enumeration, CC_GeographicEntityType->genericType().type->toOne());
+    assertIs(CC_GeographicEntityType, CC_GeographicEntityType->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeFromEnumVal():Boolean[1]
+{
+    assertIs(CC_GeographicEntityType, CC_GeographicEntityType.CITY->genericType().type->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeWithGenerics():Boolean[1]
+{
+    let l = ^CC_List<String>(values=['a', 'b', 'c']);
+    assertIs(CC_List, $l->genericType().type->toOne());
+    assertIs(String, $l->genericType().typeArguments->at(0)->cast(@GenericTypeValue).type->toOne());
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testClassTypeParameters():Boolean[1]
+{
+    // CC_List<T> has one type parameter T
+    let cls = CC_List;
+    let tp = $cls->cast(@Class<Any>).typeParameters;
+    assert($tp->size() == 1, 'CC_List should have 1 type parameter, got: ' + $tp->size()->toString());
+    assert($tp->at(0)->instanceOf(TypeParameter), 'type parameter should be a TypeParameter');
+    assertEquals('T', $tp->at(0)->cast(@TypeParameter).name);
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testNewTypeParameterMatch():Boolean[1]
+{
+    // TypeParameter created via new should match in a match expression
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    assert($tp->instanceOf(TypeParameter), 'new TypeParameter should instanceOf TypeParameter');
+    let result = $tp->match([
+        t:TypeParameter[1] | 'tp:' + $t.name,
+        a:Any[1] | 'any'
+    ]);
+    assertEquals('tp:T', $result);
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testTypeParameterInGenericType():Boolean[1]
+{
+    // TypeParameter stored in a GenericType should still match as TypeParameter
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    let extracted = $gt->cast(@GenericTypeValue).type->toOne();
+    assert($extracted->instanceOf(TypeParameter), 'extracted type should be TypeParameter, got: ' + $extracted->type()->toOne()->elementToPath());
+    let matchResult = $extracted->match([
+        t:TypeParameter[1] | 'tp:' + $t.name,
+        pe:PackageableElement[1] | 'pe',
+        a:Any[1] | 'any'
+    ]);
+    assertEquals('tp:T', $matchResult);
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testTypeParameterFromClassTypeParams():Boolean[1]
+{
+    // TypeParameter accessed from a PDB-loaded generic class should match
+    let tp = CC_List->cast(@Class<Any>).typeParameters->at(0);
+    let gt = ^UserDefinedGenericType(type=$tp);
+    let extracted = $gt->cast(@GenericTypeValue).type->toOne();
+    assert($extracted->instanceOf(TypeParameter), 'extracted PDB TypeParameter should be TypeParameter');
+    let matchResult = $extracted->match([
+        t:TypeParameter[1] | 'tp:' + $t.name,
+        pe:PackageableElement[1] | 'pe',
+        a:Any[1] | 'any'
+    ]);
+    assertEquals('tp:T', $matchResult);
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testCopyPreservesTypeParameters():Boolean[1]
+{
+    // Create a class with typeParameters, then copy-with to add a property.
+    // The copy should preserve typeParameters.
+    let tp = ^TypeParameter(name='T', contravariant=false);
+    let cls = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
+    let withTp = ^$cls(name='TestGeneric', typeParameters=[$tp]);
+    assertEquals(1, $withTp.typeParameters->size());
+    assertEquals('T', $withTp.typeParameters->at(0).name);
+
+    // Now copy-with to add another property — typeParameters should survive
+    let copied = ^$withTp(properties=[]);
+    assertEquals(1, $copied.typeParameters->size(), 'typeParameters should be preserved after copy-with');
+    assertEquals('T', $copied.typeParameters->at(0).name);
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::genericType::testGenericTypeArgumentsOnProperty():Boolean[1]
+{
+    // CC_Person.locations has type CC_Location[*] — no type args
+    let cls = CC_Person;
+    let locProp = $cls->cast(@Class<Any>).properties->filter(p | $p.name == 'locations')->toOne();
+    let propGT = $locProp.genericType->toOne()->cast(@GenericTypeValue);
+    assertIs(CC_Location, $propGT.type->toOne());
+}

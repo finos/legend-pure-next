@@ -1,0 +1,450 @@
+{
+  "_type" : "PureFile",
+  "sections" : [ {
+    "_type" : "Section",
+    "elements" : [ {
+      "_type" : "UserDefinedFunction",
+      "expressionSequence" : [ {
+        "_type" : "ArrowInvocation",
+        "functionName" : "cast",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 20,
+          "endLine" : 5,
+          "startColumn" : 5,
+          "startLine" : 5
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 5,
+            "startColumn" : 3,
+            "startLine" : 5
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 5,
+                "startColumn" : 13,
+                "startLine" : 5
+              },
+              "value" : "MyClass"
+            }
+          },
+          "multiplicity" : {
+            "_type" : "UndefinedMultiplicity"
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 19,
+            "endLine" : 5,
+            "startColumn" : 12,
+            "startLine" : 5
+          }
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "cast",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 28,
+          "endLine" : 6,
+          "startColumn" : 5,
+          "startLine" : 6
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 6,
+            "startColumn" : 3,
+            "startLine" : 6
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 6,
+                "startColumn" : 13,
+                "startLine" : 6
+              },
+              "value" : "MyClass"
+            },
+            "typeArguments" : [ {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 26,
+                  "endLine" : 6,
+                  "startColumn" : 21,
+                  "startLine" : 6
+                },
+                "value" : "String"
+              }
+            } ]
+          },
+          "multiplicity" : {
+            "_type" : "UndefinedMultiplicity"
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 27,
+            "endLine" : 6,
+            "startColumn" : 12,
+            "startLine" : 6
+          }
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "cast",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 37,
+          "endLine" : 7,
+          "startColumn" : 5,
+          "startLine" : 7
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 7,
+            "startColumn" : 3,
+            "startLine" : 7
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 7,
+                "startColumn" : 13,
+                "startLine" : 7
+              },
+              "value" : "MyClass"
+            },
+            "typeArguments" : [ {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 26,
+                  "endLine" : 7,
+                  "startColumn" : 21,
+                  "startLine" : 7
+                },
+                "value" : "String"
+              }
+            }, {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 35,
+                  "endLine" : 7,
+                  "startColumn" : 29,
+                  "startLine" : 7
+                },
+                "value" : "Integer"
+              }
+            } ]
+          },
+          "multiplicity" : {
+            "_type" : "UndefinedMultiplicity"
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 36,
+            "endLine" : 7,
+            "startColumn" : 12,
+            "startLine" : 7
+          }
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "cast",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 30,
+          "endLine" : 8,
+          "startColumn" : 5,
+          "startLine" : 8
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 8,
+            "startColumn" : 3,
+            "startLine" : 8
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "multiplicityArguments" : [ {
+              "_type" : "UserDefinedAdHocMultiplicity",
+              "lowerBound" : {
+                "_type" : "MultiplicityValue",
+                "value" : 0
+              }
+            } ],
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 8,
+                "startColumn" : 13,
+                "startLine" : 8
+              },
+              "value" : "MyClass"
+            },
+            "typeArguments" : [ {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 26,
+                  "endLine" : 8,
+                  "startColumn" : 21,
+                  "startLine" : 8
+                },
+                "value" : "String"
+              }
+            } ]
+          },
+          "multiplicity" : {
+            "_type" : "UndefinedMultiplicity"
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 29,
+            "endLine" : 8,
+            "startColumn" : 12,
+            "startLine" : 8
+          }
+        } ]
+      }, {
+        "_type" : "ArrowInvocation",
+        "functionName" : "cast",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 25,
+          "endLine" : 9,
+          "startColumn" : 5,
+          "startLine" : 9
+        },
+        "parametersValues" : [ {
+          "_type" : "VariableExpression",
+          "name" : "x",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 4,
+            "endLine" : 9,
+            "startColumn" : 3,
+            "startLine" : 9
+          }
+        }, {
+          "_type" : "UserDefinedGenericTypeAndMultiplicityHolder",
+          "genericType" : {
+            "_type" : "UserDefinedGenericType",
+            "type" : {
+              "_type" : "Type_Pointer",
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 19,
+                "endLine" : 9,
+                "startColumn" : 13,
+                "startLine" : 9
+              },
+              "value" : "Varchar"
+            },
+            "typeVariableValues" : [ {
+              "_type" : "AtomicValue",
+              "genericType" : {
+                "_type" : "UserDefinedGenericType",
+                "type" : {
+                  "_type" : "Type_Pointer",
+                  "value" : "Integer"
+                }
+              },
+              "p_sourceInformation" : {
+                "_type" : "SourceInformation",
+                "endColumn" : 23,
+                "endLine" : 9,
+                "startColumn" : 21,
+                "startLine" : 9
+              },
+              "value" : 200
+            } ]
+          },
+          "multiplicity" : {
+            "_type" : "UndefinedMultiplicity"
+          },
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 24,
+            "endLine" : 9,
+            "startColumn" : 12,
+            "startLine" : 9
+          }
+        } ]
+      } ],
+      "functionName" : "castExpressions",
+      "name" : "castExpressions__Any_MANY_",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 10,
+        "startColumn" : 1,
+        "startLine" : 3
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol"
+      },
+      "returnGenericType" : {
+        "_type" : "UserDefinedGenericType",
+        "type" : {
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 41,
+            "endLine" : 3,
+            "startColumn" : 39,
+            "startLine" : 3
+          },
+          "value" : "Any"
+        }
+      },
+      "returnMultiplicity" : {
+        "_type" : "UserDefinedAdHocMultiplicity",
+        "lowerBound" : {
+          "_type" : "MultiplicityValue",
+          "value" : 0
+        }
+      }
+    }, {
+      "_type" : "PrimitiveType",
+      "generalizations" : [ {
+        "_type" : "Generalization",
+        "general" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 51,
+              "endLine" : 12,
+              "startColumn" : 46,
+              "startLine" : 12
+            },
+            "value" : "String"
+          }
+        },
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 51,
+          "endLine" : 12,
+          "startColumn" : 46,
+          "startLine" : 12
+        }
+      } ],
+      "name" : "Varchar",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 51,
+        "endLine" : 12,
+        "startColumn" : 1,
+        "startLine" : 12
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      }
+    }, {
+      "_type" : "Class",
+      "name" : "MyClass",
+      "p_sourceInformation" : {
+        "_type" : "SourceInformation",
+        "endColumn" : 1,
+        "endLine" : 17,
+        "startColumn" : 1,
+        "startLine" : 14
+      },
+      "package" : {
+        "_type" : "Package_Pointer",
+        "value" : "protocol::support"
+      },
+      "properties" : [ {
+        "_type" : "Property",
+        "genericType" : {
+          "_type" : "UserDefinedGenericType",
+          "type" : {
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 14,
+              "endLine" : 16,
+              "startColumn" : 9,
+              "startLine" : 16
+            },
+            "value" : "String"
+          }
+        },
+        "multiplicity" : {
+          "_type" : "UserDefinedAdHocMultiplicity",
+          "lowerBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          },
+          "upperBound" : {
+            "_type" : "MultiplicityValue",
+            "value" : 1
+          }
+        },
+        "name" : "name",
+        "p_sourceInformation" : {
+          "_type" : "SourceInformation",
+          "endColumn" : 18,
+          "endLine" : 16,
+          "startColumn" : 3,
+          "startLine" : 16
+        }
+      } ]
+    } ],
+    "imports" : [ "protocol::support::*" ],
+    "parserName" : "Pure"
+  } ],
+  "sourceId" : "testFile"
+}
