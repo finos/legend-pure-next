@@ -252,7 +252,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                               || $pName == $vName
                                                               || $propType->toOne()->instanceOf(TypeParameter)
                                                               || $valType->toOne()->instanceOf(TypeParameter);
-                                                          if(!$skip && !isCompatibleType($resolvedPropGT, $keyValueVS.genericType->toOne()),
+                                                          if(!$skip && !isCompatibleType($resolvedPropGT, $keyValueVS.genericType->toOne(), $ctx2),
                                                               | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx2);
                                                                 ^$ctx2(errors += 'Type mismatch for property \'' + $propName + '\': expected ' + $pName + ', got ' + $vName + $siCtx);,
                                                               | $ctx2
@@ -313,9 +313,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     if($index >= $segments->size(),
         | $context,
         | let segment = $segments->at($index);
-          let prop = findPropertyOnClass($currentType, $segment);
+          // The Class instance reachable via prop.genericType.rawType may be a
+          // pre-resolution stub with an empty .properties list. Look up the
+          // canonical, fully-resolved version from the context.elementMap by
+          // full path before searching for the property.
+          let canonical = $context.elementMap->get($currentType->fullPath());
+          let resolvedType = if($canonical->isNotEmpty() && $canonical->toOne()->instanceOf(Class),
+              | $canonical->toOne()->cast(@Class<Any>),
+              | $currentType
+          );
+          let prop = findPropertyOnClass($resolvedType, $segment);
           if([pair(| $prop->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
-                ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $currentType->fullPath() + '\'' + $siCtx);),
+                ^$context(errors += 'Unknown deep property path \'' + $fullPath + '\' in class \'' + $rootCls->fullPath() + '\': property \'' + $segment + '\' not found in class \'' + $resolvedType->fullPath() + '\'' + $siCtx);),
               pair(| $index < $segments->size() - 1 && $prop->toOne().genericType->isNotEmpty(), | let nextType = $prop->toOne().genericType->toOne()->genericTypeRawType();
                       if($nextType->isNotEmpty(),
                           | $nextType->toOne()->match([
@@ -330,12 +339,28 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Simple type compatibility check: is actual a subtype of declared?
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1]):Boolean[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::isCompatibleType(declared:GenericType[1], actual:GenericType[1], context:CompilerContext[1]):Boolean[1]
 {
     let declaredType = $declared->genericTypeRawType();
     let actualType = $actual->genericTypeRawType();
     if($declaredType->isEmpty() || $actualType->isEmpty(),
         | true,
-        | $actualType->toOne()->linearize()->contains($declaredType->toOne())
+        | let declaredCanonical = resolveCanonicalType($declaredType->toOne(), $context);
+          let actualCanonical = resolveCanonicalType($actualType->toOne(), $context);
+          let declaredPath = $declaredCanonical->cast(@PackageableElement)->fullPath();
+          $actualCanonical->linearize()->exists(t | $t->instanceOf(PackageableElement) && $t->cast(@PackageableElement)->fullPath() == $declaredPath);
+    );
+}
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::resolveCanonicalType(t:Type[1], context:CompilerContext[1]):Type[1]
+{
+    if($t->instanceOf(PackageableElement),
+        | let path = $t->cast(@PackageableElement)->fullPath();
+          let canonical = $context.elementMap->get($path);
+          if($canonical->isNotEmpty() && $canonical->toOne()->instanceOf(Type),
+              | $canonical->toOne()->cast(@Type),
+              | $t
+          );,
+        | $t
     );
 }

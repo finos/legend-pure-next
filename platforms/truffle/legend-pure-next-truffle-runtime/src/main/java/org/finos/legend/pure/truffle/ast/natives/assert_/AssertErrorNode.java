@@ -21,7 +21,7 @@ import org.finos.legend.pure.truffle.ast.PureException;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
-import org.finos.legend.pure.truffle.types.RawClosure;
+import org.finos.legend.pure.truffle.ast.RawClosure;
 
 /**
  * {@code assertError(Function<{->Any[*]}>[1], String[1], Integer[0..1], Integer[0..1]) : Boolean[1]}

@@ -145,6 +145,11 @@ public class PdbJavaGenerator
             enumCount++;
         }
 
+        if (fbsSchema != null)
+        {
+            generateFlatBufferWriter(outputDir);
+        }
+
         System.out.println("PdbJavaGenerator: " + interfaces + " interfaces, "
                 + impls + " impls, " + enumCount + " enums generated ("
                 + skipped + " skipped, already on classpath) to " + outputDir);
@@ -299,6 +304,7 @@ public class PdbJavaGenerator
                         // Multiplicity
                         Multiplicity mult = prop._multiplicity();
                         pr.isMany = isMultiplicityMany(mult);
+                        pr.multiplicity = multiplicityName(mult);
 
                         // Equality key stereotype
                         pr.isEqualityKey = hasEqualityKeyStereotype(prop);
@@ -354,6 +360,7 @@ public class PdbJavaGenerator
 
                         Multiplicity mult = prop._multiplicity();
                         pr.isMany = isMultiplicityMany(mult);
+                        pr.multiplicity = multiplicityName(mult);
 
                         cr.properties.add(pr);
                     }
@@ -715,6 +722,863 @@ public class PdbJavaGenerator
             }
         }
         return null;
+    }
+
+    // =========================================================================
+    // FlatBuffer writer generation — produces a single GeneratedFlatBufferWriter
+    // class with one writeXxx(Xxx) per concrete metamodel class plus a
+    // dispatchWrite(Object) entry point. Mirrors the bootstrap-side writer
+    // emitted by RdfFbsJavaGenerator, but drives every per-property emit
+    // decision off the FBS schema (so field order and slot IDs are identical
+    // to what flatc produced from m3.fbs).
+    //
+    // Phase 1 — skeleton: every writeXxx shell throws UnsupportedOperationException;
+    // helpers (writeAncestorRef / writePointerRef / pointerPath / sourceInfo) are
+    // fully emitted; dispatchWrite delegates to the shells. Subsequent phases fill
+    // in the eight per-property emit cases.
+    // =========================================================================
+
+    private static final String WRITER_PKG = "org.finos.legend.pure.truffle.runtime.codegen";
+    private static final String FBS_FQN = "org.finos.legend.pure.m3.module.pdbModule.fbs";
+
+    private void generateFlatBufferWriter(Path outputDir) throws IOException
+    {
+        if (fbsSchema == null)
+        {
+            return; // no schema → no writer
+        }
+
+        Path packageDir = outputDir.resolve(WRITER_PKG.replace('.', '/'));
+        Files.createDirectories(packageDir);
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
+        sb.append("package ").append(WRITER_PKG).append(";\n\n");
+
+        sb.append("import com.google.flatbuffers.FlatBufferBuilder;\n");
+        sb.append("import java.util.IdentityHashMap;\n");
+        sb.append("import ").append(FBS_FQN).append(".*;\n\n");
+        // Note: helper logic (pathOf, unwrap, sequence ops) is inlined as
+        // private static methods below so this file compiles standalone within
+        // the codegen module — runtime-side helpers (WriterHelpers,
+        // _PackageableElement) live in a downstream module and can't be
+        // imported here.
+
+        sb.append("/**\n");
+        sb.append(" * Generated FlatBuffer writer for the Truffle PDB metamodel.\n");
+        sb.append(" * Mirrors the bootstrap GeneratedFlatBufferWriter, consumes\n");
+        sb.append(" * truffle-namespace PDB types, FBS-driven slot ordering.\n");
+        sb.append(" */\n");
+        sb.append("public final class GeneratedFlatBufferWriter\n{\n");
+
+        // State
+        sb.append("    private final FlatBufferBuilder builder;\n");
+        sb.append("    private final boolean validateRequired;\n");
+        sb.append("    private final IdentityHashMap<Object, Integer> _writing = new IdentityHashMap<>();\n");
+        sb.append("    private int _depth = 0;\n\n");
+
+        // Constructors
+        sb.append("    public GeneratedFlatBufferWriter(FlatBufferBuilder builder)\n    {\n");
+        sb.append("        this(builder, true);\n    }\n\n");
+        sb.append("    public GeneratedFlatBufferWriter(FlatBufferBuilder builder, boolean validateRequired)\n    {\n");
+        sb.append("        this.builder = builder;\n");
+        sb.append("        this.validateRequired = validateRequired;\n    }\n\n");
+
+        emitWriterHelpers(sb);
+
+        // Sort classes by simple name for deterministic output. Exclude
+        // abstract classes (no impl to dispatch to) and classes that don't
+        // have an FBS table — those are user-defined Pure classes that get
+        // serialised as instances of the M3 ClassDef table, not as their
+        // own table type.
+        MutableList<ClassRecord> writableClasses = classes.valuesView()
+                .toSortedListBy(c -> c.name)
+                .select(c -> !c.isAbstract && fbsSchema.findDefTableName(c.name) != null);
+
+        for (ClassRecord cr : writableClasses)
+        {
+            emitWriteMethod(sb, cr);
+        }
+
+        emitDispatchWrite(sb, writableClasses);
+
+        sb.append("}\n");
+
+        Files.write(packageDir.resolve("GeneratedFlatBufferWriter.java"),
+                sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void emitWriterHelpers(StringBuilder sb)
+    {
+        // pathOf — recursive ::-separated path of a PackageableElement,
+        // inlined here so the generated writer is self-contained within codegen.
+        sb.append("    private static String pathOf(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n    {\n");
+        sb.append("        if (pe == null) { return null; }\n");
+        sb.append("        String name = pe._name();\n");
+        sb.append("        Object pkg = pe._package();\n");
+        sb.append("        if (!(pkg instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement parent))\n");
+        sb.append("        {\n            return name;\n        }\n");
+        sb.append("        String parentPath = pathOf(parent);\n");
+        sb.append("        if (parentPath == null || parentPath.isEmpty() || \"Root\".equals(parentPath))\n");
+        sb.append("        {\n            return name;\n        }\n");
+        sb.append("        return parentPath + \"::\" + name;\n");
+        sb.append("    }\n\n");
+
+        // writeAncestorRef — back-edge for cycles
+        sb.append("    private int writeAncestorRef(Object obj)\n    {\n");
+        sb.append("        AncestorRef.startAncestorRef(builder);\n");
+        sb.append("        AncestorRef.addDepth(builder, _depth - _writing.get(obj));\n");
+        sb.append("        return AncestorRef.endAncestorRef(builder);\n");
+        sb.append("    }\n\n");
+
+        // pointerPath — diagnostic path for validation messages
+        sb.append("    private static String pointerPath(Object obj)\n    {\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n");
+        sb.append("        {\n            return pathOf(pe);\n        }\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp\n");
+        sb.append("                && qp._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        {\n            return pathOf(owner) + \".qp:\" + qp._name();\n        }\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty ap\n");
+        sb.append("                && ap._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        {\n            return pathOf(owner) + \".\" + ap._name();\n        }\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s\n");
+        sb.append("                && s._profile() != null)\n");
+        sb.append("        {\n            return pathOf(s._profile()) + \".\" + s._value();\n        }\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag t\n");
+        sb.append("                && t._profile() != null)\n");
+        sb.append("        {\n            return pathOf(t._profile()) + \"#\" + t._value();\n        }\n");
+        sb.append("        return String.valueOf(obj);\n");
+        sb.append("    }\n\n");
+
+        // writePointerRef — typed pointer for union PointerRef fields
+        sb.append("    private int writePointerRef(Object obj)\n    {\n");
+        sb.append("        byte kind;\n        String[] segments;\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp\n");
+        sb.append("                && qp._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        {\n            kind = 2;\n");
+        sb.append("            segments = new String[]{pathOf(owner), qp._name()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty ap\n");
+        sb.append("                && ap._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        {\n            kind = 1;\n");
+        sb.append("            segments = new String[]{pathOf(owner), ap._name()};\n");
+        sb.append("        }\n");
+        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s\n");
+        sb.append("                && s._profile() != null)\n");
+        sb.append("        {\n            kind = 3;\n");
+        sb.append("            segments = new String[]{pathOf(s._profile()), s._value()};\n        }\n");
+        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag t\n");
+        sb.append("                && t._profile() != null)\n");
+        sb.append("        {\n            kind = 4;\n");
+        sb.append("            segments = new String[]{pathOf(t._profile()), t._value()};\n        }\n");
+        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n");
+        sb.append("        {\n            kind = 0;\n");
+        sb.append("            segments = new String[]{pathOf(pe)};\n        }\n");
+        sb.append("        else\n        {\n            kind = 0;\n");
+        sb.append("            segments = new String[]{String.valueOf(obj)};\n        }\n");
+        sb.append("        int[] segOffsets = new int[segments.length];\n");
+        sb.append("        for (int i = 0; i < segments.length; i++) { segOffsets[i] = builder.createString(segments[i]); }\n");
+        sb.append("        int pathVector = PointerRef.createPathVector(builder, segOffsets);\n");
+        sb.append("        PointerRef.startPointerRef(builder);\n");
+        sb.append("        PointerRef.addKind(builder, kind);\n");
+        sb.append("        PointerRef.addPath(builder, pathVector);\n");
+        sb.append("        return PointerRef.endPointerRef(builder);\n");
+        sb.append("    }\n\n");
+
+        // sourceInfo — diagnostic suffix for validation messages
+        sb.append("    private static String sourceInfo(Object obj)\n    {\n");
+        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a\n");
+        sb.append("                && a._sourceInformation() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si)\n");
+        sb.append("        {\n");
+        sb.append("            return \" at \" + si._sourceId() + \":\" + si._startLine() + \"c\" + si._startColumn();\n");
+        sb.append("        }\n");
+        sb.append("        return \"\";\n");
+        sb.append("    }\n\n");
+    }
+
+    private void emitWriteMethod(StringBuilder sb, ClassRecord cr)
+    {
+        String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
+        sb.append("    public int write").append(cr.name).append("(").append(typeFqn).append(" obj)\n    {\n");
+        sb.append("        if (obj == null) { return 0; }\n");
+        sb.append("        if (_writing.containsKey(obj)) { return writeAncestorRef(obj); }\n");
+        sb.append("        _writing.put(obj, _depth);\n");
+        sb.append("        _depth++;\n");
+
+        String defName = fbsSchema.findDefTableName(cr.name);
+        java.util.List<FbsSchema.FbsField> fbsFields = (defName != null) ? fbsSchema.getTableFields(defName) : null;
+        if (defName == null || fbsFields == null)
+        {
+            sb.append("        throw new UnsupportedOperationException(\"write").append(cr.name).append(": no FBS table\");\n");
+            sb.append("    }\n\n");
+            return;
+        }
+
+        MutableList<PropRecord> allProps = collectAllProperties(cr);
+        // Property + matched FBS field (or null when the prop isn't in the schema).
+        // Phase 2a only covers scalar non-union cases (primitive / string / reference).
+        // Anything else falls through to a skeleton-style throw.
+        boolean allHandleable = true;
+        for (PropRecord pr : allProps)
+        {
+            FbsSchema.FbsField fb = findFbsField(fbsFields, pr.name);
+            if (fb == null) continue;
+            if (!isHandleablePhase2a(fb))
+            {
+                allHandleable = false;
+                break;
+            }
+        }
+        if (!allHandleable)
+        {
+            sb.append("        throw new UnsupportedOperationException(\"write").append(cr.name).append(" not yet emitted (vector/union cases pending)\");\n");
+            sb.append("    }\n\n");
+            return;
+        }
+
+        // 1. Required-property validation
+        for (PropRecord pr : allProps)
+        {
+            FbsSchema.FbsField fb = findFbsField(fbsFields, pr.name);
+            if (fb == null) continue;
+            emitValidation(sb, pr, cr.name);
+        }
+
+        // 2. Pre-table offset/value computation
+        for (PropRecord pr : allProps)
+        {
+            FbsSchema.FbsField fb = findFbsField(fbsFields, pr.name);
+            if (fb == null) continue;
+            emitPreTable(sb, pr, fb, defName);
+        }
+
+        // 3. Open the table
+        sb.append("        ").append(defName).append(".start").append(defName).append("(builder);\n");
+
+        // 4. In-table field additions
+        for (PropRecord pr : allProps)
+        {
+            FbsSchema.FbsField fb = findFbsField(fbsFields, pr.name);
+            if (fb == null) continue;
+            emitInTable(sb, pr, fb, defName);
+        }
+
+        // 5. Close + cleanup
+        sb.append("        int _result = ").append(defName).append(".end").append(defName).append("(builder);\n");
+        sb.append("        _depth--;\n");
+        sb.append("        _writing.remove(obj);\n");
+        sb.append("        return _result;\n");
+        sb.append("    }\n\n");
+    }
+
+    private static boolean isFbsPrimitive(String type)
+    {
+        return switch (type)
+        {
+            case "long", "int", "byte", "short", "ulong", "uint", "ubyte", "ushort",
+                 "bool", "float", "double" -> true;
+            default -> false;
+        };
+    }
+
+    /** AtomicValue.value's union — handled specially because its members are
+     *  primitive-literal Defs (no Pure ClassRecord counterpart). */
+    private static final String ATOMIC_VALUE_CONTENT_UNION = "AtomicValueContentUnion";
+
+    private boolean isHandleablePhase2a(FbsSchema.FbsField fb)
+    {
+        // Cases 4 and 8 (scalar / vector union) require every concrete
+        // (non-special) member to map to a known ClassRecord — except for
+        // AtomicValueContentUnion, which we special-case below.
+        if (fb.isUnion())
+        {
+            if (ATOMIC_VALUE_CONTENT_UNION.equals(fb.type())) return true;
+            java.util.List<String> members = fbsSchema.getUnionMembers(fb.type());
+            if (members == null) return false;
+            for (String m : members)
+            {
+                if (FbsSchema.isSpecialRef(m)) continue;
+                String pureName = FbsSchema.defToPureClassName(m);
+                if (findClassByShortName(pureName) == null) return false;
+            }
+            return true;
+        }
+        return true;  // cases 1, 2, 3, 5, 6, 7
+    }
+
+    private void emitValidation(StringBuilder sb, PropRecord pr, String className)
+    {
+        if ("PureOne".equals(pr.multiplicity))
+        {
+            sb.append("        if (validateRequired && obj._").append(pr.name).append("() == null) { throw new IllegalArgumentException(")
+                    .append("\"Validation error: Property '").append(pr.name).append("' on '").append(className)
+                    .append("' has multiplicity [1] but is null: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
+        }
+        else if ("OneMany".equals(pr.multiplicity))
+        {
+            sb.append("        if (validateRequired && (obj._").append(pr.name).append("() == null || obj._").append(pr.name).append("().isEmpty())) { throw new IllegalArgumentException(")
+                    .append("\"Validation error: Property '").append(pr.name).append("' on '").append(className)
+                    .append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
+        }
+    }
+
+    private void emitPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String defName)
+    {
+        // Variables keep the keyword-escaped camel; method-name suffixes go
+        // through resolveCreateVectorSuffix which looks up flatc's actual
+        // generated form (varies between Java-only and FBS-side keywords).
+        String camel = FbsSchema.snakeToCamel(fb.name());
+        String methodCamel = resolveCreateVectorSuffix(defName, camel);
+        // Case 1: scalar primitive — no pre-table local needed (read inline at addX time)
+        if (!fb.isVector() && !fb.isUnion() && isFbsPrimitive(fb.type()))
+        {
+            return;
+        }
+        // Case 2: scalar string (covers plain String, Enum-as-name, and PointerValue-as-path)
+        if (!fb.isVector() && !fb.isUnion() && "string".equals(fb.type()))
+        {
+            String enumFqn = enumValueFqn(pr);
+            String shortName = pr.typeName == null ? "" : (pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName);
+            if (enumFqn != null)
+            {
+                // Enum value — extract its name(); accessor returns the typed enum.
+                sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? builder.createString(((").append(enumFqn).append(") obj._").append(pr.name).append("()).name()) : 0;\n");
+            }
+            else if ("String".equals(shortName))
+            {
+                // Plain String value.
+                sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? builder.createString(obj._").append(pr.name).append("()) : 0;\n");
+            }
+            else
+            {
+                // Pointer-typed property whose FBS encoding is the path string.
+                // Defensive: instanceof PointerValue, fall back to toString().
+                sb.append("        int ").append(camel).append("Off = 0;\n");
+                sb.append("        if (obj._").append(pr.name).append("() != null)\n");
+                sb.append("        {\n");
+                sb.append("            Object _s_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+                sb.append("            String _str_").append(camel).append(" = (_s_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.protocol.grammar.PointerValue _pv) ? _pv._value() : String.valueOf(_s_").append(camel).append(");\n");
+                sb.append("            ").append(camel).append("Off = builder.createString(_str_").append(camel).append(");\n");
+                sb.append("        }\n");
+            }
+            return;
+        }
+        // Case 3: scalar reference (writes a child table inline, dispatched on runtime type)
+        if (!fb.isVector() && !fb.isUnion())
+        {
+            sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? dispatchWrite(obj._").append(pr.name).append("()) : 0;\n");
+            return;
+        }
+        // Case 4: scalar union (e.g. classifierGenericType, multiplicity)
+        if (!fb.isVector() && fb.isUnion())
+        {
+            if (ATOMIC_VALUE_CONTENT_UNION.equals(fb.type()))
+            {
+                emitAtomicValueContentPreTable(sb, pr, camel);
+                return;
+            }
+            emitUnionScalarPreTable(sb, pr, fb, camel);
+            return;
+        }
+        // Case 5: vector primitive ([long], [bool], [double], …)
+        if (fb.isVector() && !fb.isUnion() && isFbsPrimitive(fb.type()))
+        {
+            emitVectorPrimitivePreTable(sb, pr, fb, camel, methodCamel, defName);
+            return;
+        }
+        // Case 6: vector string (covers plain strings, Enum.name lists, PointerValue paths)
+        if (fb.isVector() && !fb.isUnion() && "string".equals(fb.type()))
+        {
+            emitVectorStringPreTable(sb, pr, fb, camel, methodCamel, defName);
+            return;
+        }
+        // Case 7: vector reference ([ChildDef])
+        if (fb.isVector() && !fb.isUnion())
+        {
+            emitVectorRefPreTable(sb, pr, fb, camel, methodCamel, defName);
+            return;
+        }
+        // Case 8: vector union ([SomeUnion]) — parallel offsets + type-tag arrays.
+        if (fb.isVector() && fb.isUnion())
+        {
+            emitVectorUnionPreTable(sb, pr, fb, camel, methodCamel, defName);
+            return;
+        }
+    }
+
+    private void emitVectorUnionPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
+    {
+        String unionName = fb.type();
+        java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
+        sb.append("        int ").append(camel).append("Vec = 0;\n");
+        sb.append("        int ").append(camel).append("TypeVec = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        {\n");
+        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+        sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
+        sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
+        sb.append("            byte[] _types_").append(camel).append(" = new byte[_n_").append(camel).append("];\n");
+        sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++)\n");
+        sb.append("            {\n");
+        sb.append("                Object _item = _seq_").append(camel).append(".getBoxed(i);\n");
+
+        if (members != null)
+        {
+            int ancestorIdx = members.indexOf("AncestorRef");
+            int pointerIdx = members.indexOf("PointerRef");
+            boolean wroteFirst = false;
+
+            if (ancestorIdx >= 0)
+            {
+                sb.append("                if (_writing.containsKey(_item))\n");
+                sb.append("                {\n");
+                sb.append("                    _offs_").append(camel).append("[i] = writeAncestorRef(_item);\n");
+                sb.append("                    _types_").append(camel).append("[i] = ").append(ancestorIdx + 1).append(";\n");
+                sb.append("                }\n");
+                wroteFirst = true;
+            }
+            if (pointerIdx >= 0)
+            {
+                sb.append("                ").append(wroteFirst ? "else " : "");
+                sb.append("if (_item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement\n");
+                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty\n");
+                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype\n");
+                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag)\n");
+                sb.append("                {\n");
+                sb.append("                    _offs_").append(camel).append("[i] = writePointerRef(_item);\n");
+                sb.append("                    _types_").append(camel).append("[i] = ").append(pointerIdx + 1).append(";\n");
+                sb.append("                }\n");
+                wroteFirst = true;
+            }
+            for (int i = 0; i < members.size(); i++)
+            {
+                String member = members.get(i);
+                if (FbsSchema.isSpecialRef(member)) continue;
+                String pureName = FbsSchema.defToPureClassName(member);
+                ClassRecord cr = findClassByShortName(pureName);
+                if (cr == null) continue;
+                String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
+                sb.append("                ").append(wroteFirst ? "else " : "");
+                sb.append("if (_item instanceof ").append(typeFqn).append(" _v_").append(camel).append("_").append(i).append(")\n");
+                sb.append("                {\n");
+                sb.append("                    _offs_").append(camel).append("[i] = write").append(cr.name).append("(_v_").append(camel).append("_").append(i).append(");\n");
+                sb.append("                    _types_").append(camel).append("[i] = ").append(i + 1).append(";\n");
+                sb.append("                }\n");
+                wroteFirst = true;
+            }
+        }
+        sb.append("            }\n");
+        String createOffsetMethod = "create" + capitalize(methodCamel) + "Vector";
+        String createTypeMethod = resolveMethodOnDef(defName,
+                "create" + capitalize(methodCamel) + "TypeVector",
+                "create" + capitalize(methodCamel) + "typeVector");
+        sb.append("            ").append(camel).append("Vec = ").append(defName).append(".").append(createOffsetMethod).append("(builder, _offs_").append(camel).append(");\n");
+        sb.append("            ").append(camel).append("TypeVec = ").append(defName).append(".").append(createTypeMethod).append("(builder, _types_").append(camel).append(");\n");
+        sb.append("        }\n");
+    }
+
+    private void emitVectorPrimitivePreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
+    {
+        String primType = primitiveJavaTypeName(fb.type());
+        String boxedType = primitiveBoxedTypeName(fb.type());
+        sb.append("        int ").append(camel).append("Vec = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        {\n");
+        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+        sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
+        sb.append("            ").append(primType).append("[] _arr_").append(camel).append(" = new ").append(primType).append("[_n_").append(camel).append("];\n");
+        sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++) { _arr_").append(camel).append("[i] = (").append(boxedType).append(") _seq_").append(camel).append(".getBoxed(i); }\n");
+        sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _arr_").append(camel).append(");\n");
+        sb.append("        }\n");
+    }
+
+    private void emitVectorStringPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
+    {
+        String enumFqn = enumValueFqn(pr);
+        String shortName = pr.typeName == null ? "" : (pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName);
+        sb.append("        int ").append(camel).append("Vec = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        {\n");
+        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+        sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
+        sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
+        sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++)\n");
+        sb.append("            {\n");
+        sb.append("                Object _item = _seq_").append(camel).append(".getBoxed(i);\n");
+        if (enumFqn != null)
+        {
+            sb.append("                _offs_").append(camel).append("[i] = builder.createString(((").append(enumFqn).append(") _item).name());\n");
+        }
+        else if ("String".equals(shortName))
+        {
+            sb.append("                _offs_").append(camel).append("[i] = builder.createString((String) _item);\n");
+        }
+        else
+        {
+            sb.append("                String _str = (_item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.protocol.grammar.PointerValue _pv) ? _pv._value() : String.valueOf(_item);\n");
+            sb.append("                _offs_").append(camel).append("[i] = builder.createString(_str);\n");
+        }
+        sb.append("            }\n");
+        sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _offs_").append(camel).append(");\n");
+        sb.append("        }\n");
+    }
+
+    private void emitVectorRefPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
+    {
+        // Special case: [PointerRef] — write each element through writePointerRef
+        // (the special-ref helper) rather than dispatchWrite (which would emit
+        // a concrete Def table instead of a typed PointerRef table).
+        boolean isPointerRefVector = "PointerRef".equals(fb.type());
+        String writeCall = isPointerRefVector ? "writePointerRef" : "dispatchWrite";
+        sb.append("        int ").append(camel).append("Vec = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        {\n");
+        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+        sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
+        sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
+        sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++) { _offs_").append(camel).append("[i] = ").append(writeCall).append("(_seq_").append(camel).append(".getBoxed(i)); }\n");
+        sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _offs_").append(camel).append(");\n");
+        sb.append("        }\n");
+    }
+
+    private static String primitiveJavaTypeName(String fbsType)
+    {
+        return switch (fbsType)
+        {
+            case "bool" -> "boolean";
+            case "byte", "ubyte" -> "byte";
+            case "short", "ushort" -> "short";
+            case "int", "uint" -> "int";
+            case "long", "ulong" -> "long";
+            case "float" -> "float";
+            case "double" -> "double";
+            default -> "Object";
+        };
+    }
+
+    private static String primitiveBoxedTypeName(String fbsType)
+    {
+        return switch (fbsType)
+        {
+            case "bool" -> "Boolean";
+            case "byte", "ubyte" -> "Byte";
+            case "short", "ushort" -> "Short";
+            case "int", "uint" -> "Integer";
+            case "long", "ulong" -> "Long";
+            case "float" -> "Float";
+            case "double" -> "Double";
+            default -> "Object";
+        };
+    }
+
+    private static String capitalize(String s)
+    {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /**
+     * Resolve the actual {@code add{Field}} method name on {@code DefName}.
+     * flatc varies between {@code addPackage} (Java-only keyword) and
+     * {@code addType_} (FBS-side keyword) for the same Pure-side concept of
+     * "field name needed escape" — rather than replicate its rules, look up
+     * the method by reflection.
+     */
+    private static String resolveAddMethod(String defName, String camel)
+    {
+        String stripped = camel.endsWith("_") ? camel.substring(0, camel.length() - 1) : camel;
+        String candidateNoUnderscore = "add" + capitalize(stripped);
+        String candidateUnderscore = candidateNoUnderscore + "_";
+        return resolveMethodOnDef(defName, candidateNoUnderscore, candidateUnderscore);
+    }
+
+    /**
+     * Same as {@link #resolveAddMethod} but for {@code create{Field}Vector}.
+     * Returns the suffix to use (e.g. {@code "Type"} or {@code "Type_"}) so the
+     * caller can compose both {@code create{X}Vector} and {@code add{X}}.
+     * Returns the bare camel without leading capitalisation, with or without
+     * trailing underscore, matching whatever flatc emitted.
+     */
+    private static String resolveCreateVectorSuffix(String defName, String camel)
+    {
+        String stripped = camel.endsWith("_") ? camel.substring(0, camel.length() - 1) : camel;
+        String candNoUnder = "create" + capitalize(stripped) + "Vector";
+        String candUnder = "create" + capitalize(stripped) + "_Vector";
+        // Pick whichever method actually exists.
+        String chosen = resolveMethodOnDef(defName, candNoUnder, candUnder);
+        return chosen.equals(candUnder) ? stripped + "_" : stripped;
+    }
+
+    private static String resolveMethodOnDef(String defName, String preferred, String fallback)
+    {
+        try
+        {
+            Class<?> defClass = Class.forName("org.finos.legend.pure.m3.module.pdbModule.fbs." + defName);
+            for (java.lang.reflect.Method m : defClass.getMethods())
+            {
+                if (m.getName().equals(preferred)) return preferred;
+            }
+            for (java.lang.reflect.Method m : defClass.getMethods())
+            {
+                if (m.getName().equals(fallback)) return fallback;
+            }
+        }
+        catch (Exception ignored)
+        {
+        }
+        return preferred;
+    }
+
+    /**
+     * Camel-case the FBS field name while preserving any trailing underscore
+     * (used by flatc to escape Java keywords like {@code package_}).
+     * {@code package_ -> package_}, {@code source_id -> sourceId},
+     * {@code start_line -> startLine}.
+     */
+    private static String fbsFieldIdent(String snake)
+    {
+        boolean trailingUnderscore = snake.endsWith("_");
+        String camel = FbsSchema.snakeToCamel(snake);
+        return trailingUnderscore ? camel + "_" : camel;
+    }
+
+    /**
+     * AtomicValueContentUnion is special: its members are primitive-literal Defs
+     * (IntegerValueDef, FloatValueDef, BooleanValueDef, StringValueDef,
+     * DecimalValueDef) plus LambdaFunctionDef and PointerRef. The runtime value
+     * is a Java primitive (Long, Double, Boolean, String, BigDecimal) or a
+     * LambdaFunction or a PackageableElement (for enum-pointer-style references).
+     * We construct the matching Def table inline at write time.
+     *
+     * <p>Tag indices come from the FBS union declaration:
+     * IntegerValueDef=1, FloatValueDef=2, BooleanValueDef=3, StringValueDef=4,
+     * LambdaFunctionDef=5, PointerRef=6, DecimalValueDef=7.</p>
+     */
+    private void emitAtomicValueContentPreTable(StringBuilder sb, PropRecord pr, String camel)
+    {
+        sb.append("        int ").append(camel).append("Off = 0;\n");
+        sb.append("        byte ").append(camel).append("Type = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null)\n");
+        sb.append("        {\n");
+        sb.append("            Object _av = obj._").append(pr.name).append("();\n");
+        // 1. Long → IntegerValueDef
+        sb.append("            if (_av instanceof Long _av_long)\n");
+        sb.append("            {\n");
+        sb.append("                IntegerValueDef.startIntegerValueDef(builder);\n");
+        sb.append("                IntegerValueDef.addVal(builder, _av_long);\n");
+        sb.append("                ").append(camel).append("Off = IntegerValueDef.endIntegerValueDef(builder);\n");
+        sb.append("                ").append(camel).append("Type = 1;\n");
+        sb.append("            }\n");
+        // 2. Double → FloatValueDef
+        sb.append("            else if (_av instanceof Double _av_dbl)\n");
+        sb.append("            {\n");
+        sb.append("                FloatValueDef.startFloatValueDef(builder);\n");
+        sb.append("                FloatValueDef.addVal(builder, _av_dbl);\n");
+        sb.append("                ").append(camel).append("Off = FloatValueDef.endFloatValueDef(builder);\n");
+        sb.append("                ").append(camel).append("Type = 2;\n");
+        sb.append("            }\n");
+        // 3. Boolean → BooleanValueDef
+        sb.append("            else if (_av instanceof Boolean _av_bool)\n");
+        sb.append("            {\n");
+        sb.append("                BooleanValueDef.startBooleanValueDef(builder);\n");
+        sb.append("                BooleanValueDef.addVal(builder, _av_bool);\n");
+        sb.append("                ").append(camel).append("Off = BooleanValueDef.endBooleanValueDef(builder);\n");
+        sb.append("                ").append(camel).append("Type = 3;\n");
+        sb.append("            }\n");
+        // 4. java.math.BigDecimal → DecimalValueDef (encoded as string)
+        sb.append("            else if (_av instanceof java.math.BigDecimal _av_dec)\n");
+        sb.append("            {\n");
+        sb.append("                int _av_decOff = builder.createString(_av_dec.toPlainString());\n");
+        sb.append("                DecimalValueDef.startDecimalValueDef(builder);\n");
+        sb.append("                DecimalValueDef.addVal(builder, _av_decOff);\n");
+        sb.append("                ").append(camel).append("Off = DecimalValueDef.endDecimalValueDef(builder);\n");
+        sb.append("                ").append(camel).append("Type = 7;\n");
+        sb.append("            }\n");
+        // 5. LambdaFunction → write directly via dispatchWrite (writes LambdaFunctionDef)
+        sb.append("            else if (_av instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction _av_lf)\n");
+        sb.append("            {\n");
+        sb.append("                ").append(camel).append("Off = writeLambdaFunction(_av_lf);\n");
+        sb.append("                ").append(camel).append("Type = 5;\n");
+        sb.append("            }\n");
+        // 6. PackageableElement → PointerRef
+        sb.append("            else if (_av instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement _av_pe)\n");
+        sb.append("            {\n");
+        sb.append("                ").append(camel).append("Off = writePointerRef(_av_pe);\n");
+        sb.append("                ").append(camel).append("Type = 6;\n");
+        sb.append("            }\n");
+        // 7. String → StringValueDef
+        sb.append("            else if (_av instanceof String _av_str)\n");
+        sb.append("            {\n");
+        sb.append("                int _av_strOff = builder.createString(_av_str);\n");
+        sb.append("                StringValueDef.startStringValueDef(builder);\n");
+        sb.append("                StringValueDef.addVal(builder, _av_strOff);\n");
+        sb.append("                ").append(camel).append("Off = StringValueDef.endStringValueDef(builder);\n");
+        sb.append("                ").append(camel).append("Type = 4;\n");
+        sb.append("            }\n");
+        sb.append("        }\n");
+    }
+
+    private void emitUnionScalarPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel)
+    {
+        String unionName = fb.type();
+        java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
+        sb.append("        int ").append(camel).append("Off = 0;\n");
+        sb.append("        byte ").append(camel).append("Type = 0;\n");
+        sb.append("        if (obj._").append(pr.name).append("() != null && obj._").append(pr.name).append("() != obj)\n");
+        sb.append("        {\n");
+        sb.append("            Object _u_").append(camel).append(" = obj._").append(pr.name).append("();\n");
+
+        boolean wroteFirst = false;
+        // AncestorRef (cycle break) first if it's a member
+        if (members != null)
+        {
+            int ancestorIdx = members.indexOf("AncestorRef");
+            if (ancestorIdx >= 0)
+            {
+                sb.append("            if (_writing.containsKey(_u_").append(camel).append("))\n");
+                sb.append("            {\n");
+                sb.append("                ").append(camel).append("Off = writeAncestorRef(_u_").append(camel).append(");\n");
+                sb.append("                ").append(camel).append("Type = ").append(ancestorIdx + 1).append(";\n");
+                sb.append("            }\n");
+                wroteFirst = true;
+            }
+            // PointerRef next if it's a member
+            int pointerIdx = members.indexOf("PointerRef");
+            if (pointerIdx >= 0)
+            {
+                sb.append("            ").append(wroteFirst ? "else " : "");
+                sb.append("if (_u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement\n");
+                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty\n");
+                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype\n");
+                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag)\n");
+                sb.append("            {\n");
+                sb.append("                ").append(camel).append("Off = writePointerRef(_u_").append(camel).append(");\n");
+                sb.append("                ").append(camel).append("Type = ").append(pointerIdx + 1).append(";\n");
+                sb.append("            }\n");
+                wroteFirst = true;
+            }
+            // Concrete Def members
+            for (int i = 0; i < members.size(); i++)
+            {
+                String member = members.get(i);
+                if (FbsSchema.isSpecialRef(member)) continue;
+                String pureName = FbsSchema.defToPureClassName(member);
+                ClassRecord cr = findClassByShortName(pureName);
+                if (cr == null) continue;
+                String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
+                sb.append("            ").append(wroteFirst ? "else " : "");
+                sb.append("if (_u_").append(camel).append(" instanceof ").append(typeFqn).append(" _v_").append(camel).append("_").append(i).append(")\n");
+                sb.append("            {\n");
+                sb.append("                ").append(camel).append("Off = write").append(cr.name).append("(_v_").append(camel).append("_").append(i).append(");\n");
+                sb.append("                ").append(camel).append("Type = ").append(i + 1).append(";\n");
+                sb.append("            }\n");
+                wroteFirst = true;
+            }
+        }
+        sb.append("        }\n");
+    }
+
+    private void emitInTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String defName)
+    {
+        // FbsSchema.snakeToCamel appends `_` for keywords. Variables keep the
+        // escape. Method names depend on what flatc actually emitted (it varies:
+        // Java-only keywords like `package` drop the `_`, FBS-side keywords like
+        // `type` keep it). We resolve via reflection.
+        String camel = FbsSchema.snakeToCamel(fb.name());
+        String addMethod = resolveAddMethod(defName, camel);
+
+        // Case 1: scalar primitive
+        if (!fb.isVector() && !fb.isUnion() && isFbsPrimitive(fb.type()))
+        {
+            String defaultLit = primitiveDefaultLiteral(fb.type());
+            sb.append("        if (obj._").append(pr.name).append("() != null) { ").append(defName).append(".").append(addMethod).append("(builder, obj._").append(pr.name).append("()); }\n");
+            // Rely on FBS default-omission for null; no explicit add when null.
+            // (Note: if a future required-primitive needs forced emission, add an "else" branch with the default.)
+            return;
+        }
+        // Cases 2 and 3: scalar string or scalar reference — emit Def.addX(builder, off) when nonzero
+        if (!fb.isVector() && !fb.isUnion())
+        {
+            sb.append("        if (").append(camel).append("Off != 0) { ").append(defName).append(".").append(addMethod).append("(builder, ").append(camel).append("Off); }\n");
+            return;
+        }
+        // Case 4: scalar union — emit Def.add{X}Type(builder, type) AND Def.add{X}(builder, off) when type != 0
+        if (!fb.isVector() && fb.isUnion())
+        {
+            String addTypeMethod = resolveTypeTagAddMethod(defName, addMethod);
+            sb.append("        if (").append(camel).append("Type != 0) { ")
+                    .append(defName).append(".").append(addTypeMethod).append("(builder, ").append(camel).append("Type); ")
+                    .append(defName).append(".").append(addMethod).append("(builder, ").append(camel).append("Off); }\n");
+            return;
+        }
+        // Cases 5, 6, 7: vector (non-union) — emit Def.addX(builder, vec) when nonzero
+        if (fb.isVector() && !fb.isUnion())
+        {
+            sb.append("        if (").append(camel).append("Vec != 0) { ").append(defName).append(".").append(addMethod).append("(builder, ").append(camel).append("Vec); }\n");
+            return;
+        }
+        // Case 8: vector union — emit both the offsets vector AND the types vector.
+        if (fb.isVector() && fb.isUnion())
+        {
+            String addTypeMethod = resolveTypeTagAddMethod(defName, addMethod);
+            sb.append("        if (").append(camel).append("Vec != 0) { ")
+                    .append(defName).append(".").append(addTypeMethod).append("(builder, ").append(camel).append("TypeVec); ")
+                    .append(defName).append(".").append(addMethod).append("(builder, ").append(camel).append("Vec); }\n");
+            return;
+        }
+    }
+
+    /**
+     * For a union field whose offset-add method is e.g. {@code addType_}, the
+     * type-tag-add method might be {@code addType_type} (FBS-keyword style) or
+     * {@code addType_Type} (capital). For non-keyword fields like
+     * {@code classifier_generic_type}, the offset-add is
+     * {@code addClassifierGenericType} and the type-tag-add is
+     * {@code addClassifierGenericTypeType}.
+     */
+    private static String resolveTypeTagAddMethod(String defName, String addOffsetMethod)
+    {
+        String capital = addOffsetMethod + "Type";
+        String lower = addOffsetMethod + "type";
+        return resolveMethodOnDef(defName, capital, lower);
+    }
+
+    private static String primitiveDefaultLiteral(String fbsType)
+    {
+        return switch (fbsType)
+        {
+            case "bool" -> "false";
+            case "float", "double" -> "0.0";
+            default -> "0L";
+        };
+    }
+
+    /**
+     * If the property's Pure type resolves to an enum, return the FQN of the
+     * generated enum's Java class (e.g. {@code AggregationKindEnum}); otherwise null.
+     */
+    private String enumValueFqn(PropRecord pr)
+    {
+        if (pr.typeName == null) return null;
+        String shortName = pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName;
+        EnumRecord er = findEnum(pr.typeName);
+        if (er == null) er = findEnumByShortName(shortName);
+        if (er == null) return null;
+        return toJavaPackage(er.packagePath) + "." + er.name + "Enum";
+    }
+
+    private void emitDispatchWrite(StringBuilder sb, MutableList<ClassRecord> writableClasses)
+    {
+        sb.append("    /** Dispatch on runtime type to the corresponding write method. */\n");
+        sb.append("    public int dispatchWrite(Object obj)\n    {\n");
+        sb.append("        if (obj == null) { return 0; }\n");
+        for (ClassRecord cr : writableClasses)
+        {
+            String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
+            sb.append("        if (obj instanceof ").append(typeFqn).append(" _v_").append(cr.name).append(") { return write").append(cr.name).append("(_v_").append(cr.name).append("); }\n");
+        }
+        sb.append("        throw new IllegalArgumentException(\"GeneratedFlatBufferWriter has no writer for: \" + obj.getClass().getName());\n");
+        sb.append("    }\n");
     }
 
     /**
@@ -1264,6 +2128,29 @@ public class PdbJavaGenerator
         return false;
     }
 
+    /**
+     * Classify a {@link Multiplicity} into the four canonical names used by
+     * the writer for required-property validation. Returns {@code null} for
+     * any multiplicity outside the {0,1,*}-bound family — those properties
+     * get no validation gate.
+     */
+    private static String multiplicityName(Multiplicity mult)
+    {
+        if (!(mult instanceof ConcreteMultiplicity cm))
+        {
+            return null;
+        }
+        Long lowerBox = cm._lowerBound() == null ? null : cm._lowerBound()._value();
+        long lower = lowerBox == null ? 0 : lowerBox;
+        boolean upperUnbounded = cm._upperBound() == null || cm._upperBound()._value() == null;
+        long upper = upperUnbounded ? -1 : cm._upperBound()._value();
+        if (!upperUnbounded && upper == 1 && lower == 1) return "PureOne";
+        if (!upperUnbounded && upper == 1 && lower == 0) return "ZeroOne";
+        if (upperUnbounded && lower == 1) return "OneMany";
+        if (upperUnbounded && lower == 0) return "ZeroMany";
+        return null;
+    }
+
     private static boolean isPrimitiveType(String typeName)
     {
         String shortName = typeName.contains("::") ? typeName.substring(typeName.lastIndexOf("::") + 2) : typeName;
@@ -1415,6 +2302,11 @@ public class PdbJavaGenerator
         boolean isMany;
         boolean isEqualityKey;
         String javaTypeFqn; // pre-resolved Java FQN, bypasses mapToJavaType
+        // Multiplicity name used by the writer for required-property validation.
+        // One of: "PureOne" (lower=1, upper=1), "ZeroOne" (0,1), "OneMany" (1,*),
+        // "ZeroMany" (0,*), or null when the multiplicity is not one of those
+        // four canonical shapes.
+        String multiplicity;
     }
 
     static class EnumRecord

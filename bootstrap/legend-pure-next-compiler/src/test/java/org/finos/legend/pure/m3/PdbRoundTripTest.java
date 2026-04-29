@@ -157,7 +157,7 @@ public class PdbRoundTripTest
                     allModuleElements.add(elem);
                 }
             }
-            List<PDBExtension> pdbExtensions = List.of(new PureLanguageSerialization());
+            List<PDBExtension> pdbExtensions = List.of(new PureLanguageExtension());
             try
             {
                 new CompressedArchiveWriter().write(allModuleElements, pdbExtensions, testModule, tempPdb);

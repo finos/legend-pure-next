@@ -1,5 +1,5 @@
 // Hand-written — Pure's Map is backed by java.util.LinkedHashMap, not generated.
-package org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection;
+package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;

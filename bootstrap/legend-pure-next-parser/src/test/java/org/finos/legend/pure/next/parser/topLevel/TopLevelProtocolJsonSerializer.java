@@ -53,6 +53,21 @@ public class TopLevelProtocolJsonSerializer
                 .changeDefaultPropertyInclusion(v -> v.withValueInclusion(
                         com.fasterxml.jackson.annotation.JsonInclude
                                 .Include.NON_EMPTY))
+                // Treat the generated _xxx() / _xxx(value) accessors as bean
+                // properties named "xxx", disable isXxx detection so the
+                // freeze-support isFrozen() is not picked up, and relax the
+                // default first-char validator (which rejects lower-case
+                // base names like the "s" in _sections).
+                .accessorNaming(new tools.jackson.databind.introspect
+                        .DefaultAccessorNamingStrategy.Provider()
+                        .withGetterPrefix("_")
+                        .withSetterPrefix("_")
+                        .withIsGetterPrefix(null)
+                        .withFirstCharAcceptance(true, true))
+                // Synthesize @JsonTypeInfo / @JsonTypeName / @JsonIgnore for
+                // the protocol classes, so the generated code can stay free of
+                // Jackson annotations.
+                .annotationIntrospector(new PureProtocolAnnotationIntrospector())
                 .addModule(new tools.jackson.datatype.eclipsecollections
                         .EclipseCollectionsModule())
                 .build();
