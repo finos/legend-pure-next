@@ -399,6 +399,7 @@ public class MetaNatives
             {
                 diC.setClassifierGenericType(copyCgt);
             }
+            fixTypeParameterOwners(original, copy);
             fixPropertyOwners(original, copy, resolver);
             return _E_ValueSpecification.wrap(copy, genericType, multiplicity, resolver);
         });
@@ -637,16 +638,19 @@ public class MetaNatives
             if (typeParams != null && !typeParams.isEmpty())
             {
                 org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.GenericType> innerTypeArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.type.generics.TypeParameter> tpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
                 for (Object tp : typeParams)
                 {
-                    if (tp instanceof meta.pure.metamodel.type.generics.TypeParameter)
+                    if (tp instanceof meta.pure.metamodel.type.generics.TypeParameter tpObj)
                     {
-                        ((meta.pure.metamodel.type.generics.TypeParameter) tp)._owner(newClass);
+                        tpObj._owner(newClass);
+                        tpList.add(tpObj);
                     }
                     meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl tpArg = _GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) tp, resolver);
                     innerTypeArgs.add(tpArg);
                 }
                 selfRef._typeArguments(innerTypeArgs);
+                newClass._typeParameters(tpList);
             }
             // Build multiplicityArguments from provided multiplicityParameters
             Object mulParamsRaw = _E_ValueSpecification.unwrap(args.get(1));
@@ -666,15 +670,18 @@ public class MetaNatives
             if (mulParams != null && !mulParams.isEmpty())
             {
                 org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.multiplicity.Multiplicity> innerMulArgs = org.eclipse.collections.impl.factory.Lists.mutable.empty();
+                org.eclipse.collections.api.list.MutableList<meta.pure.metamodel.multiplicity.MultiplicityParameter> mpList = org.eclipse.collections.impl.factory.Lists.mutable.empty();
                 for (Object mp : mulParams)
                 {
-                    if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter)
+                    if (mp instanceof meta.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
                     {
-                        ((meta.pure.metamodel.multiplicity.MultiplicityParameter) mp)._owner(newClass);
+                        mpObj._owner(newClass);
+                        mpList.add(mpObj);
                     }
                     innerMulArgs.add((meta.pure.metamodel.multiplicity.Multiplicity) mp);
                 }
                 selfRef._multiplicityArguments(innerMulArgs);
+                newClass._multiplicityParameters(mpList);
             }
 
             meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = _GenericType.buildUserDefinedGenericType(classType, resolver);
@@ -805,6 +812,33 @@ public class MetaNatives
      * After copying a SimplePropertyOwner, update property owners and nested
      * enum value CGTs to point to the copy instead of the original.
      */
+    private static void fixTypeParameterOwners(Object original, Object copy)
+    {
+        if (copy instanceof meta.pure.metamodel.type.Class cls)
+        {
+            if (cls._typeParameters() != null)
+            {
+                for (meta.pure.metamodel.type.generics.TypeParameter tp : cls._typeParameters())
+                {
+                    if (tp._owner() == original)
+                    {
+                        tp._owner(cls);
+                    }
+                }
+            }
+            if (cls._multiplicityParameters() != null)
+            {
+                for (meta.pure.metamodel.multiplicity.MultiplicityParameter mp : cls._multiplicityParameters())
+                {
+                    if (mp._owner() == original)
+                    {
+                        mp._owner(cls);
+                    }
+                }
+            }
+        }
+    }
+
     private static void fixPropertyOwners(Object original, Object copy, MetadataAccess resolver)
     {
         if (!(copy instanceof meta.pure.metamodel.SimplePropertyOwner spo))
