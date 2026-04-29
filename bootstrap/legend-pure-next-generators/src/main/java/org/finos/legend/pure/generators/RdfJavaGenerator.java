@@ -698,8 +698,16 @@ public class RdfJavaGenerator
             System.out.println("Metamodel:  " + metamodel);
             System.out.println();
 
+            // Java codegen targets either the source m3.ttl or the derived
+            // m3_protocol.ttl. Skip validation for the derived model — its
+            // @pointer/@maybePointer annotations have been consumed by the
+            // protocol generator's type swap.
+            boolean isDerivedProtocolModel = inputPath != null && inputPath.contains("protocol");
+            M3MetamodelReader reader = isDerivedProtocolModel
+                    ? M3MetamodelReader.forDerivedModel(inputPath, false)
+                    : new M3MetamodelReader(inputPath);
             RdfJavaGenerator generator = new RdfJavaGenerator(
-                    new M3MetamodelReader(inputPath).read(), packageName, metamodel);
+                    reader.read(), packageName, metamodel);
             generator.generate(outputDir);
         }
         catch (Exception e)

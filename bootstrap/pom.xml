@@ -142,6 +142,16 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <trimStackTrace>false</trimStackTrace>
+                    <!--
+                      Inherited by every child module. Broader than surefire's
+                      defaults (Test*, *Test, *Tests, *TestCase) so a class
+                      named *TestRunner, FooTestSuite, etc. still gets picked
+                      up. The SurefireDiscoveryTest tripwire enforces that any
+                      class with @Test annotations matches this pattern.
+                    -->
+                    <includes>
+                        <include>**/*Test*.java</include>
+                    </includes>
                 </configuration>
             </plugin>
             <plugin>

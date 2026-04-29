@@ -72,7 +72,14 @@ public final class PropertyAssignNode extends Node
             addToMergedList(merged, value);
             value = new org.finos.legend.pure.truffle.types.ObjectSequence(merged.toArray());
         }
-        writer.execute(target, propertyName, value);
+        // Dotted property paths (e.g. "address.name") can't be written through
+        // a single setter — they describe a navigation. The caller
+        // (CopyWithKeysNode) is responsible for navigating and writing the
+        // leaf via setDeepProperty. We just evaluate the value here.
+        if (!propertyName.contains("."))
+        {
+            writer.execute(target, propertyName, value);
+        }
         return value;
     }
 

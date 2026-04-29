@@ -68,7 +68,7 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testExt
 {
     let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^InferredGenericType(),
+        genericType = ^CompilerNotSetGenericType(),
         multiplicity = PureOne
     );
     
@@ -89,7 +89,7 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPop
     
     let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^InferredGenericType(),
+        genericType = ^CompilerNotSetGenericType(),
         multiplicity = PureOne
     );
     
@@ -120,7 +120,7 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPop
     
     let expr = ^FunctionInvocation(
         functionName = 'test',
-        genericType = ^InferredGenericType(),
+        genericType = ^CompilerNotSetGenericType(),
         multiplicity = PureOne
     );
     

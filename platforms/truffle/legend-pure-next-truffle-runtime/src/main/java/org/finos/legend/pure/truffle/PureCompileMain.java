@@ -54,6 +54,7 @@ public final class PureCompileMain
         String[] rest = Arrays.copyOfRange(args, 1, args.length);
         switch (command)
         {
+            case "compile" -> compile(rest);
             case "execute" -> execute(rest);
             default ->
             {
@@ -69,9 +70,42 @@ public final class PureCompileMain
         System.err.println("Usage: pure-compile <command> [options]");
         System.err.println();
         System.err.println("Commands:");
-        System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]");
+        System.err.println("  compile --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources against base PDB(s)");
+        System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
         System.err.println();
-        System.err.println("Runs the given Pure function through the GraalVM Truffle interpreter.");
+        System.err.println("Runs the Pure compiler / executor through the GraalVM Truffle interpreter.");
+    }
+
+    private static void compile(String[] args) throws Exception
+    {
+        List<String> basePdbPaths = new ArrayList<>();
+        String source = null;
+        String output = null;
+
+        for (int i = 0; i < args.length; i++)
+        {
+            switch (args[i])
+            {
+                case "--base-pdb" -> basePdbPaths.add(args[++i]);
+                case "--source" -> source = args[++i];
+                case "--output" -> output = args[++i];
+                default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
+            }
+        }
+
+        if (basePdbPaths.isEmpty() || source == null || output == null)
+        {
+            System.err.println("Usage: pure-compile compile --base-pdb <file>... --source <dir> --output <file>");
+            System.exit(1);
+        }
+
+        List<Path> basePdbs = new ArrayList<>();
+        for (String p : basePdbPaths)
+        {
+            basePdbs.add(Path.of(p));
+        }
+        org.finos.legend.pure.truffle.runtime.TruffleCompilerBinaryBuilder.compile(
+                basePdbs, Path.of(source), Path.of(output));
     }
 
     private static void execute(String[] args) throws Exception

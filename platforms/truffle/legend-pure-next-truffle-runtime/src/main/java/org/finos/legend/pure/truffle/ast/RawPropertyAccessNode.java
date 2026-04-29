@@ -39,12 +39,15 @@ public final class RawPropertyAccessNode extends PureNode
     @Child
     private PropertyReadNode reader = new PropertyReadNode();
 
-    // Cached enum value — monomorphic cache by Enumeration identity
+    // Cached enum value — monomorphic cache by (Enumeration identity, propName)
     @CompilationFinal
     private Object cachedEnumTarget;
 
     @CompilationFinal
     private Object cachedEnumValue;
+
+    @CompilationFinal
+    private String cachedPropName;
 
     public RawPropertyAccessNode(FunctionExpression fe, PureNode[] argNodes)
     {
@@ -96,12 +99,28 @@ public final class RawPropertyAccessNode extends PureNode
             {
                 return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
             }
-            // Enum value access — cached per Enumeration identity
+            // Enumerations have BOTH metaclass properties (_name, _package,
+            // _values, ...) AND enum values (FIRST, SECOND, ...).
+            // Resolution order:
+            //   1. metaclass property via reader (handles _name, _package, ...)
+            //   2. Java enum constant (handles declared enums, fast path)
+            //   3. runtime _values() traversal (handles enums made via newEnumeration)
+            //   4. throw — better than silently returning empty (which is what
+            //      hid testIsEnum / testEqualEnum / testNewEnumeration for so long)
             if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en)
             {
-                if (cachedEnumTarget == en && cachedEnumValue != null)
+                if (cachedEnumTarget == en && cachedEnumValue != null
+                        && cachedPropName != null && cachedPropName.equals(propName))
                 {
                     return cachedEnumValue;
+                }
+                // Use executeOrAbsent so we can tell "metaclass property
+                // exists and is empty" (return as-is) from "property doesn't
+                // exist on this enum" (fall through to enum-value lookup).
+                Object viaProp = reader.executeOrAbsent(target, propName);
+                if (viaProp != org.finos.legend.pure.truffle.ast.PropertyReadNode.ABSENT)
+                {
+                    return viaProp;
                 }
                 Object enumVal = getContext().coerceToJavaEnum(en, propName);
                 if (enumVal != null)
@@ -109,9 +128,40 @@ public final class RawPropertyAccessNode extends PureNode
                     CompilerDirectives.transferToInterpreterAndInvalidate();
                     cachedEnumTarget = en;
                     cachedEnumValue = enumVal;
+                    cachedPropName = propName;
                     return enumVal;
                 }
-                // Fall through to regular property access
+                // Runtime enum (no Java class): values live on _properties()
+                // as Property instances whose default-value lambda wraps the
+                // Enum. Walk the properties looking for a matching name.
+                org.finos.legend.pure.truffle.types.PureSequence properties = en._properties();
+                if (properties != null)
+                {
+                    for (int i = 0; i < properties.size(); i++)
+                    {
+                        Object p = properties.getBoxed(i);
+                        if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop
+                                && propName.equals(prop._name()))
+                        {
+                            // The default-value lambda's expressionSequence[0]
+                            // is an AtomicValue whose _value() is the Enum.
+                            var dv = prop._defaultValue();
+                            if (dv != null && dv._expressionSequence() != null && !dv._expressionSequence().isEmpty())
+                            {
+                                Object expr = dv._expressionSequence().getBoxed(0);
+                                if (expr instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
+                                {
+                                    return av._value();
+                                }
+                            }
+                        }
+                    }
+                }
+                throw new RuntimeException("No property or enum value '" + propName + "' on enumeration '"
+                        + (en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement enpe
+                                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(enpe)
+                                : en.toString())
+                        + "'");
             }
             return reader.execute(target, propName);
         }

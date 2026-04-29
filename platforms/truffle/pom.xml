@@ -22,4 +22,26 @@
         <module>legend-pure-next-truffle-runtime</module>
         <module>legend-pure-next-truffle-test-compiler-pure</module>
     </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                      Inherited by every child module. Broader than surefire's
+                      defaults (Test*, *Test, *Tests, *TestCase) so a class
+                      named *TestRunner, FooTestSuite, etc. still gets picked
+                      up. The SurefireDiscoveryTest tripwire (in the bootstrap
+                      reactor) enforces that any class with @Test annotations
+                      matches this pattern.
+                    -->
+                    <includes>
+                        <include>**/*Test*.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -23,6 +23,8 @@ import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;
 import meta.pure.protocol.grammar.type.Type_Pointer;
 import meta.pure.protocol.grammar.type.generics.GenericType;
 import meta.pure.protocol.grammar.type.generics.GenericTypeValue;
+import meta.pure.protocol.grammar.type.generics.GenericType_Pointer;
+import meta.pure.protocol.grammar.type.generics.GenericType_Protocol;
 import meta.pure.protocol.grammar.valuespecification.VariableExpression;
 
 /**
@@ -76,13 +78,18 @@ public class _G_PackageableFunction
         return sb.toString();
     }
 
-    private static String getTypeSignature(GenericType gt)
+    private static String getTypeSignature(GenericType_Protocol gt)
     {
         if (gt == null)
         {
             return "UNKNOWN";
         }
-        return switch (gt)
+        if (gt instanceof GenericType_Pointer ptr)
+        {
+            String fullPath = ptr._value();
+            return fullPath.contains("::") ? fullPath.substring(fullPath.lastIndexOf("::") + 2) : fullPath;
+        }
+        return switch ((GenericType) gt)
         {
             case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> "UNDEFINED";
             case GenericTypeValue gtv ->

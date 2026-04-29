@@ -524,15 +524,20 @@ public class M3ProtocolSerializer
      * E.g., "Function", {@code "Function<Any>"}, {@code "Property<String, Integer>"}
      */
     private void serializeGenericType(final StringBuilder sb,
-                                       final GenericType gt)
+                                       final meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
     {
         if (gt == null)
         {
             sb.append("Any");
             return;
         }
-
-        switch (gt)
+        if (gt instanceof meta.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
+        {
+            sb.append(ptr._value());
+            return;
+        }
+        GenericType inline = (GenericType) gt;
+        switch (inline)
         {
             case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored ->
             {
@@ -546,7 +551,7 @@ public class M3ProtocolSerializer
             {
                 serializeGenericTypeValue(sb, gtv);
             }
-            default -> throw new IllegalArgumentException("Unexpected GenericType: " + gt.getClass());
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + inline.getClass());
         }
     }
 
@@ -582,7 +587,7 @@ public class M3ProtocolSerializer
         }
 
         // Add type arguments if present
-        MutableList<GenericType> typeArgs = gtv._typeArguments();
+        MutableList<meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
         MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
@@ -637,7 +642,7 @@ public class M3ProtocolSerializer
                     ValueSpecification cp = colParams.get(i);
                     if (cp instanceof GenericTypeAndMultiplicityHolder holder)
                     {
-                        GenericType gt = holder._genericType();
+                        meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt = holder._genericType();
                         if (gt instanceof GenericTypeValue gtv2 && gtv2._type() instanceof meta.pure.protocol.grammar.relation.RelationType rt
                                 && rt._columns() != null && rt._columns().notEmpty())
                         {
@@ -678,13 +683,13 @@ public class M3ProtocolSerializer
      * (the &lt;args|multArgs&gt; portion, without the base type name).
      */
     private void serializeGenericTypeArgs(final StringBuilder sb,
-            final GenericType gt)
+            final meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt)
     {
         if (!(gt instanceof GenericTypeValue gtv))
         {
             throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
         }
-        MutableList<GenericType> typeArgs = gtv._typeArguments();
+        MutableList<meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeArgs = gtv._typeArguments();
         boolean hasTypeArgs = typeArgs != null && !typeArgs.isEmpty();
         MutableList<meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol> multArgs = gtv._multiplicityArguments();
         boolean hasMultArgs = multArgs != null && !multArgs.isEmpty();
@@ -1234,7 +1239,7 @@ public class M3ProtocolSerializer
                 // Extract names from Collection and types from RelationType TypeHolder
                 MutableList<ValueSpecification> names = nameCol._values();
                 // Build column-to-type map from RelationType if present
-                java.util.Map<String, GenericType> typeMap = new java.util.LinkedHashMap<>();
+                java.util.Map<String, meta.pure.protocol.grammar.type.generics.GenericType_Protocol> typeMap = new java.util.LinkedHashMap<>();
                 java.util.Map<String, Multiplicity_Protocol> mulMap = new java.util.LinkedHashMap<>();
                 if (params.size() >= 2 && params.get(1) instanceof GenericTypeAndMultiplicityHolder holder
                         && holder._genericType() != null
@@ -1399,7 +1404,7 @@ public class M3ProtocolSerializer
                 && typeHolder._genericType() != null)
         {
             // First param: GenericTypeAndMultiplicityHolder with type name and optional type/mult args
-            GenericType gt = typeHolder._genericType();
+            meta.pure.protocol.grammar.type.generics.GenericType_Protocol gt = typeHolder._genericType();
             if (!(gt instanceof GenericTypeValue gtvNew))
             {
                 throw new IllegalArgumentException("Expected GenericTypeValue for new expression, got: " + gt.getClass());

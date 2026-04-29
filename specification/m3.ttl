@@ -20,6 +20,7 @@
         [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :Class ; :general :GenericType_TypeAndMultiplicityParametersOwner ] .
 
 :qualifiedProperties a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "qualifiedProperties" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_PropertyOwner [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :QualifiedProperty ; :typeArguments :GenericType_Any ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :PropertyOwner ;
@@ -48,15 +49,6 @@
     :owner :Class ;
     :genericType :GenericType_VariableExpression ;
     :multiplicity :ZeroMany .
-
-:originalMilestonedProperties a :Property ;
-    :stereotypes :ProtocolInfo_inferred ;
-    :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "originalMilestonedProperties" ] ;
-    :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_PropertyOwner [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Nil :GenericType_Any ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
-    :owner :PropertyOwner ;
-    :genericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Nil :GenericType_Any ) ; :multiplicityArguments :ZeroMany ] ;
-    :multiplicity :ZeroMany .
-
 
 :aggregation a :Property ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "aggregation" ] ;
@@ -88,7 +80,7 @@
     :package :meta_pure_metamodel_type .
 
 :classifierGenericType a :Property ;
-    :stereotypes :ProtocolInfo_inferred ;
+    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "classifierGenericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Any :GenericType_GenericTypeValue ) ; :multiplicityArguments :PureOne ] ;
     :owner :Any ;
@@ -357,6 +349,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :FunctionType ; :general :GenericType_Type ] .
 
 :returnType a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "returnType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_FunctionType :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :FunctionType ;
@@ -364,7 +357,7 @@
     :multiplicity :PureOne .
 
 :returnMultiplicity a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "returnMultiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_FunctionType :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :FunctionType ;
@@ -382,7 +375,7 @@
 
 :GenericType a :Class ;
     :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
-    :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value [ :classifierGenericType :GenericType_String ; :data "AdHocGenericTypeValue,UndefinedGenericType,GenericTypeOperation" ] ] ;
+    :taggedValues [ a :TaggedValue ; :classifierGenericType :GenericType_TaggedValue ; :tag :ProtocolInfo_nonPointerSubtypes ; :taggedValue_value [ :classifierGenericType :GenericType_String ; :data "InferredGenericType,UserDefinedGenericType,UndefinedGenericType,GenericTypeOperation" ] ] ;
     :name [ :classifierGenericType :GenericType_String ; :data "GenericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_GenericTypeBase ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -871,7 +864,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :GenericTypeValue ; :general :GenericType_GenericTypeBase ] .
 
 :type a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "type" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_GenericTypeValue :GenericType_Type ) ; :multiplicityArguments :PureOne ] ;
     :owner :GenericTypeValue ;
@@ -879,6 +872,7 @@
     :multiplicity :PureOne .
 
 :typeArguments a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "typeArguments" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_GenericTypeValue :GenericType_GenericTypeBase ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :GenericTypeValue ;
@@ -891,7 +885,7 @@
     :owner :GenericTypeValue ;
     :genericType :GenericType_Multiplicity ;
     :multiplicity :ZeroMany ;
-    :stereotypes :ProtocolInfo_pointer .
+    :stereotypes :ProtocolInfo_maybePointer .
 
 :typeVariableValues a :Property ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "typeVariableValues" ] ;
@@ -968,6 +962,7 @@
 # Compiler-internal: "not set yet" (non-concrete). Unlike UndefinedGenericType (concrete wildcard).
 
 :CompilerNotSetGenericType a :Class ;
+    :stereotypes :ProtocolInfo_transientCompilerOnly ;
     :name [ :classifierGenericType :GenericType_String ; :data "CompilerNotSetGenericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_CompilerNotSetGenericType ] ;
     :package :meta_pure_metamodel_type_generics ;
@@ -976,6 +971,7 @@
 # --- CompilerNotSetMultiplicity ---
 
 :CompilerNotSetMultiplicity a :Class ;
+    :stereotypes :ProtocolInfo_transientCompilerOnly ;
     :name [ :classifierGenericType :GenericType_String ; :data "CompilerNotSetMultiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_CompilerNotSetMultiplicity ] ;
     :package :meta_pure_metamodel_multiplicity ;
@@ -1108,6 +1104,7 @@
     :multiplicity :PureOne .
 
 :ResolvedTypeParameter_value a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "value" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_ResolvedTypeParameter :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :ResolvedTypeParameter ;
@@ -1130,7 +1127,7 @@
     :multiplicity :PureOne .
 
 :ResolvedMultiplicityParameter_value a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "value" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_ResolvedMultiplicityParameter :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :ResolvedMultiplicityParameter ;
@@ -1178,7 +1175,7 @@
 # --- PackageableElement ---
 
 :PackageableElement a :Class ;
-    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract, :ProtocolInfo_pointerSource ;
     :name [ :classifierGenericType :GenericType_String ; :data "PackageableElement" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_PackageableElement ] ;
     :package :meta_pure_metamodel ;
@@ -1210,6 +1207,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :SimplePropertyOwner ; :general :GenericType_Any ] .
 
 :properties a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "properties" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_SimplePropertyOwner [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Nil :GenericType_Any ) ; :multiplicityArguments :ZeroMany ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :SimplePropertyOwner ;
@@ -1250,6 +1248,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :Generalization ; :general :GenericType_Any ] .
 
 :general a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "general" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Generalization :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :Generalization ;
@@ -1257,7 +1256,7 @@
     :multiplicity :PureOne .
 
 :specific a :Property ;
-    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_inferred, :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "specific" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Generalization :GenericType_Type ) ; :multiplicityArguments :PureOne ] ;
     :owner :Generalization ;
@@ -1331,6 +1330,7 @@
 
 
 :PackageableFunction_returnGenericType a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "returnGenericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackageableFunction ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "K" ] ] ] ] :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :PackageableFunction ;
@@ -1338,7 +1338,7 @@
     :multiplicity :PureOne .
 
 :PackageableFunction_returnMultiplicity a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "returnMultiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :PackageableFunction ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "K" ] ] ] ] :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :PackageableFunction ;
@@ -1411,7 +1411,7 @@
 # --- AbstractProperty ---
 
 :AbstractProperty a :Class ;
-    :stereotypes :meta_pure_profiles_typemodifiers_abstract ;
+    :stereotypes :meta_pure_profiles_typemodifiers_abstract, :ProtocolInfo_pointerSource ;
     :name [ :classifierGenericType :GenericType_String ; :data "AbstractProperty" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :AbstractProperty ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] ;
     :package :meta_pure_metamodel_function_property ;
@@ -1428,6 +1428,7 @@
     :multiplicity :PureOne .
 
 :genericType a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "genericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :AbstractProperty ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
@@ -1435,7 +1436,7 @@
     :multiplicity :PureOne .
 
 :multiplicity a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "multiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :AbstractProperty ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :AbstractProperty ;
@@ -1587,6 +1588,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :ValueSpecification ; :general :GenericType_Any ] .
 
 :ValueSpecification_genericType a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "genericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_ValueSpecification :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
@@ -1594,7 +1596,7 @@
     :multiplicity :PureOne .
 
 :ValueSpecification_multiplicity a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "multiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_ValueSpecification :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :ValueSpecification ;
@@ -1610,6 +1612,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :AtomicValue ; :general :GenericType_ValueSpecification ] .
 
 :AtomicValue_value a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "value" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_AtomicValue :GenericType_Any ) ; :multiplicityArguments :PureOne ] ;
     :owner :AtomicValue ;
@@ -1646,6 +1649,7 @@
 # by the compiler (e.g. column builder functions like funcColSpec, aggColSpec).
 
 :CompilerGenericTypeAndMultiplicityHolder a :Class ;
+    :stereotypes :ProtocolInfo_transientCompilerOnly ;
     :name [ :classifierGenericType :GenericType_String ; :data "CompilerGenericTypeAndMultiplicityHolder" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :CompilerGenericTypeAndMultiplicityHolder ; :typeArguments [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type [ a :TypeParameter ; :classifierGenericType :GenericType_TypeParameter ; :typeParameter_name [ :classifierGenericType :GenericType_String ; :data "T" ] ] ] ] ] ;
     :package :meta_pure_metamodel_valuespecification ;
@@ -1836,6 +1840,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :Profile ; :general :GenericType_PackageableElement ] .
 
 :p_stereotypes a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "p_stereotypes" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Profile :GenericType_Stereotype ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Profile ;
@@ -1843,6 +1848,7 @@
     :multiplicity :ZeroMany .
 
 :p_tags a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "p_tags" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Profile :GenericType_Tag ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Profile ;
@@ -1852,6 +1858,7 @@
 # --- Stereotype ---
 
 :Stereotype a :Class ;
+    :stereotypes :ProtocolInfo_pointerSource ;
     :name [ :classifierGenericType :GenericType_String ; :data "Stereotype" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Stereotype ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1875,6 +1882,7 @@
 # --- Tag ---
 
 :Tag a :Class ;
+    :stereotypes :ProtocolInfo_pointerSource ;
     :name [ :classifierGenericType :GenericType_String ; :data "Tag" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Class ; :typeArguments :GenericType_Tag ] ;
     :package :meta_pure_metamodel_extension ;
@@ -1963,7 +1971,7 @@
     :multiplicity :ZeroOne .
 
 :messageFunction a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "messageFunction" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Constraint [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments :GenericType_Any ] ) ; :multiplicityArguments :ZeroOne ] ;
     :owner :Constraint ;
@@ -1971,7 +1979,7 @@
     :multiplicity :ZeroOne .
 
 :functionDefinition a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "functionDefinition" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Constraint [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :FunctionDefinition ; :typeArguments :GenericType_Any ] ) ; :multiplicityArguments :PureOne ] ;
     :owner :Constraint ;
@@ -2032,6 +2040,7 @@
     :multiplicity :PureOne .
 
 :Column_genericType a :Property ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "genericType" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Column :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :Column ;
@@ -2039,7 +2048,7 @@
     :multiplicity :PureOne .
 
 :Column_multiplicity a :Property ;
-    :stereotypes :ProtocolInfo_pointer ;
+    :stereotypes :ProtocolInfo_maybePointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "multiplicity" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_Column :GenericType_Multiplicity ) ; :multiplicityArguments :PureOne ] ;
     :owner :Column ;
@@ -2080,6 +2089,7 @@
     :generalizations [ a :Generalization ; :classifierGenericType :GenericType_Generalization ; :specific :GenericTypeOperation ; :general :GenericType_GenericTypeBase ] .
 
 :gto_left a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "left" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_GenericTypeOperation :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :GenericTypeOperation ;
@@ -2087,6 +2097,7 @@
     :multiplicity :PureOne .
 
 :gto_right a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :abstractProperty_name [ :classifierGenericType :GenericType_String ; :data "right" ] ;
     :classifierGenericType [ a :UserDefinedGenericType ; :classifierGenericType :GenericType_UserDefinedGenericType ; :type :Property ; :typeArguments ( :GenericType_GenericTypeOperation :GenericType_GenericTypeBase ) ; :multiplicityArguments :PureOne ] ;
     :owner :GenericTypeOperation ;
@@ -2333,6 +2344,26 @@
 :ProtocolInfo_pointer a :Stereotype ;
     :classifierGenericType :GenericType_Stereotype ;
     :stereotype_name [ :classifierGenericType :GenericType_String ; :data "pointer" ] ;
+    :profile :ProtocolInfo .
+
+:ProtocolInfo_maybePointer a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_String ; :data "maybePointer" ] ;
+    :profile :ProtocolInfo .
+
+:ProtocolInfo_nonPointer a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_String ; :data "nonPointer" ] ;
+    :profile :ProtocolInfo .
+
+:ProtocolInfo_transientCompilerOnly a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_String ; :data "transientCompilerOnly" ] ;
+    :profile :ProtocolInfo .
+
+:ProtocolInfo_pointerSource a :Stereotype ;
+    :classifierGenericType :GenericType_Stereotype ;
+    :stereotype_name [ :classifierGenericType :GenericType_String ; :data "pointerSource" ] ;
     :profile :ProtocolInfo .
 
 

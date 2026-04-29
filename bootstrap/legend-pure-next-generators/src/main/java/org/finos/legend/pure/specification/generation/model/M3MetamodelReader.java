@@ -41,6 +41,7 @@ public class M3MetamodelReader
 
     private final Model model;
     private final boolean fullyQualifyTypes;
+    private final boolean validate;
 
     private final Resource m3Class;
     private final Resource m3Enumeration;
@@ -52,23 +53,40 @@ public class M3MetamodelReader
 
     public M3MetamodelReader(String ttlPath)
     {
-        this(RDFDataMgr.loadModel(ttlPath), false);
+        this(RDFDataMgr.loadModel(ttlPath), false, true);
     }
 
     public M3MetamodelReader(String ttlPath, boolean fullyQualifyTypes)
     {
-        this(RDFDataMgr.loadModel(ttlPath), fullyQualifyTypes);
+        this(RDFDataMgr.loadModel(ttlPath), fullyQualifyTypes, true);
+    }
+
+    /**
+     * Read a model that's a derived/post-transform artifact (e.g. m3_protocol.ttl).
+     * Skips validation — annotations like {@code @pointer}/{@code @maybePointer}
+     * have been consumed by the generator that produced this model and are no
+     * longer present, so validating here would produce false positives.
+     */
+    public static M3MetamodelReader forDerivedModel(String ttlPath, boolean fullyQualifyTypes)
+    {
+        return new M3MetamodelReader(RDFDataMgr.loadModel(ttlPath), fullyQualifyTypes, false);
     }
 
     public M3MetamodelReader(Model model)
     {
-        this(model, false);
+        this(model, false, true);
     }
 
     public M3MetamodelReader(Model model, boolean fullyQualifyTypes)
     {
+        this(model, fullyQualifyTypes, true);
+    }
+
+    private M3MetamodelReader(Model model, boolean fullyQualifyTypes, boolean validate)
+    {
         this.model = model;
         this.fullyQualifyTypes = fullyQualifyTypes;
+        this.validate = validate;
         this.m3Class = model.createResource(M3_NS + "Class");
         this.m3Enumeration = model.createResource(M3_NS + "Enumeration");
         this.m3Property = model.createResource(M3_NS + "Property");
@@ -94,6 +112,10 @@ public class M3MetamodelReader
         collectPrimitiveInfo(m3Model);
         collectPropertyInfo(m3Model);
         m3Model.computeClassesWithSubtypes();
+        if (validate)
+        {
+            M3ModelValidator.validate(m3Model);
+        }
         return m3Model;
     }
 
@@ -385,7 +407,10 @@ public class M3MetamodelReader
         if (rawTypeStmt != null && rawTypeStmt.getObject().isResource())
         {
             Resource typeRes = rawTypeStmt.getObject().asResource();
-            return fullyQualifyTypes ? getFqn(typeRes) : getLocalName(typeRes);
+            // Raw type names always short, to match classInfoMap keys. The
+            // FQN-with-type-args form is captured separately on fullTypeName /
+            // fullGeneralizations for the Pure renderer.
+            return getLocalName(typeRes);
         }
         return null;
     }

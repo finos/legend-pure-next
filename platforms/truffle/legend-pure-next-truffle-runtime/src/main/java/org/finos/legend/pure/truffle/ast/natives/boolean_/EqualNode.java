@@ -158,7 +158,11 @@ public final class EqualNode extends PureNode
                                 .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
                     }
                 }
-                return true; // same name, can't distinguish type → assume equal
+                // Same name but cannot prove same enum type — be strict and
+                // treat as unequal. Equating two enums solely on value name
+                // (e.g., TestEnum1.FIRST vs TestEnum2.FIRST) is the
+                // false-positive testEqualEnum and testIsEnum guard against.
+                return false;
             }
             if (b instanceof String s)
             {

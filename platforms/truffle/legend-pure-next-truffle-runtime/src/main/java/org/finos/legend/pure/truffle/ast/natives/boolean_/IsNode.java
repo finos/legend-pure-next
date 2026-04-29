@@ -54,10 +54,37 @@ public final class IsNode extends PureNode
         }
         if (rawA instanceof Number && rawB instanceof Number
                 || rawA instanceof String && rawB instanceof String
-                || rawA instanceof Boolean && rawB instanceof Boolean
-                || rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum && rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum)
+                || rawA instanceof Boolean && rawB instanceof Boolean)
         {
             return callPureEquals(rawA, rawB);
+        }
+        if (rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea
+                && rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb)
+        {
+            // Same value name AND same parent enum type. Comparing only by
+            // name (the previous Objects.equals path) wrongly returned true
+            // for TestEnum1.FIRST is TestEnum2.FIRST.
+            if (!Objects.equals(ea._name(), eb._name()))
+            {
+                return false;
+            }
+            if (ea._classifierGenericType() == null || eb._classifierGenericType() == null)
+            {
+                return ea.getClass() == eb.getClass();
+            }
+            var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(ea._classifierGenericType());
+            var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(eb._classifierGenericType());
+            if (typeA == typeB)
+            {
+                return true;
+            }
+            if (typeA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peA
+                    && typeB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peB)
+            {
+                return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peA)
+                        .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
+            }
+            return false;
         }
         // Enum-String cross-comparison: extract enum value name from qualified path
         if (rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea && rawB instanceof String s)

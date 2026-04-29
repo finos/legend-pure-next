@@ -78,6 +78,10 @@ public class M3ProtocolGenerator
     private final Resource protocolInfoExcluded;
     private final Resource protocolInfoInferred;
     private final Resource protocolInfoPointer;
+    private final Resource protocolInfoMaybePointer;
+    private final Resource protocolInfoNonPointer;
+    private final Resource protocolInfoTransientCompilerOnly;
+    private final Resource protocolInfoPointerSource;
     private final Resource protocolInfoAbstract;
     private final Property taggedValuesProp;
     private final Property tagProp;
@@ -124,6 +128,14 @@ public class M3ProtocolGenerator
             model.createResource(M3_NS + "ProtocolInfo_inferred");
         this.protocolInfoPointer =
             model.createResource(M3_NS + "ProtocolInfo_pointer");
+        this.protocolInfoMaybePointer =
+            model.createResource(M3_NS + "ProtocolInfo_maybePointer");
+        this.protocolInfoNonPointer =
+            model.createResource(M3_NS + "ProtocolInfo_nonPointer");
+        this.protocolInfoTransientCompilerOnly =
+            model.createResource(M3_NS + "ProtocolInfo_transientCompilerOnly");
+        this.protocolInfoPointerSource =
+            model.createResource(M3_NS + "ProtocolInfo_pointerSource");
 
         this.protocolInfoAbstract =
             model.createResource(M3_NS + "meta_pure_profiles_typemodifiers_abstract");
@@ -339,7 +351,9 @@ public class M3ProtocolGenerator
         String name = getLocalName(r);
         w.write(":" + name + " a :Class ;\n");
 
-        // Write stereotypes (only abstract for protocol)
+        // Write stereotypes that the protocol form must preserve:
+        // - abstract       (controls Impl emission downstream)
+        // - pointerSource  (drives the validator's pointer-encodability check)
         MutableList<String> stereos = Lists.mutable.empty();
         StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
         while (stereoIter.hasNext())
@@ -348,7 +362,8 @@ public class M3ProtocolGenerator
             if (stereoStmt.getObject().isResource())
             {
                 Resource stereoRes = stereoStmt.getObject().asResource();
-                if (stereoRes.equals(protocolInfoAbstract))
+                if (stereoRes.equals(protocolInfoAbstract)
+                        || stereoRes.equals(protocolInfoPointerSource))
                 {
                     stereos.add(getLocalName(stereoRes));
                 }
@@ -444,6 +459,21 @@ public class M3ProtocolGenerator
     {
         String name = getLocalName(r);
         w.write("\n:" + name + " a :Property ;\n");
+
+        // Preserve @nonPointer (explicit opt-out from pointer encoding for
+        // pointer-eligible types). Other stereotypes are intentionally dropped:
+        // @pointer is replaced by structural type swap; @inferred / @excluded
+        // are protocol-irrelevant.
+        StmtIterator stereoIter = model.listStatements(r, stereotypesProp, (RDFNode) null);
+        while (stereoIter.hasNext())
+        {
+            Statement s = stereoIter.next();
+            if (s.getObject().isResource() && s.getObject().asResource().equals(protocolInfoNonPointer))
+            {
+                w.write("    :stereotypes :ProtocolInfo_nonPointer ;\n");
+                break;
+            }
+        }
 
         String nameValue = getNameValue(r);
         // Prefix properties that conflict with Any's inherited properties
@@ -794,6 +824,10 @@ public class M3ProtocolGenerator
 
     private void identifyExcludedTypes()
     {
+        // @transientCompilerOnly classes are kept in the protocol grammar —
+        // the parser uses them as placeholders before compilation resolves
+        // their fields. They are excluded only at PDB serialization time
+        // (handled by the FBS schema/Java generator, not here).
         ResIterator iter = model.listSubjectsWithProperty(rdfType, m3Class);
         while (iter.hasNext())
         {
@@ -996,7 +1030,10 @@ public class M3ProtocolGenerator
         int count = 0;
         MutableList<Resource> pointerProps = Lists.mutable.empty();
 
-        // Find all properties with pointer stereotype
+        // Find all properties with pointer or maybePointer stereotype.
+        // Both trigger the protocol-form type swap; the choice between
+        // simple-pointer and polymorphic-pointer is made later based on
+        // whether the type carries nonPointerSubtypes.
         ResIterator iter = model.listSubjectsWithProperty(rdfType, m3Property);
         while (iter.hasNext())
         {
@@ -1006,7 +1043,9 @@ public class M3ProtocolGenerator
             {
                 Statement stmt = stmts.next();
                 RDFNode node = stmt.getObject();
-                if (node.isResource() && node.asResource().equals(protocolInfoPointer))
+                if (node.isResource()
+                        && (node.asResource().equals(protocolInfoPointer)
+                            || node.asResource().equals(protocolInfoMaybePointer)))
                 {
                     pointerProps.add(r);
                     break;
@@ -1237,12 +1276,12 @@ public class M3ProtocolGenerator
         // Create "extraPointerValues" property on Pointer
         addExtraPointerValuesProperty(pointerType, pointerTypeName);
 
-        // Make each non-pointer subtype also generalize Type_Protocol
-        nonPointerSubtypes.forEach(subtypeName ->
-        {
-            Resource subtypeRes = model.createResource(M3_NS + subtypeName);
-            addGeneralization(subtypeRes, protocolType);
-        });
+        // Make the original (now inline-only) type generalize Type_Protocol.
+        // PE-extending subtypes have been excluded from the protocol grammar,
+        // so the union is structurally limited to inline + Pointer; this edge
+        // lets every concrete inline subtype be assigned to a Type_Protocol
+        // slot without an explicit cast in hand-written parser code.
+        addGeneralization(originalType, protocolType);
 
         // Update rawType to point to Type_Protocol
         replaceRawType(propRes, genTypeRes, protocolType);
