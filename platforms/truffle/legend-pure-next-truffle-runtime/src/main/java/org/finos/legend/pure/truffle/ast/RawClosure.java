@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.truffle.types;
+package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.RootCallTarget;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;

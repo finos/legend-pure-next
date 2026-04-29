@@ -18,7 +18,7 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.nodes.RootNode;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.truffle.ast.ConstantNode;
+import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -120,7 +120,7 @@ public final class PureTruffleRuntime
      */
     public static Object hello()
     {
-        PureNode body = new ConstantNode(42L);
+        PureNode body = new AtomicValueNode(42L);
         RootNode root = new PureRootNode(null, "hello", FrameDescriptor.newBuilder().build(), body);
         return root.getCallTarget().call();
     }

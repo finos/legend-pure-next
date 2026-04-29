@@ -94,7 +94,7 @@ public final class _Type
         return null;
     }
 
-    public static boolean isTopType(Type type)
+    private static boolean isTopType(Type type)
     {
         return type instanceof PackageableElement pe && "Any".equals(pe._name());
     }

@@ -20,11 +20,11 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
-import org.finos.legend.pure.truffle.ast.ConstantNode;
+import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
-import org.finos.legend.pure.truffle.types.RawClosure;
+import org.finos.legend.pure.truffle.ast.RawClosure;
 
 /**
  * Generic eval: evaluates all children, treats the first as a function and the
@@ -131,12 +131,12 @@ public final class EvalNode extends PureNode
         {
             throw new RuntimeException("eval: no specialized node for native: " + signature);
         }
-        // Wrap each raw arg in a ConstantNode so the factory can build a
+        // Wrap each raw arg in an AtomicValueNode so the factory can build a
         // Truffle node tree. Then execute in a temporary frame.
         PureNode[] argNodes = new PureNode[args.length];
         for (int i = 0; i < args.length; i++)
         {
-            argNodes[i] = new ConstantNode(args[i]);
+            argNodes[i] = new AtomicValueNode(args[i]);
         }
         PureNode node = factory.create(argNodes, null, null, null);
         VirtualFrame tmpFrame = Truffle.getRuntime().createVirtualFrame(

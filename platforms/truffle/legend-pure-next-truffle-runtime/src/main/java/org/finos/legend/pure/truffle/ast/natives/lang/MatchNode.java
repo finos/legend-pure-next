@@ -16,9 +16,7 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.apache.jena.base.Sys;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
@@ -26,7 +24,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._Type;
-import org.finos.legend.pure.truffle.types.RawClosure;
+import org.finos.legend.pure.truffle.ast.RawClosure;
 
 /**
  * {@code match(Any[*], Function<{...}>[1..*]) : T[m]} and the two-parameter
