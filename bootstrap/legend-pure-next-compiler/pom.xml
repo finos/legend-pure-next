@@ -28,12 +28,6 @@
     <description>Generated Java classes from the Pure M3 metamodel RDF specification, including FlatBuffer serialization support.</description>
 
     <dependencies>
-        <!-- Jackson annotations for JSON serialization -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-        </dependency>
-
         <!-- Apache Jena for RDF/TTL parsing -->
         <dependency>
             <groupId>org.apache.jena</groupId>

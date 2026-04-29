@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.builder;
 
+import org.finos.legend.pure.truffle.ast.FrameLetFunctionNode;
 import org.finos.legend.pure.truffle.ast.PureSourceHelper;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
@@ -28,9 +29,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 import org.finos.legend.pure.truffle.types.PureDate;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
-import org.finos.legend.pure.truffle.ast.FrameLetFunctionNode;
 import org.finos.legend.pure.truffle.ast.FrameVariableReadNode;
-import org.finos.legend.pure.truffle.ast.GenericTypeHolderNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawCollectionNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCaptureNode;
@@ -114,11 +113,6 @@ public final class PureASTBuilder
         this.currentLayout = previous;
     }
 
-    public boolean hasCurrentLayout()
-    {
-        return currentLayout != null;
-    }
-
     /**
      * Lower a single {@link ValueSpecification} into an executable Truffle node.
      */
@@ -138,7 +132,7 @@ public final class PureASTBuilder
                 }
                 yield new RawCollectionNode(children);
             }
-            case GenericTypeAndMultiplicityHolder gmh -> new GenericTypeHolderNode(gmh);
+            case GenericTypeAndMultiplicityHolder gmh -> new AtomicValueNode(gmh);
             case FunctionExpression fe -> lowerFunctionExpression(fe);
             default -> throw new RuntimeException(
                     "Unsupported ValueSpecification type: " + vs.getClass().getName());
@@ -217,11 +211,7 @@ public final class PureASTBuilder
         String signature = nf._name();
         if (LET_FUNCTION_SIGNATURE.equals(signature))
         {
-            PureNode slotNode = tryLowerFrameLet(fe);
-            if (slotNode != null)
-            {
-                return slotNode;
-            }
+            return lowerFrameLet(fe);
         }
         NativeNodeRegistry.Factory factory = specialized.lookup(signature);
         if (factory != null)
@@ -246,22 +236,30 @@ public final class PureASTBuilder
         return new FrameVariableReadNode(-1, ve._name());
     }
 
-    private PureNode tryLowerFrameLet(FunctionExpression fe)
+    private PureNode lowerFrameLet(FunctionExpression fe)
     {
         if (currentLayout == null)
         {
-            return null;
+            throw new RuntimeException("letFunction lowered outside an enclosing function frame "
+                    + "(no FrameLayout in scope) — letFunction has no meaningful semantics here");
         }
         org.finos.legend.pure.truffle.types.PureSequence args = fe._parametersValues();
-        if (args == null || args.size() < 2 || !(args.getBoxed(0) instanceof AtomicValue nameAv)
-                || !(nameAv._value() instanceof String name))
+        if (args == null || args.size() < 2)
         {
-            return null;
+            throw new RuntimeException("letFunction requires at least (name, value); got "
+                    + (args == null ? "null args" : args.size() + " args"));
+        }
+        Object nameArg = args.getBoxed(0);
+        if (!(nameArg instanceof AtomicValue nameAv) || !(nameAv._value() instanceof String name))
+        {
+            throw new RuntimeException("letFunction's first argument must be a literal String AtomicValue; got: "
+                    + (nameArg == null ? "null" : nameArg.getClass().getName()));
         }
         Integer slot = currentLayout.slotFor(name);
         if (slot == null)
         {
-            return null;
+            throw new RuntimeException("letFunction target '" + name + "' has no pre-allocated slot in the current frame layout — "
+                    + "FrameDescriptorBuilder failed to collect this let target (likely a PDB resolution issue)");
         }
         // If only one value arg, lower it directly
         if (args.size() == 2)

@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.natives.collection.MapImpl;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -107,8 +108,8 @@ public final class EqualNode extends PureNode
             return true;
         }
         // Map comparison — deep equality by entries
-        if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl ma
-                && b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl mb)
+        if (a instanceof MapImpl ma
+                && b instanceof MapImpl mb)
         {
             if (ma.size() != mb.size())
             {

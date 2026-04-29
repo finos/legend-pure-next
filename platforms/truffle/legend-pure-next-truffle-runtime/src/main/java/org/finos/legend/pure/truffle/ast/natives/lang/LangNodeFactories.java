@@ -69,9 +69,7 @@ public final class LangNodeFactories
         registry.register("evaluate_Function_1__List_MANY__Any_MANY_",
                 (args, gt, mul, fe) -> new EvaluateNode(args));
 
-        // letFunction — frame-slot write (handled by PureASTBuilder for
-        // known names; this fallback handles dynamic/late-resolved cases)
-        registry.register("letFunction_String_1__T_m__T_m_",
-                (args, gt, mul, fe) -> new LetFunctionFallbackNode(args[0], args[1]));
+        // letFunction is handled exclusively by PureASTBuilder.lowerFrameLet;
+        // no factory registration — eval(letFunction, ...) is not supported.
     }
 }

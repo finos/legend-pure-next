@@ -16,13 +16,8 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.MapImpl;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.truffle.types.ObjectSequence;
-
-import java.util.Objects;
 
 /**
  * {@code put(Map[1], U[1], V[1]) : Map[1]} -- inserts a key-value pair into a map.

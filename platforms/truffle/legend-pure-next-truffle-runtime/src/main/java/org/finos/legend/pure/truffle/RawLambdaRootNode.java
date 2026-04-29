@@ -22,7 +22,7 @@ import com.oracle.truffle.api.nodes.RootNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
 import org.finos.legend.pure.truffle.types.PureSequence;
-import org.finos.legend.pure.truffle.types.RawClosure;
+import org.finos.legend.pure.truffle.ast.RawClosure;
 
 /**
  * RootNode for lambda bodies — binds parameters and captured variables

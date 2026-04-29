@@ -46,13 +46,12 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Packag
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class PureLanguageSerialization implements PDBExtension
+public class PureLanguageSerialization
 {
     // ========================================================================
     // PDBExtension — element deserialization
     // ========================================================================
 
-    @Override
     public PackageableElement deserialize(String typeName, byte[] data, MetadataAccess resolver)
     {
         ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -77,7 +76,6 @@ public class PureLanguageSerialization implements PDBExtension
     // PDBExtension — element serialization
     // ========================================================================
 
-    @Override
     public PDBArchiveSection serialize(PackageableElement element)
     {
         String typeName = elementTypeName(element);
@@ -166,7 +164,6 @@ public class PureLanguageSerialization implements PDBExtension
     // PDBExtension — archive sections
     // ========================================================================
 
-    @Override
     public List<PDBArchiveSection> archiveSections(Module module)
     {
         if (module instanceof LocalModule localModule)

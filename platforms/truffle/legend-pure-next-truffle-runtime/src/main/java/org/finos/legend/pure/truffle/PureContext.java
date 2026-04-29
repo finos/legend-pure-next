@@ -68,8 +68,6 @@ public final class PureContext
     // Accessors
     // ---------------------------------------------------------------
 
-    public PureLanguage getLanguage() { return language; }
-    public TruffleLanguage.Env getEnv() { return env; }
     public TruffleMetadataAccess resolver() { return resolver; }
     public PureASTBuilder astBuilder() { return astBuilder; }
     public PureParser pureParser() { return pureParser; }

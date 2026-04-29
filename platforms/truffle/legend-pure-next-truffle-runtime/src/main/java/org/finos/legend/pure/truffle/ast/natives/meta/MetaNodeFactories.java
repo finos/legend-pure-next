@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
-import org.finos.legend.pure.truffle.ast.ConstantNode;
 import org.finos.legend.pure.truffle.ast.PropertyAssignNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawCollectionNode;
@@ -197,7 +196,6 @@ public final class MetaNodeFactories
 
     private static String extractConstantString(PureNode node)
     {
-        if (node instanceof ConstantNode cn && cn.value() instanceof String s) return s;
         if (node instanceof AtomicValueNode av && av.value() instanceof String s) return s;
         throw new RuntimeException("Key expression name is not a constant string: " + node.getClass().getSimpleName());
     }
@@ -205,7 +203,6 @@ public final class MetaNodeFactories
     private static boolean extractBoolean(PureNode node)
     {
         if (node == null) return false;
-        if (node instanceof ConstantNode cn && cn.value() instanceof Boolean b) return b;
         if (node instanceof AtomicValueNode av && av.value() instanceof Boolean b) return b;
         return false;
     }
