@@ -48,6 +48,12 @@ function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1
     let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
     let result = meta::pure::compiler::compile($parsedFile);
 
+    // Compilation must produce zero errors. A compiler bug that still emits
+    // partial elements would otherwise pass the printed-graph comparison
+    // silently. Mirrors the bootstrap-side assertions in
+    // CompilerCompiledGraphTest and PdbRoundTripTest.
+    assert($result.errors->isEmpty(), 'Compilation errors for ' + $sourceId + ':\n  ' + $result.errors->joinStrings('\n  '));
+
     let allElements = $parsedFile.sections.elements;
     let expectedGraphElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
     if($expectedGraphElement->isEmpty() && contains($content, '###CompiledGraph'),
