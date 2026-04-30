@@ -72,36 +72,15 @@ jobs:
         with:
           theme: dark
 
-      # The build is orchestrated by Just. It walks the following phases:
-      #   1. build-generators — Maven install of the generators module only
-      #   2. generate         — run generators to emit m3.pure / m3.fbs /
-      #                         m3_protocol.ttl / m3_protocol.pure into
-      #                         specification/generated/
-      #   3. build-bootstrap  — Maven install of the full bootstrap reactor
-      #                         (parser, compiler, execution, ide, cli)
-      #   4. build-cli        — copy pure-cli fat JAR to build/cli/
-      #   5. build-core-pdb   — CLI: specification Pure → build/core.pdb
-      #   6. build-compiler-pdb — CLI: compiler-pure Pure → build/compiler.pdb
-      - name: Build (just build)
-        run: just build
-        env:
-          MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
-
-      # `just test` runs Java and Pure tests independently, aggregating status.
-      # Java tests are written to a single surefire-reports-aggregate directory.
+      # `just test` orchestrates the entire chain: it wipes build/, then runs
+      # `mvn clean install` in the bootstrap reactor (gating on bootstrap unit
+      # tests), generates truffle PDB wrappers, runs `mvn clean install` in
+      # truffle-runtime (gating on the 800+ truffle unit tests), and finally
+      # runs Pure-level spec tests on both bootstrap and truffle interpreters.
+      # A failure in any phase fails the recipe — no separate `mvn test` pass.
       - name: Test (just test)
         if: (github.repository != 'finos/legend-pure-next') || (github.ref != 'refs/heads/main')
-        run: |
-          set -e
-          cd bootstrap
-          mvn -B -e test -fae \
-            -DargLine="-XX:MaxRAMPercentage=25.0" \
-            -DforkCount=3 -DreuseForks=true \
-            -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate \
-            -Dorg.slf4j.simpleLogger.showDateTime=true \
-            -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
-          cd ..
-          just test
+        run: just test
         env:
           MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 
@@ -109,15 +88,11 @@ jobs:
         if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
         run: |
           set -e
+          just test
           cd bootstrap
-          mvn -B -e install javadoc:javadoc -Psonar \
-            -DargLine="-XX:MaxRAMPercentage=25.0" \
-            -DforkCount=3 -DreuseForks=true \
-            -Dsurefire.reports.directory=${GITHUB_WORKSPACE}/surefire-reports-aggregate \
+          mvn -B -e javadoc:javadoc -Psonar \
             -Dorg.slf4j.simpleLogger.showDateTime=true \
             -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
-          cd ..
-          just test
         env:
           MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 
@@ -126,7 +101,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: ${{ github.workspace }}/surefire-reports-aggregate/*.xml
+          path: |
+            ${{ github.workspace }}/bootstrap/**/target/surefire-reports/*.xml
+            ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
 
       - name: Upload CI Event
         if: always()

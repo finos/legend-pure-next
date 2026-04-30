@@ -54,9 +54,13 @@ default: test
 build: build-compiler-pdb
 
 # --- Bootstrap: Maven handles generation, compilation, PDB build, and tests ---
+# `mvn clean install` so every run is from-scratch and tests gate the install.
+# Wipe build/ first so downstream copies into a known-empty staging area
+# (otherwise stale .pdb/spec files from a previous run could be picked up).
 build-bootstrap:
-    @echo "▶ [bootstrap] mvn install (Java + core.pdb + bootstrap unit tests)"
-    cd {{boot}} && mvn install {{mvnq}} {{err_filter}}
+    @echo "▶ [bootstrap] wipe build/ + mvn clean install (Java + core.pdb + bootstrap unit tests)"
+    rm -rf {{out}}
+    cd {{boot}} && mvn clean install {{mvnq}} {{err_filter}}
 
 # --- Copy artifacts to build/ for downstream (CLI, truffle, etc.) ---
 stage: build-bootstrap
@@ -90,23 +94,20 @@ build-typescript:
 # --- Build codegen module and generate PDB classes ---
 generate-pdb-classes: build-compiler-pdb
     @echo "▶ [truffle] generate truffle-namespaced PDB wrapper classes"
-    cd {{truffle}} && mvn install -N {{mvnq}} {{err_filter}}
-    cd {{truffle_codegen}} && mvn install -DskipTests {{mvnq}} {{err_filter}}
+    cd {{truffle}} && mvn clean install -N {{mvnq}} {{err_filter}}
+    cd {{truffle_codegen}} && mvn clean install {{mvnq}} {{err_filter}}
     # Remove hand-written MapImpl (uses LinkedHashMap, lives in runtime src)
     rm -f {{truffle_runtime}}/target/generated-pdb-sources/org/finos/legend/pure/truffle/pdb/meta/pure/functions/collection/MapImpl.java
 
-# Build Truffle runtime (includes generated PDB classes)
+# Build Truffle runtime — `mvn clean install` runs the truffle Java unit tests
+# during the surefire phase, so install fails if tests fail (no separate
+# test-truffle pass needed). Skipping tests here is what hid 9 failures in a
+# 674-test class for months — never re-introduce -DskipTests on this module.
 build-truffle: generate-pdb-classes
-    @echo "▶ [truffle] mvn install -DskipTests (truffle-runtime jar + fat jar)"
-    cd {{truffle_runtime}} && mvn install -DskipTests {{mvnq}} {{err_filter}}
+    @echo "▶ [truffle] mvn clean install (truffle-runtime jar + fat jar + Java unit tests)"
+    cd {{truffle_runtime}} && mvn clean install {{mvnq}} {{err_filter}}
     mkdir -p {{out}}/cli
     cp {{truffle_runtime}}/target/pure-compile-*-fat.jar {{out}}/cli/pure-compile.jar
-
-# Truffle Java unit tests. Always shows test output regardless of verbose
-# — surefire summaries are the point of this recipe.
-test-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [truffle] mvn test (truffle-runtime Java unit tests)"
-    cd {{truffle_runtime}} && mvn test {{err_filter}}
 
 # Run the Pure test suite via the Truffle interpreter (JVM mode).
 test-pure-truffle: build-truffle build-compiler-pdb
@@ -129,19 +130,19 @@ build-truffle-native: build-bootstrap
         echo "Then set JAVA_HOME to the GraalVM JDK Home." >&2
         exit 1
     fi
-    cd {{truffle}} && mvn -Pnative package -DskipTests {{mvnq}}
+    cd {{truffle}} && mvn clean -Pnative package -DskipTests {{mvnq}}
     mkdir -p {{out}}/cli
     cp {{truffle}}/target/pure-compile {{out}}/cli/pure-compile-native
     echo "  native binary: {{out}}/cli/pure-compile-native"
 
 # --- Tests ---
-# Bootstrap Java tests run as part of `mvn install` in build-bootstrap
-# (transitively pulled in by every other build-* target).
-# Truffle Java tests run via test-truffle (otherwise build-truffle's
-# -DskipTests would silently hide them — that's how a 674-test class with
-# 9 failures stayed invisible for months).
-# Then we run Pure-level spec tests on both interpreters.
-test: test-truffle test-compiler-pure-truffle
+# Java tests are gated by `mvn clean install` in each build-* target:
+#   - bootstrap unit tests run during build-bootstrap
+#   - truffle unit tests run during build-truffle (the 804-test surefire pass)
+# A failure in either fails the install, so the chain bails before any
+# Pure-level spec tests run. Then we run Pure-level spec tests on both
+# interpreters.
+test: build-truffle test-compiler-pure-truffle
     @echo "▶ [pure→bootstrap] runCompiledGraphTests over specification/compiler"
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
@@ -236,6 +237,7 @@ ide: build-compiler-pdb
         --function "meta::pure::ide::start"
 
 clean:
-    @echo "▶ [clean] remove build/ and bootstrap target/"
+    @echo "▶ [clean] remove build/ and all maven targets"
     rm -rf {{out}}
     cd {{boot}} && mvn clean {{mvnq}}
+    cd {{truffle}} && mvn clean {{mvnq}}
