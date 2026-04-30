@@ -2738,13 +2738,14 @@ public class PdbJavaGenerator
 
         Path outputDir = Path.of(args[0]);
 
+        System.out.println();
         System.out.println("PDB Java Generator");
         System.out.println("==================");
-        System.out.println("  Output: " + outputDir);
 
         // Load PDB modules
         MutableList<PDBModule> modules = Lists.mutable.empty();
         MutableList<String> moduleNames = Lists.mutable.empty();
+        java.util.List<String> inputPaths = new java.util.ArrayList<>();
         for (int i = 1; i < args.length; i++)
         {
             if ("--fbs".equals(args[i]))
@@ -2754,13 +2755,29 @@ public class PdbJavaGenerator
             }
             Path pdbPath = Path.of(args[i]);
             String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
-            System.out.println("  PDB:    " + pdbPath);
+            inputPaths.add(pdbPath.toString());
             MutableList<String> deps = Lists.mutable.withAll(moduleNames);
             PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION,
                     moduleName, "*", deps);
             modules.add(pdb);
             moduleNames.add(moduleName);
         }
+        // Load FBS schema if --fbs flag is provided (for wrapper generation)
+        FbsSchema fbsSchema = null;
+        for (int i = 1; i < args.length - 1; i++)
+        {
+            if ("--fbs".equals(args[i]))
+            {
+                fbsSchema = FbsSchema.parse(Path.of(args[i + 1]));
+                inputPaths.add(args[i + 1]);
+                break;
+            }
+        }
+        for (int i = 0; i < inputPaths.size(); i++)
+        {
+            System.out.println((i == 0 ? "  Inputs: " : "          ") + inputPaths.get(i));
+        }
+        System.out.println("  Output: " + outputDir);
 
         // Build and compile the model (required for FlatBuffer elements to resolve)
         MutableList<org.finos.legend.pure.m3.module.Module> moduleList = Lists.mutable.empty();
@@ -2769,18 +2786,6 @@ public class PdbJavaGenerator
                 .withExtensions(Lists.mutable.with(new PureLanguageExtension()))
                 .build();
         model.compile();
-
-        // Load FBS schema if --fbs flag is provided (for wrapper generation)
-        FbsSchema fbsSchema = null;
-        for (int i = 1; i < args.length - 1; i++)
-        {
-            if ("--fbs".equals(args[i]))
-            {
-                fbsSchema = FbsSchema.parse(Path.of(args[i + 1]));
-                System.out.println("  FBS:    " + args[i + 1]);
-                break;
-            }
-        }
 
         // Use a SINGLE generator — collect from compiled model for reliable generalization resolution
         PdbJavaGenerator generator = new PdbJavaGenerator(null, outputDir);

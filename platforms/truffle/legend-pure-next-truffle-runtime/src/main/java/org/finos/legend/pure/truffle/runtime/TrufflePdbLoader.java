@@ -34,8 +34,10 @@ import java.util.Set;
  * <p>Implements {@link TruffleMetadataAccess} so it can be passed directly to
  * {@link org.finos.legend.pure.truffle.StandaloneEvaluator}.</p>
  */
-public final class TrufflePdbLoader implements TruffleMetadataAccess
+public final class TrufflePdbLoader implements TruffleModule
 {
+    private final String name;
+    private final java.util.List<String> dependencies;
     private final CompressedArchiveReader archive;
     private final Map<String, Object> cache;
     private final java.util.IdentityHashMap<Object, String> reverseCache;
@@ -43,12 +45,44 @@ public final class TrufflePdbLoader implements TruffleMetadataAccess
 
     public TrufflePdbLoader(Path pdbPath) throws IOException
     {
+        this(pdbPath, defaultName(pdbPath), java.util.List.of());
+    }
+
+    public TrufflePdbLoader(Path pdbPath, String name, java.util.List<String> dependencies) throws IOException
+    {
+        this.name = name;
+        this.dependencies = java.util.List.copyOf(dependencies);
         this.archive = new CompressedArchiveReader(pdbPath);
         int elementCount = archive.elementPaths().size();
         // Pre-size to avoid resize: capacity = count / 0.75 + 1
         int capacity = (int) (elementCount / 0.75) + 1;
         this.cache = new HashMap<>(capacity);
         this.reverseCache = new java.util.IdentityHashMap<>(elementCount);
+    }
+
+    /**
+     * Derive a module name from the PDB filename when one isn't given —
+     * keeps the no-arg constructor backwards-compatible while still
+     * giving the resulting module a stable identity.
+     */
+    private static String defaultName(Path pdbPath)
+    {
+        String fileName = pdbPath.getFileName().toString();
+        return fileName.endsWith(".pdb")
+                ? fileName.substring(0, fileName.length() - 4)
+                : fileName;
+    }
+
+    @Override
+    public String name()
+    {
+        return name;
+    }
+
+    @Override
+    public java.util.List<String> dependencies()
+    {
+        return dependencies;
     }
 
     /**

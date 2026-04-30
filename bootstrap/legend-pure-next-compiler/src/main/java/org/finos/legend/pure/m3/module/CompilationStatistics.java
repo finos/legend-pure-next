@@ -58,31 +58,30 @@ public record CompilationStatistics(
      */
     public String summary()
     {
+        // Indented as a nested sub-section of the parent build block (no own
+        // ==== underline — the parent banner already opened the block, and
+        // the indent makes it visually clear this output belongs to it).
         StringBuilder sb = new StringBuilder();
-        sb.append("Compilation Statistics\n");
-        sb.append("=====================\n");
-        sb.append(String.format("Total time:       %8.2f ms\n", totalDurationNanos / 1_000_000.0));
-        sb.append(String.format("  Parsing:        %8.2f ms\n", parsingDurationNanos / 1_000_000.0));
-        sb.append(String.format("  First pass:     %8.2f ms\n", firstPassDurationNanos / 1_000_000.0));
-        sb.append(String.format("  Second pass:    %8.2f ms\n", secondPassDurationNanos / 1_000_000.0));
-        sb.append(String.format("  Third pass:     %8.2f ms\n", thirdPassDurationNanos / 1_000_000.0));
-        sb.append(String.format("Elements:         %8d\n", elementCount));
-        sb.append(String.format("Source files:     %8d\n", sourceFileCount));
-        sb.append(String.format("Memory delta:     %8.2f KB\n", memoryDeltaBytes / 1024.0));
-        sb.append(String.format("Inference rollbacks:     %d\n", inferenceRollbackCount));
-        sb.append(String.format("Candidate evaluations:   %d\n", candidateEvaluationCount));
-
+        sb.append("  Compilation Statistics\n");
+        sb.append(String.format("    Total time:       %8.2f ms\n", totalDurationNanos / 1_000_000.0));
+        sb.append(String.format("      Parsing:        %8.2f ms\n", parsingDurationNanos / 1_000_000.0));
+        sb.append(String.format("      First pass:     %8.2f ms\n", firstPassDurationNanos / 1_000_000.0));
+        sb.append(String.format("      Second pass:    %8.2f ms\n", secondPassDurationNanos / 1_000_000.0));
+        sb.append(String.format("      Third pass:     %8.2f ms\n", thirdPassDurationNanos / 1_000_000.0));
+        sb.append(String.format("    Elements:         %8d\n", elementCount));
+        sb.append(String.format("    Source files:     %8d\n", sourceFileCount));
+        sb.append(String.format("    Memory delta:     %8.2f KB\n", memoryDeltaBytes / 1024.0));
+        sb.append(String.format("    Inference rollbacks:     %d\n", inferenceRollbackCount));
+        sb.append(String.format("    Candidate evaluations:   %d\n", candidateEvaluationCount));
         if (!elementStatistics.isEmpty())
         {
-            sb.append("\nTop 10 Elements by Compilation Time\n");
-            sb.append("-----------------------------------\n");
+            sb.append("    Top 10 Elements by Compilation Time\n");
             MutableList<ElementStatistics> sorted = Lists.mutable.withAll(elementStatistics.values());
             sorted.sortThisBy(e -> -e.totalNanos());
             sorted.take(10).forEach(e ->
-                    sb.append(String.format("  %8.2f ms  %-12s  rollbacks=%-6d candidates=%-6d  %s\n",
+                    sb.append(String.format("      %8.2f ms  %-12s  rollbacks=%-6d candidates=%-6d  %s\n",
                             e.totalMillis(), e.elementType(), e.inferenceRollbacks(), e.candidateEvaluations(), e.elementPath())));
         }
-
         return sb.toString();
     }
 }

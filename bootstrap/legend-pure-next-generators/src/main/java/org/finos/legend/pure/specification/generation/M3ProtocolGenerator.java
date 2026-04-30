@@ -160,38 +160,27 @@ public class M3ProtocolGenerator
      */
     public void generate(Path outputPath, List<String> additionalTtlPaths) throws IOException
     {
-        System.out.println("M3 Protocol Generator");
-        System.out.println("=====================");
+        System.out.println();
+        System.out.println("M3 Protocol Generator (TTL)");
+        System.out.println("===========================");
+        if (additionalTtlPaths != null)
+        {
+            for (String add : additionalTtlPaths)
+            {
+                System.out.println("  Input:  " + add + " (additional)");
+            }
+        }
         System.out.println("  Output: " + outputPath);
-        System.out.println("  Original model size: " + model.size());
 
         identifyExcludedTypes();
-        System.out.println("  Found " + excludedTypes.size() + " to exclude");
-
-        int removedClasses = removeExcludedClasses();
-        System.out.println("  Removed " + removedClasses + " classes");
-
-        int removedProperties = removeExcludedProperties();
-        System.out.println("  Removed " + removedProperties + " properties");
-
-        int removedGens = removeGeneralizationsToExcludedTypes();
-        System.out.println("  Removed " + removedGens + " generalizations");
-
-        int removedTypeRefs = removePropertiesReferencingExcludedTypes();
-        System.out.println("  Removed " + removedTypeRefs + " type refs");
-
-        int pointerTypes = processPointerProperties();
-        System.out.println("  Created " + pointerTypes + " pointer types");
-
-        int transformed = transformPackagePaths();
-        System.out.println("  Transformed " + transformed + " packages");
-
+        removeExcludedClasses();
+        removeExcludedProperties();
+        removeGeneralizationsToExcludedTypes();
+        removePropertiesReferencingExcludedTypes();
+        processPointerProperties();
+        transformPackagePaths();
         loadAdditionalTtl(additionalTtlPaths);
-
-        int enumProps = processEnumProperties();
-        System.out.println("  Converted " + enumProps + " enum properties to Enum_Pointer");
-
-        System.out.println("  Final model size: " + model.size());
+        processEnumProperties();
 
         if (outputPath.getParent() != null)
         {
@@ -210,11 +199,7 @@ public class M3ProtocolGenerator
         {
             return;
         }
-        paths.forEach(path ->
-        {
-            System.out.println("  Loading additional TTL: " + path);
-            RDFDataMgr.read(model, path);
-        });
+        paths.forEach(path -> RDFDataMgr.read(model, path));
     }
 
     private void writeFormattedTtl(Path outputPath) throws IOException

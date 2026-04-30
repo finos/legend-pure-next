@@ -59,31 +59,17 @@ class TrufflePureTestRunner
         Path compilerPdb = Path.of("../../../build/compiler.pdb");
 
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
-        coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(corePdb);
-        compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(compilerPdb);
+        coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
+                corePdb, "core", Lists.mutable.empty());
+        compilerLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
+                compilerPdb, "compiler", Lists.mutable.with("core"));
 
-        // Composite resolver: compiler first, then core
-        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = new org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess()
-        {
-            @Override
-            public Object getElement(String path)
-            {
-                Object e = compilerLoader.getElement(path);
-                return e != null ? e : coreLoader.getElement(path);
-            }
-            @Override
-            public boolean hasElement(String path)
-            {
-                return compilerLoader.hasElement(path) || coreLoader.hasElement(path);
-            }
-            @Override
-            public java.util.Set<String> elementPaths()
-            {
-                java.util.Set<String> all = new java.util.LinkedHashSet<>(coreLoader.elementPaths());
-                all.addAll(compilerLoader.elementPaths());
-                return all;
-            }
-        };
+        // Module registry replaces the previous anonymous-class composite resolver.
+        // Registration order is dependency-first: core, then compiler.
+        org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver =
+                new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
+        resolver.register(coreLoader);
+        resolver.register(compilerLoader);
 
         // Wire composite resolver into each loader for cross-module FBW resolution
         coreLoader.setResolver(resolver);

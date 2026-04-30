@@ -1569,11 +1569,12 @@ public class RdfFbsJavaGenerator
                 System.exit(1);
             }
 
-            System.out.println("M3 FlatBuffer Java Generator");
-            System.out.println("==============================");
-            System.out.println("  TTL:         " + args[0]);
-            System.out.println("  FBS:         " + args[1]);
-            System.out.println("  Java Output: " + args[2]);
+            System.out.println();
+            System.out.println("M3 FlatBuffer Java Generator (JAVA)");
+            System.out.println("===================================");
+            System.out.println("  Inputs: " + args[0]);
+            System.out.println("          " + args[1]);
+            System.out.println("  Output: " + args[2]);
 
             new RdfFbsJavaGenerator(args[0], args[1]).generate(Paths.get(args[2]));
         }

@@ -74,13 +74,20 @@ public final class TruffleCompilerBinaryBuilder
         System.out.println("Compiling Pure model from " + sourceDir
                 + " (base: " + basePdbs + ") via truffle interpreter...");
 
-        // 1. Load base PDBs and build a composite resolver.
+        // 1. Load base PDBs and build the module registry. PDBs are listed
+        // dependency-first by convention (e.g. core then compiler) — declare
+        // each PDB depending on every PDB before it so the registry can
+        // cascade-invalidate on unregister.
         List<TrufflePdbLoader> loaders = new ArrayList<>();
+        TruffleModuleRegistry resolver = new TruffleModuleRegistry();
+        List<String> priorNames = new ArrayList<>();
         for (Path p : basePdbs)
         {
-            loaders.add(new TrufflePdbLoader(p));
+            TrufflePdbLoader loader = new TrufflePdbLoader(p, deriveName(p), List.copyOf(priorNames));
+            loaders.add(loader);
+            resolver.register(loader);
+            priorNames.add(loader.name());
         }
-        TruffleMetadataAccess resolver = compositeResolver(loaders);
         for (TrufflePdbLoader loader : loaders)
         {
             loader.setResolver(resolver);
@@ -189,40 +196,10 @@ public final class TruffleCompilerBinaryBuilder
         System.out.println("Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
     }
 
-    private static TruffleMetadataAccess compositeResolver(List<TrufflePdbLoader> loaders)
+    private static String deriveName(Path pdbPath)
     {
-        return new TruffleMetadataAccess()
-        {
-            @Override
-            public Object getElement(String path)
-            {
-                // Later loaders take priority, mirroring PureCompileMain.execute.
-                for (int i = loaders.size() - 1; i >= 0; i--)
-                {
-                    Object e = loaders.get(i).getElement(path);
-                    if (e != null) return e;
-                }
-                return null;
-            }
-
-            @Override
-            public boolean hasElement(String path)
-            {
-                for (TrufflePdbLoader l : loaders)
-                {
-                    if (l.hasElement(path)) return true;
-                }
-                return false;
-            }
-
-            @Override
-            public java.util.Set<String> elementPaths()
-            {
-                java.util.Set<String> all = new java.util.LinkedHashSet<>();
-                for (TrufflePdbLoader l : loaders) all.addAll(l.elementPaths());
-                return all;
-            }
-        };
+        String fileName = pdbPath.getFileName().toString();
+        return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
     private static boolean existsInBase(List<TrufflePdbLoader> loaders, String path)

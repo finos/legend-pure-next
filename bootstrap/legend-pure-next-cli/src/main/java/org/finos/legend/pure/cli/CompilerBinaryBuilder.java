@@ -57,10 +57,11 @@ public class CompilerBinaryBuilder
 
     public static void compile(Path corePdb, Path sourceDir, Path outputFile) throws IOException
     {
-        System.out.println("Pure Compiler Binary Builder");
-        System.out.println("============================");
-        System.out.println("  Source: " + sourceDir);
-        System.out.println("  Base:   " + corePdb);
+        System.out.println();
+        System.out.println("Pure Compiler Binary Builder From Pure Files (PDB)");
+        System.out.println("==================================================");
+        System.out.println("  Inputs: " + corePdb);
+        System.out.println("          " + sourceDir);
         System.out.println("  Output: " + outputFile);
 
         // Load core.pdb which includes both bootstrap types and compiled spec functions
@@ -81,7 +82,7 @@ public class CompilerBinaryBuilder
             throw new RuntimeException("Pure compilation failed with " + result.errors().size() + " error(s)");
         }
 
-        System.out.println(result.statistics().summary());
+        System.out.print(result.statistics().summary());
 
         // Collect elements from the local module only, excluding those already in core.pdb
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();

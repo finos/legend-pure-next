@@ -52,7 +52,7 @@ err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |
 # output, so a reader scrolling through CI can find "where am I in the build?"
 # at a glance. Used inline at the top of each recipe:
 #   {{banner}} '[bootstrap]' 'wipe build/ + mvn clean install'
-banner := "printf '\\n══════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════\\n'"
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
 
 # Default: build and test everything
 default: test

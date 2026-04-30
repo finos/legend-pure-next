@@ -67,7 +67,15 @@ public class SpecificationBinaryBuilder
      */
     public static void compile(Path m3TtlPath, List<Path> sourceDirs, Path outputFile) throws IOException
     {
-        System.out.println("Compiling Pure model from " + sourceDirs + "...");
+        System.out.println();
+        System.out.println("Pure Specification Binary Builder From TTL And Pure Files (PDB)");
+        System.out.println("===============================================================");
+        System.out.println("  Inputs: " + m3TtlPath);
+        for (Path src : sourceDirs)
+        {
+            System.out.println("          " + src);
+        }
+        System.out.println("  Output: " + outputFile);
 
         // --- Compile ---
         LocalModule localModule = new LocalModule("specification", "(meta::pure)(::.*)?", sourceDirs, List.of("m3"));
@@ -83,7 +91,7 @@ public class SpecificationBinaryBuilder
             throw new RuntimeException("Pure compilation failed with " + result.errors().size() + " error(s)");
         }
 
-        System.out.println(result.statistics().summary());
+        System.out.print(result.statistics().summary());
 
         // --- Collect elements from the index (all modules), deduplicated by path ---
         LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
@@ -102,11 +110,10 @@ public class SpecificationBinaryBuilder
             }
         }
         List<PackageableElement> elements = new ArrayList<>(elementsByPath.values());
-        System.out.println("Compiled " + elements.size() + " elements");
-
+        System.out.println("  Compiled " + elements.size() + " elements");
         // --- Serialize to .pdb ---
         Files.createDirectories(outputFile.getParent());
         new CompressedArchiveWriter().write(elements, extensions, localModule, outputFile);
-        System.out.println("Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+        System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
     }
 }

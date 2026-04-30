@@ -34,7 +34,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -88,26 +87,14 @@ public class TruffleCompileToPdbTest
     static void setupOnce() throws IOException
     {
         Path buildDir = locateBuildDir();
-        TrufflePdbLoader coreLoader = new TrufflePdbLoader(buildDir.resolve("core.pdb"));
-        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(buildDir.resolve("compiler.pdb"));
-        resolver = new TruffleMetadataAccess()
-        {
-            @Override public Object getElement(String p)
-            {
-                Object e = compilerLoader.getElement(p);
-                return e != null ? e : coreLoader.getElement(p);
-            }
-            @Override public boolean hasElement(String p)
-            {
-                return compilerLoader.hasElement(p) || coreLoader.hasElement(p);
-            }
-            @Override public Set<String> elementPaths()
-            {
-                Set<String> all = new java.util.LinkedHashSet<>(coreLoader.elementPaths());
-                all.addAll(compilerLoader.elementPaths());
-                return all;
-            }
-        };
+        TrufflePdbLoader coreLoader = new TrufflePdbLoader(
+                buildDir.resolve("core.pdb"), "core", java.util.List.of());
+        TrufflePdbLoader compilerLoader = new TrufflePdbLoader(
+                buildDir.resolve("compiler.pdb"), "compiler", java.util.List.of("core"));
+        TruffleModuleRegistry registry = new TruffleModuleRegistry();
+        registry.register(coreLoader);
+        registry.register(compilerLoader);
+        resolver = registry;
         coreLoader.setResolver(resolver);
         compilerLoader.setResolver(resolver);
         coreLoader.preloadAll();

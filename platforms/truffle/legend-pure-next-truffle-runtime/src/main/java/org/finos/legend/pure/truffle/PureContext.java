@@ -41,6 +41,7 @@ public final class PureContext
     private final TruffleLanguage.Env env;
 
     private TruffleMetadataAccess resolver;
+    private org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry modules;
     private PureASTBuilder astBuilder;
     private PureParser pureParser;
 
@@ -52,24 +53,78 @@ public final class PureContext
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
 
-    // CGT for Java enum constants. Java enums are JVM singletons, so we cannot
-    // store CGT on them — a CGT built against one PureContext's resolver would
-    // outlive that context and feed stale wrappers into a later context's
-    // matches (different resolver = different wrapper for the same Pure type
-    // = identity check fails). Cache here instead so each context owns its
-    // own per-enum CGT, garbage-collected when the context dies.
-    private final java.util.IdentityHashMap<Object, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> enumCgtCache = new java.util.IdentityHashMap<>();
+    // Per-module state holds caches whose entries reference wrappers from a
+    // specific module. Keying by owning module means we can wipe just the
+    // affected slice on a recompile (via {@link #unregisterModule}) without
+    // touching unrelated modules' caches.
+    //
+    // Why these caches need module-scope (rather than living flat on the
+    // context):
+    //   - enumCgts: keyed by Java enum constant (a JVM singleton); the
+    //     cached CGT references a wrapper from the module that owns the
+    //     enum's path. Wipe that module → cache must drop the entry.
+    //   - typePathCgts: keyed by Pure type path; the cached CGT references
+    //     a wrapper from the module that owns the path. Same logic.
+    //
+    // Legacy resolvers (anonymous TruffleMetadataAccess) without a registry
+    // map to the {@link #DEFAULT_MODULE_KEY} bucket — same behavior as the
+    // pre-module flat cache.
+    private final java.util.HashMap<String, ModuleState> moduleStates = new java.util.HashMap<>();
+    private static final String DEFAULT_MODULE_KEY = "<default>";
 
-    // CGT for type paths frequently used by native nodes (Pair, Map, List, ...).
-    // Native nodes used to keep a `private static GenericTypeValue` field as a
-    // lazy cache, but a `static` field is JVM-scoped — the first PureContext
-    // wrote its resolver's wrapper, and every later context inherited that
-    // stale wrapper. The result was identity mismatches in cast/match checks
-    // (e.g. ZipNode's pairCGT leaking the old Pair wrapper into a new context,
-    // making `cast(@PackageableElement)` fail because the linearized
-    // ancestors of Pair came from a different resolver than the cast target).
-    // Per-context cache fixes that — wrapper lifetime tracks the context.
-    private final java.util.HashMap<String, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> typePathCgtCache = new java.util.HashMap<>();
+    private static final class ModuleState
+    {
+        final java.util.IdentityHashMap<Object, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> enumCgts = new java.util.IdentityHashMap<>();
+        final java.util.HashMap<String, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> typePathCgts = new java.util.HashMap<>();
+    }
+
+    private ModuleState moduleStateFor(String moduleKey)
+    {
+        return moduleStates.computeIfAbsent(moduleKey, k -> new ModuleState());
+    }
+
+    /**
+     * Drop all per-module state for the named module. Called by {@link
+     * #unregisterModule(String)} and on context teardown.
+     */
+    private void clearModuleState(String moduleKey)
+    {
+        moduleStates.remove(moduleKey);
+    }
+
+    /**
+     * Unregister a module from the registry and drop its associated state
+     * (CGT caches, future shape registry). Cascades to dependents — anything
+     * that depended on the wiped module is also wiped, since its references
+     * are now stale.
+     *
+     * <p>Recompile flow: {@code unregisterModule("foo")} → re-create the
+     * loader/module → {@link TruffleModuleRegistry#register register} again.
+     * No need to rebuild unrelated modules.</p>
+     */
+    public void unregisterModule(String name)
+    {
+        if (modules == null)
+        {
+            return;
+        }
+        // Snapshot dependents BEFORE the registry's cascade unregisters them,
+        // so we know which states to clear.
+        java.util.List<String> toClear = new java.util.ArrayList<>();
+        toClear.add(name);
+        for (org.finos.legend.pure.truffle.runtime.TruffleModule m : modules.modules())
+        {
+            if (m.dependencies().contains(name))
+            {
+                toClear.add(m.name());
+            }
+        }
+        modules.unregister(name);
+        for (String n : toClear)
+        {
+            clearModuleState(n);
+        }
+    }
 
     public PureContext(PureLanguage language, TruffleLanguage.Env env)
     {
@@ -80,6 +135,13 @@ public final class PureContext
     void initialize(TruffleMetadataAccess resolver, NativeNodeRegistry registry)
     {
         this.resolver = resolver;
+        // If the resolver is a TruffleModuleRegistry (the standard case after
+        // the module refactor), keep a typed reference so callers can ask
+        // about module ownership / lifecycle. Anonymous TruffleMetadataAccess
+        // implementations (e.g. legacy tests, ad-hoc resolvers) leave this
+        // null — module-aware features simply degrade to "single anonymous
+        // module" behavior in that case.
+        this.modules = (resolver instanceof org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry r) ? r : null;
         this.astBuilder = new PureASTBuilder(null, registry);
     }
 
@@ -88,6 +150,14 @@ public final class PureContext
     // ---------------------------------------------------------------
 
     public TruffleMetadataAccess resolver() { return resolver; }
+
+    /**
+     * The module registry, if the resolver was a {@link
+     * org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry}. Returns
+     * null for legacy anonymous resolvers — callers that need module info
+     * must check.
+     */
+    public org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry modules() { return modules; }
     public PureASTBuilder astBuilder() { return astBuilder; }
     public PureParser pureParser() { return pureParser; }
     public void setPureParser(PureParser parser) { this.pureParser = parser; }
@@ -296,17 +366,22 @@ public final class PureContext
      * Build/cache a CGT for the given Pure type path against this context's
      * resolver. Replaces the {@code private static GenericTypeValue} pattern
      * native nodes used to use, which leaked wrappers across contexts.
+     *
+     * <p>Cached in the owning module's {@link ModuleState}, so an
+     * {@link #unregisterModule(String)} drops just this module's entries.</p>
      */
     public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgtForType(String typePath)
     {
-        var cached = typePathCgtCache.get(typePath);
-        if (cached != null)
-        {
-            return cached;
-        }
         if (resolver == null)
         {
             return null;
+        }
+        String moduleKey = ownerModuleOfPath(typePath);
+        ModuleState state = moduleStateFor(moduleKey);
+        var cached = state.typePathCgts.get(typePath);
+        if (cached != null)
+        {
+            return cached;
         }
         Object t = resolver.getElement(typePath);
         if (!(t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type))
@@ -314,17 +389,12 @@ public final class PureContext
             return null;
         }
         var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);
-        typePathCgtCache.put(typePath, cgt);
+        state.typePathCgts.put(typePath, cgt);
         return cgt;
     }
 
     private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue enumCgt(Object enumConstant)
     {
-        var cached = enumCgtCache.get(enumConstant);
-        if (cached != null)
-        {
-            return cached;
-        }
         if (resolver == null)
         {
             return null;
@@ -337,14 +407,36 @@ public final class PureContext
         String purePath = ifaces[0].getName()
                 .replace("org.finos.legend.pure.truffle.pdb.", "")
                 .replace(".", "::");
+        String moduleKey = ownerModuleOfPath(purePath);
+        ModuleState state = moduleStateFor(moduleKey);
+        var cached = state.enumCgts.get(enumConstant);
+        if (cached != null)
+        {
+            return cached;
+        }
         Object enumType = resolver.getElement(purePath);
         if (!(enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t))
         {
             return null;
         }
         var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-        enumCgtCache.put(enumConstant, cgt);
+        state.enumCgts.put(enumConstant, cgt);
         return cgt;
+    }
+
+    /**
+     * Find the module that owns a given path. Falls back to
+     * {@link #DEFAULT_MODULE_KEY} when the registry isn't available (legacy
+     * resolver) or when no module claims the path (path is unknown).
+     */
+    private String ownerModuleOfPath(String path)
+    {
+        if (modules == null)
+        {
+            return DEFAULT_MODULE_KEY;
+        }
+        var owner = modules.moduleOfPath(path);
+        return owner != null ? owner.name() : DEFAULT_MODULE_KEY;
     }
 
     // ---------------------------------------------------------------

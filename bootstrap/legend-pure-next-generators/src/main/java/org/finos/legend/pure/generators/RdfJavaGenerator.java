@@ -690,12 +690,13 @@ public class RdfJavaGenerator
             String packageName = args.length > 2 && !args[2].startsWith("--") ? args[2] : DEFAULT_OUTPUT_PACKAGE;
             boolean metamodel = java.util.Arrays.asList(args).contains("--metamodel");
 
-            System.out.println("M3 Java Class Generator");
-            System.out.println("========================");
-            System.out.println("  Input:      " + inputPath);
-            System.out.println("  Output:     " + outputDir);
-            System.out.println("  Package:    " + packageName);
-            System.out.println("  Metamodel:  " + metamodel);
+            System.out.println();
+            System.out.println("M3 Java Class Generator (JAVA)");
+            System.out.println("==============================");
+            System.out.println("  Input:     " + inputPath);
+            System.out.println("  Output:    " + outputDir);
+            System.out.println("  Package:   " + packageName);
+            System.out.println("  Metamodel: " + metamodel);
 
             // Java codegen targets either the source m3.ttl or the derived
             // m3_protocol.ttl. Skip validation for the derived model — its
