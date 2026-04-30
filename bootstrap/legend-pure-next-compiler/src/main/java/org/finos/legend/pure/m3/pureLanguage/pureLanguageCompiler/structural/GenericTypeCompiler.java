@@ -61,9 +61,20 @@ public final class GenericTypeCompiler
      * @param context            the compilation context for error collection
      * @return a fully resolved metamodel GenericType, or null if the type can't be resolved
      */
-    public static GenericType compile(meta.pure.protocol.grammar.type.generics.GenericType grammarGenericType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
+    public static GenericType compile(meta.pure.protocol.grammar.type.generics.GenericType_Protocol grammarGenericType, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        return switch (grammarGenericType)
+        if (grammarGenericType instanceof meta.pure.protocol.grammar.type.generics.GenericType_Pointer ptr)
+        {
+            // GenericType_Pointer is a PDB-serialization construct — it should
+            // never appear in compile-time grammar. If we see one here, the
+            // parser or some upstream layer is leaking the PDB form into
+            // compilation. Throw with enough context to track it down.
+            throw new IllegalStateException("GenericType_Pointer reached compiler (path='" + ptr._value()
+                    + "'). This is a PDB-only concept; grammar values should always be inline GenericType subtypes. "
+                    + "Check parser/protocol-generator output.");
+        }
+        meta.pure.protocol.grammar.type.generics.GenericType inline = (meta.pure.protocol.grammar.type.generics.GenericType) grammarGenericType;
+        return switch (inline)
         {
             case meta.pure.protocol.grammar.type.generics.UndefinedGenericType ignored -> new meta.pure.metamodel.type.generics.UndefinedGenericTypeImpl(model);
             case GenericTypeOperation gto -> compileGenericTypeOperation(gto, imports, model, context);
@@ -86,7 +97,7 @@ public final class GenericTypeCompiler
                         ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                         ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
             }
-            default -> throw new IllegalArgumentException("Unexpected GenericType: " + grammarGenericType.getClass());
+            default -> throw new IllegalArgumentException("Unexpected GenericType: " + inline.getClass());
         };
     }
 

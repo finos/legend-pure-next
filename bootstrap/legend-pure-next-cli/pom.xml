@@ -107,6 +107,10 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <!-- Per-input MANIFEST.MF: ManifestResourceTransformer
+                                             builds the output manifest from <mainClass>; suppresses
+                                             the "MANIFEST.MF in two or more JARs" warning. -->
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
                                         <!-- module-info.class (root + multi-release) — fat jar is a
                                              classpath jar; JPMS encapsulation does not apply. -->
                                         <exclude>module-info.class</exclude>

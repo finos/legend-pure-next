@@ -41,9 +41,13 @@ public final class MetaHelper
         {
             return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
         }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any && any._classifierGenericType() != null)
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
         {
-            return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(any._classifierGenericType());
+            var cgt = org.finos.legend.pure.truffle.PureLanguage.get(null).classifierGenericType(value);
+            if (cgt != null)
+            {
+                return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+            }
         }
         if (value instanceof Long)
         {
@@ -149,13 +153,15 @@ public final class MetaHelper
     /**
      * Get the GenericType of a raw value.
      * For primitive types, builds a GenericType from the resolver.
-     * For instances (Any), returns the classifierGenericType.
+     * For instances (Any), returns the classifierGenericType — routed
+     * through PureContext so Java enum constants pick up their per-context
+     * cached CGT instead of relying on a JVM-singleton field.
      */
     public static GenericType getRawGenericType(Object value)
     {
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
         {
-            return any._classifierGenericType();
+            return org.finos.legend.pure.truffle.PureLanguage.get(null).classifierGenericType(value);
         }
         return null;
     }

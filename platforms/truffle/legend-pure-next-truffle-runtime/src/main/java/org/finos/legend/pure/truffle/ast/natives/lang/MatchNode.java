@@ -55,18 +55,19 @@ public final class MatchNode extends PureNode
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeMatch(values, getResolver(), matchCallNode);
+        return invokeMatch(values, getContext(), matchCallNode);
     }
 
-    private static Object invokeMatch(Object[] values, TruffleMetadataAccess resolver, RawLambdaCallNode matchCallNode)
+    private static Object invokeMatch(Object[] values, org.finos.legend.pure.truffle.PureContext context, RawLambdaCallNode matchCallNode)
     {
+        TruffleMetadataAccess resolver = context.resolver();
         // values[0] = value to match
         // values[1] = match functions collection
         // values[2] = optional extra parameter
         Object value = values[0];
         Object matchFns = values[1];
 
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType = getRawValueType(value, resolver);
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType = getRawValueType(value, context);
         int valueCount = getRawValueCount(value);
 
         // Iterate over match functions
@@ -120,7 +121,7 @@ public final class MatchNode extends PureNode
         }
         String vtPath = (valueType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
                 ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe) : "n/a";
-        Object cgt = (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any) ? any._classifierGenericType() : null;
+        Object cgt = context.classifierGenericType(value);
         throw new RuntimeException("No match function matched the value: " + value
                 + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getSimpleName()) + ", fnCount=" + fnCount + "]");
     }
@@ -135,8 +136,9 @@ public final class MatchNode extends PureNode
     }
 
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object value,
-                                                                                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+                                                                                                   org.finos.legend.pure.truffle.PureContext context)
     {
+        TruffleMetadataAccess resolver = context.resolver();
         if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
             return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Nil");
@@ -151,7 +153,7 @@ public final class MatchNode extends PureNode
             java.util.List<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type> types = new java.util.ArrayList<>();
             for (int i = 0; i < seq.size(); i++)
             {
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t = getRawValueType(seq.getBoxed(i), resolver);
+                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t = getRawValueType(seq.getBoxed(i), context);
                 if (t != null)
                 {
                     types.add(t);
@@ -165,12 +167,13 @@ public final class MatchNode extends PureNode
         }
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
         {
-            if (any._classifierGenericType() == null)
+            var cgt = context.classifierGenericType(value);
+            if (cgt == null)
             {
                 throw new RuntimeException("No classifierGenericType on: " + value.getClass().getName()
                         + " id=" + System.identityHashCode(value));
             }
-            return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(any._classifierGenericType());
+            return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         }
         if (value instanceof Long)
         {

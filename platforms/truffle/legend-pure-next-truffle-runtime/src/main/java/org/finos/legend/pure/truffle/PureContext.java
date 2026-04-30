@@ -52,6 +52,25 @@ public final class PureContext
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
 
+    // CGT for Java enum constants. Java enums are JVM singletons, so we cannot
+    // store CGT on them — a CGT built against one PureContext's resolver would
+    // outlive that context and feed stale wrappers into a later context's
+    // matches (different resolver = different wrapper for the same Pure type
+    // = identity check fails). Cache here instead so each context owns its
+    // own per-enum CGT, garbage-collected when the context dies.
+    private final java.util.IdentityHashMap<Object, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> enumCgtCache = new java.util.IdentityHashMap<>();
+
+    // CGT for type paths frequently used by native nodes (Pair, Map, List, ...).
+    // Native nodes used to keep a `private static GenericTypeValue` field as a
+    // lazy cache, but a `static` field is JVM-scoped — the first PureContext
+    // wrote its resolver's wrapper, and every later context inherited that
+    // stale wrapper. The result was identity mismatches in cast/match checks
+    // (e.g. ZipNode's pairCGT leaking the old Pair wrapper into a new context,
+    // making `cast(@PackageableElement)` fail because the linearized
+    // ancestors of Pair came from a different resolver than the cast target).
+    // Per-context cache fixes that — wrapper lifetime tracks the context.
+    private final java.util.HashMap<String, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> typePathCgtCache = new java.util.HashMap<>();
+
     public PureContext(PureLanguage language, TruffleLanguage.Env env)
     {
         this.language = language;
@@ -173,52 +192,159 @@ public final class PureContext
     // Enum coercion
     // ---------------------------------------------------------------
 
+    /**
+     * Look up a Pure enum value by name and return the Java enum constant.
+     * Returns null if no Java class exists for the enumeration (runtime enum
+     * created via {@code newEnumeration} — caller is responsible for falling
+     * back to {@code _values()} traversal). Throws if the class exists but
+     * the named value isn't one of its constants.
+     */
     public Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
     {
-        if (en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+        if (!(en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe))
         {
-            String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-            String enumClassName = "org.finos.legend.pure.truffle.pdb." + enumPath.replace("::", ".") + "Enum";
-            try
+            return null;
+        }
+        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+        String enumClassName = "org.finos.legend.pure.truffle.pdb." + pureFqnToJavaFqn(enumPath) + "Enum";
+        Class<?> enumClass;
+        try
+        {
+            enumClass = Class.forName(enumClassName);
+        }
+        catch (ClassNotFoundException e)
+        {
+            // No Java class — could be a runtime-created enum. Caller falls
+            // back to _values() traversal.
+            return null;
+        }
+        if (!enumClass.isEnum())
+        {
+            throw new RuntimeException(enumClassName + " exists but is not a Java enum.");
+        }
+        for (Object constant : enumClass.getEnumConstants())
+        {
+            if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
             {
-                Class<?> enumClass = Class.forName(enumClassName);
-                if (enumClass.isEnum())
-                {
-                    for (Object constant : enumClass.getEnumConstants())
-                    {
-                        if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
-                        {
-                            ensureEnumCGT(constant, enumClass);
-                            return constant;
-                        }
-                    }
-                }
+                return constant;
             }
-            catch (ClassNotFoundException ignored) {}
+        }
+        throw new RuntimeException(
+                "Enum '" + enumPath + "' has no value named '" + valueName + "'. "
+                        + "Available values: " + java.util.Arrays.stream(enumClass.getEnumConstants())
+                        .map(c -> ((java.lang.Enum<?>) c).name()).toList());
+    }
+
+    /**
+     * Convert a Pure path like {@code meta::pure::functions::boolean::tests::X}
+     * into the Java FQN the truffle codegen produces. Codegen escapes Java
+     * reserved words in package segments by appending an underscore (so
+     * {@code boolean} → {@code boolean_}, {@code class} → {@code class_}, etc.).
+     */
+    private static String pureFqnToJavaFqn(String purePath)
+    {
+        String[] segments = purePath.split("::");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < segments.length; i++)
+        {
+            if (i > 0) sb.append('.');
+            String seg = segments[i];
+            // Last segment is the type name — never collides with a Java keyword
+            // in practice, but escape package segments only.
+            sb.append(i < segments.length - 1 && JAVA_KEYWORDS.contains(seg) ? seg + "_" : seg);
+        }
+        return sb.toString();
+    }
+
+    private static final java.util.Set<String> JAVA_KEYWORDS = java.util.Set.of(
+            "abstract", "assert", "boolean", "break", "byte", "case", "catch",
+            "char", "class", "const", "continue", "default", "do", "double",
+            "else", "enum", "extends", "final", "finally", "float", "for",
+            "goto", "if", "implements", "import", "instanceof", "int",
+            "interface", "long", "native", "new", "package", "private",
+            "protected", "public", "return", "short", "static", "strictfp",
+            "super", "switch", "synchronized", "this", "throw", "throws",
+            "transient", "try", "void", "volatile", "while");
+
+    /**
+     * Look up the classifier generic type for any Pure value.
+     *
+     * <p>For ordinary objects we read {@code _classifierGenericType()} off the
+     * value. Java enum constants (e.g. {@code GenericTypeOperationTypeEnum.Union})
+     * are JVM singletons, so we cannot stamp the CGT onto them — a CGT built
+     * against one PureContext's resolver would outlive that context and feed
+     * stale wrappers into a later context's matches (different resolver →
+     * different wrapper for the same Pure type → identity check fails). We
+     * cache enum CGTs in this context instead, so each context owns its own
+     * wrapper that's GC'd when the context dies.</p>
+     */
+    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType(Object value)
+    {
+        if (value instanceof java.lang.Enum<?>
+                && value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
+        {
+            return enumCgt(value);
+        }
+        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+        {
+            return any._classifierGenericType();
         }
         return null;
     }
 
-    private void ensureEnumCGT(Object constant, Class<?> enumClass)
+    /**
+     * Build/cache a CGT for the given Pure type path against this context's
+     * resolver. Replaces the {@code private static GenericTypeValue} pattern
+     * native nodes used to use, which leaked wrappers across contexts.
+     */
+    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgtForType(String typePath)
     {
-        if (constant instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyConst
-                && anyConst._classifierGenericType() == null
-                && resolver != null)
+        var cached = typePathCgtCache.get(typePath);
+        if (cached != null)
         {
-            Class<?>[] ifaces = enumClass.getInterfaces();
-            if (ifaces.length > 0)
-            {
-                String purePath = ifaces[0].getName()
-                        .replace("org.finos.legend.pure.truffle.pdb.", "")
-                        .replace(".", "::");
-                Object enumType = resolver.getElement(purePath);
-                if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-                {
-                    anyConst._classifierGenericType(
-                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver));
-                }
-            }
+            return cached;
         }
+        if (resolver == null)
+        {
+            return null;
+        }
+        Object t = resolver.getElement(typePath);
+        if (!(t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type))
+        {
+            return null;
+        }
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);
+        typePathCgtCache.put(typePath, cgt);
+        return cgt;
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue enumCgt(Object enumConstant)
+    {
+        var cached = enumCgtCache.get(enumConstant);
+        if (cached != null)
+        {
+            return cached;
+        }
+        if (resolver == null)
+        {
+            return null;
+        }
+        Class<?>[] ifaces = enumConstant.getClass().getInterfaces();
+        if (ifaces.length == 0)
+        {
+            return null;
+        }
+        String purePath = ifaces[0].getName()
+                .replace("org.finos.legend.pure.truffle.pdb.", "")
+                .replace(".", "::");
+        Object enumType = resolver.getElement(purePath);
+        if (!(enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t))
+        {
+            return null;
+        }
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
+        enumCgtCache.put(enumConstant, cgt);
+        return cgt;
     }
 
     // ---------------------------------------------------------------

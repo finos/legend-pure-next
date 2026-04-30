@@ -150,9 +150,9 @@ public class PdbJavaGenerator
             generateFlatBufferWriter(outputDir);
         }
 
-        System.out.println("PdbJavaGenerator: " + interfaces + " interfaces, "
-                + impls + " impls, " + enumCount + " enums generated ("
-                + skipped + " skipped, already on classpath) to " + outputDir);
+        System.out.println("    Generated " + interfaces + " interfaces, "
+                + impls + " impls, " + enumCount + " enums ("
+                + skipped + " skipped, already on classpath)");
     }
 
     // =========================================================================
@@ -2738,6 +2738,10 @@ public class PdbJavaGenerator
 
         Path outputDir = Path.of(args[0]);
 
+        System.out.println("PDB Java Generator");
+        System.out.println("==================");
+        System.out.println("  Output: " + outputDir);
+
         // Load PDB modules
         MutableList<PDBModule> modules = Lists.mutable.empty();
         MutableList<String> moduleNames = Lists.mutable.empty();
@@ -2750,6 +2754,7 @@ public class PdbJavaGenerator
             }
             Path pdbPath = Path.of(args[i]);
             String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
+            System.out.println("  PDB:    " + pdbPath);
             MutableList<String> deps = Lists.mutable.withAll(moduleNames);
             PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION,
                     moduleName, "*", deps);
@@ -2772,7 +2777,7 @@ public class PdbJavaGenerator
             if ("--fbs".equals(args[i]))
             {
                 fbsSchema = FbsSchema.parse(Path.of(args[i + 1]));
-                System.out.println("Loaded FBS schema from " + args[i + 1]);
+                System.out.println("  FBS:    " + args[i + 1]);
                 break;
             }
         }

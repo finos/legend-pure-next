@@ -46,6 +46,22 @@ public final class NewWithKeysNode extends PureNode
     @Children
     private org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments;
 
+    /**
+     * Original {@code KeyExpression[*]} arg PureNode. Drives the dynamic
+     * path — used when the parser couldn't decompose {@code assignments[]}
+     * at parse time. Two examples:
+     *   - {@code [^KeyExpression(name=…, expression=…)]} (literal form, the
+     *     KeyExpressions are runtime instances)
+     *   - {@code $keyVar} (variable holding a list built earlier)
+     * The static path (assignments[]) is the 99% case; the dynamic path
+     * lets the remaining cases work.
+     */
+    @Child
+    private PureNode keysNode;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.PropertyWriteNode dynamicKeyWriter = new org.finos.legend.pure.truffle.ast.PropertyWriteNode();
+
     @Child
     private RawLambdaCallNode constraintCallNode = new RawLambdaCallNode();
 
@@ -57,9 +73,15 @@ public final class NewWithKeysNode extends PureNode
 
     public NewWithKeysNode(String signature, PureNode typeHolderNode, org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments)
     {
+        this(signature, typeHolderNode, assignments, null);
+    }
+
+    public NewWithKeysNode(String signature, PureNode typeHolderNode, org.finos.legend.pure.truffle.ast.PropertyAssignNode[] assignments, PureNode keysNode)
+    {
         this.signature = signature;
         this.typeHolderNode = typeHolderNode;
         this.assignments = assignments;
+        this.keysNode = keysNode;
     }
 
     @Override
@@ -147,6 +169,20 @@ public final class NewWithKeysNode extends PureNode
                     + ")");
         }
 
+        // classifierGenericType is system-managed — derived from the type
+        // holder above. Catching attempts to set it through the literal
+        // ^Foo(classifierGenericType=...) syntax keeps a single source of
+        // truth and matches the spec's testCantSetClassifierGenericType.
+        for (int i = 0; i < assignments.length; i++)
+        {
+            if ("classifierGenericType".equals(assignments[i].propertyName()))
+            {
+                throw new org.finos.legend.pure.truffle.ast.PureException(
+                        "Cannot set 'classifierGenericType' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.",
+                        this);
+            }
+        }
+
         // Push onto construction stack for parentReference() access across call boundaries
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
         ctx.pushConstruction(instance);
@@ -160,6 +196,15 @@ public final class NewWithKeysNode extends PureNode
                 {
                     keyValues.add(java.util.Map.entry(assignments[i].propertyName(), propValue));
                 }
+            }
+
+            // Dynamic path: when the parser couldn't decompose KeyExpressions
+            // at parse time (literal-form `^KeyExpression(name=…, expression=…)`
+            // or a variable-bound list), evaluate the keys arg now and walk
+            // the resulting KeyExpression instances to set properties.
+            if (assignments.length == 0 && keysNode != null)
+            {
+                applyDynamicKeyExpressions(frame, instance, keyValues);
             }
 
             // Set reverse association pointers (bidirectional binding)
@@ -185,6 +230,64 @@ public final class NewWithKeysNode extends PureNode
         {
             ctx.popConstruction();
         }
+    }
+
+    /**
+     * Dynamic path: evaluate the keys arg and walk the resulting
+     * {@code KeyExpression} instances, setting each one's named property
+     * on the instance.
+     *
+     * <p>Each {@code KeyExpression} carries:
+     *   - {@code _name()} — target property name on the new instance
+     *   - {@code _expression()} — value to assign (already evaluated when
+     *     the KeyExpression was constructed via {@code ^KeyExpression(…)})
+     *   - {@code _add()} — true means append-to-list semantics
+     * </p>
+     */
+    private void applyDynamicKeyExpressions(VirtualFrame frame, Object instance,
+                                            java.util.List<java.util.Map.Entry<String, Object>> keyValues)
+    {
+        Object keys = keysNode.executeGeneric(frame);
+        int len = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.size(keys);
+        for (int i = 0; i < len; i++)
+        {
+            Object item = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.at(keys, i);
+            if (!(item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpression ke))
+            {
+                throw new RuntimeException(
+                        "new(...) expected KeyExpression in keys list at index " + i
+                                + ", got " + (item == null ? "null" : item.getClass().getName()));
+            }
+            String propName = ke._name();
+            if (propName == null)
+            {
+                throw new RuntimeException("KeyExpression at index " + i + " has no name");
+            }
+            Object value = unwrapSingleton(ke._expression());
+            dynamicKeyWriter.execute(instance, propName, value);
+            if (value != null)
+            {
+                keyValues.add(java.util.Map.entry(propName, value));
+            }
+        }
+    }
+
+    /**
+     * Unwrap a single-element {@link PureSequence} to its element. Many
+     * setters expect the unwrapped value (e.g. a {@code String}, not a
+     * one-element sequence containing a String). Multi-element sequences
+     * pass through as-is — the receiving setter will accept the list.
+     */
+    private static Object unwrapSingleton(Object value)
+    {
+        if (value instanceof PureSequence ps)
+        {
+            if (ps.size() == 1)
+            {
+                return ps.getBoxed(0);
+            }
+        }
+        return value;
     }
 
     /**

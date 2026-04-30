@@ -22,9 +22,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -135,12 +133,6 @@ public class TruffleCompileToPdbTest
         pureParser = org.finos.legend.pure.truffle.PureLanguage.get(null).pureParser();
     }
 
-    @Test
-    public void smokeTest() throws IOException
-    {
-        runRoundTrip("smoke", "Class my::test::TestClass { name : String[1]; age : Integer[0..1]; }");
-    }
-
     public static Collection<Arguments> discoverCompilerSpecTests() throws IOException
     {
         List<Arguments> tests = new ArrayList<>();
@@ -155,8 +147,12 @@ public class TruffleCompileToPdbTest
                         try
                         {
                             String content = Files.readString(p, StandardCharsets.UTF_8);
-                            // Same filter bootstrap PdbRoundTripTest uses.
-                            if (content.contains("###Pure") && !content.contains("###Error"))
+                            // Mirror bootstrap PdbRoundTripTest exactly: discover
+                            // every spec with a ###CompiledGraph section. Error
+                            // specs (###Error) are filtered at runtime in
+                            // runRoundTrip — same as PdbRoundTripTest does — so
+                            // the discovered count matches.
+                            if (content.contains("###CompiledGraph"))
                             {
                                 String relative = rootDir.relativize(p).toString().replace('\\', '/');
                                 String testName = relative.endsWith(".pure")
@@ -174,131 +170,175 @@ public class TruffleCompileToPdbTest
         return tests;
     }
 
+    /**
+     * One JUnit test per compiler spec — each shows up independently in
+     * CI. Within a single spec we still buffer all issues (parse, compile,
+     * write/read) and throw once with the full list, so a partial failure
+     * surfaces every problem rather than just the first.
+     */
     @ParameterizedTest(name = "{0}")
     @MethodSource("discoverCompilerSpecTests")
     public void roundTripCompilerSpec(String testName, String resourcePath) throws Exception
     {
         String content = Files.readString(Path.of(resourcePath), StandardCharsets.UTF_8);
-        runRoundTrip(testName, content);
+        List<String> issues = new ArrayList<>();
+        try
+        {
+            runRoundTrip(testName, content, issues);
+        }
+        catch (Throwable t)
+        {
+            issues.add("unexpected: " + t.getClass().getSimpleName() + " " + t.getMessage());
+        }
+        if (!issues.isEmpty())
+        {
+            throw new AssertionError("[" + testName + "] " + issues.size() + " issue(s):\n  "
+                    + String.join("\n  ", issues));
+        }
     }
 
     /**
-     * Shared core: parse the source, translate, truffle-compile, write,
-     * reload, assert paths and types. Skips with {@link Assumptions#abort}
-     * if parse or truffle-compile fails — those are out-of-scope for
-     * testing the writer.
+     * Run one spec round-trip, appending any failures to {@code issues}.
+     * Discovery (mirroring PdbRoundTripTest) only includes files with a
+     * ###CompiledGraph section. A spec that ALSO declares ###Error is
+     * malformed (compile-success and compile-error are mutually exclusive
+     * for round-trip) — surface that as a hard failure.
      */
-    private static void runRoundTrip(String testName, String pureSource) throws IOException
+    private static void runRoundTrip(String testName, String pureSource, List<String> issues) throws IOException
     {
-        // 1. Parse via the SAME PureParser instance the runtime uses (the one
-        // the native `parse` invokes), then translate via ProtocolTranslator —
-        // matching ParseNode's invocation exactly.
-        meta.pure.protocol.PureFile bootstrapFile;
+        if (pureSource.contains("###Error"))
+        {
+            issues.add("malformed spec: contains both ###CompiledGraph and ###Error — these are mutually exclusive");
+            return;
+        }
+
+        meta.pure.protocol.PureFile bootstrapFile = null;
         try
         {
             bootstrapFile = pureParser.parse(testName, pureSource);
         }
         catch (Exception e)
         {
-            Assumptions.abort("parse failed: " + e.getMessage());
-            return;
+            issues.add("parse failed: " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
-        Assumptions.assumeFalse(bootstrapFile._sections().isEmpty(), "no sections to compile");
-
-        Object truffleFile = new ProtocolTranslator(resolver).translate(bootstrapFile);
-        Assertions.assertNotNull(truffleFile, "ProtocolTranslator returned null");
-
-        // 3. Truffle-compile
-        Object result;
-        try
+        if (bootstrapFile != null && bootstrapFile._sections().isEmpty())
         {
-            result = runtime.execute(compileFn, truffleFile);
-        }
-        catch (Exception e)
-        {
-            Assumptions.abort("truffle compile threw (out of scope for writer test): " + e.getClass().getSimpleName() + " " + e.getMessage());
-            return;
-        }
-        if (result == null)
-        {
-            Assumptions.abort("truffle compile returned null");
-            return;
+            issues.add("no sections to compile");
         }
 
-        // 4. Compilation must produce zero errors — same contract bootstrap's
-        // CompilerCompiledGraphTest / PdbRoundTripTest enforce.
-        Object errorsObj = invokeAccessor(result, "_errors");
-        if (errorsObj instanceof PureSequence errorsSeq && errorsSeq.size() > 0)
+        Object truffleFile = null;
+        if (bootstrapFile != null && !bootstrapFile._sections().isEmpty())
         {
-            StringBuilder msg = new StringBuilder("Compilation errors for ").append(testName).append(":");
-            for (int i = 0; i < errorsSeq.size(); i++)
+            try
             {
-                msg.append("\n  ").append(errorsSeq.getBoxed(i));
-            }
-            Assertions.fail(msg.toString());
-        }
-        Object elementsObj = invokeAccessor(result, "_elements");
-        Assertions.assertTrue(elementsObj instanceof PureSequence,
-                "_elements() returned " + (elementsObj == null ? "null" : elementsObj.getClass().getName()));
-        PureSequence elementsSeq = (PureSequence) elementsObj;
-        Assertions.assertTrue(elementsSeq.size() > 0, "compile produced no elements");
-
-        List<PackageableElement> elements = new ArrayList<>();
-        for (int i = 0; i < elementsSeq.size(); i++)
-        {
-            Object el = elementsSeq.getBoxed(i);
-            if (el instanceof PackageableElement pe)
-            {
-                elements.add(pe);
-            }
-        }
-        Assumptions.assumeFalse(elements.isEmpty(), "no PackageableElements in result");
-
-        // 5. Write
-        Path tmpPdb = Files.createTempFile("truffle-compile-roundtrip-", ".pdb");
-        try
-        {
-            TrufflePdbWriter.write(elements, tmpPdb, /*validateRequired=*/ false);
-            Assertions.assertTrue(Files.size(tmpPdb) > 0, "Round-tripped PDB should be non-empty");
-
-            // 6. Reload + compare
-            TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
-            int matched = 0;
-            int missing = 0;
-            int typeMismatch = 0;
-            List<String> failures = new ArrayList<>();
-            for (PackageableElement original : elements)
-            {
-                String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original);
-                Object reloaded = rt.getElement(path);
-                if (reloaded == null)
+                truffleFile = new ProtocolTranslator(resolver).translate(bootstrapFile);
+                if (truffleFile == null)
                 {
-                    missing++;
-                    if (failures.size() < 10) failures.add("MISSING: " + path);
-                    continue;
+                    issues.add("ProtocolTranslator returned null");
                 }
-                String expectedType = baseTypeName(original.getClass().getSimpleName());
-                String actualType = baseTypeName(reloaded.getClass().getSimpleName());
-                if (!expectedType.equals(actualType))
+            }
+            catch (Exception e)
+            {
+                issues.add("ProtocolTranslator threw: " + e.getClass().getSimpleName() + " " + e.getMessage());
+            }
+        }
+
+        Object result = null;
+        if (truffleFile != null)
+        {
+            try
+            {
+                result = runtime.execute(compileFn, truffleFile);
+            }
+            catch (Exception e)
+            {
+                issues.add("truffle compile threw: " + e.getClass().getSimpleName() + " " + e.getMessage());
+            }
+            if (result == null && issues.stream().noneMatch(s -> s.startsWith("truffle compile threw")))
+            {
+                issues.add("truffle compile returned null");
+            }
+        }
+
+        // Surface compilation-level errors the Pure compiler reports.
+        if (result != null)
+        {
+            Object errorsObj = invokeAccessor(result, "_errors");
+            if (errorsObj instanceof PureSequence errorsSeq && errorsSeq.size() > 0)
+            {
+                for (int i = 0; i < errorsSeq.size(); i++)
                 {
-                    typeMismatch++;
-                    if (failures.size() < 10) failures.add("TYPE: " + path + " expected=" + expectedType + " actual=" + actualType);
+                    issues.add("compile error: " + errorsSeq.getBoxed(i));
+                }
+            }
+        }
+
+        // Walk the PackageableElement output and run the writer/reader
+        // round-trip if the compile produced anything usable.
+        Path tmpPdb = null;
+        if (result != null && issues.isEmpty())
+        {
+            Object elementsObj = invokeAccessor(result, "_elements");
+            if (!(elementsObj instanceof PureSequence elementsSeq))
+            {
+                issues.add("_elements() returned " + (elementsObj == null ? "null" : elementsObj.getClass().getName()));
+            }
+            else if (elementsSeq.size() == 0)
+            {
+                issues.add("compile produced no elements");
+            }
+            else
+            {
+                List<PackageableElement> elements = new ArrayList<>();
+                for (int i = 0; i < elementsSeq.size(); i++)
+                {
+                    Object el = elementsSeq.getBoxed(i);
+                    if (el instanceof PackageableElement pe) elements.add(pe);
+                }
+                if (elements.isEmpty())
+                {
+                    issues.add("no PackageableElements in result");
                 }
                 else
                 {
-                    matched++;
+                    tmpPdb = Files.createTempFile("truffle-compile-roundtrip-", ".pdb");
+                    try
+                    {
+                        TrufflePdbWriter.write(elements, tmpPdb, /*validateRequired=*/ false);
+                        if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
+                        TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
+                        int matched = 0;
+                        for (PackageableElement original : elements)
+                        {
+                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original);
+                            Object reloaded = rt.getElement(path);
+                            if (reloaded == null)
+                            {
+                                issues.add("MISSING: " + path);
+                                continue;
+                            }
+                            String expectedType = baseTypeName(original.getClass().getSimpleName());
+                            String actualType = baseTypeName(reloaded.getClass().getSimpleName());
+                            if (!expectedType.equals(actualType))
+                            {
+                                issues.add("TYPE: " + path + " expected=" + expectedType + " actual=" + actualType);
+                            }
+                            else
+                            {
+                                matched++;
+                            }
+                        }
+                        if (matched == 0) issues.add("zero elements matched after round-trip (of " + elements.size() + ")");
+                    }
+                    catch (Exception e)
+                    {
+                        issues.add("write/read threw: " + e.getClass().getSimpleName() + " " + e.getMessage());
+                    }
                 }
             }
-            String summary = "[" + testName + "] matched=" + matched + " missing=" + missing
-                    + " typeMismatch=" + typeMismatch + " (of " + elements.size() + " elements)";
-            if (!failures.isEmpty()) summary += "\n  " + String.join("\n  ", failures);
-            Assertions.assertEquals(0, missing + typeMismatch, summary);
-            Assertions.assertTrue(matched > 0, summary);
         }
-        finally
-        {
-            Files.deleteIfExists(tmpPdb);
-        }
+
+        if (tmpPdb != null) Files.deleteIfExists(tmpPdb);
     }
 
     private static Object invokeAccessor(Object target, String accessor)

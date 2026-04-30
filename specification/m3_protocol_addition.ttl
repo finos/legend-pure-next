@@ -17,6 +17,7 @@
     :generalizations [ :general [ :type :Any ] ] .
 
 :Section_elements a :Property ;
+    :stereotypes :ProtocolInfo_nonPointer ;
     :name [ :classifierGenericType :GenericType_String ; :data "elements" ] ;
     :classifierGenericType [ :type :Property ; :typeArguments ( [ :type :Section ] [ :type :PackageableElement ] ) ; :multiplicityArguments :ZeroMany ] ;
     :owner :Section ;

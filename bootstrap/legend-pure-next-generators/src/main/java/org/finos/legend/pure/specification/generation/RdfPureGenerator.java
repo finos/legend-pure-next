@@ -41,7 +41,16 @@ public class RdfPureGenerator
         }
         String inputFile = args[0];
         String sourceName = Path.of(inputFile).getFileName().toString();
-        M3Model model = new M3MetamodelReader(inputFile, true).read();
+        // Pure rendering can target either the source m3.ttl or the derived
+        // m3_protocol.ttl. Source models are validated by M3MetamodelReader;
+        // the derived protocol model has had its @pointer/@maybePointer
+        // stereotypes consumed by the type swap, so re-validating it would
+        // produce false positives.
+        boolean isDerivedProtocolModel = sourceName.contains("protocol");
+        M3MetamodelReader reader = isDerivedProtocolModel
+                ? M3MetamodelReader.forDerivedModel(inputFile, true)
+                : new M3MetamodelReader(inputFile, true);
+        M3Model model = reader.read();
         new RdfPureGenerator(model, sourceName).generate(Path.of(args[1]));
     }
 

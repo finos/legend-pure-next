@@ -154,9 +154,7 @@
                 <configuration>
                     <argLine>-Duser.timezone=UTC -Dpolyglot.engine.WarnInterpreterOnly=false</argLine>
                     <trimStackTrace>false</trimStackTrace>
-                    <includes>
-                        <include>**/*CompilerPure.java</include>
-                    </includes>
+                    <!-- <includes> inherited from platforms/truffle/pom.xml -->
                 </configuration>
             </plugin>
         </plugins>

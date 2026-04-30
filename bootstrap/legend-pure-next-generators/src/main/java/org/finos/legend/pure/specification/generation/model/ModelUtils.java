@@ -161,37 +161,256 @@ public final class ModelUtils
     }
 
     /**
-     * Look up the nonPointerSubtypes for a pointer property's declared type.
-     * Returns an empty list if the property is not a pointer or has no subtypes.
+     * Inline subtypes (from the type's {@code nonPointerSubtypes} ancestor)
+     * that are also reachable from the property's declared type. Returns
+     * empty if the property doesn't carry {@code @pointer} or
+     * {@code @maybePointer}, or if no inline subtype is actually reachable.
+     *
+     * <p>Unlike {@link #getNonPointerSubtypesForType}, this method intersects
+     * the inline list against the property's declared-type reachable set, so a
+     * property typed {@code QualifiedProperty} (a subtype of FunctionDefinition,
+     * which lists {@code LambdaFunction} as inline) gets an empty list — a
+     * QualifiedProperty slot can't actually hold a LambdaFunction.</p>
      */
     public static MutableList<String> getNonPointerSubtypes(M3Model m3Model, PropertyInfo prop)
     {
-        if (!hasStereotype(prop.stereotypes, "pointer") || prop.typeName == null)
+        if (prop == null || prop.typeName == null)
         {
             return Lists.mutable.empty();
         }
-        ClassInfo typeClass = m3Model.classInfoMap().get(prop.typeName);
-        if (typeClass == null)
+        if (!hasStereotype(prop.stereotypes, "pointer")
+                && !hasStereotype(prop.stereotypes, "maybePointer"))
         {
             return Lists.mutable.empty();
         }
-        for (TaggedValueEntry tv : typeClass.taggedValues)
+        return Lists.mutable.withAll(inlineEligibleSubtypes(m3Model, prop));
+    }
+
+    /**
+     * Look up the nonPointerSubtypes annotation reachable from the given type by
+     * walking up the generalization chain. Returns the list declared on the
+     * closest ancestor (including the type itself) that defines it; empty if
+     * none in the chain do.
+     */
+    public static MutableList<String> getNonPointerSubtypesForType(M3Model m3Model, String typeName)
+    {
+        if (typeName == null)
         {
-            if ("nonPointerSubtypes".equals(bareName(tv.tag)))
+            return Lists.mutable.empty();
+        }
+        ClassInfo cur = m3Model.classInfoMap().get(typeName);
+        MutableSet<String> seen = Sets.mutable.empty();
+        while (cur != null && seen.add(cur.name))
+        {
+            for (TaggedValueEntry tv : cur.taggedValues)
             {
-                MutableList<String> result = Lists.mutable.empty();
-                for (String s : tv.value.split(","))
+                if ("nonPointerSubtypes".equals(bareName(tv.tag)))
                 {
-                    String trimmed = s.trim();
-                    if (!trimmed.isEmpty())
+                    MutableList<String> result = Lists.mutable.empty();
+                    for (String s : tv.value.split(","))
                     {
-                        result.add(trimmed);
+                        String trimmed = s.trim();
+                        if (!trimmed.isEmpty())
+                        {
+                            result.add(trimmed);
+                        }
                     }
+                    return result;
                 }
-                return result;
             }
+            // Walk up to the first generalization that's a known class
+            ClassInfo next = null;
+            for (String parent : cur.generalizations)
+            {
+                ClassInfo parentInfo = m3Model.classInfoMap().get(parent);
+                if (parentInfo != null)
+                {
+                    next = parentInfo;
+                    break;
+                }
+            }
+            cur = next;
         }
         return Lists.mutable.empty();
+    }
+
+    /**
+     * Concrete subtypes reachable from {@code typeName} (its closure plus self if
+     * concrete). The returned set contains only non-abstract class names. Classes
+     * marked {@code @transientCompilerOnly} are excluded — they exist only in
+     * the in-memory compile-time graph and never participate in serialization.
+     */
+    public static MutableSet<String> reachableConcreteSubtypes(M3Model m3Model, String typeName)
+    {
+        MutableSet<String> result = Sets.mutable.empty();
+        if (typeName == null)
+        {
+            return result;
+        }
+        ClassInfo self = m3Model.classInfoMap().get(typeName);
+        if (self != null && !isAbstract(self) && !isTransientCompilerOnly(self))
+        {
+            result.add(typeName);
+        }
+        for (String s : collectAllSubtypes(m3Model, typeName))
+        {
+            ClassInfo ci = m3Model.classInfoMap().get(s);
+            if (ci == null || !isTransientCompilerOnly(ci))
+            {
+                result.add(s);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * True iff the class carries the {@code @transientCompilerOnly} stereotype:
+     * compile-time sentinel, never serialized.
+     */
+    public static boolean isTransientCompilerOnly(ClassInfo ci)
+    {
+        return ci != null && hasStereotype(ci.stereotypes, "transientCompilerOnly");
+    }
+
+    /**
+     * Subtypes of the property's declared type that would be encoded as
+     * pointers at runtime: reachable concrete subtypes that are not on the
+     * taxonomy's {@code nonPointerSubtypes} list AND that extend
+     * {@code PackageableElement} (only PEs are pointer-encodable). Empty means
+     * no pointer can ever flow through this property — so {@code @pointer}
+     * would be wrong to set.
+     */
+    public static MutableSet<String> pointerEligibleSubtypes(M3Model m3Model, PropertyInfo prop)
+    {
+        if (prop == null || prop.typeName == null)
+        {
+            return Sets.mutable.empty();
+        }
+        MutableSet<String> reachable = reachableConcreteSubtypes(m3Model, prop.typeName);
+        MutableList<String> nps = getNonPointerSubtypesForType(m3Model, prop.typeName);
+        MutableSet<String> inlineLeaves = Sets.mutable.empty();
+        for (String npsName : nps)
+        {
+            inlineLeaves.addAll(reachableConcreteSubtypes(m3Model, npsName));
+        }
+        MutableSet<String> result = Sets.mutable.empty();
+        for (String name : reachable)
+        {
+            if (!inlineLeaves.contains(name) && isPointerEncodable(m3Model, name))
+            {
+                result.add(name);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * True iff the class itself carries the {@code @pointerSource} stereotype.
+     * Pointer-source classes are foundational definitions whose instances have
+     * addressable identity (path / owner+name / profile+name).
+     */
+    public static boolean isPointerSource(ClassInfo ci)
+    {
+        return ci != null && hasStereotype(ci.stereotypes, "pointerSource");
+    }
+
+    /**
+     * True iff {@code className} is, or transitively extends, a class declared
+     * {@code @pointerSource} — i.e., its instances are addressable and qualify
+     * for pointer encoding in serialization.
+     */
+    public static boolean isPointerEncodable(M3Model m3Model, String className)
+    {
+        return findPointerSource(m3Model, className) != null;
+    }
+
+    /**
+     * The closest {@code @pointerSource} ancestor of {@code className} (or the
+     * class itself if it carries the stereotype). Null if no such ancestor.
+     * This is the class's "definition taxonomy" — the canonical place where
+     * its identity is anchored. The protocol generator uses this to decide
+     * which inheritance edges to keep when emitting the protocol grammar:
+     * edges to other (non-pointerSource) taxonomies are dropped, since those
+     * relationships are M3-only and become path-references in the protocol.
+     */
+    public static String findPointerSource(M3Model m3Model, String className)
+    {
+        if (className == null)
+        {
+            return null;
+        }
+        MutableSet<String> seen = Sets.mutable.empty();
+        return findPointerSourceRecursive(m3Model, className, seen);
+    }
+
+    private static String findPointerSourceRecursive(M3Model m3Model, String name, MutableSet<String> seen)
+    {
+        if (!seen.add(name))
+        {
+            return null;
+        }
+        ClassInfo ci = m3Model.classInfoMap().get(name);
+        if (ci == null)
+        {
+            return null;
+        }
+        if (isPointerSource(ci))
+        {
+            return name;
+        }
+        for (String parent : ci.generalizations)
+        {
+            String found = findPointerSourceRecursive(m3Model, parent, seen);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True iff at least one value reachable through this property would have to
+     * be pointer-encoded — i.e., the property's @pointer stereotype is required.
+     */
+    public static boolean needsPointerStereotype(M3Model m3Model, PropertyInfo prop)
+    {
+        return pointerEligibleSubtypes(m3Model, prop).notEmpty();
+    }
+
+    /**
+     * Inline-eligible subtypes for this property: subtypes reachable from the
+     * declared type that are also in the taxonomy's nonPointerSubtypes list.
+     * Empty means no inline value could ever flow through this slot — even if
+     * an ancestor type declares an inline list, none of those leaves are
+     * reachable from this property's narrower declared type.
+     */
+    public static MutableSet<String> inlineEligibleSubtypes(M3Model m3Model, PropertyInfo prop)
+    {
+        if (prop == null || prop.typeName == null)
+        {
+            return Sets.mutable.empty();
+        }
+        MutableSet<String> reachable = reachableConcreteSubtypes(m3Model, prop.typeName);
+        MutableList<String> nps = getNonPointerSubtypesForType(m3Model, prop.typeName);
+        if (nps.isEmpty())
+        {
+            return Sets.mutable.empty();
+        }
+        MutableSet<String> inlineLeaves = Sets.mutable.empty();
+        for (String npsName : nps)
+        {
+            inlineLeaves.addAll(reachableConcreteSubtypes(m3Model, npsName));
+        }
+        MutableSet<String> result = Sets.mutable.empty();
+        for (String name : reachable)
+        {
+            if (inlineLeaves.contains(name))
+            {
+                result.add(name);
+            }
+        }
+        return result;
     }
 
     /**

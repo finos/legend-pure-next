@@ -15,10 +15,8 @@
 package org.finos.legend.pure.specification.generation;
 
 import org.eclipse.collections.api.factory.Maps;
-import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
-import org.eclipse.collections.api.set.MutableSet;
 import org.finos.legend.pure.specification.generation.model.M3MetamodelReader;
 import org.finos.legend.pure.specification.generation.model.M3Model;
 import org.finos.legend.pure.specification.generation.model.PropertyInfo;
@@ -84,8 +82,16 @@ public class RdfFbsSchemaGenerator
         sb.append("    depth: int;\n");
         sb.append("}\n\n");
 
-        // Generate union types for pointer properties with nonPointerSubtypes
-        MutableSet<String> generatedUnions = Sets.mutable.empty();
+        // Generate union types for pointer properties with nonPointerSubtypes.
+        // Properties with identical member sets share a union (so all
+        // `classifier_generic_type` slots that have the same inline subtypes
+        // collapse to one declaration), but different content produces
+        // distinct unions — the previous "dedup by field-name only" approach
+        // collided when two unrelated classes had a same-named property of
+        // different types (e.g. ResolvedTypeParameter.value vs
+        // ResolvedMultiplicityParameter.value).
+        MutableMap<String, String> contentToUnionName = Maps.mutable.empty();
+        MutableMap<String, String> propertyToUnionName = Maps.mutable.empty();
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(classInfo ->
         {
             MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
@@ -96,17 +102,37 @@ public class RdfFbsSchemaGenerator
                     return;
                 }
                 MutableList<String> nps = getNonPointerSubtypes(m3Model, prop);
-                if (nps.notEmpty())
+                if (nps.isEmpty()) { return; }
+
+                String fbsField = toFbsFieldName(prop.name);
+                String defaultName = unionTypeName(fbsField);
+                String contentKey = nps.toSortedList().makeString(",");
+
+                String existing = contentToUnionName.get(contentKey);
+                String uName;
+                if (existing != null)
                 {
-                    String fbsField = toFbsFieldName(prop.name);
-                    String uName = unionTypeName(fbsField);
-                    if (generatedUnions.add(uName))
-                    {
-                        sb.append("union ").append(uName).append(" { PointerRef, AncestorRef");
-                        nps.forEach(subtype -> sb.append(", ").append(subtype).append("Def"));
-                        sb.append(" }\n\n");
-                    }
+                    uName = existing;
                 }
+                else if (!contentToUnionName.valuesView().contains(defaultName))
+                {
+                    uName = defaultName;
+                    contentToUnionName.put(contentKey, uName);
+                    sb.append("union ").append(uName).append(" { PointerRef, AncestorRef");
+                    nps.forEach(subtype -> sb.append(", ").append(subtype).append("Def"));
+                    sb.append(" }\n\n");
+                }
+                else
+                {
+                    // Default name is taken by a different content set —
+                    // disambiguate with the class name.
+                    uName = classInfo.name + defaultName;
+                    contentToUnionName.put(contentKey, uName);
+                    sb.append("union ").append(uName).append(" { PointerRef, AncestorRef");
+                    nps.forEach(subtype -> sb.append(", ").append(subtype).append("Def"));
+                    sb.append(" }\n\n");
+                }
+                propertyToUnionName.put(classInfo.name + "." + fbsField, uName);
             });
         });
 
@@ -172,7 +198,12 @@ public class RdfFbsSchemaGenerator
                 if (nps.notEmpty())
                 {
                     String fbsField = toFbsFieldName(prop.name);
-                    String uName = unionTypeName(fbsField);
+                    String uName = propertyToUnionName.get(classInfo.name + "." + fbsField);
+                    if (uName == null)
+                    {
+                        throw new IllegalStateException("No union name registered for "
+                                + classInfo.name + "." + fbsField + " — first-pass union build skipped this property.");
+                    }
                     String fbsType = prop.isMany ? "[" + uName + "]" : uName;
                     sb.append("    ").append(fbsField).append(": ").append(fbsType).append(";\n");
                 }
@@ -301,15 +332,14 @@ public class RdfFbsSchemaGenerator
 
             System.out.println("M3 FlatBuffer Schema Generator");
             System.out.println("================================");
-            System.out.println("Input:  " + args[0]);
-            System.out.println("Output: " + args[1]);
-            System.out.println();
+            System.out.println("  Input:  " + args[0]);
+            System.out.println("  Output: " + args[1]);
 
             List<String> additionalFbs = args.length > 2
                     ? List.of(java.util.Arrays.copyOfRange(args, 2, args.length))
                     : List.of();
             new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs);
-            System.out.println("\nFBS schema generation complete.");
+            System.out.println("    FBS schema generation complete.");
         }
         catch (Exception e)
         {

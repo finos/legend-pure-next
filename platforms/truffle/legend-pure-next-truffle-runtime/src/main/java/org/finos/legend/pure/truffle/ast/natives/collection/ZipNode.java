@@ -45,29 +45,15 @@ public final class ZipNode extends PureNode
     {
         Object left = leftArg.executeGeneric(frame);
         Object right = rightArg.executeGeneric(frame);
-        return doZip(left, right, getResolver());
-    }
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT;
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getPairCGT(TruffleMetadataAccess resolver)
-    {
-        if (pairCGT == null)
+        var cgt = getContext().cgtForType("meta::pure::functions::collection::Pair");
+        if (cgt == null)
         {
-            Object pairType = resolver.getElement("meta::pure::functions::collection::Pair");
-            if (pairType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-            {
-                pairCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-            }
-            else
-            {
-                throw new RuntimeException("[ZipNode] Cannot resolve Pair type from PDB");
-            }
+            throw new RuntimeException("[ZipNode] Cannot resolve Pair type from PDB");
         }
-        return pairCGT;
+        return doZip(left, right, cgt);
     }
 
-    private static Object doZip(Object left, Object right, TruffleMetadataAccess resolver)
+    private static Object doZip(Object left, Object right, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT)
     {
         int leftSz = CollectionHelper.size(left);
         int rightSz = CollectionHelper.size(right);
@@ -76,14 +62,13 @@ public final class ZipNode extends PureNode
         {
             return PureSequence.EMPTY;
         }
-        var cgt = getPairCGT(resolver);
         Object[] pairs = new Object[sz];
         for (int i = 0; i < sz; i++)
         {
             PairImpl pair = new PairImpl();
             pair._first(CollectionHelper.at(left, i));
             pair._second(CollectionHelper.at(right, i));
-            pair._classifierGenericType(cgt);
+            pair._classifierGenericType(pairCGT);
             pairs[i] = pair;
         }
         return new ObjectSequence(pairs);

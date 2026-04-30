@@ -28,10 +28,19 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     compileGenericType($protocolGT, $context, $packagePath, $typeParameters, '', '');
 }
 
-// Mirrors Java GenericTypeCompiler.compile(GenericType) — handles all GenericType subtypes
-function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTypeArg(protocolGT:meta::pure::protocol::grammar::type::generics::GenericType[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
+// Mirrors Java GenericTypeCompiler.compile(GenericType_Protocol).
+// Accepts the parent protocol type (after the structural change where
+// GenericType extends GenericType_Protocol). GenericType_Pointer is a
+// PDB-only construct and must never reach the compiler; if one slips
+// through (parser bug, leaked PDB form), record an error.
+function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTypeArg(protocolGT:meta::pure::protocol::grammar::type::generics::GenericType_Protocol[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
 {
     $protocolGT->match([
+        ptr : meta::pure::protocol::grammar::type::generics::GenericType_Pointer[1] |
+            ^CompilerResult<GenericType>(
+                value = ^CompilerNotSetGenericType(),
+                context = ^$context(errors += ('GenericType_Pointer reached compiler (path=' + $ptr.value + '): PDB-only construct should never appear in grammar.'))
+            ),
         ugt : meta::pure::protocol::grammar::type::generics::UndefinedGenericType[1] |
             ^CompilerResult<GenericType>(
                 value = ^UndefinedGenericType(),

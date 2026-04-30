@@ -50,32 +50,18 @@ public final class NewMapNode extends PureNode
         {
             propertiesArg.executeGeneric(frame);
         }
-        return buildMap(pairs, getResolver());
-    }
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
-    {
-        if (mapCGT == null)
+        var cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        if (cgt == null)
         {
-            Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
-            if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-            {
-                mapCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-            }
-            else
-            {
-                throw new RuntimeException("[NewMapNode] Cannot resolve Map type from PDB");
-            }
+            throw new RuntimeException("[NewMapNode] Cannot resolve Map type from PDB");
         }
-        return mapCGT;
+        return buildMap(pairs, cgt);
     }
 
-    private static Object buildMap(Object pairs, TruffleMetadataAccess resolver)
+    private static Object buildMap(Object pairs, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl map = new MapImpl();
-        map._classifierGenericType(getMapCGT(resolver));
+        map._classifierGenericType(mapCGT);
         int sz = CollectionHelper.size(pairs);
         for (int i = 0; i < sz; i++)
         {
