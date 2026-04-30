@@ -160,43 +160,45 @@ public class M3ProtocolGenerator
      */
     public void generate(Path outputPath, List<String> additionalTtlPaths) throws IOException
     {
-        System.out.println("Generating m3_protocol.ttl...");
-        System.out.println("Original model size: " + model.size());
+        System.out.println("M3 Protocol Generator");
+        System.out.println("=====================");
+        System.out.println("  Output: " + outputPath);
+        System.out.println("  Original model size: " + model.size());
 
         identifyExcludedTypes();
-        System.out.println("Found " + excludedTypes.size() + " to exclude");
+        System.out.println("  Found " + excludedTypes.size() + " to exclude");
 
         int removedClasses = removeExcludedClasses();
-        System.out.println("Removed " + removedClasses + " classes");
+        System.out.println("  Removed " + removedClasses + " classes");
 
         int removedProperties = removeExcludedProperties();
-        System.out.println("Removed " + removedProperties + " properties");
+        System.out.println("  Removed " + removedProperties + " properties");
 
         int removedGens = removeGeneralizationsToExcludedTypes();
-        System.out.println("Removed " + removedGens + " generalizations");
+        System.out.println("  Removed " + removedGens + " generalizations");
 
         int removedTypeRefs = removePropertiesReferencingExcludedTypes();
-        System.out.println("Removed " + removedTypeRefs + " type refs");
+        System.out.println("  Removed " + removedTypeRefs + " type refs");
 
         int pointerTypes = processPointerProperties();
-        System.out.println("Created " + pointerTypes + " pointer types");
+        System.out.println("  Created " + pointerTypes + " pointer types");
 
         int transformed = transformPackagePaths();
-        System.out.println("Transformed " + transformed + " packages");
+        System.out.println("  Transformed " + transformed + " packages");
 
         loadAdditionalTtl(additionalTtlPaths);
 
         int enumProps = processEnumProperties();
-        System.out.println("Converted " + enumProps + " enum properties to Enum_Pointer");
+        System.out.println("  Converted " + enumProps + " enum properties to Enum_Pointer");
 
-        System.out.println("Final model size: " + model.size());
+        System.out.println("  Final model size: " + model.size());
 
         if (outputPath.getParent() != null)
         {
             Files.createDirectories(outputPath.getParent());
         }
         writeFormattedTtl(outputPath);
-        System.out.println("Wrote protocol model to: " + outputPath);
+        System.out.println("    Protocol model written.");
     }
 
     /**
@@ -210,7 +212,7 @@ public class M3ProtocolGenerator
         }
         paths.forEach(path ->
         {
-            System.out.println("Loading additional TTL: " + path);
+            System.out.println("  Loading additional TTL: " + path);
             RDFDataMgr.read(model, path);
         });
     }

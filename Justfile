@@ -14,7 +14,7 @@
 #       just build-truffle verbose=1
 
 # `set quiet := true` suppresses just's per-command echo. Each recipe prints
-# its own '▶ ...' header so the run reads as a script of phases.
+# its own banner via the `step` helper so the run reads as a script of phases.
 set quiet := true
 # Bash needed for process substitution (filtering stderr without touching exit codes).
 set shell := ["bash", "-c"]
@@ -47,6 +47,13 @@ mvnq    := if verbose == "" { "-q" } else { "" }
 #   Note: ... will be removed     — JDK terminal-deprecation tail
 err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
 
+# `banner` is a printf invocation prepended to each step. The blank-line +
+# ═══ rule makes the phase boundary obvious in a long log full of mvn / java
+# output, so a reader scrolling through CI can find "where am I in the build?"
+# at a glance. Used inline at the top of each recipe:
+#   {{banner}} '[bootstrap]' 'wipe build/ + mvn clean install'
+banner := "printf '\\n══════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════\\n'"
+
 # Default: build and test everything
 default: test
 
@@ -58,13 +65,13 @@ build: build-compiler-pdb
 # Wipe build/ first so downstream copies into a known-empty staging area
 # (otherwise stale .pdb/spec files from a previous run could be picked up).
 build-bootstrap:
-    @echo "▶ [bootstrap] wipe build/ + mvn clean install (Java + core.pdb + bootstrap unit tests)"
+    @{{banner}} '[bootstrap]' 'wipe build/ + mvn clean install (Java + core.pdb + unit tests)'
     rm -rf {{out}}
     cd {{boot}} && mvn clean install {{mvnq}} {{err_filter}}
 
 # --- Copy artifacts to build/ for downstream (CLI, truffle, etc.) ---
 stage: build-bootstrap
-    @echo "▶ [stage] copy CLI jar + core.pdb + generated specs to build/"
+    @{{banner}} '[stage]' 'copy CLI jar + core.pdb + generated specs into build/'
     mkdir -p {{out}}/cli {{out}}/specification/protocol
     cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
     cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
@@ -72,7 +79,7 @@ stage: build-bootstrap
 
 # --- Copy pre-built artifacts to build/ (no rebuild) ---
 copy:
-    @echo "▶ [stage] copy pre-built artifacts (no rebuild)"
+    @{{banner}} '[stage]' 'copy pre-built artifacts into build/ (no rebuild)'
     mkdir -p {{out}}/cli {{out}}/specification/protocol
     cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
     cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
@@ -80,7 +87,7 @@ copy:
 
 # --- Compile compiler.pdb from compiler-pure sources ---
 build-compiler-pdb: stage
-    @echo "▶ [compiler-pure] build compiler.pdb against core.pdb"
+    @{{banner}} '[compiler-pure]' 'compile compiler.pdb against core.pdb (bootstrap CLI)'
     java -jar {{cli}} compile \
         --base-pdb {{out}}/core.pdb \
         --source {{compiler}} \
@@ -88,12 +95,12 @@ build-compiler-pdb: stage
 
 # --- Platforms ---
 build-typescript:
-    @echo "▶ [typescript] pnpm install + build"
+    @{{banner}} '[typescript]' 'pnpm install + build'
     if [ -d "{{ts}}" ]; then cd {{ts}} && pnpm install && pnpm run build; else echo "  (platforms/typescript/ not present, skipping)"; fi
 
 # --- Build codegen module and generate PDB classes ---
 generate-pdb-classes: build-compiler-pdb
-    @echo "▶ [truffle] generate truffle-namespaced PDB wrapper classes"
+    @{{banner}} '[truffle]' 'generate truffle-namespaced PDB wrapper classes (codegen)'
     cd {{truffle}} && mvn clean install -N {{mvnq}} {{err_filter}}
     cd {{truffle_codegen}} && mvn clean install {{mvnq}} {{err_filter}}
     # Remove hand-written MapImpl (uses LinkedHashMap, lives in runtime src)
@@ -104,14 +111,14 @@ generate-pdb-classes: build-compiler-pdb
 # test-truffle pass needed). Skipping tests here is what hid 9 failures in a
 # 674-test class for months — never re-introduce -DskipTests on this module.
 build-truffle: generate-pdb-classes
-    @echo "▶ [truffle] mvn clean install (truffle-runtime jar + fat jar + Java unit tests)"
+    @{{banner}} '[truffle]' 'mvn clean install (truffle-runtime jar + fat jar + Java unit tests)'
     cd {{truffle_runtime}} && mvn clean install {{mvnq}} {{err_filter}}
     mkdir -p {{out}}/cli
     cp {{truffle_runtime}}/target/pure-compile-*-fat.jar {{out}}/cli/pure-compile.jar
 
 # Run the Pure test suite via the Truffle interpreter (JVM mode).
 test-pure-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [pure→truffle] runCompiledGraphTests over specification/compiler"
+    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over specification/compiler'
     java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -122,7 +129,7 @@ test-pure-truffle: build-truffle build-compiler-pdb
 build-truffle-native: build-bootstrap
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "▶ [truffle] native-image build (GraalVM)"
+    {{banner}} '[truffle]' 'native-image build (GraalVM)'
     if ! command -v native-image >/dev/null 2>&1; then
         echo "Error: 'native-image' not on PATH." >&2
         echo "GraalVM is required. Install with:" >&2
@@ -143,7 +150,7 @@ build-truffle-native: build-bootstrap
 # Pure-level spec tests run. Then we run Pure-level spec tests on both
 # interpreters.
 test: build-truffle test-compiler-pure-truffle
-    @echo "▶ [pure→bootstrap] runCompiledGraphTests over specification/compiler"
+    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over specification/compiler'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -152,7 +159,7 @@ test: build-truffle test-compiler-pure-truffle
 
 # Run the compiler-pure tests via the Truffle interpreter.
 test-compiler-pure-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [pure→truffle] runCompiledGraphTests (compiler-pure spec)"
+    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests (compiler-pure spec)'
     java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -160,7 +167,7 @@ test-compiler-pure-truffle: build-truffle build-compiler-pdb
         --args "{{spec}}/compiler" {{err_filter}}
 
 test-pure: build-compiler-pdb
-    @echo "▶ [pure→bootstrap] runCompiledGraphTests"
+    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -168,7 +175,7 @@ test-pure: build-compiler-pdb
         --args "{{spec}}/compiler" {{err_filter}}
 
 test-functions-pure: build-compiler-pdb
-    @echo "▶ [pure→bootstrap] runFunctionTests"
+    @{{banner}} '[pure→bootstrap]' 'runFunctionTests'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -176,7 +183,7 @@ test-functions-pure: build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-functions-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [pure→truffle] runFunctionTests"
+    @{{banner}} '[pure→truffle]' 'runFunctionTests'
     java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -184,7 +191,7 @@ test-functions-truffle: build-truffle build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-functions-native: build-truffle-native build-compiler-pdb
-    @echo "▶ [pure→native] runFunctionTests"
+    @{{banner}} '[pure→native]' 'runFunctionTests'
     {{out}}/cli/pure-compile-native execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -192,7 +199,7 @@ test-functions-native: build-truffle-native build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-pct-pure: build-compiler-pdb
-    @echo "▶ [pure→bootstrap] runPCTTests"
+    @{{banner}} '[pure→bootstrap]' 'runPCTTests'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -200,7 +207,7 @@ test-pct-pure: build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-pct-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [pure→truffle] runPCTTests"
+    @{{banner}} '[pure→truffle]' 'runPCTTests'
     java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -208,7 +215,7 @@ test-pct-truffle: build-truffle build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-pct-native: build-truffle-native build-compiler-pdb
-    @echo "▶ [pure→native] runPCTTests"
+    @{{banner}} '[pure→native]' 'runPCTTests'
     {{out}}/cli/pure-compile-native execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -216,7 +223,7 @@ test-pct-native: build-truffle-native build-compiler-pdb
         --args "meta::pure::functions" {{err_filter}}
 
 test-pure-native: build-truffle-native build-compiler-pdb
-    @echo "▶ [pure→native] runCompiledGraphTests"
+    @{{banner}} '[pure→native]' 'runCompiledGraphTests'
     {{out}}/cli/pure-compile-native execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -225,19 +232,19 @@ test-pure-native: build-truffle-native build-compiler-pdb
 
 # --- Benchmarks ---
 bench-truffle: build-truffle build-compiler-pdb
-    @echo "▶ [truffle] PureEvaluatorBenchmark"
+    @{{banner}} '[truffle]' 'PureEvaluatorBenchmark'
     cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
 
 # --- Utilities ---
 ide: build-compiler-pdb
-    @echo "▶ [ide] launch IDE via bootstrap CLI"
+    @{{banner}} '[ide]' 'launch IDE via bootstrap CLI'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::ide::start"
 
 clean:
-    @echo "▶ [clean] remove build/ and all maven targets"
+    @{{banner}} '[clean]' 'remove build/ and all maven targets'
     rm -rf {{out}}
     cd {{boot}} && mvn clean {{mvnq}}
     cd {{truffle}} && mvn clean {{mvnq}}

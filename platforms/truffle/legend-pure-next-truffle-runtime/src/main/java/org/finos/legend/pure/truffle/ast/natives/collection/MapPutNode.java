@@ -47,32 +47,18 @@ public final class MapPutNode extends PureNode
         Object map = mapArg.executeGeneric(frame);
         Object key = keyArg.executeGeneric(frame);
         Object value = valueArg.executeGeneric(frame);
-        return doPut(map, key, value, getResolver());
-    }
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
-    {
-        if (mapCGT == null)
+        var cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        if (cgt == null)
         {
-            Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
-            if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-            {
-                mapCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-            }
-            else
-            {
-                throw new RuntimeException("[MapPutNode] Cannot resolve Map type from PDB");
-            }
+            throw new RuntimeException("[MapPutNode] Cannot resolve Map type from PDB");
         }
-        return mapCGT;
+        return doPut(map, key, value, cgt);
     }
 
-    private static Object doPut(Object map, Object key, Object value, TruffleMetadataAccess resolver)
+    private static Object doPut(Object map, Object key, Object value, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();
-        newMap._classifierGenericType(getMapCGT(resolver));
+        newMap._classifierGenericType(mapCGT);
         if (map instanceof MapImpl mi)
         {
             newMap.putAll(mi);

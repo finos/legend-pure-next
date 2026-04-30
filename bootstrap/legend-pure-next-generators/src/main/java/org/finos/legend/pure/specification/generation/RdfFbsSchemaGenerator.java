@@ -332,15 +332,14 @@ public class RdfFbsSchemaGenerator
 
             System.out.println("M3 FlatBuffer Schema Generator");
             System.out.println("================================");
-            System.out.println("Input:  " + args[0]);
-            System.out.println("Output: " + args[1]);
-            System.out.println();
+            System.out.println("  Input:  " + args[0]);
+            System.out.println("  Output: " + args[1]);
 
             List<String> additionalFbs = args.length > 2
                     ? List.of(java.util.Arrays.copyOfRange(args, 2, args.length))
                     : List.of();
             new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs);
-            System.out.println("\nFBS schema generation complete.");
+            System.out.println("    FBS schema generation complete.");
         }
         catch (Exception e)
         {

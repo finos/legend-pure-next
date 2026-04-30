@@ -95,8 +95,8 @@ public class RdfJavaGenerator
      */
     public void generate(Path outputDir) throws IOException
     {
-        System.out.println("Found " + m3Model.classInfoMap().size() + " classes, " + m3Model.enumInfoMap().size() + " enumerations");
-        System.out.println("Found " + m3Model.classesWithSubtypes().size() + " classes with subtypes");
+        System.out.println("  Found " + m3Model.classInfoMap().size() + " classes, " + m3Model.enumInfoMap().size() + " enumerations");
+        System.out.println("  Found " + m3Model.classesWithSubtypes().size() + " classes with subtypes");
 
         Files.createDirectories(outputDir);
 
@@ -105,8 +105,8 @@ public class RdfJavaGenerator
         int impls = generateClassImplementations(outputDir);
         int enums = generateEnumInterfaces(outputDir);
 
-        System.out.println("Generated " + interfaces + " interfaces, " + impls + " impls, " + enums + " enums, " + annotations + " annotations");
-        System.out.println("\nGeneration complete. Output: " + outputDir);
+        System.out.println("  Generated " + interfaces + " interfaces, " + impls + " impls, " + enums + " enums, " + annotations + " annotations");
+        System.out.println("    Generation complete. Output: " + outputDir);
     }
 
     // =========================================================================
@@ -692,11 +692,10 @@ public class RdfJavaGenerator
 
             System.out.println("M3 Java Class Generator");
             System.out.println("========================");
-            System.out.println("Input:      " + inputPath);
-            System.out.println("Output:     " + outputDir);
-            System.out.println("Package:    " + packageName);
-            System.out.println("Metamodel:  " + metamodel);
-            System.out.println();
+            System.out.println("  Input:      " + inputPath);
+            System.out.println("  Output:     " + outputDir);
+            System.out.println("  Package:    " + packageName);
+            System.out.println("  Metamodel:  " + metamodel);
 
             // Java codegen targets either the source m3.ttl or the derived
             // m3_protocol.ttl. Skip validation for the derived model — its

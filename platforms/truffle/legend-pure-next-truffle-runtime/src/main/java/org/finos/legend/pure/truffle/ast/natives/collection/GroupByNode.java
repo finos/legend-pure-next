@@ -65,48 +65,16 @@ public final class GroupByNode extends PureNode
             items[i] = CollectionHelper.at(col, i);
             keys[i] = callNode.call(keyFn, items[i]);
         }
-        return buildMap(items, keys, sz, getResolver());
+        var mapCgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        var listCgt = getContext().cgtForType("meta::pure::functions::collection::List");
+        if (mapCgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
+        if (listCgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
+        return buildMap(items, keys, sz, mapCgt, listCgt);
     }
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT;
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getMapCGT(TruffleMetadataAccess resolver)
-    {
-        if (mapCGT == null)
-        {
-            Object mapType = resolver.getElement("meta::pure::functions::collection::Map");
-            if (mapType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-            {
-                mapCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-            }
-            else
-            {
-                throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
-            }
-        }
-        return mapCGT;
-    }
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCGT;
-
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue getListCGT(TruffleMetadataAccess resolver)
-    {
-        if (listCGT == null)
-        {
-            Object listType = resolver.getElement("meta::pure::functions::collection::List");
-            if (listType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-            {
-                listCGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
-            }
-            else
-            {
-                throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
-            }
-        }
-        return listCGT;
-    }
-
-    private static Object buildMap(Object[] items, Object[] keys, int sz, TruffleMetadataAccess resolver)
+    private static Object buildMap(Object[] items, Object[] keys, int sz,
+                                   org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCgt,
+                                   org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCgt)
     {
         LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();
         List<Object> canonicalKeys = new ArrayList<>();
@@ -133,8 +101,6 @@ public final class GroupByNode extends PureNode
         }
 
         // Build MapImpl backed by LinkedHashMap
-        var mapCgt = getMapCGT(resolver);
-        var listCgt = getListCGT(resolver);
         MapImpl mapInstance = new MapImpl();
         mapInstance._classifierGenericType(mapCgt);
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())

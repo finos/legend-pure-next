@@ -271,7 +271,7 @@ public class RdfFbsJavaGenerator
         generateFlatBufferWrapperInterface(outputDir);
 
 
-        System.out.println("\nFlatBuffer Java generation complete.");
+        System.out.println("    FlatBuffer Java generation complete.");
     }
 
     private String toJavaPackage(String purePackagePath)
@@ -1571,10 +1571,9 @@ public class RdfFbsJavaGenerator
 
             System.out.println("M3 FlatBuffer Java Generator");
             System.out.println("==============================");
-            System.out.println("TTL:         " + args[0]);
-            System.out.println("FBS:         " + args[1]);
-            System.out.println("Java Output: " + args[2]);
-            System.out.println();
+            System.out.println("  TTL:         " + args[0]);
+            System.out.println("  FBS:         " + args[1]);
+            System.out.println("  Java Output: " + args[2]);
 
             new RdfFbsJavaGenerator(args[0], args[1]).generate(Paths.get(args[2]));
         }

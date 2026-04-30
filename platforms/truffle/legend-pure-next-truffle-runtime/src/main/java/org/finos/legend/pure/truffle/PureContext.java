@@ -60,6 +60,17 @@ public final class PureContext
     // own per-enum CGT, garbage-collected when the context dies.
     private final java.util.IdentityHashMap<Object, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> enumCgtCache = new java.util.IdentityHashMap<>();
 
+    // CGT for type paths frequently used by native nodes (Pair, Map, List, ...).
+    // Native nodes used to keep a `private static GenericTypeValue` field as a
+    // lazy cache, but a `static` field is JVM-scoped — the first PureContext
+    // wrote its resolver's wrapper, and every later context inherited that
+    // stale wrapper. The result was identity mismatches in cast/match checks
+    // (e.g. ZipNode's pairCGT leaking the old Pair wrapper into a new context,
+    // making `cast(@PackageableElement)` fail because the linearized
+    // ancestors of Pair came from a different resolver than the cast target).
+    // Per-context cache fixes that — wrapper lifetime tracks the context.
+    private final java.util.HashMap<String, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> typePathCgtCache = new java.util.HashMap<>();
+
     public PureContext(PureLanguage language, TruffleLanguage.Env env)
     {
         this.language = language;
@@ -279,6 +290,32 @@ public final class PureContext
             return any._classifierGenericType();
         }
         return null;
+    }
+
+    /**
+     * Build/cache a CGT for the given Pure type path against this context's
+     * resolver. Replaces the {@code private static GenericTypeValue} pattern
+     * native nodes used to use, which leaked wrappers across contexts.
+     */
+    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgtForType(String typePath)
+    {
+        var cached = typePathCgtCache.get(typePath);
+        if (cached != null)
+        {
+            return cached;
+        }
+        if (resolver == null)
+        {
+            return null;
+        }
+        Object t = resolver.getElement(typePath);
+        if (!(t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type))
+        {
+            return null;
+        }
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);
+        typePathCgtCache.put(typePath, cgt);
+        return cgt;
     }
 
     private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue enumCgt(Object enumConstant)

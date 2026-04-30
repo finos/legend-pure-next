@@ -57,7 +57,11 @@ public class CompilerBinaryBuilder
 
     public static void compile(Path corePdb, Path sourceDir, Path outputFile) throws IOException
     {
-        System.out.println("Compiling compiler Pure model from " + sourceDir + " (base: " + corePdb + ")...");
+        System.out.println("Pure Compiler Binary Builder");
+        System.out.println("============================");
+        System.out.println("  Source: " + sourceDir);
+        System.out.println("  Base:   " + corePdb);
+        System.out.println("  Output: " + outputFile);
 
         // Load core.pdb which includes both bootstrap types and compiled spec functions
         PDBModule coreModule = new PDBModule(corePdb, PDBModule.Mode.COMPILATION);
@@ -93,11 +97,11 @@ public class CompilerBinaryBuilder
             }
         }
         List<PackageableElement> elements = new ArrayList<>(elementsByPath.values());
-        System.out.println("Compiled " + elements.size() + " elements");
+        System.out.println("  Compiled " + elements.size() + " elements");
 
         // Write compiler.pdb
         Files.createDirectories(outputFile.getParent());
         new CompressedArchiveWriter().write(elements, extensions, localModule, outputFile);
-        System.out.println("Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
+        System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
     }
 }
