@@ -35,7 +35,7 @@ import java.util.function.Supplier;
  */
 public class CompilationContext
 {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = Boolean.getBoolean("legend.pure.compileDebug");
     private int debugDepth = 0;
 
     private final MutableList<CompilationError> errors = Lists.mutable.empty();

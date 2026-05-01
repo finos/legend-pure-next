@@ -24,6 +24,7 @@ import meta::pure::metamodel::relationship::*;
 import meta::pure::metamodel::extension::*;
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::functions::lang::*;
+import meta::pure::functions::date::*;
 
 // Convenience entry for callers that have a (sourceId, content) pair rather
 // than a pre-parsed PureFile. Wraps `parse` + `compile` so the parsing
@@ -36,7 +37,18 @@ function meta::pure::compiler::compileSource(sourceId:String[1], content:String[
 
 function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], debug:Boolean[1]):CompilationResult[1]
 {
-    meta::pure::compiler::compile(meta::pure::functions::meta::parse($sourceId, $content), $debug);
+    let parseStart = currentTimeMillis();
+    let parsed = meta::pure::functions::meta::parse($sourceId, $content);
+    let parseMillis = currentTimeMillis() - $parseStart;
+    let result = meta::pure::compiler::compile($parsed, $debug);
+    if($result.statistics->isEmpty(),
+        | $result,
+        | let s = $result.statistics->toOne();
+          ^$result(statistics = ^$s(
+              parsingMillis = $parseMillis,
+              totalMillis = $s.totalMillis + $parseMillis
+          ));
+    );
 }
 
 // One-shot directory compile: walk every `.pure` under `dir`, parse +
@@ -52,6 +64,7 @@ function meta::pure::compiler::compileDir(dir:String[1]):CompilationResult[1]
 
 function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):CompilationResult[1]
 {
+    let dirStart = currentTimeMillis();
     let files = directoryTree($dir)->filter(f | $f->endsWith('.pure'));
     let total = $files->size();
     println('  compileDir: ' + $total->toString() + ' files under ' + $dir);
@@ -71,10 +84,109 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
     // self-host's output PDB needs the same Package set so the two are
     // structurally comparable.
     let packages = buildPackages($allElements);
+
+    // Aggregate per-file CompilationStatistics into a single summary. Pass timings
+    // and rollback/candidate counts sum across files; per-element entries from
+    // pass 2 and pass 3 are merged by elementPath so one row reports total wall
+    // time and total counter deltas for that element across both passes.
+    let perFileStats = $results->map(r | $r.statistics)->filter(s | $s->isNotEmpty())->map(s | $s->toOne());
+    let aggregatedStatsPreElements = aggregateCompilationStatistics($perFileStats, currentTimeMillis() - $dirStart, $total);
+    // Match Java's element count by including the synthetic Package elements
+    // that buildPackages adds after per-file compileSource. Per-file stats
+    // count source-defined elements only; the final result.elements list
+    // includes packages, and Java's CompilationStatistics counts both.
+    let aggregatedStats = ^$aggregatedStatsPreElements(elementCount = $allElements->size() + $packages->size());
+    println(printCompilationStatisticsSummary($aggregatedStats));
+
     ^CompilationResult(
         elements = $allElements->concatenate($packages),
-        errors   = $results->map(r | $r.errors)
+        errors   = $results->map(r | $r.errors),
+        statistics = $aggregatedStats
     );
+}
+
+// Sum per-file statistics into a single CompilationStatistics. Per-element
+// entries with the same elementPath are merged (totalMillis summed, deltas
+// summed) — pass 2 and pass 3 each produce an entry per element.
+function meta::pure::compiler::aggregateCompilationStatistics(perFile:CompilationStatistics[*], totalWallMillis:Integer[1], sourceFileCount:Integer[1]):CompilationStatistics[1]
+{
+    let allElementStats = $perFile->map(s | $s.elementStatistics)->cast(@ElementStatistics);
+    let mergedElementMap = $allElementStats->fold({es, m | mergeElementStat($m, $es)}, newMap([]->cast(@Pair<String, ElementStatistics>)));
+
+    ^CompilationStatistics(
+        totalMillis = $totalWallMillis,
+        parsingMillis = $perFile->map(s | $s.parsingMillis)->fold({a, b | $a + $b}, 0),
+        firstPassMillis = $perFile->map(s | $s.firstPassMillis)->fold({a, b | $a + $b}, 0),
+        secondPassMillis = $perFile->map(s | $s.secondPassMillis)->fold({a, b | $a + $b}, 0),
+        thirdPassMillis = $perFile->map(s | $s.thirdPassMillis)->fold({a, b | $a + $b}, 0),
+        elementCount = $perFile->map(s | $s.elementCount)->fold({a, b | $a + $b}, 0),
+        sourceFileCount = $sourceFileCount,
+        inferenceRollbackCount = $perFile->map(s | $s.inferenceRollbackCount)->fold({a, b | $a + $b}, 0),
+        candidateEvaluationCount = $perFile->map(s | $s.candidateEvaluationCount)->fold({a, b | $a + $b}, 0),
+        elementStatistics = $mergedElementMap->values()
+    );
+}
+
+function meta::pure::compiler::mergeElementStat(m:Map<String, ElementStatistics>[1], es:ElementStatistics[1]):Map<String, ElementStatistics>[1]
+{
+    let existing = $m->get($es.elementPath);
+    if($existing->isEmpty(),
+        | $m->put($es.elementPath, $es),
+        | let prev = $existing->toOne();
+          let merged = ^$prev(
+              totalMillis = $prev.totalMillis + $es.totalMillis,
+              inferenceRollbacks = $prev.inferenceRollbacks + $es.inferenceRollbacks,
+              candidateEvaluations = $prev.candidateEvaluations + $es.candidateEvaluations
+          );
+          $m->put($es.elementPath, $merged);
+    );
+}
+
+// Format CompilationStatistics as a human-readable summary block — mirrors
+// the layout produced by Java's CompilationStatistics.summary() so a side-by-side
+// comparison of Java- vs Pure-built compiler output reads identically.
+function meta::pure::compiler::printCompilationStatisticsSummary(s:CompilationStatistics[1]):String[1]
+{
+    let header = '  Compilation Statistics\n';
+    let body = [
+        '    Total time:       ' + padLeft($s.totalMillis->toString() + ' ms', 11),
+        '      Parsing:        ' + padLeft($s.parsingMillis->toString() + ' ms', 11),
+        '      First pass:     ' + padLeft($s.firstPassMillis->toString() + ' ms', 11),
+        '      Second pass:    ' + padLeft($s.secondPassMillis->toString() + ' ms', 11),
+        '      Third pass:     ' + padLeft($s.thirdPassMillis->toString() + ' ms', 11),
+        '    Elements:         ' + padLeft($s.elementCount->toString(), 8),
+        '    Source files:     ' + padLeft($s.sourceFileCount->toString(), 8),
+        '    Inference rollbacks:     ' + $s.inferenceRollbackCount->toString(),
+        '    Candidate evaluations:   ' + $s.candidateEvaluationCount->toString()
+    ]->joinStrings('\n');
+    let topHeader = if($s.elementStatistics->isEmpty(), | '', | '\n    Top 10 Elements by Compilation Time');
+    let sortedElements = $s.elementStatistics->sort({a, b | $b.totalMillis - $a.totalMillis});
+    let topN = if($sortedElements->size() > 10, | $sortedElements->take(10), | $sortedElements);
+    let topRows = $topN->map(e |
+        '      ' + padLeft($e.totalMillis->toString() + ' ms', 9)
+            + '  ' + padRight($e.elementType, 18)
+            + '  rollbacks=' + padRight($e.inferenceRollbacks->toString(), 6)
+            + ' candidates=' + padRight($e.candidateEvaluations->toString(), 6)
+            + '  ' + $e.elementPath
+    )->joinStrings('\n');
+    $header + $body + $topHeader + if($topN->isEmpty(), | '', | '\n' + $topRows);
+}
+
+function meta::pure::compiler::padLeft(s:String[1], width:Integer[1]):String[1]
+{
+    let pad = $width - $s->length();
+    if($pad <= 0, | $s, | repeatString(' ', $pad) + $s);
+}
+
+function meta::pure::compiler::padRight(s:String[1], width:Integer[1]):String[1]
+{
+    let pad = $width - $s->length();
+    if($pad <= 0, | $s, | $s + repeatString(' ', $pad));
+}
+
+function meta::pure::compiler::repeatString(s:String[1], n:Integer[1]):String[1]
+{
+    range(0, $n)->fold({i, acc | $acc + $s}, '');
 }
 
 // Collect every package path referenced by `elements`, including all
@@ -136,6 +248,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], debugMode:Boolean[1]):CompilationResult[1]
 {
     let debug = ^DebugState(debug = $debugMode, space = '');
+    let compileStart = currentTimeMillis();
 
     let allElements = $file.sections.elements;
     let defaultImports = [
@@ -164,6 +277,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
     let allImports = $defaultImports->concatenate($fileImports)->removeDuplicates();
 
     // Pass 1: Build structural scaffolding
+    let pass1Start = currentTimeMillis();
     let pass1Context = $allElements->fold({e, ctx |
         $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
@@ -240,13 +354,28 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
                 ^$ctx(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
-    }, ^CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([])));
+    }, ^CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([]),
+            inferenceRollbacks = 0, candidateEvaluations = 0,
+            rb_preResolve = 0, rb_failedCandidate = 0, rb_notResolved = 0, rb_lambda = 0,
+            rb_reverseMatch = 0, rb_collection = 0, rb_postFinish = 0, rb_other = 0,
+            ca_single = 0, ca_multi = 0));
+    let pass1Millis = currentTimeMillis() - $pass1Start;
 
     $pass1Context->debug({| 'compile: pass 1 done (' + $pass1Context.elementMap->keys()->size()->toString() + ' skeletons), starting pass 2'});
 
-    // Pass 2: Compile elements (threading context for error collection)
+    // Pass 2: Compile elements (threading context for error collection).
+    // Per-element timing wraps each match dispatch — snapshot time + counter
+    // values before, capture deltas after, append an ElementStatistics entry
+    // when the element was actually added (the catch-all PackageableElement
+    // arm yields the unchanged acc and contributes no entry).
+    let pass2Start = currentTimeMillis();
     let pass2 = $allElements->fold({e, acc |
-        $e->match([
+        let beforeT = currentTimeMillis();
+        let beforeCtx = $acc.context;
+        let beforeRb = $beforeCtx.inferenceRollbacks;
+        let beforeCa = $beforeCtx.candidateEvaluations;
+        let prevSize = $acc.values->size();
+        let newAcc = $e->match([
             c:meta::pure::protocol::grammar::type::Class[1] |
                 let r = $c->compileClass($acc.context);
                 let compiledClass = $r.value->toOne()->cast(@PackageableElement);
@@ -308,13 +437,35 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
             a:meta::pure::protocol::grammar::PackageableElement[1] |
                 $acc
         ]);
+        let elapsed = currentTimeMillis() - $beforeT;
+        let postCtx = $newAcc.context;
+        if($newAcc.values->size() > $prevSize,
+            | let lastEl = $newAcc.values->at($newAcc.values->size() - 1);
+              let stat = ^ElementStatistics(
+                  elementPath = $lastEl->elementToPath(),
+                  elementType = elementSimpleType($lastEl),
+                  totalMillis = $elapsed,
+                  inferenceRollbacks = $postCtx.inferenceRollbacks - $beforeRb,
+                  candidateEvaluations = $postCtx.candidateEvaluations - $beforeCa
+              );
+              let updatedCtx = ^$postCtx(elementStatistics = $postCtx.elementStatistics->concatenate($stat));
+              ^$newAcc(context = $updatedCtx);,
+            | $newAcc
+        );
     }, ^CompilerListResult<PackageableElement>(context = $pass1Context));
+    let pass2Millis = currentTimeMillis() - $pass2Start;
 
     $pass2.context->debug({| 'compile: pass 2 done (' + $pass2.values->size()->toString() + ' elements compiled), starting pass 3'});
 
-    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties
+    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties.
+    // Per-element timing mirrors pass 2: append an ElementStatistics entry for
+    // each element so compileDir can merge by path across passes.
+    let pass3Start = currentTimeMillis();
     let pass3Ctx = $pass2.values->fold({elem, ctx |
-        $elem->match([
+        let beforeT = currentTimeMillis();
+        let beforeRb = $ctx.inferenceRollbacks;
+        let beforeCa = $ctx.candidateEvaluations;
+        let newCtx = $elem->match([
             fn:UserDefinedFunction<Any>[1] |
                 resolveFunctionDefinition($fn, $ctx);,
             cls:Class<Any>[1] |
@@ -325,13 +476,48 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
                 resolvePrimitive($pt, $ctx);,
             a:Any[1] | $ctx
         ]);
+        let elapsed = currentTimeMillis() - $beforeT;
+        let stat = ^ElementStatistics(
+            elementPath = $elem->elementToPath(),
+            elementType = elementSimpleType($elem),
+            totalMillis = $elapsed,
+            inferenceRollbacks = $newCtx.inferenceRollbacks - $beforeRb,
+            candidateEvaluations = $newCtx.candidateEvaluations - $beforeCa
+        );
+        ^$newCtx(elementStatistics = $newCtx.elementStatistics->concatenate($stat));
     }, $pass2.context);
+    let pass3Millis = currentTimeMillis() - $pass3Start;
 
     $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
 
     // Return elements from the map (source of truth after resolution)
     let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
-    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors);
+    let totalMillis = currentTimeMillis() - $compileStart;
+    let stats = ^CompilationStatistics(
+        totalMillis = $totalMillis,
+        parsingMillis = 0,
+        firstPassMillis = $pass1Millis,
+        secondPassMillis = $pass2Millis,
+        thirdPassMillis = $pass3Millis,
+        elementCount = $resolvedElements->size(),
+        sourceFileCount = 1,
+        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
+        candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
+        elementStatistics = $pass3Ctx.elementStatistics
+    );
+    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats);
+}
+
+// Extract a short element-type label (e.g. "UserDefinedFunction", "Class") from an
+// element's runtime classifier — used by per-element statistics so the summary
+// table can show what kind of element each row represents.
+function meta::pure::compiler::elementSimpleType(elem:Any[1]):String[1]
+{
+    let t = $elem->type();
+    if($t->isEmpty(),
+        | 'Unknown',
+        | $t->toOne()->elementToPath()->split('::')->last()->toOne()
+    );
 }
 
 function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<Any>[1], context:CompilerContext[1]):CompilerContext[1]

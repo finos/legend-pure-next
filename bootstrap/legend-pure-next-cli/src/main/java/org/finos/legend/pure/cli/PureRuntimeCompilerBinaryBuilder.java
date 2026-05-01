@@ -67,10 +67,9 @@ public final class PureRuntimeCompilerBinaryBuilder
     // {@code directoryTree} and {@code readFile}, then per-file
     // {@code parse} + {@code compile}, then aggregates into a single
     // {@code CompilationResult}. Java just invokes this one function and
-    // serializes the resulting elements. The 2-arg variant takes a debug
-    // flag so the orchestrator can surface compile-pass progress —
-    // strategic {@code $ctx->debug({| ... })} calls inside the compiler
-    // fire only when this flag is true.
+    // serializes the resulting elements. We resolve the 2-arg overload so
+    // we can pass the debug flag (matching Truffle's path); pass {@code false}
+    // for normal runs and flip to {@code true} when debugging compiler-pure.
     private static final String COMPILE_DIR_FN_PATH =
             "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
 
@@ -152,7 +151,7 @@ public final class PureRuntimeCompilerBinaryBuilder
         // source dir and gets a single CompilationResult back.
         long t0 = System.currentTimeMillis();
         System.out.println("  Calling compileDir on " + sourceDir.toAbsolutePath() + " ...");
-        Object result = execution.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), true);
+        Object result = execution.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), false);
         System.out.println("  compileDir done in " + (System.currentTimeMillis() - t0) + " ms");
         if (!(result instanceof DynamicInstance compResult))
         {

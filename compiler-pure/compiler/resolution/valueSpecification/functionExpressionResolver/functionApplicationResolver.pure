@@ -119,9 +119,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                    context = ^$context(errors += $errorLines)
                );),
         pair(| $candidates->size() == 1,
-             | // Single candidate — resolve directly, errors are legitimate
+             | // Single candidate — resolve directly, errors are legitimate.
+               // Mirrors Java line 75 (incrementCandidateEvaluationCount on the
+               // single-candidate branch) so single-candidate calls also bump.
                debug($deepCtx, | '1 candidate');
-               resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $deepCtx);)],
+               let singleBumpedCtx = ^$deepCtx(
+                   candidateEvaluations = $deepCtx.candidateEvaluations + 1,
+                   ca_single = $deepCtx.ca_single + 1
+               );
+               resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $singleBumpedCtx);)],
        | // Multiple candidates — sort most-specific-first, pre-resolve non-lambda params, then try each candidate
          // Sort most-specific-first: by parameter specificity, then fewer type/multiplicity params = more specific (mirrors Java mostSpecificFirst)
          let sorted = $candidates->sort({a, b |
@@ -134,7 +140,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
              );
          });
          debug($deepCtx, | $sorted->size()->toString() + ' candidates, pre-resolving non-lambda params');
-         resolveWithMultipleCandidates($fi, $sorted, $scope, $deepCtx, $context);
+         // Mirrors Java line 94 (rollbackErrorsTo(preResolveCheckpoint) ALWAYS
+         // fires after pre-resolve speculative compilation): one inferenceRollback
+         // bump per multi-candidate call accounts for that always-rollback.
+         debug($deepCtx, | 'ERRORS ROLLED BACK (preResolve) [implicit]');
+         let preResolveBumpedCtx = ^$deepCtx(
+             inferenceRollbacks = $deepCtx.inferenceRollbacks + 1,
+             rb_preResolve = $deepCtx.rb_preResolve + 1
+         );
+         let preResolveBumpedCtxOuter = ^$context(
+             inferenceRollbacks = $context.inferenceRollbacks + 1,
+             rb_preResolve = $context.rb_preResolve + 1
+         );
+         resolveWithMultipleCandidates($fi, $sorted, $scope, $preResolveBumpedCtx, $preResolveBumpedCtxOuter);
     );
 }
 
@@ -161,22 +179,41 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let preResolvedFI = ^$fi(parametersValues = $preResolvedParams);
 
     // Step 2: Try each candidate with the fixpoint — first clean resolution wins (like Java lines 97-126)
+    // The candidate try uses ORIGINAL context (each attempt is independent); counters
+    // accumulate in $acc.context so totals/per-element deltas survive across iterations.
     let tryResult = $candidates->fold({candidate, acc |
         if($acc.resolved,
             | $acc,
             | debug($deepCtx, | 'trying candidate: ' + $candidate->elementToPath());
+              let accCtx = $acc.context;
+              let bumpedAccCtx = ^$accCtx(
+                  candidateEvaluations = $accCtx.candidateEvaluations + 1,
+                  ca_multi = $accCtx.ca_multi + 1
+              );
               let checkpoint = $context->errorCheckpoint();
-              // Pass ORIGINAL context (not accumulated) — each candidate attempt is independent
               let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $context);
               let resultCtx = $result.context;
               if($resultCtx->errorCheckpoint() == $checkpoint,
-                  | // Clean resolution — success
+                  | // Clean resolution — success. Merge accumulated counters into the
+                    // resultCtx returned by the candidate try (which carries no counter
+                    // bumps since we passed $context, not $acc.context).
                     debug($deepCtx, | 'candidate resolved cleanly');
-                    ^$acc(resolved = true, result = $result, resolvedCandidate = $candidate);,
-                  | // Resolution produced errors — save first candidate's errors, try next
+                    let mergedResultCtx = ^$resultCtx(
+                        candidateEvaluations = $resultCtx.candidateEvaluations + $bumpedAccCtx.candidateEvaluations - $context.candidateEvaluations,
+                        inferenceRollbacks = $resultCtx.inferenceRollbacks + $bumpedAccCtx.inferenceRollbacks - $context.inferenceRollbacks
+                    );
+                    let mergedResult = ^$result(context = $mergedResultCtx);
+                    ^$acc(resolved = true, result = $mergedResult, resolvedCandidate = $candidate, context = $bumpedAccCtx);,
+                  | // Resolution produced errors — backtrack. Bump rollback counter,
+                    // save first candidate's errors, try next.
                     debug($deepCtx, | 'candidate produced errors, trying next');
+                    debug($deepCtx, | 'ERRORS ROLLED BACK (failedCandidate) [implicit]');
+                    let rollbackCtx = ^$bumpedAccCtx(
+                        inferenceRollbacks = $bumpedAccCtx.inferenceRollbacks + 1,
+                        rb_failedCandidate = $bumpedAccCtx.rb_failedCandidate + 1
+                    );
                     let savedErrors = if($acc.firstErrors->isEmpty(), | $resultCtx->snapshotErrors($checkpoint), | $acc.firstErrors);
-                    ^$acc(firstErrors = $savedErrors);
+                    ^$acc(firstErrors = $savedErrors, context = $rollbackCtx);
               );
         );
     }, ^CandidateTryAccumulator(resolved = false, context = $context));
@@ -210,14 +247,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     context = ^$resolvedCtx(errors += 'Ambiguous function call: multiple equally-specific matches found [' + $signatures + ']' + $siCtx));,
               | $tryResult.result->toOne()
           );,
-        | // No candidate resolved cleanly — restore first candidate's errors
+        | // No candidate resolved cleanly — restore first candidate's errors.
+          // Use $tryResult.context (which carries the accumulated counter bumps
+          // from every failed candidate try) so the rollback/candidate counters
+          // aren't lost on the failure path.
           if($tryResult.firstErrors->isNotEmpty(),
               | ^CompilerResult<ValueSpecification>(
                     value = $fi,
-                    context = ^$context(errors += $tryResult.firstErrors));,
+                    context = ^$context(
+                        errors += $tryResult.firstErrors,
+                        inferenceRollbacks = $tryResult.context.inferenceRollbacks,
+                        candidateEvaluations = $tryResult.context.candidateEvaluations
+                    ));,
               | ^CompilerResult<ValueSpecification>(
                     value = $fi,
-                    context = $context);
+                    context = ^$context(
+                        inferenceRollbacks = $tryResult.context.inferenceRollbacks,
+                        candidateEvaluations = $tryResult.context.candidateEvaluations
+                    ));
           );
     );
 }
@@ -555,7 +602,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           ^ResolveOneParamResult(resolved = true, newParam = $result.newParam, bindings = $result.bindings, context = $result.context, savedErrors = []);,
         | // Not resolved: snapshot errors and rollback (Java lines 263-266)
           let savedErrors = $result.context->snapshotErrors($checkpoint);
-          let rolledBackCtx = $result.context->rollbackErrors($checkpoint);
+          let rolledBackCtx = $result.context->rollbackErrorsLabeled($checkpoint, 'notResolved');
           debug($context, | '=> NOT RESOLVED');
           ^ResolveOneParamResult(resolved = false, newParam = $result.newParam, bindings = $result.bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
     );
@@ -609,7 +656,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               av : AtomicValue[1] |
                   // Check if LAMBDA (Java line 442-448)
                   if($av.value->toOne()->instanceOf(LambdaFunction),
-                      | let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                      | let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'lambda');
                         debug($context, | 'resolveArg: LAMBDA');
                         let lambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
                         let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings);
@@ -622,7 +669,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               fi2 : FunctionInvocation[1] |
                   // Check if REVERSE_MATCH (Java line 450-454)
                   if($fi2.func->isNotEmpty(),
-                      | let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                      | let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'reverseMatch');
                         debug($context, | 'resolveArg: REVERSE_MATCH func=' + $fi2.functionName->toOne()
                             + ' childGT=' + if($fi2.genericType->isEmpty(), | '?', | printGenericType($fi2.genericType->toOne())));
                         let reversedChild = reverseMatch($fi2, $paramGT, $paramMul, $bindings);
@@ -633,7 +680,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   );,
               col : Collection[1] |
                   // COLLECTION (Java line 456-494)
-                  let ctx2 = $ctx1->rollbackErrors($checkpoint);
+                  let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'collection');
                   let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
                   let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
                   debug($context, | 'resolveArg: COLLECTION (' + $col.values->size()->toString() + ' elements) resolvedParamGT=' + printGenericType($resolvedParamGT));
@@ -649,7 +696,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let preFinishCheckpoint = $colResult.context->errorCheckpoint();
                   let fpResult = finishProcessing($paramGT, $paramMul, $bindings, $scope, $colResult.context, $newCol);
                   if($fpResult.context->errorCheckpoint() > $preFinishCheckpoint,
-                      | ^$fpResult(context = $fpResult.context->rollbackErrors($preFinishCheckpoint)),
+                      | ^$fpResult(context = $fpResult.context->rollbackErrorsLabeled($preFinishCheckpoint, 'postFinish')),
                       | $fpResult
                   );,
               other : Any[1] |
