@@ -26,7 +26,11 @@ function meta::pure::compiler::structural::variableCompiler::compileParameter(p:
     let mMult = $p.multiplicity->compileMultiplicity();
     ^CompilerResult<VariableExpression>(
         value = ^VariableExpression(
-            name = $p.name,
+            // Mirror Java VariableCompiler.compileParameter: anonymous params
+            // (e.g. inner FunctionType `{X[1]->Y[1]}`) have no name in the
+            // grammar; default to '' so the writer's [1] validation doesn't
+            // reject the resulting VariableExpression.
+            name = if($p.name->isEmpty(), | '', | $p.name->toOne()),
             genericType = $gtResult.value->toOne(),
             multiplicity = $mMult
         ),

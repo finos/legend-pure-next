@@ -35,7 +35,7 @@ import meta::pure::functions::string::*;
 // ---------------------------------------------------------------------------
 // Render a progress bar using a precomputed fixed-width template.
 // barWidth is fixed at 30 via the BAR_FULL / BAR_EMPTY constants below.
-function meta::pure::test::renderBar(done:Integer[1], total:Integer[1]):String[1]
+function <<test.TestDependency>> meta::pure::test::renderBar(done:Integer[1], total:Integer[1]):String[1]
 {
     let fullBar = '\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588';
     let emptyBar = '\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591';
@@ -51,7 +51,7 @@ function meta::pure::test::renderBar(done:Integer[1], total:Integer[1]):String[1
         + $done->toString() + '/' + $total->toString() + ')';
 }
 
-function meta::pure::test::runCompiledGraphTests(testDir:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runCompiledGraphTests(testDir:String[1]):Boolean[1]
 {
     let files = directoryTree($testDir)
         ->filter(f | $f->endsWith('.pure'));

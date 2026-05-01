@@ -62,12 +62,12 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                           | $assocMatch->head(),
                           | let inherited = $cls.generalizations
                                 ->map(g | $g.general->genericTypeRawType())
-                                ->filter(t | $t->instanceOf(Class))
+                                ->filter(t | $t->instanceOf(Class) || $t->instanceOf(Enumeration))
                                 ->map(t |
                                     let superPath = $t->cast(@PackageableElement)->elementToPath();
                                     let resolved = $context->resolveElement($superPath);
                                     let superCls = if($resolved->isNotEmpty(),
-                                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, a:Any[1] | $t]),
+                                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $t]),
                                         | $t
                                     );
                                     $superCls->findProperty($name, $context);
@@ -76,6 +76,31 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                                 ->head();
                             $inherited;
                       );
+                );,
+            // Enumeration is not a Class<Any> at the Pure type level (it extends
+            // DataType), but its properties + generalizations chain to Enum →
+            // AnnotatedElement → … → PackageableElement, which is where `name`
+            // lives. Without this arm, `someEnumValue.name` on a PDB-loaded
+            // enumeration fails to resolve.
+            en : Enumeration<Any>[1] |
+                let directMatch = $en.properties->filter(p | $p.name == $name);
+                if($directMatch->isNotEmpty(),
+                    | $directMatch->head(),
+                    | let inherited = $en.generalizations
+                          ->map(g | $g.general->genericTypeRawType())
+                          ->filter(t | $t->instanceOf(Class) || $t->instanceOf(Enumeration))
+                          ->map(t |
+                              let superPath = $t->cast(@PackageableElement)->elementToPath();
+                              let resolved = $context->resolveElement($superPath);
+                              let superCls = if($resolved->isNotEmpty(),
+                                  | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $t]),
+                                  | $t
+                              );
+                              $superCls->findProperty($name, $context);
+                          )
+                          ->filter(p | $p->isNotEmpty())
+                          ->head();
+                      $inherited;
                 );,
             a : Any[1] | []
         ]

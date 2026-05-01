@@ -21,7 +21,7 @@ import meta::pure::functions::string::*;
 import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::compiler::test::printer::*;
 
-function meta::pure::compiler::test::printer::primitive::printPrimitive(p:PrimitiveType[1]):String[1]
+function <<test.TestDependency>> meta::pure::compiler::test::printer::primitive::printPrimitive(p:PrimitiveType[1]):String[1]
 {
     [
         'primitive ', $p->fullPath(),

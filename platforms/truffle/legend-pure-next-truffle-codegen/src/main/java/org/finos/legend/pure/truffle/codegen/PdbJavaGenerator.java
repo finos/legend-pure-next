@@ -825,10 +825,14 @@ public class PdbJavaGenerator
         sb.append("        return parentPath + \"::\" + name;\n");
         sb.append("    }\n\n");
 
-        // writeAncestorRef — back-edge for cycles
+        // writeAncestorRef — back-edge for cycles. depth=0 is self,
+        // depth=N walks N `_fbParent` hops at read time. Subtract 1 from
+        // the natural `_depth - _writing.get(obj)` because the writer
+        // increments `_depth` immediately after `_writing.put`, so while
+        // we're inside obj, `_depth - _writing.get(obj)` is one off.
         sb.append("    private int writeAncestorRef(Object obj)\n    {\n");
         sb.append("        AncestorRef.startAncestorRef(builder);\n");
-        sb.append("        AncestorRef.addDepth(builder, _depth - _writing.get(obj));\n");
+        sb.append("        AncestorRef.addDepth(builder, _depth - _writing.get(obj) - 1);\n");
         sb.append("        return AncestorRef.endAncestorRef(builder);\n");
         sb.append("    }\n\n");
 
@@ -1064,10 +1068,14 @@ public class PdbJavaGenerator
             }
             return;
         }
-        // Case 3: scalar reference (writes a child table inline, dispatched on runtime type)
+        // Case 3: scalar reference (writes a child table inline, dispatched on runtime type).
+        // PointerRef-typed fields (e.g. FunctionInvocation.func, ArrowInvocation.func)
+        // serialize as typed pointers, NOT inline tables — otherwise top-level
+        // PackageableElements get re-emitted recursively and the buffer blows up.
         if (!fb.isVector() && !fb.isUnion())
         {
-            sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? dispatchWrite(obj._").append(pr.name).append("()) : 0;\n");
+            String writeCall = "PointerRef".equals(fb.type()) ? "writePointerRef" : "dispatchWrite";
+            sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? ").append(writeCall).append("(obj._").append(pr.name).append("()) : 0;\n");
             return;
         }
         // Case 4: scalar union (e.g. classifierGenericType, multiplicity)
@@ -1424,7 +1432,10 @@ public class PdbJavaGenerator
         java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
         sb.append("        int ").append(camel).append("Off = 0;\n");
         sb.append("        byte ").append(camel).append("Type = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null && obj._").append(pr.name).append("() != obj)\n");
+        // Self-ref now flows through the AncestorRef branch (encoded
+        // explicitly as depth=0), so the historical `!= obj` guard goes
+        // away. `uType == 0` strictly means "field absent."
+        sb.append("        if (obj._").append(pr.name).append("() != null)\n");
         sb.append("        {\n");
         sb.append("            Object _u_").append(camel).append(" = obj._").append(pr.name).append("();\n");
 
@@ -1763,6 +1774,9 @@ public class PdbJavaGenerator
     {
         java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
         String typeSuffix2 = camelName.endsWith("_") ? "type" : "Type";
+        // `uType == 0` strictly means absent. Self-references are encoded
+        // explicitly as `AncestorRef(depth=0)` and resolve to `this` via
+        // the AncestorRef case below.
         sb.append("        { byte uType = fb.").append(camelName).append(typeSuffix2).append("();\n");
         sb.append("          if (uType == 0) { __raw = null; }\n");
         sb.append("          else { switch (uType) {\n");

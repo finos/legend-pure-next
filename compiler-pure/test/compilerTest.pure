@@ -18,7 +18,7 @@ import meta::pure::functions::string::*;
 import meta::pure::compiler::test::printer::*;
 
 // Harness
-function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
 {
     if([pair(| contains($content, '###' + 'Error'), | assertCompilationError($content, $sourceId)),
         pair(| contains($content, '###' + 'CompiledGraph'), | assertCompiledGraphContent($content, $sourceId))],
@@ -26,7 +26,7 @@ function meta::pure::compiler::test::assertCompiledGraph(content:String[1], sour
     );
 }
 
-function meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
 {
     let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
     let expectedMessages = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim()->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
@@ -43,7 +43,7 @@ function meta::pure::compiler::test::assertCompilationError(content:String[1], s
     assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
 }
 
-function meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
 {
     let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
     let result = meta::pure::compiler::compile($parsedFile);

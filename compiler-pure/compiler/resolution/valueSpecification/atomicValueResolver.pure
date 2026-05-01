@@ -102,14 +102,23 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                       );
                 );,
             a : Any[1] |
-                // For element references, refresh from the map to get up-to-date classifierGenericType
+                // For element references, refresh from the map to get up-to-date classifierGenericType.
+                // Mirrors Java AtomicValueResolver.processPackagePointer: the resolved element's CGT
+                // is run through withUndefinedTypeParams so intrinsic type parameters of the element
+                // (e.g. T in `Class<List<T>>` when referencing List as a value) are wildcarded —
+                // otherwise an outer call's binder sees that T as a free TypeParameter, NO_MATCH's
+                // the arg, and finalises with its own type parameter unbound (see reproducer at
+                // specification/compiler/valueSpecification/atomicValue/element/classWithTypeParameter.pure).
                 if($a->instanceOf(PackageableElement),
                     | let path = $a->cast(@PackageableElement)->elementToPath();
                       let fromMap = $context->resolveElement($path);
                       if($fromMap->isNotEmpty(),
                           | let resolved = $fromMap->toOne()->cast(@PackageableElement);
                             let resolvedCGT = $resolved->cast(@Any).classifierGenericType;
-                            let updatedGT = if($resolvedCGT->isEmpty(), | $av.genericType, | asInferredGenericType($resolvedCGT->toOne()));
+                            let updatedGT = if($resolvedCGT->isEmpty(),
+                                | $av.genericType,
+                                | asInferredGenericType(withUndefinedTypeParams($resolvedCGT->toOne()))
+                            );
                             ^CompilerResult<ValueSpecification>(value = ^$av(value = $resolved, genericType = $updatedGT->toOne()), context = $context);,
                           | ^CompilerResult<ValueSpecification>(value = $av, context = $context)
                       );,

@@ -148,8 +148,9 @@ build-truffle-native: build-bootstrap
 #   - truffle unit tests run during build-truffle (the 804-test surefire pass)
 # A failure in either fails the install, so the chain bails before any
 # Pure-level spec tests run. Then we run Pure-level spec tests on both
-# interpreters.
-test: build-truffle test-compiler-pure-truffle
+# interpreters, plus two self-host tests (compile the compiler with each
+# compiler, then run compiler tests against the freshly produced PDB).
+test: build-truffle test-compiler-pure-truffle test-self-host-java test-self-host-truffle
     @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over specification/compiler'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
@@ -163,6 +164,45 @@ test-compiler-pure-truffle: build-truffle build-compiler-pdb
     java -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+# Self-host (Java): run the Pure compiler ON the Java runtime to compile
+# compiler-pure into a fresh compiler_java.pdb, then run the compiler spec
+# tests against that PDB. Verifies the bootstrap Java executor can run
+# compiler-pure end-to-end and produce a usable compiler — distinct from
+# {{cli}} compile (which uses the Java compiler implementation, not
+# compiler-pure). Needs the build-chain compiler.pdb as a base because
+# that's where compile_PureFile_… is loaded from.
+test-self-host-java: build-compiler-pdb
+    @{{banner}} '[self-host-java]' 'compiler-pure → compiler_java.pdb (Java runtime + Pure compiler), then run compiler tests'
+    java -jar {{cli}} compile-via-pure \
+        --base-pdb {{out}}/core.pdb \
+        --base-pdb {{out}}/compiler.pdb \
+        --source {{compiler}} \
+        --output {{out}}/compiler_java.pdb {{err_filter}}
+    java -jar {{cli}} execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler_java.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+# Self-host (Truffle): use the Truffle pure-compile to compile compiler-pure
+# into a fresh compiler_truffle.pdb, then run the compiler spec tests against
+# that PDB. Verifies that Truffle's compilation path is correct end-to-end —
+# the output PDB has to be functionally equivalent to the bootstrap one.
+# Truffle needs an existing compiler.pdb to bootstrap its own compile, so
+# {{out}}/compiler.pdb (built by build-compiler-pdb) is passed as a base.
+test-self-host-truffle: build-truffle build-compiler-pdb
+    @{{banner}} '[self-host-truffle]' 'compiler-pure → compiler_truffle.pdb (truffle CLI), then run compiler tests'
+    java -jar {{out}}/cli/pure-compile.jar compile \
+        --base-pdb {{out}}/core.pdb \
+        --base-pdb {{out}}/compiler.pdb \
+        --source {{compiler}} \
+        --output {{out}}/compiler_truffle.pdb {{err_filter}}
+    java -jar {{out}}/cli/pure-compile.jar execute \
+        --pdb {{out}}/core.pdb \
+        --pdb {{out}}/compiler_truffle.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
         --args "{{spec}}/compiler" {{err_filter}}
 

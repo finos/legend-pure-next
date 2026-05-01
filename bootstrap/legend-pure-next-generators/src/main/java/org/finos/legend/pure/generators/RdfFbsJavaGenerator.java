@@ -148,7 +148,11 @@ public class RdfFbsJavaGenerator
         }
         sb.append("        int ").append(fbField).append("Offset = 0;\n");
         sb.append("        byte ").append(fbField).append("UnionType = 0;\n");
-        sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("() != obj)\n");
+        // Drop the historical `!= obj` self-ref guard: self-ref now flows
+        // through the `AncestorRef` branch (since obj is in `_writing`),
+        // which encodes it explicitly as depth=0. `uType == 0` is reserved
+        // for genuinely-absent fields.
+        sb.append("        if (obj._").append(prop.name).append("() != null)\n");
         sb.append("        {\n");
         boolean priorBranch = false;
         for (String member : u.members())
@@ -167,6 +171,19 @@ public class RdfFbsJavaGenerator
             {
                 sb.append(prefix).append(" (_writing.containsKey(obj._").append(prop.name).append("()))\n");
                 sb.append("            {\n");
+                // A self-classified GenericTypeValue is only valid as the
+                // canonical UDGT meta-class anchor — i.e. `_type` must be the
+                // `UserDefinedGenericType` meta-class. Anything else is a
+                // construction bug somewhere upstream; throwing here surfaces
+                // it loudly instead of silently round-tripping a corrupt
+                // classifier through the PDB.
+                sb.append("                if (obj._").append(prop.name).append("() == obj\n");
+                sb.append("                        && obj instanceof meta.pure.metamodel.type.generics.GenericTypeValue _gtv\n");
+                sb.append("                        && _gtv._type() instanceof meta.pure.metamodel.PackageableElement _pe\n");
+                sb.append("                        && !\"meta::pure::metamodel::type::generics::UserDefinedGenericType\".equals(_PackageableElement.path(_pe)))\n");
+                sb.append("                {\n");
+                sb.append("                    throw new IllegalStateException(\"Self-classified GenericTypeValue is only valid as the canonical UDGT anchor (_type=UserDefinedGenericType). Got _type=\" + _PackageableElement.path(_pe) + \" obj=\" + obj.getClass().getName());\n");
+                sb.append("                }\n");
                 sb.append("                ").append(fbField).append("Offset = writeAncestorRef(obj._").append(prop.name).append("());\n");
                 sb.append("                ").append(fbField).append("UnionType = ").append(byteVal).append(";\n");
                 sb.append("            }\n");
@@ -199,6 +216,8 @@ public class RdfFbsJavaGenerator
         }
         sb.append("        int[] ").append(fbField).append("Offsets = null;\n");
         sb.append("        byte[] ").append(fbField).append("Types = null;\n");
+        // (vector form) — null means absent. Self-refs in vector slots take
+        // the same `AncestorRef(0)` path as scalar.
         sb.append("        if (obj._").append(prop.name).append("() != null && obj._").append(prop.name).append("().notEmpty())\n");
         sb.append("        {\n");
         sb.append("            var ").append(fbField).append("List = obj._").append(prop.name).append("();\n");
@@ -856,11 +875,13 @@ public class RdfFbsJavaGenerator
         }
 
         sb.append("        byte uType = fb.").append(unionTypeAccessor(fbField)).append("();\n");
-        sb.append("        if (uType == 0)\n");
-        sb.append("        {\n");
-        sb.append("            if (this instanceof ").append(prop.typeName).append(") { return (").append(prop.typeName).append(") (java.lang.Object) this; }\n");
-        sb.append("            return null;\n");
-        sb.append("        }\n");
+        // `uType == 0` strictly means "field absent." Self-references are
+        // encoded explicitly as `AncestorRef(depth=0)`. The previous
+        // codegen overloaded `uType == 0` as an implicit self-ref when the
+        // field type accepted `this` — that conflated absence with self
+        // and made every consumer guess the writer's intent. Now: absent
+        // ↔ null, self ↔ AncestorRef(0).
+        sb.append("        if (uType == 0) { return null; }\n");
         sb.append("        switch (uType)\n");
         sb.append("        {\n");
 
@@ -1083,8 +1104,16 @@ public class RdfFbsJavaGenerator
         sb.append("    }\n\n");
         sb.append("    private int writeAncestorRef(Object obj)\n");
         sb.append("    {\n");
+        // `_writing.put(obj, _depth)` is called before `_depth++` on entry,
+        // so while we're inside obj, `_depth = _writing.get(obj) + 1`.
+        // The reader walks `depth` `_fbParent` hops starting from the FBW
+        // that's reading the field, so:
+        //   self-ref: 0 hops (don't move)
+        //   parent:   1 hop
+        //   N-up:     N hops
+        // Hence `_depth - _writing.get(obj) - 1` gives the right answer.
         sb.append("        AncestorRef.startAncestorRef(builder);\n");
-        sb.append("        AncestorRef.addDepth(builder, _depth - _writing.get(obj));\n");
+        sb.append("        AncestorRef.addDepth(builder, _depth - _writing.get(obj) - 1);\n");
         sb.append("        return AncestorRef.endAncestorRef(builder);\n");
         sb.append("    }\n\n");
         sb.append("    private static String pointerPath(Object obj)\n");

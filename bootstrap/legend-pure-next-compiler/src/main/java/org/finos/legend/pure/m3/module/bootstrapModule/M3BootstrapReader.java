@@ -116,10 +116,14 @@ public class M3BootstrapReader
             bootstrapType(model, m3PrimitiveType, root, index, "PrimitiveType");
             bootstrapType(model, m3Enumeration, root, index, "Enumeration");
             bootstrapType(model, m3Profile, root, index, "Profile");
-            bootstrapMultiplicities(model, m3UserDefinedPackageableMultiplicity, root, index, UserDefinedPackageableMultiplicityImpl::new);
-            bootstrapMultiplicities(model, m3InferredPackageableMultiplicity, root, index, InferredPackageableMultiplicityImpl::new);
+            // UDPGT named anchors must be in the index before any buildGenericType
+            // call: multiplicity values reference :GenericType_MultiplicityValue,
+            // and resolving that to the indexed PE keeps the writer's classifier
+            // chain as PointerRefs instead of duplicate self-classified inline UDGTs.
             Resource m3UserDefinedPackageableGenericType = model.createResource(M3_NS + "UserDefinedPackageableGenericType");
             bootstrapPackageableGenericTypes(model, m3UserDefinedPackageableGenericType, root, index);
+            bootstrapMultiplicities(model, m3UserDefinedPackageableMultiplicity, root, index, UserDefinedPackageableMultiplicityImpl::new);
+            bootstrapMultiplicities(model, m3InferredPackageableMultiplicity, root, index, InferredPackageableMultiplicityImpl::new);
 
             // Second pass: wire parameters and generalizations now that all types exist
             wireTypeParameters(model, m3Class, index);
@@ -429,7 +433,7 @@ public class M3BootstrapReader
             Statement cgtStmt = getM3Statement(model, res, "classifierGenericType");
             if (cgtStmt != null && cgtStmt.getObject().isResource())
             {
-                UserDefinedGenericType cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
+                meta.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, cgtStmt.getObject().asResource(), index);
                 element._classifierGenericType(cgt);
             }
         }
@@ -698,14 +702,14 @@ public class M3BootstrapReader
             // GenericType for this enumeration's values (e.g., GenericType pointing to GenericTypeOperationType)
             UserDefinedGenericType enumGT = new UserDefinedGenericTypeImpl()
                     ._type((Type) enumeration);
-            enumGT._classifierGenericType(enumGT);
+            enumGT._classifierGenericType(buildUdgtAnchor(index));
 
             // GenericType for Enumeration<E> parameterized with this enum type
             Type enumerationType = (Type) index.get("meta::pure::metamodel::type::Enumeration");
             UserDefinedGenericType enumerationOfE = new UserDefinedGenericTypeImpl()
                     ._type(enumerationType)
                     ._typeArguments(Lists.mutable.with(enumGT));
-            enumerationOfE._classifierGenericType(enumerationOfE);
+            enumerationOfE._classifierGenericType(buildUdgtAnchor(index));
 
             Type propertyType = (Type) index.get("meta::pure::metamodel::function::property::Property");
             Multiplicity pureOne = (Multiplicity) index.get("meta::pure::metamodel::multiplicity::PureOne");
@@ -734,12 +738,12 @@ public class M3BootstrapReader
                 UserDefinedGenericType lambdaCGT = new UserDefinedGenericTypeImpl()
                         ._type(lambdaType)
                         ._typeArguments(Lists.mutable.with(enumGT));
-                lambdaCGT._classifierGenericType(lambdaCGT);
+                lambdaCGT._classifierGenericType(buildUdgtAnchor(index));
 
                 Type atomicValueType = (Type) index.get("meta::pure::metamodel::valuespecification::AtomicValue");
                 UserDefinedGenericType avCGT = new UserDefinedGenericTypeImpl()
                         ._type(atomicValueType);
-                avCGT._classifierGenericType(avCGT);
+                avCGT._classifierGenericType(buildUdgtAnchor(index));
 
                 // Create a lambda whose body is the AtomicValue wrapping the Enum
                 LambdaFunctionImpl defaultValueLambda = new LambdaFunctionImpl();
@@ -757,7 +761,7 @@ public class M3BootstrapReader
                         ._type(propertyType)
                         ._typeArguments(Lists.mutable.with(enumerationOfE, enumGT))
                         ._multiplicityArguments(Lists.mutable.with(pureOne));
-                propCGT._classifierGenericType(propCGT);
+                propCGT._classifierGenericType(buildUdgtAnchor(index));
 
                 PropertyImpl prop = new PropertyImpl()
                         ._name(valName)
@@ -1018,7 +1022,7 @@ public class M3BootstrapReader
             Statement veCgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
             if (veCgtStmt != null && veCgtStmt.getObject().isResource())
             {
-                UserDefinedGenericType cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
+                meta.pure.metamodel.type.generics.GenericTypeValue cgt = buildGenericType(model, veCgtStmt.getObject().asResource(), index);
                 ve._classifierGenericType(cgt);
             }
 
@@ -1068,10 +1072,28 @@ public class M3BootstrapReader
     /**
      * Build a GenericType from an RDF resource. Handles typeParameter references,
      * concrete rawType references, typeArguments, and multiplicityArguments.
+     *
+     * <p>If the resource refers to a named PackageableElement that's already in
+     * the index (e.g., a UDPGT named anchor like
+     * {@code :GenericType_UserDefinedGenericType}), the indexed instance is
+     * returned directly. Otherwise a fresh inline UDGT is built. Without this
+     * lookup, references to named anchors materialize as duplicate self-classified
+     * UDGT impls — which then get serialized inline rather than as PointerRefs.
      */
-    private static UserDefinedGenericType buildGenericType(
+    private static meta.pure.metamodel.type.generics.GenericTypeValue buildGenericType(
             Model model, Resource gtRes, MutableMap<String, PackageableElement> index)
     {
+        String name = getName(model, gtRes);
+        String packagePath = getPackagePath(model, gtRes);
+        if (name != null && packagePath != null)
+        {
+            PackageableElement existing = index.get(packagePath + "::" + name);
+            if (existing instanceof meta.pure.metamodel.type.generics.GenericTypeValue existingGt)
+            {
+                return existingGt;
+            }
+        }
+
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
         // Concrete rawType reference
@@ -1186,17 +1208,29 @@ public class M3BootstrapReader
             gt._multiplicityArguments(mulArgs);
         }
 
-        // classifierGenericType — self-referential by default (UserDefinedGenericType's classifier is itself),
-        // overridden if the RDF explicitly provides a different one
-        gt._classifierGenericType(gt);
+        // classifierGenericType: REQUIRED. Every UDGT in the TTL must specify
+        // its classifier explicitly. Self-references are written by stating
+        // `:classifierGenericType :GenericType_self_resource`. We don't infer
+        // self-ref from absence — that hid bugs where elements emerged with
+        // a self-classified UDGT they shouldn't have.
         Statement cgtStmt = getM3Statement(model, gtRes, "classifierGenericType");
-        if (cgtStmt != null && cgtStmt.getObject().isResource())
+        if (cgtStmt == null || !cgtStmt.getObject().isResource())
         {
-            Resource cgtRes = cgtStmt.getObject().asResource();
-            if (!cgtRes.equals(gtRes))
-            {
-                gt._classifierGenericType(buildGenericType(model, cgtRes, index));
-            }
+            throw new IllegalStateException(
+                    "GenericType " + gtRes.getURI() + " is missing a classifierGenericType in the TTL. "
+                            + "Every UserDefinedGenericType must declare one explicitly — self-references "
+                            + "must be written, not inferred from absence.");
+        }
+        Resource cgtRes = cgtStmt.getObject().asResource();
+        if (cgtRes.equals(gtRes))
+        {
+            // Explicit self-reference: only valid for the canonical
+            // UDGT meta-class anchor (`:GenericType_UserDefinedGenericType`).
+            gt._classifierGenericType(gt);
+        }
+        else
+        {
+            gt._classifierGenericType(buildGenericType(model, cgtRes, index));
         }
 
         return gt;
@@ -1267,6 +1301,21 @@ public class M3BootstrapReader
             }
         }
         return current;
+    }
+
+    /**
+     * Build a fresh canonical UDGT anchor: a self-classified UDGT whose
+     * {@code _type} is the {@code UserDefinedGenericType} meta-class. This is
+     * the only shape in which self-classification is valid; using it as the
+     * classifier of any other UDGT gives that UDGT a proper {@code _cgt._type
+     * = UserDefinedGenericType} reading.
+     */
+    private static UserDefinedGenericType buildUdgtAnchor(MutableMap<String, PackageableElement> index)
+    {
+        UserDefinedGenericTypeImpl anchor = new UserDefinedGenericTypeImpl();
+        anchor._type((Type) index.get("meta::pure::metamodel::type::generics::UserDefinedGenericType"));
+        anchor._classifierGenericType(anchor);
+        return anchor;
     }
 
     /**

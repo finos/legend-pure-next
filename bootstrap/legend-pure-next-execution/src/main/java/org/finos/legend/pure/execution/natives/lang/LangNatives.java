@@ -105,7 +105,34 @@ public class LangNatives
                 }
                 return eval.executeFunction(mfVS, List.of(args.get(0)));
             }
-            throw new RuntimeException("No match function matched the value: " + _E_ValueSpecification.unwrap(args.get(0)));
+            Object val = _E_ValueSpecification.unwrap(args.get(0));
+            StringBuilder diag = new StringBuilder("No match function matched the value: ").append(val);
+            diag.append("\n  Java class: ").append(val == null ? "null" : val.getClass().getName());
+            diag.append("\n  valueType: ");
+            if (valueType == null) diag.append("null");
+            else
+            {
+                diag.append(valueType.getClass().getName());
+                if (valueType instanceof meta.pure.metamodel.PackageableElement vpe) diag.append(" name=").append(vpe._name());
+            }
+            int idx = 0;
+            for (ValueSpecification mfVS : matchFuncCol._values())
+            {
+                Object mf = _E_ValueSpecification.unwrap(mfVS);
+                diag.append("\n  arm[").append(idx++).append("] ");
+                if (mf instanceof meta.pure.metamodel.function.FunctionDefinition fd
+                        && fd._parameters() != null && !fd._parameters().isEmpty())
+                {
+                    var p = fd._parameters().getFirst();
+                    var pt = p._genericType() == null ? null : _GenericType.type(p._genericType());
+                    diag.append("paramType=")
+                            .append(pt == null ? "null"
+                                    : pt.getClass().getName() + (pt instanceof meta.pure.metamodel.PackageableElement ppe ? " name=" + ppe._name() : ""))
+                            .append(" subtypeOf=")
+                            .append(pt == null || valueType == null ? "n/a" : _Type.subtypeOf(valueType, pt, resolver));
+                }
+            }
+            throw new RuntimeException(diag.toString());
         });
 
         // match with extra parameter — match(Any[*], Function[1..*], P[o]) : T[m]

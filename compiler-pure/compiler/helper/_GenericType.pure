@@ -228,14 +228,14 @@ Class <<test.TestDependency>> meta::pure::compiler::helper::genericType::tests::
     classTpProp: Class<meta::pure::compiler::helper::genericType::tests::MyClass<String>>[1];
 }
 
-function meta::pure::compiler::helper::genericType::tests::getPropGT(name:String[1]):GenericType[1]
+function <<test.TestDependency>> meta::pure::compiler::helper::genericType::tests::getPropGT(name:String[1]):GenericType[1]
 {
     let tc = meta::pure::compiler::helper::genericType::tests::TestClass;
     let prop = $tc.properties->filter(p | $p.name == $name)->toOne();
     $prop.genericType;
 }
 
-function meta::pure::compiler::helper::genericType::tests::getMyClassTpGT():GenericType[1]
+function <<test.TestDependency>> meta::pure::compiler::helper::genericType::tests::getMyClassTpGT():GenericType[1]
 {
     let mc = meta::pure::compiler::helper::genericType::tests::MyClass;
     let prop = $mc.properties->filter(p | $p.name == 'tpProp')->toOne();
@@ -827,6 +827,37 @@ function meta::pure::compiler::helper::genericType::asInferredGenericType(gt:Gen
                 type = $gtv.type,
                 typeArguments = $gtv.typeArguments,
                 multiplicityArguments = $gtv.multiplicityArguments
+            ),
+        other : GenericType[1] | $gt
+    ]);
+}
+
+// Mirrors Java _GenericType.withUndefinedTypeParams (lines 474-493).
+//
+// Used when a PackageableElement is referenced as a value (e.g.
+// {@code instanceOf(List)}, or {@code let g = MyClass;}) — the element's
+// classifierGenericType has intrinsic type parameters (e.g.
+// {@code Class<List<T>>}) that are not bound by the call site and should
+// be treated as wildcards. Without this, an outer call's parameter binder
+// sees the inner T as a "free" TypeParameter, fails to bind, and the
+// surrounding type-parameter is left unbound — leaving the value typed
+// as TypeParameter rather than the intended Class.
+//
+// The reproducer at
+// {@code specification/compiler/valueSpecification/atomicValue/element/classWithTypeParameter.pure}
+// demonstrates the failure mode this fixes.
+function meta::pure::compiler::helper::genericType::withUndefinedTypeParams(gt:GenericType[1]):GenericType[1]
+{
+    $gt->match([
+        gtv : GenericTypeValue[1] |
+            if($gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(TypeParameter),
+                | ^UndefinedGenericType()->cast(@GenericType),
+                | if($gtv.typeArguments->isNotEmpty() && $gtv.typeArguments->exists(arg | !$arg->isConcreteGenericType()),
+                    | let newArgs = $gtv.typeArguments->map(arg | withUndefinedTypeParams($arg));
+                      let inferred = asInferredGenericType($gtv)->cast(@InferredGenericType);
+                      ^$inferred(typeArguments = $newArgs)->cast(@GenericType);,
+                    | $gt
+                )
             ),
         other : GenericType[1] | $gt
     ]);

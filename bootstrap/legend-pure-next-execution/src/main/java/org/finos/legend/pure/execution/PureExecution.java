@@ -15,6 +15,7 @@
 package org.finos.legend.pure.execution;
 
 import meta.pure.metamodel.function.FunctionDefinition;
+import meta.pure.metamodel.function.FunctionWithParameters;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.m3.module.MetadataAccess;
@@ -122,6 +123,27 @@ public class PureExecution
      */
     public Object execute(FunctionDefinition function, Object... args)
     {
+        return executeAny(function, args);
+    }
+
+    /**
+     * Execute any callable: {@link FunctionDefinition}, {@link
+     * meta.pure.metamodel.function.NativeFunction}, or other
+     * {@link FunctionWithParameters}. Delegates dispatch to
+     * {@link ValueSpecificationEvaluator#executeFunction}, which handles
+     * each callable kind appropriately.
+     *
+     * <p>Useful when the caller only knows the function as
+     * {@code FunctionWithParameters} (e.g. a CLI/orchestrator that resolves
+     * a function by path and may get back a native or a user function).</p>
+     */
+    public Object execute(FunctionWithParameters function, Object... args)
+    {
+        return executeAny(function, args);
+    }
+
+    private Object executeAny(FunctionWithParameters function, Object[] args)
+    {
         // Wrap each raw argument with the parameter's declared type
         List<VariableExpression> params = function._parameters();
         List<ValueSpecification> wrappedArgs = new ArrayList<>(args.length);
@@ -131,7 +153,8 @@ public class PureExecution
             wrappedArgs.add(_E_ValueSpecification.wrap(args[i], param._genericType(), param._multiplicity(), this.resolver));
         }
 
-        ValueSpecification result = evaluator.evaluateFunctionDefinition(function, wrappedArgs);
+        ValueSpecification fnVS = _E_ValueSpecification.wrap(function, null, null, this.resolver);
+        ValueSpecification result = evaluator.executeFunction(fnVS, wrappedArgs);
         return result != null ? _E_ValueSpecification.unwrap(result) : null;
     }
 }

@@ -14,21 +14,17 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.finos.legend.pure.next.parser.PureParser;
-import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Truffle-side analog of {@code CompilerBinaryBuilder}: compile every
@@ -43,8 +39,13 @@ import java.util.stream.Stream;
  */
 public final class TruffleCompilerBinaryBuilder
 {
-    private static final String COMPILE_FN_PATH =
-            "meta::pure::compiler::compile_PureFile_1__CompilationResult_1_";
+    // Mirror bootstrap: hand the entire orchestration (directory walk,
+    // parse, per-file compile, package emission) to compile-pure's
+    // `compileDir`. Keeping the platforms structurally identical is what
+    // makes the output PDBs comparable — the only platform-specific code
+    // is the runtime hosting the same Pure entry point.
+    private static final String COMPILE_DIR_FN_PATH =
+            "meta::pure::compiler::compileDir_String_1__Boolean_1__CompilationResult_1_";
 
     private TruffleCompilerBinaryBuilder()
     {
@@ -105,79 +106,34 @@ public final class TruffleCompilerBinaryBuilder
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 
-        Object compileObj = resolver.getElement(COMPILE_FN_PATH);
-        if (!(compileObj instanceof FunctionDefinition))
+        Object compileDirObj = resolver.getElement(COMPILE_DIR_FN_PATH);
+        if (!(compileDirObj instanceof FunctionDefinition compileDirFn))
         {
-            throw new RuntimeException("compile FunctionDefinition not resolvable: "
-                    + (compileObj == null ? "null" : compileObj.getClass().getName()));
+            throw new RuntimeException("compileDir FunctionDefinition not resolvable: "
+                    + (compileDirObj == null ? "null" : compileDirObj.getClass().getName()));
         }
-        FunctionDefinition compileFn = (FunctionDefinition) compileObj;
-        PureParser parser = PureLanguage.get(null).pureParser();
 
-        // 3. For each .pure file: parse → translate → compile → collect elements.
-        // Keyed by full path so duplicate definitions across files take the
-        // last-seen version (matches bootstrap behavior). Errors from any
-        // file abort the whole build.
-        LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
-        List<String> allErrors = new ArrayList<>();
-        int filesCompiled = 0;
-        try (Stream<Path> walk = Files.walk(sourceDir))
+        // 3. Hand the whole walk-parse-compile-aggregate pipeline to
+        // compile-pure's `compileDir` — same entry point the bootstrap
+        // orchestrator uses. Keeps the platforms structurally identical:
+        // every byte of orchestration logic lives in Pure, only the runtime
+        // changes. Returns a `CompilationResult` whose `elements` already
+        // includes the hierarchical Package set built by `buildPackages`.
+        Object result = runtime.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), false);
+        if (result == null)
         {
-            List<Path> sources = walk.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".pure"))
-                    .sorted()
-                    .toList();
-            for (Path src : sources)
+            throw new RuntimeException("compileDir returned null");
+        }
+
+        List<String> allErrors = new ArrayList<>();
+        Object errorsObj = invokeAccessor(result, "_errors");
+        if (errorsObj instanceof PureSequence errSeq)
+        {
+            for (int i = 0; i < errSeq.size(); i++)
             {
-                String content = Files.readString(src, StandardCharsets.UTF_8);
-                String sourceId = sourceDir.relativize(src).toString().replace('\\', '/');
-                if (sourceId.endsWith(".pure"))
-                {
-                    sourceId = sourceId.substring(0, sourceId.length() - ".pure".length());
-                }
-
-                meta.pure.protocol.PureFile bootstrapFile = parser.parse(sourceId, content);
-                Object truffleFile = new ProtocolTranslator(resolver).translate(bootstrapFile);
-                Object result = runtime.execute(compileFn, truffleFile);
-                if (result == null)
-                {
-                    throw new RuntimeException("compile returned null for " + src);
-                }
-
-                // CompilationResult lives in the truffle PDB namespace; access
-                // its fields reflectively to avoid a static dependency on a
-                // package the runtime module doesn't import directly.
-                Object errorsObj = invokeAccessor(result, "_errors");
-                if (errorsObj instanceof PureSequence errSeq)
-                {
-                    for (int i = 0; i < errSeq.size(); i++)
-                    {
-                        allErrors.add("[" + sourceId + "] " + errSeq.getBoxed(i));
-                    }
-                }
-
-                Object elementsObj = invokeAccessor(result, "_elements");
-                if (elementsObj instanceof PureSequence elementsSeq)
-                {
-                    for (int i = 0; i < elementsSeq.size(); i++)
-                    {
-                        Object el = elementsSeq.getBoxed(i);
-                        if (el instanceof PackageableElement pe)
-                        {
-                            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-                            // Skip elements already in the base PDBs.
-                            if (existsInBase(loaders, path))
-                            {
-                                continue;
-                            }
-                            elementsByPath.put(path, pe);
-                        }
-                    }
-                }
-                filesCompiled++;
+                allErrors.add(String.valueOf(errSeq.getBoxed(i)));
             }
         }
-
         if (!allErrors.isEmpty())
         {
             System.err.println("Compilation errors:");
@@ -185,7 +141,33 @@ public final class TruffleCompilerBinaryBuilder
             throw new RuntimeException("Pure compilation failed with " + allErrors.size() + " error(s)");
         }
 
-        System.out.println("Compiled " + elementsByPath.size() + " elements from " + filesCompiled + " file(s)");
+        // Filter Package elements that already live in the anchor (first
+        // base PDB) — compile-pure's `buildPackages` expands paths to all
+        // ancestors (`meta`, `meta::pure`, …) and core.pdb already owns
+        // those, so re-emitting them would diverge from bootstrap's output.
+        // Non-Package elements always pass through.
+        LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
+        Object elementsObj = invokeAccessor(result, "_elements");
+        if (elementsObj instanceof PureSequence elementsSeq)
+        {
+            TrufflePdbLoader anchor = loaders.isEmpty() ? null : loaders.get(0);
+            for (int i = 0; i < elementsSeq.size(); i++)
+            {
+                Object el = elementsSeq.getBoxed(i);
+                if (el instanceof PackageableElement pe)
+                {
+                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+                    if (pe instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.Package
+                            && anchor != null && anchor.hasElement(path))
+                    {
+                        continue;
+                    }
+                    elementsByPath.put(path, pe);
+                }
+            }
+        }
+
+        System.out.println("Compiled " + elementsByPath.size() + " elements");
 
         // 4. Write the aggregated elements to the output PDB.
         if (outputFile.getParent() != null)
@@ -200,15 +182,6 @@ public final class TruffleCompilerBinaryBuilder
     {
         String fileName = pdbPath.getFileName().toString();
         return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
-    }
-
-    private static boolean existsInBase(List<TrufflePdbLoader> loaders, String path)
-    {
-        for (TrufflePdbLoader l : loaders)
-        {
-            if (l.hasElement(path)) return true;
-        }
-        return false;
     }
 
     private static Object invokeAccessor(Object target, String accessor)

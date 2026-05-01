@@ -221,6 +221,46 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                         buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $scope, $ctx1);
                                   );
                             );,
+                          en:Enumeration<Any>[1] |
+                            // Enumeration is not a Class<Any> at the Pure type
+                            // level, but property access on an enum value (e.g.
+                            // `Foo.X.name`) needs to walk the generalization
+                            // chain Enumeration → Enum → … → PackageableElement
+                            // to find inherited fields like `name`. Enumerations
+                            // don't have qualified properties so the lookup is
+                            // simpler than the Class arm's full QP logic.
+                            let path = $en->cast(@PackageableElement)->elementToPath();
+                            let fromCtx = $context->resolveElement($path);
+                            let resolvedOwner = if($fromCtx->isNotEmpty(),
+                                | $fromCtx->toOne()->match([
+                                      e:Enumeration<Any>[1] | $e,
+                                      a:Any[1] | $en
+                                  ]),
+                                | $en
+                            );
+                            let foundProp = findProperty($resolvedOwner, $functionName, $context);
+                            if($foundProp->isEmpty(),
+                                | ^CompilerResult<ValueSpecification>(
+                                      value = $dot,
+                                      context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx)
+                                  ),
+                                | let resolvedProp = $foundProp->toOne();
+                                  let propGT = asInferredGenericType($resolvedProp.genericType->toOne());
+                                  let propMul = $resolvedProp.multiplicity->toOne();
+                                  let receiverMul = $receiver.multiplicity;
+                                  if($receiverMul->isNotEmpty() && multiplicityLowerBound($receiverMul->toOne()) == 1 && multiplicityUpperBound($receiverMul->toOne()) == 1,
+                                      | ^CompilerResult<ValueSpecification>(
+                                            value = ^$dot(
+                                                func = $resolvedProp,
+                                                genericType = $propGT,
+                                                multiplicity = $propMul,
+                                                parametersValues = $resolvedParams->cast(@ValueSpecification)
+                                            ),
+                                            context = $ctx1
+                                        ),
+                                      | buildAutomap($dot, $receiver, $functionName, $propGT, $propMul, $scope, $ctx1)
+                                  );
+                            );,
                           a:Any[1] |
                             ^CompilerResult<ValueSpecification>(
                                 value = $dot,

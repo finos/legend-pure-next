@@ -188,26 +188,15 @@ public class _E_ValueSpecification
         {
             return _GenericType.type(di.getClassifierGenericType());
         }
-        // All metamodel elements implement Any which has _classifierGenericType()
         if (value instanceof meta.pure.metamodel.type.Any any)
         {
             GenericType cgt = any._classifierGenericType();
-            if (cgt == null && any instanceof ValueSpecification vsVal && vsVal._genericType() != null)
-            {
-                return _GenericType.type(vsVal._genericType());
-            }
             if (cgt == null)
             {
                 throw new RuntimeException("classifierGenericType is null for " + value.getClass().getName()
-                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : ""));
+                        + (value instanceof meta.pure.metamodel.PackageableElement pe ? " name='" + pe._name() + "'" : "")
+                        + " — this is a constructor bug.");
             }
-            // FlatBuffer GenericTypeValue wrappers return 'this' from _classifierGenericType()
-            // when the classifier pointer is unset (uType==0 self-referential).
-            // In that case cgt._type() returns the *inner* wrapped type (e.g., Number)
-            // rather than the meta-class (UserDefinedGenericType). Detect and resolve properly.
-            // IMPORTANT: Do NOT use vs._genericType() here — that gives the declared static type
-            // (e.g., GenericType) which is too broad. We need the actual runtime type
-            // (e.g., UserDefinedGenericType) resolved via the Java interface name.
             return _GenericType.type(cgt);
         }
         // Java primitives and collections — use the VS genericType

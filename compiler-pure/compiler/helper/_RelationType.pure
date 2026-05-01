@@ -230,7 +230,7 @@ Class <<test.TestDependency>> meta::pure::compiler::helper::relationType::tests:
     otherRt2: Relation<(col3:Float)>[1];
 }
 
-function meta::pure::compiler::helper::relationType::tests::getPropRT(name:String[1]):RelationType<Any>[1]
+function <<test.TestDependency>> meta::pure::compiler::helper::relationType::tests::getPropRT(name:String[1]):RelationType<Any>[1]
 {
     let cl = meta::pure::compiler::helper::relationType::tests::RelClass;
     $cl.properties->filter(p | $p.name == $name)->toOne().genericType->cast(@GenericTypeValue).typeArguments->at(0)->cast(@GenericTypeValue).type->cast(@RelationType<Any>);

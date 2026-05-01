@@ -148,6 +148,18 @@ function <<test.Test>> meta::pure::functions::lang::tests::new::testNewClassFail
                 ), 'Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam');
 }
 
+function <<test.Test>> meta::pure::functions::lang::tests::new::testNewPdbLoadedClass():Boolean[1]
+{
+    let v = ^meta::pure::metamodel::valuespecification::VariableExpression(
+        name = 'a',
+        genericType = ^meta::pure::metamodel::type::generics::InferredGenericType(
+            type = meta::pure::metamodel::type::primitives::String
+        ),
+        multiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    assert($v->isNotEmpty());
+}
+
 function <<test.Test>> meta::pure::functions::lang::tests::new::testClassifierGenericType():Boolean[1]
 {
     let x = ^LA_Person(firstName='Pierre', lastName='Doe');

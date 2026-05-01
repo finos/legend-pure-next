@@ -39,7 +39,7 @@ import meta::pure::test::pct::*;
 // ---------------------------------------------------------------------------
 
 // Recursively collect zero-arg <<test.Test>> functions under a package.
-function meta::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
+function <<test.TestDependency>> meta::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
     let directTests = $pkg.children
         ->filter(e | $e->instanceOf(UserDefinedFunction)
@@ -59,18 +59,18 @@ function meta::pure::test::collectFunctionTests(pkg:Package[1]):UserDefinedFunct
 // is available directly on any PackageableElement. We still check via a cast
 // that's always-true so the type system doesn't complain about non-inherited
 // access.
-function meta::pure::test::hasTestStereotype(el:PackageableElement[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::hasTestStereotype(el:PackageableElement[1]):Boolean[1]
 {
     $el.stereotypes
         ->exists(s | $s.value == 'Test' && $s.profile.name == 'test');
 }
 
-function meta::pure::test::isZeroArg(fn:UserDefinedFunction<Any>[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::isZeroArg(fn:UserDefinedFunction<Any>[1]):Boolean[1]
 {
     $fn.parameters->isEmpty();
 }
 
-function meta::pure::test::runFunctionTests(rootPackagePath:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runFunctionTests(rootPackagePath:String[1]):Boolean[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectFunctionTests($root);
@@ -106,13 +106,13 @@ function meta::pure::test::runFunctionTests(rootPackagePath:String[1]):Boolean[1
 // evaluates the passed-in closure in the current runtime.
 // ---------------------------------------------------------------------------
 
-function meta::pure::test::hasPctTestStereotype(el:PackageableElement[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::hasPctTestStereotype(el:PackageableElement[1]):Boolean[1]
 {
     $el.stereotypes
         ->exists(s | $s.value == 'test' && $s.profile.name == 'PCT');
 }
 
-function meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
+function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<Any>[*]
 {
     let directTests = $pkg.children
         ->filter(e | $e->instanceOf(UserDefinedFunction)
@@ -127,7 +127,7 @@ function meta::pure::test::collectPCTTests(pkg:Package[1]):UserDefinedFunction<A
     concatenate($directTests, $subTests);
 }
 
-function meta::pure::test::runPCTTests(rootPackagePath:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1]):Boolean[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectPCTTests($root);

@@ -40,7 +40,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
 
     let skeleton = ^$emptyFunc(
         name = $mangledName,
-        functionName = $fn.name,
+        functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
         package = ^Package(name = $packagePath, package = $rootPkg),
         sourceInformation = $fn.p_sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,

@@ -124,7 +124,10 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                 let fpMult = $fp.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
                 ^$acc(
                     values += ^VariableExpression(
-                        name = $fp.name,
+                        // Anonymous params in `Function<{X[1]->Y[1]}>` have no
+                        // grammar name; default to '' so the writer's [1]
+                        // validation accepts the VariableExpression.
+                        name = if($fp.name->isEmpty(), | '', | $fp.name->toOne()),
                         genericType = $fpGtResult.value->toOne(),
                         multiplicity = $fpMult
                     ),

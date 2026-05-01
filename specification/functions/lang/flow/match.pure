@@ -193,3 +193,15 @@ function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchEnumV
     ]);
     assertEquals('enum:CITY', $result);
 }
+
+function <<test.Test>> meta::pure::functions::lang::tests::match::testMatchUserDefinedGenericType():Boolean[1]
+{
+    let cgt = meta::pure::metamodel::type::generics::UserDefinedGenericType.classifierGenericType->toOne()
+        ->cast(@meta::pure::metamodel::type::generics::GenericTypeValue).typeArguments->at(0);
+    let result = $cgt->match([
+        gtv : meta::pure::metamodel::type::generics::GenericTypeValue[1] | 'gtv',
+        u   : meta::pure::metamodel::type::generics::UndefinedGenericType[1] | 'undefined',
+        a   : meta::pure::metamodel::type::generics::GenericType[1] | 'gt-other'
+    ]);
+    assertEquals('gtv', $result);
+}

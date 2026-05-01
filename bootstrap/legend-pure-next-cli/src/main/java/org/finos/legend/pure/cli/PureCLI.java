@@ -46,7 +46,9 @@ public class PureCLI
         {
             case "compile-spec" -> compileSpec(rest);
             case "compile" -> compile(rest);
+            case "compile-via-pure" -> compileViaPure(rest);
             case "execute" -> execute(rest);
+            case "diff-pdb" -> diffPdb(rest);
             default ->
             {
                 System.err.println("Unknown command: " + command);
@@ -62,8 +64,41 @@ public class PureCLI
         System.err.println();
         System.err.println("Commands:");
         System.err.println("  compile-spec --m3-ttl <file> <sourceDir...> <output.pdb>   Compile specification Pure sources into core.pdb");
-        System.err.println("  compile --base-pdb <file> --source <dir> --output <file>   Compile Pure sources against a base PDB");
+        System.err.println("  compile --base-pdb <file> --source <dir> --output <file>   Compile Pure sources against a base PDB (Java compiler)");
+        System.err.println("  compile-via-pure --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources by running compiler-pure on the Java runtime");
         System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
+        System.err.println("  diff-pdb [--deep] <a.pdb> <b.pdb>                          Compare two PDB archives (path-set + per-element byte hash; --deep walks typed properties)");
+    }
+
+    private static void diffPdb(String[] args) throws Exception
+    {
+        boolean deep = false;
+        List<String> positional = new ArrayList<>();
+        for (String arg : args)
+        {
+            if ("--deep".equals(arg)) deep = true;
+            else positional.add(arg);
+        }
+        if (positional.size() != 2)
+        {
+            System.err.println("Usage: pure-cli diff-pdb [--deep] <a.pdb> <b.pdb>");
+            System.exit(1);
+        }
+        Path a = Path.of(positional.get(0));
+        Path b = Path.of(positional.get(1));
+        boolean clean;
+        if (deep)
+        {
+            clean = org.finos.legend.pure.m3.module.pdbModule.diff.PdbDeepDiffer
+                    .diff(a, b, System.out).isClean();
+        }
+        else
+        {
+            clean = org.finos.legend.pure.m3.module.pdbModule.diff.PdbDiffer
+                    .diff(a, b, System.out).isClean();
+        }
+        // Exit 0 if PDBs are identical, 1 otherwise — useful for CI gates.
+        System.exit(clean ? 0 : 1);
     }
 
     private static void compileSpec(String[] args) throws Exception
@@ -119,6 +154,45 @@ public class PureCLI
         }
 
         CompilerBinaryBuilder.compile(Path.of(basePdb), Path.of(source), Path.of(output));
+    }
+
+    /**
+     * {@code compile-via-pure} — run the Pure-language compiler on the Java
+     * runtime to produce a PDB. Mirrors the Truffle CLI's {@code compile}
+     * subcommand structurally (multi-{@code --base-pdb}, {@code --source},
+     * {@code --output}) but runs through {@link PureRuntimeCompilerBinaryBuilder}.
+     */
+    private static void compileViaPure(String[] args) throws Exception
+    {
+        List<String> basePdbs = new ArrayList<>();
+        String source = null;
+        String output = null;
+
+        for (int i = 0; i < args.length; i++)
+        {
+            switch (args[i])
+            {
+                case "--base-pdb" -> basePdbs.add(args[++i]);
+                case "--source" -> source = args[++i];
+                case "--output" -> output = args[++i];
+                default -> throw new IllegalArgumentException("Unknown option: " + args[i]);
+            }
+        }
+
+        if (basePdbs.isEmpty() || source == null || output == null)
+        {
+            System.err.println("Usage: pure-cli compile-via-pure --base-pdb <file>... --source <dir> --output <file>");
+            System.err.println("  Pass at least core.pdb plus an existing compiler.pdb so the");
+            System.err.println("  Pure compile_PureFile_… function is on the resolver.");
+            System.exit(1);
+        }
+
+        List<Path> basePaths = new ArrayList<>();
+        for (String b : basePdbs)
+        {
+            basePaths.add(Path.of(b));
+        }
+        PureRuntimeCompilerBinaryBuilder.compile(basePaths, Path.of(source), Path.of(output));
     }
 
     private static void execute(String[] args) throws Exception

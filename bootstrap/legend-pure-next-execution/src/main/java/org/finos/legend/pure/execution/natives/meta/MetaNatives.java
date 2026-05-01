@@ -261,6 +261,7 @@ public class MetaNatives
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
                     meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    assertNotSelf(instance, cgt, "new(GenericTypeAndMultiplicityHolder, KeyExpressions) classPath=" + classPath);
                     if (instance instanceof Any any)
                     {
                         any._classifierGenericType((GenericTypeValue) cgt);
@@ -1669,23 +1670,32 @@ public class MetaNatives
         {
             Class<?> implClass = Class.forName(javaClassName);
             Any any = (Any) implClass.getDeclaredConstructor().newInstance();
-            try
-            {
-                if (_GenericType.typeArguments(gtmh2._genericType()) != null
-                        && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
-                {
-                    any._classifierGenericType((GenericTypeValue) _GenericType.typeArguments(gtmh2._genericType()).getFirst());
-                }
-            }
-            catch (Exception ignored)
-            {
-                // classifierGenericType assignment failed — still return the compiled instance
-            }
+            GenericTypeValue cgt = (GenericTypeValue) _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+            assertNotSelf(any, cgt, "createInstance(" + classPath + ")");
+            any._classifierGenericType(cgt);
             return any;
         }
         catch (Exception e)
         {
             return new DynamicInstance(classPath);
+        }
+    }
+
+    /**
+     * Diagnostic: explode (with a stack trace) when a freshly-built instance
+     * is about to be classified by its own self. The runtime invariant is
+     * that the new instance's classifier must be a *separate* anchor — never
+     * itself — except for the canonical UDGT meta-class anchor built via
+     * `_GenericType.buildUserDefinedGenericType`.
+     */
+    private static void assertNotSelf(Object instance, Object cgt, String site)
+    {
+        if (instance == cgt)
+        {
+            throw new IllegalStateException("[SELF-CLASSIFIER BUG] " + site
+                    + " is about to set _classifierGenericType to the new instance itself ("
+                    + instance.getClass().getName() + "). This isn't a canonical anchor; "
+                    + "the holder GT's typeArguments[0] should reference a separate UDGT.");
         }
     }
 

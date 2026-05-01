@@ -61,14 +61,18 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
 
     private static Object findFunctions(String name, int arity, TruffleMetadataAccess resolver)
     {
-        // The suffix pattern after the function name: name_T1_M1__T2_M2__...__RetT_RetM_
-        // We look for paths ending with ::name_... or paths that are just name_...
+        // The path is `pkg::funcName_<sig>` where the function's simple name
+        // is `funcName`. Pure mangling can't be parsed unambiguously from the
+        // path alone (function names like `unify_step1_pairwiseBind` collide
+        // with `unify` on a prefix-only check, and similarly for
+        // `findCommonRelationType_build` vs `findCommonRelationType`). Use
+        // the resolved function's `functionName` and `parameters` size as the
+        // authoritative source.
         String nameSuffix = name + "_";
 
         List<Object> matches = new ArrayList<>();
         for (String path : resolver.elementPaths())
         {
-            // Check if this path is for the requested function name
             int lastSep = path.lastIndexOf("::");
             String localPart = (lastSep >= 0) ? path.substring(lastSep + 2) : path;
 
@@ -77,22 +81,24 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
                 continue;
             }
 
-            // Count arity from the signature: groups separated by __ (double underscore)
-            // Format: name_T1_M1__T2_M2__RetT_RetM_
-            String sigPart = localPart.substring(name.length());
-            int groups = sigPart.split("__").length;
-            int funcArity = groups - 1; // subtract return type group
-
+            Object element = resolver.getElement(path);
+            if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction pf))
+            {
+                continue;
+            }
+            // Check the simple name on the function itself — only consider it
+            // if `functionName` exactly equals the requested `name`.
+            String fn = pf._functionName();
+            if (fn == null || !fn.equals(name))
+            {
+                continue;
+            }
+            int funcArity = pf._parameters() == null ? 0 : pf._parameters().size();
             if (funcArity != arity)
             {
                 continue;
             }
-
-            Object element = resolver.getElement(path);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction)
-            {
-                matches.add(element);
-            }
+            matches.add(element);
         }
 
         if (matches.isEmpty())
