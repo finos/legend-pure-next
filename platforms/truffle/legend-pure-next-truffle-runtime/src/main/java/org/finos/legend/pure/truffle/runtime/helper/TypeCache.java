@@ -67,6 +67,7 @@ public final class TypeCache implements TruffleTypeCache
     // can blow the stack on any cyclic shape. Identity is also semantically
     // correct: top-level PDB types are singletons per resolver.
     private final Map<Type, Entry> entries = Collections.synchronizedMap(new IdentityHashMap<>());
+    private final Map<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
     public List<Type> linearization(Object type)
@@ -78,6 +79,12 @@ public final class TypeCache implements TruffleTypeCache
     public Set<String> equalityKeyProperties(Object type)
     {
         return entryFor(type).equalityKeys;
+    }
+
+    @Override
+    public Class<?> classForPath(String classPath)
+    {
+        return classCache.computeIfAbsent(classPath, org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory::resolveClass);
     }
 
     private Entry entryFor(Object type)

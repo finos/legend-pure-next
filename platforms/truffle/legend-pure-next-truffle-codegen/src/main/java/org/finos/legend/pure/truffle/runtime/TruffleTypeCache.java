@@ -35,4 +35,12 @@ public interface TruffleTypeCache
 
     /** Names of properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}. */
     Set<String> equalityKeyProperties(Object type);
+
+    /**
+     * Resolve a Pure class path (e.g. {@code "meta::pure::metamodel::type::Class"})
+     * to the runtime Java {@code Impl} class. Cached because {@code Class.forName}
+     * is the dominant {@code String.replace} hot caller in JFR and the result
+     * is invariant for a given path.
+     */
+    Class<?> classForPath(String classPath);
 }

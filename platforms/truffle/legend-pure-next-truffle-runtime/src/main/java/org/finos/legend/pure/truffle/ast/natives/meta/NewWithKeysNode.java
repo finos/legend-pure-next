@@ -133,7 +133,7 @@ public final class NewWithKeysNode extends PureNode
         }
 
         // Create instance
-        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
 
         // Set classifier generic type from the type holder's first type argument
         if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh
@@ -434,6 +434,10 @@ public final class NewWithKeysNode extends PureNode
         }
     }
 
+    // @TruffleBoundary — walks target.getClass().getMethods() to detect
+    // multi-valued setter shape. Class.getMethodsRecursive PE was inlining
+    // 990 deep. No frame here, so the boundary is safe.
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     static void appendToProperty(Object target, String propName, Object value,
                                           org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
                                           org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)

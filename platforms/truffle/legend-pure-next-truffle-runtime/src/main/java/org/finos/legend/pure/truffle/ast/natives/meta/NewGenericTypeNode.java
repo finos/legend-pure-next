@@ -46,10 +46,11 @@ public final class NewGenericTypeNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doNewGenericType(result);
+        return doNewGenericType(result, getResolver());
     }
 
-    private static Object doNewGenericType(Object result)
+    private static Object doNewGenericType(Object result,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (!(result instanceof GenericTypeValue gt))
         {
@@ -75,7 +76,7 @@ public final class NewGenericTypeNode extends PureNode
             }
         }
 
-        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
         if (instance instanceof Any any)
         {
             any._classifierGenericType(gt);

@@ -47,22 +47,34 @@ public final class ElementToPathNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
+        Object[] values = evaluateChildren(frame);
+        return doElementToPath(values, getResolver());
+    }
+
+    @com.oracle.truffle.api.nodes.ExplodeLoop
+    private Object[] evaluateChildren(VirtualFrame frame)
+    {
         Object[] values = new Object[children.length];
         for (int i = 0; i < children.length; i++)
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return doElementToPath(values);
+        return values;
     }
 
-    private static String doElementToPath(Object[] values)
+    private static String doElementToPath(Object[] values,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         Object element = values[0];
         String separator = values.length > 1 ? StringHelper.asString(values[1], "elementToPath") : "::";
 
         if (element instanceof PackageableElement pe)
         {
-            String path = _PackageableElement.path(pe);
+            // Pass resolver — _PackageableElement.path(pe, resolver) hits the
+            // O(1) reverseCache for elements loaded from PDB before falling
+            // back to walking the package chain (recursive, surfaced as 8%
+            // of CPU on JFR before this change).
+            String path = _PackageableElement.path(pe, resolver);
             if (path == null || path.isEmpty() || "Root".equals(path) || "::".equals(path))
             {
                 return "";

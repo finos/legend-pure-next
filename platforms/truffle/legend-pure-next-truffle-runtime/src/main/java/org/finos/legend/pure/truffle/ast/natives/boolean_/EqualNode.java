@@ -53,6 +53,13 @@ public final class EqualNode extends PureNode
         return callPureEquals(rawA, rawB, getResolver());
     }
 
+    // @TruffleBoundary — equality is inherently recursive over arbitrary
+    // structure (PureSequence-of-PureSequence chains were inlining 997 deep
+    // and tripping the inlining budget) and equalByProperties uses
+    // reflection (Class.getMethod), which is unfriendly to PE. Equality
+    // isn't on the tightest inner loop; running it past a boundary trades
+    // a Java call for not exhausting Graal's budget on every callsite.
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean callPureEquals(Object a, Object b, TruffleMetadataAccess resolver)
     {
         if (a == b)
@@ -325,42 +332,54 @@ public final class EqualNode extends PureNode
         return keys.isEmpty() ? null : keys;
     }
 
+    /**
+     * Iterative — recursion here would compound through Graal's PE: each
+     * wrapper-unwrap level inlines another copy of {@code normalizeForEquals},
+     * which {@code callPureEquals} then calls twice (lhs + rhs) per recursion
+     * level. Past 2–3 unwraps that's enough to bust the inlining budget,
+     * which surfaced 299× in the "Too deep inlining" bailout list.
+     */
     private static Object normalizeForEquals(Object v)
     {
-        // AtomicValue from PDB metadata — unwrap to raw value for comparison
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+        while (true)
         {
-            return normalizeForEquals(av._value());
-        }
-        if (v instanceof PureDate pd)
-        {
-            return pd.dateString();
-        }
-        if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
-        {
-            if (seq.isEmpty())
+            if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
+                    && av._value() != null)
             {
-                return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+                v = av._value();
+                continue;
             }
-            if (seq.size() == 1)
+            if (v instanceof PureDate pd)
             {
-                return normalizeForEquals(seq.getBoxed(0));
+                return pd.dateString();
             }
-            return v; // keep PureSequence as-is for comparison
+            if (v instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
+            {
+                if (seq.isEmpty())
+                {
+                    return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+                }
+                if (seq.size() == 1)
+                {
+                    v = seq.getBoxed(0);
+                    continue;
+                }
+                return v; // keep PureSequence as-is for comparison
+            }
+            if (v instanceof org.eclipse.collections.api.list.MutableList<?> ml)
+            {
+                if (ml.isEmpty())
+                {
+                    return null;
+                }
+                if (ml.size() == 1)
+                {
+                    v = ml.get(0);
+                    continue;
+                }
+                return ml;
+            }
+            return v;
         }
-        // MutableList normalization
-        if (v instanceof org.eclipse.collections.api.list.MutableList<?> ml)
-        {
-            if (ml.isEmpty())
-            {
-                return null;
-            }
-            if (ml.size() == 1)
-            {
-                return normalizeForEquals(ml.get(0));
-            }
-            return ml;
-        }
-        return v;
     }
 }

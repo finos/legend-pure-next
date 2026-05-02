@@ -104,7 +104,7 @@ public final class CopyWithKeysNode extends PureNode
         }
 
         // Step 2: Create the copy
-        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
         shallowCopyProperties(original, copy, cgt);
         GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
         if (copy instanceof Any anyC && copyCgt != null)

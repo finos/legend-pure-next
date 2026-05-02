@@ -20,6 +20,11 @@ public final class StringHelper
     {
     }
 
+    // @TruffleBoundary — recursive over PureSequence and falls through to
+    // ToStringNode.pureToString (already a boundary). The recursion through
+    // sequences was inlining ~3000 deep and tripping the budget. Cheap to
+    // call past a boundary; not on a hot inner loop.
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static String asString(Object v, String signature)
     {
         if (v instanceof String s)

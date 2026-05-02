@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.string;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
@@ -61,6 +62,11 @@ public final class ToStringNode extends PureNode
         return pureToString(v, null);
     }
 
+    // @TruffleBoundary — recursive over arbitrary structure with substring,
+    // StringBuilder, and reflection (toString-QP dispatch). Same JDK
+    // inlining-budget hazard as normalizeDateString. Cheap to call across
+    // a boundary; not on a tight inner loop.
+    @TruffleBoundary
     static String pureToString(Object v, org.finos.legend.pure.truffle.ast.PropertyReadNode reader)
     {
         if (v == null)
@@ -197,6 +203,10 @@ public final class ToStringNode extends PureNode
         return dashIdx >= start + 1 && dashIdx <= start + 10;
     }
 
+    // @TruffleBoundary — heavy String.substring usage drags in JDK
+    // bounds-check, formatter, locale, and reflection (ClassRepository
+    // /SignatureParser) into PE, blowing the inlining budget.
+    @TruffleBoundary
     static String normalizeDateString(String s)
     {
         String input = s.startsWith("+") ? s.substring(1) : s;

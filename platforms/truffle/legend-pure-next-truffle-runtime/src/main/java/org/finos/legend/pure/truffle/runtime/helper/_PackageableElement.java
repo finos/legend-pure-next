@@ -1,5 +1,6 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
@@ -19,6 +20,12 @@ public final class _PackageableElement
         return path(pe, null);
     }
 
+    // @TruffleBoundary — the fallback walks the package chain via
+    // StringBuilder.insert(0, ...), which Graal's PE follows into
+    // String.length / substring / Preconditions / Locale / Formatter.
+    // Path resolution is not on the tightest inner loop and is cheap
+    // past a boundary; the resolver fast-path returns immediately.
+    @TruffleBoundary
     public static String path(PackageableElement pe, TruffleMetadataAccess resolver)
     {
         if (pe == null)

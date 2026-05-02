@@ -96,7 +96,7 @@ public class ElementPathNatives
 
             if (element instanceof PackageableElement pe)
             {
-                return _E_ValueSpecification.wrap(elementToPathString(pe, separator), genericType, multiplicity, resolver);
+                return _E_ValueSpecification.wrap(elementToPathString(pe, separator, resolver), genericType, multiplicity, resolver);
             }
             if (element instanceof DynamicInstance di)
             {
@@ -136,7 +136,7 @@ public class ElementPathNatives
             Object element = _E_ValueSpecification.unwrap(args.get(0));
             if (element instanceof PackageableElement pe)
             {
-                return _E_ValueSpecification.wrap(elementToPathString(pe, "::"), genericType, multiplicity, resolver);
+                return _E_ValueSpecification.wrap(elementToPathString(pe, "::", resolver), genericType, multiplicity, resolver);
             }
             if (element instanceof DynamicInstance di)
             {
@@ -159,7 +159,7 @@ public class ElementPathNatives
             String separator = separatorObj != null ? separatorObj.toString() : "::";
             if (element instanceof PackageableElement pe)
             {
-                return _E_ValueSpecification.wrap(elementToPathString(pe, separator), genericType, multiplicity, resolver);
+                return _E_ValueSpecification.wrap(elementToPathString(pe, separator, resolver), genericType, multiplicity, resolver);
             }
             return _E_ValueSpecification.wrap("", genericType, multiplicity, resolver);
         });
@@ -171,7 +171,19 @@ public class ElementPathNatives
 
     public static String elementToPathString(PackageableElement pe, String separator)
     {
-        String path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe);
+        return elementToPathString(pe, separator, null);
+    }
+
+    /**
+     * Cached overload — uses the resolver's elementPathCache via the
+     * {@code path(pe, resolver)} helper. Self-host hits this once per
+     * unique element rather than re-walking the parent chain on every
+     * call.
+     */
+    public static String elementToPathString(PackageableElement pe, String separator,
+            org.finos.legend.pure.m3.module.MetadataAccess resolver)
+    {
+        String path = org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(pe, resolver);
         if ("::".equals(path))
         {
             return "";

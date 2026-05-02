@@ -146,16 +146,24 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 | findProperty($resolvedOwner, $functionName, $context),
                                 | []->cast(@Property<Nil, Any|*>)
                             );
+                            // Look up QPs once — reused below for foundFunc selection AND
+                            // the "Ambiguous QP" error branch. The previous version called
+                            // findQualifiedProperties twice with identical args (each call
+                            // re-walks the entire class generalisation hierarchy).
+                            let qps = if($simpleProp->isNotEmpty(),
+                                | []->cast(@QualifiedProperty<Any>),
+                                | findQualifiedProperties($resolvedOwner->cast(@Class<Any>), $functionName, $context)
+                                      ->filter(qp | $qp.parameters->size() == $paramCount)
+                            );
                             let foundFunc = if($simpleProp->isNotEmpty(),
                                 | $simpleProp->toOne(),
-                                | // Fall through to QP lookup — search hierarchy by name, then filter by arity
-                                  let classBindings = buildBindingsFromGenericType($resolvedOwner->cast(@Class<Any>), $receiver.genericType->toOne());
-                                  let qps = findQualifiedProperties($resolvedOwner->cast(@Class<Any>), $functionName, $context)
-                                      ->filter(qp | $qp.parameters->size() == $paramCount);
-                                  if($qps->size() == 1,
+                                | if($qps->size() == 1,
                                       | $qps->at(0),
                                       | if($qps->size() > 1,
                                             | // Multiple QPs match — check if first overrides all others (mirrors Java DotApplicationResolver)
+                                              // classBindings is only needed in this branch — was previously
+                                              // computed unconditionally above, wasting work on the qps.size==1 path.
+                                              let classBindings = buildBindingsFromGenericType($resolvedOwner->cast(@Class<Any>), $receiver.genericType->toOne());
                                               let mostSpecific = $qps->at(0);
                                               let allOverridden = $qps->tail()->fold({other, ok |
                                                   if(!$ok, | false,
@@ -186,10 +194,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       )
                                   );
                             );
-                            // Check for ambiguity: foundFunc is empty but multiple QPs matched
-                            let allQPs = if($simpleProp->isNotEmpty(), | [], | findQualifiedProperties($resolvedOwner->cast(@Class<Any>), $functionName, $context)->filter(qp | $qp.parameters->size() == $paramCount));
                             if($foundFunc->isEmpty(),
-                                | let errorMsg = if($allQPs->size() > 1,
+                                | let errorMsg = if($qps->size() > 1,
                                       | 'Ambiguous qualified property \'' + $functionName + '\' with ' + ($paramCount - 1)->toString() + ' parameter(s) in class \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx,
                                       | 'Can\'t find property \'' + $functionName + '\' in class \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx
                                   );

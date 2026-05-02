@@ -124,6 +124,30 @@ public class _PackageableElement
         return pkgPath.isEmpty() ? name : pkgPath + "::" + name;
     }
 
+    /**
+     * Cached overload — uses {@link MetadataAccess#elementPathCache()} so
+     * repeat calls on the same element (very common in self-host: every
+     * type reference in error messages, debug, equality) return the
+     * pre-computed path without re-walking the parent chain. JFR flagged
+     * the uncached version at 2–8% of self-host CPU before this overload.
+     */
+    public static String path(PackageableElement element, MetadataAccess resolver)
+    {
+        if (resolver == null)
+        {
+            return path(element);
+        }
+        java.util.Map<PackageableElement, String> cache = resolver.elementPathCache();
+        String cached = cache.get(element);
+        if (cached != null)
+        {
+            return cached;
+        }
+        String computed = path(element);
+        cache.put(element, computed);
+        return computed;
+    }
+
     private static String packagePath(Package pkg)
     {
         if (pkg._package() == null || pkg._name() == null)

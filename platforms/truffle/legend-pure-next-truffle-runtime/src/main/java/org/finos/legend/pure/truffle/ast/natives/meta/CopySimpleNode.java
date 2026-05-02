@@ -84,7 +84,7 @@ public final class CopySimpleNode extends PureNode
         }
 
         // Create instance via TruffleInstanceFactory (handles prefix stripping)
-        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
         // All Pure classes must have truffle-generated Impls at this point
 
         // Shallow copy all _xxx() getter/setter pairs via reflection

@@ -461,6 +461,11 @@ public class RdfFbsJavaGenerator
         sb.append("    private final Object _parent;\n");
 
         // Lazy cache fields for properties that create wrapper objects
+        // and for single-valued String fields (FlatBuffer fb.<field>() decodes
+        // UTF-8 from the raw byte array on every call — JFR flagged
+        // Utf8Safe.decodeUtf8Array as 13% of bootstrap self-host CPU because
+        // _name() is called everywhere and the underlying string is invariant
+        // for a given wrapper instance).
         allProps.forEach(prop ->
         {
             if (hasStereotype(prop.stereotypes, "excluded") || ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))) { return; }
@@ -471,6 +476,7 @@ public class RdfFbsJavaGenerator
             boolean createsWrapper = isPointer || isClassType || isEnumType
                     || isMainTaxonomyType(prop.typeName)
                     || (getNonPointerSubtypes(m3Model, prop).notEmpty());
+            boolean isCachedString = !prop.isMany && "String".equals(prop.typeName);
             if (createsWrapper)
             {
                 if (prop.isMany)
@@ -483,6 +489,10 @@ public class RdfFbsJavaGenerator
                     String javaType = mapToJavaType(prop.typeName, false);
                     sb.append("    private ").append(javaType).append(" cached_").append(prop.name).append(";\n");
                 }
+            }
+            else if (isCachedString)
+            {
+                sb.append("    private String cached_").append(prop.name).append(";\n");
             }
         });
         // Add cached_value field for AtomicValue's union value getter
@@ -534,13 +544,16 @@ public class RdfFbsJavaGenerator
             boolean needsCache = isPointer || isClassType || isEnumType
                     || isMainTaxonomyType(prop.typeName)
                     || (getNonPointerSubtypes(m3Model, prop).notEmpty());
+            // Single-valued String fields cache the decoded UTF-8 — see field
+            // declaration above for the JFR justification.
+            boolean isCachedString = !prop.isMany && "String".equals(prop.typeName) && !needsCache;
 
             // Getter
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(prop.name).append("()\n");
             sb.append("    {\n");
 
-            if (needsCache)
+            if (needsCache || isCachedString)
             {
                 sb.append("        if (cached_").append(prop.name).append(" != null) { return cached_").append(prop.name).append("; }\n");
             }
@@ -684,6 +697,23 @@ public class RdfFbsJavaGenerator
             else
             {
                 generatePrimitiveGetter(sb, prop, javaType, javaAccessor);
+            }
+
+            // For single-valued cached String getters, replace the
+            // generated `return fb.<field>();` with cache assignment.
+            // Done as a string-replace mirroring the needsCache logic below
+            // because the primitive getter is one-line and the rewrite is
+            // simpler than threading the cache name through the generator.
+            if (isCachedString)
+            {
+                String search = "        return fb." + javaAccessor + "();\n";
+                int idx = sb.lastIndexOf(search);
+                if (idx >= 0)
+                {
+                    String replacement = "        cached_" + prop.name + " = fb." + javaAccessor + "();\n"
+                            + "        return cached_" + prop.name + ";\n";
+                    sb.replace(idx, idx + search.length(), replacement);
+                }
             }
 
             // For cached getters, replace return statements with cache assignment

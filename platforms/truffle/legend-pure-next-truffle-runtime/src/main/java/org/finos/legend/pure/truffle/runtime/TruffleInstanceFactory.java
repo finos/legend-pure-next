@@ -34,35 +34,75 @@ public final class TruffleInstanceFactory
      * Create an instance of the truffle Impl class for the given Pure class path.
      * e.g. "meta::pure::functions::collection::tests::fold::FO_Person" →
      *       org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.tests.fold.FO_PersonImpl
+     *
+     * <p>Cached path: pass the resolver so {@link TruffleTypeCache#classForPath}
+     * memoises {@code Class.forName} (the dominant {@code String.replace} hot
+     * caller before this overload existed).</p>
      */
-    public static Object createInstance(String classPath)
+    public static Object createInstance(String classPath, TruffleMetadataAccess resolver)
     {
-        // Strip leading :: separators and the truffle prefix if already present
-        classPath = classPath.replaceAll("^:+", "");
-        if (classPath.startsWith("org.finos.legend.pure.truffle.pdb.") || classPath.startsWith("org::finos::legend::pure::truffle::pdb::"))
-        {
-            classPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "")
-                    .replace("org.finos.legend.pure.truffle.pdb.", "");
-        }
-        String javaClassName = TRUFFLE_PREFIX + escapeJavaKeywords(classPath.replace("::", ".")) + "Impl";
         try
         {
-            Class<?> implClass = Class.forName(javaClassName);
-            return implClass.getDeclaredConstructor().newInstance();
+            return resolver.typeCache().classForPath(classPath).getDeclaredConstructor().newInstance();
+        }
+        catch (RuntimeException re)
+        {
+            throw re;
         }
         catch (Exception e)
         {
+            throw new RuntimeException("Failed to instantiate '" + classPath + "'", e);
+        }
+    }
+
+    /** Back-compat overload — no caching. Prefer the resolver-aware overload above. */
+    public static Object createInstance(String classPath)
+    {
+        try
+        {
+            return resolveClass(classPath).getDeclaredConstructor().newInstance();
+        }
+        catch (RuntimeException re)
+        {
+            throw re;
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Failed to instantiate '" + classPath + "'", e);
+        }
+    }
+
+    /**
+     * Resolve a Pure class path to its runtime Java {@code Impl} class.
+     * Public entry point for {@link TruffleTypeCache} to use as the cache
+     * compute function.
+     */
+    public static Class<?> resolveClass(String classPath)
+    {
+        // Strip leading :: separators and the truffle prefix if already present
+        String stripped = classPath.replaceAll("^:+", "");
+        if (stripped.startsWith("org.finos.legend.pure.truffle.pdb.") || stripped.startsWith("org::finos::legend::pure::truffle::pdb::"))
+        {
+            stripped = stripped.replace("org::finos::legend::pure::truffle::pdb::", "")
+                    .replace("org.finos.legend.pure.truffle.pdb.", "");
+        }
+        String javaClassName = TRUFFLE_PREFIX + escapeJavaKeywords(stripped.replace("::", ".")) + "Impl";
+        try
+        {
+            return Class.forName(javaClassName);
+        }
+        catch (ClassNotFoundException e)
+        {
             // Fallback: try without truffle prefix (for bootstrap-generated classes still on classpath)
+            String fallback = stripped.replace("::", ".") + "Impl";
             try
             {
-                String fallback = classPath.replace("::", ".") + "Impl";
-                Class<?> implClass = Class.forName(fallback);
-                return implClass.getDeclaredConstructor().newInstance();
+                return Class.forName(fallback);
             }
-            catch (Exception e2)
+            catch (ClassNotFoundException e2)
             {
                 throw new RuntimeException("No Impl class found for: " + classPath
-                        + " (tried " + javaClassName + " and " + classPath.replace("::", ".") + "Impl)", e2);
+                        + " (tried " + javaClassName + " and " + fallback + ")", e2);
             }
         }
     }

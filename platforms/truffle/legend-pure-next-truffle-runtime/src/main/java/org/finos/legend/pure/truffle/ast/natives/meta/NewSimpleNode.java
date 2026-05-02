@@ -48,10 +48,11 @@ public final class NewSimpleNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object result = child.executeGeneric(frame);
-        return doNew(result);
+        return doNew(result, getResolver());
     }
 
-    private static Object doNew(Object result)
+    private static Object doNew(Object result,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (!(result instanceof GenericTypeAndMultiplicityHolder gtmh))
         {
@@ -79,7 +80,7 @@ public final class NewSimpleNode extends PureNode
         }
 
         // Create instance via TruffleInstanceFactory (handles Java keyword escaping)
-        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
         if (instance == null)
         {
             throw new RuntimeException("Cannot instantiate " + classPath);

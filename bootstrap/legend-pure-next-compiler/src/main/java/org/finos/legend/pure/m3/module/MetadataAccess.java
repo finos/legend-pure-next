@@ -22,6 +22,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Function;
+
 /**
  * Provides access to compiled Pure elements and indices.
  *
@@ -81,6 +83,20 @@ public interface MetadataAccess
      * implementations override to provide a persistent {@link IdentityHashMap}.
      */
     default Map<Type, java.util.List<String>> equalityKeyPropertiesCache()
+    {
+        return new IdentityHashMap<>();
+    }
+
+    /**
+     * Per-resolver cache for {@code _PackageableElement.path(element)}.
+     * Walks the parent chain and concatenates names; without caching it
+     * re-walks on every call (JFR flagged it at 2–8% of self-host CPU).
+     * Identity-keyed because the FBW caches its parent Package wrapper,
+     * so the same {@code PackageableElement} instance returns the same
+     * computed path. Concrete implementations override to provide a
+     * persistent {@link IdentityHashMap}.
+     */
+    default Map<PackageableElement, String> elementPathCache()
     {
         return new IdentityHashMap<>();
     }

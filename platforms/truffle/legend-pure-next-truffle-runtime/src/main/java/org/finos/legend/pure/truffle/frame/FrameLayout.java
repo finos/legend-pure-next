@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.frame;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 
 import java.util.Map;
@@ -44,7 +45,17 @@ public record FrameLayout(
     /**
      * Look up the slot for {@code name}, or {@code null} if the name is not
      * in this layout (e.g. a captured variable from an outer scope).
+     *
+     * <p>{@code @TruffleBoundary} so PE doesn't try to inline {@code
+     * HashMap.get} (whose {@code TreeNode.find} recursion blows past Graal's
+     * inlining-depth budget — observed 991-deep chains causing 195+ {@code
+     * PureFunctionRootNode} compilations to bail with "Too deep inlining"
+     * before this annotation). Build-time callers don't care about
+     * boundaries; the only hot caller is {@link
+     * org.finos.legend.pure.truffle.PureContext#bindQpTypeVariablesStatic}
+     * which runs once per QP call and is not in an inner loop.</p>
      */
+    @TruffleBoundary
     public Integer slotFor(String name)
     {
         return slots.get(name);
