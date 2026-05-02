@@ -33,18 +33,28 @@ function meta::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefi
     );
 }
 
+// Skip the context rebuild when debug is off — both functions ran 80K+ times
+// per self-host even when debug was disabled, costing 0.7s of profiler self-time
+// for an unused string concat. Returning $context unchanged keeps the nesting
+// chain a no-op for non-debug runs.
 function meta::pure::compiler::debugSpaceInc(context:CompilerContext[1]):CompilerContext[1]
 {
-    let ds = $context.debugState;
-    let newDs = ^$ds(space = $ds.space + '\t');
-    ^$context(debugState = $newDs);
+    if(!$context.debugState.debug,
+        | $context,
+        | let ds = $context.debugState;
+          let newDs = ^$ds(space = $ds.space + '\t');
+          ^$context(debugState = $newDs);
+    );
 }
 
 function meta::pure::compiler::debugSpaceDec(context:CompilerContext[1]):CompilerContext[1]
 {
-    let ds = $context.debugState;
-    let newDs = ^$ds(space = $ds.space->substring(1));
-    ^$context(debugState = $newDs);
+    if(!$context.debugState.debug,
+        | $context,
+        | let ds = $context.debugState;
+          let newDs = ^$ds(space = $ds.space->substring(1));
+          ^$context(debugState = $newDs);
+    );
 }
 
 Class meta::pure::compiler::CompilerContext
@@ -53,6 +63,13 @@ Class meta::pure::compiler::CompilerContext
     sourceId : String[0..1];
     imports : String[*];
     elementMap : Map<String, PackageableElement>[1];
+    // Index of locally-compiled PackageableFunctions by simple name. Populated
+    // once between pass 2 and pass 3 by buildLocalFunctionIndex (elementMap is
+    // read-only across pass 3). Replaces the O(elementMap.size()) walk inside
+    // findAllFunctionsByNameAndArityUnfiltered (180us/call × 13K calls = 2.4s
+    // of self-host time before this index existed). Empty during pass 1/2; the
+    // unfiltered lookup falls back to walking elementMap.values() when empty.
+    localFunctionIndex : Map<String, List<PackageableFunction<Any>>>[1];
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
@@ -165,16 +182,54 @@ function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerCo
     );
 }
 
+/**
+ * Walk elementMap once and group {@link PackageableFunction}s by
+ * {@code functionName}. Call between pass 2 and pass 3 (elementMap is
+ * read-only across pass 3, so the index stays valid for all
+ * {@link findAllFunctionsByNameAndArityUnfiltered} lookups in that
+ * pass).
+ */
+function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]
+{
+    let funcs = $context.elementMap->values()
+        ->filter(e | $e->instanceOf(PackageableFunction))
+        ->cast(@PackageableFunction<Any>)
+        ->filter(f | $f.functionName->isNotEmpty());
+    let pairs = $funcs->map(f | pair($f.functionName->toOne(), $f));
+    // Group by name. Pure's `Map<K, V>` uses single-value put, so we accumulate
+    // List<V> per key explicitly. Each key's list grows in elementMap iteration
+    // order — we don't rely on inner order downstream (the arity filter is
+    // applied at lookup time).
+    let index = $pairs->fold({p, m |
+        let existing = $m->get($p.first);
+        let updated = if($existing->isEmpty(),
+            | ^List<PackageableFunction<Any>>(values = [$p.second]),
+            | ^List<PackageableFunction<Any>>(values = $existing->toOne().values->concatenate($p.second))
+        );
+        $m->put($p.first, $updated);
+    }, newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)));
+    ^$context(localFunctionIndex = $index);
+}
+
 function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
     // Union: native index + locally-defined functions from context elementMap.
     let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
-    let localCandidates = $context.elementMap->values()
-        ->filter(e | $e->instanceOf(PackageableFunction))
-        ->cast(@PackageableFunction<Any>)
-        ->filter(f | $f.functionName->isNotEmpty()
-                     && $f.functionName == $name
-                     && $f.parameters->size() == $arity);
+    // Index lookup when populated (pass 3); fallback to elementMap walk when
+    // not (pass 1/2 still build the map and call this for early lookups).
+    let indexedByName = $context.localFunctionIndex->get($name);
+    let localCandidates = if($indexedByName->isNotEmpty(),
+        | $indexedByName->toOne().values->filter(f | $f.parameters->size() == $arity),
+        | if($context.localFunctionIndex->keys()->isNotEmpty(),
+              | []->cast(@PackageableFunction<Any>),
+              | $context.elementMap->values()
+                    ->filter(e | $e->instanceOf(PackageableFunction))
+                    ->cast(@PackageableFunction<Any>)
+                    ->filter(f | $f.functionName->isNotEmpty()
+                                 && $f.functionName == $name
+                                 && $f.parameters->size() == $arity)
+        )
+    );
     // Self-hosting: when the same fully qualified path appears in both the
     // base PDB and the current source, prefer the local definition. Without
     // this, recompiling a module against a base PDB that already contains

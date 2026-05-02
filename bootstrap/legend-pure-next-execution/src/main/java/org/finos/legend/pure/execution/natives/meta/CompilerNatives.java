@@ -88,8 +88,9 @@ public class CompilerNatives implements NativeExtension
         {
             String name = (String) _E_ValueSpecification.unwrap(args.get(0));
             long arity = (Long) _E_ValueSpecification.unwrap(args.get(1));
-            CompositePureLanguageMetadata metadata = new CompositePureLanguageMetadata(resolver.getMetadataAccessExtension(PureLanguageMetadata.class), resolver);
-            org.eclipse.collections.api.list.MutableList<FunctionIndexEntry> entries = metadata.findFunctionHeadersByNameAndArity(name, (int) arity);
+            CompositePureLanguageMetadata fnMetadata = new CompositePureLanguageMetadata(
+                    resolver.getMetadataAccessExtension(PureLanguageMetadata.class), resolver);
+            org.eclipse.collections.api.list.MutableList<FunctionIndexEntry> entries = fnMetadata.findFunctionHeadersByNameAndArity(name, (int) arity);
             List<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
             for (FunctionIndexEntry entry : entries)
             {

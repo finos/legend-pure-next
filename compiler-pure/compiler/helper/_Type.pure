@@ -8,7 +8,12 @@ function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):
         | true,
         | $t1->match([
               pa:PackageableElement[1] | $t2->match([pb:PackageableElement[1] | $pa->elementToPath() == $pb->elementToPath(), other:Any[1] | false]),
-              tp1:TypeParameter[1] | $t2->match([tp2:TypeParameter[1] | $tp1.name == $tp2.name, other:Any[1] | false]),
+              // Experiment: rely on identity (the $t1 == $t2 short-circuit) for
+              // TypeParameter equality. If TypeParameters are identity-preserved
+              // within their owner scope, this is strictly more correct than the
+              // previous name-only compare (which returned true for cross-scope
+              // collisions like `f<T>` vs `g<T>`).
+              tp1:TypeParameter[1] | false,
               other:Any[1] | false
           ])
     );

@@ -358,6 +358,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
     }, ^CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([]),
+            localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
             inferenceRollbacks = 0, candidateEvaluations = 0));
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
@@ -460,6 +461,10 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
     // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties.
     // Per-element timing mirrors pass 2: append an ElementStatistics entry for
     // each element so compileDir can merge by path across passes.
+    // Build the local-function index once before resolution so the 13K
+    // findAllFunctionsByNameAndArityUnfiltered calls become O(1) lookups
+    // rather than full elementMap.values() walks.
+    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex();
     let pass3Start = currentTimeMillis();
     let pass3Ctx = $pass2.values->fold({elem, ctx |
         let beforeT = currentTimeMillis();
@@ -485,7 +490,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
             candidateEvaluations = $newCtx.candidateEvaluations - $beforeCa
         );
         ^$newCtx(elementStatistics = $newCtx.elementStatistics->concatenate($stat));
-    }, $pass2.context);
+    }, $pass3StartCtx);
     let pass3Millis = currentTimeMillis() - $pass3Start;
 
     $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
