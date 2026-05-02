@@ -68,20 +68,6 @@ Class meta::pure::compiler::CompilerContext
     inferenceRollbacks : Integer[1];
     candidateEvaluations : Integer[1];
 
-    // Per-site rollback breakdown (diagnostic — sums to inferenceRollbacks).
-    rb_preResolve : Integer[1];
-    rb_failedCandidate : Integer[1];
-    rb_notResolved : Integer[1];
-    rb_lambda : Integer[1];
-    rb_reverseMatch : Integer[1];
-    rb_collection : Integer[1];
-    rb_postFinish : Integer[1];
-    rb_other : Integer[1];
-
-    // Per-site candidate breakdown (diagnostic — sums to candidateEvaluations).
-    ca_single : Integer[1];
-    ca_multi : Integer[1];
-
     // Per-element timing collected across pass 2 and pass 3. Each element compile
     // appends an ElementStatistics with wall time (millis) and the rollback /
     // candidate deltas for that element. compileDir aggregates entries with the
@@ -96,28 +82,13 @@ function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integ
 
 function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1]):CompilerContext[1]
 {
-    rollbackErrorsLabeled($context, $checkpoint, 'other');
-}
-
-function meta::pure::compiler::rollbackErrorsLabeled(context:CompilerContext[1], checkpoint:Integer[1], label:String[1]):CompilerContext[1]
-{
-    // Mirrors Java CompilationContext.rollbackErrorsTo: every rollback bumps
-    // the inferenceRollbacks counter. Per-site `label` lets us diagnose where
-    // Pure's count diverges from the Java compiler's per-site contributions.
-    debug($context, | 'ERRORS ROLLED BACK (' + $label + ') from ' + $context.errors->size()->toString() + ' to ' + $checkpoint->toString());
-    let withTotal = ^$context(
+    // Mirrors Java CompilationContext.rollbackErrorsTo: bump inferenceRollbacks
+    // alongside the error-stack truncation so the Pure compiler's telemetry
+    // tracks the same speculative-compile-discarded count as the Java bootstrap.
+    ^$context(
         errors = $context.errors->take($checkpoint),
         inferenceRollbacks = $context.inferenceRollbacks + 1
     );
-    if([
-        pair(| $label == 'preResolve',      | ^$withTotal(rb_preResolve      = $withTotal.rb_preResolve      + 1)),
-        pair(| $label == 'failedCandidate', | ^$withTotal(rb_failedCandidate = $withTotal.rb_failedCandidate + 1)),
-        pair(| $label == 'notResolved',     | ^$withTotal(rb_notResolved     = $withTotal.rb_notResolved     + 1)),
-        pair(| $label == 'lambda',          | ^$withTotal(rb_lambda          = $withTotal.rb_lambda          + 1)),
-        pair(| $label == 'reverseMatch',    | ^$withTotal(rb_reverseMatch    = $withTotal.rb_reverseMatch    + 1)),
-        pair(| $label == 'collection',      | ^$withTotal(rb_collection      = $withTotal.rb_collection      + 1)),
-        pair(| $label == 'postFinish',      | ^$withTotal(rb_postFinish      = $withTotal.rb_postFinish      + 1))
-    ], | ^$withTotal(rb_other = $withTotal.rb_other + 1));
 }
 
 function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]

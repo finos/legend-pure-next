@@ -200,12 +200,10 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
             let isString = $typeName == 'String';
             let isDate = $typeName == 'DateTime' || $typeName == 'StrictDate' || $typeName == 'Date' || $typeName == 'StrictTime';
             let processedValue = if($isString,
-                | // Parser leaves escape sequences as literal two-char sequences
-                  $rawValue->cast(@String)
-                    ->replace('\\\'', '\'')
-                    ->replace('\\n', '\n')
-                    ->replace('\\t', '\t')
-                    ->replace('\\r', '\r'),
+                | // Parser leaves escape sequences as literal two-char sequences;
+                  // unescape via the native (chained replace can't handle `\\`
+                  // without distorting its own patterns under self-host).
+                  meta::pure::compiler::structural::valueSpecificationCompiler::unescapePureString($rawValue->cast(@String)),
                 | if($isDate,
                     | normalizeDateString($rawValue->toString()),
                     | $rawValue
@@ -440,3 +438,9 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::getGeneri
 }
 
 native function meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1];
+
+// Char-by-char unescape of Pure string-literal escape sequences. Implemented
+// as a native because the chained-replace alternative is not self-host stable —
+// each iteration of the Pure compiler re-compiling itself distorts the patterns
+// it stores for the next iteration.
+native function meta::pure::compiler::structural::valueSpecificationCompiler::unescapePureString(s:String[1]):String[1];

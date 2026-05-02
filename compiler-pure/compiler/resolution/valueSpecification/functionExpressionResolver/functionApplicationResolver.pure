@@ -121,12 +121,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         pair(| $candidates->size() == 1,
              | // Single candidate — resolve directly, errors are legitimate.
                // Mirrors Java line 75 (incrementCandidateEvaluationCount on the
-               // single-candidate branch) so single-candidate calls also bump.
+               // single-candidate branch).
                debug($deepCtx, | '1 candidate');
-               let singleBumpedCtx = ^$deepCtx(
-                   candidateEvaluations = $deepCtx.candidateEvaluations + 1,
-                   ca_single = $deepCtx.ca_single + 1
-               );
+               let singleBumpedCtx = ^$deepCtx(candidateEvaluations = $deepCtx.candidateEvaluations + 1);
                resolveFunctionApplicationUsingTemplateFunction($fi, $candidates->at(0), $scope, $singleBumpedCtx);)],
        | // Multiple candidates — sort most-specific-first, pre-resolve non-lambda params, then try each candidate
          // Sort most-specific-first: by parameter specificity, then fewer type/multiplicity params = more specific (mirrors Java mostSpecificFirst)
@@ -143,15 +140,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
          // Mirrors Java line 94 (rollbackErrorsTo(preResolveCheckpoint) ALWAYS
          // fires after pre-resolve speculative compilation): one inferenceRollback
          // bump per multi-candidate call accounts for that always-rollback.
-         debug($deepCtx, | 'ERRORS ROLLED BACK (preResolve) [implicit]');
-         let preResolveBumpedCtx = ^$deepCtx(
-             inferenceRollbacks = $deepCtx.inferenceRollbacks + 1,
-             rb_preResolve = $deepCtx.rb_preResolve + 1
-         );
-         let preResolveBumpedCtxOuter = ^$context(
-             inferenceRollbacks = $context.inferenceRollbacks + 1,
-             rb_preResolve = $context.rb_preResolve + 1
-         );
+         let preResolveBumpedCtx = ^$deepCtx(inferenceRollbacks = $deepCtx.inferenceRollbacks + 1);
+         let preResolveBumpedCtxOuter = ^$context(inferenceRollbacks = $context.inferenceRollbacks + 1);
          resolveWithMultipleCandidates($fi, $sorted, $scope, $preResolveBumpedCtx, $preResolveBumpedCtxOuter);
     );
 }
@@ -186,10 +176,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             | $acc,
             | debug($deepCtx, | 'trying candidate: ' + $candidate->elementToPath());
               let accCtx = $acc.context;
-              let bumpedAccCtx = ^$accCtx(
-                  candidateEvaluations = $accCtx.candidateEvaluations + 1,
-                  ca_multi = $accCtx.ca_multi + 1
-              );
+              let bumpedAccCtx = ^$accCtx(candidateEvaluations = $accCtx.candidateEvaluations + 1);
               let checkpoint = $context->errorCheckpoint();
               let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $context);
               let resultCtx = $result.context;
@@ -207,11 +194,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | // Resolution produced errors — backtrack. Bump rollback counter,
                     // save first candidate's errors, try next.
                     debug($deepCtx, | 'candidate produced errors, trying next');
-                    debug($deepCtx, | 'ERRORS ROLLED BACK (failedCandidate) [implicit]');
-                    let rollbackCtx = ^$bumpedAccCtx(
-                        inferenceRollbacks = $bumpedAccCtx.inferenceRollbacks + 1,
-                        rb_failedCandidate = $bumpedAccCtx.rb_failedCandidate + 1
-                    );
+                    let rollbackCtx = ^$bumpedAccCtx(inferenceRollbacks = $bumpedAccCtx.inferenceRollbacks + 1);
                     let savedErrors = if($acc.firstErrors->isEmpty(), | $resultCtx->snapshotErrors($checkpoint), | $acc.firstErrors);
                     ^$acc(firstErrors = $savedErrors, context = $rollbackCtx);
               );
@@ -602,7 +585,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           ^ResolveOneParamResult(resolved = true, newParam = $result.newParam, bindings = $result.bindings, context = $result.context, savedErrors = []);,
         | // Not resolved: snapshot errors and rollback (Java lines 263-266)
           let savedErrors = $result.context->snapshotErrors($checkpoint);
-          let rolledBackCtx = $result.context->rollbackErrorsLabeled($checkpoint, 'notResolved');
+          let rolledBackCtx = $result.context->rollbackErrors($checkpoint);
           debug($context, | '=> NOT RESOLVED');
           ^ResolveOneParamResult(resolved = false, newParam = $result.newParam, bindings = $result.bindings, context = $rolledBackCtx, savedErrors = $savedErrors);
     );
@@ -656,7 +639,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               av : AtomicValue[1] |
                   // Check if LAMBDA (Java line 442-448)
                   if($av.value->toOne()->instanceOf(LambdaFunction),
-                      | let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'lambda');
+                      | let ctx2 = $ctx1->rollbackErrors($checkpoint);
                         debug($context, | 'resolveArg: LAMBDA');
                         let lambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
                         let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings);
@@ -669,7 +652,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               fi2 : FunctionInvocation[1] |
                   // Check if REVERSE_MATCH (Java line 450-454)
                   if($fi2.func->isNotEmpty(),
-                      | let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'reverseMatch');
+                      | let ctx2 = $ctx1->rollbackErrors($checkpoint);
                         debug($context, | 'resolveArg: REVERSE_MATCH func=' + $fi2.functionName->toOne()
                             + ' childGT=' + if($fi2.genericType->isEmpty(), | '?', | printGenericType($fi2.genericType->toOne())));
                         let reversedChild = reverseMatch($fi2, $paramGT, $paramMul, $bindings);
@@ -680,7 +663,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   );,
               col : Collection[1] |
                   // COLLECTION (Java line 456-494)
-                  let ctx2 = $ctx1->rollbackErrorsLabeled($checkpoint, 'collection');
+                  let ctx2 = $ctx1->rollbackErrors($checkpoint);
                   let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
                   let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
                   debug($context, | 'resolveArg: COLLECTION (' + $col.values->size()->toString() + ' elements) resolvedParamGT=' + printGenericType($resolvedParamGT));
@@ -696,7 +679,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let preFinishCheckpoint = $colResult.context->errorCheckpoint();
                   let fpResult = finishProcessing($paramGT, $paramMul, $bindings, $scope, $colResult.context, $newCol);
                   if($fpResult.context->errorCheckpoint() > $preFinishCheckpoint,
-                      | ^$fpResult(context = $fpResult.context->rollbackErrorsLabeled($preFinishCheckpoint, 'postFinish')),
+                      | ^$fpResult(context = $fpResult.context->rollbackErrors($preFinishCheckpoint)),
                       | $fpResult
                   );,
               other : Any[1] |

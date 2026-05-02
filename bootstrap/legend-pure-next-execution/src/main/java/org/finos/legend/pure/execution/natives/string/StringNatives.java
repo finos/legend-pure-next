@@ -244,6 +244,67 @@ public class StringNatives
             return _E_ValueSpecification.wrap(source.replace(toReplace, replacement), genericType, multiplicity, resolver);
         });
 
+        // unescapePureString(String[1]) : String[1]
+        // Char-by-char unescape of Pure string-literal escapes. The Pure-side
+        // chained-replace approach can't handle `\\` correctly: it falls apart
+        // under self-host because each iteration distorts the unescape patterns
+        // it stores for the next iteration. Expose as a native that mirrors
+        // ValueSpecificationCompiler.unescapePureString on the Java side.
+        natives.put("unescapePureString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
+        {
+            String s = (String) _E_ValueSpecification.unwrap(args.get(0));
+            String result;
+            if (s.indexOf('\\') < 0)
+            {
+                result = s;
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder(s.length());
+                for (int i = 0; i < s.length(); i++)
+                {
+                    char c = s.charAt(i);
+                    if (c == '\\' && i + 1 < s.length())
+                    {
+                        char next = s.charAt(i + 1);
+                        switch (next)
+                        {
+                            case '\'': sb.append('\''); i++; break;
+                            case '\\': sb.append('\\'); i++; break;
+                            case 'n':  sb.append('\n'); i++; break;
+                            case 't':  sb.append('\t'); i++; break;
+                            case 'r':  sb.append('\r'); i++; break;
+                            case 'u':
+                                int hexStart = i + 2;
+                                int hexEnd = hexStart;
+                                while (hexEnd < s.length() && hexEnd - hexStart < 4
+                                        && Character.digit(s.charAt(hexEnd), 16) >= 0)
+                                {
+                                    hexEnd++;
+                                }
+                                if (hexEnd > hexStart)
+                                {
+                                    sb.append((char) Integer.parseInt(s.substring(hexStart, hexEnd), 16));
+                                    i = hexEnd - 1;
+                                }
+                                else
+                                {
+                                    sb.append(c);
+                                }
+                                break;
+                            default:   sb.append(c); break;
+                        }
+                    }
+                    else
+                    {
+                        sb.append(c);
+                    }
+                }
+                result = sb.toString();
+            }
+            return _E_ValueSpecification.wrap(result, genericType, multiplicity, resolver);
+        });
+
         // endsWith(String[1], String[1]) : Boolean[1]
         natives.put("endsWith_String_1__String_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
                 _E_ValueSpecification.wrap(((String) _E_ValueSpecification.unwrap(args.get(0))).endsWith((String) _E_ValueSpecification.unwrap(args.get(1))),

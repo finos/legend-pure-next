@@ -107,5 +107,11 @@ public final class StringNodeFactories
         // Compiler-internal native: normalizes date literal strings
         registry.register("normalizeDateString_String_1__String_1_",
                 (args, gt, mul, fe) -> new NormalizeDateStringNode(args[0]));
+
+        // Compiler-internal native: char-by-char unescape of Pure string-literal
+        // escape sequences. See UnescapePureStringNode for why this is a native
+        // rather than a Pure chained-replace.
+        registry.register("unescapePureString_String_1__String_1_",
+                (args, gt, mul, fe) -> new UnescapePureStringNode(args[0]));
     }
 }

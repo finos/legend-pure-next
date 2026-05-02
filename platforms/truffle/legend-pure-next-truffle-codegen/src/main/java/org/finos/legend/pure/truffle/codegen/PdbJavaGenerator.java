@@ -813,16 +813,27 @@ public class PdbJavaGenerator
     {
         // pathOf — recursive ::-separated path of a PackageableElement,
         // inlined here so the generated writer is self-contained within codegen.
+        // Mirrors the bootstrap _PackageableElement.path() / packagePath()
+        // pair: the *root anchor* is detected by `_package() == null`, not by
+        // matching its name against "Root". Bootstrap creates the root with
+        // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
+        // into every path that walks through it.
         sb.append("    private static String pathOf(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n    {\n");
         sb.append("        if (pe == null) { return null; }\n");
         sb.append("        String name = pe._name();\n");
         sb.append("        Object pkg = pe._package();\n");
         sb.append("        if (!(pkg instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement parent))\n");
         sb.append("        {\n            return name;\n        }\n");
-        sb.append("        String parentPath = pathOf(parent);\n");
-        sb.append("        if (parentPath == null || parentPath.isEmpty() || \"Root\".equals(parentPath))\n");
-        sb.append("        {\n            return name;\n        }\n");
-        sb.append("        return parentPath + \"::\" + name;\n");
+        sb.append("        String pkgPath = pathOfPkg(parent);\n");
+        sb.append("        return pkgPath.isEmpty() ? name : pkgPath + \"::\" + name;\n");
+        sb.append("    }\n\n");
+        sb.append("    private static String pathOfPkg(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pkg)\n    {\n");
+        sb.append("        Object grandparent = pkg._package();\n");
+        sb.append("        String name = pkg._name();\n");
+        sb.append("        if (!(grandparent instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement gp) || name == null)\n");
+        sb.append("        {\n            return \"\";\n        }\n");
+        sb.append("        String parentPath = pathOfPkg(gp);\n");
+        sb.append("        return parentPath.isEmpty() ? name : parentPath + \"::\" + name;\n");
         sb.append("    }\n\n");
 
         // writeAncestorRef — back-edge for cycles. depth=0 is self,
