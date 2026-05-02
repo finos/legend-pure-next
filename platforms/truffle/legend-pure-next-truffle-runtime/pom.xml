@@ -66,6 +66,14 @@
             <version>${truffle.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- Polyglot CPU sampler. Adds the `cpusampler` engine options.
+             Loaded via ServiceLoader at runtime; opt-in via the CLI flag. -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>profiler-tool</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Eclipse Collections -->
         <dependency>

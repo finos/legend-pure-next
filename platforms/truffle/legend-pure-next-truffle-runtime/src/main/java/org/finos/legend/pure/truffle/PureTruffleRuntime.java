@@ -20,11 +20,15 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDe
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.PureSourceHelper;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.next.parser.PureParser;
@@ -44,15 +48,29 @@ public final class PureTruffleRuntime
     private final TruffleMetadataAccess resolver;
 
     private PureTruffleRuntime(TruffleMetadataAccess resolver,
-                               List<? extends ParserExtension> parserExtensions)
+                               List<? extends ParserExtension> parserExtensions,
+                               List<Path> sourceRoots,
+                               Map<String, String> polyglotOptions)
     {
         this.resolver = resolver;
 
+        // Register source roots before any AST is built — once a Source is
+        // cached for a sourceId, later root additions don't update its content.
+        for (Path root : sourceRoots)
+        {
+            PureSourceHelper.addSourceRoot(root);
+        }
+
         // Configure and create the Truffle polyglot context
         PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
-        this.polyglotContext = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+        org.graalvm.polyglot.Context.Builder ctxBuilder = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
                 .allowAllAccess(true)
-                .build();
+                .allowExperimentalOptions(true);
+        for (Map.Entry<String, String> e : polyglotOptions.entrySet())
+        {
+            ctxBuilder.option(e.getKey(), e.getValue());
+        }
+        this.polyglotContext = ctxBuilder.build();
         this.polyglotContext.initialize(PureLanguage.ID);
         this.polyglotContext.enter();
 
@@ -68,10 +86,29 @@ public final class PureTruffleRuntime
                 .build());
     }
 
+    /**
+     * Close the underlying polyglot context. Triggers any attached engine
+     * tools (e.g. {@code cpusampler}) to flush their output.
+     */
+    public void close()
+    {
+        try
+        {
+            polyglotContext.leave();
+        }
+        catch (RuntimeException ignored)
+        {
+            // already left or never entered
+        }
+        polyglotContext.close();
+    }
+
     public static final class Builder
     {
         private TruffleMetadataAccess resolver;
         private final List<ParserExtension> parserExtensions = new ArrayList<>();
+        private final List<Path> sourceRoots = new ArrayList<>();
+        private final Map<String, String> polyglotOptions = new LinkedHashMap<>();
 
         public Builder withResolver(TruffleMetadataAccess resolver)
         {
@@ -88,9 +125,34 @@ public final class PureTruffleRuntime
             return this;
         }
 
+        /**
+         * Register a directory whose contents should be embedded in Truffle
+         * {@link com.oracle.truffle.api.source.Source} objects when their
+         * sourceId resolves under it. Required for {@code --cpu-sampler}
+         * flamegraphs to render Pure source lines.
+         */
+        public Builder withSourceRoot(Path root)
+        {
+            if (root != null)
+            {
+                this.sourceRoots.add(root);
+            }
+            return this;
+        }
+
+        /**
+         * Pass through a polyglot engine option, e.g.
+         * {@code option("cpusampler", "true")}.
+         */
+        public Builder withPolyglotOption(String key, String value)
+        {
+            this.polyglotOptions.put(key, value);
+            return this;
+        }
+
         public PureTruffleRuntime build()
         {
-            return new PureTruffleRuntime(resolver, parserExtensions);
+            return new PureTruffleRuntime(resolver, parserExtensions, sourceRoots, polyglotOptions);
         }
     }
 

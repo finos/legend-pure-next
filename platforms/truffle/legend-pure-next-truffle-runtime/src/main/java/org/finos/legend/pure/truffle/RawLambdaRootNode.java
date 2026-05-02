@@ -74,6 +74,8 @@ public final class RawLambdaRootNode extends RootNode
     @ExplodeLoop
     public Object execute(VirtualFrame frame)
     {
+        org.finos.legend.pure.truffle.profiler.PureProfiler.enter(name);
+
         Object[] arguments = frame.getArguments();
         Object closureOrLambda = arguments[0];
 
@@ -106,6 +108,8 @@ public final class RawLambdaRootNode extends RootNode
         {
             result = ((PureNode) body[i]).executeGeneric(frame);
         }
+
+        org.finos.legend.pure.truffle.profiler.PureProfiler.exit();
         return result;
     }
 

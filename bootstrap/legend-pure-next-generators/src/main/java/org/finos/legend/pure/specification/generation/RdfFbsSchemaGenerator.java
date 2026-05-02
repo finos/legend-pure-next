@@ -59,7 +59,24 @@ public class RdfFbsSchemaGenerator
      */
     public void generate(Path outputDir, List<String> additionalFbsPaths) throws IOException
     {
+        generate(outputDir, additionalFbsPaths, null);
+    }
+
+    /**
+     * Generate with a persistent field-ID registry. When {@code idRegistryPath}
+     * is non-null, every emitted field carries an explicit {@code (id: N)}
+     * pinned by {@link FbsFieldIdRegistry} — wire format stays stable across
+     * builds even though Apache Jena's RDF iteration is order-non-deterministic
+     * (which is the underlying reason builds without IDs produced shuffled
+     * vtables and incompatible jars).
+     */
+    public void generate(Path outputDir, List<String> additionalFbsPaths, Path idRegistryPath) throws IOException
+    {
         Files.createDirectories(outputDir);
+
+        FbsFieldIdRegistry registry = idRegistryPath == null
+                ? null
+                : FbsFieldIdRegistry.load(idRegistryPath);
 
         StringBuilder sb = new StringBuilder();
         sb.append("// AUTO-GENERATED from m3.ttl - DO NOT EDIT\n\n");
@@ -73,13 +90,13 @@ public class RdfFbsSchemaGenerator
         // Pointer reference table for union pointer fields
         sb.append("enum PointerKind : byte { Element, Property, QualifiedProperty, Stereotype, Tag }\n\n");
         sb.append("table PointerRef {\n");
-        sb.append("    kind: PointerKind;\n");
-        sb.append("    path: [string];\n");
+        appendField(sb, registry, "PointerRef", "kind", "PointerKind");
+        appendField(sb, registry, "PointerRef", "path", "[string]");
         sb.append("}\n\n");
 
         // Ancestor reference table for cycle back-references
         sb.append("table AncestorRef {\n");
-        sb.append("    depth: int;\n");
+        appendField(sb, registry, "AncestorRef", "depth", "int");
         sb.append("}\n\n");
 
         // Generate union types for pointer properties with nonPointerSubtypes.
@@ -170,11 +187,11 @@ public class RdfFbsSchemaGenerator
         });
 
         // AtomicValue.value is Any[1] — needs a union for primitives vs LambdaFunction
-        sb.append("table IntegerValueDef { val: long; }\n");
-        sb.append("table FloatValueDef { val: double; }\n");
-        sb.append("table DecimalValueDef { val: string; }\n");
-        sb.append("table BooleanValueDef { val: bool; }\n");
-        sb.append("table StringValueDef { val: string; }\n");
+        appendSingleFieldTable(sb, registry, "IntegerValueDef", "val", "long");
+        appendSingleFieldTable(sb, registry, "FloatValueDef", "val", "double");
+        appendSingleFieldTable(sb, registry, "DecimalValueDef", "val", "string");
+        appendSingleFieldTable(sb, registry, "BooleanValueDef", "val", "bool");
+        appendSingleFieldTable(sb, registry, "StringValueDef", "val", "string");
         sb.append("union AtomicValueContentUnion { IntegerValueDef, FloatValueDef, BooleanValueDef, StringValueDef, LambdaFunctionDef, PointerRef, DecimalValueDef }\n\n");
 
         // Generate tables
@@ -185,9 +202,14 @@ public class RdfFbsSchemaGenerator
                 return;
             }
             MutableList<PropertyInfo> allProps = collectAllProperties(m3Model, classInfo);
+            String tableName = classInfo.name + "Def";
 
-            sb.append("table ").append(classInfo.name).append("Def {\n");
+            sb.append("table ").append(tableName).append(" {\n");
 
+            // Collect (fbsField, fbsType) pairs first; emit them sorted by
+            // assigned ID below so the file order is deterministic regardless
+            // of how the underlying RDF iteration ordered allProps.
+            java.util.LinkedHashMap<String, String> currentFields = new java.util.LinkedHashMap<>();
             allProps.forEach(prop ->
             {
                 if (hasStereotype(prop.stereotypes, "excluded"))
@@ -195,30 +217,33 @@ public class RdfFbsSchemaGenerator
                     return;
                 }
                 MutableList<String> nps = getNonPointerSubtypes(m3Model, prop);
+                String fbsField;
+                String fbsType;
                 if (nps.notEmpty())
                 {
-                    String fbsField = toFbsFieldName(prop.name);
+                    fbsField = toFbsFieldName(prop.name);
                     String uName = propertyToUnionName.get(classInfo.name + "." + fbsField);
                     if (uName == null)
                     {
                         throw new IllegalStateException("No union name registered for "
                                 + classInfo.name + "." + fbsField + " — first-pass union build skipped this property.");
                     }
-                    String fbsType = prop.isMany ? "[" + uName + "]" : uName;
-                    sb.append("    ").append(fbsField).append(": ").append(fbsType).append(";\n");
+                    fbsType = prop.isMany ? "[" + uName + "]" : uName;
                 }
                 else if ("AtomicValue".equals(classInfo.name) && "value".equals(prop.name))
                 {
-                    // Use union for Any-typed value
-                    sb.append("    value: AtomicValueContentUnion;\n");
+                    fbsField = "value";
+                    fbsType = "AtomicValueContentUnion";
                 }
                 else
                 {
-                    String fbsType = mapToFbsType(prop.typeName, prop.isMany, hasStereotype(prop.stereotypes, "pointer"), mainTaxonomyUnions);
-                    String fbsFieldName = toFbsFieldName(prop.name);
-                    sb.append("    ").append(fbsFieldName).append(": ").append(fbsType).append(";\n");
+                    fbsField = toFbsFieldName(prop.name);
+                    fbsType = mapToFbsType(prop.typeName, prop.isMany, hasStereotype(prop.stereotypes, "pointer"), mainTaxonomyUnions);
                 }
+                currentFields.put(fbsField, fbsType);
             });
+
+            emitTableFields(sb, registry, tableName, currentFields);
 
             sb.append("}\n\n");
         });
@@ -255,25 +280,127 @@ public class RdfFbsSchemaGenerator
 
         // Element entry table is the top-level container
         sb.append("table ElementEntry {\n");
-        sb.append("    path: string;\n");
-        sb.append("    element_type: string;\n");
-
+        java.util.LinkedHashMap<String, String> entryFields = new java.util.LinkedHashMap<>();
+        entryFields.put("path", "string");
+        entryFields.put("element_type", "string");
         m3Model.classInfoMap().valuesView().toSortedListBy(ci -> ci.name).forEach(ci ->
         {
             if (isAbstract(ci))
             {
                 return;
             }
-            String fbsField = toFbsFieldName(ci.name);
-            sb.append("    ").append(fbsField).append("_val: ").append(ci.name).append("Def;\n");
+            entryFields.put(toFbsFieldName(ci.name) + "_val", ci.name + "Def");
         });
-
+        emitTableFields(sb, registry, "ElementEntry", entryFields);
         sb.append("}\n\n");
         sb.append("root_type ElementEntry;\n");
 
         Path schemaPath = outputDir.resolve("m3.fbs");
         Files.write(schemaPath, sb.toString().getBytes(StandardCharsets.UTF_8));
         System.out.println("  Generated: m3.fbs (" + m3Model.classInfoMap().size() + " tables)");
+
+        if (registry != null)
+        {
+            registry.saveIfDirty();
+        }
+    }
+
+    /**
+     * Emit a single field, with an explicit {@code (id: N)} when {@code
+     * registry} is non-null. Pinning IDs is what keeps vtable offsets
+     * stable across builds.
+     */
+    private static void appendField(StringBuilder sb, FbsFieldIdRegistry registry,
+            String table, String field, String type)
+    {
+        sb.append("    ").append(field).append(": ").append(type);
+        if (registry != null)
+        {
+            sb.append(" (id: ").append(registry.idFor(table, field, isUnionType(type))).append(")");
+        }
+        sb.append(";\n");
+    }
+
+    /**
+     * A FlatBuffer field is a "union" (and so consumes two id slots — the
+     * implicit type byte plus the value) when its type ends with
+     * {@code Union}. Both single ({@code MyUnion}) and vector
+     * ({@code [MyUnion]}) flavours qualify.
+     */
+    private static boolean isUnionType(String fbsType)
+    {
+        if (fbsType == null)
+        {
+            return false;
+        }
+        String inner = (fbsType.startsWith("[") && fbsType.endsWith("]"))
+                ? fbsType.substring(1, fbsType.length() - 1)
+                : fbsType;
+        return inner.endsWith("Union");
+    }
+
+    /** Convenience: emit a one-field table with stable ID. */
+    private static void appendSingleFieldTable(StringBuilder sb, FbsFieldIdRegistry registry,
+            String table, String field, String type)
+    {
+        sb.append("table ").append(table).append(" {\n");
+        appendField(sb, registry, table, field, type);
+        sb.append("}\n");
+    }
+
+    /**
+     * Emit the body of a table given its current fields. Fields keep their
+     * assigned IDs across builds; previously-known fields that no longer
+     * appear are emitted as {@code (deprecated, id: N)} so the vtable shape
+     * is preserved (FlatBuffer requires contiguous IDs from 0; without the
+     * deprecated placeholder, removing a field would force a renumber).
+     * Output is sorted by ID so the file diffs cleanly.
+     */
+    private static void emitTableFields(StringBuilder sb, FbsFieldIdRegistry registry,
+            String table, java.util.LinkedHashMap<String, String> currentFields)
+    {
+        if (registry == null)
+        {
+            // No registry — fall back to declaration order. This mode exists
+            // only for the back-compat overload; the maven pipeline always
+            // passes a registry path.
+            currentFields.forEach((field, type) ->
+                    sb.append("    ").append(field).append(": ").append(type).append(";\n"));
+            return;
+        }
+        record Entry(String field, String type, int id, boolean deprecated) {}
+        java.util.List<Entry> entries = new java.util.ArrayList<>(currentFields.size());
+        for (var e : currentFields.entrySet())
+        {
+            int id = registry.idFor(table, e.getKey(), isUnionType(e.getValue()));
+            entries.add(new Entry(e.getKey(), e.getValue(), id, false));
+        }
+        // Render previously-seen-but-now-removed fields as deprecated so the
+        // vtable retains its slots. Without this, FlatBuffer's "contiguous IDs"
+        // requirement would force a renumber on removal.
+        for (String dep : registry.deprecatedFieldsFor(table, currentFields.keySet()))
+        {
+            int id = registry.idFor(table, dep, false);
+            // Deprecated fields keep their original type; we don't track the
+            // original type so we use a safe placeholder that matches any
+            // historical field shape (FlatBuffer doesn't validate the type
+            // of a deprecated field). bool is the smallest scalar.
+            entries.add(new Entry(dep, "bool", id, true));
+        }
+        entries.sort(java.util.Comparator.comparingInt(Entry::id));
+        for (Entry e : entries)
+        {
+            sb.append("    ").append(e.field()).append(": ").append(e.type());
+            if (e.deprecated())
+            {
+                sb.append(" (deprecated, id: ").append(e.id()).append(")");
+            }
+            else
+            {
+                sb.append(" (id: ").append(e.id()).append(")");
+            }
+            sb.append(";\n");
+        }
     }
 
     // =========================================================================
@@ -318,7 +445,13 @@ public class RdfFbsSchemaGenerator
     // =========================================================================
 
     /**
-     * Usage: {@code RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir>}
+     * Usage: {@code RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir>
+     *        [--ids <idRegistry>] [<additional.fbs> ...]}
+     *
+     * <p>{@code --ids <path>} is the persistent field-ID registry — required
+     * for wire-format stability across builds. Without it, fields get
+     * implicit IDs by declaration order, which depends on Apache Jena's
+     * RDF iteration (non-deterministic).</p>
      */
     public static void main(String[] args)
     {
@@ -326,31 +459,40 @@ public class RdfFbsSchemaGenerator
         {
             if (args.length < 2)
             {
-                System.out.println("Usage: RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir>");
+                System.out.println("Usage: RdfFbsSchemaGenerator <input.ttl> <fbsOutputDir> [--ids <registry>] [<additional.fbs>...]");
                 System.exit(1);
             }
 
             System.out.println();
             System.out.println("M3 FlatBuffer Schema Generator (FBS)");
             System.out.println("====================================");
-            List<String> additionalFbs = args.length > 2
-                    ? List.of(java.util.Arrays.copyOfRange(args, 2, args.length))
-                    : List.of();
-            if (additionalFbs.isEmpty())
+
+            Path idRegistry = null;
+            List<String> additionalFbs = new java.util.ArrayList<>();
+            for (int i = 2; i < args.length; i++)
             {
-                System.out.println("  Input:  " + args[0]);
-            }
-            else
-            {
-                System.out.println("  Inputs: " + args[0]);
-                for (String add : additionalFbs)
+                if ("--ids".equals(args[i]) && i + 1 < args.length)
                 {
-                    System.out.println("          " + add);
+                    idRegistry = Paths.get(args[++i]);
+                }
+                else
+                {
+                    additionalFbs.add(args[i]);
                 }
             }
-            System.out.println("  Output: " + args[1]);
 
-            new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs);
+            System.out.println("  Input:    " + args[0]);
+            System.out.println("  Output:   " + args[1]);
+            if (idRegistry != null)
+            {
+                System.out.println("  Field IDs: " + idRegistry);
+            }
+            for (String add : additionalFbs)
+            {
+                System.out.println("  Merge:    " + add);
+            }
+
+            new RdfFbsSchemaGenerator(args[0]).generate(Paths.get(args[1]), additionalFbs, idRegistry);
             System.out.println("    FBS schema generation complete.");
         }
         catch (Exception e)

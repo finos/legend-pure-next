@@ -23,7 +23,9 @@ import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Standalone entry point for running Pure functions through the Truffle
@@ -35,6 +37,14 @@ import java.util.List;
  *       --function meta::pure::some::fn_... \
  *       [--args arg1 arg2 ...]
  * </pre>
+ *
+ * <p>Profiling: pass {@code --cpu-sampler} (optionally with
+ * {@code --cpu-sampler-period}, {@code --cpu-sampler-output},
+ * {@code --cpu-sampler-output-file}) to attach Truffle's polyglot CPU sampler
+ * for the run. To get readable Pure source locations in the report, pass
+ * {@code --source-root <dir>} (repeatable) for each directory whose tree the
+ * sourceIds in the PDB are relative to (typically {@code compiler-pure} for
+ * compiler PDBs).</p>
  */
 public final class PureCompileMain
 {
@@ -73,11 +83,106 @@ public final class PureCompileMain
         System.err.println("  compile --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources against base PDB(s)");
         System.err.println("  execute --pdb <file>... --function <path> [--args <arg>...]   Execute a Pure function");
         System.err.println();
+        System.err.println("Profiling options (work for both commands):");
+        System.err.println("  --source-root <dir>             Probe <dir>/<sourceId> to embed Pure source content (repeatable)");
+        System.err.println("  --cpu-sampler                   Attach Truffle's polyglot CPU sampler");
+        System.err.println("  --cpu-sampler-period <ms>       Sampling period in milliseconds (default: 10)");
+        System.err.println("  --cpu-sampler-output <fmt>      histogram | json | flamegraph (default: histogram)");
+        System.err.println("  --cpu-sampler-output-file <p>   Write report to <p> instead of stdout");
+        System.err.println("  --cpu-sampler-show-tiers        Show JIT tier breakdown in the histogram");
+        System.err.println("  --pure-profiler                 Per-Pure-function CPU profiler (works under libgraal,");
+        System.err.println("                                  unlike --cpu-sampler — uses Truffle instrumentation)");
+        System.err.println("  --pure-profiler-output-file <p> Write Pure profiler histogram to <p> instead of stdout");
+        System.err.println("  --pure-profiler-top <n>         Show top <n> entries (default: 50)");
+        System.err.println();
         System.err.println("Runs the Pure compiler / executor through the GraalVM Truffle interpreter.");
+    }
+
+    /**
+     * Mutable accumulator for the cross-cutting CLI options (source roots and
+     * cpu-sampler flags) that {@link #compile(String[])} and
+     * {@link #execute(String[])} both honour. We strip recognised flags from
+     * the argv during parsing; whatever remains is the subcommand-specific
+     * options.
+     */
+    private static final class ProfilingOptions
+    {
+        final List<Path> sourceRoots = new ArrayList<>();
+        final Map<String, String> polyglotOptions = new LinkedHashMap<>();
+        boolean cpuSampler;
+
+        void apply(PureTruffleRuntime.Builder b)
+        {
+            sourceRoots.forEach(b::withSourceRoot);
+            polyglotOptions.forEach(b::withPolyglotOption);
+        }
+    }
+
+    /**
+     * Strip {@code --source-root}, {@code --cpu-sampler*} flags out of {@code args},
+     * accumulating them on {@code opts}. Returns the residual arg list with those
+     * flags removed.
+     */
+    private static String[] consumeProfilingFlags(String[] args, ProfilingOptions opts)
+    {
+        List<String> rest = new ArrayList<>(args.length);
+        for (int i = 0; i < args.length; i++)
+        {
+            String a = args[i];
+            switch (a)
+            {
+                case "--source-root" -> opts.sourceRoots.add(Path.of(args[++i]));
+                case "--cpu-sampler" ->
+                {
+                    opts.cpuSampler = true;
+                    opts.polyglotOptions.put("cpusampler", "true");
+                }
+                case "--cpu-sampler-period" ->
+                {
+                    opts.cpuSampler = true;
+                    opts.polyglotOptions.put("cpusampler", "true");
+                    opts.polyglotOptions.put("cpusampler.Period", args[++i]);
+                }
+                case "--cpu-sampler-output" ->
+                {
+                    opts.cpuSampler = true;
+                    opts.polyglotOptions.put("cpusampler", "true");
+                    opts.polyglotOptions.put("cpusampler.Output", args[++i]);
+                }
+                case "--cpu-sampler-output-file" ->
+                {
+                    opts.cpuSampler = true;
+                    opts.polyglotOptions.put("cpusampler", "true");
+                    opts.polyglotOptions.put("cpusampler.OutputFile", args[++i]);
+                }
+                case "--cpu-sampler-show-tiers" ->
+                {
+                    opts.cpuSampler = true;
+                    opts.polyglotOptions.put("cpusampler", "true");
+                    opts.polyglotOptions.put("cpusampler.ShowTiers", "true");
+                }
+                case "--pure-profiler" -> opts.polyglotOptions.put("pureprofiler", "true");
+                case "--pure-profiler-output-file" ->
+                {
+                    opts.polyglotOptions.put("pureprofiler", "true");
+                    opts.polyglotOptions.put("pureprofiler.OutputFile", args[++i]);
+                }
+                case "--pure-profiler-top" ->
+                {
+                    opts.polyglotOptions.put("pureprofiler", "true");
+                    opts.polyglotOptions.put("pureprofiler.Top", args[++i]);
+                }
+                default -> rest.add(a);
+            }
+        }
+        return rest.toArray(String[]::new);
     }
 
     private static void compile(String[] args) throws Exception
     {
+        ProfilingOptions profiling = new ProfilingOptions();
+        args = consumeProfilingFlags(args, profiling);
+
         List<String> basePdbPaths = new ArrayList<>();
         String source = null;
         String output = null;
@@ -99,17 +204,27 @@ public final class PureCompileMain
             System.exit(1);
         }
 
+        // If --source-root wasn't given, default to the source directory we're
+        // compiling — its files match the sourceIds the parser embeds in the PDB.
+        if (profiling.sourceRoots.isEmpty())
+        {
+            profiling.sourceRoots.add(Path.of(source));
+        }
+
         List<Path> basePdbs = new ArrayList<>();
         for (String p : basePdbPaths)
         {
             basePdbs.add(Path.of(p));
         }
         org.finos.legend.pure.truffle.runtime.TruffleCompilerBinaryBuilder.compile(
-                basePdbs, Path.of(source), Path.of(output));
+                basePdbs, Path.of(source), Path.of(output), profiling::apply);
     }
 
     private static void execute(String[] args) throws Exception
     {
+        ProfilingOptions profiling = new ProfilingOptions();
+        args = consumeProfilingFlags(args, profiling);
+
         List<String> pdbPaths = new ArrayList<>();
         String function = null;
         List<String> fnArgs = new ArrayList<>();
@@ -197,32 +312,42 @@ public final class PureCompileMain
         for (var loader : loaders) loader.setResolver(resolver);
         for (var loader : loaders) loader.preloadAll();
 
-        PureTruffleRuntime runtime = PureTruffleRuntime.builder()
+        PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
                 .withResolver(resolver)
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
-                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
-                .build();
+                        new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()));
+        profiling.apply(runtimeBuilder);
+        PureTruffleRuntime runtime = runtimeBuilder.build();
 
-        FunctionDefinition fd = (FunctionDefinition) resolver.getElement(function);
-        if (fd == null)
+        try
         {
-            for (PDBModule mod : modules)
+            FunctionDefinition fd = (FunctionDefinition) resolver.getElement(function);
+            if (fd == null)
             {
-                fd = (FunctionDefinition) mod.getElement(function);
-                if (fd != null) break;
+                for (PDBModule mod : modules)
+                {
+                    fd = (FunctionDefinition) mod.getElement(function);
+                    if (fd != null) break;
+                }
+            }
+            if (fd == null)
+            {
+                System.err.println("Function not found: " + function);
+                System.exit(1);
+            }
+
+            Object result = runtime.execute(fd, fnArgs.toArray());
+            if (result != null)
+            {
+                System.out.println(result);
             }
         }
-        if (fd == null)
+        finally
         {
-            System.err.println("Function not found: " + function);
-            System.exit(1);
-        }
-
-        Object result = runtime.execute(fd, fnArgs.toArray());
-        if (result != null)
-        {
-            System.out.println(result);
+            // Closing the polyglot context flushes any attached engine tools
+            // (cpusampler, etc.) so their reports actually print.
+            runtime.close();
         }
     }
 }

@@ -44,9 +44,12 @@ public final class FbsSchemaParser
     // table Name { ... }   — body captured separately to handle nested braces simply
     private static final Pattern TABLE_HEADER = Pattern.compile("table\\s+(\\w+)\\s*\\{");
 
-    // field_name: TypeRef [= default] ;   — only care about field_name and TypeRef
+    // field_name: TypeRef [= default] [(attrs...)] ;
+    // Attribute clauses (e.g. {@code (id: N)} or {@code (deprecated, id: N)})
+    // are tolerated — RdfFbsSchemaGenerator emits explicit IDs to keep wire
+    // format stable across builds, so this parser must accept them.
     private static final Pattern FIELD_PATTERN = Pattern.compile(
-            "(\\w+)\\s*:\\s*(\\[\\s*(\\w+)\\s*\\]|(\\w+))(?:\\s*=\\s*[^;]+)?\\s*;");
+            "(\\w+)\\s*:\\s*(\\[\\s*(\\w+)\\s*\\]|(\\w+))(?:\\s*=\\s*[^;()]+)?(?:\\s*\\([^)]*\\))?\\s*;");
 
     private FbsSchemaParser()
     {

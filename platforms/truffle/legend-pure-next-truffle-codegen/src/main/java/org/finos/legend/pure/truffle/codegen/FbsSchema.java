@@ -71,17 +71,28 @@ public final class FbsSchema
                 {
                     continue;
                 }
-                String[] parts = line.split(":");
-                if (parts.length != 2)
+                // Field syntax: name: Type [(attr...)] [= default]
+                // Split on the FIRST colon only — the type portion may
+                // itself contain ":" (in attribute clauses like "(id: N)"
+                // emitted by RdfFbsSchemaGenerator for wire-format stability).
+                int colon = line.indexOf(':');
+                if (colon < 0)
                 {
                     continue;
                 }
-                String fieldName = parts[0].trim();
-                String fieldType = parts[1].trim();
+                String fieldName = line.substring(0, colon).trim();
+                String rest = line.substring(colon + 1).trim();
+                // Strip "(...)" attribute clause and "=..." default before
+                // reading the type — neither affects the wire-level shape.
+                int paren = rest.indexOf('(');
+                if (paren >= 0) { rest = rest.substring(0, paren).trim(); }
+                int eq = rest.indexOf('=');
+                if (eq >= 0) { rest = rest.substring(0, eq).trim(); }
+                String fieldType = rest;
                 boolean isVector = fieldType.startsWith("[") && fieldType.endsWith("]");
                 if (isVector)
                 {
-                    fieldType = fieldType.substring(1, fieldType.length() - 1);
+                    fieldType = fieldType.substring(1, fieldType.length() - 1).trim();
                 }
                 boolean isUnion = schema.unions.containsKey(fieldType);
                 fields.add(new FbsField(fieldName, fieldType, isVector, isUnion));

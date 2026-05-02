@@ -78,6 +78,12 @@ public final class PureFunctionRootNode extends RootNode
     @ExplodeLoop
     public Object execute(VirtualFrame frame)
     {
+        // Profiler hook — short-circuits to a single field load when
+        // disabled. Skipped on exceptional exit (uncommon — propagates as
+        // a Pure runtime error and the profiler frame stays on the
+        // stack until the next enter prunes it).
+        org.finos.legend.pure.truffle.profiler.PureProfiler.enter(name);
+
         Object[] arguments = frame.getArguments();
 
         // Bind params from arguments[0..]
@@ -98,6 +104,8 @@ public final class PureFunctionRootNode extends RootNode
         {
             result = ((PureNode) body[i]).executeGeneric(frame);
         }
+
+        org.finos.legend.pure.truffle.profiler.PureProfiler.exit();
         return result;
     }
 

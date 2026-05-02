@@ -89,6 +89,8 @@
                             <arguments>
                                 <argument>${spec.dir}/m3.ttl</argument>
                                 <argument>${gen.spec.dir}</argument>
+                                <argument>--ids</argument>
+                                <argument>${spec.dir}/m3-fbs-field-ids.txt</argument>
                                 <argument>${spec.dir}/m3_fbs_addition.fbs</argument>
                             </arguments>
                         </configuration>
