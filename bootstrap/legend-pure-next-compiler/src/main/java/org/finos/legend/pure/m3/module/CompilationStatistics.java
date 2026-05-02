@@ -78,8 +78,11 @@ public record CompilationStatistics(
             sb.append("    Top 10 Elements by Compilation Time\n");
             MutableList<ElementStatistics> sorted = Lists.mutable.withAll(elementStatistics.values());
             sorted.sortThisBy(e -> -e.totalNanos());
+            // %-20s on elementType fits "UserDefinedFunction" (19 chars) without
+            // overflowing — keeps shorter labels (Class, Profile…) aligned on
+            // the same rollbacks=/candidates= columns.
             sorted.take(10).forEach(e ->
-                    sb.append(String.format("      %8.2f ms  %-12s  rollbacks=%-6d candidates=%-6d  %s\n",
+                    sb.append(String.format("      %8.2f ms  %-20s  rollbacks=%-6d candidates=%-6d  %s\n",
                             e.totalMillis(), e.elementType(), e.inferenceRollbacks(), e.candidateEvaluations(), e.elementPath())));
         }
         return sb.toString();

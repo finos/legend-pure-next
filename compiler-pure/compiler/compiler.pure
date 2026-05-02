@@ -163,8 +163,11 @@ function meta::pure::compiler::printCompilationStatisticsSummary(s:CompilationSt
     let sortedElements = $s.elementStatistics->sort({a, b | $b.totalMillis - $a.totalMillis});
     let topN = if($sortedElements->size() > 10, | $sortedElements->take(10), | $sortedElements);
     let topRows = $topN->map(e |
+        // padRight elementType to 20 to fit 'UserDefinedFunction' (19 chars)
+        // without overflow; shorter labels (Class, Profile…) keep
+        // rollbacks=/candidates= columns aligned.
         '      ' + padLeft($e.totalMillis->toString() + ' ms', 9)
-            + '  ' + padRight($e.elementType, 18)
+            + '  ' + padRight($e.elementType, 20)
             + '  rollbacks=' + padRight($e.inferenceRollbacks->toString(), 6)
             + ' candidates=' + padRight($e.candidateEvaluations->toString(), 6)
             + '  ' + $e.elementPath
