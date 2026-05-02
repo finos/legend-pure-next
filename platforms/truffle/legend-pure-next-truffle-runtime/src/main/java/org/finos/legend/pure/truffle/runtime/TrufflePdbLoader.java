@@ -41,6 +41,8 @@ public final class TrufflePdbLoader implements TruffleModule
     private final CompressedArchiveReader archive;
     private final Map<String, Object> cache;
     private final java.util.IdentityHashMap<Object, String> reverseCache;
+    private final org.finos.legend.pure.truffle.runtime.helper.TypeCache typeCache =
+            new org.finos.legend.pure.truffle.runtime.helper.TypeCache();
     private TruffleMetadataAccess resolver = this; // default: self. Set to composite for multi-module.
 
     public TrufflePdbLoader(Path pdbPath) throws IOException
@@ -160,6 +162,12 @@ public final class TrufflePdbLoader implements TruffleModule
     public Set<String> elementPaths()
     {
         return archive.elementPaths();
+    }
+
+    @Override
+    public org.finos.legend.pure.truffle.runtime.TruffleTypeCache typeCache()
+    {
+        return typeCache;
     }
 
 

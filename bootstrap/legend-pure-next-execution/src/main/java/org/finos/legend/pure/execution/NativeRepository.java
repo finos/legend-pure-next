@@ -237,8 +237,23 @@ public class NativeRepository
     /**
      * Pure-semantics equality: PackageableElements are compared by path,
      * DynamicInstances by class+values, Lists element-wise.
+     *
+     * <p>Back-compat overload — does not use the per-resolver equality-key
+     * cache. Prefer {@link #pureEquals(Object, Object, MetadataAccess)} so
+     * key-property derivation is memoised.</p>
      */
     public static boolean pureEquals(Object a, Object b)
+    {
+        return pureEquals(a, b, null);
+    }
+
+    /**
+     * Pure-semantics equality with cached equality-key derivation. The
+     * resolver's {@link MetadataAccess#equalityKeyPropertiesCache cache}
+     * memoises the {@code <<equality.Key>>} property-name lookup per Type,
+     * which is otherwise re-walked for every DynamicInstance comparison.
+     */
+    public static boolean pureEquals(Object a, Object b, MetadataAccess resolver)
     {
         // Unwrap ValueSpecification wrappers before comparison
         if (a instanceof meta.pure.metamodel.valuespecification.ValueSpecification vsA)
@@ -278,11 +293,11 @@ public class NativeRepository
         // Normalize single-element List to its element for comparison
         if (a instanceof List<?> listA && listA.size() == 1 && !(b instanceof List<?>))
         {
-            return pureEquals(listA.get(0), b);
+            return pureEquals(listA.get(0), b, resolver);
         }
         if (b instanceof List<?> listB && listB.size() == 1 && !(a instanceof List<?>))
         {
-            return pureEquals(a, listB.get(0));
+            return pureEquals(a, listB.get(0), resolver);
         }
 
 
@@ -323,13 +338,13 @@ public class NativeRepository
                 meta.pure.metamodel.type.Type type = _GenericType.type(cgtA);
                 if (type instanceof meta.pure.metamodel.SimplePropertyOwner spo)
                 {
-                    java.util.List<String> keyProps = collectEqualityKeyProperties(spo);
+                    java.util.List<String> keyProps = collectEqualityKeyProperties(spo, type, resolver);
                     if (!keyProps.isEmpty())
                     {
                         // Compare only equality key properties
                         for (String prop : keyProps)
                         {
-                            if (!pureEquals(diA.get(prop), diB.get(prop)))
+                            if (!pureEquals(diA.get(prop), diB.get(prop), resolver))
                             {
                                 return false;
                             }
@@ -356,7 +371,7 @@ public class NativeRepository
             }
             for (int i = 0; i < listA.size(); i++)
             {
-                if (!pureEquals(listA.get(i), listB.get(i)))
+                if (!pureEquals(listA.get(i), listB.get(i), resolver))
                 {
                     return false;
                 }
@@ -374,12 +389,35 @@ public class NativeRepository
      * {@code <<equality.Key>>}, the subclass's definition takes precedence.
      * This means a property overridden WITHOUT the stereotype will NOT
      * be treated as an equality key.
+     * <p>
+     * When {@code resolver} is non-null the result is memoised in
+     * {@link MetadataAccess#equalityKeyPropertiesCache}, keyed by the
+     * {@code Type} associated with {@code owner}. The walk is otherwise
+     * re-executed on every call.
      */
-    private static java.util.List<String> collectEqualityKeyProperties(meta.pure.metamodel.SimplePropertyOwner owner)
+    private static java.util.List<String> collectEqualityKeyProperties(
+            meta.pure.metamodel.SimplePropertyOwner owner,
+            meta.pure.metamodel.type.Type cacheKey,
+            MetadataAccess resolver)
     {
+        if (resolver != null && cacheKey != null)
+        {
+            Map<meta.pure.metamodel.type.Type, java.util.List<String>> cache = resolver.equalityKeyPropertiesCache();
+            java.util.List<String> cached = cache.get(cacheKey);
+            if (cached != null)
+            {
+                return cached;
+            }
+            java.util.List<String> keys = new ArrayList<>();
+            collectEqualityKeyPropertiesRecursive(owner, keys, new java.util.LinkedHashSet<>());
+            java.util.List<String> immutable = keys.isEmpty()
+                    ? java.util.Collections.emptyList()
+                    : java.util.List.copyOf(keys);
+            cache.put(cacheKey, immutable);
+            return immutable;
+        }
         java.util.List<String> keys = new ArrayList<>();
-        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
-        collectEqualityKeyPropertiesRecursive(owner, keys, seen);
+        collectEqualityKeyPropertiesRecursive(owner, keys, new java.util.LinkedHashSet<>());
         return keys;
     }
 

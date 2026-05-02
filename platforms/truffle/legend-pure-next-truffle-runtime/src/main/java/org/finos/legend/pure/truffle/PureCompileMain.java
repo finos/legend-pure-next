@@ -164,6 +164,8 @@ public final class PureCompileMain
             loaders.add(new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(java.nio.file.Path.of(pdbPaths.get(mi))));
         }
         // Composite resolver: later modules take priority
+        org.finos.legend.pure.truffle.runtime.helper.TypeCache compositeTypeCache =
+                new org.finos.legend.pure.truffle.runtime.helper.TypeCache();
         org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = new org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess()
         {
             @Override public Object getElement(String p)
@@ -185,6 +187,10 @@ public final class PureCompileMain
                 java.util.Set<String> all = new java.util.LinkedHashSet<>();
                 for (var l : loaders) all.addAll(l.elementPaths());
                 return all;
+            }
+            @Override public org.finos.legend.pure.truffle.runtime.TruffleTypeCache typeCache()
+            {
+                return compositeTypeCache;
             }
         };
         // Wire composite resolver into each loader for cross-module FBW resolution

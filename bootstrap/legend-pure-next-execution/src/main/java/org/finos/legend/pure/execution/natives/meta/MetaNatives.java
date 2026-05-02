@@ -904,7 +904,7 @@ public class MetaNatives
                 if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV)
                 {
                     var argType = argV._type();
-                    if (argType == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argType, original))
+                    if (argType == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argType, original, resolver))
                     {
                         hasSelfRef = true;
                         break;
@@ -918,7 +918,7 @@ public class MetaNatives
                         typeArgs.collect(arg ->
                         {
                             if (arg instanceof meta.pure.metamodel.type.generics.GenericTypeValue argV
-                                    && (argV._type() == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original)))
+                                    && (argV._type() == original || org.finos.legend.pure.execution.NativeRepository.pureEquals(argV._type(), original, resolver)))
                             {
                                 meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl selfRef =
                                         _GenericType.buildUserDefinedGenericType(copyType, resolver);

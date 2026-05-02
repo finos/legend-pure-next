@@ -290,118 +290,39 @@ public final class EqualNode extends PureNode
 
     /**
      * Collect property names with the {@code <<equality.Key>>} stereotype
-     * from the object's class hierarchy via the PDB metamodel.
+     * from the object's class hierarchy via the PDB metamodel. Memoised per
+     * Type on the resolver — see {@link org.finos.legend.pure.truffle.runtime.helper.TypeCache}.
      */
     private static java.util.Set<String> collectEqualityKeyProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any obj, TruffleMetadataAccess resolver)
     {
-        java.util.Set<String> keys = new java.util.LinkedHashSet<>();
-        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
         var cgt = obj._classifierGenericType();
         if (cgt == null)
         {
             return null;
         }
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner spo = null;
-        var type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
-        if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner s)
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
+                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+        if (type == null)
         {
-            spo = s;
-        }
-        else
-        {
-            // Try resolving via the MetadataAccess from the Java interface name
+            // Fall back to interface-name resolution for FlatBuffer wrappers
+            // whose generic type doesn't surface a resolved Type.
             String ifaceName = obj.getClass().getInterfaces().length > 0
                     ? obj.getClass().getInterfaces()[0].getName().replace(".", "::") : null;
             if (ifaceName != null)
             {
-                var elem = resolver.getElement(ifaceName);
-                if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner s2)
+                Object elem = resolver.getElement(ifaceName);
+                if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
                 {
-                    spo = s2;
+                    type = t;
                 }
             }
         }
-        if (spo == null)
+        if (type == null)
         {
             return null;
         }
-        try
-        {
-            collectEqualityKeysRecursive(spo, keys, seen);
-        }
-        catch (StackOverflowError ignored)
-        {
-            // FlatBuffer wrapper cycles — fall back to no equality keys
-            return null;
-        }
-        return keys;
-    }
-
-    private static void collectEqualityKeysRecursive(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner owner,
-            java.util.Set<String> keys, java.util.Set<String> seen)
-    {
-        collectEqualityKeysRecursive(owner, keys, seen, 0);
-    }
-
-    private static void collectEqualityKeysRecursive(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner owner,
-            java.util.Set<String> keys, java.util.Set<String> seen,
-            int depth)
-    {
-        // Guard against cycles in the generalization hierarchy.
-        // FlatBuffer wrappers create new Java objects per access, so identity
-        // and name checks can fail. A depth limit is the robust safety net.
-        if (depth > 10)
-        {
-            return;
-        }
-        if (owner._properties() != null)
-        {
-            for (Object p : owner._properties().toBoxedArray())
-            {
-                if (!(p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop))
-                {
-                    continue;
-                }
-                String propName = prop._name();
-                if (propName == null || seen.contains(propName))
-                {
-                    continue;
-                }
-                seen.add(propName);
-                org.finos.legend.pure.truffle.types.PureSequence stereotypes = prop._stereotypes();
-                if (stereotypes != null)
-                {
-                    for (Object st : stereotypes.toBoxedArray())
-                    {
-                        if (st instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype ster
-                                && "Key".equals(ster._value())
-                                && ster._profile() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement ppe
-                                && "meta::pure::profiles::equality".equals(
-                                org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(ppe)))
-                        {
-                            keys.add(propName);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if (owner instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type && type._generalizations() != null)
-        {
-            for (Object gen : type._generalizations().toBoxedArray())
-            {
-                if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g && g._general() != null)
-                {
-                    var superType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general());
-                    if (superType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner superOwner)
-                    {
-                        collectEqualityKeysRecursive(superOwner, keys, seen, depth + 1);
-                    }
-                }
-            }
-        }
+        java.util.Set<String> keys = resolver.typeCache().equalityKeyProperties(type);
+        return keys.isEmpty() ? null : keys;
     }
 
     private static Object normalizeForEquals(Object v)

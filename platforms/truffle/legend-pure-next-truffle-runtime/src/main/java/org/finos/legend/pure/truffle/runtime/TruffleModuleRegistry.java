@@ -14,6 +14,8 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
+import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -48,6 +50,7 @@ import java.util.Set;
 public final class TruffleModuleRegistry implements TruffleMetadataAccess
 {
     private final LinkedHashMap<String, TruffleModule> modules = new LinkedHashMap<>();
+    private final TypeCache typeCache = new TypeCache();
 
     /**
      * Register a module. Validates that all declared dependencies are already
@@ -196,5 +199,11 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             }
         }
         return null;
+    }
+
+    @Override
+    public TruffleTypeCache typeCache()
+    {
+        return typeCache;
     }
 }

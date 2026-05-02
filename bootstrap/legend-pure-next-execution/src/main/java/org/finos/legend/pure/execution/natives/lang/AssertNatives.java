@@ -86,7 +86,7 @@ public class AssertNatives
         {
             ValueSpecification expected = args.get(0);
             ValueSpecification actual = args.get(1);
-            if (!NativeRepository.pureEquals(expected, actual))
+            if (!NativeRepository.pureEquals(expected, actual, resolver))
             {
                 throw new PureAssertionError("assertEqual failed:\nexpected: " + NativeRepository.pureToString(expected) + "\nactual:   " + NativeRepository.pureToString(actual));
             }

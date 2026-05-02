@@ -59,6 +59,8 @@ class TruffleTestCompilerPure
         TrufflePdbLoader coreLoader = new TrufflePdbLoader(corePdb);
         TrufflePdbLoader compilerLoader = new TrufflePdbLoader(compilerPdb);
 
+        org.finos.legend.pure.truffle.runtime.helper.TypeCache typeCache =
+                new org.finos.legend.pure.truffle.runtime.helper.TypeCache();
         TruffleMetadataAccess resolver = new TruffleMetadataAccess()
         {
             @Override
@@ -80,6 +82,12 @@ class TruffleTestCompilerPure
                 java.util.Set<String> all = new java.util.LinkedHashSet<>(coreLoader.elementPaths());
                 all.addAll(compilerLoader.elementPaths());
                 return all;
+            }
+
+            @Override
+            public org.finos.legend.pure.truffle.runtime.TruffleTypeCache typeCache()
+            {
+                return typeCache;
             }
         };
 

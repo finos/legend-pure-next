@@ -328,7 +328,7 @@ public class CollectionNatives
                     else
                     {
                         // pureEquals auto-unwraps ValueSpecification arguments
-                        if (org.finos.legend.pure.execution.NativeRepository.pureEquals(existingKey, itemKey))
+                        if (org.finos.legend.pure.execution.NativeRepository.pureEquals(existingKey, itemKey, resolver))
                         {
                             found = true;
                             break;
@@ -357,7 +357,7 @@ public class CollectionNatives
             for (int i = 0; i < col._values().size(); i++)
             {
                 // pureEquals auto-unwraps both VS arguments
-                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(col._values().get(i), args.get(1)))
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(col._values().get(i), args.get(1), resolver))
                 {
                     return _E_ValueSpecification.wrap((long) i, genericType, multiplicity, resolver);
                 }
@@ -436,7 +436,7 @@ public class CollectionNatives
                 for (ValueSpecification other : otherCol._values())
                 {
                     // pureEquals auto-unwraps both VS arguments
-                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(vs, other))
+                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(vs, other, resolver))
                     {
                         found = true;
                         break;
@@ -477,7 +477,7 @@ public class CollectionNatives
             ValueSpecification valueVS = args.get(2);
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
             // remove existing structurally-equal key first
-            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, keyVS));
+            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, keyVS, resolver));
             m.put(keyVS, valueVS);
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
@@ -489,7 +489,7 @@ public class CollectionNatives
             ValueSpecification keyVS = args.get(1);
             for (Map.Entry<ValueSpecification, ValueSpecification> e : pureMap.getMap().entrySet())
             {
-                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(e.getKey(), keyVS))
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(e.getKey(), keyVS, resolver))
                 {
                     // Return the stored VS directly — type info is already embedded
                     return e.getValue();
@@ -542,7 +542,7 @@ public class CollectionNatives
                 DynamicInstance pair = (DynamicInstance) _E_ValueSpecification.unwrap(pairVS);
                 ValueSpecification kVS = _E_ValueSpecification.wrap(pair.get("first"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("first"), resolver), null, resolver);
                 ValueSpecification vVS = _E_ValueSpecification.wrap(pair.get("second"), org.finos.legend.pure.execution.PureTypeResolver.getClassifierGenericType(pair.get("second"), resolver), null, resolver);
-                m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, kVS));
+                m.keySet().removeIf(key -> org.finos.legend.pure.execution.NativeRepository.pureEquals(key, kVS, resolver));
                 m.put(kVS, vVS);
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
@@ -556,7 +556,7 @@ public class CollectionNatives
             java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(m1.getMap());
             for (Map.Entry<ValueSpecification, ValueSpecification> e : m2.getMap().entrySet())
             {
-                m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, e.getKey()));
+                m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, e.getKey(), resolver));
                 m.put(e.getKey(), e.getValue());
             }
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
@@ -602,7 +602,7 @@ public class CollectionNatives
                 ValueSpecification canonicalKey = null;
                 for (ValueSpecification k : grouped.keySet())
                 {
-                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key))
+                    if (org.finos.legend.pure.execution.NativeRepository.pureEquals(k, key, resolver))
                     {
                         canonicalKey = k;
                         break;

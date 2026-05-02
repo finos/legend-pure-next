@@ -38,6 +38,7 @@ public final class ScopedMetadataAccess implements MetadataAccess
     private final Module self;
     private final MutableList<Module> dependencies;
     private final Map<Type, MutableList<Type>> linearizationCache = new IdentityHashMap<>();
+    private final Map<Type, java.util.List<String>> equalityKeyPropertiesCache = new IdentityHashMap<>();
 
     public ScopedMetadataAccess(Module self, PureModel model)
     {
@@ -120,5 +121,11 @@ public final class ScopedMetadataAccess implements MetadataAccess
     public Map<Type, MutableList<Type>> linearizationCache()
     {
         return linearizationCache;
+    }
+
+    @Override
+    public Map<Type, java.util.List<String>> equalityKeyPropertiesCache()
+    {
+        return equalityKeyPropertiesCache;
     }
 }

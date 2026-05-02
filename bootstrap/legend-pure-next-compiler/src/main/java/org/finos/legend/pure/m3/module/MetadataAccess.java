@@ -71,4 +71,17 @@ public interface MetadataAccess
     {
         return new IdentityHashMap<>();
     }
+
+    /**
+     * Per-resolver cache for equality-key property names (the names of
+     * properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}
+     * on a Type and its supertypes). Walks the same generalization chain
+     * as {@link #linearizationCache()}; without caching it re-walks on
+     * every {@code pureEquals} call against a DynamicInstance. Concrete
+     * implementations override to provide a persistent {@link IdentityHashMap}.
+     */
+    default Map<Type, java.util.List<String>> equalityKeyPropertiesCache()
+    {
+        return new IdentityHashMap<>();
+    }
 }

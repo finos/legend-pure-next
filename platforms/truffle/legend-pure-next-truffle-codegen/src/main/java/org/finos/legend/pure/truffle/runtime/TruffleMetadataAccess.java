@@ -38,4 +38,11 @@ public interface TruffleMetadataAccess
     {
         return null;
     }
+
+    /**
+     * Per-resolver memoisation of type-shape derivations (linearization,
+     * equality keys). Lives on the resolver so its lifetime tracks the
+     * loaded modules — no shared static state.
+     */
+    TruffleTypeCache typeCache();
 }

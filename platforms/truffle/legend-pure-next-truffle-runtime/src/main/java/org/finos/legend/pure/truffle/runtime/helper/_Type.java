@@ -3,41 +3,22 @@ package org.finos.legend.pure.truffle.runtime.helper;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.truffle.types.PureSequence;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public final class _Type
 {
     private _Type() {}
 
+    @SuppressWarnings("unchecked")
     public static List<Type> linearize(Type type, TruffleMetadataAccess resolver)
     {
-        List<Type> result = new ArrayList<>();
-        linearizeRecursive(type, result);
-        return result;
-    }
-
-    private static void linearizeRecursive(Type type, List<Type> result)
-    {
-        if (type == null || result.contains(type))
-        {
-            return;
-        }
-        result.add(type);
-        Object gens = type._generalizations();
-        if (gens instanceof PureSequence seq)
-        {
-            for (Object gen : seq.toBoxedArray())
-            {
-                if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g)
-                {
-                    Type superType = _GenericType.type(g._general());
-                    linearizeRecursive(superType, result);
-                }
-            }
-        }
+        // Memoised on the resolver — identity-keyed, computed once per Type.
+        // Cast: the runtime TypeCache impl always stores List<Type>; the
+        // List<?> contract on TruffleTypeCache is purely so the interface
+        // can live in codegen (where the generated Type class isn't yet on
+        // the classpath at first-pass compile).
+        return (List<Type>) resolver.typeCache().linearization(type);
     }
 
     public static boolean subtypeOf(Type sub, Type sup, TruffleMetadataAccess resolver)

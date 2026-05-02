@@ -32,6 +32,14 @@ cli       := out / "cli" / "pure-cli.jar"
 truffle_codegen := truffle / "legend-pure-next-truffle-codegen"
 truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
 
+# Truffle JVM invocation. The polyglot engine falls back to an interpreter
+# (and prints a `WARNING: The polyglot engine uses a fallback runtime…`)
+# unless JVMCI is explicitly enabled and selected as the JIT. With GraalVM
+# JDK on PATH that gives Graal real runtime compilation; on a non-Graal JDK
+# the JVMCI flags become inert (the launcher silently keeps interpreting),
+# so the same recipe works in either environment.
+truffle_java := "java -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler"
+
 # verbose='' (default) → mvn runs with -q, JVM noise filtered from stderr.
 # verbose=anything-else → mvn runs without -q, nothing filtered.
 verbose := ""
@@ -119,7 +127,7 @@ build-truffle: generate-pdb-classes
 # Run the Pure test suite via the Truffle interpreter (JVM mode).
 test-pure-truffle: build-truffle build-compiler-pdb
     @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over specification/compiler'
-    java -jar {{out}}/cli/pure-compile.jar execute \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
@@ -161,7 +169,7 @@ test: build-truffle test-compiler-pure-truffle test-self-host-java test-self-hos
 # Run the compiler-pure tests via the Truffle interpreter.
 test-compiler-pure-truffle: build-truffle build-compiler-pdb
     @{{banner}} '[pure→truffle]' 'runCompiledGraphTests (compiler-pure spec)'
-    java -jar {{out}}/cli/pure-compile.jar execute \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
@@ -195,12 +203,12 @@ test-self-host-java: build-compiler-pdb
 # {{out}}/compiler.pdb (built by build-compiler-pdb) is passed as a base.
 test-self-host-truffle: build-truffle build-compiler-pdb
     @{{banner}} '[self-host-truffle]' 'compiler-pure → compiler_truffle.pdb (truffle CLI), then run compiler tests'
-    java -jar {{out}}/cli/pure-compile.jar compile \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar compile \
         --base-pdb {{out}}/core.pdb \
         --base-pdb {{out}}/compiler.pdb \
         --source {{compiler}} \
         --output {{out}}/compiler_truffle.pdb {{err_filter}}
-    java -jar {{out}}/cli/pure-compile.jar execute \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler_truffle.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__Boolean_1_" \
@@ -224,7 +232,7 @@ test-functions-pure: build-compiler-pdb
 
 test-functions-truffle: build-truffle build-compiler-pdb
     @{{banner}} '[pure→truffle]' 'runFunctionTests'
-    java -jar {{out}}/cli/pure-compile.jar execute \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runFunctionTests_String_1__Boolean_1_" \
@@ -248,7 +256,7 @@ test-pct-pure: build-compiler-pdb
 
 test-pct-truffle: build-truffle build-compiler-pdb
     @{{banner}} '[pure→truffle]' 'runPCTTests'
-    java -jar {{out}}/cli/pure-compile.jar execute \
+    {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
         --function "meta::pure::test::runPCTTests_String_1__Boolean_1_" \
