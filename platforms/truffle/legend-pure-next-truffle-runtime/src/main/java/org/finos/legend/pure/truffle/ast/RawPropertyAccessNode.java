@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty;
@@ -80,11 +81,7 @@ public final class RawPropertyAccessNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object[] argValues = new Object[argNodes.length];
-        for (int i = 0; i < argNodes.length; i++)
-        {
-            argValues[i] = argNodes[i].executeGeneric(frame);
-        }
+        Object[] argValues = evaluateArgs(frame);
 
         if (isQualifiedProperty)
         {
@@ -167,5 +164,22 @@ public final class RawPropertyAccessNode extends PureNode
         }
 
         throw new RuntimeException("Cannot access property: " + propName);
+    }
+
+    /**
+     * Evaluate child argument nodes. Pulled into its own method so {@link
+     * ExplodeLoop} can fully unroll the {@code @Children} iteration —
+     * argNodes.length is compilation-final, but only when the loop is in
+     * a method whose only loop has a known bound.
+     */
+    @ExplodeLoop
+    private Object[] evaluateArgs(VirtualFrame frame)
+    {
+        Object[] argValues = new Object[argNodes.length];
+        for (int i = 0; i < argNodes.length; i++)
+        {
+            argValues[i] = argNodes[i].executeGeneric(frame);
+        }
+        return argValues;
     }
 }

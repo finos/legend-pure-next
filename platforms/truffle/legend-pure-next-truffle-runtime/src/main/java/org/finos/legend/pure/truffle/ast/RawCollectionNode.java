@@ -15,6 +15,7 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -47,11 +48,17 @@ public final class RawCollectionNode extends PureNode
         {
             return children[0].executeGeneric(frame);
         }
+        return new ObjectSequence(evaluateChildren(frame));
+    }
+
+    @ExplodeLoop
+    private Object[] evaluateChildren(VirtualFrame frame)
+    {
         Object[] values = new Object[children.length];
         for (int i = 0; i < children.length; i++)
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return new ObjectSequence(values);
+        return values;
     }
 }

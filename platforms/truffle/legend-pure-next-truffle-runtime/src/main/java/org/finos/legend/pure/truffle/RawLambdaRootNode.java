@@ -82,13 +82,17 @@ public final class RawLambdaRootNode extends RootNode
         {
             frame.setObject(paramSlots[i], arguments[i + 1]);
         }
-        // Bind open vars from RawClosure captured values
+        // Bind open vars from RawClosure captured values. Iterate
+        // openVarSlots.length (compilation-final) so @ExplodeLoop above
+        // can fully unroll this loop and Graal can virtualise the frame
+        // — using captured.length would leave a runtime-bounded loop and
+        // force the frame to materialise (Truffle frame-escape bailout).
+        // RawLambdaCaptureNode sizes capturedValues from openVarNames.length,
+        // which equals openVarSlots.length, so the indices stay in bounds.
         if (closureOrLambda instanceof RawClosure rc)
         {
             Object[] captured = rc.capturedValues();
-            // Fast path: captured values align with openVarSlots by index
-            int count = Math.min(captured.length, openVarSlots.length);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < openVarSlots.length; i++)
             {
                 if (openVarSlots[i] >= 0)
                 {

@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
@@ -60,6 +61,14 @@ public final class RawLambdaCaptureNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
+        Object[] capturedValues = capture(frame);
+        RootCallTarget ct = lookupCallTarget();
+        return new RawClosure(lambda, capturedValues, openVarNames, ct);
+    }
+
+    @ExplodeLoop
+    private Object[] capture(VirtualFrame frame)
+    {
         Object[] capturedValues = new Object[openVarNames.length];
         for (int i = 0; i < openVarNames.length; i++)
         {
@@ -68,8 +77,7 @@ public final class RawLambdaCaptureNode extends PureNode
                 capturedValues[i] = frame.getObject(openVarSlots[i]);
             }
         }
-        RootCallTarget ct = lookupCallTarget();
-        return new RawClosure(lambda, capturedValues, openVarNames, ct);
+        return capturedValues;
     }
 
     @CompilationFinal

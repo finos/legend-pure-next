@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
@@ -57,11 +58,7 @@ public final class RawUserFunctionCallNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object[] args = new Object[argNodes.length];
-        for (int i = 0; i < argNodes.length; i++)
-        {
-            args[i] = argNodes[i].executeGeneric(frame);
-        }
+        Object[] args = evaluateArgs(frame);
         // For QPs: dispatch based on target's runtime type
         if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp && args.length > 0)
         {
@@ -80,6 +77,17 @@ public final class RawUserFunctionCallNode extends PureNode
             return callNode.call(ct, args);
         }
         return getContext().executeFunction(fd, args);
+    }
+
+    @ExplodeLoop
+    private Object[] evaluateArgs(VirtualFrame frame)
+    {
+        Object[] args = new Object[argNodes.length];
+        for (int i = 0; i < argNodes.length; i++)
+        {
+            args[i] = argNodes[i].executeGeneric(frame);
+        }
+        return args;
     }
 
     private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
