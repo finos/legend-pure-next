@@ -42,12 +42,10 @@ public final class IsNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
-        Object a = left.executeGeneric(frame);
-        Object b = right.executeGeneric(frame);
-        Object rawA = normalize(a);
-        Object rawB = normalize(b);
+        Object rawA = normalize(left.executeGeneric(frame));
+        Object rawB = normalize(right.executeGeneric(frame));
         if (rawA == rawB)
         {
             return true;
@@ -96,6 +94,12 @@ public final class IsNode extends PureNode
             return Objects.equals(extractEnumValueName(s), eb._name());
         }
         return false;
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeBoolean(frame);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

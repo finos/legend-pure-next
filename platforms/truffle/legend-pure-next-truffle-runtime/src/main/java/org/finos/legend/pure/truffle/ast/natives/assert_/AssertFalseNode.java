@@ -42,9 +42,7 @@ public final class AssertFalseNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object v = valueArg.executeGeneric(frame);
-        boolean value = asBoolean(v);
-        if (value)
+        if (valueArg.executeBoolean(frame))
         {
             if (messageArg != null)
             {
@@ -54,15 +52,5 @@ public final class AssertFalseNode extends PureNode
             throw new PureException.AssertionError("assertFalse failed: value was true", null);
         }
         return true;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean asBoolean(Object v)
-    {
-        if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        return false;
     }
 }

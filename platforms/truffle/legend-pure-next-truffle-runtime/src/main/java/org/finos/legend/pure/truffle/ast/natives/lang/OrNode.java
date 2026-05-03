@@ -27,8 +27,6 @@ import org.finos.legend.pure.truffle.ast.PureNode;
 @NodeInfo(shortName = "or")
 public final class OrNode extends PureNode
 {
-    private static final String SIG = "or_Boolean_1__Boolean_1__Boolean_1_";
-
     @Child
     private PureNode left;
 
@@ -42,24 +40,14 @@ public final class OrNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
-        boolean first = asBoolean(left.executeGeneric(frame));
-        if (first)
-        {
-            return true;
-        }
-        return asBoolean(right.executeGeneric(frame));
+        return left.executeBoolean(frame) || right.executeBoolean(frame);
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean asBoolean(Object v)
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
     {
-        if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (v == null ? "null" : v.getClass().getName()));
+        return executeBoolean(frame);
     }
 }

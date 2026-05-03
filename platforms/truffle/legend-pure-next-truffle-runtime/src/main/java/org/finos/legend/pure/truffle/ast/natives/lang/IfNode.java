@@ -28,8 +28,6 @@ import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 @NodeInfo(shortName = "if")
 public final class IfNode extends PureNode
 {
-    private static final String SIG = "if_Boolean_1__Function_1__Function_1__T_m_";
-
     @Child
     private PureNode condition;
 
@@ -52,22 +50,13 @@ public final class IfNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object condVal = condition.executeGeneric(frame);
-        boolean cond = asBoolean(condVal);
-        Object branchFn = cond
+        // condition.executeBoolean stays primitive on the JVM stack when the
+        // child is one of the boolean producers (NotBool / And / Or / Equal /
+        // comparison nodes). For producers that still return Object the base
+        // PureNode.executeBoolean does the unbox.
+        Object branchFn = condition.executeBoolean(frame)
                 ? thenBranch.executeGeneric(frame)
                 : elseBranch.executeGeneric(frame);
         return callNode.call(branchFn);
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean asBoolean(Object v)
-    {
-        if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (v == null ? "null" : v.getClass().getName()));
     }
 }

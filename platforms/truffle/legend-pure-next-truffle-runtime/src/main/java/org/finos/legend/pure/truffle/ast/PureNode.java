@@ -42,6 +42,31 @@ public abstract class PureNode extends Node
 
     public abstract Object executeGeneric(VirtualFrame frame);
 
+    /**
+     * Specialised entry point for nodes whose Pure type is {@code Boolean[1]}.
+     * Producers (e.g. {@link org.finos.legend.pure.truffle.ast.natives.boolean_.NotBooleanNode},
+     * {@link org.finos.legend.pure.truffle.ast.natives.lang.AndNode}) override
+     * this to return a primitive {@code boolean} directly — letting consumers
+     * (e.g. {@link org.finos.legend.pure.truffle.ast.natives.lang.IfNode}'s
+     * condition) skip the box / unbox pair and keep the value on the JVM
+     * stack.
+     *
+     * <p>The default implementation unboxes from {@link #executeGeneric}; a
+     * non-Boolean result deopts to the interpreter and throws — Pure's type
+     * system guarantees this branch is unreachable for well-typed code.</p>
+     */
+    public boolean executeBoolean(VirtualFrame frame)
+    {
+        Object value = executeGeneric(frame);
+        if (value instanceof Boolean b)
+        {
+            return b;
+        }
+        com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+        throw new ClassCastException("expected Boolean, got: "
+                + (value == null ? "null" : value.getClass().getName()));
+    }
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     protected final org.finos.legend.pure.truffle.PureContext getContext()
     {

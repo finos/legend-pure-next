@@ -44,13 +44,17 @@ public final class EqualNode extends PureNode
     }
 
     @Override
+    public boolean executeBoolean(VirtualFrame frame)
+    {
+        Object rawA = normalizeForEquals(left.executeGeneric(frame));
+        Object rawB = normalizeForEquals(right.executeGeneric(frame));
+        return callPureEquals(rawA, rawB, getResolver());
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object a = left.executeGeneric(frame);
-        Object b = right.executeGeneric(frame);
-        Object rawA = normalizeForEquals(a);
-        Object rawB = normalizeForEquals(b);
-        return callPureEquals(rawA, rawB, getResolver());
+        return executeBoolean(frame);
     }
 
     // @TruffleBoundary — equality is inherently recursive over arbitrary

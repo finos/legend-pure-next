@@ -21,8 +21,6 @@ import org.finos.legend.pure.truffle.ast.PureNode;
 @NodeInfo(shortName = "notBool")
 public final class NotBooleanNode extends PureNode
 {
-    private static final String SIG = "not_Boolean_1__Boolean_1_";
-
     @Child
     private PureNode operand;
 
@@ -32,20 +30,14 @@ public final class NotBooleanNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
-        boolean b = asBoolean(operand.executeGeneric(frame));
-        return !b;
+        return !operand.executeBoolean(frame);
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean asBoolean(Object v)
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
     {
-        if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        throw new ClassCastException(SIG + " expected Boolean, got: "
-                + (v == null ? "null" : v.getClass().getName()));
+        return executeBoolean(frame);
     }
 }

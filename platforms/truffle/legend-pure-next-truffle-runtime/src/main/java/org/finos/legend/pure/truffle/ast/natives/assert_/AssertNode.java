@@ -43,9 +43,7 @@ public final class AssertNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object cond = conditionArg.executeGeneric(frame);
-        boolean condition = asBoolean(cond);
-        if (!condition)
+        if (!conditionArg.executeBoolean(frame))
         {
             if (messageFnArg != null)
             {
@@ -65,15 +63,5 @@ public final class AssertNode extends PureNode
     {
         Object message = msgCallNode.call(msgFn);
         throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError(String.valueOf(message), this);
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean asBoolean(Object v)
-    {
-        if (v instanceof Boolean b)
-        {
-            return b;
-        }
-        return false;
     }
 }
