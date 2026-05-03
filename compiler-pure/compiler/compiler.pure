@@ -375,7 +375,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
     //   has hits, and again between pass 2 and pass 3 so any types refined
     //   during pass 2 (e.g. compiled bodies that change generalizations or
     //   add new types) get refreshed entries before pass 3 resolution.
-    let pass2StartCtx = $pass1Context->buildLinearizationCache();
+    let pass2StartCtx = $pass1Context->buildLinearizationCache()->buildLocalFunctionIndex();
     let pass2Start = currentTimeMillis();
     let pass2 = $allElements->fold({e, acc |
         let beforeT = currentTimeMillis();

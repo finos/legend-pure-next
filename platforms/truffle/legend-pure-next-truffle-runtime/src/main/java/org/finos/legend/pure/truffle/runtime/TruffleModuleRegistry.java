@@ -18,9 +18,11 @@ import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,6 +53,18 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
 {
     private final LinkedHashMap<String, TruffleModule> modules = new LinkedHashMap<>();
     private final TypeCache typeCache = new TypeCache();
+    // Lazy index keyed by (function shortName, arity) → resolved
+    //   {@code PackageableFunction}s. Built on first access from
+    //   {@link #functionsByNameAndArity(String,int)} by walking every module's
+    //   {@link TruffleModule#elementPaths()} once and resolving each function
+    //   path to confirm its name (path mangling is ambiguous, e.g.
+    //   {@code unify} vs {@code unify_step1_pairwiseBind}) and parameter count.
+    //   Replaces a per-call linear scan in
+    //   {@code FindFunctionsByNameAndArityNode} (8.5% of self-host CPU when
+    //   measured); after this index every lookup is two map gets. Invalidated
+    //   on register / unregister so newly registered modules' functions become
+    //   visible without forcing callers through a rebuild.
+    private Map<String, Map<Integer, List<Object>>> functionsByNameArity;
 
     /**
      * Register a module. Validates that all declared dependencies are already
@@ -74,6 +88,7 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                             + "Call unregister(name) before re-registering.");
         }
         modules.put(module.name(), module);
+        functionsByNameArity = null;
     }
 
     /**
@@ -98,10 +113,61 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             }
         }
         modules.remove(name);
+        functionsByNameArity = null;
         for (String d : dependents)
         {
             unregister(d);
         }
+    }
+
+    /**
+     * Lookup resolved {@code PackageableFunction}s by short name and arity.
+     * O(1) — backed by an index keyed by (functionName, parameterCount) that's
+     * built lazily on first access by resolving every module's element paths.
+     * Returns the empty list when no function matches; never falls back to a
+     * scan.
+     */
+    public List<Object> functionsByNameAndArity(String name, int arity)
+    {
+        Map<String, Map<Integer, List<Object>>> idx = functionsByNameArity;
+        if (idx == null)
+        {
+            idx = buildFunctionIndex();
+            functionsByNameArity = idx;
+        }
+        Map<Integer, List<Object>> byArity = idx.get(name);
+        if (byArity == null)
+        {
+            return List.of();
+        }
+        List<Object> hits = byArity.get(arity);
+        return hits != null ? hits : List.of();
+    }
+
+    private Map<String, Map<Integer, List<Object>>> buildFunctionIndex()
+    {
+        Map<String, Map<Integer, List<Object>>> idx = new HashMap<>();
+        for (TruffleModule m : modules.values())
+        {
+            for (String path : m.elementPaths())
+            {
+                Object element = getElement(path);
+                if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction pf))
+                {
+                    continue;
+                }
+                String fnName = pf._functionName();
+                if (fnName == null)
+                {
+                    continue;
+                }
+                int arity = pf._parameters() == null ? 0 : pf._parameters().size();
+                idx.computeIfAbsent(fnName, k -> new HashMap<>())
+                   .computeIfAbsent(arity, k -> new ArrayList<>())
+                   .add(element);
+            }
+        }
+        return idx;
     }
 
     /** All registered modules, in dependency-first order. */

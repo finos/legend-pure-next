@@ -289,22 +289,17 @@ function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1
 
 function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
 {
-    // Union: native index + locally-defined functions from context elementMap.
+    // Union: native index (base PDB functions, indexed by short name in
+    //   {@code TruffleModuleRegistry.pathsByFunctionName}) + locally-defined
+    //   functions from {@code localFunctionIndex} (built between pass 1 and
+    //   pass 2 by {@link buildLocalFunctionIndex}). Both are O(1) lookups
+    //   keyed by short name; no scan of {@code elementMap} or
+    //   {@code elementPaths} happens on the hot path.
     let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
-    // Index lookup when populated (pass 3); fallback to elementMap walk when
-    // not (pass 1/2 still build the map and call this for early lookups).
     let indexedByName = $context.localFunctionIndex->get($name);
-    let localCandidates = if($indexedByName->isNotEmpty(),
-        | $indexedByName->toOne().values->filter(f | $f.parameters->size() == $arity),
-        | if($context.localFunctionIndex->keys()->isNotEmpty(),
-              | []->cast(@PackageableFunction<Any>),
-              | $context.elementMap->values()
-                    ->filter(e | $e->instanceOf(PackageableFunction))
-                    ->cast(@PackageableFunction<Any>)
-                    ->filter(f | $f.functionName->isNotEmpty()
-                                 && $f.functionName == $name
-                                 && $f.parameters->size() == $arity)
-        )
+    let localCandidates = if($indexedByName->isEmpty(),
+        | []->cast(@PackageableFunction<Any>),
+        | $indexedByName->toOne().values->filter(f | $f.parameters->size() == $arity)
     );
     // Self-hosting: when the same fully qualified path appears in both the
     // base PDB and the current source, prefer the local definition. Without
@@ -313,10 +308,8 @@ function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:
     // (two candidates with identical signatures).
     let localPaths = $localCandidates->map(f | $f->elementToPath());
     let nativeFiltered = $nativeCandidates->filter(f | !$localPaths->contains($f->elementToPath()));
-    // Belt-and-braces dedupe-by-path on the merged list. The startsWith name
-    // filter above can over-collect when two functions share a prefix
-    // (e.g. `foo` vs `foo_build`); a path-based pass collapses any survivors
-    // with identical paths from either side.
+    // Belt-and-braces dedupe-by-path on the merged list — collapses any
+    // duplicates with identical paths from either side.
     $nativeFiltered->concatenate($localCandidates)->removeDuplicatesBy(f | $f->elementToPath());
 }
 

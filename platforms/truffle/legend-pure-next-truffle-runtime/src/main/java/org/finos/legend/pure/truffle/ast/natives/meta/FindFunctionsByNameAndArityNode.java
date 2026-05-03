@@ -20,10 +20,10 @@ import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -61,46 +61,18 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
 
     private static Object findFunctions(String name, int arity, TruffleMetadataAccess resolver)
     {
-        // The path is `pkg::funcName_<sig>` where the function's simple name
-        // is `funcName`. Pure mangling can't be parsed unambiguously from the
-        // path alone (function names like `unify_step1_pairwiseBind` collide
-        // with `unify` on a prefix-only check, and similarly for
-        // `findCommonRelationType_build` vs `findCommonRelationType`). Use
-        // the resolved function's `functionName` and `parameters` size as the
-        // authoritative source.
-        String nameSuffix = name + "_";
-
-        List<Object> matches = new ArrayList<>();
-        for (String path : resolver.elementPaths())
+        // O(1) lookup via the registry's (name, arity) index — built once on
+        //   first access from every module's elementPaths. No fallback: this
+        //   native is a compile hot path (13.5K calls / 8.5% of self-host
+        //   CPU before indexing), and bypassing the index would re-introduce
+        //   the linear scan.
+        if (!(resolver instanceof TruffleModuleRegistry registry))
         {
-            int lastSep = path.lastIndexOf("::");
-            String localPart = (lastSep >= 0) ? path.substring(lastSep + 2) : path;
-
-            if (!localPart.startsWith(nameSuffix))
-            {
-                continue;
-            }
-
-            Object element = resolver.getElement(path);
-            if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction pf))
-            {
-                continue;
-            }
-            // Check the simple name on the function itself — only consider it
-            // if `functionName` exactly equals the requested `name`.
-            String fn = pf._functionName();
-            if (fn == null || !fn.equals(name))
-            {
-                continue;
-            }
-            int funcArity = pf._parameters() == null ? 0 : pf._parameters().size();
-            if (funcArity != arity)
-            {
-                continue;
-            }
-            matches.add(element);
+            throw new IllegalStateException(
+                    "findFunctionsByNameAndArity requires a TruffleModuleRegistry resolver, got "
+                            + (resolver == null ? "null" : resolver.getClass().getName()));
         }
-
+        List<Object> matches = registry.functionsByNameAndArity(name, arity);
         if (matches.isEmpty())
         {
             return PureSequence.EMPTY;
