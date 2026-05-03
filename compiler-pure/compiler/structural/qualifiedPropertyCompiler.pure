@@ -152,7 +152,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
                     let ctx2 = if([pair(| $lastExpr.genericType->isEmpty() || $qp.genericType->isEmpty()
                                          || $lastExpr.genericType->toOne()->instanceOf(UndefinedGenericType),
                                        | $ctx1),
-                                  pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($qp.genericType->toOne(), $lastExpr.genericType->toOne()),
+                                  pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($qp.genericType->toOne(), $lastExpr.genericType->toOne(), $ctx1),
                                        | $ctx1)],
                                  | ^$ctx1(errors += 'Return type error in qualified property \'' + $qpName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($qp.genericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
                     );
@@ -202,7 +202,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
                                                     let clsName = $cls.name->toOne();
                                                     // Check return type covariance
                                                     let gCtx2 = if($qp.genericType->isNotEmpty() && $superProp.genericType->isNotEmpty()
-                                                                    && !meta::pure::compiler::helper::genericType::isCompatibleGenericType($superProp.genericType->toOne(), $qp.genericType->toOne()),
+                                                                    && !meta::pure::compiler::helper::genericType::isCompatibleGenericType($superProp.genericType->toOne(), $qp.genericType->toOne(), $gCtx),
                                                         | ^$gCtx(errors += 'Qualified property override variance mismatch for \'' + $qp.name->toOne() + '\' in class \'' + $clsName + '\'. Return type is not covariant. Overridden property has return type \'' + printGenericType($superProp.genericType->toOne()) + '\', but overriding property has return type \'' + printGenericType($qp.genericType->toOne()) + '\'.' + $siCtx),
                                                         | $gCtx
                                                     );

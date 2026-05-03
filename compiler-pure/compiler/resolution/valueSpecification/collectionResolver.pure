@@ -40,7 +40,7 @@ function meta::pure::compiler::resolution::valueSpecification::collectionResolve
     // Filter out CompilerNotSetGenericType (matches Java: nonNull.select(gt -> gt != null),
     // then selectInstancesOf(GenericTypeValue) which excludes CompilerNotSetGenericType)
     let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(CompilerNotSetGenericType))->map(gt | $gt->toOne());
-    let commonGTOpt = findCommonGenericType($elementTypes, $typeResolver);
+    let commonGTOpt = findCommonGenericType($elementTypes, $typeResolver, $resolvedCtx);
     // If all elements were filtered out (e.g., unresolved lambdas), keep CompilerNotSet to match Java
     // (Java returns null → collection stays unresolved for fixpoint re-processing)
     let commonGT = if($commonGTOpt->isEmpty() || ($elementTypes->isEmpty() && $result.values->isNotEmpty()),

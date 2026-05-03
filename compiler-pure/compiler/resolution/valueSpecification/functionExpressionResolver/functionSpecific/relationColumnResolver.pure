@@ -133,7 +133,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromSubset(paramValues:ValueSpecification[*], subsetOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1], exprSourceInformation:SourceInformation[0..1]):EnrichResult[1]
 {
-    let resolvedRight = makeAsConcreteAsPossible($subsetOp.right, $bindings);
+    let resolvedRight = makeAsConcreteAsPossible($subsetOp.right, $bindings, $context);
     let referenceType = $resolvedRight->genericTypeRawType();
     if($referenceType->isEmpty(),
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
@@ -164,14 +164,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::relationColumnResolver::resolveFromEqualWithWildcard(paramValues:ValueSpecification[*], equalOp:GenericTypeOperation[1], bindings:meta::pure::compiler::helper::parametersBinding::ParametersBinding[1], context:CompilerContext[1]):EnrichResult[1]
 {
-    let resolvedRight = makeAsConcreteAsPossible($equalOp.right, $bindings);
+    let resolvedRight = makeAsConcreteAsPossible($equalOp.right, $bindings, $context);
     let rightType = $resolvedRight->genericTypeRawType();
     if($rightType->isEmpty(),
         | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context),
         | $rightType->toOne()->match([
               wildcardRT:RelationType<Any>[1] |
                   let wildcardCol = $wildcardRT.columns->cast(@Column<Nil, Any|*>)->at(0);
-                  let resolvedColType = makeAsConcreteAsPossible($wildcardCol.genericType->toOne(), $bindings);
+                  let resolvedColType = makeAsConcreteAsPossible($wildcardCol.genericType->toOne(), $bindings, $context);
                   let resolvedColMul = if($wildcardCol.multiplicity->isNotEmpty(), | makeAsConcreteAsPossible($wildcardCol.multiplicity->toOne(), $bindings), | PureOne);
                   let columnNames = extractColumnNames($paramValues->at(0));
                   let enrichedCols = $columnNames->map(colName | meta::pure::compiler::helper::column::buildColumn($colName, ^UserDefinedGenericType(type = RelationType), $resolvedColType, $resolvedColMul, false));

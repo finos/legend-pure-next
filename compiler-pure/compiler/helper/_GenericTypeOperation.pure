@@ -57,10 +57,10 @@ function meta::pure::compiler::helper::genericTypeOperation::collectGenericTypeO
     );
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOperationAsConcreteAsPossible(gto:GenericTypeOperation[1], bindings:ParametersBinding[1]):GenericType[1]
+function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOperationAsConcreteAsPossible(gto:GenericTypeOperation[1], bindings:ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
 {
-    let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings);
-    let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings);
+    let resolvedLeft = makeAsConcreteAsPossible($gto.left, $bindings, $context);
+    let resolvedRight = makeAsConcreteAsPossible($gto.right, $bindings, $context);
     // If both sides are concrete RelationTypes, evaluate the operation
     let evaluated = $resolvedLeft->match([
         leftV : GenericTypeValue[1] |
@@ -89,11 +89,11 @@ function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOper
     );
 }
 
-function meta::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1]):Boolean[1]
+function meta::pure::compiler::helper::genericTypeOperation::isCompatibleGenericTypeOperation(gto:GenericTypeOperation[1], other:GenericType[1], contravariant:Boolean[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
 {
     let right = $gto.right;
-    if([pair(| $gto.operationType == GenericTypeOperationType.Equal, | isCompatibleGenericType($right, $other, $contravariant)),
-        pair(| $gto.operationType == GenericTypeOperationType.Subset, | isCompatibleGenericType($other, $right, $contravariant))],
+    if([pair(| $gto.operationType == GenericTypeOperationType.Equal, | isCompatibleGenericType($right, $other, $contravariant, $context)),
+        pair(| $gto.operationType == GenericTypeOperationType.Subset, | isCompatibleGenericType($other, $right, $contravariant, $context))],
        | true
     );
 }

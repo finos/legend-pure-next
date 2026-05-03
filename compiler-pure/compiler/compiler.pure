@@ -545,7 +545,7 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
                 let ctx1 = if([pair(| $lastExpr.genericType->isEmpty() || $fn.returnGenericType->isEmpty()
                                      || $lastExpr.genericType->toOne()->instanceOf(UndefinedGenericType),
                                    | $resultCtx),
-                              pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($fn.returnGenericType->toOne(), $lastExpr.genericType->toOne()),
+                              pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($fn.returnGenericType->toOne(), $lastExpr.genericType->toOne(), $resultCtx),
                                    | $resultCtx)],
                              | ^$resultCtx(errors += 'Return type error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($fn.returnGenericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
                 );

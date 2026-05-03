@@ -241,7 +241,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                               );
                                               // Type check — resolve property type through class bindings (e.g., Z → String)
                                               if($p.genericType->isNotEmpty() && $keyValueVS.genericType->isNotEmpty(),
-                                                  | let resolvedPropGT = makeAsConcreteAsPossible($p.genericType->toOne(), $classBindings);
+                                                  | let resolvedPropGT = makeAsConcreteAsPossible($p.genericType->toOne(), $classBindings, $context);
                                                     let propType = $resolvedPropGT->genericTypeRawType();
                                                     let valType = $keyValueVS.genericType->toOne()->genericTypeRawType();
                                                     if($propType->isNotEmpty() && $valType->isNotEmpty(),
@@ -348,7 +348,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | let declaredCanonical = resolveCanonicalType($declaredType->toOne(), $context);
           let actualCanonical = resolveCanonicalType($actualType->toOne(), $context);
           let declaredPath = $declaredCanonical->cast(@PackageableElement)->fullPath();
-          $actualCanonical->linearize()->contains($declaredPath);
+          $actualCanonical->linearize($context)->contains($declaredPath);
     );
 }
 

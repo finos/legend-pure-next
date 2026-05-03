@@ -22,12 +22,12 @@ function meta::pure::compiler::helper::functionExpression::extractResolvedParame
     $withMultiplicities;
 }
 
-function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1]):FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):FunctionExpression[1]
 {
-    populateResolvedParameters($expr, $bindings, [], []);
+    populateResolvedParameters($expr, $bindings, [], [], $context);
 }
 
-function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*]):FunctionExpression[1]
+function meta::pure::compiler::helper::functionExpression::populateResolvedParameters(expr:FunctionExpression[1], bindings:ParametersBinding[1], ownTypeParams:String[*], ownMulParams:String[*], context:meta::pure::compiler::CompilerContext[1]):FunctionExpression[1]
 {
     let doFilterType = $ownTypeParams->isNotEmpty();
     let tbKeys = $bindings.typeBindings->keys();
@@ -36,7 +36,7 @@ function meta::pure::compiler::helper::functionExpression::populateResolvedParam
         if([pair(| $doFilterType && !$ownTypeParams->contains($k), | $resolved),
             pair(| $vals.values->size() == 1, | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$vals.values->at(0)))),
             pair(| $vals.values->size() > 1,
-                 | let common = findCommonGenericType($vals.values, false);
+                 | let common = findCommonGenericType($vals.values, false, $context);
                    if($common->isNotEmpty(),
                        | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$common->toOne())),
                        | $resolved
@@ -93,7 +93,7 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPop
         multiplicity = PureOne
     );
     
-    let populated = populateResolvedParameters($expr, $bindings); // no filter
+    let populated = populateResolvedParameters($expr, $bindings, meta::pure::compiler::newPlainCompilerContext()); // no filter
     
     assertEquals(2, $populated.resolvedTypeParameters->size());
     assert($populated.resolvedTypeParameters->filter(t | $t.name == 'T')->isNotEmpty());
@@ -124,7 +124,7 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPop
         multiplicity = PureOne
     );
     
-    let populated = populateResolvedParameters($expr, $bindings, ['T'], ['m']);
+    let populated = populateResolvedParameters($expr, $bindings, ['T'], ['m'], meta::pure::compiler::newPlainCompilerContext());
     
     assertEquals(1, $populated.resolvedTypeParameters->size());
     assertEquals('T', $populated.resolvedTypeParameters->at(0).name);

@@ -7,9 +7,9 @@ import meta::pure::compiler::helper::genericType::*;
 
 // Function helpers
 
-function meta::pure::compiler::helper::function::resolveFunctionType(genericType:GenericType[1]):FunctionType[0..1]
+function meta::pure::compiler::helper::function::resolveFunctionType(genericType:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):FunctionType[0..1]
 {
-    let res = $genericType->resolveForTarget(Function);
+    let res = $genericType->resolveForTarget(Function, $context);
     let rt = if($res->isNotEmpty(), | $res->toOne()->genericTypeTypeArguments(), | []);
     if($rt->isNotEmpty(),
        | $rt->at(0)->genericTypeRawType()->toOne()->cast(@FunctionType),
@@ -17,9 +17,9 @@ function meta::pure::compiler::helper::function::resolveFunctionType(genericType
     );
 }
 
-function meta::pure::compiler::helper::function::getFunctionType(func:Function<Any>[1]):FunctionType[1]
+function meta::pure::compiler::helper::function::getFunctionType(func:Function<Any>[1], context:meta::pure::compiler::CompilerContext[1]):FunctionType[1]
 {
-    $func.classifierGenericType->toOne()->resolveFunctionType()->toOne()
+    $func.classifierGenericType->toOne()->resolveFunctionType($context)->toOne()
 }
 
 function meta::pure::compiler::helper::function::validateFunctionParameters(params:VariableExpression[*]):Boolean[1]
@@ -34,11 +34,12 @@ function meta::pure::compiler::helper::function::validateFunctionParameters(para
 
 function <<test.Test>> meta::pure::compiler::helper::function::tests::testResolveFunctionType():Boolean[1]
 {
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
     let lambda = {a:String[1]| $a + 'ok'};
     let cgt = $lambda->getLambdaClassifierGenericType();
-    
-    let ft = $cgt->resolveFunctionType()->toOne();
-    
+
+    let ft = $cgt->resolveFunctionType($ctx)->toOne();
+
     assert($ft.parameters->isNotEmpty());
     assertEquals('a', $ft.parameters->at(0).name);
     assertEquals(String, $ft.parameters->at(0).genericType->toOne()->genericTypeRawType()->toOne());
@@ -46,9 +47,10 @@ function <<test.Test>> meta::pure::compiler::helper::function::tests::testResolv
 
 function <<test.Test>> meta::pure::compiler::helper::function::tests::testGetFunctionType():Boolean[1]
 {
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
     let func = meta::pure::compiler::helper::function::tests::testResolveFunctionType__Boolean_1_;
-    let ft = $func->getFunctionType();
-    
+    let ft = $func->getFunctionType($ctx);
+
     assertEquals(Boolean, $ft.returnType->toOne()->genericTypeRawType()->toOne());
     assertEquals(1, $ft.returnMultiplicity->toOne()->multiplicityLowerBound());
 }

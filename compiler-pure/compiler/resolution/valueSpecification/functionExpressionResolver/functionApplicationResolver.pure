@@ -128,7 +128,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
        | // Multiple candidates — sort most-specific-first, pre-resolve non-lambda params, then try each candidate
          // Sort most-specific-first: by parameter specificity, then fewer type/multiplicity params = more specific (mirrors Java mostSpecificFirst)
          let sorted = $candidates->sort({a, b |
-             let cmp = compareFunctionTypes($a->getFunctionType(), $b->getFunctionType());
+             let cmp = compareFunctionTypes($a->getFunctionType($context), $b->getFunctionType($context), $context);
              if($cmp != 0, | $cmp,
                  | let tpCmp = $a.typeParameters->size() - $b.typeParameters->size();
                    if($tpCmp != 0, | $tpCmp,
@@ -206,16 +206,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | // Check for equally-specific ties (ambiguity detection — matches Java lines 104-115)
           // Use normalized function type comparison (ignores TypeParameter name differences between PDB and local functions)
           let resolvedCandidate = $tryResult.resolvedCandidate->toOne();
-          let resolvedFT = $resolvedCandidate->getFunctionType();
+          let resolvedFT = $resolvedCandidate->getFunctionType($context);
           let resolvedNorm = normalizeFunctionTypeForComparison($resolvedFT);
           let tied = $candidates->filter(c |
-              normalizeFunctionTypeForComparison($c->getFunctionType()) == $resolvedNorm
+              normalizeFunctionTypeForComparison($c->getFunctionType($context)) == $resolvedNorm
           );
           debug($deepCtx, | 'ambiguity check: tied=' + $tied->size()->toString() + ' for ' + $fi.functionName->toOne());
           if($tied->size() > 1,
               | // Ambiguous — multiple equally-specific candidates
                 let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
-                let signatures = $tied->map(t | functionSignature($t))->sort()->joinStrings(', ');
+                let signatures = $tied->map(t | functionSignature($t, $context))->sort()->joinStrings(', ');
                 let resolvedResult = $tryResult.result->toOne();
                 let resolvedCtx = $resolvedResult.context;
                 debug($deepCtx, | 'AMBIGUOUS: ' + $signatures + $siCtx + ' (errors before=' + $resolvedCtx.errors->size()->toString() + ')');
@@ -265,7 +265,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | $fromContext->toOne()->cast(@Function<Any>),
         | $entry
     );
-    let ft = $resolvedEntry->getFunctionType();
+    let ft = $resolvedEntry->getFunctionType($context);
     let funcParams = $ft.parameters->cast(@VariableExpression);
 
     debug($context, | 'resolveFunctionApplicationUsingTemplateFunction: ' + $entryPath + ' (' + $fi.parametersValues->size()->toString() + ' args)');
@@ -320,7 +320,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let resolvedInfos = $fixpointResult.infos;
     // Unify: cross-match, transitive resolution, pre-reduction, common-type reduction (like Java unify())
     let bindings = $fixpointResult.bindings->match([
-        fcpb:FunctionCallParametersBinding[1] | unify($fcpb)->cast(@ParametersBinding),
+        fcpb:FunctionCallParametersBinding[1] | unify($fcpb, $context)->cast(@ParametersBinding),
         other:ParametersBinding[1] | $other
     ]);
     let ctx1 = $fixpointResult.context;
@@ -373,7 +373,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     context = $validationCtx);,
               |
           // Build return type using validated bindings (includes reconciled inferred values)
-          let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $validatedBindings);
+          let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $validatedBindings, $context);
           let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $validatedBindings);
           let inferredReturnGT = asInferredGenericType($returnGT);
           let inferredReturnMul = asInferredMultiplicity($returnMul);
@@ -387,7 +387,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               let vals = $validatedBindings.typeBindings->get($k)->toOne().values;
               let boundGT = if($vals->size() == 1,
                   | $vals->at(0),
-                  | let common = findCommonGenericType($vals);
+                  | let common = findCommonGenericType($vals, $context);
                     if($common->isEmpty(), | $vals->at(0), | $common->toOne());
               );
               ^ResolvedTypeParameter(
@@ -457,11 +457,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               let argMul = $argVS.multiplicity->toOne();
               if($argGT->instanceOf(UndefinedGenericType) || $argGT->instanceOf(CompilerNotSetGenericType),
                   | ^$acc(reconciledParams += $argVS),
-                  | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $acc.bindings);
+                  | let expectedGT = makeAsConcreteAsPossible($funcParams->at($i).genericType->toOne(), $acc.bindings, $context);
                     let expectedMul = makeAsConcreteAsPossible($funcParams->at($i).multiplicity->toOne(), $acc.bindings);
                     // Reconcile expected with actual (mirrors Java reconcileInferred)
                     debug($context, | 'validateParam[' + $i->toString() + ']: expected=' + printGenericType($expectedGT) + ' actual=' + printGenericType($argGT));
-                    let reconciledArgGT = reconcileInferred($expectedGT, $argGT);
+                    let reconciledArgGT = reconcileInferred($expectedGT, $argGT, $context);
                     debug($context, | 'validateParam[' + $i->toString() + ']: reconciled=' + printGenericType($reconciledArgGT) + ' sameAsActual=' + ($reconciledArgGT == $argGT)->toString());
                     // Mirrors Java rebuildWithReconciledType: for lambdas, rebuild with reconciled FunctionType params
                     let reconciledVS = $argVS->match([
@@ -482,7 +482,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         other:Any[1] | ^$argVS(genericType = $reconciledArgGT)
                     ]);
                     let updatedBindings = $acc.bindings;
-                    let typeOk = isCompatibleGenericType($expectedGT, $reconciledArgGT);
+                    let typeOk = isCompatibleGenericType($expectedGT, $reconciledArgGT, $context);
                     let mulOk = multiplicitySubsumes($expectedMul, $argMul);
                     if(!$typeOk || !$mulOk,
                         | ^$acc(reconciledParams += $reconciledVS, bindings = $updatedBindings, failed = true);,
@@ -627,7 +627,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           let argRawType = $rawArgGT->match([gtv:GenericTypeValue[1] | $gtv.type, a:Any[1] | []]);
           let argGT = if($paramRawType->isNotEmpty() && !$paramRawType->toOne()->instanceOf(TypeParameter)
                          && $argRawType->isNotEmpty() && !typeEquals($paramRawType->toOne(), $argRawType->toOne()),
-              | let resolved = resolveForTarget($rawArgGT, $paramRawType->toOne());
+              | let resolved = resolveForTarget($rawArgGT, $paramRawType->toOne(), $context);
                 if($resolved->isEmpty(), | $rawArgGT, | $resolved->toOne());,
               | $rawArgGT
           );
@@ -642,7 +642,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       | let ctx2 = $ctx1->rollbackErrors($checkpoint);
                         debug($context, | 'resolveArg: LAMBDA');
                         let lambda = $av.value->toOne()->cast(@LambdaFunction<Any>);
-                        let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings);
+                        let reprocessedLambda = setMissingLambdaParameterInformation($lambda, $paramGT, $bindings, $context);
                         let withReprocessedLambda = ^$av(value = $reprocessedLambda);
                         finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $withReprocessedLambda);,
                       | // AtomicValue but not a lambda — NO_MATCH
@@ -655,7 +655,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       | let ctx2 = $ctx1->rollbackErrors($checkpoint);
                         debug($context, | 'resolveArg: REVERSE_MATCH func=' + $fi2.functionName->toOne()
                             + ' childGT=' + if($fi2.genericType->isEmpty(), | '?', | printGenericType($fi2.genericType->toOne())));
-                        let reversedChild = reverseMatch($fi2, $paramGT, $paramMul, $bindings);
+                        let reversedChild = reverseMatch($fi2, $paramGT, $paramMul, $bindings, $context);
                         finishProcessing($paramGT, $paramMul, $bindings, $scope, $ctx2, $reversedChild);,
                       | // FunctionInvocation without func — NO_MATCH
                         debug($context, | 'resolveArg: NO_MATCH class=' + $processed->type()->toOne()->elementToPath());
@@ -664,7 +664,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               col : Collection[1] |
                   // COLLECTION (Java line 456-494)
                   let ctx2 = $ctx1->rollbackErrors($checkpoint);
-                  let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+                  let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings, $context);
                   let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
                   debug($context, | 'resolveArg: COLLECTION (' + $col.values->size()->toString() + ' elements) resolvedParamGT=' + printGenericType($resolvedParamGT));
                   // Resolve each element via resolveParameterValue (not resolveOneParam) to match Java
@@ -695,12 +695,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::setMissingLambdaParameterInformation(
     lambda:LambdaFunction<Any>[1],
     paramGT:GenericType[1],
-    bindings:ParametersBinding[1]
+    bindings:ParametersBinding[1],
+    context:CompilerContext[1]
 ):LambdaFunction<Any>[1]
 {
     // Resolve the function parameter's Function<{FunctionType}> to concrete types using current bindings
     // e.g. Function<{T[1]->Boolean[1]}> with T=String => Function<{String[1]->Boolean[1]}>
-    let concreteGT = makeAsConcreteAsPossible($paramGT, $bindings);
+    let concreteGT = makeAsConcreteAsPossible($paramGT, $bindings, $context);
     $concreteGT->match([
         concreteGTV : GenericTypeValue[1] |
             if($concreteGTV.typeArguments->isNotEmpty(),
@@ -712,7 +713,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 let newParams = $ft.parameters->cast(@VariableExpression)->zip($lambdaParams)->map({pair |
                                     let ftParam = $pair.first;
                                     let lambdaParam = $pair.second;
-                                    let resolvedType = makeAsConcreteAsPossible($ftParam.genericType->toOne(), $bindings);
+                                    let resolvedType = makeAsConcreteAsPossible($ftParam.genericType->toOne(), $bindings, $context);
                                     let resolvedMul = makeAsConcreteAsPossible($ftParam.multiplicity->toOne(), $bindings);
                                     // Replace if param type is not concrete (CompilerNotSetGenericType = Java null = not concrete)
                                     let lambdaGT = $lambdaParam.genericType->toOne();
@@ -784,13 +785,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     childExpr:FunctionInvocation[1],
     paramGT:GenericType[1],
     paramMul:Multiplicity[1],
-    bindings:ParametersBinding[1]
+    bindings:ParametersBinding[1],
+    context:CompilerContext[1]
 ):FunctionInvocation[1]
 {
     // Collect child bindings: child's return type → parent's resolved param type
     let argGT = $childExpr.genericType->toOne();
     let childBindings = newPlainParametersBinding()->cast(@ParametersBinding);
-    let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+    let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings, $context);
     let b1 = collectTypeParameterBindings($argGT, $resolvedParamGT, $childBindings);
     let resolvedParamMul = makeAsConcreteAsPossible($paramMul, $bindings);
     let b2 = collectMultiplicityParameterBindings($childExpr.multiplicity->toOne(), $resolvedParamMul, $b1);
@@ -800,7 +802,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // them via findCommonGenericType — mirrors Java's replaceAll + populateResolvedParameters.
     let concreteChildTypeBindings = $b2.typeBindings->keys()->fold({k, acc |
         let vals = $b2.typeBindings->get($k)->toOne().values;
-        let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings)));
+        let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings, $context)));
         $concreteVals->fold({cv, a |
             collectTypeParameterBindings(
                 ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
@@ -822,7 +824,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         }, $acc);
     }, $concreteChildTypeBindings);
 
-    populateResolvedParameters($childExpr, $concreteChildBindings)->cast(@FunctionInvocation);
+    populateResolvedParameters($childExpr, $concreteChildBindings, $context)->cast(@FunctionInvocation);
 }
 
 // ============================================================================
@@ -832,10 +834,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::isCandidateCompatible(
     candidate:PackageableFunction<Any>[1],
     argTypes:GenericType[*],
-    argMuls:Multiplicity[*]
+    argMuls:Multiplicity[*],
+    context:CompilerContext[1]
 ):Boolean[1]
 {
-    let ft = $candidate->getFunctionType();
+    let ft = $candidate->getFunctionType($context);
     let params = $ft.parameters->cast(@VariableExpression);
 
     // Collect bindings from arg types against param types
@@ -852,14 +855,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     $argTypes->zip($params)->forAll({pair |
         let argGT = $pair.first;
         let paramGT = $pair.second.genericType->toOne();
-        let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings);
+        let resolvedParamGT = makeAsConcreteAsPossible($paramGT, $bindings, $context);
         let isUndefined = $resolvedParamGT->instanceOf(UndefinedGenericType) || $argGT->instanceOf(UndefinedGenericType) || $resolvedParamGT->instanceOf(CompilerNotSetGenericType) || $argGT->instanceOf(CompilerNotSetGenericType);
         let isTypeParam = $resolvedParamGT->instanceOf(GenericTypeValue) && $resolvedParamGT->cast(@GenericTypeValue).type->isNotEmpty() && $resolvedParamGT->cast(@GenericTypeValue).type->toOne()->instanceOf(TypeParameter);
         if($isUndefined || $isTypeParam,
             | true,
             | let paramStr = printGenericType($resolvedParamGT);
               let argStr = printGenericType($argGT);
-              isCompatibleGenericType($resolvedParamGT, $argGT) || isCompatibleGenericType($argGT, $resolvedParamGT) || ($paramStr == $argStr);
+              isCompatibleGenericType($resolvedParamGT, $argGT, $context) || isCompatibleGenericType($argGT, $resolvedParamGT, $context) || ($paramStr == $argStr);
         );
     }) && $argMuls->zip($params)->forAll({pair |
         let argMul = $pair.first;
@@ -872,10 +875,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::buildResolutionResult(
     candidate:PackageableFunction<Any>[1],
     argTypes:GenericType[*],
-    argMuls:Multiplicity[*]
+    argMuls:Multiplicity[*],
+    context:CompilerContext[1]
 ):FunctionResolutionResult[1]
 {
-    let ft = $candidate->getFunctionType();
+    let ft = $candidate->getFunctionType($context);
     let params = $ft.parameters->cast(@VariableExpression);
     let bindings = range($argTypes->size())->fold({i, b |
         let paramGT = $params->at($i).genericType->toOne();
@@ -886,7 +890,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         collectMultiplicityParameterBindings($paramMul, $argMul, $b2);
     }, newPlainParametersBinding()->cast(@ParametersBinding));
 
-    let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings);
+    let returnGT = makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings, $context);
     let returnMul = makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings);
 
     let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
@@ -919,21 +923,22 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     candidates:PackageableFunction<Any>[*],
     functionName:String[1],
     argTypes:GenericType[*],
-    argMuls:Multiplicity[*]
+    argMuls:Multiplicity[*],
+    context:CompilerContext[1]
 ):FunctionResolutionResult[*]
 {
     $candidates
-        ->filter(c | isCandidateCompatible($c, $argTypes, $argMuls))
-        ->map(c | buildResolutionResult($c, $argTypes, $argMuls));
+        ->filter(c | isCandidateCompatible($c, $argTypes, $argMuls, $context))
+        ->map(c | buildResolutionResult($c, $argTypes, $argMuls, $context));
 }
 
 // ============================================================================
 // Error suggestions
 // ============================================================================
 
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::functionSignature(f:PackageableFunction<Any>[1]):String[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::functionSignature(f:PackageableFunction<Any>[1], context:CompilerContext[1]):String[1]
 {
-    let ft = $f->getFunctionType();
+    let ft = $f->getFunctionType($context);
     let params = $ft.parameters->cast(@VariableExpression);
     let paramDesc = $params->map(p | $p.name + ': ' + printGenericType($p.genericType->toOne()) + printMultiplicity($p.multiplicity->toOne()))->joinStrings(', ');
     let retDesc = printGenericType($ft.returnType->toOne()) + printMultiplicity($ft.returnMultiplicity->toOne());
@@ -957,9 +962,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let diffArity = range(5)->filter(a | $a != $paramCount)->map(a | findAllFunctionsByNameAndArityUnfiltered($context, $functionName, $a))->filter(f | $context->isElementVisible($f->elementToPath()));
 
     let parts = []
-        ->concatenate(if($inScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) in scope:\n    ' + $inScope->map(f | functionSignature($f))->joinStrings('\n    '), | []))
-        ->concatenate(if($outOfScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) not in scope:\n    ' + $outOfScope->map(f | functionSignature($f))->joinStrings('\n    '), | []))
-        ->concatenate(if($diffArity->isNotEmpty(), | '. Possible matches with different number of parameters:\n    ' + $diffArity->map(f | functionSignature($f))->joinStrings('\n    '), | []));
+        ->concatenate(if($inScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) in scope:\n    ' + $inScope->map(f | functionSignature($f, $context))->joinStrings('\n    '), | []))
+        ->concatenate(if($outOfScope->isNotEmpty(), | '. Possible matches with ' + $paramCount->toString() + ' parameter(s) not in scope:\n    ' + $outOfScope->map(f | functionSignature($f, $context))->joinStrings('\n    '), | []))
+        ->concatenate(if($diffArity->isNotEmpty(), | '. Possible matches with different number of parameters:\n    ' + $diffArity->map(f | functionSignature($f, $context))->joinStrings('\n    '), | []));
     $parts->joinStrings('');
 }
 
@@ -988,7 +993,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 // Matches Java FunctionIndexEntry.compareFunctionTypes + mostSpecificFirst comparator
 // Returns: -1 if f1 more specific, 1 if f2 more specific, 0 if equally specific
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::compareFunctionTypeSpecificity(f1:FunctionType[1], f2:FunctionType[1]):Integer[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::compareFunctionTypeSpecificity(f1:FunctionType[1], f2:FunctionType[1], context:CompilerContext[1]):Integer[1]
 {
     let params1 = $f1.parameters->cast(@VariableExpression);
     let params2 = $f2.parameters->cast(@VariableExpression);
@@ -1009,9 +1014,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   pair(| $t1IsTp && !$t2IsTp, | if(isTopType($t2->toOne()), | -1, | 1)),
                   pair(| !$t1IsTp && $t2IsTp, | if(isTopType($t1->toOne()), | 1, | -1)),
                   pair(| $t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && !typeEquals($t1->toOne(), $t2->toOne()),
-                       | if(subtypeOf($t1->toOne(), $t2->toOne()),
+                       | if(subtypeOf($t1->toOne(), $t2->toOne(), $context),
                              | -1,
-                             | if(subtypeOf($t2->toOne(), $t1->toOne()), | 1, | 0)
+                             | if(subtypeOf($t2->toOne(), $t1->toOne(), $context), | 1, | 0)
                          );)],
                  | 0
               );

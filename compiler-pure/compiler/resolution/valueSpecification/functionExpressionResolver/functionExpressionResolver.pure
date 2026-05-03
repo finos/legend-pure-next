@@ -68,7 +68,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               | match($fromContext->toOne(), [f:Function<Any>[1] | $f, a:Any[1] | $fi.func->toOne()]),
               | $fi.func->toOne()
           );
-          let ft = $resolvedFunc->getFunctionType();
+          let ft = $resolvedFunc->getFunctionType($context);
           let baseBindings = extractResolvedParametersBinding($fi);
           // For class properties, enrich bindings with class type parameter bindings
           // from the receiver's generic type so that T resolves to the concrete type argument.
@@ -90,7 +90,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 && $fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType);
           let returnGT = if($alreadyResolved,
               | asInferredGenericType($fi.genericType->toOne()),
-              | asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings))
+              | asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings, $context))
           );
           let returnMul = if($alreadyResolved,
               | asInferredMultiplicity($fi.multiplicity->toOne()),

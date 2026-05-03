@@ -254,11 +254,11 @@ function meta::pure::compiler::helper::parametersBinding::unify_step4_preReduceE
     );
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduce(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduce(fcpb:FunctionCallParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
 {
     let st1 = fold($fcpb.typeBindings->keyValues(), {kv, b |
         if($kv.second.values->size() > 1,
-            | let common = findCommonGenericType($kv.second.values, false);
+            | let common = findCommonGenericType($kv.second.values, false, $context);
               if($common->isEmpty(),
                   | $b,
                   | ^$b(typeBindings = $b.typeBindings->put($kv.first, ^List<GenericType>(values=$common->toOne())))
@@ -266,7 +266,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduc
             | $b
         );
     }, $fcpb);
-    
+
     fold($st1.multiplicityBindings->keyValues(), {kv, b |
         if($kv.second.values->size() > 1,
             | let common = findCommonMultiplicity($kv.second.values);
@@ -279,13 +279,13 @@ function meta::pure::compiler::helper::parametersBinding::unify_step5_finalReduc
     }, $st1);
 }
 
-function meta::pure::compiler::helper::parametersBinding::unify(fcpb:FunctionCallParametersBinding[1]):FunctionCallParametersBinding[1]
+function meta::pure::compiler::helper::parametersBinding::unify(fcpb:FunctionCallParametersBinding[1], context:meta::pure::compiler::CompilerContext[1]):FunctionCallParametersBinding[1]
 {
     let step1 = unify_step1_pairwiseBind($fcpb);
     let step2 = unify_step2_transitiveType($step1);
     let step3 = unify_step3_transitiveMul($step2);
     let step4 = unify_step4_preReduceEnclosing($step3);
-    unify_step5_finalReduce($step4);
+    unify_step5_finalReduce($step4, $context);
 }
 
 function meta::pure::compiler::helper::parametersBinding::toString(pb:ParametersBinding[1]):String[1]

@@ -92,6 +92,21 @@ Class meta::pure::compiler::CompilerContext
     elementStatistics : ElementStatistics[*];
 }
 
+// Build a minimal CompilerContext with no source state — used by helper-module
+// unit tests that don't run a real compile but still need a context to thread
+// through ctx-taking helpers like {@code subtypeOf} / {@code linearize}.
+function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
+{
+    ^CompilerContext(
+        debugState = ^DebugState(debug=false, space=''),
+        imports=[],
+        elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
+        localFunctionIndex=newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+        inferenceRollbacks=0,
+        candidateEvaluations=0
+    );
+}
+
 function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
 {
     $context.errors->size();

@@ -170,16 +170,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                                       | // Compare parameter types (skip receiver at index 0)
                                                         let paramsMatch = range(1, $paramCount)->fold({i, match |
                                                             if(!$match, | false,
-                                                                | let msGT = printGenericType(makeAsConcreteAsPossible($mostSpecific.parameters->at($i).genericType->toOne(), $classBindings));
-                                                                  let otGT = printGenericType(makeAsConcreteAsPossible($other.parameters->at($i).genericType->toOne(), $classBindings));
+                                                                | let msGT = printGenericType(makeAsConcreteAsPossible($mostSpecific.parameters->at($i).genericType->toOne(), $classBindings, $context));
+                                                                  let otGT = printGenericType(makeAsConcreteAsPossible($other.parameters->at($i).genericType->toOne(), $classBindings, $context));
                                                                   $msGT == $otGT;
                                                             )
                                                         }, true);
                                                         if(!$paramsMatch, | false,
                                                             | // Compare return types and multiplicity — mirrors Java isCompatible(otherReturnGT, msReturnGT)
-                                                              let msRetGT = makeAsConcreteAsPossible($mostSpecific.genericType->toOne(), $classBindings);
-                                                              let otRetGT = makeAsConcreteAsPossible($other.genericType->toOne(), $classBindings);
-                                                              let typesCompatible = isCompatibleGenericType($otRetGT, $msRetGT);
+                                                              let msRetGT = makeAsConcreteAsPossible($mostSpecific.genericType->toOne(), $classBindings, $context);
+                                                              let otRetGT = makeAsConcreteAsPossible($other.genericType->toOne(), $classBindings, $context);
+                                                              let typesCompatible = isCompatibleGenericType($otRetGT, $msRetGT, $context);
                                                               let mulMatch = multiplicitySubsumes(makeAsConcreteAsPossible($other.multiplicity->toOne(), $classBindings), makeAsConcreteAsPossible($mostSpecific.multiplicity->toOne(), $classBindings));
                                                               $typesCompatible && $mulMatch;
                                                         );
@@ -205,7 +205,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   );,
                                 | debug($context, | '  property found: ' + $foundFunc->toOne().name->toOne());
                                   let resolvedProp = $foundFunc->toOne();
-                                  let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne(), $resolvedOwner);
+                                  let propResolved = resolvePropertyReturnTypeAndMultiplicity($resolvedProp, $receiver.genericType->toOne(), $resolvedOwner, $context);
                                   let propGT = $propResolved.first;
                                   let propMul = $propResolved.second;
                                   let receiverMul = $receiver.multiplicity;
@@ -279,7 +279,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 }
 
 // Matches Java DotApplicationResolver lines 106-113: apply class type bindings to property type and multiplicity
-function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1], resolvedOwnerClass:Class<Any>[0..1]):Pair<GenericType, Multiplicity>[1]
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::resolvePropertyReturnTypeAndMultiplicity(prop:AbstractProperty<Any>[1], ownerGT:GenericType[1], resolvedOwnerClass:Class<Any>[0..1], context:CompilerContext[1]):Pair<GenericType, Multiplicity>[1]
 {
     let rawGT = $prop.genericType->toOne();
     let rawMul = $prop.multiplicity->toOne();
@@ -296,7 +296,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | let bindings = $ownerClass->toOne()->buildBindingsFromGenericType($ownerGT);
           if($bindings.typeBindings->isEmpty() && $bindings.multiplicityBindings->isEmpty(),
               | pair($rawGT, $rawMul),
-              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
+              | pair(asInferredGenericType(makeAsConcreteAsPossible($rawGT, $bindings, $context)), asInferredMultiplicity(makeAsConcreteAsPossible($rawMul, $bindings)))
           );,
         | pair($rawGT, $rawMul)
     );

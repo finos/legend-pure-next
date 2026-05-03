@@ -9,22 +9,22 @@ import meta::pure::compiler::helper::class::*;
 
 // Property helpers
 
-function meta::pure::compiler::helper::property::resolveProperty(prop:Property<Nil,Any|*>[1], receiverType:GenericType[1]):Property<Nil,Any|*>[1]
+function meta::pure::compiler::helper::property::resolveProperty(prop:Property<Nil,Any|*>[1], receiverType:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):Property<Nil,Any|*>[1]
 {
     let resolvedGenericType = $prop.genericType;
     let resolvedMultiplicity = $prop.multiplicity;
     let resolvedClassifierGenericType = $prop.classifierGenericType;
-    
+
     let resolvedTuple = $receiverType->genericTypeRawType()->toOne()->match(
         [
             ownerClass : Class<Any>[1] |
                 let bindings = $ownerClass->buildBindingsFromGenericType($receiverType);
                 if($bindings.typeBindings->isNotEmpty() || $bindings.multiplicityBindings->isNotEmpty(),
                     | pair(
-                        $resolvedGenericType->makeAsConcreteAsPossible($bindings),
+                        $resolvedGenericType->makeAsConcreteAsPossible($bindings, $context),
                         pair(
                             $resolvedMultiplicity->makeAsConcreteAsPossible($bindings),
-                            $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings)
+                            $resolvedClassifierGenericType->toOne()->makeAsConcreteAsPossible($bindings, $context)
                         )
                       ),
                     | pair($resolvedGenericType, pair($resolvedMultiplicity, $resolvedClassifierGenericType->toOne()))
@@ -56,10 +56,11 @@ Class <<test.TestDependency>> meta::pure::compiler::helper::property::tests::Tes
 
 function <<test.Test>> meta::pure::compiler::helper::property::tests::testResolveProperty():Boolean[1]
 {
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
     let ownerClass = meta::pure::compiler::helper::property::tests::MyClass;
     let prop = meta::pure::compiler::helper::property::tests::TestClass.properties->filter(p | $p.name == 'prop')->toOne();
     let receiverType = $prop.genericType->toOne();
-    
+
     let sourceProp = ^Property<Nil,Any|*>(
         aggregation = AggregationKind.None,
         name = 'mockProp',
@@ -71,6 +72,6 @@ function <<test.Test>> meta::pure::compiler::helper::property::tests::testResolv
     );
 
     // TODO: A more comprehensive test that has type parameter references inside the source prop
-    let resolvedProp = resolveProperty($sourceProp, $receiverType);
+    let resolvedProp = resolveProperty($sourceProp, $receiverType, $ctx);
     assertEquals('mockProp', $resolvedProp.name);
 }
