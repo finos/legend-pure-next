@@ -492,11 +492,15 @@ public class PdbJavaGenerator
             sb.append("    ").append(cr.name).append(" _").append(pr.name).append("(").append(javaType).append(" value);\n\n");
         }
 
-        // _copy() — required for all classes
-        if (!cr.isAbstract)
-        {
-            sb.append("    ").append(cr.name).append(" _copy();\n\n");
-        }
+        // _copy() — declared on every interface (concrete or abstract) so
+        // callers holding any metamodel reference can invoke it without
+        // reflection. Abstract intermediates rely on Java's covariant-return
+        // override: e.g. {@code Any._copy()} returns Any, {@code Class._copy()}
+        // returns Class, {@code ClassImpl._copy()} returns ClassImpl. The
+        // {@code copyViaReflection} hot loop in {@code CopyWithKeysNode}
+        // collapses to one virtual call after this — JFR profile showed
+        // that path consuming ~75% of self-compile CPU.
+        sb.append("    ").append(cr.name).append(" _copy();\n\n");
 
         sb.append("}\n");
         return sb.toString();

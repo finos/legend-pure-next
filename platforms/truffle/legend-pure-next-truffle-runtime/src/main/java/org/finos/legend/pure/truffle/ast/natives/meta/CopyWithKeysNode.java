@@ -171,9 +171,22 @@ public final class CopyWithKeysNode extends PureNode
             classPath = resolveClassPathFromCGT(cgt);
         }
 
-        // Step 2: Create the copy
-        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
-        shallowCopyProperties(original, copy, cgt);
+        // Step 2: Create the copy via the typed {@code _copy()} method that
+        // codegen emits on every metamodel impl (declared on {@link Any}).
+        // Replaces the previous {@code createInstance + reflective property
+        // copy} sequence — the JFR profile showed that reflection at ~75% of
+        // self-compile CPU because the inner {@code Class.getMethods()} walk
+        // is O(N) per copy and copies the method array defensively each time.
+        Object copy = (original instanceof Any anyOrig)
+                ? anyOrig._copy()
+                : org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
+        if (!(original instanceof Any))
+        {
+            // Legacy fallback for non-Any originals: keep the reflective
+            // path. Should be unreachable in practice — every metamodel
+            // value is Any.
+            shallowCopyProperties(original, copy, cgt);
+        }
         GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
         if (copy instanceof Any anyC && copyCgt != null)
         {
@@ -522,24 +535,13 @@ public final class CopyWithKeysNode extends PureNode
     }
 
     /**
-     * Try to invoke _copy() on an Any instance. Falls back to reflection-based copy.
+     * {@code _copy()} on an Any — declared on the {@link Any} interface
+     * since codegen now generates it for every metamodel class. One virtual
+     * call, no reflection.
      */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object tryCopy(Any any)
     {
-        try
-        {
-            java.lang.reflect.Method copyMethod = any.getClass().getMethod("_copy");
-            return copyMethod.invoke(any);
-        }
-        catch (Exception e)
-        {
-            // _copy() not available -- fallback
-            String classPath = any.getClass().getInterfaces()[0].getName().replace(".", "::");
-            Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath);
-            copyViaReflection(any, copy);
-            return copy;
-        }
+        return any._copy();
     }
 
     /**

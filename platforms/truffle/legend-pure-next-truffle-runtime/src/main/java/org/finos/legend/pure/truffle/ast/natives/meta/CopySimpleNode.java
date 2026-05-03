@@ -50,91 +50,23 @@ public final class CopySimpleNode extends PureNode
         return doCopy(result, getResolver());
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        GenericTypeValue cgt;
-        String classPath;
-        if (original instanceof PackageableElement pe)
-        {
-            cgt = pe._classifierGenericType();
-            classPath = pe.getClass().getInterfaces()[0].getName().replace(".", "::");
-        }
-        else if (original instanceof Any any)
-        {
-            cgt = any._classifierGenericType();
-            classPath = any.getClass().getInterfaces()[0].getName().replace(".", "::");
-        }
-        else
+        if (!(original instanceof Any anyOrig))
         {
             throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
         }
-
-        if ((classPath == null || classPath.isEmpty()) && cgt != null)
+        // Typed _copy() on Any — codegen-emitted, replaces what used to be
+        // an O(N×M) reflective getter/setter walk per copy. JFR identified
+        // the reflection path as ~75% of self-compile CPU.
+        Object copy = anyOrig._copy();
+        // Fix self-referencing CGT (e.g., Class<x> where x == original) —
+        // _copy() preserves the CGT reference to the source object, but
+        // for self-referential cases we need to rewire it to the copy.
+        GenericTypeValue cgt = anyOrig._classifierGenericType();
+        if (copy instanceof Any anyC && cgt != null && hasSelfReference(cgt, original))
         {
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType =
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
-            if (rawType instanceof PackageableElement pe2)
-            {
-                String p = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe2);
-                if (p != null && !p.isEmpty())
-                {
-                    classPath = p;
-                }
-            }
-        }
-
-        // Create instance via TruffleInstanceFactory (handles prefix stripping)
-        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
-        // All Pure classes must have truffle-generated Impls at this point
-
-        // Shallow copy all _xxx() getter/setter pairs via reflection
-        Class<?>[] interfaces = original.getClass().getInterfaces();
-        if (interfaces.length > 0)
-        {
-            for (java.lang.reflect.Method getter : interfaces[0].getMethods())
-            {
-                String name = getter.getName();
-                if (!name.startsWith("_") || getter.getParameterCount() != 0
-                        || "_copy".equals(name) || "_class".equals(name) || "_hashCode".equals(name))
-                {
-                    continue;
-                }
-                try
-                {
-                    Object value = getter.invoke(original);
-                    if (value == null)
-                    {
-                        continue;
-                    }
-                    for (java.lang.reflect.Method setter : copy.getClass().getMethods())
-                    {
-                        if (setter.getName().equals(name) && setter.getParameterCount() == 1
-                                && setter.getParameterTypes()[0].isInstance(value))
-                        {
-                            setter.invoke(copy, value);
-                            break;
-                        }
-                    }
-                }
-                catch (Exception ignored)
-                {
-                }
-            }
-        }
-
-        // Fix self-referencing CGT (e.g., Class<x> where x == original)
-        // Only deep-copy when the CGT actually references the original
-        if (copy instanceof Any anyC && cgt != null)
-        {
-            if (hasSelfReference(cgt, original))
-            {
-                anyC._classifierGenericType(deepCopyCgt(cgt, original, copy, resolver));
-            }
-            else
-            {
-                anyC._classifierGenericType(cgt);
-            }
+            anyC._classifierGenericType(deepCopyCgt(cgt, original, copy, resolver));
         }
         return copy;
     }

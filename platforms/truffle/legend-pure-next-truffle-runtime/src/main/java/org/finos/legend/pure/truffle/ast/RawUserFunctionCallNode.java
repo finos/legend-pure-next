@@ -17,128 +17,93 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 
 /**
- * Calls a user-defined FunctionDefinition via Truffle {@link IndirectCallNode}.
- * The CallTarget is resolved lazily and cached. All arguments and return values
- * are raw Java objects.
+ * Calls a user-defined FunctionDefinition.
  *
- * <p>Using IndirectCallNode (instead of a plain Java call through
- * StandaloneEvaluator) enables Truffle to:
- * <ul>
- *   <li>Build proper stack frames with Pure source locations</li>
- *   <li>Inline the callee for Graal JIT compilation</li>
- * </ul>
+ * <p>Each instance is a *monomorphic* call site by construction — the AST
+ * builder bakes in one {@link FunctionDefinition} per node, so the call
+ * target never changes once resolved. We use a {@link DirectCallNode} with
+ * the cached target, which is Truffle's canonical mechanism for letting
+ * the runtime decide inlining per call site (small targets fold into the
+ * caller; large compiler-pure functions stay as separate JIT units, by
+ * Truffle's own heuristics).</p>
+ *
+ * <p>QualifiedProperty calls fall back to {@link IndirectCallNode} because
+ * the resolved target depends on the runtime type of the receiver.</p>
+ *
+ * <p>The args array is allocated on every call but escape analysis
+ * virtualises it whenever {@code DirectCallNode} inlines the callee — the
+ * common case for the small standard-library functions that dominate
+ * compiler-pure's hot path.</p>
  */
 @NodeInfo(shortName = "userFunctionCall")
 public final class RawUserFunctionCallNode extends PureNode
 {
     private final FunctionDefinition fd;
-    /**
-     * Whether the callee should be inlined into the caller during partial
-     * evaluation. Pure has thousands of small user functions plus a few very
-     * large ones (the compiler internals) — naive inlining of the latter
-     * spreads the same JDK helpers across many specializations and exhausts
-     * Graal's inlining budget ("Too deep inlining" — 800+ failures during
-     * self-host). We only mark calls into the collection / lang / etc.
-     * standard library as inline candidates so collection ops fold their
-     * lambdas; everything else uses an indirect call with a non-constant
-     * target so Graal stops at the call site.
-     */
-    private final boolean inlineCandidate;
 
     @Children
     private PureNode[] argNodes;
 
+    /**
+     * Direct call to the cached target (monomorphic). Truffle's runtime
+     * makes the per-callsite inlining decision: small targets fold into
+     * the caller, large targets compile as separate JIT units.
+     */
     @Child
-    private IndirectCallNode callNode;
+    private DirectCallNode directCallNode;
 
     /**
-     * Cached call target — only marked {@link CompilerDirectives.CompilationFinal}
-     * for inline-candidate callees. For non-candidates the field is read as a
-     * regular (non-PE) value so Graal can't fold the target and the call stays
-     * indirect.
+     * Indirect call for QualifiedProperty dispatch — the resolved target
+     * varies by receiver type so we can't lock in a {@link DirectCallNode}.
      */
+    @Child
+    private IndirectCallNode indirectCallNode;
+
     @CompilerDirectives.CompilationFinal
-    private RootCallTarget cachedCallTarget;
-    private RootCallTarget regularCallTarget;
+    private RootCallTarget cachedTarget;
 
     public RawUserFunctionCallNode(FunctionDefinition fd, PureNode[] argNodes)
     {
         this.fd = fd;
         this.argNodes = argNodes;
-        this.callNode = IndirectCallNode.create();
-        this.inlineCandidate = isInlineCandidate(fd);
-    }
-
-    /**
-     * Whitelist of standard-library namespaces whose functions are small
-     * enough — and called often enough — that their bodies should fold into
-     * callers during partial evaluation. Bodies in these namespaces are the
-     * collection combinators (map / fold / filter / …), small lang predicates
-     * (if / let / equals / …), boolean / math primitives, and metaclass
-     * accessors — exactly the patterns a Pure-source compiler hot loop wants
-     * unrolled.
-     */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean isInlineCandidate(FunctionDefinition fd)
-    {
-        // Empty whitelist: every named function and every lambda routes
-        //   through {@link #boundaryCall} so each Pure function is its own
-        //   JIT compilation unit. Test mode for "no inlining at all".
-        return false;
     }
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object[] args = evaluateArgs(frame);
-        // For QPs: dispatch based on target's runtime type
         if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp && args.length > 0)
         {
             return dispatchQp(qp, args);
         }
-        if (inlineCandidate)
+        if (directCallNode != null)
         {
-            // Inline-candidate path: cached as @CompilationFinal so Graal sees
-            //   the target as constant and may fold the callee body in.
-            RootCallTarget ct = cachedCallTarget;
-            if (ct == null)
-            {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                ct = getContext().getCallTarget(fd);
-                cachedCallTarget = ct;
-            }
-            if (ct != null)
-            {
-                return callNode.call(ct, args);
-            }
-            return getContext().executeFunction(fd, args);
+            return directCallNode.call(args);
         }
-        // Non-inline path: hard boundary — Graal stops PE here so the caller's
-        //   compilation graph stays small. The callee compiles as its own unit
-        //   (still JIT-compiled, just not inlined).
-        RootCallTarget ct = regularCallTarget;
-        if (ct == null)
-        {
-            ct = getContext().getCallTarget(fd);
-            regularCallTarget = ct;
-        }
-        if (ct != null)
-        {
-            return boundaryCall(ct, args);
-        }
-        return getContext().executeFunction(fd, args);
+        return slowDispatch(args);
     }
 
-    @CompilerDirectives.TruffleBoundary
-    private static Object boundaryCall(RootCallTarget ct, Object[] args)
+    private Object slowDispatch(Object[] args)
     {
-        return ct.call(args);
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        if (cachedTarget == null)
+        {
+            cachedTarget = getContext().getCallTarget(fd);
+        }
+        if (cachedTarget != null)
+        {
+            directCallNode = insert(DirectCallNode.create(cachedTarget));
+            return directCallNode.call(args);
+        }
+        // No call target available (legacy path) — fall through to the
+        // evaluator's compile-on-demand entry point.
+        return getContext().executeFunction(fd, args);
     }
 
     @ExplodeLoop
@@ -152,17 +117,41 @@ public final class RawUserFunctionCallNode extends PureNode
         return args;
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
     {
-        // Resolve the actual QP from the target's runtime type
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition resolved =
-                getContext().resolveQpDispatch(staticQp, args);
-        RootCallTarget ct = getContext().getCallTarget(resolved);
+        // QP target depends on the receiver's runtime type — install (lazily)
+        // an IndirectCallNode and let it dispatch per call.
+        if (indirectCallNode == null)
+        {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            indirectCallNode = insert(IndirectCallNode.create());
+        }
+        FunctionDefinition resolved = resolveQpTarget(staticQp, args);
+        RootCallTarget ct = lookupCallTarget(resolved);
         if (ct != null)
         {
-            return callNode.call(ct, args);
+            return indirectCallNode.call(ct, args);
         }
+        return invokeWithoutCallTarget(resolved, args);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private FunctionDefinition resolveQpTarget(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp,
+            Object[] args)
+    {
+        return getContext().resolveQpDispatch(staticQp, args);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private RootCallTarget lookupCallTarget(FunctionDefinition resolved)
+    {
+        return getContext().getCallTarget(resolved);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object invokeWithoutCallTarget(FunctionDefinition resolved, Object[] args)
+    {
         return getContext().executeFunction(resolved, args);
     }
 }
