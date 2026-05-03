@@ -272,42 +272,26 @@ public final class PureCompileMain
                 .build();
         model.compile();
 
-        // Build truffle PDB loaders for all modules
+        // Build truffle PDB loaders + module registry. Each loader depends on
+        //   every loader before it so the registry resolves dependencies in
+        //   declared order; the composite resolver in the registry then
+        //   delegates {@code getElement} to the loaders in registration order.
         java.util.List<org.finos.legend.pure.truffle.runtime.TrufflePdbLoader> loaders = new java.util.ArrayList<>();
+        org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver =
+                new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
+        java.util.List<String> declaredDeps = new java.util.ArrayList<>();
         for (int mi = 0; mi < pdbPaths.size(); mi++)
         {
-            loaders.add(new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(java.nio.file.Path.of(pdbPaths.get(mi))));
+            String moduleName = "pdb" + mi;
+            org.finos.legend.pure.truffle.runtime.TrufflePdbLoader loader =
+                    new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(
+                            java.nio.file.Path.of(pdbPaths.get(mi)),
+                            moduleName,
+                            java.util.List.copyOf(declaredDeps));
+            resolver.register(loader);
+            loaders.add(loader);
+            declaredDeps.add(moduleName);
         }
-        // Composite resolver: later modules take priority
-        org.finos.legend.pure.truffle.runtime.helper.TypeCache compositeTypeCache =
-                new org.finos.legend.pure.truffle.runtime.helper.TypeCache();
-        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = new org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess()
-        {
-            @Override public Object getElement(String p)
-            {
-                for (int li = loaders.size() - 1; li >= 0; li--)
-                {
-                    Object e = loaders.get(li).getElement(p);
-                    if (e != null) return e;
-                }
-                return null;
-            }
-            @Override public boolean hasElement(String p)
-            {
-                for (var l : loaders) if (l.hasElement(p)) return true;
-                return false;
-            }
-            @Override public java.util.Set<String> elementPaths()
-            {
-                java.util.Set<String> all = new java.util.LinkedHashSet<>();
-                for (var l : loaders) all.addAll(l.elementPaths());
-                return all;
-            }
-            @Override public org.finos.legend.pure.truffle.runtime.TruffleTypeCache typeCache()
-            {
-                return compositeTypeCache;
-            }
-        };
         // Wire composite resolver into each loader for cross-module FBW resolution
         for (var loader : loaders) loader.setResolver(resolver);
         for (var loader : loaders) loader.preloadAll();

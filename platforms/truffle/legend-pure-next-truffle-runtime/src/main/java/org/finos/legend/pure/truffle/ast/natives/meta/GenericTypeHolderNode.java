@@ -49,6 +49,7 @@ public final class GenericTypeHolderNode extends PureNode
         return doGenericTypeHolder(result, genericType, multiplicity, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doGenericTypeHolder(Object result, GenericType genericType, Multiplicity multiplicity, TruffleMetadataAccess resolver)
     {
 

@@ -54,6 +54,7 @@ public final class PutAllNode extends PureNode
         return doPutAll(map, other, cgt);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doPutAll(Object map, Object other, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();

@@ -62,6 +62,7 @@ public final class RangeNode extends PureNode
         return build(start, stop, step);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object build(long start, long stop, long step)
     {
         int capacity = (int) Math.max(0, step > 0 ? (stop - start + step - 1) / step : (start - stop - step - 1) / (-step));

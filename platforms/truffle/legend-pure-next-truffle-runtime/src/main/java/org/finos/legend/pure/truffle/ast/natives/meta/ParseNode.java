@@ -54,6 +54,7 @@ public final class ParseNode extends PureNode
         return doParse(getContext(), sourceId, content);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doParse(PureContext eval, String sourceId, String content)
     {
         PureParser parser = eval.pureParser();

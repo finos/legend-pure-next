@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import org.finos.legend.pure.truffle.runtime.helper.TypeCache;
 
 import java.util.ArrayList;
@@ -127,6 +128,7 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
      * Returns the empty list when no function matches; never falls back to a
      * scan.
      */
+    @TruffleBoundary
     public List<Object> functionsByNameAndArity(String name, int arity)
     {
         Map<String, Map<Integer, List<Object>>> idx = functionsByNameArity;
@@ -144,6 +146,7 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
         return hits != null ? hits : List.of();
     }
 
+    @TruffleBoundary
     private Map<String, Map<Integer, List<Object>>> buildFunctionIndex()
     {
         Map<String, Map<Integer, List<Object>>> idx = new HashMap<>();

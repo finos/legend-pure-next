@@ -227,6 +227,7 @@ public final class EqualNode extends PureNode
      * LeftClass from BottomClass (different types, not equal) while still
      * matching FlatBufferWrapper vs Impl of the same type.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean samePureType(
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a,
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b)
@@ -253,6 +254,7 @@ public final class EqualNode extends PureNode
     }
 
     /** Extract just the value name from an enum value string like "pkg::EnumType.VALUE" → "VALUE". */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String extractEnumValueName(String s)
     {
         int dotIdx = s.lastIndexOf('.');
@@ -263,6 +265,7 @@ public final class EqualNode extends PureNode
         return s;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean equalByProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b, TruffleMetadataAccess resolver)
     {
         // Check for <<equality.Key>> properties — only compare those if present.
@@ -284,7 +287,7 @@ public final class EqualNode extends PureNode
                 }
                 catch (Exception e)
                 {
-                    throw new RuntimeException("Equality comparison failed for property '" + propName + "' on " + a.getClass().getSimpleName(), e);
+                    throw new RuntimeException("Equality comparison failed for property '" + propName + "' on " + a.getClass().getName(), e);
                 }
             }
             return true;
@@ -300,6 +303,7 @@ public final class EqualNode extends PureNode
      * from the object's class hierarchy via the PDB metamodel. Memoised per
      * Type on the resolver — see {@link org.finos.legend.pure.truffle.runtime.helper.TypeCache}.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.util.Set<String> collectEqualityKeyProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any obj, TruffleMetadataAccess resolver)
     {
         var cgt = obj._classifierGenericType();
@@ -339,6 +343,7 @@ public final class EqualNode extends PureNode
      * level. Past 2–3 unwraps that's enough to bust the inlining budget,
      * which surfaced 299× in the "Too deep inlining" bailout list.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object normalizeForEquals(Object v)
     {
         while (true)

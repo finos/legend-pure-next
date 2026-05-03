@@ -45,6 +45,7 @@ public final class ElementPathNode extends PureNode
         return buildPath(element);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildPath(Object element)
     {
         if (!(element instanceof PackageableElement pe))
@@ -56,6 +57,7 @@ public final class ElementPathNode extends PureNode
         return new ObjectSequence(path.toArray());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectAncestors(PackageableElement pe, List<Object> path)
     {
         if (pe._package() instanceof PackageableElement parent)

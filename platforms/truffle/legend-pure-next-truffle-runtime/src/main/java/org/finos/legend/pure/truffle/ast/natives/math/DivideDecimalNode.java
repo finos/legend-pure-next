@@ -51,6 +51,7 @@ public final class DivideDecimalNode extends PureNode
         return toBigDecimal(a).divide(toBigDecimal(b), s, RoundingMode.HALF_UP);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static BigDecimal toBigDecimal(Object v)
     {
         if (v instanceof BigDecimal d)

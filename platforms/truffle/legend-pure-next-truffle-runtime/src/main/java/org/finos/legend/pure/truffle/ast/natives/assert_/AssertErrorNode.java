@@ -71,6 +71,7 @@ public final class AssertErrorNode extends PureNode
         return doAssertError(fn, expectedMessage);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private boolean doAssertError(Object rawFn, String expectedMessage)
     {
         Object fn = rawFn;

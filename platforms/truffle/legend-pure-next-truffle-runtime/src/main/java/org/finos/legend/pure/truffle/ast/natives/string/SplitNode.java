@@ -53,6 +53,7 @@ public final class SplitNode extends PureNode
         return doSplit(s, delimiter);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doSplit(String s, String delimiter)
     {
         String[] parts = s.split(Pattern.quote(delimiter), -1);

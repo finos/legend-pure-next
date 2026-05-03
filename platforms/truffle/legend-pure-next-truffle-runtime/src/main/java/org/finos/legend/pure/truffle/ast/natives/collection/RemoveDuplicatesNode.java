@@ -105,6 +105,7 @@ public final class RemoveDuplicatesNode extends PureNode
         return new ObjectSequence(Arrays.copyOf(result, count));
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean pureEquals(Object a, Object b)
     {
         if (a == b)

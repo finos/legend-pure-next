@@ -46,6 +46,7 @@ public final class InstanceOfNode extends PureNode
         return doInstanceOf(valResult, typeResult, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean doInstanceOf(Object rawVal, Object typeResult, TruffleMetadataAccess resolver)
     {
 

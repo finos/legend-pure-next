@@ -61,6 +61,7 @@ public final class IndexOfCollectionNode extends PureNode
         return -1L;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean pureEquals(Object a, Object b)
     {
         if (a == b)

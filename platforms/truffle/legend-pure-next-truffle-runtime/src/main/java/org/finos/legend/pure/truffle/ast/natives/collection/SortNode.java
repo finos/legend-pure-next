@@ -85,6 +85,7 @@ public final class SortNode extends PureNode
         return new ObjectSequence(arr);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object[] extractKeys(Object[] arr, Object keyFn)
     {
         Object[] keys = new Object[arr.length];
@@ -95,6 +96,7 @@ public final class SortNode extends PureNode
         return keys;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private void insertionSortWithComp(Object[] arr, Object[] keys, Object compFn)
     {
         for (int i = 1; i < arr.length; i++)
@@ -119,6 +121,7 @@ public final class SortNode extends PureNode
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     @SuppressWarnings("unchecked")
     private static void insertionSortNatural(Object[] arr, Object[] keys)
     {
@@ -139,6 +142,7 @@ public final class SortNode extends PureNode
     }
 
     @SuppressWarnings("unchecked")
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static int naturalCompare(Object a, Object b)
     {
         if (a instanceof Number nA && b instanceof Number nB)
@@ -149,7 +153,7 @@ public final class SortNode extends PureNode
         {
             return c.compareTo(b);
         }
-        int typeCmp = a.getClass().getSimpleName().compareTo(b.getClass().getSimpleName());
+        int typeCmp = a.getClass().getName().compareTo(b.getClass().getName());
         if (typeCmp != 0)
         {
             return typeCmp;

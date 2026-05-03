@@ -55,6 +55,7 @@ public final class MapPutNode extends PureNode
         return doPut(map, key, value, cgt);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doPut(Object map, Object key, Object value, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();

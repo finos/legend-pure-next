@@ -198,6 +198,7 @@ public final class DateHelper
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String zeroPadDate(String datePart)
     {
         String[] parts = datePart.split("-");

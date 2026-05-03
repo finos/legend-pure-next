@@ -15,6 +15,7 @@
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -50,14 +51,22 @@ public final class MatchNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
+        Object[] values = evaluateChildren(frame);
+        return invokeMatch(values, getContext(), matchCallNode);
+    }
+
+    @ExplodeLoop
+    private Object[] evaluateChildren(VirtualFrame frame)
+    {
         Object[] values = new Object[children.length];
         for (int i = 0; i < children.length; i++)
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeMatch(values, getContext(), matchCallNode);
+        return values;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object invokeMatch(Object[] values, org.finos.legend.pure.truffle.PureContext context, RawLambdaCallNode matchCallNode)
     {
         TruffleMetadataAccess resolver = context.resolver();
@@ -123,9 +132,10 @@ public final class MatchNode extends PureNode
                 ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe) : "n/a";
         Object cgt = context.classifierGenericType(value);
         throw new RuntimeException("No match function matched the value: " + value
-                + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getSimpleName()) + ", fnCount=" + fnCount + "]");
+                + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getName()) + ", fnCount=" + fnCount + "]");
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static int getRawValueCount(Object value)
     {
         if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
@@ -135,6 +145,7 @@ public final class MatchNode extends PureNode
         return CollectionHelper.size(value);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type getRawValueType(Object value,
                                                                                                    org.finos.legend.pure.truffle.PureContext context)
     {
@@ -230,6 +241,7 @@ public final class MatchNode extends PureNode
         return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::type::Any");
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean matchesBranch(FunctionDefinition fd,
                                          org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type valueType,
                                          int valueCount,
@@ -277,6 +289,7 @@ public final class MatchNode extends PureNode
         return true;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean multiplicityAccepts(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity mult, int count)
     {
         if (!(mult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm))

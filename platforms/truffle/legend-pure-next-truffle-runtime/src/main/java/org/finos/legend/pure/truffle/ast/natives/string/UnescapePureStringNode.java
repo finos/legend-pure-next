@@ -44,6 +44,12 @@ public final class UnescapePureStringNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(strArg.executeGeneric(frame), SIG);
+        return doUnescape(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doUnescape(String s)
+    {
         if (s.indexOf('\\') < 0)
         {
             return s;

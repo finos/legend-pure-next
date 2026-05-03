@@ -85,6 +85,7 @@ public final class PureSourceHelper
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Source buildSource(String sourceId)
     {
         for (Path root : SOURCE_ROOTS)

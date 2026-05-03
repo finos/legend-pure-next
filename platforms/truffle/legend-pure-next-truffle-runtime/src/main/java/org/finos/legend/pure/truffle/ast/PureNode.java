@@ -42,11 +42,13 @@ public abstract class PureNode extends Node
 
     public abstract Object executeGeneric(VirtualFrame frame);
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     protected final org.finos.legend.pure.truffle.PureContext getContext()
     {
         return org.finos.legend.pure.truffle.PureLanguage.get(this);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     protected final org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess getResolver()
     {
         return getContext().resolver();

@@ -41,6 +41,7 @@ public final class NewEnumNode extends PureNode
         return doNewEnumeration(name, pkg, valueNames, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNewEnumeration(Object name, Object pkg, Object valueNames, TruffleMetadataAccess resolver)
     {
         var enumeration = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.EnumerationImpl();

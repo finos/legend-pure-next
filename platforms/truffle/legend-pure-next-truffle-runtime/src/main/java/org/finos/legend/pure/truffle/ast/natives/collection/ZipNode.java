@@ -53,6 +53,7 @@ public final class ZipNode extends PureNode
         return doZip(left, right, cgt);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doZip(Object left, Object right, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT)
     {
         int leftSz = CollectionHelper.size(left);

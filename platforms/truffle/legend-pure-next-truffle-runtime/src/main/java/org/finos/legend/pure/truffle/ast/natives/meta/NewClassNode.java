@@ -34,6 +34,7 @@ public final class NewClassNode extends PureNode
         return doNewClass(typeParams, multParams, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNewClass(Object typeParams, Object multParams, TruffleMetadataAccess resolver)
     {
         var cls = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl();
@@ -95,6 +96,7 @@ public final class NewClassNode extends PureNode
         return cls;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static PureSequence toSequence(Object value)
     {
         if (value instanceof PureSequence ps) return ps;

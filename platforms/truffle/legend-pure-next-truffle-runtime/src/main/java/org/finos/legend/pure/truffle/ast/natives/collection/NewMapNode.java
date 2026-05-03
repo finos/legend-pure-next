@@ -58,6 +58,7 @@ public final class NewMapNode extends PureNode
         return buildMap(pairs, cgt);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildMap(Object pairs, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl map = new MapImpl();

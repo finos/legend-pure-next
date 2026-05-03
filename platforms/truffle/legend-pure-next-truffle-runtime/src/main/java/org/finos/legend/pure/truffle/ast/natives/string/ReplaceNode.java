@@ -45,6 +45,12 @@ public final class ReplaceNode extends PureNode
         String s = StringHelper.asString(strArg.executeGeneric(frame), SIG);
         String toReplace = StringHelper.asString(toReplaceArg.executeGeneric(frame), SIG);
         String replacement = StringHelper.asString(replacementArg.executeGeneric(frame), SIG);
+        return doReplace(s, toReplace, replacement);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doReplace(String s, String toReplace, String replacement)
+    {
         return s.replace(toReplace, replacement);
     }
 }

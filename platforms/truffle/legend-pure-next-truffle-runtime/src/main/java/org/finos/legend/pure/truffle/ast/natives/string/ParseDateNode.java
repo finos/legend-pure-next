@@ -51,6 +51,7 @@ public final class ParseDateNode extends PureNode
         return parseDate(s);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static PureDate parseDate(String s)
     {
         String dateStr = s.trim();

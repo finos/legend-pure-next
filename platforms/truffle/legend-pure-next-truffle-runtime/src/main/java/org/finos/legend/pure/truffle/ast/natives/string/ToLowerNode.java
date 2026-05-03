@@ -35,6 +35,12 @@ public final class ToLowerNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
+        return doLower(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doLower(String s)
+    {
         return s.toLowerCase();
     }
 }

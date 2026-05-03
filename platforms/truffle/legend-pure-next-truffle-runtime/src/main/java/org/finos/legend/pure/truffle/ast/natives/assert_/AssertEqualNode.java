@@ -48,6 +48,7 @@ public final class AssertEqualNode extends PureNode
         return doAssertEqual(expected, actual);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean doAssertEqual(Object expected, Object actual)
     {
         if (!deepEquals(expected, actual))
@@ -60,6 +61,7 @@ public final class AssertEqualNode extends PureNode
         return true;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean deepEquals(Object a, Object b)
     {
         // Unwrap PureDate to date strings for comparison

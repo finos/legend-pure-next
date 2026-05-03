@@ -50,6 +50,7 @@ public final class CopySimpleNode extends PureNode
         return doCopy(result, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         GenericTypeValue cgt;
@@ -66,7 +67,7 @@ public final class CopySimpleNode extends PureNode
         }
         else
         {
-            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
+            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
         }
 
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
@@ -138,6 +139,7 @@ public final class CopySimpleNode extends PureNode
         return copy;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String printGtv(GenericTypeValue gtv, Object original, Object copy, int depth)
     {
         if (gtv == null) return "null";
@@ -147,7 +149,7 @@ public final class CopySimpleNode extends PureNode
         String typeName = type == null ? "null"
                 : type == original ? "ORIGINAL@" + System.identityHashCode(original)
                 : type == copy ? "COPY@" + System.identityHashCode(copy)
-                : type.getClass().getSimpleName() + "@" + System.identityHashCode(type);
+                : type.getClass().getName() + "@" + System.identityHashCode(type);
         sb.append("GT(type=").append(typeName);
         var ta = gtv._typeArguments();
         if (ta != null && !ta.isEmpty())
@@ -163,7 +165,7 @@ public final class CopySimpleNode extends PureNode
                 }
                 else
                 {
-                    sb.append(elem != null ? elem.getClass().getSimpleName() : "null");
+                    sb.append(elem != null ? elem.getClass().getName() : "null");
                 }
             }
             sb.append("]");
@@ -172,6 +174,7 @@ public final class CopySimpleNode extends PureNode
         return sb.toString();
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean hasSelfReference(GenericTypeValue gtv, Object original)
     {
         if (gtv._type() == original) return true;
@@ -191,6 +194,7 @@ public final class CopySimpleNode extends PureNode
      * Deep-copy a GenericTypeValue tree, replacing all references to {@code original}
      * with {@code copy}. Handles type pointers and TypeParameter owner pointers.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy,
                                                 org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {

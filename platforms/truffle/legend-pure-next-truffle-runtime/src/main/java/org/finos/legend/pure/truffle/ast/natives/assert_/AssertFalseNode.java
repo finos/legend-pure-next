@@ -56,6 +56,7 @@ public final class AssertFalseNode extends PureNode
         return true;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b)

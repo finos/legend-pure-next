@@ -49,6 +49,7 @@ public final class TypeNode extends PureNode
         return doType(result, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doType(Object result, TruffleMetadataAccess resolver)
     {
         return MetaHelper.getRawValueType(result, resolver);

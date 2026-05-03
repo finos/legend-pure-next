@@ -83,6 +83,7 @@ public final class RawLambdaCaptureNode extends PureNode
     @CompilationFinal
     private RootCallTarget cachedCallTarget;
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget lookupCallTarget()
     {
         if (cachedCallTarget != null)

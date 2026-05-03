@@ -85,19 +85,19 @@ public final class NewWithKeysNode extends PureNode
     }
 
     @Override
+    @com.oracle.truffle.api.nodes.ExplodeLoop
     public Object executeGeneric(VirtualFrame frame)
     {
         return invoke(frame);
     }
 
+    @com.oracle.truffle.api.nodes.ExplodeLoop
     private Object invoke(VirtualFrame frame)
     {
         // Delegate to the evaluator which manages the construction
         // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
         // We evaluate them lazily through the evaluator.
         org.finos.legend.pure.truffle.PureContext eval = getContext();
-
-        // Evaluate type holder (first param) — pre-compiled as child node
         Object typeHolder = typeHolderNode.executeGeneric(frame);
 
         // Extract class path from type holder
@@ -125,9 +125,9 @@ public final class NewWithKeysNode extends PureNode
                 }
                 if ("Unknown".equals(classPath))
                 {
-                    throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + gt.getClass().getSimpleName()
+                    throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + gt.getClass().getName()
                             + " typeArgs=" + (typeArgs != null ? typeArgs.size() : "null")
-                            + " type=" + (_GenericType.type(gt) != null ? _GenericType.type(gt).getClass().getSimpleName() : "null"));
+                            + " type=" + (_GenericType.type(gt) != null ? _GenericType.type(gt).getClass().getName() : "null"));
                 }
             }
         }
@@ -163,8 +163,8 @@ public final class NewWithKeysNode extends PureNode
         if (instance instanceof Any anyCheck && anyCheck._classifierGenericType() == null)
         {
             throw new RuntimeException("[NEW] classifierGenericType is NULL after creation of " + classPath
-                    + " (instance=" + instance.getClass().getSimpleName()
-                    + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getSimpleName() : "null")
+                    + " (instance=" + instance.getClass().getName()
+                    + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getName() : "null")
                     + ", gt=" + (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh2 ? _GenericType.print(gtmh2._genericType(), eval.resolver()) : "n/a")
                     + ")");
         }
@@ -278,6 +278,7 @@ public final class NewWithKeysNode extends PureNode
      * one-element sequence containing a String). Multi-element sequences
      * pass through as-is — the receiving setter will accept the list.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object unwrapSingleton(Object value)
     {
         if (value instanceof PureSequence ps)
@@ -294,6 +295,7 @@ public final class NewWithKeysNode extends PureNode
      * Resolve a class path from a type argument (Object from PureSequence.getBoxed).
      * Uses truffle-namespaced helpers.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String resolveClassPathFromTypeArg(Object typeArg,
                                                        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
@@ -388,6 +390,7 @@ public final class NewWithKeysNode extends PureNode
         return null;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.util.Map<String, java.util.List<String[]>> buildReverseAssocIndex(
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
@@ -415,6 +418,7 @@ public final class NewWithKeysNode extends PureNode
         return index;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void addAssocEntry(java.util.Map<String, java.util.List<String[]>> index,
                                        Property matchProp, Property otherProp,
                                        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
@@ -520,7 +524,7 @@ public final class NewWithKeysNode extends PureNode
         }
         catch (Exception e)
         {
-            throw new RuntimeException("Failed to set reverse association property '" + propName + "' on " + target.getClass().getSimpleName(), e);
+            throw new RuntimeException("Failed to set reverse association property '" + propName + "' on " + target.getClass().getName(), e);
         }
     }
 
@@ -528,6 +532,7 @@ public final class NewWithKeysNode extends PureNode
      * Unwrap VS one level for the execution stack:
      * AtomicValue → raw value, Collection → PureSequence of unwrapped values.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object unwrapVS(Object value)
     {
         if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)

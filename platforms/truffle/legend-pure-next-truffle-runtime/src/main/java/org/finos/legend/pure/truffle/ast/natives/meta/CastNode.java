@@ -53,6 +53,7 @@ public final class CastNode extends PureNode
         return doCast(inputResult, targetResult, getResolver(), constraintCallNode);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doCast(Object inputResult, Object targetResult, TruffleMetadataAccess resolver, RawLambdaCallNode constraintCallNode)
     {
 
@@ -122,6 +123,7 @@ public final class CastNode extends PureNode
         return inputResult;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     static void validateConstraints(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
                                             GenericType targetGT,
                                             Object value,
@@ -144,6 +146,7 @@ public final class CastNode extends PureNode
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void validateConstraintsOnType(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
                                                    GenericType targetGT,
                                                    Object value,

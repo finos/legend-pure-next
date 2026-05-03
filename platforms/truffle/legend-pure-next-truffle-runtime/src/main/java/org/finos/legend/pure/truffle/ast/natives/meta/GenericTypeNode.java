@@ -48,6 +48,7 @@ public final class GenericTypeNode extends PureNode
         return doGenericType(result, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doGenericType(Object result, TruffleMetadataAccess resolver)
     {
         GenericType gt = MetaHelper.getRawGenericType(result, resolver);

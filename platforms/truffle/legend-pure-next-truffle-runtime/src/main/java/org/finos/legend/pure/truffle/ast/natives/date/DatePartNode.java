@@ -54,6 +54,7 @@ public final class DatePartNode extends PureNode
         return extract(v);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static PureDate extract(Object v)
     {
         String dateStr = DateHelper.asDateString(v, SIG);

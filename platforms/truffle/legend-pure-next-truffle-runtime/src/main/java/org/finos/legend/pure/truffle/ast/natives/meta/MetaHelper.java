@@ -122,6 +122,7 @@ public final class MetaHelper
      * Compute the most common (least upper bound) type of all elements
      * in a collection. Uses {@code _Type.findCommonType} for LUB computation.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Type getCollectionType(int size, java.util.function.IntFunction<Object> getter, TruffleMetadataAccess resolver)
     {
         if (size == 0)

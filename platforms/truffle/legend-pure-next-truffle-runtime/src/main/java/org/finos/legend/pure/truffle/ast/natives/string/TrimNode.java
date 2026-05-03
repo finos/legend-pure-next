@@ -35,6 +35,12 @@ public final class TrimNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
+        return doTrim(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doTrim(String s)
+    {
         return s.trim();
     }
 }

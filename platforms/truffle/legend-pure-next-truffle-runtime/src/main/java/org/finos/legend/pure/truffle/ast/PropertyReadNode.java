@@ -3,22 +3,30 @@ package org.finos.legend.pure.truffle.ast;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.nodes.Node;
+import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
 
 /**
- * Cached property getter node. Caches the getter MethodHandle by
- * (targetClass, propertyName) for JIT-friendly property reads.
+ * Pure {@code $obj.foo} property dispatch. All generated metamodel classes
+ * (XImpl + XFlatBufferWrapper) implement {@link PropertyAccessor#readProperty}
+ * — a single virtual call into a generated {@code switch} on the property
+ * name. Replaces a previous {@link java.lang.invoke.MethodHandle}-based
+ * lookup that was opaque to Graal partial evaluation and contributed to
+ * "Too deep inlining" compilation failures during self-host.
+ *
+ * <p>Per-call-site monomorphic inline cache: the first execution stores the
+ * receiver's exact class as {@link CompilationFinal}, so subsequent calls of
+ * the same shape (the common case for {@code $obj.foo} where the static type
+ * is fixed) let Graal devirtualize {@code readProperty} to the cached class's
+ * implementation. With {@code propName} also constant at the AST level, the
+ * generated {@code switch} inside that class collapses to a single
+ * {@code _foo()} accessor call after partial evaluation.</p>
+ *
+ * <p>Receivers that aren't a {@link PropertyAccessor} (e.g. {@code RawClosure}
+ * wrapping a lambda) are unwrapped or fall through to {@link #ABSENT}; no
+ * reflection path remains.</p>
  */
 public final class PropertyReadNode extends Node
 {
-    @CompilationFinal
-    private Class<?> cachedClass;
-
-    @CompilationFinal
-    private String cachedPropName;
-
-    @CompilationFinal
-    private java.lang.invoke.MethodHandle cachedGetter;
-
     /**
      * Sentinel returned by {@link #executeOrAbsent} when the target has no
      * such property at all (vs. has it and it's empty). Callers that need
@@ -26,7 +34,10 @@ public final class PropertyReadNode extends Node
      * which falls back to enum-value lookup only when the property doesn't
      * exist — should use {@code executeOrAbsent} and check for this token.
      */
-    public static final Object ABSENT = new Object();
+    public static final Object ABSENT = PropertyAccessor.ABSENT;
+
+    @CompilationFinal
+    private Class<?> cachedClass;
 
     public Object execute(Object target, String propName)
     {
@@ -55,41 +66,32 @@ public final class PropertyReadNode extends Node
         {
             target = rc.lambda();
         }
-        Class<?> targetClass = target.getClass();
-        if (targetClass == cachedClass && propName.equals(cachedPropName) && cachedGetter != null)
+        Class<?> tc = target.getClass();
+        if (tc == cachedClass)
         {
-            try
-            {
-                return cachedGetter.invoke(target);
-            }
-            catch (Throwable t)
-            {
-                throw new RuntimeException("Error reading '" + propName + "'", t);
-            }
+            // PE knows tc is the cached class — the cast then devirtualizes
+            //   readProperty to that exact class's implementation, and with
+            //   constant propName the inner switch collapses to a single
+            //   typed accessor call.
+            return ((PropertyAccessor) target).readProperty(propName);
         }
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        return lookupAndInvoke(target, propName, targetClass);
-    }
-
-    private Object lookupAndInvoke(Object target, String propName, Class<?> targetClass)
-    {
-        String methodName = "_" + propName;
-        try
+        if (cachedClass == null)
         {
-            java.lang.reflect.Method method = targetClass.getMethod(methodName);
-            if (method.getDeclaringClass() != Object.class)
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            // Only cache when the target actually implements PropertyAccessor
+            // — caching a non-PropertyAccessor class (e.g. a Java enum like
+            //   GenericTypeOperationTypeEnum, which the metamodel uses for
+            //   relation operations) would cause the fast-path cast above to
+            //   fail with ClassCastException on subsequent calls of the same
+            //   shape.
+            if (target instanceof PropertyAccessor pa)
             {
-                cachedClass = targetClass;
-                cachedPropName = propName;
-                cachedGetter = java.lang.invoke.MethodHandles.lookup().unreflect(method);
-                return cachedGetter.invoke(target);
+                cachedClass = tc;
+                return pa.readProperty(propName);
             }
+            return ABSENT;
         }
-        catch (NoSuchMethodException ignored) {}
-        catch (Throwable t)
-        {
-            throw new RuntimeException("Error reading '" + propName + "' on " + targetClass.getName(), t);
-        }
-        return ABSENT;
+        // Polymorphic call site — virtual dispatch through the interface.
+        return target instanceof PropertyAccessor pa ? pa.readProperty(propName) : ABSENT;
     }
 }

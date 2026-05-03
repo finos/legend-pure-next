@@ -70,6 +70,7 @@ public final class _GenericType
         return print(gt, null);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static String print(Object gt, TruffleMetadataAccess resolver)
     {
         if (gt == null)
@@ -80,11 +81,11 @@ public final class _GenericType
                 && !(gt instanceof GenericTypeValue))
         {
             String path = _PackageableElement.path(pe, resolver);
-            return "[Type:" + (path != null ? path : (pe._name() != null ? pe._name() : gt.getClass().getSimpleName())) + "]";
+            return "[Type:" + (path != null ? path : (pe._name() != null ? pe._name() : gt.getClass().getName())) + "]";
         }
         if (!(gt instanceof GenericTypeValue gtv))
         {
-            return gt.getClass().getSimpleName();
+            return gt.getClass().getName();
         }
 
         StringBuilder sb = new StringBuilder();

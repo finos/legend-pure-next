@@ -98,17 +98,20 @@ public final class IsNode extends PureNode
         return false;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean callPureEquals(Object a, Object b)
     {
         return Objects.equals(a, b);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String extractEnumValueName(String s)
     {
         int dotIdx = s.lastIndexOf('.');
         return (dotIdx > 0 && s.contains("::")) ? s.substring(dotIdx + 1) : s;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object normalize(Object v)
     {
         if (v instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty())

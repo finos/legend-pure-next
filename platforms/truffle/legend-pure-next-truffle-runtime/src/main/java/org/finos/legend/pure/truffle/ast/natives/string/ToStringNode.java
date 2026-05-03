@@ -48,6 +48,7 @@ public final class ToStringNode extends PureNode
         return convert(v, toStringReader);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String convert(Object v, org.finos.legend.pure.truffle.ast.PropertyReadNode reader)
     {
         if (v == null)
@@ -302,6 +303,7 @@ public final class ToStringNode extends PureNode
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String normalizeStrictDate(String s)
     {
         // Strip leading + for large years
@@ -325,6 +327,7 @@ public final class ToStringNode extends PureNode
         return input;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String normalizeTimePart(String s)
     {
         // Handle h:m:s.f or h:m:s format
@@ -348,6 +351,7 @@ public final class ToStringNode extends PureNode
         return s;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     static String formatStrictDate(java.time.LocalDate ld)
     {
         // Pure format: yyyy-MM-dd (no + prefix for large years)
@@ -355,6 +359,7 @@ public final class ToStringNode extends PureNode
         return s;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     static String formatDateTime(java.time.ZonedDateTime zdt)
     {
         // Pure format: yyyy-MM-ddTHH:mm:ss.S (no + prefix, no timezone)

@@ -515,6 +515,7 @@ public class PdbJavaGenerator
         sb.append("package ").append(pkg).append(";\n\n");
         sb.append("public class ").append(cr.name).append("Impl");
         sb.append(" implements ").append(cr.name);
+        sb.append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor");
         sb.append("\n{\n");
 
         // Collect all properties (own + inherited)
@@ -617,8 +618,74 @@ public class PdbJavaGenerator
         sb.append("        return copy;\n");
         sb.append("    }\n\n");
 
+        appendReadPropertySwitch(sb, allProps);
+        appendWritePropertySwitch(sb, allProps, false);
+
         sb.append("}\n");
         return sb.toString();
+    }
+
+    /**
+     * Emits the {@code readProperty(String)} method required by {@link
+     * org.finos.legend.pure.truffle.runtime.PropertyAccessor} — a switch on
+     * the property name that delegates to the typed {@code _foo()} accessor
+     * already generated above. Used by {@code PropertyReadNode} to dispatch
+     * Pure-side {@code $obj.foo} reads without {@code MethodHandle} reflection.
+     * Returns {@code PropertyAccessor.ABSENT} for unknown names so callers can
+     * distinguish "no such property" from "property is the empty sequence".
+     */
+    private void appendReadPropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps)
+    {
+        sb.append("    @Override\n");
+        sb.append("    public Object readProperty(String name)\n");
+        sb.append("    {\n");
+        sb.append("        return switch (name)\n");
+        sb.append("        {\n");
+        for (PropRecord pr : allProps)
+        {
+            sb.append("            case \"").append(pr.name).append("\" -> _").append(pr.name).append("();\n");
+        }
+        sb.append("            default -> org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT;\n");
+        sb.append("        };\n");
+        sb.append("    }\n\n");
+    }
+
+    /**
+     * Emits the {@code writeProperty(String, Object)} method required by
+     * {@link org.finos.legend.pure.truffle.runtime.PropertyAccessor}. For
+     * {@code XImpl} classes this delegates to the typed setter
+     * ({@code _foo(coerce(value))}); FlatBuffer wrappers throw
+     * {@code UnsupportedOperationException} because they're read-only.
+     * Replaces {@code MethodHandle.invoke} reflection in
+     * {@code PropertyWriteNode}, which inlined the JDK's
+     * {@code SignatureParser} machinery 33 levels deep on every Pure
+     * {@code ^X(prop=val)} and contributed the bulk of remaining Graal
+     * compilation failures.
+     */
+    private void appendWritePropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps, boolean readOnly)
+    {
+        sb.append("    @Override\n");
+        sb.append("    public void writeProperty(String name, Object value)\n");
+        sb.append("    {\n");
+        if (readOnly)
+        {
+            sb.append("        throw new UnsupportedOperationException(\"Read-only FlatBuffer wrapper\");\n");
+        }
+        else
+        {
+            sb.append("        switch (name)\n");
+            sb.append("        {\n");
+            for (PropRecord pr : allProps)
+            {
+                String javaType = resolveJavaType(pr);
+                String boxed = boxType(javaType);
+                sb.append("            case \"").append(pr.name).append("\" -> _").append(pr.name)
+                        .append("((").append(boxed).append(") org.finos.legend.pure.truffle.runtime.helper.PropertyCoercion.coerce(value, ").append(boxed).append(".class));\n");
+            }
+            sb.append("            default -> throw new IllegalArgumentException(\"No such property: \" + name);\n");
+            sb.append("        }\n");
+        }
+        sb.append("    }\n\n");
     }
 
     // =========================================================================
@@ -650,7 +717,9 @@ public class PdbJavaGenerator
         sb.append("import org.finos.legend.pure.truffle.types.ObjectSequence;\n");
         sb.append("import org.finos.legend.pure.truffle.types.PureSequence;\n\n");
 
-        sb.append("public class ").append(cr.name).append("FlatBufferWrapper implements ").append(cr.name).append("\n{\n");
+        sb.append("public class ").append(cr.name).append("FlatBufferWrapper implements ").append(cr.name)
+                .append(", org.finos.legend.pure.truffle.runtime.FbParented")
+                .append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor\n{\n");
         sb.append("    private final ").append(FBS_PKG).append(".").append(defName).append(" fb;\n");
         sb.append("    private final TruffleMetadataAccess resolver;\n");
         sb.append("    private final Object _parent;\n");
@@ -679,11 +748,19 @@ public class PdbJavaGenerator
             String cacheField = "cached_" + escapeKeyword(pr.name);
             FbsSchema.FbsField fbsField = findFbsField(fbsFields, pr.name);
 
-            // Getter with caching
+            // Getter — fast cached path inlines into PE; slow load is behind a
+            //   @TruffleBoundary so FlatBuffer deserialization (Utf8Safe,
+            //   PointerRef chains, etc.) doesn't pull JDK reflection /
+            //   string-bounds / Locale machinery into the caller's compilation.
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(pr.name).append("()\n    {\n");
-            sb.append("        if (").append(cacheField).append(" != null) return ").append(cacheField).append(";\n");
-            // Generate the actual resolution into a local, then cache
+            sb.append("        ").append(boxedType).append(" __cached = ").append(cacheField).append(";\n");
+            sb.append("        if (__cached != null) return __cached;\n");
+            sb.append("        return __load_").append(pr.name).append("();\n");
+            sb.append("    }\n\n");
+
+            sb.append("    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary\n");
+            sb.append("    private ").append(javaType).append(" __load_").append(pr.name).append("()\n    {\n");
             sb.append("        Object __raw = null;\n");
             generateWrapperGetterBody(sb, pr, fbsField);
             sb.append("        ").append(cacheField).append(" = (").append(boxedType).append(") __raw;\n");
@@ -705,6 +782,9 @@ public class PdbJavaGenerator
             sb.append("        copy._").append(pr.name).append("(this._").append(pr.name).append("());\n");
         }
         sb.append("        return copy;\n    }\n\n");
+
+        appendReadPropertySwitch(sb, allProps);
+        appendWritePropertySwitch(sb, allProps, true);
 
         sb.append("}\n");
         return sb.toString();
@@ -1825,7 +1905,7 @@ public class PdbJavaGenerator
                         .append(".AncestorRef) fb.").append(camelName).append("(new ").append(FBS_PKG)
                         .append(".AncestorRef()");
                 if (isVector) sb.append(", i");
-                sb.append("); if (ar != null) { Object t = this; for (int d = 0; d < ar.depth(); d++) { try { t = t.getClass().getMethod(\"_fbParent\").invoke(t); } catch (Exception e) { break; } } ")
+                sb.append("); if (ar != null) { Object t = this; for (int d = 0; d < ar.depth(); d++) { if (!(t instanceof org.finos.legend.pure.truffle.runtime.FbParented fp)) break; t = fp._fbParent(); if (t == null) break; } ")
                   .append(target).append(" = t; } break; }\n");
             }
             return;
@@ -1924,7 +2004,9 @@ public class PdbJavaGenerator
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("public enum ").append(er.name).append("Enum implements ").append(er.name).append("\n{\n");
+        sb.append("public enum ").append(er.name).append("Enum implements ").append(er.name)
+                .append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor")
+                .append("\n{\n");
 
         for (int i = 0; i < er.values.size(); i++)
         {
@@ -1966,6 +2048,27 @@ public class PdbJavaGenerator
 
         // _copy() — enum values are singletons
         sb.append("    @Override public ").append(er.name).append("Enum _copy() { return this; }\n\n");
+
+        // PropertyAccessor — Pure-side `$enumValue.name`, `.stereotypes`, etc.
+        // dispatch through this switch instead of a reflective method handle.
+        // Java enums extend java.lang.Enum (whose generic supertype triggers
+        // the SignatureParser → Locale → ConcurrentHashMap inlining chain)
+        // so the previous fallback-to-reflection path also broke
+        // {@code TruffleTestCompilerPure.assertNoCompilationFailures} once
+        // PropertyReadNode tightened its monomorphic cache.
+        sb.append("    @Override\n");
+        sb.append("    public Object readProperty(String name)\n    {\n");
+        sb.append("        switch (name)\n        {\n");
+        sb.append("            case \"name\": return _name();\n");
+        sb.append("            case \"classifierGenericType\": return _classifierGenericType();\n");
+        sb.append("            case \"sourceInformation\": return _sourceInformation();\n");
+        sb.append("            case \"elementOverride\": return _elementOverride();\n");
+        sb.append("            case \"taggedValues\": return _taggedValues();\n");
+        sb.append("            case \"stereotypes\": return _stereotypes();\n");
+        sb.append("            default: return org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT;\n");
+        sb.append("        }\n    }\n\n");
+        sb.append("    @Override\n");
+        sb.append("    public void writeProperty(String name, Object value) {}\n\n");
 
         sb.append("}\n");
         return sb.toString();

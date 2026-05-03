@@ -29,6 +29,13 @@
             <artifactId>eclipse-collections</artifactId>
             <version>${eclipsecollections.version}</version>
         </dependency>
+        <!-- Truffle API on the codegen classpath so generated FBW getters can
+             carry @TruffleBoundary on their slow-path loaders. -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

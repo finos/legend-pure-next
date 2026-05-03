@@ -57,6 +57,7 @@ public final class CompareNode extends PureNode
         return doCompare(a, b);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static long doCompare(Object rawA, Object rawB)
     {
         // Normalize: if one side is PureDate and the other is a date-like String, treat both as dates
@@ -92,8 +93,8 @@ public final class CompareNode extends PureNode
         // Mixed types: PureDate vs non-PureDate — compare by class name
         if (rawA instanceof PureDate || rawB instanceof PureDate)
         {
-            String classA = rawA instanceof PureDate ? "Date" : rawA.getClass().getSimpleName();
-            String classB = rawB instanceof PureDate ? "Date" : rawB.getClass().getSimpleName();
+            String classA = rawA instanceof PureDate ? "Date" : rawA.getClass().getName();
+            String classB = rawB instanceof PureDate ? "Date" : rawB.getClass().getName();
             return (long) Math.signum(classA.compareTo(classB));
         }
 
@@ -138,6 +139,7 @@ public final class CompareNode extends PureNode
         return (long) Math.signum(String.valueOf(a).compareTo(String.valueOf(b)));
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean looksLikeDate(String s)
     {
         if (s == null || s.length() < 4 || s.length() > 30)
@@ -161,6 +163,7 @@ public final class CompareNode extends PureNode
         return true;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static int comparePureDates(String d1, String d2)
     {
         int dash1 = d1.indexOf('-', d1.startsWith("-") ? 1 : 0);

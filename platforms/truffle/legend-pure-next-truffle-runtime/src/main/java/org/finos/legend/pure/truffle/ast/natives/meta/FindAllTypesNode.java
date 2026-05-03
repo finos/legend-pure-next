@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -54,6 +55,7 @@ public final class FindAllTypesNode extends PureNode
         return collect(getResolver());
     }
 
+    @TruffleBoundary
     private static Object collect(TruffleMetadataAccess resolver)
     {
         List<Object> types = new ArrayList<>();

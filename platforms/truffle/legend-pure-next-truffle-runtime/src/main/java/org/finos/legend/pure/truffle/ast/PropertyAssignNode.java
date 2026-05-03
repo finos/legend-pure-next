@@ -63,7 +63,23 @@ public final class PropertyAssignNode extends Node
 
     public Object execute(VirtualFrame frame, Object target)
     {
-        Object value = valueExpr.executeGeneric(frame);
+        return executeWithValue(valueExpr.executeGeneric(frame), target);
+    }
+
+    /** Evaluate just the right-hand-side value; no read/merge/write. */
+    public Object evaluateValue(VirtualFrame frame)
+    {
+        return valueExpr.executeGeneric(frame);
+    }
+
+    /**
+     * Apply a pre-evaluated value to {@code target}. Used by callers that
+     * evaluated the RHS in PE-friendly code and now want to do the read /
+     * merge / write across a {@code @TruffleBoundary} (so the heavy
+     * reflective writer doesn't expand into PE).
+     */
+    public Object executeWithValue(Object value, Object target)
+    {
         if (isAdd)
         {
             Object existing = reader.execute(target, propertyName);
@@ -72,10 +88,6 @@ public final class PropertyAssignNode extends Node
             addToMergedList(merged, value);
             value = new org.finos.legend.pure.truffle.types.ObjectSequence(merged.toArray());
         }
-        // Dotted property paths (e.g. "address.name") can't be written through
-        // a single setter — they describe a navigation. The caller
-        // (CopyWithKeysNode) is responsible for navigating and writing the
-        // leaf via setDeepProperty. We just evaluate the value here.
         if (!propertyName.contains("."))
         {
             writer.execute(target, propertyName, value);
@@ -83,6 +95,7 @@ public final class PropertyAssignNode extends Node
         return value;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void addToMergedList(java.util.List<Object> list, Object value)
     {
         if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))

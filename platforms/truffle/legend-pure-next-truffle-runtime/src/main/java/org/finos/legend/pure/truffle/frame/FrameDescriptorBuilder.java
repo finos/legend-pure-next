@@ -60,6 +60,7 @@ public final class FrameDescriptorBuilder
      * frame-eligible, {@code null} otherwise (caller falls back to HashMap
      * scope).
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static FrameLayout analyze(FunctionDefinition fd)
     {
         if (fd instanceof LambdaFunction lambda)
@@ -96,6 +97,7 @@ public final class FrameDescriptorBuilder
      * (should not happen once all FDs are frame-eligible, but provides
      * a safe fallback during the transition).
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static FrameLayout analyzeMinimal(FunctionDefinition fd)
     {
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
@@ -124,6 +126,7 @@ public final class FrameDescriptorBuilder
      * resolve via {@link org.finos.legend.pure.truffle.ast.FrameVariableReadNode}
      * instead of falling through to the HashMap scope.</p>
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static FrameLayout analyzeLambda(LambdaFunction lambda)
     {
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();

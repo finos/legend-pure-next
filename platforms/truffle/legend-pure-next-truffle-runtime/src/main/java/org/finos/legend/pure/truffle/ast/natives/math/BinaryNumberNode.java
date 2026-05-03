@@ -75,6 +75,7 @@ public final class BinaryNumberNode extends PureNode
         return op.applyAsDouble(a, b);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.math.BigDecimal toBigDecimal(Object v)
     {
         if (v instanceof java.math.BigDecimal bd) return bd;

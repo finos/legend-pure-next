@@ -62,6 +62,7 @@ public final class ElementToPathNode extends PureNode
         return values;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String doElementToPath(Object[] values,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {

@@ -69,11 +69,79 @@ public final class CopyWithKeysNode extends PureNode
     }
 
     @Override
+    @com.oracle.truffle.api.nodes.ExplodeLoop
     public Object executeGeneric(VirtualFrame frame)
     {
         return invoke(frame);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String classPathFromInstance(Object instance)
+    {
+        Class<?>[] interfaces = instance.getClass().getInterfaces();
+        return interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String headBeforeDot(String s)
+    {
+        int idx = s.indexOf('.');
+        return idx < 0 ? s : s.substring(0, idx);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object finalizeCopy(Object copy, String classPath,
+                                java.util.List<java.util.Map.Entry<String, Object>> keyValues,
+                                org.finos.legend.pure.truffle.PureContext eval)
+    {
+        // Set reverse association pointers (bidirectional binding)
+        // For deep property paths, add the top-level property to enable reverse binding
+        java.util.Set<String> topLevelDeepProps = new java.util.LinkedHashSet<>();
+        for (java.util.Map.Entry<String, Object> kv : keyValues)
+        {
+            if (kv.getKey().contains("."))
+            {
+                topLevelDeepProps.add(headBeforeDot(kv.getKey()));
+            }
+        }
+        for (String topProp : topLevelDeepProps)
+        {
+            boolean alreadyPresent = keyValues.stream().anyMatch(kv -> topProp.equals(kv.getKey()));
+            if (!alreadyPresent)
+            {
+                Object topValue = topPropReader.execute(copy, topProp);
+                if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
+                {
+                    keyValues.add(java.util.Map.entry(topProp, topValue));
+                }
+            }
+        }
+        String pureClassPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "");
+        java.util.Set<String> keyPropNames = new java.util.HashSet<>();
+        for (var kv : keyValues) keyPropNames.add(kv.getKey());
+        addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
+
+        NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval, appendReader, appendWriter);
+
+        for (String topProp : topLevelDeepProps)
+        {
+            Object subCopy = subCopyReader.execute(copy, topProp);
+            if (subCopy instanceof Any subAny && subAny._classifierGenericType() != null)
+            {
+                var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subAny._classifierGenericType());
+                if (subType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement subPe)
+                {
+                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subPe);
+                    java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
+                    addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
+                    NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
+                }
+            }
+        }
+        return copy;
+    }
+
+    @com.oracle.truffle.api.nodes.ExplodeLoop
     private Object invoke(VirtualFrame frame)
     {
         org.finos.legend.pure.truffle.PureContext eval = getContext();
@@ -86,16 +154,16 @@ public final class CopyWithKeysNode extends PureNode
         if (original instanceof PackageableElement pe)
         {
             cgt = pe._classifierGenericType();
-            classPath = pe.getClass().getInterfaces()[0].getName().replace(".", "::");
+            classPath = classPathFromInstance(pe);
         }
         else if (original instanceof Any any)
         {
             cgt = any._classifierGenericType();
-            classPath = any.getClass().getInterfaces()[0].getName().replace(".", "::");
+            classPath = classPathFromInstance(any);
         }
         else
         {
-            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getSimpleName()));
+            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
         }
 
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
@@ -145,56 +213,7 @@ public final class CopyWithKeysNode extends PureNode
                 }
             }
 
-            // Set reverse association pointers (bidirectional binding)
-            // For deep property paths, add the top-level property to enable reverse binding
-            java.util.Set<String> topLevelDeepProps = new java.util.LinkedHashSet<>();
-            for (java.util.Map.Entry<String, Object> kv : keyValues)
-            {
-                if (kv.getKey().contains("."))
-                {
-                    topLevelDeepProps.add(kv.getKey().split("\\.")[0]);
-                }
-            }
-            for (String topProp : topLevelDeepProps)
-            {
-                // Only add if not already in keyValues as a simple property
-                boolean alreadyPresent = keyValues.stream().anyMatch(kv -> topProp.equals(kv.getKey()));
-                if (!alreadyPresent)
-                {
-                    Object topValue = topPropReader.execute(copy, topProp);
-                    if (topValue != null && !(topValue instanceof org.finos.legend.pure.truffle.types.PureSequence ps2 && ps2.isEmpty()))
-                    {
-                        keyValues.add(java.util.Map.entry(topProp, topValue));
-                    }
-                }
-            }
-            // Also include shallow-copied association properties that aren't in keyValues
-            // Use Pure path (not truffle-namespaced) for association matching
-            String pureClassPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "");
-            java.util.Set<String> keyPropNames = new java.util.HashSet<>();
-            for (var kv : keyValues) keyPropNames.add(kv.getKey());
-            addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
-
-            NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval, appendReader, appendWriter);
-
-            // Also set reverse associations for sub-copies created by deep property paths
-            for (String topProp : topLevelDeepProps)
-            {
-                Object subCopy = subCopyReader.execute(copy, topProp);
-                if (subCopy instanceof Any subAny && subAny._classifierGenericType() != null)
-                {
-                    var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subAny._classifierGenericType());
-                    if (subType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement subPe)
-                    {
-                        String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subPe);
-                        java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
-                        addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
-                        NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
-                    }
-                }
-            }
-
-            return copy;
+            return finalizeCopy(copy, classPath, keyValues, eval);
         }
         finally
         {
@@ -205,6 +224,7 @@ public final class CopyWithKeysNode extends PureNode
     /**
      * Resolve a class path from a truffle GenericTypeValue.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String resolveClassPathFromCGT(GenericTypeValue cgt)
     {
         Type rawType = _GenericType.type(cgt);
@@ -223,6 +243,7 @@ public final class CopyWithKeysNode extends PureNode
      * Shallow-copy all properties from source to target via reflection.
      * Copies all _xxx() getter values to the corresponding _xxx(value) setter.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void shallowCopyProperties(Object source, Object target, GenericTypeValue cgt)
     {
         // Use the truffle type to gather property names, then copy via reflection
@@ -240,6 +261,7 @@ public final class CopyWithKeysNode extends PureNode
     /**
      * Collect all property names from a truffle type and its supertypes.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.util.List<String> collectAllPropertyNames(Type type)
     {
         java.util.List<String> names = new java.util.ArrayList<>();
@@ -249,6 +271,7 @@ public final class CopyWithKeysNode extends PureNode
         return names;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectPropertyNamesRecursive(Type type, java.util.List<String> names,
                                                        java.util.Set<String> seen,
                                                        java.util.Set<String> visited)
@@ -282,6 +305,7 @@ public final class CopyWithKeysNode extends PureNode
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void addPropertyNamesFromSeq(PureSequence seq, java.util.List<String> names, java.util.Set<String> seen)
     {
         if (seq == null)
@@ -301,6 +325,7 @@ public final class CopyWithKeysNode extends PureNode
     /**
      * Copy a single property value from source to target via reflection.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void copyPropertyDirect(Object source, Object target, String propName)
     {
         String methodName = "_" + propName;
@@ -335,6 +360,7 @@ public final class CopyWithKeysNode extends PureNode
     /**
      * Fallback: copy all _xxx() properties from source to target using interface methods.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void copyViaReflection(Object source, Object target)
     {
         Class<?>[] interfaces = source.getClass().getInterfaces();
@@ -388,6 +414,7 @@ public final class CopyWithKeysNode extends PureNode
      * (e.g., Class&lt;self&gt;), create a new CGT with the typeArgument pointing to the copy.
      * Returns the updated CGT, or the original if no self-reference was found.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static GenericTypeValue fixSelfReferentialCGT(GenericTypeValue cgt, Object original, Object copy,
                                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
@@ -459,6 +486,7 @@ public final class CopyWithKeysNode extends PureNode
      * Handle dotted property paths like "address.name" or "firm.employees".
      * Navigates to each sub-object, creating copies as needed, and sets the leaf property.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void setDeepProperty(Object root, String dottedPath, Object value,
                                          org.finos.legend.pure.truffle.ast.PropertyReadNode reader,
                                          org.finos.legend.pure.truffle.ast.PropertyWriteNode writer)
@@ -496,6 +524,7 @@ public final class CopyWithKeysNode extends PureNode
     /**
      * Try to invoke _copy() on an Any instance. Falls back to reflection-based copy.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object tryCopy(Any any)
     {
         try
@@ -522,6 +551,7 @@ public final class CopyWithKeysNode extends PureNode
      * After shallow copy, find all association properties on the copy that have non-null values
      * and add them to keyValues for reverse pointer binding.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void addCopiedAssociationProps(Object copy, String classPath,
                                                    java.util.Set<String> existingKeys,
                                                    java.util.List<java.util.Map.Entry<String, Object>> keyValues,
@@ -568,6 +598,7 @@ public final class CopyWithKeysNode extends PureNode
      * After copying a SimplePropertyOwner, update property owners and nested
      * enum value CGTs to point to the copy instead of the original.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void fixPropertyOwners(Object original, Object copy,
                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
@@ -624,6 +655,7 @@ public final class CopyWithKeysNode extends PureNode
      * update the owner back-reference on its TypeParameters and MultiplicityParameters
      * to point to the copy instead of the original.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void fixTypeParameterOwners(Object copy)
     {
         if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner))

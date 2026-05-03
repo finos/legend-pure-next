@@ -60,6 +60,7 @@ public final class JoinStringsNode extends PureNode
         return join(col, prefix, separator, suffix);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String join(Object col, String prefix, String separator, String suffix)
     {
         int sz = CollectionHelper.size(col);

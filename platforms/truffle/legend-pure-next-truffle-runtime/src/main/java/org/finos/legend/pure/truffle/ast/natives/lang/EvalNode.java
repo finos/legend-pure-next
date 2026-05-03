@@ -17,6 +17,7 @@ package org.finos.legend.pure.truffle.ast.natives.lang;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
@@ -47,14 +48,22 @@ public final class EvalNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
+        Object[] values = evaluateChildren(frame);
+        return invokeEval(values);
+    }
+
+    @ExplodeLoop
+    private Object[] evaluateChildren(VirtualFrame frame)
+    {
         Object[] values = new Object[children.length];
         for (int i = 0; i < children.length; i++)
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeEval(values);
+        return values;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object invokeEval(Object[] values)
     {
         Object fn = values[0];
@@ -122,6 +131,7 @@ public final class EvalNode extends PureNode
         throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object executeNativeViaRegistry(org.finos.legend.pure.truffle.PureContext evaluator, NativeFunction nf, Object[] args)
     {
         String signature = nf._name();

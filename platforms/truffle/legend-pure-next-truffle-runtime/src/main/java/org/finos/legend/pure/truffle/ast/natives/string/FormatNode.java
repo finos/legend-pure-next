@@ -54,6 +54,7 @@ public final class FormatNode extends PureNode
         return doFormat(fmt, args);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String doFormat(Object fmt, Object args)
     {
         String formatStr = StringHelper.asString(fmt, "format");
@@ -180,6 +181,7 @@ public final class FormatNode extends PureNode
         return sb.toString();
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String formatFloat(Object v, int precision)
     {
         double d;
@@ -209,6 +211,7 @@ public final class FormatNode extends PureNode
         return pureToString(v);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String formatInt(Object v, String spec)
     {
         long val;
@@ -239,6 +242,7 @@ public final class FormatNode extends PureNode
         return String.valueOf(val);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String formatDateWithPattern(Object v, String pattern)
     {
         String dateStr = v instanceof PureDate pd ? pd.dateString() : pureToString(v);
@@ -289,11 +293,13 @@ public final class FormatNode extends PureNode
         }
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String pureToString(Object v)
     {
         return ToStringNode.pureToString(v);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String toRepresentation(Object v)
     {
         if (v instanceof PureDate pd)

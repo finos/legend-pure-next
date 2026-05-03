@@ -51,6 +51,7 @@ public final class DirectoryTreeNode extends PureNode
         return walk(path);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object walk(String path)
     {
         Path dir = Path.of(path);

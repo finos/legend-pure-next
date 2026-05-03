@@ -45,6 +45,7 @@ public final class RawLambdaCallNode extends Node
     @CompilerDirectives.CompilationFinal
     private Object cachedTarget;
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private org.finos.legend.pure.truffle.PureContext getContext()
     {
         return org.finos.legend.pure.truffle.PureLanguage.get(this);
@@ -73,6 +74,7 @@ public final class RawLambdaCallNode extends Node
         return dispatch(lambdaOrClosure, fullArgs);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object dispatch(Object lambdaOrClosure, Object[] args)
     {
         RootCallTarget target = getCallTarget(lambdaOrClosure);
@@ -80,26 +82,21 @@ public final class RawLambdaCallNode extends Node
         {
             return fallback(lambdaOrClosure, args);
         }
-        // Cache by CallTarget identity (stable) not by closure identity (ephemeral)
-        if (directCallNode != null && cachedTarget == target)
-        {
-            return directCallNode.call(args);
-        }
-        if (cachedTarget == null)
-        {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            cachedTarget = target;
-            directCallNode = insert(DirectCallNode.create(target));
-            return directCallNode.call(args);
-        }
-        if (indirectCallNode == null)
-        {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            indirectCallNode = insert(IndirectCallNode.create());
-        }
-        return indirectCallNode.call(target, args);
+        // Boundary call: hard PE stop so lambdas don't inline into their
+        //   caller's compilation. Each lambda still compiles as its own
+        //   root node — runtime calls dispatch through the cached target
+        //   without expanding it into the caller's graph. Mirrors the
+        //   model where every Pure function is its own JIT unit.
+        return boundaryCall(target, args);
     }
 
+    @CompilerDirectives.TruffleBoundary
+    private static Object boundaryCall(RootCallTarget target, Object[] args)
+    {
+        return target.call(args);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget getCallTarget(Object v)
     {
         if (v instanceof RawClosure rc && rc.callTarget() != null)
@@ -113,11 +110,13 @@ public final class RawLambdaCallNode extends Node
         return null;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget lookupCallTarget(LambdaFunction lambda)
     {
         return getContext().callTargetForLambda(lambda);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object fallback(Object lambdaOrClosure, Object[] args)
     {
         if (lambdaOrClosure instanceof RawClosure rc)
@@ -168,6 +167,7 @@ public final class RawLambdaCallNode extends Node
         throw new RuntimeException("Cannot call: " + lambdaOrClosure.getClass().getName());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object[] extractArgs(Object[] args)
     {
         Object[] rawArgs = new Object[args.length - 1];

@@ -45,6 +45,7 @@ public final class MapGetNode extends PureNode
         return doGet(map, key);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doGet(Object map, Object key)
     {
         if (map instanceof MapImpl mi)

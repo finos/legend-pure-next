@@ -35,6 +35,12 @@ public final class ToUpperNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
+        return doUpper(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doUpper(String s)
+    {
         return s.toUpperCase();
     }
 }

@@ -70,18 +70,21 @@ public final class TypeCache implements TruffleTypeCache
     private final Map<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public List<Type> linearization(Object type)
     {
         return entryFor(type).linearization;
     }
 
     @Override
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Set<String> equalityKeyProperties(Object type)
     {
         return entryFor(type).equalityKeys;
     }
 
     @Override
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Class<?> classForPath(String classPath)
     {
         return classCache.computeIfAbsent(classPath, org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory::resolveClass);

@@ -51,13 +51,14 @@ public final class NewSimpleNode extends PureNode
         return doNew(result, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNew(Object result,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (!(result instanceof GenericTypeAndMultiplicityHolder gtmh))
         {
             throw new RuntimeException("new(GenericTypeAndMultiplicityHolder[1]) requires a GenericTypeAndMultiplicityHolder argument, got: "
-                    + (result == null ? "null" : result.getClass().getSimpleName()));
+                    + (result == null ? "null" : result.getClass().getName()));
         }
 
         String classPath = "Unknown";

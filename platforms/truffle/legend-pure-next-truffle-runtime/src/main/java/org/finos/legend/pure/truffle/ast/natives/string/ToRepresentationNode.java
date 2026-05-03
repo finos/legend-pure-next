@@ -48,6 +48,7 @@ public final class ToRepresentationNode extends PureNode
         return convert(v);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String convert(Object v)
     {
         if (v instanceof PureDate pd)

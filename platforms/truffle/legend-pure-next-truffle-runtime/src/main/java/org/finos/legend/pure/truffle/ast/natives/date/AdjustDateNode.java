@@ -57,6 +57,7 @@ public final class AdjustDateNode extends PureNode
         return doAdjust(date, amount, unit);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static PureDate doAdjust(Object date, Object amount, Object unit)
     {
         String dateStr = DateHelper.asDateString(date, SIG);

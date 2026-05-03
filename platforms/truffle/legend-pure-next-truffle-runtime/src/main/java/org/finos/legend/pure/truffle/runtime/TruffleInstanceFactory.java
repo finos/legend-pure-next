@@ -39,6 +39,7 @@ public final class TruffleInstanceFactory
      * memoises {@code Class.forName} (the dominant {@code String.replace} hot
      * caller before this overload existed).</p>
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath, TruffleMetadataAccess resolver)
     {
         try
@@ -56,6 +57,7 @@ public final class TruffleInstanceFactory
     }
 
     /** Back-compat overload — no caching. Prefer the resolver-aware overload above. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath)
     {
         try
@@ -77,6 +79,7 @@ public final class TruffleInstanceFactory
      * Public entry point for {@link TruffleTypeCache} to use as the cache
      * compute function.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Class<?> resolveClass(String classPath)
     {
         // Strip leading :: separators and the truffle prefix if already present

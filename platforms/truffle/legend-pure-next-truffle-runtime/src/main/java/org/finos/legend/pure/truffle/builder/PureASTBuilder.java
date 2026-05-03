@@ -147,7 +147,7 @@ public final class PureASTBuilder
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
         if (func == null)
         {
-            throw new RuntimeException("_func() returned null for: " + fe._functionName() + " [" + fe.getClass().getSimpleName() + "]");
+            throw new RuntimeException("_func() returned null for: " + fe._functionName() + " [" + fe.getClass().getName() + "]");
         }
         // QP overload disambiguation: the PDB func path may resolve to the wrong
         // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).

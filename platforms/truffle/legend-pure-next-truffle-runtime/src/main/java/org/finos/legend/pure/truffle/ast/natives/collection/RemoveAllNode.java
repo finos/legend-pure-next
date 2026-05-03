@@ -73,6 +73,7 @@ public final class RemoveAllNode extends PureNode
         return new ObjectSequence(Arrays.copyOf(buf, count));
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean pureEquals(Object a, Object b)
     {
         if (a == b)

@@ -58,6 +58,7 @@ public final class RemNumberNode extends PureNode
         return BigDecimal.valueOf(a).remainder(BigDecimal.valueOf(b)).doubleValue();
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Long asLongOrNull(Object v)
     {
         if (v instanceof Long l)

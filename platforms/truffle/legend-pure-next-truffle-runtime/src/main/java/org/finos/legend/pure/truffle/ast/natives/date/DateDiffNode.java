@@ -55,6 +55,7 @@ public final class DateDiffNode extends PureNode
         return doDiff(d1, d2, unit);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static long doDiff(Object d1, Object d2, Object unit)
     {
         String d1Str = DateHelper.asDateString(d1, SIG);

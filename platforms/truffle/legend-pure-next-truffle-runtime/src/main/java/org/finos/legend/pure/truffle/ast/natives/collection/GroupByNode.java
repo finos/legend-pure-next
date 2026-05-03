@@ -72,6 +72,7 @@ public final class GroupByNode extends PureNode
         return buildMap(items, keys, sz, mapCgt, listCgt);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildMap(Object[] items, Object[] keys, int sz,
                                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCgt,
                                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCgt)

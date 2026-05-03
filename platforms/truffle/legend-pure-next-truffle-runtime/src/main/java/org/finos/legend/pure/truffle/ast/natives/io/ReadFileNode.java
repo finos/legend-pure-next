@@ -46,6 +46,7 @@ public final class ReadFileNode extends PureNode
         return readFile(path);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String readFile(String path)
     {
         try

@@ -99,6 +99,6 @@ public final class _Type
                 return name;
             }
         }
-        return type.getClass().getSimpleName();
+        return type.getClass().getName();
     }
 }

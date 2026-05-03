@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -59,6 +60,7 @@ public final class FindFunctionsByNameAndArityNode extends PureNode
         return findFunctions(name, (int) arity, getResolver());
     }
 
+    @TruffleBoundary
     private static Object findFunctions(String name, int arity, TruffleMetadataAccess resolver)
     {
         // O(1) lookup via the registry's (name, arity) index — built once on

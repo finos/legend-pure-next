@@ -15,6 +15,7 @@
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
@@ -47,14 +48,22 @@ public final class EvaluateNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
+        Object[] values = evaluateChildren(frame);
+        return invokeEvaluate(getContext(), values, dispatchReader);
+    }
+
+    @ExplodeLoop
+    private Object[] evaluateChildren(VirtualFrame frame)
+    {
         Object[] values = new Object[children.length];
         for (int i = 0; i < children.length; i++)
         {
             values[i] = children[i].executeGeneric(frame);
         }
-        return invokeEvaluate(getContext(), values, dispatchReader);
+        return values;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object invokeEvaluate(org.finos.legend.pure.truffle.PureContext evaluator, Object[] values,
                                           org.finos.legend.pure.truffle.ast.PropertyReadNode propertyReader)
     {
@@ -81,6 +90,7 @@ public final class EvaluateNode extends PureNode
         return EvalNode.dispatch(evaluator, fn, args, propertyReader);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void unwrapListValues(Object listObj, List<Object> out)
     {
         // ListImpl has _values() returning collection (Object / ObjectSequence / MutableList)

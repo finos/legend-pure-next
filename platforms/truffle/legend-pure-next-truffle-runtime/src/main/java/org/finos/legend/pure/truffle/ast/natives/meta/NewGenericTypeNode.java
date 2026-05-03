@@ -49,6 +49,7 @@ public final class NewGenericTypeNode extends PureNode
         return doNewGenericType(result, getResolver());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNewGenericType(Object result,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {

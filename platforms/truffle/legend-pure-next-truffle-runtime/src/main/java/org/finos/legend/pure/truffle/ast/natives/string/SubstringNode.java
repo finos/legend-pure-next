@@ -49,8 +49,20 @@ public final class SubstringNode extends PureNode
         if (endArg != null)
         {
             int end = (int) IntegerHelper.asLong(endArg.executeGeneric(frame), sig);
-            return s.substring(start, end);
+            return doSubstring(s, start, end);
         }
+        return doSubstring(s, start);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doSubstring(String s, int start, int end)
+    {
+        return s.substring(start, end);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String doSubstring(String s, int start)
+    {
         return s.substring(start);
     }
 }

@@ -41,6 +41,7 @@ public final class PrintlnNode extends PureNode
         return PureSequence.EMPTY;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void doPrintln(Object val)
     {
         System.out.println(String.valueOf(val));

@@ -184,12 +184,14 @@ public final class PureContext
     // Function compilation & execution
     // ---------------------------------------------------------------
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public RootCallTarget getCallTarget(FunctionDefinition fd)
     {
         return compile(fd).callTarget();
     }
 
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Object executeFunction(FunctionDefinition fd, Object[] rawArgs)
     {
         RootCallTarget ct = compile(fd).callTarget();
@@ -200,6 +202,7 @@ public final class PureContext
         throw new RuntimeException("No CallTarget for: " + getFunctionName(fd));
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public RootCallTarget callTargetForLambda(LambdaFunction lambda)
     {
         RootCallTarget cached = lambdaCache.get(lambda);
@@ -269,6 +272,7 @@ public final class PureContext
      * back to {@code _values()} traversal). Throws if the class exists but
      * the named value isn't one of its constants.
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
     {
         if (!(en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe))
@@ -311,6 +315,7 @@ public final class PureContext
      * reserved words in package segments by appending an underscore (so
      * {@code boolean} → {@code boolean_}, {@code class} → {@code class_}, etc.).
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String pureFqnToJavaFqn(String purePath)
     {
         String[] segments = purePath.split("::");
@@ -370,6 +375,7 @@ public final class PureContext
      * <p>Cached in the owning module's {@link ModuleState}, so an
      * {@link #unregisterModule(String)} drops just this module's entries.</p>
      */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgtForType(String typePath)
     {
         if (resolver == null)
@@ -393,6 +399,7 @@ public final class PureContext
         return cgt;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue enumCgt(Object enumConstant)
     {
         if (resolver == null)

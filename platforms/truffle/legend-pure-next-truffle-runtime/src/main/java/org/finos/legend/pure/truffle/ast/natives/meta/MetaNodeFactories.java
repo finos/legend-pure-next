@@ -155,6 +155,7 @@ public final class MetaNodeFactories
     // expressions at build time from RawCollectionNode<KeyExpressionNode>.
     // =========================================================================
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static KeyExpressionNode[] extractKeyNodes(PureNode keysNode)
     {
         if (keysNode instanceof RawCollectionNode col)
@@ -200,12 +201,14 @@ public final class MetaNodeFactories
         return result;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String extractConstantString(PureNode node)
     {
         if (node instanceof AtomicValueNode av && av.value() instanceof String s) return s;
-        throw new RuntimeException("Key expression name is not a constant string: " + node.getClass().getSimpleName());
+        throw new RuntimeException("Key expression name is not a constant string: " + node.getClass().getName());
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean extractBoolean(PureNode node)
     {
         if (node == null) return false;

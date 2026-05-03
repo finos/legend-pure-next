@@ -113,6 +113,12 @@ public final class TrufflePdbWriter
      */
     private static String elementTypeName(PackageableElement element)
     {
+        // {@link Class#getSimpleName()} (not {@code getName()}) — the writer's
+        // element-index needs just {@code "ClassImpl"}, not the FQN. This used
+        // to be {@code getSimpleName} until a sweep that aimed to break the
+        // SignatureParser→Locale inlining chain incorrectly rewrote it; the
+        // reflective writer is only invoked from {@code @TruffleBoundary}
+        // contexts, so the JDK chain isn't a concern here.
         String simple = element.getClass().getSimpleName();
         if (simple.endsWith("Impl"))
         {

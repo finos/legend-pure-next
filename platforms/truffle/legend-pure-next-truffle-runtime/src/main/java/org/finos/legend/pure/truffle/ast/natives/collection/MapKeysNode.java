@@ -41,6 +41,7 @@ public final class MapKeysNode extends PureNode
         return doKeys(map);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doKeys(Object map)
     {
         if (map instanceof MapImpl mi)

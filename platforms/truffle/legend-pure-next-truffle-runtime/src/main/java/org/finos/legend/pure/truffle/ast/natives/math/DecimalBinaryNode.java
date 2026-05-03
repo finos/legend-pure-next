@@ -54,6 +54,7 @@ public final class DecimalBinaryNode extends PureNode
         return op.apply(a, b);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private BigDecimal asBigDecimal(Object v)
     {
         if (v instanceof BigDecimal bd)

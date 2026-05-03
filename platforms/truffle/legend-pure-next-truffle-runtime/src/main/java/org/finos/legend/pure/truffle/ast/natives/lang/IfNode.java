@@ -60,6 +60,7 @@ public final class IfNode extends PureNode
         return callNode.call(branchFn);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean asBoolean(Object v)
     {
         if (v instanceof Boolean b)
