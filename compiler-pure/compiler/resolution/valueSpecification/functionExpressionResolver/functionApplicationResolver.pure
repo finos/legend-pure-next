@@ -1009,11 +1009,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   pair(| $t1IsTp && !$t2IsTp, | if(isTopType($t2->toOne()), | -1, | 1)),
                   pair(| !$t1IsTp && $t2IsTp, | if(isTopType($t1->toOne()), | 1, | -1)),
                   pair(| $t1->isNotEmpty() && $t2->isNotEmpty() && !$t1IsTp && !$t2IsTp && !typeEquals($t1->toOne(), $t2->toOne()),
-                       | let lin1 = linearize($t1->toOne());
-                         if($lin1->exists(l | typeEquals($l, $t2->toOne())),
+                       | if(subtypeOf($t1->toOne(), $t2->toOne()),
                              | -1,
-                             | let lin2 = linearize($t2->toOne());
-                               if($lin2->exists(l | typeEquals($l, $t1->toOne())), | 1, | 0);
+                             | if(subtypeOf($t2->toOne(), $t1->toOne()), | 1, | 0)
                          );)],
                  | 0
               );

@@ -515,7 +515,7 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
 
                 let validGens = $sourceType.generalizations->filter(g |
                     $g.general->match([
-                        gtv : GenericTypeValue[1] | $gtv.type->isNotEmpty() && $gtv.type->toOne()->linearize()->exists(l | typeEquals($l, $targetType)),
+                        gtv : GenericTypeValue[1] | $gtv.type->isNotEmpty() && $gtv.type->toOne()->subtypeOf($targetType),
                         other : GenericType[1] | false
                     ])
                 );
@@ -529,7 +529,7 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
                       // so instanceof Class returns true. PrimitiveTypeImpl does not implement Class.
                       // In Pure, instanceOf(Class) matches the M3 meta-classifier, which is true for
                       // all Class-defined types but false for PrimitiveType instances.
-                      let targetIsSubtype = $targetType->instanceOf(Class) && $targetType->linearize()->exists(l | typeEquals($l, $sourceType));
+                      let targetIsSubtype = $targetType->instanceOf(Class) && $targetType->subtypeOf($sourceType);
                       if($targetIsSubtype,
                           | let targetCls = $targetType->cast(@Class<Any>);
                             let templateTypeArgs = $targetCls.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp));

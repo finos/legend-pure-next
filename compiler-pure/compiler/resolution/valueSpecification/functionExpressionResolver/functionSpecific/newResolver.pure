@@ -348,7 +348,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | let declaredCanonical = resolveCanonicalType($declaredType->toOne(), $context);
           let actualCanonical = resolveCanonicalType($actualType->toOne(), $context);
           let declaredPath = $declaredCanonical->cast(@PackageableElement)->fullPath();
-          $actualCanonical->linearize()->exists(t | $t->instanceOf(PackageableElement) && $t->cast(@PackageableElement)->fullPath() == $declaredPath);
+          $actualCanonical->linearize()->contains($declaredPath);
     );
 }
 

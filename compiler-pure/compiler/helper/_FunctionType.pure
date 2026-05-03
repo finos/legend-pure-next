@@ -279,10 +279,8 @@ function meta::pure::compiler::helper::functionType::compareFunctionTypes(f1:Fun
                   pair(| $t1IsTP && !$t2IsTP && $t2->isNotEmpty(), | if(meta::pure::compiler::helper::type::isTopType($t2->toOne()), | -1, | 1)),
                   pair(| !$t1IsTP && $t1->isNotEmpty() && $t2IsTP, | if(meta::pure::compiler::helper::type::isTopType($t1->toOne()), | 1, | -1)),
                   pair(| !$t1IsTP && $t1->isNotEmpty() && !$t2IsTP && $t2->isNotEmpty() && !meta::pure::compiler::helper::type::typeEquals($t1->toOne(), $t2->toOne()),
-                       | let lin1 = meta::pure::compiler::helper::type::linearize($t1->toOne());
-                         let lin2 = meta::pure::compiler::helper::type::linearize($t2->toOne());
-                         if($lin1->exists(l | meta::pure::compiler::helper::type::typeEquals($l, $t2->toOne())), | -1,
-                             | if($lin2->exists(l | meta::pure::compiler::helper::type::typeEquals($l, $t1->toOne())), | 1,
+                       | if(meta::pure::compiler::helper::type::subtypeOf($t1->toOne(), $t2->toOne()), | -1,
+                             | if(meta::pure::compiler::helper::type::subtypeOf($t2->toOne(), $t1->toOne()), | 1,
                                  | let n1 = if($t1->toOne()->instanceOf(PackageableElement), | $t1->toOne()->cast(@PackageableElement).name->toOne(), | '');
                                    let n2 = if($t2->toOne()->instanceOf(PackageableElement), | $t2->toOne()->cast(@PackageableElement).name->toOne(), | '');
                                    $n1->compare($n2);
