@@ -58,23 +58,52 @@ function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1
 // types (FunctionType / RelationType / TypeParameter instances) have no path and no
 // inheritance to walk, so the result is empty for those inputs. Callers that need
 // identity equality on non-PE types should short-circuit via {@link typeEquals}
-// before consulting linearize. The {@code context} parameter is the seat for a
-// future cache lookup — today's body just walks generalizations.
+// before consulting linearize.
+//
+// PE-typed inputs hit the {@code linearizationCache} on
+// {@code context} — a map from path to the precomputed linearization. The cache
+// is built between pass 2 and pass 3 by {@code buildLinearizationCache} and
+// covers source elements + universe-reachable built-ins. A miss is reported via
+// {@code println} so coverage gaps are visible during development; callers fall
+// back to a full C3 walk in that case.
 function meta::pure::compiler::helper::type::linearize(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
 {
-    linearize($t, {x:Type[1] | $x}, $context);
+    if(!$t->instanceOf(PackageableElement),
+        | [],
+        | let path = $t->cast(@PackageableElement)->elementToPath();
+          let cached = $context.linearizationCache->get($path);
+          if($cached->isNotEmpty(),
+              | $cached->toOne().values,
+              | println('LINEARIZE MISS: ' + $path);
+                linearizeWalk($t, $context);
+          );
+    );
 }
 
+// Path-based linearization is unaffected by path-preserving resolves —
+// canonicalizing a Type to a different instance doesn't change its path. Apply
+// resolve once at the entry, then go through the cached 1-arg overload. This
+// keeps the hot {@code findCommonType} caller on the cache fast path instead of
+// walking generalizations on every call.
 function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Function<{Type[1]->Type[1]}>[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
 {
-    let resolved = $resolve->eval($t);
-    if(!$resolved->instanceOf(PackageableElement),
+    $resolve->eval($t)->linearize($context)
+}
+
+// Actual C3 walk — used to populate the cache and as the cache-miss fallback.
+// Recurses into itself for ancestors (rather than {@code linearize}) so that
+// during cache build we don't trigger spurious miss prints on every ancestor:
+// the cache is empty during the build, and entries are only inserted in bulk
+// at the end.
+function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+{
+    if(!$t->instanceOf(PackageableElement),
         | [],
-        | let resolvedPath = $resolved->cast(@PackageableElement)->elementToPath();
-          let parents = $resolved->directSupertypes();
+        | let resolvedPath = $t->cast(@PackageableElement)->elementToPath();
+          let parents = $t->directSupertypes();
           if($parents->isEmpty(),
               | $resolvedPath,
-              | let parentLins = $parents->map(p | $p->linearize($resolve, $context)->list());
+              | let parentLins = $parents->map(p | $p->linearizeWalk($context)->list());
                 let parentPathLists = $parents->map(p |
                     if($p->instanceOf(PackageableElement),
                         | ^List<String>(values = $p->cast(@PackageableElement)->elementToPath()),

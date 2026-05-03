@@ -70,6 +70,12 @@ Class meta::pure::compiler::CompilerContext
     // of self-host time before this index existed). Empty during pass 1/2; the
     // unfiltered lookup falls back to walking elementMap.values() when empty.
     localFunctionIndex : Map<String, List<PackageableFunction<Any>>>[1];
+    // C3 linearization cache keyed by PackageableElement path. Built once between
+    // pass 2 and pass 3 by {@link buildLinearizationCache} from elementMap +
+    // ancestors reachable through generalizations. Looked up by {@code linearize}
+    // — non-PE types and any path not in the cache fall back to walking, with the
+    // miss reported via println so coverage gaps are visible.
+    linearizationCache : Map<String, List<String>>[1];
     errors : String[*];
     scopeTypeParams : String[*];
     scopeMulParams : String[*];
@@ -102,6 +108,7 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         imports=[],
         elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
         localFunctionIndex=newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+        linearizationCache=newMap([]->cast(@Pair<String, List<String>>)),
         inferenceRollbacks=0,
         candidateEvaluations=0
     );
@@ -204,6 +211,67 @@ function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerCo
  * {@link findAllFunctionsByNameAndArityUnfiltered} lookups in that
  * pass).
  */
+/**
+ * Walk every Type-typed element reachable from {@code elementMap} (source
+ * types) and from the universe Root (built-ins like {@code Any}, {@code Number},
+ * {@code Function} that live in the base PDB). For each PackageableElement Type,
+ * compute its C3 linearization once and store the path list in
+ * {@code linearizationCache}. Call between pass 2 and pass 3 — elementMap is
+ * read-only across pass 3, so the cached lists stay valid for every
+ * {@code linearize(t, ctx)} lookup that pass makes.
+ *
+ * Source types built during pass 1 use FRESH {@code Package} instances that
+ * aren't connected to the universe Root, so we can't reach the built-ins by
+ * walking up from a source type. We anchor the universe walk via
+ * {@code lenientPathToElement} on a known canonical element.
+ */
+function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1]):CompilerContext[1]
+{
+    let sourceTypes = $context.elementMap->values()
+        ->filter(e | $e->instanceOf(Type))
+        ->cast(@Type)
+        ->filter(t | $t->instanceOf(PackageableElement));
+    // Anchor the universe walk at {@code Any} — its Root walk reaches every
+    //   type registered with the same module's package tree. Types living in
+    //   modules whose Roots aren't reachable from this anchor (e.g.
+    //   {@code FuncColSpec} in functions-relation) miss the cache and fall
+    //   back to a walk in {@code linearize}; that's a module-management
+    //   issue (PDB loader doesn't unify package children across modules)
+    //   to be addressed separately.
+    let anchor = 'meta::pure::metamodel::type::Any'->lenientPathToElement();
+    let universeTypes = if($anchor->isEmpty(),
+        | [],
+        | collectTypesFromPackage(findRoot($anchor->toOne()));
+    );
+    let allTypes = $sourceTypes->concatenate($universeTypes)
+        ->removeDuplicatesBy(t | $t->cast(@PackageableElement)->elementToPath());
+    // Compute each type's linearization via the no-cache walk
+    //   ({@code linearize(t, resolve, ctx)} with identity resolve), then store
+    //   it as paths. The 1-arg overload is what hot callers use; it consults
+    //   this map.
+    let entries = $allTypes->map(t |
+        let path = $t->cast(@PackageableElement)->elementToPath();
+        let lin = $t->meta::pure::compiler::helper::type::linearizeWalk($context);
+        pair($path, ^List<String>(values = $lin));
+    );
+    ^$context(linearizationCache = newMap($entries));
+}
+
+function meta::pure::compiler::collectTypesFromPackage(p:Package[1]):Type[*]
+{
+    let direct = $p.children->filter(c | $c->instanceOf(Type))->cast(@Type);
+    let subPackages = $p.children->filter(c | $c->instanceOf(Package))->cast(@Package);
+    $direct->concatenate($subPackages->map(sp | collectTypesFromPackage($sp)));
+}
+
+function meta::pure::compiler::findRoot(e:PackageableElement[1]):Package[1]
+{
+    if($e.package->isEmpty(),
+        | $e->cast(@Package),
+        | findRoot($e.package->toOne())
+    )
+}
+
 function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]
 {
     let funcs = $context.elementMap->values()

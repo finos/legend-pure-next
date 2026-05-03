@@ -359,6 +359,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
         ]);
     }, ^CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([]),
             localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+            linearizationCache = newMap([]->cast(@Pair<String, List<String>>)),
             inferenceRollbacks = 0, candidateEvaluations = 0));
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
@@ -369,6 +370,12 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
     // values before, capture deltas after, append an ElementStatistics entry
     // when the element was actually added (the catch-all PackageableElement
     // arm yields the unchanged acc and contributes no entry).
+    // Build the linearization cache in two stages: once between pass 1 and
+    //   pass 2 (universe + skeletons from pass 1) so pass 2 body compilation
+    //   has hits, and again between pass 2 and pass 3 so any types refined
+    //   during pass 2 (e.g. compiled bodies that change generalizations or
+    //   add new types) get refreshed entries before pass 3 resolution.
+    let pass2StartCtx = $pass1Context->buildLinearizationCache();
     let pass2Start = currentTimeMillis();
     let pass2 = $allElements->fold({e, acc |
         let beforeT = currentTimeMillis();
@@ -453,7 +460,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
               ^$newAcc(context = $updatedCtx);,
             | $newAcc
         );
-    }, ^CompilerListResult<PackageableElement>(context = $pass1Context));
+    }, ^CompilerListResult<PackageableElement>(context = $pass2StartCtx));
     let pass2Millis = currentTimeMillis() - $pass2Start;
 
     $pass2.context->debug({| 'compile: pass 2 done (' + $pass2.values->size()->toString() + ' elements compiled), starting pass 3'});
@@ -464,7 +471,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
     // Build the local-function index once before resolution so the 13K
     // findAllFunctionsByNameAndArityUnfiltered calls become O(1) lookups
     // rather than full elementMap.values() walks.
-    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex();
+    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex()->buildLinearizationCache();
     let pass3Start = currentTimeMillis();
     let pass3Ctx = $pass2.values->fold({elem, ctx |
         let beforeT = currentTimeMillis();
