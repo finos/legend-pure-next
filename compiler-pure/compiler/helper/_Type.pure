@@ -72,11 +72,8 @@ function meta::pure::compiler::helper::type::linearize(t:Type[1], context:meta::
         | [],
         | let path = $t->cast(@PackageableElement)->elementToPath();
           let cached = $context.linearizationCache->get($path);
-          if($cached->isNotEmpty(),
-              | $cached->toOne().values,
-              | println('LINEARIZE MISS: ' + $path);
-                linearizeWalk($t, $context);
-          );
+          assert($cached->isNotEmpty(), | 'LINEARIZE MISS: ' + $path + ' — buildLinearizationCache must seed every PE Type before this call');
+          $cached->toOne().values;
     );
 }
 

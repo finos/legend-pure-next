@@ -142,6 +142,12 @@ public final class MetaNodeFactories
         // findFunctionsByNameAndArity — compiler native: search resolver for functions
         registry.register("findFunctionsByNameAndArity_String_1__Integer_1__PackageableFunction_MANY_",
                 (args, gt, mul, fe) -> new FindFunctionsByNameAndArityNode(args[0], args[1]));
+
+        // findAllTypes — compiler native: enumerate every PE Type across all
+        // loaded modules. Used by buildLinearizationCache to seed the cache
+        // without relying on the package tree (which is split per module).
+        registry.register("findAllTypes__Type_MANY_",
+                (args, gt, mul, fe) -> new FindAllTypesNode());
     }
 
     // =========================================================================

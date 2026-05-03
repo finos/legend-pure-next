@@ -103,7 +103,7 @@ Class meta::pure::compiler::CompilerContext
 // through ctx-taking helpers like {@code subtypeOf} / {@code linearize}.
 function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
 {
-    ^CompilerContext(
+    let plain = ^CompilerContext(
         debugState = ^DebugState(debug=false, space=''),
         imports=[],
         elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
@@ -112,6 +112,10 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         inferenceRollbacks=0,
         candidateEvaluations=0
     );
+    // Seed the cache with universe types so {@code linearize} can be called
+    //   straight away — every helper-test that constructs a plain context
+    //   relies on this for hits on built-ins like Integer/Number/Any.
+    $plain->buildLinearizationCache();
 }
 
 function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
@@ -179,6 +183,14 @@ Class meta::pure::compiler::CompilerListResult<T>
 
 native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
 
+// Enumerates every Type-typed PackageableElement across all loaded modules.
+// Backed by a native that walks {@code TruffleMetadataAccess.elementPaths()},
+// the union of every module's path index. Used by {@link buildLinearizationCache}
+// to populate the universe-side of the cache without relying on package-tree
+// traversal (which is split per module — walking {@code Package.children}
+// from a single Root only reaches one module's contributions).
+native function meta::pure::compiler::findAllTypes():Type[*];
+
 function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
 {
     if(!$elementPath->contains('::'),
@@ -231,18 +243,14 @@ function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1
         ->filter(e | $e->instanceOf(Type))
         ->cast(@Type)
         ->filter(t | $t->instanceOf(PackageableElement));
-    // Anchor the universe walk at {@code Any} — its Root walk reaches every
-    //   type registered with the same module's package tree. Types living in
-    //   modules whose Roots aren't reachable from this anchor (e.g.
-    //   {@code FuncColSpec} in functions-relation) miss the cache and fall
-    //   back to a walk in {@code linearize}; that's a module-management
-    //   issue (PDB loader doesn't unify package children across modules)
-    //   to be addressed separately.
-    let anchor = 'meta::pure::metamodel::type::Any'->lenientPathToElement();
-    let universeTypes = if($anchor->isEmpty(),
-        | [],
-        | collectTypesFromPackage(findRoot($anchor->toOne()));
-    );
+    // Universe types come from every loaded module via {@link findAllTypes} —
+    //   the native enumerates {@code elementPaths()} across all modules and
+    //   resolves each through the composite resolver. Bypasses package-tree
+    //   traversal (which would only reach one module's children at a time;
+    //   tried it with a {@code MergedPackage} resolver overlay and it still
+    //   missed cross-module entries on the Java bootstrap path because that
+    //   side has no merge step).
+    let universeTypes = findAllTypes()->filter(t | $t->instanceOf(PackageableElement));
     let allTypes = $sourceTypes->concatenate($universeTypes)
         ->removeDuplicatesBy(t | $t->cast(@PackageableElement)->elementToPath());
     // Compute each type's linearization via the no-cache walk
@@ -255,21 +263,6 @@ function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1
         pair($path, ^List<String>(values = $lin));
     );
     ^$context(linearizationCache = newMap($entries));
-}
-
-function meta::pure::compiler::collectTypesFromPackage(p:Package[1]):Type[*]
-{
-    let direct = $p.children->filter(c | $c->instanceOf(Type))->cast(@Type);
-    let subPackages = $p.children->filter(c | $c->instanceOf(Package))->cast(@Package);
-    $direct->concatenate($subPackages->map(sp | collectTypesFromPackage($sp)));
-}
-
-function meta::pure::compiler::findRoot(e:PackageableElement[1]):Package[1]
-{
-    if($e.package->isEmpty(),
-        | $e->cast(@Package),
-        | findRoot($e.package->toOne())
-    )
 }
 
 function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]

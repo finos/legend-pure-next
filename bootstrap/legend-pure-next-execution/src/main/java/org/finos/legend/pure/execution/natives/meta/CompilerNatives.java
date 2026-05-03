@@ -99,6 +99,24 @@ public class CompilerNatives implements NativeExtension
             return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
         });
 
+        // meta::pure::compiler::findAllTypes():Type[*]
+        // Enumerates every Type-typed PackageableElement across all loaded
+        // modules. Used by buildLinearizationCache to seed the cache without
+        // relying on package-tree traversal (which is split per module).
+        natives.put("findAllTypes__Type_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            List<meta.pure.metamodel.valuespecification.ValueSpecification> wrapped = new ArrayList<>();
+            for (String path : resolver.elementPaths())
+            {
+                meta.pure.metamodel.PackageableElement element = resolver.getElement(path);
+                if (element instanceof meta.pure.metamodel.type.Type)
+                {
+                    wrapped.add(_E_ValueSpecification.wrap(element, null, null, resolver));
+                }
+            }
+            return org.finos.legend.pure.execution.natives.collection.CollectionNatives.makeCollection(wrapped, resolver);
+        });
+
         // meta::pure::compiler::structural::valueSpecificationCompiler::normalizeDateString(dateStr:String[1]):String[1]
         // Normalizes date literals: zero-pads components and converts timezone offsets to UTC.
         natives.put("normalizeDateString_String_1__String_1_", (args, eval, genericType, multiplicity) ->
