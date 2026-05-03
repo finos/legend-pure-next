@@ -36,10 +36,14 @@ public final class DivideNumberNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        return left.executeDouble(frame) / right.executeDouble(frame);
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double a = FloatHelper.asDouble(left.executeGeneric(frame), SIG);
-        double b = FloatHelper.asDouble(right.executeGeneric(frame), SIG);
-        return a / b;
+        return executeDouble(frame);
     }
 }

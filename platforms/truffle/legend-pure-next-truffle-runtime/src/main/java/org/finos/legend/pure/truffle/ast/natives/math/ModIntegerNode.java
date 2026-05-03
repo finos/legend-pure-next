@@ -40,15 +40,21 @@ public final class ModIntegerNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public long executeLong(VirtualFrame frame)
     {
-        long a = IntegerHelper.asLong(left.executeGeneric(frame), SIG);
-        long b = IntegerHelper.asLong(right.executeGeneric(frame), SIG);
+        long a = left.executeLong(frame);
+        long b = right.executeLong(frame);
         long result = a % b;
         if (result < 0)
         {
             result += Math.abs(b);
         }
         return result;
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeLong(frame);
     }
 }

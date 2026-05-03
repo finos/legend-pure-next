@@ -36,10 +36,16 @@ public final class ContainsStringNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
         String s = StringHelper.asString(strArg.executeGeneric(frame), SIG);
         String search = StringHelper.asString(searchArg.executeGeneric(frame), SIG);
         return s.contains(search);
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeBoolean(frame);
     }
 }

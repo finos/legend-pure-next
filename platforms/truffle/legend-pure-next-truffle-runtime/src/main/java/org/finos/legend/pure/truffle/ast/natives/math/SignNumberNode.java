@@ -36,9 +36,15 @@ public final class SignNumberNode extends PureNode
     }
 
     @Override
+    public long executeLong(VirtualFrame frame)
+    {
+        double v = operand.executeDouble(frame);
+        return v > 0 ? 1L : (v < 0 ? -1L : 0L);
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double v = FloatHelper.asDouble(operand.executeGeneric(frame), SIG);
-        return v > 0 ? 1L : (v < 0 ? -1L : 0L);
+        return executeLong(frame);
     }
 }

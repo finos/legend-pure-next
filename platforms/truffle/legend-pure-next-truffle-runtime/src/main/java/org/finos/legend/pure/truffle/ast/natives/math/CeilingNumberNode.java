@@ -35,9 +35,14 @@ public final class CeilingNumberNode extends PureNode
     }
 
     @Override
+    public long executeLong(VirtualFrame frame)
+    {
+        return (long) Math.ceil(operand.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double v = FloatHelper.asDouble(operand.executeGeneric(frame), SIG);
-        return (long) Math.ceil(v);
+        return executeLong(frame);
     }
 }

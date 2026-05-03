@@ -36,10 +36,14 @@ public final class GreaterThanEqualNumberNode extends PureNode
     }
 
     @Override
+    public boolean executeBoolean(VirtualFrame frame)
+    {
+        return left.executeDouble(frame) >= right.executeDouble(frame);
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double a = FloatHelper.asDouble(left.executeGeneric(frame), SIG);
-        double b = FloatHelper.asDouble(right.executeGeneric(frame), SIG);
-        return a >= b;
+        return executeBoolean(frame);
     }
 }

@@ -32,9 +32,15 @@ public final class LengthStringNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public long executeLong(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
-        return (long) s.length();
+        return s.length();
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeLong(frame);
     }
 }

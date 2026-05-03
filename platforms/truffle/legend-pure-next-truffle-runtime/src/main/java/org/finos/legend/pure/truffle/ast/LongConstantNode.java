@@ -1,4 +1,4 @@
-// Copyright 2024 Goldman Sachs
+// Copyright 2026 Goldman Sachs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,37 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.truffle.ast.natives.math;
+package org.finos.legend.pure.truffle.ast;
 
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
- * Truffle node for {@code abs_Integer_1__Integer_1_}.
+ * Compile-time {@code Integer[1]} constant. Mirrors {@link AtomicValueNode}
+ * but exposes the primitive {@code long} via {@link #executeLong} so a
+ * consumer like {@link org.finos.legend.pure.truffle.ast.natives.math.PlusIntegerNode}
+ * never has to unbox.
  */
-@NodeInfo(shortName = "absInt")
-public final class AbsIntegerNode extends PureNode
+@NodeInfo(shortName = "longConst")
+public final class LongConstantNode extends AtomicValueNode
 {
-    private static final String SIG = "abs_Integer_1__Integer_1_";
+    @CompilationFinal
+    private final long primitive;
 
-    @Child
-    private PureNode operand;
-
-    public AbsIntegerNode(PureNode operand)
+    public LongConstantNode(long value)
     {
-        this.operand = operand;
+        super(value);
+        this.primitive = value;
     }
 
     @Override
     public long executeLong(VirtualFrame frame)
     {
-        return Math.abs(operand.executeLong(frame));
-    }
-
-    @Override
-    public Object executeGeneric(VirtualFrame frame)
-    {
-        return executeLong(frame);
+        return primitive;
     }
 }

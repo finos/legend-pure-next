@@ -35,8 +35,14 @@ public final class AbsFloatNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        return Math.abs(operand.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        return Math.abs(FloatHelper.asDouble(operand.executeGeneric(frame), SIG));
+        return executeDouble(frame);
     }
 }

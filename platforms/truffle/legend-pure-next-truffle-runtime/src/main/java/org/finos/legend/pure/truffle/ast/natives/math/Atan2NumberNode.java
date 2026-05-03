@@ -39,10 +39,14 @@ public final class Atan2NumberNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        return Math.atan2(y.executeDouble(frame), x.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double yVal = FloatHelper.asDouble(y.executeGeneric(frame), SIG);
-        double xVal = FloatHelper.asDouble(x.executeGeneric(frame), SIG);
-        return Math.atan2(yVal, xVal);
+        return executeDouble(frame);
     }
 }

@@ -43,10 +43,22 @@ public final class RoundFloatNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        double v = value.executeDouble(frame);
+        int s = (int) scale.executeLong(frame);
+        return doRound(v, s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double doRound(double v, int s)
+    {
+        return BigDecimal.valueOf(v).setScale(s, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double v = FloatHelper.asDouble(value.executeGeneric(frame), SIG);
-        int s = (int) IntegerHelper.asLong(scale.executeGeneric(frame), SIG);
-        return BigDecimal.valueOf(v).setScale(s, RoundingMode.HALF_UP).doubleValue();
+        return executeDouble(frame);
     }
 }

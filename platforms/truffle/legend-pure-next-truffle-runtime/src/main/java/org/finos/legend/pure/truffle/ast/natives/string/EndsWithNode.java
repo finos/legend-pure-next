@@ -36,10 +36,16 @@ public final class EndsWithNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
         String s = StringHelper.asString(strArg.executeGeneric(frame), SIG);
         String suffix = StringHelper.asString(suffixArg.executeGeneric(frame), SIG);
         return s.endsWith(suffix);
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeBoolean(frame);
     }
 }

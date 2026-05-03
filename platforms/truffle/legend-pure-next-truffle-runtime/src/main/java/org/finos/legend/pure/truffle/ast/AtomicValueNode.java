@@ -24,12 +24,20 @@ import com.oracle.truffle.api.nodes.NodeInfo;
  * {@code PureASTBuilder.lowerAtomicValue} — this node never touches
  * {@code ValueSpecification} types.
  *
- * <p>For primitives (Long, Double, Boolean, String) the payload is the
- * Java boxed value. For lambdas it's the {@code LambdaFunction} or
- * {@code RawClosure}. For metamodel objects it's the object itself.</p>
+ * <p>For non-primitive payloads (lambdas, metamodel objects, strings,
+ * BigDecimal, sequences) this class is used directly. For primitives the
+ * builder picks one of the typed subclasses ({@link LongConstantNode},
+ * {@link DoubleConstantNode}, {@link BooleanConstantNode}) so consumers
+ * calling the typed entry points (e.g. {@code executeLong}) skip the box /
+ * unbox pair.</p>
+ *
+ * <p>Subclasses still expose the boxed value through {@link #value()} so
+ * AST-time inspection (e.g. constant-folding helpers in
+ * {@code MetaNodeFactories}) continues to work without an instanceof
+ * cascade.</p>
  */
 @NodeInfo(shortName = "atomic")
-public final class AtomicValueNode extends PureNode
+public class AtomicValueNode extends PureNode
 {
     @CompilationFinal
     private final Object value;

@@ -42,15 +42,21 @@ public final class IndexOfNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public long executeLong(VirtualFrame frame)
     {
         String s = StringHelper.asString(strArg.executeGeneric(frame), sig);
         String search = StringHelper.asString(searchArg.executeGeneric(frame), sig);
         if (fromArg != null)
         {
-            int from = (int) IntegerHelper.asLong(fromArg.executeGeneric(frame), sig);
-            return (long) s.indexOf(search, from);
+            int from = (int) fromArg.executeLong(frame);
+            return s.indexOf(search, from);
         }
-        return (long) s.indexOf(search);
+        return s.indexOf(search);
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeLong(frame);
     }
 }

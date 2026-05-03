@@ -67,6 +67,51 @@ public abstract class PureNode extends Node
                 + (value == null ? "null" : value.getClass().getName()));
     }
 
+    /**
+     * Specialised entry point for nodes whose Pure type is {@code Integer[1]}.
+     * Pure's {@code Integer} maps to Java {@code long}; producers override to
+     * skip the {@link Long} box. The default unboxes from {@link
+     * #executeGeneric}, accepting any {@link Number} (so an {@code Integer}
+     * value flowing in from a {@code Float} call site widens cleanly).
+     */
+    public long executeLong(VirtualFrame frame)
+    {
+        Object value = executeGeneric(frame);
+        if (value instanceof Long l)
+        {
+            return l;
+        }
+        if (value instanceof Number n)
+        {
+            return n.longValue();
+        }
+        com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+        throw new ClassCastException("expected Integer, got: "
+                + (value == null ? "null" : value.getClass().getName()));
+    }
+
+    /**
+     * Specialised entry point for nodes whose Pure type is {@code Float[1]}.
+     * Pure's {@code Float} maps to Java {@code double}; producers override to
+     * skip the {@link Double} box. {@code Decimal} (BigDecimal) flows through
+     * {@link #executeGeneric} since there's no primitive form.
+     */
+    public double executeDouble(VirtualFrame frame)
+    {
+        Object value = executeGeneric(frame);
+        if (value instanceof Double d)
+        {
+            return d;
+        }
+        if (value instanceof Number n)
+        {
+            return n.doubleValue();
+        }
+        com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+        throw new ClassCastException("expected Float, got: "
+                + (value == null ? "null" : value.getClass().getName()));
+    }
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     protected final org.finos.legend.pure.truffle.PureContext getContext()
     {

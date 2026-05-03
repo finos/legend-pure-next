@@ -35,9 +35,21 @@ public final class ParseFloatNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public double executeDouble(VirtualFrame frame)
     {
         String s = StringHelper.asString(arg.executeGeneric(frame), SIG);
+        return parse(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double parse(String s)
+    {
         return Double.parseDouble(s.trim());
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeDouble(frame);
     }
 }

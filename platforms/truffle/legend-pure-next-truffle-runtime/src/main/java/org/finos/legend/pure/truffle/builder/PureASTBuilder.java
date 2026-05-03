@@ -295,6 +295,21 @@ public final class PureASTBuilder
         {
             return new AtomicValueNode(org.finos.legend.pure.truffle.types.PureSequence.EMPTY);
         }
+        // Pure's primitive types map to JVM primitives — emit typed constant
+        // nodes so consumers calling executeLong / executeDouble /
+        // executeBoolean skip the unbox.
+        if (value instanceof Long l)
+        {
+            return new org.finos.legend.pure.truffle.ast.LongConstantNode(l);
+        }
+        if (value instanceof Double d)
+        {
+            return new org.finos.legend.pure.truffle.ast.DoubleConstantNode(d);
+        }
+        if (value instanceof Boolean b)
+        {
+            return new org.finos.legend.pure.truffle.ast.BooleanConstantNode(b);
+        }
         if (value instanceof String s)
         {
             String typeName = extractTypeName(av);

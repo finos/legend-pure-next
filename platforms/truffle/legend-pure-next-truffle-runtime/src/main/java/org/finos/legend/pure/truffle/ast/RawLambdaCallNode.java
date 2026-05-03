@@ -24,10 +24,19 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunc
 /**
  * Raw lambda call site — no ValueSpecification anywhere.
  *
- * <p>Monomorphic inline cache: first call records the lambda identity
- * and creates a DirectCallNode. Same-lambda subsequent calls dispatch
- * directly (Graal-inlineable). Different-lambda calls fall back to
- * IndirectCallNode.</p>
+ * <p>Monomorphic inline cache: first call records the call target and
+ * installs a {@link DirectCallNode}. Subsequent calls to the same target
+ * dispatch through it — letting Truffle's runtime inline the callee into
+ * the caller's compilation when its inlining heuristics agree. Different
+ * targets at the same call site promote to an {@link IndirectCallNode},
+ * which is a hard inlining boundary (the target isn't compile-time
+ * constant).</p>
+ *
+ * <p>This is the standard Truffle pattern: instead of forcing every lambda
+ * call across a {@code @TruffleBoundary} (which prevents fusion of
+ * collection operations like {@code map}/{@code filter}/{@code fold} with
+ * their lambda body), we let Truffle decide. The Graal trip-wire on
+ * {@code TruffleTestCompilerPure} catches any regression.</p>
  *
  * <p>All arguments and return values are raw Java objects.</p>
  */
@@ -43,7 +52,7 @@ public final class RawLambdaCallNode extends Node
     private PropertyReadNode propertyReader = new PropertyReadNode();
 
     @CompilerDirectives.CompilationFinal
-    private Object cachedTarget;
+    private RootCallTarget cachedTarget;
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private org.finos.legend.pure.truffle.PureContext getContext()
@@ -74,7 +83,6 @@ public final class RawLambdaCallNode extends Node
         return dispatch(lambdaOrClosure, fullArgs);
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object dispatch(Object lambdaOrClosure, Object[] args)
     {
         RootCallTarget target = getCallTarget(lambdaOrClosure);
@@ -82,18 +90,37 @@ public final class RawLambdaCallNode extends Node
         {
             return fallback(lambdaOrClosure, args);
         }
-        // Boundary call: hard PE stop so lambdas don't inline into their
-        //   caller's compilation. Each lambda still compiles as its own
-        //   root node — runtime calls dispatch through the cached target
-        //   without expanding it into the caller's graph. Mirrors the
-        //   model where every Pure function is its own JIT unit.
-        return boundaryCall(target, args);
+        // Monomorphic fast path: same target as the cached one — the
+        // DirectCallNode is the inlining decision point. Truffle inlines
+        // the callee here when its heuristics allow, fusing the lambda
+        // body with the caller's compilation (the win for map/filter/fold).
+        if (target == cachedTarget)
+        {
+            return directCallNode.call(args);
+        }
+        return slowDispatch(target, args);
     }
 
-    @CompilerDirectives.TruffleBoundary
-    private static Object boundaryCall(RootCallTarget target, Object[] args)
+    private Object slowDispatch(RootCallTarget target, Object[] args)
     {
-        return target.call(args);
+        // First-ever call at this site: install the monomorphic cache.
+        if (cachedTarget == null)
+        {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            cachedTarget = target;
+            directCallNode = insert(DirectCallNode.create(target));
+            return directCallNode.call(args);
+        }
+        // Megamorphic: a different target showed up at this site.
+        // Promote to IndirectCallNode — no inlining (target isn't a PE
+        // constant) but every other call site keeps its monomorphic
+        // DirectCallNode.
+        if (indirectCallNode == null)
+        {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            indirectCallNode = insert(IndirectCallNode.create());
+        }
+        return indirectCallNode.call(target, args);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

@@ -36,10 +36,14 @@ public final class MinusIntegerNode extends PureNode
     }
 
     @Override
+    public long executeLong(VirtualFrame frame)
+    {
+        return left.executeLong(frame) - right.executeLong(frame);
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        long a = IntegerHelper.asLong(left.executeGeneric(frame), SIG);
-        long b = IntegerHelper.asLong(right.executeGeneric(frame), SIG);
-        return a - b;
+        return executeLong(frame);
     }
 }

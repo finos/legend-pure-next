@@ -35,9 +35,14 @@ public final class FloorNumberNode extends PureNode
     }
 
     @Override
+    public long executeLong(VirtualFrame frame)
+    {
+        return (long) Math.floor(operand.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double v = FloatHelper.asDouble(operand.executeGeneric(frame), SIG);
-        return (long) Math.floor(v);
+        return executeLong(frame);
     }
 }

@@ -36,10 +36,16 @@ public final class StartsWithNode extends PureNode
     }
 
     @Override
-    public Object executeGeneric(VirtualFrame frame)
+    public boolean executeBoolean(VirtualFrame frame)
     {
         String s = StringHelper.asString(strArg.executeGeneric(frame), SIG);
         String prefix = StringHelper.asString(prefixArg.executeGeneric(frame), SIG);
         return s.startsWith(prefix);
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        return executeBoolean(frame);
     }
 }

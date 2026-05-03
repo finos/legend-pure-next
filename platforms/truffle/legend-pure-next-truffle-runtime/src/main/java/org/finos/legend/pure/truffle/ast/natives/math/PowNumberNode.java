@@ -39,10 +39,14 @@ public final class PowNumberNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        return Math.pow(base.executeDouble(frame), exponent.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double b = FloatHelper.asDouble(base.executeGeneric(frame), SIG);
-        double e = FloatHelper.asDouble(exponent.executeGeneric(frame), SIG);
-        return Math.pow(b, e);
+        return executeDouble(frame);
     }
 }

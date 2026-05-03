@@ -45,9 +45,14 @@ public final class UnaryDoubleOpNode extends PureNode
     }
 
     @Override
+    public double executeDouble(VirtualFrame frame)
+    {
+        return op.applyAsDouble(operand.executeDouble(frame));
+    }
+
+    @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        double v = FloatHelper.asDouble(operand.executeGeneric(frame), signature);
-        return op.applyAsDouble(v);
+        return executeDouble(frame);
     }
 }
