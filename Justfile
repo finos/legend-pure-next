@@ -20,12 +20,14 @@ set quiet := true
 set shell := ["bash", "-c"]
 
 root      := justfile_directory()
-spec      := root / "specification"
-boot      := root / "bootstrap"
-compiler  := root / "compiler-pure"
+pure      := root / "pure"
+spec      := pure / "specification"
+boot      := root / "bootstrap" / "legend-pure-next-bootstrap"
+bcore     := boot / "legend-pure-next-bootstrap-core"
+compiler  := pure / "compiler-pure"
 platforms := root / "platforms"
 ts        := platforms / "typescript"
-truffle   := platforms / "truffle"
+truffle   := platforms / "truffle" / "legend-pure-next-truffle"
 out       := root / "build"
 cli       := out / "cli" / "pure-cli.jar"
 
@@ -81,17 +83,17 @@ build-bootstrap:
 stage: build-bootstrap
     @{{banner}} '[stage]' 'copy CLI jar + core.pdb + generated specs into build/'
     mkdir -p {{out}}/cli {{out}}/specification/protocol
-    cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
-    cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
-    cp -r {{boot}}/legend-pure-next-generators/target/generated-specification/* {{out}}/specification/
+    cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-cli-*-fat.jar {{cli}}
+    cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{out}}/core.pdb
+    cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{out}}/specification/
 
 # --- Copy pre-built artifacts to build/ (no rebuild) ---
 copy:
     @{{banner}} '[stage]' 'copy pre-built artifacts into build/ (no rebuild)'
     mkdir -p {{out}}/cli {{out}}/specification/protocol
-    cp {{boot}}/legend-pure-next-cli/target/pure-cli-*-fat.jar {{cli}}
-    cp {{boot}}/legend-pure-next-compiler/target/classes/core.pdb {{out}}/core.pdb
-    cp -r {{boot}}/legend-pure-next-generators/target/generated-specification/* {{out}}/specification/
+    cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-cli-*-fat.jar {{cli}}
+    cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{out}}/core.pdb
+    cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{out}}/specification/
 
 # --- Compile compiler.pdb from compiler-pure sources ---
 build-compiler-pdb: stage
@@ -126,7 +128,7 @@ build-truffle: generate-pdb-classes
 
 # Run the Pure test suite via the Truffle interpreter (JVM mode).
 test-pure-truffle: build-truffle build-compiler-pdb
-    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over specification/compiler'
+    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over pure/specification/compiler'
     {{truffle_java}} -jar {{out}}/cli/pure-compile.jar execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \
@@ -159,7 +161,7 @@ build-truffle-native: build-bootstrap
 # interpreters, plus two self-host tests (compile the compiler with each
 # compiler, then run compiler tests against the freshly produced PDB).
 test: build-truffle test-compiler-pure-truffle test-self-host-java test-self-host-truffle
-    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over specification/compiler'
+    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler'
     java -jar {{cli}} execute \
         --pdb {{out}}/core.pdb \
         --pdb {{out}}/compiler.pdb \

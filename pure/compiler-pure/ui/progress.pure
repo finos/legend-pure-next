@@ -1,0 +1,90 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::io::*;
+import meta::pure::functions::math::*;
+import meta::pure::functions::string::*;
+
+// ---------------------------------------------------------------------------
+// Two-line ANSI progress display: a bar that overwrites itself in place plus
+// a status line directly below it showing the item currently being processed.
+// Used by the test runners and the directory compiler. All terminal writes
+// assume the terminal honors VT100 escape sequences (carriage return, cursor
+// up/down, erase-in-line). No fallback for non-TTY output — same assumption
+// the rest of the CLI makes.
+//
+// Invariant maintained across calls:
+//   After startProgress and after every tickProgress, the cursor sits at
+//   column 0 of the bar line (the line containing the bar). finishProgress
+//   leaves the cursor on a fresh line below the cleared display area.
+//
+// Usage:
+//   startProgress('Running 247 tests from spec/...');
+//   range(0, $total)->map(i | tickProgress($i + 1, $total, $name); doWork($i););
+//   finishProgress();
+//   println('OK: 247 / 247 passed in 1234 ms');
+// ---------------------------------------------------------------------------
+
+// Render a 30-char progress bar plus percentage and counter. Pure function;
+// kept public so callers that want the bar text without the cursor dance
+// (logging, custom redraw) can reuse it.
+function meta::pure::ui::progress::renderBar(done:Integer[1], total:Integer[1]):String[1]
+{
+    let fullBar = '\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588';
+    let emptyBar = '\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591';
+    let width = 30;
+    // `/` returns Float in Pure — convert back to Integer via floor.
+    let filled = if($total == 0, |0, |floor($done * $width / $total));
+    let pct = if($total == 0, |100, |floor($done * 100 / $total));
+    // Each block char is 3 bytes in UTF-8 — substring operates on Java char indices,
+    // so taking first `filled` characters of the full/empty templates gives the right slice.
+    '[' + substring($fullBar, 0, $filled)
+        + substring($emptyBar, 0, $width - $filled)
+        + '] ' + $pct->toString() + '%  ('
+        + $done->toString() + '/' + $total->toString() + ')';
+}
+
+// Print the header, reserve two lines for the bar + status display, then park
+// the cursor on the bar line. Caller should print no other output between
+// startProgress and the matching finishProgress, or the bar will scroll off.
+function meta::pure::ui::progress::startProgress(label:String[1]):Boolean[1]
+{
+    println($label);
+    println('');
+    println('');
+    print('\u001B[2A');
+    true;
+}
+
+// Redraw the bar with `done`/`total` and update the status line below it
+// with `current`. Restores the bar-line cursor invariant on exit.
+//   \r\u001B[K<bar>     — column 0, clear to EOL, write bar
+//   \u001B[B\r\u001B[K  — cursor down (no scroll) to status line, col 0, clear
+//   '  ' + $current     — write current item
+//   \u001B[K            — clear tail (in case previous item name was longer)
+//   \u001B[A\r          — cursor up back to bar line, col 0
+function meta::pure::ui::progress::tickProgress(done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
+{
+    print('\r\u001B[K' + meta::pure::ui::progress::renderBar($done, $total)
+          + '\u001B[B\r\u001B[K  ' + $current + '\u001B[K\u001B[A\r');
+    true;
+}
+
+// Clear the bar + status lines and drop the cursor onto a fresh line below.
+// After this call the caller can println a summary normally.
+function meta::pure::ui::progress::finishProgress():Boolean[1]
+{
+    print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
+    true;
+}

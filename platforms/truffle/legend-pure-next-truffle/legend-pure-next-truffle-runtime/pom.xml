@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-truffle</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-truffle-runtime</artifactId>
+    <packaging>jar</packaging>
+    <name>Legend Pure - Next - Truffle - Runtime</name>
+    <description>GraalVM Truffle interpreter for Pure — JIT-compiled, native-image-ready.</description>
+
+    <dependencies>
+        <!-- Codegen module (generates truffle PDB classes before this module compiles) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-truffle-codegen</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <!-- Bootstrap compiler (for CompressedArchiveReader, FBS Defs) -->
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-compiler</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-execution</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.finos.legend.pure</groupId>
+            <artifactId>legend-pure-next-bootstrap-cli</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Truffle -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-dsl-processor</artifactId>
+            <version>${truffle.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>nativeimage</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${truffle.version}</version>
+        </dependency>
+        <!-- Truffle Runtime — enables Graal JIT compilation of guest language ASTs -->
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-runtime</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Polyglot CPU sampler. Adds the `cpusampler` engine options.
+             Loaded via ServiceLoader at runtime; opt-in via the CLI flag. -->
+        <dependency>
+            <groupId>org.graalvm.tools</groupId>
+            <artifactId>profiler-tool</artifactId>
+            <version>${truffle.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Eclipse Collections -->
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections-api</artifactId>
+            <version>${eclipsecollections.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections</artifactId>
+            <version>${eclipsecollections.version}</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.15.0</version>
+                <configuration>
+                    <release>25</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.graalvm.truffle</groupId>
+                            <artifactId>truffle-dsl-processor</artifactId>
+                            <version>${truffle.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.openjdk.jmh</groupId>
+                            <artifactId>jmh-generator-annprocess</artifactId>
+                            <version>1.37</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <!-- Generated PDB classes come from codegen JAR dependency -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <trimStackTrace>false</trimStackTrace>
+                    <argLine>
+                        --add-opens=java.base/sun.misc=ALL-UNNAMED
+                        --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                    </argLine>
+                    <!-- <includes> inherited from platforms/truffle/pom.xml -->
+                </configuration>
+            </plugin>
+            <!-- Fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.finos.legend.pure.truffle.PureCompileMain</mainClass>
+                                    <manifestEntries>
+                                        <Multi-Release>true</Multi-Release>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <!-- Merge LICENSE / NOTICE entries instead of duplicating them. -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                                    <addHeader>false</addHeader>
+                                </transformer>
+                            </transformers>
+                            <finalName>pure-compile-${project.version}-fat</finalName>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <!-- Signature files: invalid once jars are merged. -->
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <!-- Per-input MANIFEST.MF: ManifestResourceTransformer
+                                             builds the output manifest from <mainClass> +
+                                             <manifestEntries>. -->
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <!-- module-info.class (root + multi-release) — fat jar is
+                                             classpath-loaded; JPMS encapsulation does not apply. -->
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                        <!-- Per-jar license/notice noise; merged copies are
+                                             produced by the transformers above. -->
+                                        <exclude>META-INF/DEPENDENCIES</exclude>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/LICENSE.txt</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/NOTICE.txt</exclude>
+                                        <!-- Eclipse Collections ships these duplicated across api/impl. -->
+                                        <exclude>about.html</exclude>
+                                        <exclude>LICENSE-EDL-1.0.txt</exclude>
+                                        <exclude>LICENSE-EPL-1.0.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <!-- pure/annotations/* are emitted identically by RdfJavaGenerator
+                                     in both parser and compiler. Keep the parser copy (parser is
+                                     the upstream module) and drop the compiler's duplicate. -->
+                                <filter>
+                                    <artifact>org.finos.legend.pure:legend-pure-next-bootstrap-compiler</artifact>
+                                    <excludes>
+                                        <exclude>pure/annotations/**</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.10.6</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.truffle.PureCompileMain</mainClass>
+                            <imageName>pure-compile</imageName>
+                            <buildArgs>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>--features=org.finos.legend.pure.truffle.nativeimage.PureFeature</buildArg>
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.PureLanguageProvider</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
