@@ -251,7 +251,14 @@ function meta::pure::compiler::helper::functionType::reconcileInferredFT(expecte
         | $expected.parameters->zip($actual.parameters)->map(p |
             let actualParam = $p.second;
             let rGT = meta::pure::compiler::helper::genericType::reconcileInferred($p.first.genericType->toOne(), $actualParam.genericType->toOne(), $context);
-            ^$actualParam(genericType = $rGT);
+            // Build a fresh VE without sourceInformation, mirroring Java _FunctionType.reconcileInferred
+            // which constructs `new VariableExpressionImpl(model)._name(...)._genericType(...)._multiplicity(...)`
+            // — Java never carries SI through reconciliation, so Pure must not either.
+            ^VariableExpression(
+                name = $actualParam.name->toOne(),
+                genericType = $rGT,
+                multiplicity = $actualParam.multiplicity->toOne()
+            )->cast(@VariableExpression);
         ),
         | $actual.parameters
     );

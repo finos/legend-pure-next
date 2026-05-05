@@ -43,12 +43,16 @@ function meta::pure::compiler::resolution::functionDefinitionResolver::resolveEx
         ]);
         let newScope = $resolved->match([
             fi:FunctionApplication[1] |
-                if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 1,
+                if($fi.functionName->toOne()->startsWith('letFunction') && $fi.parametersValues->size() >= 2,
                     | let varName = $fi.parametersValues->at(0)->cast(@AtomicValue<String>).value->cast(@String);
+                      // Take the GT from the resolved value VS itself (post-reconciliation) rather than
+                      // the let's overall genericType, which is built from bindings that may still
+                      // reference pre-reconciliation arg types (SI-bearing FT params).
+                      let valueVS = $fi.parametersValues->at(1);
                       $acc.scope->concatenate(^VariableExpression(
                           name = $varName,
-                          genericType = $resolved.genericType,
-                          multiplicity = $resolved.multiplicity
+                          genericType = $valueVS.genericType,
+                          multiplicity = $valueVS.multiplicity
                       ));,
                     | $acc.scope
                 ),

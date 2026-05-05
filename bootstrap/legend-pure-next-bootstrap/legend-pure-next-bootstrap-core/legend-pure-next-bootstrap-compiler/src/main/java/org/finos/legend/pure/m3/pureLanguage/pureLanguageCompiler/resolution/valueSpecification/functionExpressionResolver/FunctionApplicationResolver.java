@@ -357,7 +357,8 @@ public class FunctionApplicationResolver
                         ._classifierGenericType((GenericTypeValue) reconciledGT)
                         ._parameters(reconciledFT._parameters())
                         ._expressionSequence(lambda._expressionSequence())
-                        ._openVariables(lambda._openVariables());
+                        ._openVariables(lambda._openVariables())
+                        ._sourceInformation(lambda._sourceInformation());
                 // ^$av(value = newLambda, genericType = reconciledGT)
                 return new meta.pure.metamodel.valuespecification.AtomicValueImpl(model)
                         ._value(newLambda)

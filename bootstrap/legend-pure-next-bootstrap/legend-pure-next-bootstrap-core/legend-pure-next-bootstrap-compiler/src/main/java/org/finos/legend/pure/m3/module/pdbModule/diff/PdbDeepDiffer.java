@@ -67,7 +67,7 @@ public final class PdbDeepDiffer
      * {@code <too deep>}. Keeps pathological cycles from blowing the stack
      * even when the visited-set check fails for value-equal objects.
      */
-    private static final int MAX_DEPTH = 60;
+    private static final int MAX_DEPTH = 120;
 
     /**
      * Accessors whose returned sequences are semantically order-insensitive —
@@ -81,7 +81,10 @@ public final class PdbDeepDiffer
             "_typeParameters",
             "_multiplicityParameters",
             "_stereotypes",
-            "_taggedValues"
+            "_taggedValues",
+            "_children",
+            "_properties",
+            "_qualifiedProperties"
     );
 
     private PdbDeepDiffer() {}

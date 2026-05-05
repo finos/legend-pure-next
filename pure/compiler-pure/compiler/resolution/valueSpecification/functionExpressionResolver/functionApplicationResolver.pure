@@ -467,7 +467,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       a:Any[1] | []
                                   ]);
                                   if($reconciledFT->isNotEmpty() && $reconciledFT->toOne().parameters->isNotEmpty(),
-                                      | let newLambda = ^$lambda(parameters = $reconciledFT->toOne().parameters);
+                                      | // Mirror Java rebuildWithReconciledType: also overwrite the lambda's
+                                      // classifierGenericType with the reconciled GT so the inner FT.parameters
+                                      // (with no SI) replace the original SI-bearing ones in both views.
+                                      let newLambda = ^$lambda(
+                                          parameters = $reconciledFT->toOne().parameters,
+                                          classifierGenericType = $reconciledArgGT->cast(@meta::pure::metamodel::type::generics::GenericTypeValue)
+                                      );
                                         ^$av(value = $newLambda, genericType = $reconciledArgGT);,
                                       | ^$argVS(genericType = $reconciledArgGT)
                                   );,
