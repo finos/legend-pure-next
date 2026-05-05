@@ -41,21 +41,17 @@ public final class _GenericType
     {
         var gt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         gt._type(type);
-        // Set CGT to Class<UserDefinedGenericType> so match/instanceOf works.
-        // The anchor `cgt` is itself a UDGT so its own classifierGenericType
-        // must be set — point it at itself, mirroring the bootstrap helper
-        // (the canonical "I am the meta-class anchor" self-reference).
-        // Without this, write-time validation of any element whose classifier
-        // chain reaches the anchor fails with "classifierGenericType is null".
+        // Anchor at the canonical GenericType_UserDefinedGenericType (UDPGT)
+        // element from core.pdb, mirroring bootstrap's _GenericType.buildUserDefinedGenericType.
+        // Without canonical anchoring the classifier chain bottoms at a fresh
+        // self-loop UDGT instead of the canonical UDPGT anchor — divergent
+        // from Java's compiler.pdb encoding.
         if (resolver != null)
         {
-            Object gtClass = resolver.getElement("meta::pure::metamodel::type::generics::UserDefinedGenericType");
-            if (gtClass instanceof Type gtType)
+            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType");
+            if (canonical instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
             {
-                var cgt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-                cgt._type(gtType);
-                cgt._classifierGenericType(cgt);
-                gt._classifierGenericType(cgt);
+                gt._classifierGenericType(canonicalGT);
             }
         }
         return gt;
