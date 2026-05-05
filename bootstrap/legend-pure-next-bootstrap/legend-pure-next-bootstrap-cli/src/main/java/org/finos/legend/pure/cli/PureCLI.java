@@ -60,7 +60,7 @@ public class PureCLI
 
     private static void printUsage()
     {
-        System.err.println("Usage: pure-cli <command> [options]");
+        System.err.println("Usage: pure-bootstrap <command> [options]");
         System.err.println();
         System.err.println("Commands:");
         System.err.println("  compile-spec --m3-ttl <file> <sourceDir...> <output.pdb>   Compile specification Pure sources into core.pdb");
@@ -73,15 +73,18 @@ public class PureCLI
     private static void diffPdb(String[] args) throws Exception
     {
         boolean deep = false;
+        Path corePdb = null;
         List<String> positional = new ArrayList<>();
-        for (String arg : args)
+        for (int i = 0; i < args.length; i++)
         {
+            String arg = args[i];
             if ("--deep".equals(arg)) deep = true;
+            else if ("--core".equals(arg) && i + 1 < args.length) corePdb = Path.of(args[++i]);
             else positional.add(arg);
         }
         if (positional.size() != 2)
         {
-            System.err.println("Usage: pure-cli diff-pdb [--deep] <a.pdb> <b.pdb>");
+            System.err.println("Usage: pure-bootstrap diff-pdb [--deep] [--core <core.pdb>] <a.pdb> <b.pdb>");
             System.exit(1);
         }
         Path a = Path.of(positional.get(0));
@@ -90,7 +93,7 @@ public class PureCLI
         if (deep)
         {
             clean = org.finos.legend.pure.m3.module.pdbModule.diff.PdbDeepDiffer
-                    .diff(a, b, System.out).isClean();
+                    .diff(a, b, corePdb, System.out).isClean();
         }
         else
         {
@@ -118,7 +121,7 @@ public class PureCLI
         }
         if (m3TtlPath == null || positional.size() < 2)
         {
-            System.err.println("Usage: pure-cli compile-spec --m3-ttl <file> <sourceDir...> <output.pdb>");
+            System.err.println("Usage: pure-bootstrap compile-spec --m3-ttl <file> <sourceDir...> <output.pdb>");
             System.exit(1);
         }
         List<Path> sourceDirs = new ArrayList<>();
@@ -149,7 +152,7 @@ public class PureCLI
 
         if (basePdb == null || source == null || output == null)
         {
-            System.err.println("Usage: pure-cli compile --base-pdb <file> --source <dir> --output <file>");
+            System.err.println("Usage: pure-bootstrap compile --base-pdb <file> --source <dir> --output <file>");
             System.exit(1);
         }
 
@@ -181,7 +184,7 @@ public class PureCLI
 
         if (basePdbs.isEmpty() || source == null || output == null)
         {
-            System.err.println("Usage: pure-cli compile-via-pure --base-pdb <file>... --source <dir> --output <file>");
+            System.err.println("Usage: pure-bootstrap compile-via-pure --base-pdb <file>... --source <dir> --output <file>");
             System.err.println("  Pass at least core.pdb plus an existing compiler.pdb so the");
             System.err.println("  Pure compile_PureFile_… function is on the resolver.");
             System.exit(1);
@@ -220,7 +223,7 @@ public class PureCLI
 
         if (pdbPaths.isEmpty() || function == null)
         {
-            System.err.println("Usage: pure-cli execute --pdb <file>... --function <path> [--args <arg>...]");
+            System.err.println("Usage: pure-bootstrap execute --pdb <file>... --function <path> [--args <arg>...]");
             System.exit(1);
         }
 

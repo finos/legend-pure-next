@@ -42,7 +42,7 @@ function meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(lamb
         | PureOne,
         | $lastExpr->toOne().multiplicity->toOne()
     );
-    let ft = new(^UserDefinedGenericType(type = FunctionType))->cast(@FunctionType);
+    let ft = new(buildUserDefinedGenericType(FunctionType))->cast(@FunctionType);
     let rebuiltFT = ^$ft(parameters = $params, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
     let rebuiltCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $rebuiltFT)]);
     ^$lambda(classifierGenericType = $rebuiltCGT);
@@ -110,7 +110,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           );
 
           let lambdaFunctionType = new(
-              ^UserDefinedGenericType(type = FunctionType)
+              buildUserDefinedGenericType(FunctionType)
           )->cast(@FunctionType);
           let ft = ^$lambdaFunctionType(
               parameters = $compiledParams,
@@ -128,7 +128,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           );
 
           let emptyLambda = new(
-              ^UserDefinedGenericType(type = LambdaFunction)
+              buildUserDefinedGenericType(LambdaFunction)
           )->cast(@LambdaFunction<Any>);
           let m3Lambda = ^$emptyLambda(
               parameters = $compiledParams,

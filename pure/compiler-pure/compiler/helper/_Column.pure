@@ -8,11 +8,8 @@ import meta::pure::compiler::helper::genericType::*;
 
 function meta::pure::compiler::helper::column::buildColumn(name:String[1], owner:GenericType[1], genericType:GenericType[1], multiplicity:Multiplicity[1], nameWildCard:Boolean[1]):Column[1]
 {
-    let cgtype = ^UserDefinedGenericType(
-        type = Column,
-        typeArguments = [$owner, $genericType],
-        multiplicityArguments = [$multiplicity]
-    );
+    let cgtypeBase = buildUserDefinedGenericType(Column);
+    let cgtype = ^$cgtypeBase(typeArguments = [$owner, $genericType], multiplicityArguments = [$multiplicity]);
 
     let col = new($cgtype)->cast(@Column);
     ^$col(

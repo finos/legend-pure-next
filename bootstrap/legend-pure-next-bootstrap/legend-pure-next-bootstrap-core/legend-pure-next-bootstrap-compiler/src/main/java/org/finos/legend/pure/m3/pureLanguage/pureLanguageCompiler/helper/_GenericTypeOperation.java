@@ -78,7 +78,7 @@ public final class _GenericTypeOperation
             RelationType resultRT = evaluateRelationTypeOperation(leftRT, rightRT, opName(gto), model);
             if (resultRT != null)
             {
-                return new InferredGenericTypeImpl(model)._type(resultRT);
+                return _GenericType.buildInferredGenericType(resultRT, model);
             }
         }
 
@@ -124,8 +124,7 @@ public final class _GenericTypeOperation
             return result
                     ._columns(columns)
                     ._classifierGenericType(
-                            new UserDefinedGenericTypeImpl(model)
-                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(ownerGT))
                     );
         }
@@ -152,8 +151,7 @@ public final class _GenericTypeOperation
             return result
                     ._columns(columns)
                     ._classifierGenericType(
-                            new UserDefinedGenericTypeImpl(model)
-                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(ownerGT))
                     );
         }

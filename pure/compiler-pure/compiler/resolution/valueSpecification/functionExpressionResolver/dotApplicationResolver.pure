@@ -318,7 +318,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         multiplicity = ^CompilerNotSetMultiplicity()
     );
     let innerDot = meta::pure::functions::lang::new(
-        ^UserDefinedGenericType(type = DotApplication)
+        buildUserDefinedGenericType(DotApplication)
     )->cast(@DotApplication);
     let dotBody = ^$innerDot(
         functionName = $functionName,
@@ -328,7 +328,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     // Build lambda function
     let emptyLambda = meta::pure::functions::lang::new(
-        ^UserDefinedGenericType(type = LambdaFunction)
+        buildUserDefinedGenericType(LambdaFunction)
     )->cast(@LambdaFunction<Any>);
     let lambda = ^$emptyLambda(
         parameters = [$lambdaParam],

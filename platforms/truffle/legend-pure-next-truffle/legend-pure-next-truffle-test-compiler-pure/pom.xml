@@ -154,7 +154,7 @@
                             <executable>/bin/sh</executable>
                             <arguments>
                                 <argument>-c</argument>
-                                <argument>mkdir -p ${project.basedir}/../../../../build &amp;&amp; cp ${project.build.testOutputDirectory}/core.pdb ${project.build.testOutputDirectory}/compiler.pdb ${project.basedir}/../../../../build/</argument>
+                                <argument>mkdir -p ${project.basedir}/../../../../shared &amp;&amp; cp ${project.build.testOutputDirectory}/core.pdb ${project.build.testOutputDirectory}/compiler.pdb ${project.basedir}/../../../../shared/</argument>
                             </arguments>
                         </configuration>
                     </execution>

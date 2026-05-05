@@ -55,8 +55,8 @@ class TrufflePureTestRunner
         {
             return;
         }
-        Path corePdb = Path.of("../../../../build/core.pdb");
-        Path compilerPdb = Path.of("../../../../build/compiler.pdb");
+        Path corePdb = Path.of("../../../../shared/core.pdb");
+        Path compilerPdb = Path.of("../../../../shared/compiler.pdb");
 
         // Use truffle PDB loader — reads FlatBuffer directly into truffle-namespaced wrappers
         coreLoader = new org.finos.legend.pure.truffle.runtime.TrufflePdbLoader(

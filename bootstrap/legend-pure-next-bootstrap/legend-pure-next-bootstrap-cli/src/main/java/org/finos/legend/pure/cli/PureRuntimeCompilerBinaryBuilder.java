@@ -26,7 +26,10 @@ import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
+import org.finos.legend.pure.m3.module.pdbModule.archive.PDBArchiveSection;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.PureLanguageCompilerExtension;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -217,10 +220,26 @@ public final class PureRuntimeCompilerBinaryBuilder
             elementsByPath.put(path, pe);
         }
 
-        List<PackageableElement> elements = new ArrayList<>(elementsByPath.values());
+        MutableList<PackageableElement> elements = Lists.mutable.withAll(elementsByPath.values());
         System.out.println("  Compiled " + elements.size() + " elements");
 
-        // 4. Serialize. CompressedArchiveWriter wants a Module to satisfy
+        // 4. Build the function index from the compiled elements. Mirrors what
+        //    the Java compiler's PureLanguageCompilerExtension does in its
+        //    `preThirdPass` (populating the LocalModule's PureLanguageMetadata),
+        //    but we compute it directly because compile-via-pure produces a
+        //    plain list of elements without a LocalModule. Without this section
+        //    function-name lookups in self-host PDBs would fall back to a
+        //    linear scan; the byte-level diff against the Java-compiled
+        //    compiler.pdb would also flag the absence as a divergence.
+        PureLanguageCompilerExtension compilerExt = new PureLanguageCompilerExtension();
+        MutableList<FunctionIndexEntry> functionEntries = Lists.mutable.empty();
+        compilerExt.buildFunctionIndex(elements, resolver)
+                .forEachValue(byArity -> byArity.forEachValue(functionEntries::addAllIterable));
+        PureLanguageExtension pureLangExt = (PureLanguageExtension) extensions.get(0);
+        List<PDBArchiveSection> additionalSections = pureLangExt.archiveSections(functionEntries);
+        System.out.println("  Function index: " + functionEntries.size() + " entries");
+
+        // 5. Serialize. CompressedArchiveWriter wants a Module to satisfy
         // its archive-metadata expectations; the last input PDB module is
         // a fine stand-in (its name becomes the local-module name in the
         // produced archive header, matching the existing builders).
@@ -228,7 +247,7 @@ public final class PureRuntimeCompilerBinaryBuilder
         {
             Files.createDirectories(outputFile.getParent());
         }
-        new CompressedArchiveWriter().write(elements, extensions, lastModule, outputFile);
+        new CompressedArchiveWriter().write(elements, extensions, lastModule, additionalSections, outputFile);
         System.out.println("    Written: " + outputFile + " (" + Files.size(outputFile) + " bytes)");
     }
 

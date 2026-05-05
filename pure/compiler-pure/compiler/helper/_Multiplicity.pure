@@ -297,10 +297,28 @@ function meta::pure::compiler::helper::multiplicity::asInferredMultiplicity(mul:
                       owner = $mp.owner
                   ),
               cm:ConcreteMultiplicity[1] |
-                  ^InferredAdHocMultiplicity(
-                      lowerBound = $cm.lowerBound,
-                      upperBound = $cm.upperBound
-                  ),
+                  // Match Java _Multiplicity.asInferred: prefer the named
+                  // InferredPackageableMultiplicity anchors for well-known
+                  // patterns; fall back to InferredAdHocMultiplicity only
+                  // for non-canonical bounds.
+                  let lower = $cm->multiplicityLowerBound();
+                  let upper = $cm->multiplicityUpperBound();
+                  if($lower == 1 && $upper == 1,
+                      | InferredPureOne->cast(@Multiplicity),
+                      | if($lower == 0 && $upper == 1,
+                            | InferredZeroOne->cast(@Multiplicity),
+                            | if($lower == 0 && $upper == -1,
+                                  | InferredZeroMany->cast(@Multiplicity),
+                                  | if($lower == 1 && $upper == -1,
+                                        | InferredOneMany->cast(@Multiplicity),
+                                        | ^InferredAdHocMultiplicity(
+                                              lowerBound = $cm.lowerBound,
+                                              upperBound = $cm.upperBound
+                                          )->cast(@Multiplicity)
+                                    )
+                            )
+                      )
+                  );,
               other:Multiplicity[1] | $mul
           ])
     );

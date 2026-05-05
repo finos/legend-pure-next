@@ -171,17 +171,27 @@ public class PureLanguageSerialization
             MutableList<PureLanguageMetadata> metas = localModule.getMetadataAccessExtension(PureLanguageMetadata.class);
             if (metas.notEmpty())
             {
-                MutableList<FunctionIndexEntry> entries = metas.getFirst().getAllFunctionHeaders();
-                if (entries.notEmpty())
-                {
-                    return List.of(new PDBArchiveSection("functionIndex", serializeFunctionIndex(entries)));
-                }
+                return archiveSections(metas.getFirst().getAllFunctionHeaders());
             }
         }
         return List.of();
     }
 
-    private byte[] serializeFunctionIndex(List<FunctionIndexEntry> entries)
+    /**
+     * Build archive sections directly from a function-index entry list.
+     * Used by writers that don't have a {@link LocalModule} to lean on
+     * (e.g. the compile-via-pure path).
+     */
+    public List<PDBArchiveSection> archiveSections(List<FunctionIndexEntry> entries)
+    {
+        if (entries.isEmpty())
+        {
+            return List.of();
+        }
+        return List.of(new PDBArchiveSection("functionIndex", serializeFunctionIndex(entries)));
+    }
+
+    public byte[] serializeFunctionIndex(List<FunctionIndexEntry> entries)
     {
         FlatBufferBuilder builder = new FlatBufferBuilder(4096);
         GeneratedFlatBufferWriter writer = new GeneratedFlatBufferWriter(builder);

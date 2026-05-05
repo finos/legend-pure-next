@@ -192,7 +192,7 @@ public final class RelationColumnResolver
 
         // Look up each column in the reference relation — this IS the SUBSET result
         RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
+        GenericType enrichedGT = _GenericType.buildInferredGenericType(enrichedRT, model);
         MutableList<Column> enrichedColumns = columnNames.collect(colName ->
                 {
                     Column foundColumn = referenceRT._columns().detect(c -> c._name().equals(colName));
@@ -211,8 +211,7 @@ public final class RelationColumnResolver
         ).select(Objects::nonNull);
         enrichedRT._columns(enrichedColumns)
                   ._classifierGenericType(
-                            new UserDefinedGenericTypeImpl(model)
-                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(enrichedGT))
                   );
 
@@ -252,7 +251,7 @@ public final class RelationColumnResolver
 
         // Build the enriched RelationType using the column name + resolved K type
         RelationTypeImpl enrichedRT = new RelationTypeImpl();
-        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(enrichedRT);
+        GenericType enrichedGT = _GenericType.buildInferredGenericType(enrichedRT, model);
         enrichedRT._columns(columnNames.collect(colName ->
                                 _Column.build(
                                         colName,
@@ -269,8 +268,7 @@ public final class RelationColumnResolver
                         )
                     )
                     ._classifierGenericType(
-                            new UserDefinedGenericTypeImpl(model)
-                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(enrichedGT))
                     );
 
@@ -337,12 +335,11 @@ public final class RelationColumnResolver
         );
         RelationType mergedRT = new RelationTypeImpl();
 
-        GenericType enrichedGT = new InferredGenericTypeImpl(model)._type(mergedRT);
+        GenericType enrichedGT = _GenericType.buildInferredGenericType(mergedRT, model);
 
         mergedRT._columns(mergedColumns)
                 ._classifierGenericType(
-                        new UserDefinedGenericTypeImpl(model)
-                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                 ._typeArguments(Lists.mutable.with(enrichedGT))
                 );
 
@@ -353,7 +350,7 @@ public final class RelationColumnResolver
                         setCgt(paramValues.get(1), model)
                                 ._genericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::CompilerGenericTypeAndMultiplicityHolder"), model)
                                         ._multiplicityArguments(Lists.mutable.with((Multiplicity) model.getElement("meta::pure::metamodel::multiplicity::PureOne")))
-                                        ._typeArguments(Lists.mutable.with(new InferredGenericTypeImpl(model)._type(mergedRT))))
+                                        ._typeArguments(Lists.mutable.with(_GenericType.buildInferredGenericType(mergedRT, model))))
                 )
         );
     }
@@ -400,12 +397,11 @@ public final class RelationColumnResolver
         String colName = (String) ((AtomicValue) paramValues.get(nameIdx))._value();
 
         RelationTypeImpl relationType = new RelationTypeImpl();
-        GenericType ownerGT = new InferredGenericTypeImpl(model)._type(relationType);
+        GenericType ownerGT = _GenericType.buildInferredGenericType(relationType, model);
         Column col = _Column.build(colName, ownerGT, lastExpr._genericType(), lastExpr._multiplicity(), false, model);
         relationType._columns(Lists.mutable.with(col))
                     ._classifierGenericType(
-                            new UserDefinedGenericTypeImpl(model)
-                                    ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                     ._typeArguments(Lists.mutable.with(ownerGT))
                     );
 

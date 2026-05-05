@@ -291,7 +291,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Create FunctionCallParametersBinding with enclosingOwner (mirrors Java pushBindingNode line 149)
     let seedBindings = $fi.resolvedTypeParameters->fold({rtp, b |
         collectTypeParameterBindings(
-            ^UserDefinedGenericType(type = ^TypeParameter(name = $rtp.name)),
+            buildUserDefinedGenericType(^TypeParameter(name = $rtp.name)),
             $rtp.value,
             $b
         );
@@ -805,7 +805,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings, $context)));
         $concreteVals->fold({cv, a |
             collectTypeParameterBindings(
-                ^UserDefinedGenericType(type = ^TypeParameter(name = $k)),
+                buildUserDefinedGenericType(^TypeParameter(name = $k)),
                 $cv,
                 $a
             );

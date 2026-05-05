@@ -24,17 +24,17 @@ import meta::pure::ui::progress::*;
 // Pure-native test runner.
 //
 // Exposed to the CLI as:
-//   java -jar pure-cli.jar execute \
-//       --pdb build/core.pdb \
-//       --pdb build/compiler.pdb \
+//   pure-bootstrap execute \
+//       --pdb shared/core.pdb \
+//       --pdb shared/compiler.pdb \
 //       --function "meta::pure::test::runCompiledGraphTests" \
-//       --args "specification/compiler"
+//       --args "pure/specification/compiler"
 //
 // Walks the filesystem under the given directory, reads each .pure file,
 // and asserts it compiles correctly against the ###CompiledGraph or ###Error
 // section that documents the expected output.
 // ---------------------------------------------------------------------------
-function <<test.TestDependency>> meta::pure::test::runCompiledGraphTests(testDir:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runCompiledGraphTests(testDir:String[1]):String[1]
 {
     let files = directoryTree($testDir)
         ->filter(f | $f->endsWith('.pure'));
@@ -56,6 +56,5 @@ function <<test.TestDependency>> meta::pure::test::runCompiledGraphTests(testDir
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    println('OK: ' + $total->toString() + ' / ' + $total->toString() + ' tests passed in ' + $elapsedMs->toString() + ' ms');
-    true;
+    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' tests passed in ' + $elapsedMs->toString() + ' ms';
 }

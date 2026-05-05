@@ -25,7 +25,8 @@ website/yarn-error.log*
 /.agent/
 
 # Build outputs (includes specification artifacts generated from m3.ttl)
-/build/
+**/build/
+/shared/
 
 # Platforms
 /platforms/typescript/node_modules/

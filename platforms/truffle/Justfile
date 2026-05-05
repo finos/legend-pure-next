@@ -1,0 +1,183 @@
+# platforms/truffle/Justfile — builds and tests the Truffle interpreter.
+#
+# Direct invocation:    just <recipe>          (from platforms/truffle/)
+# Via the root Justfile: just truffle::<recipe> (from repo root)
+#
+# Truffle reads core.pdb / compiler.pdb out of <repo>/shared/ (produced by
+# bootstrap). All recipes that need them depend on `_check-pdbs` which fails
+# loudly with a pointer to `just bootstrap::build-compiler-pdb` if they're missing.
+#
+# A single parameterized private recipe `_mvn mode` invokes Maven; `mode` is
+# either "skip-tests" (passes `-DskipTests`) or "with-tests" (lets surefire
+# run unit tests during the install lifecycle). Two recipes use it directly:
+#   `build` → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
+#   `test-java` → `(_mvn "with-tests")` (mvn install)         — surefire runs unit tests inline
+# Maven runs once on the truffle parent pom; the reactor walks
+# parent → codegen → runtime in a single launch. Codegen's pom already
+# removes its generated MapImpl during its own `compile` phase, so no
+# inter-module file shuffling is needed at the Justfile level.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+truffle_root    := source_directory()
+repo_root       := truffle_root / ".." / ".."
+truffle         := truffle_root / "legend-pure-next-truffle"
+truffle_runtime := truffle / "legend-pure-next-truffle-runtime"
+spec            := repo_root / "pure" / "specification"
+compiler_src    := repo_root / "pure" / "compiler-pure"
+truffle_out     := truffle_root / "build"
+shared_out      := repo_root / "shared"
+truffle_cli     := truffle_out / "pure-truffle.jar"
+truffle_native  := truffle_out / "pure-truffle-native"
+pure_truffle    := truffle_root / "bin" / "pure-truffle"
+
+verbose := ""
+mvnq    := if verbose == "" { "-q" } else { "" }
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+default: test
+
+# --- Public: build (no Java tests) ---
+build: (_mvn "skip-tests")
+
+# Native image (GraalVM required). Doesn't run unit tests — that's `test`'s job.
+build-native: _check-pdbs _check-graalvm
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{banner}} '[truffle]' 'native-image build (GraalVM)'
+    if ! command -v native-image >/dev/null 2>&1; then
+        echo "Error: 'native-image' not on PATH." >&2
+        echo "Install with: brew install --cask graalvm-jdk@21" >&2
+        echo "Then set JAVA_HOME to the GraalVM JDK Home." >&2
+        exit 1
+    fi
+    cd {{truffle}} && mvn clean -Pnative package -DskipTests {{mvnq}}
+    mkdir -p {{truffle_out}}
+    cp {{truffle_runtime}}/target/pure-truffle-native {{truffle_native}}
+
+# --- Public: test (single Maven run with tests + Pure spec tests) ---
+test: (_mvn "with-tests")
+    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over pure/specification/compiler'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+# --- Public: Java unit tests only — surefire runs as part of `mvn install` ---
+test-java: (_mvn "with-tests")
+
+test-functions: (_mvn "skip-tests")
+    @{{banner}} '[pure→truffle]' 'runTests'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+test-pct: (_mvn "skip-tests")
+    @{{banner}} '[pure→truffle]' 'runPCTTests'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# --- Tests via the native binary ---
+test-native: build-native
+    @{{banner}} '[pure→native]' 'runCompiledGraphTests'
+    {{truffle_native}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+test-functions-native: build-native
+    @{{banner}} '[pure→native]' 'runTests'
+    {{truffle_native}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+test-pct-native: build-native
+    @{{banner}} '[pure→native]' 'runPCTTests'
+    {{truffle_native}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# Self-host: use the Truffle pure-compile to compile compiler-pure into a
+# fresh compiler_truffle.pdb, then run the compiler spec tests against that
+# PDB. Verifies Truffle's compilation path is functionally equivalent to
+# the bootstrap one.
+test-self-host: (_mvn "skip-tests")
+    @{{banner}} '[self-host-truffle]' 'compiler-pure → compiler_truffle.pdb (truffle), then run compiler tests'
+    {{pure_truffle}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{compiler_src}} \
+        --output {{truffle_out}}/compiler_truffle.pdb {{err_filter}}
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{truffle_out}}/compiler_truffle.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+bench: (_mvn "skip-tests")
+    @{{banner}} '[truffle]' 'PureEvaluatorBenchmark'
+    cd {{truffle}} && mvn -Pbench test -Dtest=PureEvaluatorBenchmark
+
+clean:
+    @{{banner}} '[truffle clean]' 'remove truffle/build (jar + native + self-host pdb) and mvn target/'
+    rm -rf {{truffle_out}}
+    cd {{truffle}} && mvn clean {{mvnq}}
+
+# --- Internal: Maven invocation. `mode` is "skip-tests" (fast, no Java tests)
+# or "with-tests" (surefire runs unit tests during the install lifecycle).
+# Single `mvn install` against the truffle parent pom — walks the whole reactor
+# (parent → codegen → runtime) in one launch. Copies the runtime fat jar into
+# truffle/build/. just dedupes by (recipe, args) so the same mode invoked
+# from multiple deps in one run executes only once.
+_mvn mode: _check-pdbs _check-graalvm
+    @{{banner}} '[truffle]' '{{ if mode == "skip-tests" { "mvn install -DskipTests (parent → codegen → runtime + fat jar)" } else { "mvn install (parent → codegen → runtime + fat jar + unit tests)" } }}'
+    cd {{truffle}} && mvn clean install {{ if mode == "skip-tests" { "-DskipTests" } else { "" } }} {{mvnq}} {{err_filter}}
+    mkdir -p {{truffle_out}}
+    cp {{truffle_runtime}}/target/pure-truffle-*-fat.jar {{truffle_cli}}
+
+# --- Internal: verify <repo>/shared PDBs exist before any work that needs them.
+_check-pdbs:
+    #!/usr/bin/env bash
+    if [[ ! -f "{{shared_out}}/core.pdb" || ! -f "{{shared_out}}/compiler.pdb" ]]; then
+        echo "Error: <repo>/shared/core.pdb or compiler.pdb missing." >&2
+        echo "Run 'just bootstrap::build-compiler-pdb' first (or 'just build' from the repo root)." >&2
+        exit 1
+    fi
+
+# --- Internal: enforce GraalVM JDK so Truffle picks up the optimizing runtime.
+# Plain OpenJDK falls back to DefaultTruffleRuntime (Interpreted), which doesn't
+# register engine.TraceCompilation and breaks the test harness's compile-failure
+# tripwire. Surefire forks the JDK at $JAVA_HOME, so JAVA_HOME must point to a
+# GraalVM JDK — `java` on PATH is not consulted by Maven once JAVA_HOME is set.
+_check-graalvm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    JAVA="${JAVA_HOME:+$JAVA_HOME/bin/java}"
+    JAVA="${JAVA:-$(command -v java || true)}"
+    if [[ -z "$JAVA" || ! -x "$JAVA" ]]; then
+        echo "Error: no Java found. Set JAVA_HOME to a GraalVM 25 JDK." >&2
+        exit 1
+    fi
+    if ! "$JAVA" -version 2>&1 | grep -qiE 'graalvm'; then
+        echo "Error: Java at '$JAVA' is not GraalVM." >&2
+        "$JAVA" -version >&2 || true
+        echo "" >&2
+        echo "Truffle needs GraalVM's optimizing runtime. Install GraalVM 25 and set JAVA_HOME, e.g.:" >&2
+        echo "  export JAVA_HOME=\$(/usr/libexec/java_home -v 25.0.3)    # macOS" >&2
+        echo "  export PATH=\"\$JAVA_HOME/bin:\$PATH\"" >&2
+        exit 1
+    fi

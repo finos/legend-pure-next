@@ -16,6 +16,7 @@ import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::relationship::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::generalizationCompiler::compileGeneralizations(protocolGeneralizations:meta::pure::protocol::grammar::relationship::Generalization[*], skeleton:Type[1], context:CompilerContext[1], packagePath:String[1], ownerContext:String[1]):CompilerListResult<Generalization>[1]
@@ -26,10 +27,15 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
             a : Any[1]        | []->cast(@TypeParameter)
         ]
     );
+    // Route Generalization construction through new(canonical UDPGT) so the
+    // instance's _classifierGenericType resolves to the packageable canonical
+    // (mirrors Java GeneralizationImpl(model) constructor which auto-sets
+    // _classifierGenericType = optimization::GenericType_Generalization).
+    let emptyGen = new(meta::pure::metamodel::type::generics::optimization::GenericType_Generalization)->cast(@Generalization);
     if($protocolGeneralizations->isEmpty(),
         | ^CompilerListResult<Generalization>(
-              values = [^Generalization(
-                  general = ^UserDefinedGenericType(type = Any),
+              values = [^$emptyGen(
+                  general = buildUserDefinedGenericType(Any),
                   specific = $skeleton
               )],
               context = $context
@@ -37,7 +43,7 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
         | $protocolGeneralizations->fold({g, acc |
               let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
-                  values += ^Generalization(
+                  values += ^$emptyGen(
                       general = $gtResult.value->toOne(),
                       specific = $skeleton
                   ),

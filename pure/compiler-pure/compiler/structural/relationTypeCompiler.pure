@@ -18,13 +18,14 @@ import meta::pure::metamodel::relation::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::relationTypeCompiler::*;
 import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
 // Mirrors Java RelationTypeCompiler.compile()
 // Compiles a protocol RelationType into a metamodel RelationType.
 function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
 {
-    let ownerGT = ^UserDefinedGenericType(type = RelationType);
+    let ownerGT = buildUserDefinedGenericType(RelationType);
     let colAccum = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->fold({col, acc |
         let colGenType = $col.genericType;
         let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
@@ -46,7 +47,7 @@ function meta::pure::compiler::structural::relationTypeCompiler::compileRelation
     }, ^CompilerListResult<Column<Nil, Any|*>>(context = $context));
     let compiledRT = ^RelationType<Any>(columns = $colAccum.values);
     ^CompilerResult<GenericType>(
-        value = ^UserDefinedGenericType(type = $compiledRT),
+        value = buildUserDefinedGenericType($compiledRT),
         context = $colAccum.context
     );
 }

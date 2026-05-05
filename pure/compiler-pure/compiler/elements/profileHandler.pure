@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import meta::pure::compiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::extension::*;
@@ -22,24 +23,18 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
 {
     let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
     let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
-    let rootPkg = ^Package(name = 'Root');
-    let emptyProfile = new(
-        ^UserDefinedGenericType(type = Profile)
-    )->cast(@Profile);
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    let emptyProfile = new(buildUserDefinedGenericType(Profile))->cast(@Profile);
 
     let profileSkeletonInt = ^$emptyProfile(
         name = $pr.name,
-        package = ^Package(name = $packagePath, package = $rootPkg),
+        package = $pkgRes.value->toOne(),
         p_stereotypes = $pr.p_stereotypes->map(s |
-            let stInst = new(
-                ^UserDefinedGenericType(type = Stereotype)
-            )->cast(@Stereotype);
+            let stInst = new(buildUserDefinedGenericType(Stereotype))->cast(@Stereotype);
             ^$stInst(value = $s.value, profile = ~.~);
         ),
         p_tags = $pr.p_tags->map(t |
-            let tagInst = new(
-                ^UserDefinedGenericType(type = Tag)
-            )->cast(@Tag);
+            let tagInst = new(buildUserDefinedGenericType(Tag))->cast(@Tag);
             ^$tagInst(value = $t.value, profile = ~.~);
         ),
         sourceInformation = $pr.p_sourceInformation->map(si | ^SourceInformation(
@@ -52,10 +47,8 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
     );
 
     let profileSkeleton = ^$profileSkeletonInt(
-        classifierGenericType = ^UserDefinedGenericType(
-            type = Profile
-        )
+        classifierGenericType = buildUserDefinedGenericType(Profile)
     );
 
-    ^$ctx(elementMap=$ctx.elementMap->put($prName, $profileSkeleton));
+    putElementUnderPackage($pkgRes.context, $prName, $packagePath, $profileSkeleton);
 }

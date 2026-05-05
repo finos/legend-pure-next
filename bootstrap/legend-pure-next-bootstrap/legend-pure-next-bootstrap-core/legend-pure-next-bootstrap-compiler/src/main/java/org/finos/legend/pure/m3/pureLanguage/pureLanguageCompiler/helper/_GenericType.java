@@ -66,17 +66,33 @@ public class _GenericType
 
     public static UserDefinedGenericTypeImpl buildUserDefinedGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
     {
+        // Anchor classifierGenericType at the canonical UDPGT in core.pdb so
+        // both compilers converge on the same chain shape. Pure-side can't
+        // build a fresh self-loop UDGT in immutable construction, so we
+        // converge on this path-based anchor instead.
         meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         if (rawType != null)
         {
             gt._type(rawType);
         }
+        gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType"));
+        return gt;
+    }
 
-        meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl cgt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        cgt._type((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::UserDefinedGenericType"));
-        cgt._classifierGenericType(cgt);
-        
-        gt._classifierGenericType(cgt);
+    public static meta.pure.metamodel.type.generics.InferredGenericTypeImpl buildInferredGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
+    {
+        // Pure auto-derives _classifierGenericType when constructing via
+        // ^InferredGenericType(...); Java's `new InferredGenericTypeImpl()`
+        // doesn't. Anchor on the canonical UDPGT for InferredGenericType so
+        // both compilers' classifier chains bottom out the same way.
+        meta.pure.metamodel.type.generics.InferredGenericTypeImpl gt = new meta.pure.metamodel.type.generics.InferredGenericTypeImpl();
+        if (rawType != null)
+        {
+            gt._type(rawType);
+        }
+        gt._classifierGenericType((meta.pure.metamodel.type.generics.GenericTypeValue)
+                model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_InferredGenericType"));
         return gt;
     }
 
@@ -145,8 +161,7 @@ public class _GenericType
         if (genericTypes == null || genericTypes.isEmpty())
         {
             // Empty list: return Nil (bottom of hierarchy, subtype of everything)
-            return new InferredGenericTypeImpl(model)
-                    ._type((Type) model.getElement("meta::pure::metamodel::type::Nil"));
+            return buildInferredGenericType((Type) model.getElement("meta::pure::metamodel::type::Nil"), model);
         }
 
         // If all elements are the same type parameter reference, return it directly.
@@ -177,8 +192,8 @@ public class _GenericType
                 .selectInstancesOf(meta.pure.metamodel.relation.RelationType.class);
         if (rawRelationTypes.size() == rawTypes.size() && rawRelationTypes.notEmpty())
         {
-            return new InferredGenericTypeImpl(model)._type(
-                    _RelationType.findCommonRelationType(rawRelationTypes, contravariant, model));
+            return buildInferredGenericType(
+                    _RelationType.findCommonRelationType(rawRelationTypes, contravariant, model), model);
         }
 
         // If all raw types are FunctionType instances, use structural unification
@@ -187,13 +202,13 @@ public class _GenericType
         if (rawFunctionTypes.size() == rawTypes.size() && rawFunctionTypes.notEmpty())
         {
             FunctionType common = _FunctionType.findCommonFunctionType(rawFunctionTypes, model);
-            return common != null ? new InferredGenericTypeImpl(model)._type(common) : null;
+            return common != null ? _GenericType.buildInferredGenericType(common, model) : null;
         }
 
         Type commonType = _Type.findCommonType(rawTypes, contravariant, model);
 
         // Build a GenericType wrapping the common rawType.
-        InferredGenericTypeImpl result = new InferredGenericTypeImpl(model)._type(commonType);
+        InferredGenericTypeImpl result = _GenericType.buildInferredGenericType(commonType, model);
 
         // Collect projected GenericTypes at the common-type level.
         // If all inputs already have the same raw type, use their type args directly.
@@ -758,8 +773,7 @@ public class _GenericType
 
                 if (changed)
                 {
-                    InferredGenericTypeImpl result = new InferredGenericTypeImpl(model)
-                            ._type(gtv._type());
+                    InferredGenericTypeImpl result = buildInferredGenericType(gtv._type(), model);
                     if (resolvedTypeArgs != null)
                     {
                         result._typeArguments(resolvedTypeArgs);
@@ -791,7 +805,7 @@ public class _GenericType
         }
         return switch (gt)
         {
-            case GenericTypeValue gtv -> copyInto(gtv, new InferredGenericTypeImpl(model));
+            case GenericTypeValue gtv -> copyInto(gtv, buildInferredGenericType(null, model));
             default -> throw new IllegalArgumentException("Expected GenericTypeValue, got: " + gt.getClass());
         };
     }
@@ -1188,8 +1202,10 @@ public class _GenericType
                 newType = _RelationType.reconcileInferred(expectedRT, actualRT, model);
             }
 
-            return (actual instanceof Inferred ? new InferredGenericTypeImpl(model) : new UserDefinedGenericTypeImpl(model))
-                    ._type(newType)
+            GenericTypeValue base = actual instanceof Inferred
+                    ? buildInferredGenericType(newType, model)
+                    : buildUserDefinedGenericType(newType, model);
+            return base
                     ._typeArguments(expectedV._typeArguments().zip(actualV._typeArguments())
                             .collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model)))
                     ._multiplicityArguments(actualV._multiplicityArguments())

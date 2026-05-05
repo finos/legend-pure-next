@@ -91,8 +91,7 @@ public final class EnumerationHandler
             meta.pure.metamodel.type.FunctionTypeImpl ft = _FunctionType.newFunctionType(model);
             ft._returnType(enumGT);
             ft._returnMultiplicity(pureOne);
-            InferredGenericTypeImpl classifierGenericType = new InferredGenericTypeImpl(model)
-                    ._type((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"))
+            InferredGenericTypeImpl classifierGenericType = _GenericType.buildInferredGenericType((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model)
                     ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
                             new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(ft)));
             // ClassifierGenericType -----

@@ -124,6 +124,14 @@ public class CompressedArchiveReader
     }
 
     /**
+     * Names of all named (non-element) sections in the archive.
+     */
+    public Set<String> sectionNames()
+    {
+        return sections.keySet();
+    }
+
+    /**
      * Read raw bytes for a named section (e.g. "functionIndex", "elementIndex").
      * Returns null if the section does not exist.
      */

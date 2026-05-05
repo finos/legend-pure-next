@@ -24,6 +24,7 @@ import meta::pure::compiler::structural::constraintCompiler::*;
 import meta::pure::compiler::structural::valueSpecificationCompiler::*;
 import meta::pure::compiler::structural::lambdaCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::constraintCompiler::compileConstraints(protocolConstraints:meta::pure::protocol::grammar::constraint::Constraint[*], ownerGenericType:GenericType[1], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
@@ -49,7 +50,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
 function meta::pure::compiler::structural::constraintCompiler::compileConstraint(pc:meta::pure::protocol::grammar::constraint::Constraint[1], thisScope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<Any>[1]
 {
     let emptyConstraint = new(
-        ^UserDefinedGenericType(type = Constraint)
+        buildUserDefinedGenericType(Constraint)
     )->cast(@Constraint);
 
     let funcDef = $pc.functionDefinition->cast(@meta::pure::protocol::grammar::function::LambdaFunction);

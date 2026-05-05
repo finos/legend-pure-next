@@ -31,9 +31,9 @@ import java.util.Map;
  * Standalone entry point for running Pure functions through the Truffle
  * interpreter. JVM-mode today; Native Image packaging comes in Phase F.
  *
- * <p>Mirrors the {@code execute} subcommand of {@code pure-cli}:</p>
+ * <p>Mirrors the {@code execute} subcommand of {@code pure-bootstrap}:</p>
  * <pre>
- *   pure-compile execute --pdb core.pdb --pdb compiler.pdb \
+ *   pure-truffle execute --pdb core.pdb --pdb compiler.pdb \
  *       --function meta::pure::some::fn_... \
  *       [--args arg1 arg2 ...]
  * </pre>
@@ -77,7 +77,7 @@ public final class PureCompileMain
 
     private static void printUsage()
     {
-        System.err.println("Usage: pure-compile <command> [options]");
+        System.err.println("Usage: pure-truffle <command> [options]");
         System.err.println();
         System.err.println("Commands:");
         System.err.println("  compile --base-pdb <file>... --source <dir> --output <file>   Compile Pure sources against base PDB(s)");
@@ -200,7 +200,7 @@ public final class PureCompileMain
 
         if (basePdbPaths.isEmpty() || source == null || output == null)
         {
-            System.err.println("Usage: pure-compile compile --base-pdb <file>... --source <dir> --output <file>");
+            System.err.println("Usage: pure-truffle compile --base-pdb <file>... --source <dir> --output <file>");
             System.exit(1);
         }
 
@@ -248,7 +248,7 @@ public final class PureCompileMain
 
         if (pdbPaths.isEmpty() || function == null)
         {
-            System.err.println("Usage: pure-compile execute --pdb <file>... --function <path> [--args <arg>...]");
+            System.err.println("Usage: pure-truffle execute --pdb <file>... --function <path> [--args <arg>...]");
             System.exit(1);
         }
 

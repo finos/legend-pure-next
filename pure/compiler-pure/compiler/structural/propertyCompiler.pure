@@ -51,8 +51,8 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
         | ^CompilerResult<Property<Nil, Any|*>>(context = $updatedContext),
         | let mMult = $protocolProperty.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
 
-          let propClassifierGT = ^UserDefinedGenericType(
-              type = Property,
+          let propClassifierGTBase = buildUserDefinedGenericType(Property);
+          let propClassifierGT = ^$propClassifierGTBase(
               typeArguments = [
                   $owner.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0),
                   $mGenType
@@ -130,7 +130,7 @@ function meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefa
                   | // Build a 'this' variable of the owning class type and push it into scope
                     let ownerGenericType = if($prop.owner->isEmpty(), | ^CompilerNotSetGenericType(),
                         | let ownerCls = $prop.owner->toOne()->cast(@Class<Any>);
-                          if($ownerCls.classifierGenericType->isEmpty(), | ^UserDefinedGenericType(type = $ownerCls),
+                          if($ownerCls.classifierGenericType->isEmpty(), | buildUserDefinedGenericType($ownerCls),
                               | $ownerCls.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0)
                           );
                     );
@@ -185,8 +185,8 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
 {
     let pureOne = PureOne;
 
-    let propClassifierGT = ^UserDefinedGenericType(
-        type = Property,
+    let propClassifierGTBase = buildUserDefinedGenericType(Property);
+    let propClassifierGT = ^$propClassifierGTBase(
         typeArguments = [
             $skeleton.classifierGenericType->toOne(),
             $selfGenType

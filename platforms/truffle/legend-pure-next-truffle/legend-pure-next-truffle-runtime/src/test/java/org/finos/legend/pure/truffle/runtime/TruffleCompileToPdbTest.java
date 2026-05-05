@@ -59,7 +59,7 @@ public class TruffleCompileToPdbTest
         Path current = Path.of("").toAbsolutePath();
         while (current != null)
         {
-            Path candidate = current.resolve("build");
+            Path candidate = current.resolve("shared");
             if (Files.isDirectory(candidate)
                     && Files.exists(candidate.resolve("core.pdb"))
                     && Files.exists(candidate.resolve("compiler.pdb")))
@@ -68,7 +68,7 @@ public class TruffleCompileToPdbTest
             }
             current = current.getParent();
         }
-        throw new RuntimeException("Cannot locate build/core.pdb + build/compiler.pdb");
+        throw new RuntimeException("Cannot locate shared/core.pdb + shared/compiler.pdb");
     }
 
     private static Path locateCompilerSpecRoot()

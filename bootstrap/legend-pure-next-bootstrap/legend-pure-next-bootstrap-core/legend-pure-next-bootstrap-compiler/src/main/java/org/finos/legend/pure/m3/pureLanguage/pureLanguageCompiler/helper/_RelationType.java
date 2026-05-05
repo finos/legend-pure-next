@@ -210,8 +210,7 @@ public class _RelationType
         return result
                 ._columns(commonColumns)
                 ._classifierGenericType(
-                    new UserDefinedGenericTypeImpl(model)
-                            ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                    _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                             ._typeArguments(Lists.mutable.with(ownerGT))
                 );
     }
@@ -364,8 +363,7 @@ public class _RelationType
             }
             newRT._columns(rebuiltColumns)
                  ._classifierGenericType(
-                        new UserDefinedGenericTypeImpl(model)
-                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                 ._typeArguments(Lists.mutable.with(newOwnerGT))
                  );
             return newOwnerGT;

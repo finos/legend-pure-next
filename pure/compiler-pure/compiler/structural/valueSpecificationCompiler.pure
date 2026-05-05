@@ -221,7 +221,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
                   let dateType = $ctx->resolveElement($dateTypePath);
                   if($dateType->isEmpty(),
                       | $inferredGT,
-                      | ^UserDefinedGenericType(type = $dateType->toOne()->cast(@Type))
+                      | buildUserDefinedGenericType($dateType->toOne()->cast(@Type))
                   );,
                 | $inferredGT
             );
@@ -332,7 +332,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileDo
     let updatedCtx = if($newErrors->isNotEmpty(), | ^$ctx(errors += $newErrors), | $ctx);
 
     let m3Dot = new(
-        ^UserDefinedGenericType(type = DotApplication)
+        buildUserDefinedGenericType(DotApplication)
     )->cast(@DotApplication);
     ^ValueCompileResult(
         values = [^$m3Dot(
@@ -386,7 +386,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
     // UserDefinedGenericTypeAndMultiplicityHolder → full compilation with genericType set
     if($gmh->instanceOf(meta::pure::protocol::grammar::valuespecification::CompilerGenericTypeAndMultiplicityHolder),
         | // Compiler-managed TypeHolder — bare instance with no genericType (matches Java line 118)
-          let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+          let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
           let holder = new($compilerCGT)->cast(@CompilerGenericTypeAndMultiplicityHolder);
           let holderWithProps = ^$holder(
               genericType = ^CompilerNotSetGenericType(),
@@ -404,11 +404,8 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileGe
               | $gmh.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity(),
               | []->cast(@Multiplicity)
           );
-          let classifierGT = ^UserDefinedGenericType(
-              type = UserDefinedGenericTypeAndMultiplicityHolder,
-              typeArguments = $heldGT,
-              multiplicityArguments = $heldMul
-          );
+          let classifierGTBase = buildUserDefinedGenericType(UserDefinedGenericTypeAndMultiplicityHolder);
+          let classifierGT = ^$classifierGTBase(typeArguments = $heldGT, multiplicityArguments = $heldMul);
           let holder = new($classifierGT)->cast(@UserDefinedGenericTypeAndMultiplicityHolder);
           let holderWithProps = ^$holder(
               genericType = $classifierGT,

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::*;
 import meta::pure::metamodel::type::generics::*;
@@ -21,7 +22,7 @@ import meta::pure::compiler::structural::functionTypeCompiler::*;
 function meta::pure::compiler::structural::functionTypeCompiler::compileFunctionType(parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):FunctionType[1]
 {
     let functionType = new(
-        ^UserDefinedGenericType(type = FunctionType)
+        buildUserDefinedGenericType(FunctionType)
     )->cast(@FunctionType);
     ^$functionType(
         parameters = $parameters,

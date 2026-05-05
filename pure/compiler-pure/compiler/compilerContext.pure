@@ -167,6 +167,7 @@ Class meta::pure::compiler::CompilationResult
     elements : PackageableElement[*];
     errors : String[*];
     statistics : CompilationStatistics[0..1];
+    context : CompilerContext[0..1];
 }
 
 Class meta::pure::compiler::CompilerResult<T>
@@ -315,10 +316,14 @@ function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:
 
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
+    // Short-name suffix matches skip Packages — Pure source never references
+    // a Package by short name, but elementMap now contains Packages alongside
+    // other elements, so `meta::pure::compiler::test` (Package) would shadow
+    // the actual Profile when resolving a stereotype value of `test`.
     let localResolution = $context.elementMap->get($path);
     if([pair(| $localResolution->isNotEmpty(), | $localResolution),
-        pair(| $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->isNotEmpty(),
-             | let shortNameMatch = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
+        pair(| $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package))->isNotEmpty(),
+             | let shortNameMatch = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package));
                $context.elementMap->get($shortNameMatch->at(0));),
         pair(| $path->lenientPathToElement()->isNotEmpty(), | $path->lenientPathToElement()),
         pair(| $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head()->isNotEmpty(),

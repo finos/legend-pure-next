@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::functionTypeCompiler::*;
 import meta::pure::compiler::structural::packageableFunctionCompiler::*;
@@ -33,15 +34,13 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
     let mangledName = $fn.name;
     let fName = if($packagePath == '', | $mangledName, | [$packagePath, '::', $mangledName]->joinStrings(''));
 
-    let rootPkg = ^Package(name = 'Root');
-    let emptyFunc = new(
-        ^UserDefinedGenericType(type = NativeFunction)
-    )->cast(@NativeFunction<Any>);
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    let emptyFunc = new(buildUserDefinedGenericType(NativeFunction))->cast(@NativeFunction<Any>);
 
     let skeleton = ^$emptyFunc(
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
-        package = ^Package(name = $packagePath, package = $rootPkg),
+        package = $pkgRes.value->toOne(),
         sourceInformation = $fn.p_sourceInformation->map(si | ^SourceInformation(
             sourceId = $si.sourceId,
             startLine = $si.startLine,
@@ -51,7 +50,7 @@ function meta::pure::compiler::elements::compileNativeFunctionPass1(fn:meta::pur
         ))
     );
 
-    ^$ctx(elementMap=$ctx.elementMap->put($fName, $skeleton));
+    putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);
 }
 
 function meta::pure::compiler::elements::compileNativeFunctionPass2(fn:meta::pure::protocol::grammar::function::NativeFunction[1], ctx:CompilerContext[1]):CompilerResult<NativeFunction<Any>>[1]

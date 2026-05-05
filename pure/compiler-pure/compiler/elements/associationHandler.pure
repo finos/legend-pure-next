@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
@@ -51,8 +52,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
         | let mMult1 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p1Protocol.multiplicity);
           let mMult2 = meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity($p2Protocol.multiplicity);
 
-          let propClassifierGT1 = ^UserDefinedGenericType(
-              type = Property,
+          let propClassifierGT1Base = buildUserDefinedGenericType(Property);
+          let propClassifierGT1 = ^$propClassifierGT1Base(
               typeArguments = [$mGenType2, $mGenType1],
               multiplicityArguments = [$mMult1]
           );
@@ -73,8 +74,8 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               ))
           );
 
-          let propClassifierGT2 = ^UserDefinedGenericType(
-              type = Property,
+          let propClassifierGT2Base = buildUserDefinedGenericType(Property);
+          let propClassifierGT2 = ^$propClassifierGT2Base(
               typeArguments = [$mGenType1, $mGenType2],
               multiplicityArguments = [$mMult2]
           );

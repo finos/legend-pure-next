@@ -56,25 +56,10 @@
                             <mainClass>org.finos.legend.pure.truffle.codegen.PdbJavaGenerator</mainClass>
                             <arguments>
                                 <argument>${project.build.directory}/generated-pdb-sources</argument>
-                                <argument>${project.basedir}/../../../../build/core.pdb</argument>
-                                <argument>${project.basedir}/../../../../build/compiler.pdb</argument>
+                                <argument>${project.basedir}/../../../../shared/core.pdb</argument>
+                                <argument>${project.basedir}/../../../../shared/compiler.pdb</argument>
                                 <argument>--fbs</argument>
-                                <argument>${project.basedir}/../../../../build/specification/m3.fbs</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <!-- Remove generated MapImpl — hand-written in runtime -->
-                    <execution>
-                        <id>remove-generated-mapimpl</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>rm</executable>
-                            <arguments>
-                                <argument>-f</argument>
-                                <argument>${project.build.directory}/generated-pdb-sources/org/finos/legend/pure/truffle/pdb/meta/pure/functions/collection/MapImpl.java</argument>
+                                <argument>${project.basedir}/../../../../shared/specification/m3.fbs</argument>
                             </arguments>
                         </configuration>
                     </execution>

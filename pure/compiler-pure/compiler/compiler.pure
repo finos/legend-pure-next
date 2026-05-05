@@ -14,6 +14,7 @@
 
 import meta::pure::compiler::*;
 import meta::pure::compiler::elements::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::type::*;
@@ -38,10 +39,15 @@ function meta::pure::compiler::compileSource(sourceId:String[1], content:String[
 
 function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], debug:Boolean[1]):CompilationResult[1]
 {
+    meta::pure::compiler::compileSource($sourceId, $content, newCompilerContext($debug), $debug);
+}
+
+function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], inputCtx:CompilerContext[1], debug:Boolean[1]):CompilationResult[1]
+{
     let parseStart = currentTimeMillis();
     let parsed = meta::pure::functions::meta::parse($sourceId, $content);
     let parseMillis = currentTimeMillis() - $parseStart;
-    let result = meta::pure::compiler::compile($parsed, $debug);
+    let result = meta::pure::compiler::compile($parsed, $inputCtx, $debug);
     if($result.statistics->isEmpty(),
         | $result,
         | let s = $result.statistics->toOne();
@@ -55,8 +61,8 @@ function meta::pure::compiler::compileSource(sourceId:String[1], content:String[
 // One-shot directory compile: walk every `.pure` under `dir`, parse +
 // compile each via {@link compileSource}, and aggregate the
 // PackageableElements and errors into a single CompilationResult. Used by
-// self-host CLI orchestrators (`pure-cli compile-via-pure`,
-// `pure-compile compile`) — the Java side just calls this and serializes
+// self-host CLI orchestrators (`pure-bootstrap compile-via-pure`,
+// `pure-truffle compile`) — the Java side just calls this and serializes
 // the resulting elements to a `.pdb`.
 function meta::pure::compiler::compileDir(dir:String[1]):CompilationResult[1]
 {
@@ -71,44 +77,40 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
     let prefixLen = $dir->length() + 1;
     let names = $files->map(f | substring($f, $prefixLen, $f->length() - 5));
     startProgress('  compileDir: ' + $total->toString() + ' files under ' + $dir);
-    let results = range(0, $total)->map(i |
+    let folded = range(0, $total)->fold({i, acc |
+        let priorCtx = $acc.context;
+        let priorResults = $acc.values;
         let name = $names->at($i);
         tickProgress($i + 1, $total, $name);
-        compileSource($name, readFile($files->at($i)), $debug);
-    );
+        let result = compileSource($name, readFile($files->at($i)), $priorCtx, $debug);
+        ^CompilerListResult<CompilationResult>(values = $priorResults->concatenate($result), context = $result.context->toOne());
+    }, ^CompilerListResult<CompilationResult>(values = []->cast(@CompilationResult), context = newCompilerContext($debug)));
     finishProgress();
+    let finalCtx = $folded.context;
+    let perFileResults = $folded.values;
     // Per-file errors are buffered (the progress bar can't share screen real estate with
     // scrolling output). Replay them once the bar is gone so they're still surfaced before
     // the stats summary.
     range(0, $total)->map(i |
-        let r = $results->at($i);
+        let r = $perFileResults->at($i);
         $r.errors->map(e | println('      ERR ' + $names->at($i) + ': ' + $e));
     );
-    let allElements = $results->map(r | $r.elements)->cast(@PackageableElement);
-    // Mirror the Java compiler: emit a hierarchical `Package` element for
-    // every package any compiled element lives in (and all ancestor
-    // packages). The Java path uses `getOrCreatePackage` in TopLevelCompiler;
-    // self-host's output PDB needs the same Package set so the two are
-    // structurally comparable.
-    let packages = buildPackages($allElements);
+    let mergedElements = $finalCtx.elementMap->values();
 
     // Aggregate per-file CompilationStatistics into a single summary. Pass timings
     // and rollback/candidate counts sum across files; per-element entries from
     // pass 2 and pass 3 are merged by elementPath so one row reports total wall
     // time and total counter deltas for that element across both passes.
-    let perFileStats = $results->map(r | $r.statistics)->filter(s | $s->isNotEmpty())->map(s | $s->toOne());
+    let perFileStats = $perFileResults->map(r | $r.statistics)->filter(s | $s->isNotEmpty())->map(s | $s->toOne());
     let aggregatedStatsPreElements = aggregateCompilationStatistics($perFileStats, currentTimeMillis() - $dirStart, $total);
-    // Match Java's element count by including the synthetic Package elements
-    // that buildPackages adds after per-file compileSource. Per-file stats
-    // count source-defined elements only; the final result.elements list
-    // includes packages, and Java's CompilationStatistics counts both.
-    let aggregatedStats = ^$aggregatedStatsPreElements(elementCount = $allElements->size() + $packages->size());
+    let aggregatedStats = ^$aggregatedStatsPreElements(elementCount = $mergedElements->size());
     println(printCompilationStatisticsSummary($aggregatedStats));
 
     ^CompilationResult(
-        elements = $allElements->concatenate($packages),
-        errors   = $results->map(r | $r.errors),
-        statistics = $aggregatedStats
+        elements = $mergedElements,
+        errors   = $perFileResults->map(r | $r.errors),
+        statistics = $aggregatedStats,
+        context = $finalCtx
     );
 }
 
@@ -199,55 +201,54 @@ function meta::pure::compiler::repeatString(s:String[1], n:Integer[1]):String[1]
     range(0, $n)->fold({i, acc | $acc + $s}, '');
 }
 
-// Collect every package path referenced by `elements`, including all
-// ancestor packages — `meta::pure::compiler::helper` brings in
-// `meta::pure::compiler`, `meta::pure`, and `meta`.
-function meta::pure::compiler::collectAllPackagePaths(elements:PackageableElement[*]):String[*]
+function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], packagePath:String[1]):CompilerResult<Package>[1]
 {
-    let elementPkgPaths = $elements
-        ->map(e |
-            let path = $e->elementToPath();
-            let parts = $path->split('::');
-            if($parts->size() <= 1, | '', | $parts->take($parts->size() - 1)->joinStrings('::'));
-        )
-        ->filter(p | $p != '');
-    $elementPkgPaths
-        ->map(p |
-            let parts = $p->split('::');
-            range(1, $parts->size() + 1)->map(n | $parts->take($n)->joinStrings('::'));
-        )
-        ->fold({lst, acc | $acc->concatenate($lst);}, []->cast(@String))
-        ->removeDuplicates();
+    let emptyPkg = meta::pure::functions::lang::new(buildUserDefinedGenericType(Package))->cast(@Package);
+    let rootPkg = ^$emptyPkg(name = 'Root');
+    let parts = if($packagePath == '', | []->cast(@String), | $packagePath->split('::'));
+    let walked = $parts->fold({part, acc |
+        let curCtx = $acc.first;
+        let parentPkg = $acc.second.first;
+        let parentPath = $acc.second.second;
+        let curPath = if($parentPath == '', | $part, | $parentPath + '::' + $part);
+        let existing = $curCtx.elementMap->get($curPath);
+        if($existing->isNotEmpty(),
+            | pair($curCtx, pair($existing->toOne()->cast(@Package), $curPath)),
+            | let newPkg = ^$emptyPkg(name = $part, package = $parentPkg);
+              let newMap = if($parentPath == '',
+                  | $curCtx.elementMap->put($curPath, $newPkg),
+                  | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg));
+                    $curCtx.elementMap->put($parentPath, $updatedParent)->put($curPath, $newPkg);
+              );
+              pair(^$curCtx(elementMap = $newMap), pair($newPkg, $curPath));
+        );
+    }, pair($ctx, pair($rootPkg, '')));
+    ^CompilerResult<Package>(value = $walked.second.first, context = $walked.first);
 }
 
-// Build hierarchical Package elements for every path produced by
-// `collectAllPackagePaths`. Parents are emitted before children (sorted by
-// segment count) so each child can wire `package = <parent>` from the
-// already-built map. Returns Packages in build order; the Root anchor
-// itself is NOT emitted (Java compiler doesn't include it either — Root
-// is implicit).
-function meta::pure::compiler::buildPackages(elements:PackageableElement[*]):Package[*]
+function meta::pure::compiler::putElementUnderPackage(ctx:CompilerContext[1], elementPath:String[1], packagePath:String[1], element:PackageableElement[1]):CompilerContext[1]
 {
-    let allPaths = collectAllPackagePaths($elements);
-    let sortedPaths = $allPaths->sort({a:String[1], b:String[1] |
-        $a->split('::')->size() - $b->split('::')->size();
-    });
-    // Construct via `new(GenericType)` so classifierGenericType is set by
-    // the runtime — `^Package(classifierGenericType=…)` rejects direct
-    // assignment ("This field is system-managed").
-    let emptyPkg = meta::pure::functions::lang::new(^UserDefinedGenericType(type = Package))->cast(@Package);
-    let rootPkg = ^$emptyPkg(name = 'Root');
-    let pathToPkg = $sortedPaths->fold({path, accMap |
-        let parts = $path->split('::');
-        let segName = $parts->at($parts->size() - 1);
-        let parent = if($parts->size() == 1,
-            | $rootPkg,
-            | $accMap->get($parts->take($parts->size() - 1)->joinStrings('::'))->toOne()
-        );
-        let pkg = ^$emptyPkg(name = $segName, package = $parent);
-        $accMap->put($path, $pkg);
-    }, newMap([]->cast(@Pair<String, Package>)));
-    $sortedPaths->map(p | $pathToPkg->get($p)->toOne());
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    let parentPkg = $pkgRes.value->toOne();
+    let ctxWithPkg = $pkgRes.context;
+    if($packagePath == '',
+        | ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($elementPath, $element)),
+        | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element));
+          ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($packagePath, $updatedParent)->put($elementPath, $element));
+    );
+}
+
+function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):CompilerContext[1]
+{
+    ^CompilerContext(
+        debugState = ^DebugState(debug = $debugMode, space = ''),
+        imports = [],
+        elementMap = newMap([]->cast(@Pair<String, PackageableElement>)),
+        localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+        linearizationCache = newMap([]->cast(@Pair<String, List<String>>)),
+        inferenceRollbacks = 0,
+        candidateEvaluations = 0
+    );
 }
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):CompilationResult[1]
@@ -256,6 +257,11 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):C
 }
 
 function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], debugMode:Boolean[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compile($file, newCompilerContext($debugMode), $debugMode);
+}
+
+function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], inputCtx:CompilerContext[1], debugMode:Boolean[1]):CompilationResult[1]
 {
     let debug = ^DebugState(debug = $debugMode, space = '');
     let compileStart = currentTimeMillis();
@@ -293,13 +299,13 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
             c:meta::pure::protocol::grammar::type::Class[1] |
                 let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
                 let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
-                let rootPkg = ^Package(name = 'Root');
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
                 let typeParams = $c.typeParameters->map(tp | ^TypeParameter(name = $tp.name, contravariant = false)->cast(@TypeParameter));
                 let mulParams = $c.multiplicityParameters->map(mp | ^UserDefinedMultiplicityParameter(name = $mp.name)->cast(@MultiplicityParameter));
                 let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
                 let skeleton = ^$emptyClass(
                     name = $c.name,
-                    package = ^Package(name = $packagePath, package = $rootPkg),
+                    package = $pkgRes.value->toOne(),
                     typeParameters = $typeParams,
                     multiplicityParameters = $mulParams,
                     sourceInformation = $c.p_sourceInformation->map(si | ^SourceInformation(
@@ -310,17 +316,15 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
                         endColumn = $si.endColumn
                     ))
                 );
-                ^$ctx(elementMap=$ctx.elementMap->put($className, $skeleton));,
+                putElementUnderPackage($pkgRes.context, $className, $packagePath, $skeleton);,
             a:meta::pure::protocol::grammar::relationship::Association[1] |
                 let packagePath = $a.package->toOne().value;
                 let aName = $packagePath + '::' + $a.name;
-                let rootPkg = ^Package(name = 'Root');
-                let emptyAssoc = new(
-                    ^UserDefinedGenericType(type = Association)
-                )->cast(@Association);
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let emptyAssoc = new(buildUserDefinedGenericType(Association))->cast(@Association);
                 let assocSkeleton = ^$emptyAssoc(
                     name = $a.name,
-                    package = ^Package(name = $packagePath, package = $rootPkg),
+                    package = $pkgRes.value->toOne(),
                     sourceInformation = $a.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
@@ -329,14 +333,14 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
                         endColumn = $si.endColumn
                     ))
                 );
-                ^$ctx(elementMap=$ctx.elementMap->put($aName, $assocSkeleton));,
+                putElementUnderPackage($pkgRes.context, $aName, $packagePath, $assocSkeleton);,
             en:meta::pure::protocol::grammar::type::Enumeration[1] |
                 let packagePath = $en.package->toOne().value;
                 let enName = $packagePath + '::' + $en.name;
-                let rootPkg = ^Package(name = 'Root');
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
                 let valueNames = $en.properties->map(p | $p.name);
-                let enumSkeleton = meta::pure::functions::meta::creation::newEnumeration($en.name, ^Package(name = $packagePath, package = $rootPkg), $valueNames);
-                ^$ctx(elementMap=$ctx.elementMap->put($enName, $enumSkeleton));,
+                let enumSkeleton = meta::pure::functions::meta::creation::newEnumeration($en.name, $pkgRes.value->toOne(), $valueNames);
+                putElementUnderPackage($pkgRes.context, $enName, $packagePath, $enumSkeleton);,
             pr:meta::pure::protocol::grammar::extension::Profile[1] |
                 $pr->compileProfilePass1($ctx);,
             fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
@@ -346,13 +350,11 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
             p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
                 let packagePath = $p.package->toOne().value;
                 let pName = $packagePath + '::' + $p.name;
-                let rootPkg = ^Package(name = 'Root');
-                let emptyPrim = new(
-                    ^UserDefinedGenericType(type = PrimitiveType)
-                )->cast(@PrimitiveType);
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let emptyPrim = new(buildUserDefinedGenericType(PrimitiveType))->cast(@PrimitiveType);
                 let primSkeleton = ^$emptyPrim(
                     name = $p.name,
-                    package = ^Package(name = $packagePath, package = $rootPkg),
+                    package = $pkgRes.value->toOne(),
                     sourceInformation = $p.p_sourceInformation->map(si | ^SourceInformation(
                         sourceId = $si.sourceId,
                         startLine = $si.startLine,
@@ -361,13 +363,10 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
                         endColumn = $si.endColumn
                     ))
                 );
-                ^$ctx(elementMap=$ctx.elementMap->put($pName, $primSkeleton));,
+                putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,
             a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
         ]);
-    }, ^CompilerContext(debugState = $debug, sourceId = $file.sourceId, imports = $allImports, elementMap=newMap([]),
-            localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
-            linearizationCache = newMap([]->cast(@Pair<String, List<String>>)),
-            inferenceRollbacks = 0, candidateEvaluations = 0));
+    }, ^$inputCtx(debugState = $debug, sourceId = $file.sourceId, imports = $allImports));
     let pass1Millis = currentTimeMillis() - $pass1Start;
 
     $pass1Context->debug({| 'compile: pass 1 done (' + $pass1Context.elementMap->keys()->size()->toString() + ' skeletons), starting pass 2'});
@@ -509,7 +508,9 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
 
     $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
 
-    // Return elements from the map (source of truth after resolution)
+    // Pull the compiled (resolved) source elements out of the map, in
+    // pass2 source order. Packages live in $pass3Ctx.elementMap too — they
+    // surface to the caller via the returned context, not through this list.
     let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
     let totalMillis = currentTimeMillis() - $compileStart;
     let stats = ^CompilationStatistics(
@@ -524,7 +525,7 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], d
         candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
         elementStatistics = $pass3Ctx.elementStatistics
     );
-    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats);
+    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats, context = $pass3Ctx);
 }
 
 // Extract a short element-type label (e.g. "UserDefinedFunction", "Class") from an

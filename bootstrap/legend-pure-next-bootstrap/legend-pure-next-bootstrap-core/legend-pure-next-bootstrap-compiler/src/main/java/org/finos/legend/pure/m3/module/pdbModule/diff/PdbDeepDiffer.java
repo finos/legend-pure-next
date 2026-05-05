@@ -9,17 +9,29 @@
 package org.finos.legend.pure.m3.module.pdbModule.diff;
 
 import meta.pure.metamodel.PackageableElement;
+import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
+import org.finos.legend.pure.m3.PureModel;
+import org.finos.legend.pure.m3.LanguageExtension;
+import org.finos.legend.pure.m3.module.Module;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
+import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.io.PrintStream;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -61,9 +73,45 @@ public final class PdbDeepDiffer
 
     public static Result diff(Path a, Path b, PrintStream out) throws Exception
     {
-        PDBModule modA = new PDBModule(a, PDBModule.Mode.EXECUTION);
-        PDBModule modB = new PDBModule(b, PDBModule.Mode.EXECUTION);
+        return diff(a, b, null, out);
+    }
+
+    public static Result diff(Path a, Path b, Path corePdb, PrintStream out) throws Exception
+    {
+        // Construct each side as a PureModel so loader.extensions/resolver
+        // wire via setPureModel. With corePdb passed in, both sides bundle
+        // it as a dependency so PointerRefs into core (e.g. canonical UDPGT
+        // anchors) actually resolve — without it, FBW returns null for any
+        // cross-module reference, masking real diffs as "A: null".
+        List<String> deps = corePdb != null ? List.of("core") : List.of();
+        PDBModule modA = new PDBModule(a, PDBModule.Mode.EXECUTION, "a", "*", deps);
+        PDBModule modB = new PDBModule(b, PDBModule.Mode.EXECUTION, "b", "*", deps);
+        if (corePdb != null)
+        {
+            wireWithCore(modA, corePdb);
+            wireWithCore(modB, corePdb);
+        }
+        else
+        {
+            wireModule(modA);
+            wireModule(modB);
+        }
         return doDiff(modA, modB, a, b, out);
+    }
+
+    private static void wireModule(PDBModule module)
+    {
+        MutableList<Module> modules = Lists.mutable.with(module);
+        MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
+        PureModel.withModules(modules).withExtensions(extensions).build().compile();
+    }
+
+    private static void wireWithCore(PDBModule diffModule, Path corePdb) throws java.io.IOException
+    {
+        PDBModule core = new PDBModule(corePdb, PDBModule.Mode.EXECUTION, "core", "*", List.of());
+        MutableList<Module> modules = Lists.mutable.with(core, diffModule);
+        MutableList<LanguageExtension> extensions = Lists.mutable.with(new PureLanguageExtension());
+        PureModel.withModules(modules).withExtensions(extensions).build().compile();
     }
 
     private static Result doDiff(PDBModule modA, PDBModule modB,
@@ -89,7 +137,7 @@ public final class PdbDeepDiffer
             PackageableElement elA = (PackageableElement) modA.getElement(path);
             PackageableElement elB = (PackageableElement) modB.getElement(path);
             DiffWalker walker = new DiffWalker();
-            walker.compare(path, elA, elB, 0);
+            walker.compareTopLevel(path, elA, elB);
             if (walker.diffs.isEmpty())
             {
                 identical++;
@@ -100,12 +148,46 @@ public final class PdbDeepDiffer
             }
         }
 
+        // Archive-level sections (e.g. functionIndex, elementIndex). Each PDB
+        // can carry runtime-relevant indexes alongside the element entries; an
+        // index present on one side and absent on the other is a real semantic
+        // divergence (e.g. function-name resolution falls back to a linear
+        // scan when the index is missing) — the per-element walk above can't
+        // see it because it isn't a PackageableElement. For sections present
+        // on both sides we compare bytes — the index payload is FlatBuffer
+        // serialized but built from a deterministic walk of compiled elements,
+        // so byte equality is a reasonable proxy for semantic equality and
+        // any drift is worth flagging.
+        Set<String> sectionsA = modA.archive().sectionNames();
+        Set<String> sectionsB = modB.archive().sectionNames();
+        List<String> sectionsOnlyInA = new ArrayList<>();
+        List<String> sectionsOnlyInB = new ArrayList<>();
+        List<SectionDiff> sectionDiffs = new ArrayList<>();
+        for (String s : sectionsA) if (!sectionsB.contains(s)) sectionsOnlyInA.add(s);
+        for (String s : sectionsB) if (!sectionsA.contains(s)) sectionsOnlyInB.add(s);
+        for (String s : sectionsA)
+        {
+            if (sectionsB.contains(s))
+            {
+                byte[] bytesA = modA.archive().readSection(s);
+                byte[] bytesB = modB.archive().readSection(s);
+                if (!java.util.Arrays.equals(bytesA, bytesB))
+                {
+                    sectionDiffs.add(compareSection(s, bytesA, bytesB));
+                }
+            }
+        }
+        sectionsOnlyInA.sort(Comparator.naturalOrder());
+        sectionsOnlyInB.sort(Comparator.naturalOrder());
+        sectionDiffs.sort(Comparator.comparing(d -> d.name));
+
         onlyInA.sort(Comparator.naturalOrder());
         onlyInB.sort(Comparator.naturalOrder());
         diffs.sort(Comparator.comparing((PathDiff d) -> d.path));
 
         Result result = new Result(pathsA.size(), pathsB.size(), shared.size(),
-                identical, onlyInA, onlyInB, diffs);
+                identical, onlyInA, onlyInB, diffs,
+                sectionsOnlyInA, sectionsOnlyInB, sectionDiffs);
         writeReport(out, pathA, pathB, result);
         return result;
     }
@@ -122,6 +204,9 @@ public final class PdbDeepDiffer
         out.println("  property diffs         : " + r.diffs.size());
         out.println("  only in A              : " + r.onlyInA.size());
         out.println("  only in B              : " + r.onlyInB.size());
+        out.println("  archive sections only in A : " + r.sectionsOnlyInA.size());
+        out.println("  archive sections only in B : " + r.sectionsOnlyInB.size());
+        out.println("  archive section diffs       : " + r.sectionDiffs.size());
         out.println();
         if (!r.onlyInA.isEmpty())
         {
@@ -133,6 +218,31 @@ public final class PdbDeepDiffer
         {
             out.println("Only in B (" + r.onlyInB.size() + "):");
             for (String p : r.onlyInB) out.println("  + " + p);
+            out.println();
+        }
+        if (!r.sectionsOnlyInA.isEmpty())
+        {
+            out.println("Archive sections only in A (" + r.sectionsOnlyInA.size() + "):");
+            for (String s : r.sectionsOnlyInA) out.println("  - " + s);
+            out.println();
+        }
+        if (!r.sectionsOnlyInB.isEmpty())
+        {
+            out.println("Archive sections only in B (" + r.sectionsOnlyInB.size() + "):");
+            for (String s : r.sectionsOnlyInB) out.println("  + " + s);
+            out.println();
+        }
+        if (!r.sectionDiffs.isEmpty())
+        {
+            out.println("Archive section diffs (" + r.sectionDiffs.size() + "):");
+            for (SectionDiff d : r.sectionDiffs)
+            {
+                out.println("  ! " + d.name + " [" + d.kind + "]  " + d.summary);
+                for (String line : d.details)
+                {
+                    out.println("      " + line);
+                }
+            }
             out.println();
         }
         if (!r.diffs.isEmpty())
@@ -156,6 +266,23 @@ public final class PdbDeepDiffer
         // identity could appear at different positions on each side.
         final IdentityHashMap<Object, Boolean> visitedA = new IdentityHashMap<>();
         final IdentityHashMap<Object, Boolean> visitedB = new IdentityHashMap<>();
+
+        // Entry point for the outer per-element walk. Unlike {@link #compare},
+        // this does NOT short-circuit when a/b are PackageableElements — we
+        // *want* to descend into the element's own properties. The PE shortcut
+        // exists to avoid double-walking cross-references (e.g. `_package`,
+        // `_general`) which are themselves PEs and get diffed on their own
+        // pass via the outer loop.
+        void compareTopLevel(String path, Object a, Object b)
+        {
+            if (a == null && b == null) return;
+            if (a == null || b == null)
+            {
+                diffs.add(new PathDiff(path, summarize(a), summarize(b)));
+                return;
+            }
+            walkAccessors(path, a, b, 0);
+        }
 
         void compare(String path, Object a, Object b, int depth)
         {
@@ -220,6 +347,11 @@ public final class PdbDeepDiffer
             }
 
             // Complex objects: walk all `_xxxx()` accessors common to both.
+            walkAccessors(path, a, b, depth);
+        }
+
+        private void walkAccessors(String path, Object a, Object b, int depth)
+        {
             visitedA.put(a, Boolean.TRUE);
             visitedB.put(b, Boolean.TRUE);
             try
@@ -279,6 +411,11 @@ public final class PdbDeepDiffer
                     if (m.getReturnType() == void.class) continue;
                     // Skip the FlatBufferWrapper-internal _fbParent helper
                     if ("_fbParent".equals(m.getName())) continue;
+                    // Skip _copy: it's a deep-copy constructor, not a property.
+                    // Each invocation returns a fresh instance with a new
+                    // identity, so identity-keyed cycle detection can't catch
+                    // the unbounded recursion through copy.copy.copy....
+                    if ("_copy".equals(m.getName())) continue;
                     result.add(m);
                 }
             }
@@ -319,9 +456,14 @@ public final class PdbDeepDiffer
         public final List<String> onlyInA;
         public final List<String> onlyInB;
         public final List<PathDiff> diffs;
+        public final List<String> sectionsOnlyInA;
+        public final List<String> sectionsOnlyInB;
+        public final List<SectionDiff> sectionDiffs;
 
         Result(int aTotal, int bTotal, int shared, int identical,
-               List<String> onlyInA, List<String> onlyInB, List<PathDiff> diffs)
+               List<String> onlyInA, List<String> onlyInB, List<PathDiff> diffs,
+               List<String> sectionsOnlyInA, List<String> sectionsOnlyInB,
+               List<SectionDiff> sectionDiffs)
         {
             this.aTotal = aTotal;
             this.bTotal = bTotal;
@@ -330,13 +472,229 @@ public final class PdbDeepDiffer
             this.onlyInA = onlyInA;
             this.onlyInB = onlyInB;
             this.diffs = diffs;
+            this.sectionsOnlyInA = sectionsOnlyInA;
+            this.sectionsOnlyInB = sectionsOnlyInB;
+            this.sectionDiffs = sectionDiffs;
         }
 
         public boolean isClean()
         {
-            return onlyInA.isEmpty() && onlyInB.isEmpty() && diffs.isEmpty();
+            return onlyInA.isEmpty() && onlyInB.isEmpty() && diffs.isEmpty()
+                    && sectionsOnlyInA.isEmpty() && sectionsOnlyInB.isEmpty()
+                    && sectionDiffs.isEmpty();
         }
     }
 
     public record PathDiff(String path, String valueA, String valueB) {}
+
+    /**
+     * Result of comparing one archive section. {@code kind} categorizes the
+     * divergence: ENCODING (semantic content equal, byte layout differs),
+     * ORDER (content equal, ordering of entries differs), CONTENT (extra
+     * or differing entries), or BYTE (unknown section, only byte-level
+     * comparison available).
+     */
+    public record SectionDiff(String name, Kind kind, String summary, List<String> details)
+    {
+        public enum Kind { ENCODING, ORDER, CONTENT, BYTE }
+    }
+
+    // ========================================================================
+    // Section comparators — semantic decoders for known archive sections.
+    // ========================================================================
+
+    private static SectionDiff compareSection(String name, byte[] bytesA, byte[] bytesB)
+    {
+        return switch (name)
+        {
+            case "functionIndex" -> compareFunctionIndex(bytesA, bytesB);
+            case "elementIndex" -> compareElementIndex(bytesA, bytesB);
+            default -> new SectionDiff(name, SectionDiff.Kind.BYTE,
+                    "byte content differs (no semantic decoder)",
+                    List.of("bytes A=" + (bytesA == null ? 0 : bytesA.length)
+                            + " B=" + (bytesB == null ? 0 : bytesB.length)));
+        };
+    }
+
+    /**
+     * Decode a {@code functionIndex} section into a list of (path, name,
+     * isNative) rows and compare. Categorizes the diff as:
+     * - ENCODING: same content, same order, only byte layout differs
+     * - ORDER: same content, different order
+     * - CONTENT: extra/missing/drifted entries
+     */
+    private static SectionDiff compareFunctionIndex(byte[] bytesA, byte[] bytesB)
+    {
+        List<FnIdxRow> rA = decodeFunctionIndex(bytesA);
+        List<FnIdxRow> rB = decodeFunctionIndex(bytesB);
+
+        Map<String, FnIdxRow> mapA = new HashMap<>();
+        Map<String, FnIdxRow> mapB = new HashMap<>();
+        for (FnIdxRow r : rA) mapA.put(r.path, r);
+        for (FnIdxRow r : rB) mapB.put(r.path, r);
+
+        List<String> onlyInA = new ArrayList<>();
+        List<String> onlyInB = new ArrayList<>();
+        for (String p : mapA.keySet()) if (!mapB.containsKey(p)) onlyInA.add(p);
+        for (String p : mapB.keySet()) if (!mapA.containsKey(p)) onlyInB.add(p);
+        onlyInA.sort(Comparator.naturalOrder());
+        onlyInB.sort(Comparator.naturalOrder());
+
+        List<String> contentDrift = new ArrayList<>();
+        Set<String> shared = new TreeSet<>(mapA.keySet());
+        shared.retainAll(mapB.keySet());
+        for (String p : shared)
+        {
+            FnIdxRow ra = mapA.get(p);
+            FnIdxRow rb = mapB.get(p);
+            if (!Objects.equals(ra.name, rb.name))
+            {
+                contentDrift.add(p + ".functionName  A=" + ra.name + "  B=" + rb.name);
+            }
+            if (ra.isNative != rb.isNative)
+            {
+                contentDrift.add(p + ".isNative  A=" + ra.isNative + "  B=" + rb.isNative);
+            }
+        }
+
+        boolean orderDiffers = !pathSequence(rA).equals(pathSequence(rB));
+
+        if (!onlyInA.isEmpty() || !onlyInB.isEmpty() || !contentDrift.isEmpty())
+        {
+            List<String> details = new ArrayList<>();
+            details.add("A=" + rA.size() + " entries, B=" + rB.size() + " entries");
+            if (!onlyInA.isEmpty())
+            {
+                details.add(onlyInA.size() + " only in A:");
+                for (String p : onlyInA) details.add("  - " + p);
+            }
+            if (!onlyInB.isEmpty())
+            {
+                details.add(onlyInB.size() + " only in B:");
+                for (String p : onlyInB) details.add("  + " + p);
+            }
+            if (!contentDrift.isEmpty())
+            {
+                details.add(contentDrift.size() + " content drift:");
+                for (String d : contentDrift) details.add("  ~ " + d);
+            }
+            return new SectionDiff("functionIndex", SectionDiff.Kind.CONTENT,
+                    "extras/drift across " + rA.size() + " ↔ " + rB.size() + " entries", details);
+        }
+        if (orderDiffers)
+        {
+            return new SectionDiff("functionIndex", SectionDiff.Kind.ORDER,
+                    rA.size() + " entries match by content; ordering differs",
+                    List.of("A first 5: " + pathSequence(rA).stream().limit(5).toList(),
+                            "B first 5: " + pathSequence(rB).stream().limit(5).toList()));
+        }
+        // Bytes differed but path/name/isNative match in same order — must be
+        // FunctionType encoding drift below the surface (FlatBuffer field
+        // order, default-value omission, vector packing).
+        return new SectionDiff("functionIndex", SectionDiff.Kind.ENCODING,
+                rA.size() + " entries match by content + order; FlatBuffer encoding differs",
+                List.of("bytes A=" + bytesA.length + " B=" + bytesB.length));
+    }
+
+    private static SectionDiff compareElementIndex(byte[] bytesA, byte[] bytesB)
+    {
+        List<ElIdxRow> rA = decodeElementIndex(bytesA);
+        List<ElIdxRow> rB = decodeElementIndex(bytesB);
+
+        Map<String, String> mapA = new HashMap<>();
+        Map<String, String> mapB = new HashMap<>();
+        for (ElIdxRow r : rA) mapA.put(r.path, r.type);
+        for (ElIdxRow r : rB) mapB.put(r.path, r.type);
+
+        List<String> onlyInA = new ArrayList<>();
+        List<String> onlyInB = new ArrayList<>();
+        for (String p : mapA.keySet()) if (!mapB.containsKey(p)) onlyInA.add(p);
+        for (String p : mapB.keySet()) if (!mapA.containsKey(p)) onlyInB.add(p);
+        onlyInA.sort(Comparator.naturalOrder());
+        onlyInB.sort(Comparator.naturalOrder());
+
+        List<String> typeDrift = new ArrayList<>();
+        Set<String> shared = new TreeSet<>(mapA.keySet());
+        shared.retainAll(mapB.keySet());
+        for (String p : shared)
+        {
+            if (!Objects.equals(mapA.get(p), mapB.get(p)))
+            {
+                typeDrift.add(p + "  A=" + mapA.get(p) + "  B=" + mapB.get(p));
+            }
+        }
+
+        List<String> seqA = new ArrayList<>();
+        List<String> seqB = new ArrayList<>();
+        for (ElIdxRow r : rA) seqA.add(r.path);
+        for (ElIdxRow r : rB) seqB.add(r.path);
+        boolean orderDiffers = !seqA.equals(seqB);
+
+        if (!onlyInA.isEmpty() || !onlyInB.isEmpty() || !typeDrift.isEmpty())
+        {
+            List<String> details = new ArrayList<>();
+            details.add("A=" + rA.size() + " entries, B=" + rB.size() + " entries");
+            if (!onlyInA.isEmpty())
+            {
+                details.add(onlyInA.size() + " only in A: " + onlyInA);
+            }
+            if (!onlyInB.isEmpty())
+            {
+                details.add(onlyInB.size() + " only in B: " + onlyInB);
+            }
+            if (!typeDrift.isEmpty())
+            {
+                details.add(typeDrift.size() + " type drift:");
+                for (String d : typeDrift) details.add("  ~ " + d);
+            }
+            return new SectionDiff("elementIndex", SectionDiff.Kind.CONTENT,
+                    "extras/drift across " + rA.size() + " ↔ " + rB.size() + " entries", details);
+        }
+        if (orderDiffers)
+        {
+            return new SectionDiff("elementIndex", SectionDiff.Kind.ORDER,
+                    rA.size() + " entries match by content; ordering differs",
+                    List.of("A first 5: " + seqA.stream().limit(5).toList(),
+                            "B first 5: " + seqB.stream().limit(5).toList()));
+        }
+        return new SectionDiff("elementIndex", SectionDiff.Kind.ENCODING,
+                rA.size() + " entries match; FlatBuffer encoding differs",
+                List.of("bytes A=" + bytesA.length + " B=" + bytesB.length));
+    }
+
+    private static List<FnIdxRow> decodeFunctionIndex(byte[] bytes)
+    {
+        List<FnIdxRow> rows = new ArrayList<>();
+        if (bytes == null) return rows;
+        FunctionIndex idx = FunctionIndex.getRootAsFunctionIndex(ByteBuffer.wrap(bytes));
+        for (int i = 0; i < idx.entriesLength(); i++)
+        {
+            org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry e = idx.entries(i);
+            if (e != null) rows.add(new FnIdxRow(e.fullPath(), e.functionName(), e.isNative()));
+        }
+        return rows;
+    }
+
+    private static List<ElIdxRow> decodeElementIndex(byte[] bytes)
+    {
+        List<ElIdxRow> rows = new ArrayList<>();
+        if (bytes == null) return rows;
+        ElementIndex idx = ElementIndex.getRootAsElementIndex(ByteBuffer.wrap(bytes));
+        for (int i = 0; i < idx.elementsLength(); i++)
+        {
+            org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry e = idx.elements(i);
+            if (e != null) rows.add(new ElIdxRow(e.elementPath(), e.elementType()));
+        }
+        return rows;
+    }
+
+    private static List<String> pathSequence(List<FnIdxRow> rows)
+    {
+        List<String> seq = new ArrayList<>(rows.size());
+        for (FnIdxRow r : rows) seq.add(r.path);
+        return seq;
+    }
+
+    private record FnIdxRow(String path, String name, boolean isNative) {}
+    private record ElIdxRow(String path, String type) {}
 }

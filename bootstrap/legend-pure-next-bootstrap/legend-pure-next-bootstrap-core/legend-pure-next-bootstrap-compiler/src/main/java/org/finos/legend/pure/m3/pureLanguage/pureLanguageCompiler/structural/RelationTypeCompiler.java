@@ -56,8 +56,7 @@ public final class RelationTypeCompiler
                                                                     model)
                                                                 )
                 )._classifierGenericType(
-                        new UserDefinedGenericTypeImpl(model)
-                                ._type((Type) model.getElement("meta::pure::metamodel::relation::RelationType"))
+                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::relation::RelationType"), model)
                                 ._typeArguments(Lists.mutable.with(ownerGT))
                 );
     }

@@ -30,6 +30,11 @@ public final class LambdaCompiler
     public static LambdaFunctionImpl compile(LambdaFunction grammarLambda, MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         LambdaFunctionImpl result = new LambdaFunctionImpl();
+        // Pure ^LambdaFunction(...) auto-derives _classifierGenericType. Mirror
+        // by setting it here so nested lambdas in expression bodies have a
+        // populated classifier chain (matching Pure side encoding shape).
+        result._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType
+                .buildInferredGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model));
         if (grammarLambda._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(grammarLambda._p_sourceInformation(), context.getSourceId(), model));

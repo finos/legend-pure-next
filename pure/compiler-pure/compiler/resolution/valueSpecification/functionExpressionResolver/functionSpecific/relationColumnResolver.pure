@@ -67,11 +67,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let lastExpr = $lambda.expressionSequence->at($lambda.expressionSequence->size() - 1);
     let colName = $paramValues->at($nameIdx)->cast(@AtomicValue).value->toOne()->cast(@String);
     let enrichedRT = ^RelationType<Any>(columns = [
-        meta::pure::compiler::helper::column::buildColumn($colName, ^UserDefinedGenericType(type = RelationType), if($lastExpr.genericType->isNotEmpty(), | $lastExpr.genericType->toOne(), | ^CompilerNotSetGenericType()), if($lastExpr.multiplicity->isNotEmpty(), | $lastExpr.multiplicity->toOne(), | PureOne), false)
+        meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($lastExpr.genericType->isNotEmpty(), | $lastExpr.genericType->toOne(), | ^CompilerNotSetGenericType()), if($lastExpr.multiplicity->isNotEmpty(), | $lastExpr.multiplicity->toOne(), | PureOne), false)
     ]);
     let enrichedGT = ^InferredGenericType(type = $enrichedRT);
-    let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
-    let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+    let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     range($paramValues->size())->map(i | if($i == $typeHolderIdx, | let val = $paramValues->at($i); ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT);, | $paramValues->at($i)));
 }
 
@@ -93,8 +94,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
     let mergedRT = ^RelationType<Any>(columns = $mergedColumns);
     let enrichedGT = ^InferredGenericType(type = $mergedRT);
-    let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
-    let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+    let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
     let val = $paramValues->at(1);
     [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)];
 }
@@ -147,14 +149,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                           | let errCtx = $acc.context;
                             ^$acc(context = ^$errCtx(errors += 'The column \'' + $colName + '\' can\'t be found in the relation ' + meta::pure::compiler::helper::relationType::printRelationType($referenceRT) + $siCtx));,
                           | let col = $foundCol->at(0);
-                            let newCol = meta::pure::compiler::helper::column::buildColumn($colName, ^UserDefinedGenericType(type = RelationType), if($col.genericType->isNotEmpty(), | $col.genericType->toOne(), | ^CompilerNotSetGenericType()), if($col.multiplicity->isNotEmpty(), | $col.multiplicity->toOne(), | PureOne), false);
+                            let newCol = meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), if($col.genericType->isNotEmpty(), | $col.genericType->toOne(), | ^CompilerNotSetGenericType()), if($col.multiplicity->isNotEmpty(), | $col.multiplicity->toOne(), | PureOne), false);
                             ^$acc(values += $newCol);
                       );
                   }, ^CompilerListResult<Any>(context = $context));
                   let enrichedRT = ^RelationType<Any>(columns = $lookupResult.values->cast(@Column<Nil, Any|*>));
                   let enrichedGT = ^InferredGenericType(type = $enrichedRT);
-                  let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
-                  let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+                  let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+                  let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
                   let val = $paramValues->at(1);
                   ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)], bindings = $bindings, context = $lookupResult.context);,
               a:Any[1] | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context)
@@ -174,11 +177,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   let resolvedColType = makeAsConcreteAsPossible($wildcardCol.genericType->toOne(), $bindings, $context);
                   let resolvedColMul = if($wildcardCol.multiplicity->isNotEmpty(), | makeAsConcreteAsPossible($wildcardCol.multiplicity->toOne(), $bindings), | PureOne);
                   let columnNames = extractColumnNames($paramValues->at(0));
-                  let enrichedCols = $columnNames->map(colName | meta::pure::compiler::helper::column::buildColumn($colName, ^UserDefinedGenericType(type = RelationType), $resolvedColType, $resolvedColMul, false));
+                  let enrichedCols = $columnNames->map(colName | meta::pure::compiler::helper::column::buildColumn($colName, buildUserDefinedGenericType(RelationType), $resolvedColType, $resolvedColMul, false));
                   let enrichedRT = ^RelationType<Any>(columns = $enrichedCols);
                   let enrichedGT = ^InferredGenericType(type = $enrichedRT);
-                  let typeHolderGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder, typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
-                  let compilerCGT = ^UserDefinedGenericType(type = CompilerGenericTypeAndMultiplicityHolder);
+                  let typeHolderGT0 = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
+    let typeHolderGT = ^$typeHolderGT0(typeArguments = [$enrichedGT], multiplicityArguments = [PureOne]);
+                  let compilerCGT = buildUserDefinedGenericType(CompilerGenericTypeAndMultiplicityHolder);
                   let val = $paramValues->at(1);
                   ^EnrichResult(resolvedParams = [$paramValues->at(0), ^$val(genericType = $typeHolderGT, classifierGenericType = $compilerCGT)], bindings = $bindings, context = $context);,
               a:Any[1] | ^EnrichResult(resolvedParams = $paramValues, bindings = $bindings, context = $context)
@@ -226,7 +230,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         if($enrichedTypeArgs->isNotEmpty(),
                             | // Clear existing binding before adding enriched value (mirrors Java updateTypeHolderBinding line 378: bound.clear())
                               let cleared = ^$bindings(typeBindings = $bindings.typeBindings->put($typeParamName, ^List<GenericType>(values = [])));
-                              collectTypeParameterBindings(^UserDefinedGenericType(type = ^TypeParameter(name = $typeParamName, contravariant = false)), $enrichedTypeArgs->at(0), $cleared);,
+                              collectTypeParameterBindings(buildUserDefinedGenericType(^TypeParameter(name = $typeParamName, contravariant = false)), $enrichedTypeArgs->at(0), $cleared);,
                             | $bindings
                         );,
                     a:Any[1] | $bindings

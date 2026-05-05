@@ -21,6 +21,7 @@ import meta::pure::functions::lang::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::structural::relationTypeCompiler::*;
 import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::genericTypeCompiler::compileGenericType(protocolGT:meta::pure::protocol::grammar::type::generics::GenericTypeValue[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*]):CompilerResult<GenericType>[1]
@@ -73,7 +74,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             if($allMatches->size() > 1,
                 | let errorMsg = 'The element \'' + $p.value + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
                   ^CompilerResult<GenericType>(
-                      value = ^UserDefinedGenericType(type = Any),
+                      value = buildUserDefinedGenericType(Any),
                       context = ^$context(errors += $errorMsg)
                   );,
                 | let resolvedOpt = $context->resolveElement($p.value);
@@ -84,13 +85,11 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                   if($resolvedOptWithPackage->isEmpty(),
                       | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
                         ^CompilerResult<GenericType>(
-                            value = ^UserDefinedGenericType(type = Any),
+                            value = buildUserDefinedGenericType(Any),
                             context = ^$context(errors += $errorMsg)
                         );,
                       | ^CompilerResult<GenericType>(
-                            value = ^UserDefinedGenericType(
-                                type = $resolvedOptWithPackage->toOne()->cast(@Type)
-                            ),
+                            value = buildUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)),
                             context = $context
                         )
                   );
@@ -100,9 +99,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             let resolved = if($matched->isNotEmpty(), | $matched, | $context.ownerTypeParams->filter(tp | $tp.name == $t.name));
             if($resolved->isNotEmpty(),
                 | ^CompilerResult<GenericType>(
-                      value = ^UserDefinedGenericType(
-                          type = $resolved->toOne()
-                      ),
+                      value = buildUserDefinedGenericType($resolved->toOne()),
                       context = $context
                   ),
                 | let tElemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
@@ -113,7 +110,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                   );
                   let errorMsg = 'The type \'' + $t.name + '\' can\'t be found' + $tElemCtx + $tOwnerCtx + $siCtx;
                   ^CompilerResult<GenericType>(
-                      value = ^UserDefinedGenericType(type = Any),
+                      value = buildUserDefinedGenericType(Any),
                       context = ^$context(errors += $errorMsg)
                   );
             );,
@@ -137,7 +134,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
             let ftReturnGT = $ft.returnType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ftParamAccum.context, $packagePath, $typeParameters, '', $ownerContext);
             let ftReturnMul = $ft.returnMultiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             let functionType = new(
-                ^UserDefinedGenericType(type = FunctionType)
+                buildUserDefinedGenericType(FunctionType)
             )->cast(@FunctionType);
             let compiledFT = ^$functionType(
                 parameters = $ftParamAccum.values,
@@ -145,7 +142,7 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
                 returnMultiplicity = $ftReturnMul
             );
             ^CompilerResult<GenericType>(
-                value = ^UserDefinedGenericType(type = $compiledFT),
+                value = buildUserDefinedGenericType($compiledFT),
                 context = $ftReturnGT.context
             );,
         rt:meta::pure::protocol::grammar::relation::RelationType[1] |

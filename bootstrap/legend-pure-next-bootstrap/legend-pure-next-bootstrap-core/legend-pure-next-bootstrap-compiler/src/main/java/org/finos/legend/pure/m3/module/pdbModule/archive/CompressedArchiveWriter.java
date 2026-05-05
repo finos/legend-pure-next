@@ -59,6 +59,21 @@ public class CompressedArchiveWriter
                       Module module,
                       Path outputPath) throws IOException
     {
+        write(elements, extensions, module, List.of(), outputPath);
+    }
+
+    /**
+     * Same as {@link #write(Iterable, List, Module, Path)}, but also writes
+     * caller-provided archive sections in addition to anything contributed
+     * by the extensions. Used by writers (e.g. compile-via-pure) that build
+     * sections from elements directly rather than via a {@link Module}.
+     */
+    public void write(Iterable<? extends PackageableElement> elements,
+                      List<? extends PDBExtension> extensions,
+                      Module module,
+                      List<PDBArchiveSection> additionalSections,
+                      Path outputPath) throws IOException
+    {
         try (OutputStream fos = Files.newOutputStream(outputPath);
              ZipOutputStream zos = new ZipOutputStream(fos))
         {
@@ -105,13 +120,25 @@ public class CompressedArchiveWriter
             {
                 for (PDBArchiveSection section : ext.archiveSections(module))
                 {
-                    ZipEntry zipEntry = new ZipEntry(section.name());
-                    zos.putNextEntry(zipEntry);
-                    zos.write(section.data());
-                    zos.closeEntry();
+                    writeSection(zos, section);
                 }
             }
+
+            // Write caller-provided additional sections (e.g. functionIndex
+            // built from elements directly when there's no LocalModule).
+            for (PDBArchiveSection section : additionalSections)
+            {
+                writeSection(zos, section);
+            }
         }
+    }
+
+    private static void writeSection(ZipOutputStream zos, PDBArchiveSection section) throws IOException
+    {
+        ZipEntry zipEntry = new ZipEntry(section.name());
+        zos.putNextEntry(zipEntry);
+        zos.write(section.data());
+        zos.closeEntry();
     }
 
     /**

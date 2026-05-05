@@ -75,22 +75,18 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
 
     // Build FunctionType and classifierGenericType
     let functionType = new(
-        ^UserDefinedGenericType(type = FunctionType)
+        buildUserDefinedGenericType(FunctionType)
     )->cast(@FunctionType);
     let ft = ^$functionType(
         parameters = $allParams,
         returnType = $returnGenType,
         returnMultiplicity = $returnMult
     );
-    let qpClassifierGT = ^UserDefinedGenericType(
-        type = QualifiedProperty,
-        typeArguments = [
-            ^UserDefinedGenericType(type = $ft)
-        ]
-    );
+    let qpClassifierGTBase = buildUserDefinedGenericType(QualifiedProperty);
+    let qpClassifierGT = ^$qpClassifierGTBase(typeArguments = [buildUserDefinedGenericType($ft)]);
 
     let emptyQP = new(
-        ^UserDefinedGenericType(type = QualifiedProperty)
+        buildUserDefinedGenericType(QualifiedProperty)
     )->cast(@QualifiedProperty<Any>);
     // Compile stereotypes and tagged values
     let qpCtx = 'qualified property \'' + $qp.name + '\' in ' + $classCtx;

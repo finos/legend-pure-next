@@ -170,7 +170,7 @@
                                     <addHeader>false</addHeader>
                                 </transformer>
                             </transformers>
-                            <finalName>pure-compile-${project.version}-fat</finalName>
+                            <finalName>pure-truffle-${project.version}-fat</finalName>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -238,7 +238,7 @@
                         </executions>
                         <configuration>
                             <mainClass>org.finos.legend.pure.truffle.PureCompileMain</mainClass>
-                            <imageName>pure-compile</imageName>
+                            <imageName>pure-truffle-native</imageName>
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
                                 <buildArg>--features=org.finos.legend.pure.truffle.nativeimage.PureFeature</buildArg>

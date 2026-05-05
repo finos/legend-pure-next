@@ -15,6 +15,19 @@ import meta::pure::functions::lang::*;
 
 // GenericType helpers
 
+// Each UDGT we create needs a non-null _classifierGenericType so the
+// chain doesn't dead-end (Java's _GenericType.buildUserDefinedGenericType
+// builds a fresh self-loop UDGT per call; Pure can't self-loop in immutable
+// construction, so we anchor at the pre-built canonical UDGT in core.pdb,
+// which is itself self-classified). new(canonical) makes Pure set
+// _classifierGenericType to the canonical anchor; ^$inst(type=...) then
+// overrides type without touching the system-managed classifier.
+function meta::pure::compiler::helper::genericType::buildUserDefinedGenericType(rawType:Type[1]):UserDefinedGenericType[1]
+{
+    let inst = new(meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType)->cast(@UserDefinedGenericType);
+    ^$inst(type = $rawType);
+}
+
 function meta::pure::compiler::helper::genericType::printGenericType(genericType:GenericType[1]):String[1]
 {
     $genericType->printGenericType(true)
@@ -379,7 +392,7 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 {
     // LambdaFunction<{Integer[1]->Boolean[1]}> for both
     let ft = new(
-        ^UserDefinedGenericType(type = FunctionType)
+        buildUserDefinedGenericType(FunctionType)
     )->cast(@FunctionType);
     let concretesFT = ^$ft(
         parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
@@ -401,7 +414,7 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
 {
     // Two LambdaFunction<{Integer[1]->Integer[1]}> with DIFFERENT FunctionType objects
     let ft1 = new(
-        ^UserDefinedGenericType(type = FunctionType)
+        buildUserDefinedGenericType(FunctionType)
     )->cast(@FunctionType);
     let concreteFT1 = ^$ft1(
         parameters = [^VariableExpression(name='x', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
@@ -409,7 +422,7 @@ function <<test.Test>> meta::pure::compiler::helper::genericType::tests::testFin
         returnMultiplicity = PureOne
     );
     let ft2 = new(
-        ^UserDefinedGenericType(type = FunctionType)
+        buildUserDefinedGenericType(FunctionType)
     )->cast(@FunctionType);
     let concreteFT2 = ^$ft2(
         parameters = [^VariableExpression(name='y', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)],
@@ -532,9 +545,10 @@ function meta::pure::compiler::helper::genericType::resolveForTarget_GenericType
                       let targetIsSubtype = $targetType->instanceOf(Class) && $targetType->subtypeOf($sourceType, $context);
                       if($targetIsSubtype,
                           | let targetCls = $targetType->cast(@Class<Any>);
-                            let templateTypeArgs = $targetCls.typeParameters->map(tp | ^UserDefinedGenericType(type = $tp));
+                            let templateTypeArgs = $targetCls.typeParameters->map(tp | buildUserDefinedGenericType($tp));
                             let templateMulArgs = $targetCls.multiplicityParameters->map(mp | $mp->cast(@Multiplicity));
-                            let templateGT = ^UserDefinedGenericType(type = $targetType, typeArguments = $templateTypeArgs, multiplicityArguments = $templateMulArgs);
+                            let templateGT0 = buildUserDefinedGenericType($targetType);
+                            let templateGT = ^$templateGT0(typeArguments = $templateTypeArgs, multiplicityArguments = $templateMulArgs);
                             let resolvedTemplate = resolveForTarget($templateGT, $sourceType, $context);
                             if($resolvedTemplate->isNotEmpty(),
                                 | let downBindings = newPlainParametersBinding()->cast(@ParametersBinding);
@@ -936,9 +950,11 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
                               );
                               // Preserve typeVariableValues from actual (mirrors Java line 1196)
                               let actualTVV = $actual->match([u:UserDefinedGenericType[1] | $u.typeVariableValues, a:Any[1] | []->cast(@ValueSpecification)]);
+                              let baseGT = buildUserDefinedGenericType($newType);
+                              let userDefinedGT = ^$baseGT(typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments, typeVariableValues = $actualTVV);
                               if($actual->instanceOf(Inferred),
                                   | ^InferredGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments),
-                                  | ^UserDefinedGenericType(type = $newType, typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments, typeVariableValues = $actualTVV)
+                                  | $userDefinedGT
                               );
                           );
                     );,

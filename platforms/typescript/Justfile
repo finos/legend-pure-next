@@ -1,0 +1,29 @@
+# platforms/typescript/Justfile — builds and tests the TypeScript runtime.
+#
+# Direct invocation:    just <recipe>             (from platforms/typescript/)
+# Via the root Justfile: just typescript::<recipe> (from repo root)
+#
+# Backed by pnpm; package.json defines `build` (tsc) and `test`.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+ts_root := source_directory()
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+default: test
+
+# pnpm install + pnpm run build (tsc).
+build:
+    @{{banner}} '[typescript]' 'pnpm install + build'
+    cd {{ts_root}} && pnpm install && pnpm run build
+
+# pnpm run test. Currently a placeholder until the typescript runtime grows tests.
+test: build
+    @{{banner}} '[typescript]' 'pnpm run test'
+    cd {{ts_root}} && pnpm run test
+
+clean:
+    @{{banner}} '[typescript clean]' 'remove dist/ and node_modules/'
+    rm -rf {{ts_root}}/dist {{ts_root}}/node_modules

@@ -98,7 +98,7 @@
                                     <addHeader>false</addHeader>
                                 </transformer>
                             </transformers>
-                            <finalName>pure-cli-${project.version}-fat</finalName>
+                            <finalName>pure-bootstrap-${project.version}-fat</finalName>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>

@@ -97,6 +97,16 @@ public class PureLanguageExtension implements LanguageExtension
         return serialization.archiveSections(module);
     }
 
+    /**
+     * Build archive sections (function index) directly from a list of
+     * function-index entries. Used by builders that don't go through a
+     * {@link LocalModule} (e.g. the compile-via-pure path).
+     */
+    public List<PDBArchiveSection> archiveSections(List<FunctionIndexEntry> entries)
+    {
+        return serialization.archiveSections(entries);
+    }
+
     @Override
     public PackageableElement deserialize(String typeName, byte[] data, MetadataAccess resolver)
     {

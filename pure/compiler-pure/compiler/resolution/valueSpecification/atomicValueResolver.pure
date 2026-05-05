@@ -80,7 +80,7 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                             if($lastExpr.multiplicity->isEmpty(), | PureOne, | $lastExpr.multiplicity->toOne());
                       );
                       let lambdaFT = meta::pure::functions::lang::new(
-                          ^UserDefinedGenericType(type = FunctionType)
+                          buildUserDefinedGenericType(FunctionType)
                       )->cast(@FunctionType);
                       let ft = ^$lambdaFT(parameters = $lambdaParams, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
                       let lambdaGT = ^InferredGenericType(

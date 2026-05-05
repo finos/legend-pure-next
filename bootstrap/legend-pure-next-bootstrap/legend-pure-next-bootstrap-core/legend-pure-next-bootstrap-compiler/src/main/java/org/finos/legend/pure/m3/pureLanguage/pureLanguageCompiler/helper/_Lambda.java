@@ -68,9 +68,8 @@ public final class _Lambda
 
     public static InferredGenericTypeImpl getLambdaClassifierGenericType(MetadataAccess model, LambdaFunction lambda)
     {
-        return new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)
-                ._type((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"))
+        return _GenericType.buildInferredGenericType((Type) model.getElement("meta::pure::metamodel::function::LambdaFunction"), model)
                 ._typeArguments(org.eclipse.collections.impl.factory.Lists.mutable.with(
-                        new meta.pure.metamodel.type.generics.InferredGenericTypeImpl(model)._type(buildFunctionType(lambda, model))));
+                        _GenericType.buildInferredGenericType(buildFunctionType(lambda, model), model)));
     }
 }

@@ -43,7 +43,7 @@ public class PureIDEMain
 
     public static void main(String[] args) throws Exception
     {
-        // Resolve core.pdb path (CLI arg or Just-built build/core.pdb)
+        // Resolve core.pdb path (CLI arg or Just-built shared/core.pdb)
         Path pdbPath = args.length > 0
                 ? Path.of(args[0])
                 : org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule.locateCorePdb();

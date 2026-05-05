@@ -1191,7 +1191,7 @@ public class RdfFbsJavaGenerator
         sb.append("            segments = new String[]{String.valueOf(obj)};\n");
         sb.append("        }\n");
         sb.append("        int[] segOffsets = new int[segments.length];\n");
-        sb.append("        for (int i = 0; i < segments.length; i++) { segOffsets[i] = builder.createString(segments[i]); }\n");
+        sb.append("        for (int i = 0; i < segments.length; i++) { segOffsets[i] = builder.createSharedString(segments[i]); }\n");
         sb.append("        int pathVector = PointerRef.createPathVector(builder, segOffsets);\n");
         sb.append("        PointerRef.startPointerRef(builder);\n");
         sb.append("        PointerRef.addKind(builder, kind);\n");
@@ -1283,7 +1283,7 @@ public class RdfFbsJavaGenerator
                         sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
                         sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
                         sb.append("            {\n");
-                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createString(((meta.pure.metamodel.type.Enum) ").append(fbField).append("List.get(i))._name());\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createSharedString(((meta.pure.metamodel.type.Enum) ").append(fbField).append("List.get(i))._name());\n");
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
@@ -1310,7 +1310,7 @@ public class RdfFbsJavaGenerator
                         sb.append("            ").append(fbField).append("Offsets = new int[").append(fbField).append("List.size()];\n");
                         sb.append("            for (int i = 0; i < ").append(fbField).append("List.size(); i++)\n");
                         sb.append("            {\n");
-                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createString(String.valueOf(").append(fbField).append("List.get(i)));\n");
+                        sb.append("                ").append(fbField).append("Offsets[i] = builder.createSharedString(String.valueOf(").append(fbField).append("List.get(i)));\n");
                         sb.append("            }\n");
                         sb.append("        }\n");
                     }
@@ -1344,11 +1344,11 @@ public class RdfFbsJavaGenerator
                         }
                         else if (isEnumType)
                         {
-                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createString(((meta.pure.metamodel.type.Enum) obj._").append(prop.name).append("())._name()); }\n");
+                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createSharedString(((meta.pure.metamodel.type.Enum) obj._").append(prop.name).append("())._name()); }\n");
                         }
                         else
                         {
-                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createString(obj._").append(prop.name).append("().toString()); }\n");
+                            sb.append("        if (obj._").append(prop.name).append("() != null) { ").append(fbField).append("Offset = builder.createSharedString(obj._").append(prop.name).append("().toString()); }\n");
                         }
                     }
                 }
@@ -1399,7 +1399,7 @@ public class RdfFbsJavaGenerator
                 sb.append("            String enumPath = (enumType instanceof meta.pure.metamodel.PackageableElement enumPe)\n");
                 sb.append("                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(enumPe) + \".\" + ev._name()\n");
                 sb.append("                : ev._name();\n");
-                sb.append("            int primStrOff = builder.createString(enumPath);\n");
+                sb.append("            int primStrOff = builder.createSharedString(enumPath);\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.startStringValueDef(builder);\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.addVal(builder, primStrOff);\n");
                 sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.endStringValueDef(builder);\n");
@@ -1414,7 +1414,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() instanceof java.math.BigDecimal bd)\n");
                 sb.append("        {\n");
-                sb.append("            int decStrOff = builder.createString(bd.toPlainString());\n");
+                sb.append("            int decStrOff = builder.createSharedString(bd.toPlainString());\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.startDecimalValueDef(builder);\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.addVal(builder, decStrOff);\n");
                 sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.endDecimalValueDef(builder);\n");
@@ -1429,7 +1429,7 @@ public class RdfFbsJavaGenerator
                 sb.append("            }\n");
                 sb.append("            if (isDecimal)\n");
                 sb.append("            {\n");
-                sb.append("                int decStrOff = builder.createString(v.toString());\n");
+                sb.append("                int decStrOff = builder.createSharedString(v.toString());\n");
                 sb.append("                org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.startDecimalValueDef(builder);\n");
                 sb.append("                org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.addVal(builder, decStrOff);\n");
                 sb.append("                valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.DecimalValueDef.endDecimalValueDef(builder);\n");
@@ -1452,7 +1452,7 @@ public class RdfFbsJavaGenerator
                 sb.append("        }\n");
                 sb.append("        else if (obj._value() != null)\n");
                 sb.append("        {\n");
-                sb.append("            int strOff = builder.createString(obj._value().toString());\n");
+                sb.append("            int strOff = builder.createSharedString(obj._value().toString());\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.startStringValueDef(builder);\n");
                 sb.append("            org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.addVal(builder, strOff);\n");
                 sb.append("            valueUnionOffset = org.finos.legend.pure.m3.module.pdbModule.fbs.StringValueDef.endStringValueDef(builder);\n");

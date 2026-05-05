@@ -31,8 +31,8 @@ import meta::pure::ui::progress::*;
 // parameters, invokes each, and reports pass/fail.
 //
 // Invocation:
-//   pure-compile execute --pdb core.pdb --pdb compiler.pdb \
-//       --function "meta::pure::test::runFunctionTests_String_1__Boolean_1_" \
+//   pure-truffle execute --pdb core.pdb --pdb compiler.pdb \
+//       --function "meta::pure::test::runTests_String_1__String_1_" \
 //       --args "meta::pure::functions"
 //
 // Returns true iff every discovered test returns true.
@@ -71,7 +71,7 @@ function <<test.TestDependency>> meta::pure::test::isZeroArg(fn:UserDefinedFunct
     $fn.parameters->isEmpty();
 }
 
-function <<test.TestDependency>> meta::pure::test::runFunctionTests(rootPackagePath:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:String[1]):String[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectFunctionTests($root);
@@ -92,8 +92,7 @@ function <<test.TestDependency>> meta::pure::test::runFunctionTests(rootPackageP
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    println('OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed in ' + $elapsedMs->toString() + ' ms');
-    true;
+    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<test.Test>> tests passed in ' + $elapsedMs->toString() + ' ms';
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +123,7 @@ function <<test.TestDependency>> meta::pure::test::collectPCTTests(pkg:Package[1
     concatenate($directTests, $subTests);
 }
 
-function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1]):Boolean[1]
+function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:String[1]):String[1]
 {
     let root = pathToElement($rootPackagePath)->cast(@Package);
     let tests = meta::pure::test::collectPCTTests($root);
@@ -152,6 +151,5 @@ function <<test.TestDependency>> meta::pure::test::runPCTTests(rootPackagePath:S
 
     let elapsedMs = currentTimeMillis() - $start;
     finishProgress();
-    println('OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms');
-    true;
+    'OK: ' + $total->toString() + ' / ' + $total->toString() + ' <<PCT.test>> tests passed in ' + $elapsedMs->toString() + ' ms';
 }
