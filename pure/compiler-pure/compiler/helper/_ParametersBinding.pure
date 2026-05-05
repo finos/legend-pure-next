@@ -17,6 +17,8 @@ import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::helper::parametersBinding::*;
 import meta::pure::metamodel::type::generics::*;
 import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::*;
+import meta::pure::compiler::helper::packageableElement::*;
 import meta::pure::functions::collection::*;
 
 
@@ -56,7 +58,9 @@ function meta::pure::compiler::helper::parametersBinding::addTypeBinding(pb:Para
 {
     $pb->match([
         fcpb : FunctionCallParametersBinding[1] |
-            if($fcpb.enclosingOwner->isNotEmpty() && $typeParam.owner == $fcpb.enclosingOwner->toOne().owner,
+            if($fcpb.enclosingOwner->isNotEmpty()
+                  && $typeParam.owner->isNotEmpty()
+                  && ownersMatch($typeParam.owner->toOne(), $fcpb.enclosingOwner->toOne().owner),
                 | // Route to enclosing owner
                   ^$fcpb(
                       enclosingOwner = $fcpb.enclosingOwner->toOne()->addTypeBinding($typeParam, $argGT)->cast(@EnclosingOwnerParametersBinding)
@@ -64,9 +68,29 @@ function meta::pure::compiler::helper::parametersBinding::addTypeBinding(pb:Para
                 | // Add locally
                   ^$fcpb(typeBindings = $fcpb.typeBindings->putMapList($typeParam.name, $argGT))
             ),
-        other : ParametersBinding[1] | 
+        other : ParametersBinding[1] |
             ^$other(typeBindings = $other.typeBindings->putMapList($typeParam.name, $argGT))
     ])
+}
+
+// Java's `addTypeBinding` does `typeParam._owner() == enclosingOwner.owner()` — pointer
+// equality that works because Java mutates one canonical instance per owner. In
+// Pure-on-Truffle each `^...(field = ...)` clones, so the same logical owner exists
+// as multiple object instances during compilation (e.g. captured in scope when typeparams
+// are minted vs. read back from elementMap when FCPB is built). Fall back to qualified-path
+// comparison when both are PackageableElements so routing matches Java's intent.
+function meta::pure::compiler::helper::parametersBinding::ownersMatch(a:Any[1], b:Any[1]):Boolean[1]
+{
+    if($a == $b,
+        | true,
+        | $a->match([
+              peA : PackageableElement[1] | $b->match([
+                  peB : PackageableElement[1] | $peA->elementToPath() == $peB->elementToPath(),
+                  other : Any[1] | false
+              ]),
+              other : Any[1] | false
+          ])
+    )
 }
 
 function meta::pure::compiler::helper::parametersBinding::addMultiplicityBinding(pb:ParametersBinding[1], mulParam:MultiplicityParameter[1], argMul:Multiplicity[1]):ParametersBinding[1]
@@ -114,7 +138,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_step2_transitive
                           let targetBindingOptional = $tb.typeBindings->get($targetName);
 
                           let targetBinding = if(($targetBindingOptional->isEmpty() || $targetBindingOptional->toOne().values->isEmpty()) && $tb.enclosingOwner->isNotEmpty(),
-                              | if($tp.owner == $tb.enclosingOwner->toOne().owner,
+                              | if($tp.owner->isNotEmpty() && ownersMatch($tp.owner->toOne(), $tb.enclosingOwner->toOne().owner),
                                     | $tb.enclosingOwner->toOne().typeBindings->get($targetName),
                                     | $targetBindingOptional
                                 ),
@@ -207,7 +231,7 @@ function meta::pure::compiler::helper::parametersBinding::unify_preReduce_Helper
                 if($gtv.type->isNotEmpty(),
                     | $gtv.type->toOne()->match([
                           tp : TypeParameter[1] |
-                              if($tp.owner == $fcpb.enclosingOwner->toOne().owner,
+                              if($tp.owner->isNotEmpty() && ownersMatch($tp.owner->toOne(), $fcpb.enclosingOwner->toOne().owner),
                                   | let ownerBinding = $fcpb.enclosingOwner->toOne().typeBindings->get($tp.name);
                                     if($ownerBinding->isNotEmpty() && $ownerBinding->toOne().values->size() == 1,
                                         | let ownerResolved = $ownerBinding->toOne().values->at(0);
