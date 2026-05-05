@@ -64,9 +64,7 @@ function <<test.Test>> meta::pure::compiler::helper::property::tests::testResolv
     let sourceProp = ^Property<Nil,Any|*>(
         aggregation = AggregationKind.None,
         name = 'mockProp',
-        genericType = ^InferredGenericType(
-            type = meta::pure::compiler::helper::property::tests::TestClass
-        ),
+        genericType = buildInferredGenericType(meta::pure::compiler::helper::property::tests::TestClass),
         multiplicity = PureOne,
         owner = $ownerClass
     );

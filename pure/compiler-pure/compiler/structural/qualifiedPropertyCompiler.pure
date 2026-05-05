@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::*;
@@ -106,13 +107,7 @@ function meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQua
         taggedValues = $tvAccum.values,
         expressionSequence = $bodyResult.specs,
         classifierGenericType = $qpClassifierGT,
-        sourceInformation = $qp.p_sourceInformation->map(si | ^SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
+        sourceInformation = compileSourceInformation($qp.p_sourceInformation)
     );
     ^CompilerResult<QualifiedProperty<Any>>(
         value = $compiledQP,

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::helper::genericType::*;
 import meta::pure::compiler::structural::genericTypeCompiler::*;
 import meta::pure::compiler::helper::type::*;
@@ -65,13 +66,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               multiplicity = $mMult1,
               stereotypes = compilePropertyStereotypes($p1Protocol, $ctx1, $ownerCtx).values,
               taggedValues = compilePropertyTaggedValues($p1Protocol, $ctx1, $ownerCtx).values,
-              sourceInformation = $p1Protocol.p_sourceInformation->map(si | ^SourceInformation(
-                  sourceId = $si.sourceId,
-                  startLine = $si.startLine,
-                  startColumn = $si.startColumn,
-                  endLine = $si.endLine,
-                  endColumn = $si.endColumn
-              ))
+              sourceInformation = compileSourceInformation($p1Protocol.p_sourceInformation)
           );
 
           let propClassifierGT2Base = buildUserDefinedGenericType(Property);
@@ -87,13 +82,7 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
               multiplicity = $mMult2,
               stereotypes = compilePropertyStereotypes($p2Protocol, $ctx1, $ownerCtx).values,
               taggedValues = compilePropertyTaggedValues($p2Protocol, $ctx1, $ownerCtx).values,
-              sourceInformation = $p2Protocol.p_sourceInformation->map(si | ^SourceInformation(
-                  sourceId = $si.sourceId,
-                  startLine = $si.startLine,
-                  startColumn = $si.startColumn,
-                  endLine = $si.endLine,
-                  endColumn = $si.endColumn
-              ))
+              sourceInformation = compileSourceInformation($p2Protocol.p_sourceInformation)
           );
 
           // Compile stereotypes and tagged values on the association itself

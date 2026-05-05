@@ -92,7 +92,9 @@ public final class NewSimpleNode extends PureNode
             Object cgtObj = typeArgs.getBoxed(0);
             if (instance instanceof Any any && cgtObj instanceof GenericTypeValue gtv)
             {
-                any._classifierGenericType(gtv);
+                // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
+                // prefer canonical GenericType_<TypeName> UDPGT from core.pdb.
+                any._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(gtv, resolver));
             }
         }
 

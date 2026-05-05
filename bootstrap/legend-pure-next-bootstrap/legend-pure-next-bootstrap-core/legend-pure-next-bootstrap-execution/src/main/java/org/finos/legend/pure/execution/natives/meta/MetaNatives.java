@@ -167,6 +167,7 @@ public class MetaNatives
                     && _GenericType.typeArguments(gtmh._genericType()).notEmpty())
             {
                 GenericType cgt = _GenericType.typeArguments(gtmh._genericType()).getFirst();
+                cgt = preferCanonicalAnchor(cgt, resolver);
                 if (instance instanceof Any any)
                 {
                     any._classifierGenericType((GenericTypeValue) cgt);
@@ -261,6 +262,11 @@ public class MetaNatives
                         && _GenericType.typeArguments(gtmh2._genericType()).notEmpty())
                 {
                     meta.pure.metamodel.type.generics.GenericType cgt = _GenericType.typeArguments(gtmh2._genericType()).getFirst();
+                    // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
+                    // prefer the canonical GenericType_<TypeName> UDPGT element from core.pdb
+                    // (matches Java's `new XxxImpl(model)` ctor pattern). Falls through to the
+                    // parser-built UDGT when no canonical exists or args are present.
+                    cgt = preferCanonicalAnchor(cgt, resolver);
                     assertNotSelf(instance, cgt, "new(GenericTypeAndMultiplicityHolder, KeyExpressions) classPath=" + classPath);
                     if (instance instanceof Any any)
                     {
@@ -1126,6 +1132,51 @@ public class MetaNatives
         {
             return new DynamicInstance(classPath);
         }
+    }
+
+    /**
+     * For a parser-built classifier UDGT (from {@code ^Type(...)} syntax), prefer
+     * the pre-built canonical {@code GenericType_<TypeName>} anchor from core.pdb
+     * when one exists and the UDGT has no type/multiplicity arguments. Mirrors
+     * Java's {@code new XxxImpl(model)} ctor pattern, which sets classifier
+     * directly to the canonical UDPGT — keeping classifier chains identical
+     * between {@code ^} construction (Pure) and Impl constructors (Java).
+     *
+     * Falls through to the original {@code cgt} when no canonical exists or args
+     * are present (e.g. {@code ^Class<T>(...)}).
+     */
+    private static meta.pure.metamodel.type.generics.GenericType preferCanonicalAnchor(
+            meta.pure.metamodel.type.generics.GenericType cgt,
+            MetadataAccess resolver)
+    {
+        if (!(cgt instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv))
+        {
+            return cgt;
+        }
+        if (gtv._typeArguments() != null && gtv._typeArguments().notEmpty())
+        {
+            return cgt;
+        }
+        if (gtv._multiplicityArguments() != null && gtv._multiplicityArguments().notEmpty())
+        {
+            return cgt;
+        }
+        meta.pure.metamodel.type.Type rawType = gtv._type();
+        if (!(rawType instanceof meta.pure.metamodel.PackageableElement pe))
+        {
+            return cgt;
+        }
+        String simpleName = pe._name();
+        if (simpleName == null || simpleName.isEmpty())
+        {
+            return cgt;
+        }
+        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
+        {
+            return canonicalGT;
+        }
+        return cgt;
     }
 
 

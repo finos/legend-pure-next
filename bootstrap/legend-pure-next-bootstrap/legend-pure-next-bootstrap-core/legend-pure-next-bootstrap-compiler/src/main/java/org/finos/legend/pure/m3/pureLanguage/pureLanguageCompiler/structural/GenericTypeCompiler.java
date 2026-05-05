@@ -155,13 +155,10 @@ public final class GenericTypeCompiler
         {
             return null;
         }
-        TypeParameterImpl tp = new TypeParameterImpl(model)
+        return new TypeParameterImpl(model)
                 ._name(grammarTypeParameter._name())
                 ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false)
                 ._owner(owner);
-        tp._classifierGenericType(_GenericType.buildUserDefinedGenericType(
-                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model));
-        return tp;
     }
 
     /**
@@ -187,10 +184,7 @@ public final class GenericTypeCompiler
         }
         return new TypeParameterImpl(model)
                         ._name(grammarTypeParameter._name())
-                        ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false)
-                        ._classifierGenericType(_GenericType.buildUserDefinedGenericType(
-                                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model)
-                        );
+                        ._contravariant(grammarTypeParameter._contravariant() != null ? grammarTypeParameter._contravariant() : false);
 
     }
 }

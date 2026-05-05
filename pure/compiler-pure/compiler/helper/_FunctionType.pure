@@ -12,7 +12,7 @@ import meta::pure::compiler::helper::parametersBinding::*;
 function meta::pure::compiler::helper::functionType::newFunctionType():FunctionType[1]
 {
     ^FunctionType(
-        returnType = ^InferredGenericType(type=Any),
+        returnType = buildInferredGenericType(Any),
         returnMultiplicity = PureOne
     );
 }
@@ -143,8 +143,8 @@ function meta::pure::compiler::helper::functionType::makeAsConcreteAsPossible(ge
         | [],
         | let typeArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.typeArguments, a : Any[1] | []]);
           let mulArgs = $genericType->match([gtv : GenericTypeValue[1] | $gtv.multiplicityArguments, a : Any[1] | []]);
-          ^InferredGenericType(
-              type = ^$ft(parameters = $newParams, returnType = $rRetGT->toOne(), returnMultiplicity = $rRetMul->toOne()),
+          let resultBase = buildInferredGenericType(^$ft(parameters = $newParams, returnType = $rRetGT->toOne(), returnMultiplicity = $rRetMul->toOne()));
+          ^$resultBase(
               typeArguments = $typeArgs,
               multiplicityArguments = $mulArgs
           );

@@ -934,7 +934,7 @@ public class M3BootstrapReader
             String paramName = getName(model, paramRes);
             if (paramName != null)
             {
-                TypeParameterImpl tp = new TypeParameterImpl()._name(paramName)._owner(owner);
+                TypeParameterImpl tp = new TypeParameterImpl()._name(paramName)._contravariant(false)._owner(owner);
                 Statement cgtStmt = getM3Statement(model, paramRes, "classifierGenericType");
                 if (cgtStmt != null && cgtStmt.getObject().isResource())
                 {

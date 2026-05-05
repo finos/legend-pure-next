@@ -69,9 +69,6 @@ public final class SourceInformationCompiler
                         ._startLine(src._startLine())
                         ._startColumn(src._startColumn())
                         ._endLine(src._endLine())
-                        ._endColumn(src._endColumn())
-                        ._classifierGenericType(
-                            _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::SourceInformation"), model)
-                        );
+                        ._endColumn(src._endColumn());
     }
 }

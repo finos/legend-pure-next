@@ -66,7 +66,6 @@ public final class ValueSpecificationCompiler
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         ArrowInvocationImpl result = new ArrowInvocationImpl(model)
-                ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::ArrowInvocation"), model))
                 ._functionName(arrow._functionName())
                 ._parametersValues(arrow._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
@@ -82,7 +81,6 @@ public final class ValueSpecificationCompiler
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         FunctionInvocationImpl result = new FunctionInvocationImpl(model)
-                ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::FunctionInvocation"), model))
                 ._functionName(fa._functionName())
                 ._parametersValues(fa._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
@@ -98,7 +96,6 @@ public final class ValueSpecificationCompiler
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
         DotApplicationImpl result = new DotApplicationImpl(model)
-                ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model))
                 ._functionName(dot._functionName())
                 ._parametersValues(dot._parametersValues()
                         .collect(pv -> compile(pv, imports, model, context)));
@@ -170,8 +167,7 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.AtomicValueImpl av,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        AtomicValueImpl result = new AtomicValueImpl(model)
-                ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
+        AtomicValueImpl result = new AtomicValueImpl(model);
         if (av._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(av._p_sourceInformation(), context.getSourceId(), model));
@@ -255,8 +251,7 @@ public final class ValueSpecificationCompiler
             meta.pure.protocol.grammar.valuespecification.CollectionImpl col,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
-        CollectionImpl result = new CollectionImpl(model)
-                ._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::Collection"), model));
+        CollectionImpl result = new CollectionImpl(model);
         if (col._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(col._p_sourceInformation(), context.getSourceId(), model));

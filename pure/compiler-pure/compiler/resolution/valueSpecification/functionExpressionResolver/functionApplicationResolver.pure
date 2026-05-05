@@ -291,14 +291,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Create FunctionCallParametersBinding with enclosingOwner (mirrors Java pushBindingNode line 149)
     let seedBindings = $fi.resolvedTypeParameters->fold({rtp, b |
         collectTypeParameterBindings(
-            buildUserDefinedGenericType(^TypeParameter(name = $rtp.name)),
+            buildUserDefinedGenericType(buildTypeParameter($rtp.name)),
             $rtp.value,
             $b
         );
     }, newPlainParametersBinding()->cast(@ParametersBinding));
     let seedBindings2 = $fi.resolvedMultiplicityParameters->fold({rmp, b |
         collectMultiplicityParameterBindings(
-            ^UserDefinedMultiplicityParameter(name = $rmp.name),
+            buildUserDefinedMultiplicityParameter($rmp.name),
             $rmp.value,
             $b
         );
@@ -308,8 +308,8 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     let node = ^FunctionCallParametersBinding(
         expr = $fi,
         function = $entry,
-        ownTypeParams = newMap($ownTypeParamNames->map(n | pair($n, ^TypeParameter(name = $n, contravariant = false)))),
-        ownMulParams = newMap($ownMulParamNames->map(n | pair($n, ^UserDefinedMultiplicityParameter(name = $n)->cast(@MultiplicityParameter)))),
+        ownTypeParams = newMap($ownTypeParamNames->map(n | pair($n, buildTypeParameter($n, false)))),
+        ownMulParams = newMap($ownMulParamNames->map(n | pair($n, buildUserDefinedMultiplicityParameter($n)->cast(@MultiplicityParameter)))),
         enclosingOwner = $deepCtx.enclosingOwnerBinding,
         typeBindings = $seedBindings2.typeBindings,
         multiplicityBindings = $seedBindings2.multiplicityBindings
@@ -390,19 +390,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                   | let common = findCommonGenericType($vals, $context);
                     if($common->isEmpty(), | $vals->at(0), | $common->toOne());
               );
-              ^ResolvedTypeParameter(
-                  name = $k,
-                  value = $boundGT
-              );
+              buildResolvedTypeParameter($k, $boundGT);
           );
           let resolvedMulParams = $validatedBindings.multiplicityBindings->keys()
               ->filter(k | $ownMulParamNames->isEmpty() || $ownMulParamNames->contains($k))
               ->map(k |
               let vals = $validatedBindings.multiplicityBindings->get($k)->toOne().values;
-              ^ResolvedMultiplicityParameter(
-                  name = $k,
-                  value = $vals->at(0)
-              );
+              buildResolvedMultiplicityParameter($k, $vals->at(0));
           );
 
           ^CompilerResult<ValueSpecification>(
@@ -805,7 +799,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         let concreteVals = $vals->map(gt | asInferredGenericType(makeAsConcreteAsPossible($gt, $bindings, $context)));
         $concreteVals->fold({cv, a |
             collectTypeParameterBindings(
-                buildUserDefinedGenericType(^TypeParameter(name = $k)),
+                buildUserDefinedGenericType(buildTypeParameter($k)),
                 $cv,
                 $a
             );
@@ -817,7 +811,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         let concreteVals = $vals->map(m | asInferredMultiplicity(makeAsConcreteAsPossible($m, $bindings)));
         $concreteVals->fold({cv, a |
             collectMultiplicityParameterBindings(
-                ^UserDefinedMultiplicityParameter(name = $k),
+                buildUserDefinedMultiplicityParameter($k),
                 $cv,
                 $a
             );
@@ -895,17 +889,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
     let resolvedTypeParams = $bindings.typeBindings->keys()->map(k |
         let vals = $bindings.typeBindings->get($k)->toOne().values;
-        ^ResolvedTypeParameter(
-            name = $k,
-            value = asInferredGenericType($vals->at(0))
-        );
+        buildResolvedTypeParameter($k, asInferredGenericType($vals->at(0)));
     );
     let resolvedMulParams = $bindings.multiplicityBindings->keys()->map(k |
         let vals = $bindings.multiplicityBindings->get($k)->toOne().values;
-        ^ResolvedMultiplicityParameter(
-            name = $k,
-            value = asInferredMultiplicity($vals->at(0))
-        );
+        buildResolvedMultiplicityParameter($k, asInferredMultiplicity($vals->at(0)));
     );
 
     ^FunctionResolutionResult(

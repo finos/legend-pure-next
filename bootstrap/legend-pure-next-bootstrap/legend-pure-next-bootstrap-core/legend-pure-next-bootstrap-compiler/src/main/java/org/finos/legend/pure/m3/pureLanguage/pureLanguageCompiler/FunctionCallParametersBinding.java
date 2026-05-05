@@ -135,19 +135,26 @@ public class FunctionCallParametersBinding extends ParametersBinding
         // Cross-match: for type params with multiple bindings, compare them pairwise
         // to extract inner bindings (e.g. T→{List<V>, List<String>} → V=String).
         // Only structured types (with rawType) are used as templates.
+        // Snapshot entries upfront — `collectTypeParameterBindings` calls back
+        // into `addTypeBinding`, which mutates `typeBindings` (a UnifiedMap),
+        // and iterating a UnifiedMap while it grows throws ArrayIndexOutOfBounds.
+        java.util.List<MutableList<GenericType>> multiValuedSnapshot = new java.util.ArrayList<>();
         for (var entry : typeBindings.entrySet())
         {
             if (entry.getValue().size() > 1)
             {
-                MutableList<GenericType> values = Lists.mutable.withAll(entry.getValue());
-                for (int i = 0; i < values.size(); i++)
+                multiValuedSnapshot.add(Lists.mutable.withAll(entry.getValue()));
+            }
+        }
+        for (MutableList<GenericType> values : multiValuedSnapshot)
+        {
+            for (int i = 0; i < values.size(); i++)
+            {
+                for (int j = i + 1; j < values.size(); j++)
                 {
-                    for (int j = i + 1; j < values.size(); j++)
-                    {
-                        // 'addTypeBinding' called within collectTypeParameterBindings is dispatching to the proper context (this or EnclosingOwner).
-                        _GenericType.collectTypeParameterBindings(values.get(i), values.get(j), this);
-                        _GenericType.collectTypeParameterBindings(values.get(j), values.get(i), this);
-                    }
+                    // 'addTypeBinding' called within collectTypeParameterBindings is dispatching to the proper context (this or EnclosingOwner).
+                    _GenericType.collectTypeParameterBindings(values.get(i), values.get(j), this);
+                    _GenericType.collectTypeParameterBindings(values.get(j), values.get(i), this);
                 }
             }
         }

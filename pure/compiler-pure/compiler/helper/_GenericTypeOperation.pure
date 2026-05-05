@@ -72,7 +72,7 @@ function meta::pure::compiler::helper::genericTypeOperation::makeGenericTypeOper
                                   $rightV.type->toOne()->match([
                                       rightRT : RelationType<Any>[1] |
                                           let result = evaluateRelationTypeOperation($leftRT, $rightRT, $gto.operationType);
-                                          if($result->isNotEmpty(), | ^InferredGenericType(type = $result->toOne()), | []);,
+                                          if($result->isNotEmpty(), | buildInferredGenericType($result->toOne()), | []);,
                                       other : Type[1] | []
                                   ]);,
                               other : Type[1] | []

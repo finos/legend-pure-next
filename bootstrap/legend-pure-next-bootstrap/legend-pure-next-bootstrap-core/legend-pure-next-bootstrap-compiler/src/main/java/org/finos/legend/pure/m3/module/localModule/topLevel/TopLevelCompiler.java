@@ -382,8 +382,17 @@ public class TopLevelCompiler
                 String packagePath = entry.grammarElement()._package() != null
                         ? entry.grammarElement()._package()._value()
                         : null;
+                // Anchor sub-package classifier at canonical GenericType_Package (UDPGT) so the
+                // chain matches Pure's `^Package(...)` (platform fix in MetaNatives.new substitutes canonical).
+                meta.pure.metamodel.type.generics.GenericTypeValue packageCanonical =
+                        (meta.pure.metamodel.type.generics.GenericTypeValue) model.getElement(
+                                "meta::pure::metamodel::type::generics::optimization::GenericType_Package");
                 Package parent = packagePath != null
-                        ? getOrCreatePackage(root, packagePath, _GenericType.buildUserDefinedGenericType((Type)model.getElement("meta::pure::metamodel::Package"), model), model)
+                        ? getOrCreatePackage(root, packagePath,
+                                packageCanonical != null
+                                        ? packageCanonical
+                                        : _GenericType.buildUserDefinedGenericType((Type)model.getElement("meta::pure::metamodel::Package"), model),
+                                model)
                         : root;
                 entry.element()._package(parent);
                 parent._children().add(entry.element());

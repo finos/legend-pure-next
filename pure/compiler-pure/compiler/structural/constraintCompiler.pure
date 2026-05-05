@@ -83,7 +83,7 @@ function meta::pure::compiler::structural::constraintCompiler::compileConstraint
                   enforcementLevel = $pc.enforcementLevel,
                   functionDefinition = $compiledLambda,
                   messageFunction = $msgResult.value->cast(@FunctionDefinition<Any>),
-                  sourceInformation = $pc.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+                  sourceInformation = compileSourceInformation($pc.p_sourceInformation)
               ),
               context = $ctx2
           );

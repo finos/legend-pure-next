@@ -53,8 +53,8 @@ public final class ProfileHandler
 
     public static Profile secondPass(ProfileImpl result, meta.pure.protocol.grammar.extension.Profile grammar, MetadataAccess model)
     {
-        return result._classifierGenericType(
-                _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::extension::Profile"), model));
+        // Ctor (firstPass) already set classifier to canonical GenericType_Profile (UDPGT).
+        return result;
     }
 
     public static PackageableElement thirdPass(Profile pr, MetadataAccess pureModel, CompilationContext context)

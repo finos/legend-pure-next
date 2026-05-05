@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::compiler::structural::propertyCompiler::*;
 import meta::pure::compiler::structural::annotationCompiler::*;
 import meta::pure::compiler::*;
@@ -48,7 +49,7 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
             | let pp = $protocolProp->head()->toOne();
               let stereoResult = compilePropertyStereotypes($pp, $ctx0, $ownerCtx);
               let tvResult = compilePropertyTaggedValues($pp, $ctx0, $ownerCtx);
-              let si = $pp.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn));
+              let si = compileSourceInformation($pp.p_sourceInformation);
               ^$prop(
                   stereotypes = $stereoResult.values,
                   taggedValues = $tvResult.values,
@@ -65,13 +66,7 @@ function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::p
                                 compileTaggedValue($t, $acc, $ownerCtx);
                             }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
 
-    let si = $protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation->map(si | ^SourceInformation(
-        sourceId = $si.sourceId,
-        startLine = $si.startLine,
-        startColumn = $si.startColumn,
-        endLine = $si.endLine,
-        endColumn = $si.endColumn
-    ));
+    let si = compileSourceInformation($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation);
     ^CompilerResult<Enumeration<Any>>(
         value = ^$skeleton(
             stereotypes = $stereoAccum.values,

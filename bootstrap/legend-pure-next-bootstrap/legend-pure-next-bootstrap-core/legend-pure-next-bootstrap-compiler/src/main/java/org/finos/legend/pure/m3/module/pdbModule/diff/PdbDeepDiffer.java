@@ -67,7 +67,22 @@ public final class PdbDeepDiffer
      * {@code <too deep>}. Keeps pathological cycles from blowing the stack
      * even when the visited-set check fails for value-equal objects.
      */
-    private static final int MAX_DEPTH = 30;
+    private static final int MAX_DEPTH = 60;
+
+    /**
+     * Accessors whose returned sequences are semantically order-insensitive —
+     * elements are matched by {@code _name()} rather than positionally.
+     * Adding to this set when a property's specification doesn't mandate
+     * iteration order (e.g. binding maps surfaced as lists in the PDB).
+     */
+    private static final java.util.Set<String> ORDER_INSENSITIVE_ACCESSORS = java.util.Set.of(
+            "_resolvedTypeParameters",
+            "_resolvedMultiplicityParameters",
+            "_typeParameters",
+            "_multiplicityParameters",
+            "_stereotypes",
+            "_taggedValues"
+    );
 
     private PdbDeepDiffer() {}
 
@@ -388,7 +403,15 @@ public final class PdbDeepDiffer
                     }
                     String propName = m.getName().startsWith("_")
                             ? m.getName().substring(1) : m.getName();
-                    compare(path + "." + propName, vA, vB, depth + 1);
+                    if (ORDER_INSENSITIVE_ACCESSORS.contains(m.getName())
+                            && vA instanceof Iterable<?> ia && vB instanceof Iterable<?> ib)
+                    {
+                        compareByName(path + "." + propName, toList(ia), toList(ib), depth + 1);
+                    }
+                    else
+                    {
+                        compare(path + "." + propName, vA, vB, depth + 1);
+                    }
                 }
             }
             finally
@@ -396,6 +419,83 @@ public final class PdbDeepDiffer
                 visitedA.remove(a);
                 visitedB.remove(b);
             }
+        }
+
+        /**
+         * Compare two collections of named elements (resolvedTypeParameters,
+         * stereotypes, etc.) by matching elements via their {@code _name()}
+         * accessor rather than positionally. The collections may differ in
+         * order without producing diffs — only missing names or per-element
+         * value differences surface.
+         */
+        private void compareByName(String path, List<Object> la, List<Object> lb, int depth)
+        {
+            if (la.size() != lb.size())
+            {
+                diffs.add(new PathDiff(path + ".size",
+                        String.valueOf(la.size()),
+                        String.valueOf(lb.size())));
+                return;
+            }
+            java.util.Map<String, Object> mapA = indexByName(la);
+            java.util.Map<String, Object> mapB = indexByName(lb);
+            // Fall back to positional comparison if any element lacks _name(),
+            // or there are duplicates (unique-name invariant violated).
+            if (mapA == null || mapB == null || mapA.size() != la.size() || mapB.size() != lb.size())
+            {
+                for (int i = 0; i < la.size(); i++)
+                {
+                    compare(path + "[" + i + "]", la.get(i), lb.get(i), depth + 1);
+                }
+                return;
+            }
+            // Iterate A's order, compare to B-by-name; report missing names.
+            for (java.util.Map.Entry<String, Object> entry : mapA.entrySet())
+            {
+                Object bElem = mapB.get(entry.getKey());
+                if (bElem == null)
+                {
+                    diffs.add(new PathDiff(path + "[name=" + entry.getKey() + "]",
+                            summarize(entry.getValue()), "<missing>"));
+                    continue;
+                }
+                compare(path + "[name=" + entry.getKey() + "]", entry.getValue(), bElem, depth + 1);
+            }
+            for (String nameB : mapB.keySet())
+            {
+                if (!mapA.containsKey(nameB))
+                {
+                    diffs.add(new PathDiff(path + "[name=" + nameB + "]",
+                            "<missing>", summarize(mapB.get(nameB))));
+                }
+            }
+        }
+
+        private static java.util.Map<String, Object> indexByName(List<Object> list)
+        {
+            java.util.Map<String, Object> idx = new java.util.LinkedHashMap<>();
+            for (Object o : list)
+            {
+                if (o == null)
+                {
+                    return null;
+                }
+                try
+                {
+                    Method nameMethod = o.getClass().getMethod("_name");
+                    Object name = nameMethod.invoke(o);
+                    if (!(name instanceof String s))
+                    {
+                        return null;
+                    }
+                    idx.put(s, o);
+                }
+                catch (Throwable t)
+                {
+                    return null;
+                }
+            }
+            return idx;
         }
 
         private static List<Method> accessors(Object obj)

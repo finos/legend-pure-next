@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
 import meta::pure::metamodel::*;
 import meta::pure::metamodel::valuespecification::*;
 import meta::pure::metamodel::type::*;
@@ -73,13 +74,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileProperty(pro
               multiplicity = $mMult,
               stereotypes = $stereoResult.values,
               taggedValues = $tvResult.values,
-              sourceInformation = $protocolProperty.p_sourceInformation->map(si | ^SourceInformation(
-                  sourceId = $si.sourceId,
-                  startLine = $si.startLine,
-                  startColumn = $si.startColumn,
-                  endLine = $si.endLine,
-                  endColumn = $si.endColumn
-              ))
+              sourceInformation = compileSourceInformation($protocolProperty.p_sourceInformation)
           );
           let finalProp = if($protocolProperty.defaultValue->isEmpty(),
               | $builtProp,
@@ -200,10 +195,8 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
         returnType = $selfGenType,
         returnMultiplicity = $pureOne
     );
-    let defaultLambdaGT = ^InferredGenericType(
-        type = LambdaFunction,
-        typeArguments = [^InferredGenericType(type = $lambdaReturn)]
-    );
+    let defaultLambdaGTBase = buildInferredGenericType(LambdaFunction);
+    let defaultLambdaGT = ^$defaultLambdaGTBase(typeArguments = [buildInferredGenericType($lambdaReturn)]);
     let emptyLambda = new($defaultLambdaGT)->cast(@LambdaFunction<Any>);
 
     // Compile stereotypes and tagged values on the enum value
@@ -227,13 +220,7 @@ function meta::pure::compiler::structural::propertyCompiler::compileEnumProperty
                 )
             ]
         ),
-        sourceInformation = $p.p_sourceInformation->map(si | ^SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
+        sourceInformation = compileSourceInformation($p.p_sourceInformation)
     );
 }
 

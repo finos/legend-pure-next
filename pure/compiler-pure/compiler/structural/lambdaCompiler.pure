@@ -44,7 +44,8 @@ function meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(lamb
     );
     let ft = new(buildUserDefinedGenericType(FunctionType))->cast(@FunctionType);
     let rebuiltFT = ^$ft(parameters = $params, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
-    let rebuiltCGT = ^InferredGenericType(type = LambdaFunction, typeArguments = [^InferredGenericType(type = $rebuiltFT)]);
+    let rebuiltCGTBase = buildInferredGenericType(LambdaFunction);
+    let rebuiltCGT = ^$rebuiltCGTBase(typeArguments = [buildInferredGenericType($rebuiltFT)]);
     ^$lambda(classifierGenericType = $rebuiltCGT);
 }
 
@@ -118,14 +119,8 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               returnMultiplicity = $bodyReturnMul
           );
 
-          let lambdaCGT = ^InferredGenericType(
-              type = LambdaFunction,
-              typeArguments = [
-                  ^InferredGenericType(
-                      type = $ft
-                  )
-              ]
-          );
+          let lambdaCGTBase = buildInferredGenericType(LambdaFunction);
+          let lambdaCGT = ^$lambdaCGTBase(typeArguments = [buildInferredGenericType($ft)]);
 
           let emptyLambda = new(
               buildUserDefinedGenericType(LambdaFunction)
@@ -134,8 +129,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
               parameters = $compiledParams,
               expressionSequence = $compiledSequence.specs,
               openVariables = $openVariables,
-              classifierGenericType = $lambdaCGT,
-              sourceInformation = $l.p_sourceInformation->map(si | ^SourceInformation(sourceId=$si.sourceId, startLine=$si.startLine, startColumn=$si.startColumn, endLine=$si.endLine, endColumn=$si.endColumn))
+              classifierGenericType = $lambdaCGT
           );
 
           let wrappedLambda = ^AtomicValue(

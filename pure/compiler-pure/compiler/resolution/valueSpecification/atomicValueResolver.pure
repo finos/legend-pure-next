@@ -83,10 +83,9 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                           buildUserDefinedGenericType(FunctionType)
                       )->cast(@FunctionType);
                       let ft = ^$lambdaFT(parameters = $lambdaParams, returnType = $bodyReturnGT, returnMultiplicity = $bodyReturnMul);
-                      let lambdaGT = ^InferredGenericType(
-                          type = LambdaFunction,
-                          typeArguments = [^InferredGenericType(type = $ft)]
-                      );
+                      let lambdaInnerGT = buildInferredGenericType($ft);
+                      let lambdaBaseGT = buildInferredGenericType(LambdaFunction);
+                      let lambdaGT = ^$lambdaBaseGT(typeArguments = [$lambdaInnerGT]);
                       // Collect open variables by walking the resolved expression tree
                       let paramNames = $lambdaParams->map(p | $p.name->toOne());
                       let resolvedOpenVars = meta::pure::compiler::resolution::valueSpecification::atomicValueResolver::collectOpenVariables($resolveResult.resolvedSpecs->cast(@ValueSpecification), $paramNames);

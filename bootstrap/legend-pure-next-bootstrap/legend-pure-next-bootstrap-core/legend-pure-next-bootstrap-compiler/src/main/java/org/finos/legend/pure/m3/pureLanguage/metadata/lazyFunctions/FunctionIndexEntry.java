@@ -95,11 +95,7 @@ public abstract class FunctionIndexEntry implements PackageableFunction
         MutableSet<String> typeParamNames = _FunctionType.collectReferencedTypeParameterNames(functionType);
         this.typeParamCount = typeParamNames.size();
         this.typeParameters = typeParamNames.collect(name ->
-                                {
-                                    TypeParameterImpl tp = new TypeParameterImpl(model)._name(name)._owner(this);
-                                    tp._classifierGenericType(_GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::generics::TypeParameter"), model));
-                                    return (TypeParameter) tp;
-                                }).toList();
+                                (TypeParameter) new TypeParameterImpl(model)._name(name)._contravariant(false)._owner(this)).toList();
 
         MutableSet<String> mulParamNames = _FunctionType.collectReferencedMultiplicityParameterNames(functionType);
         this.multiplicityParamCount = mulParamNames.size();

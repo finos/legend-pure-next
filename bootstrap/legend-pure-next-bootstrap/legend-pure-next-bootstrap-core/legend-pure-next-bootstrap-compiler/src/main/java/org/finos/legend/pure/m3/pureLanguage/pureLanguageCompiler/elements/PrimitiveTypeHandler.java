@@ -45,9 +45,7 @@ public final class PrimitiveTypeHandler
         result._generalizations(grammar._generalizations()
                 .collect(g -> GeneralizationCompiler.compile(g, result, imports, model, context))
                 .select(Objects::nonNull));
-
-        result._classifierGenericType(
-                _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::type::PrimitiveType"), model));
+        // Ctor (firstPass) already set classifier to canonical GenericType_PrimitiveType (UDPGT).
 
         // Compile type variables (e.g., Primitive Varchar(x:Integer[1]))
         if (grammar._typeVariables() != null && grammar._typeVariables().notEmpty())

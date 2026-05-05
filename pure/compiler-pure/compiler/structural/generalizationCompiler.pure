@@ -27,14 +27,12 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
             a : Any[1]        | []->cast(@TypeParameter)
         ]
     );
-    // Route Generalization construction through new(canonical UDPGT) so the
-    // instance's _classifierGenericType resolves to the packageable canonical
-    // (mirrors Java GeneralizationImpl(model) constructor which auto-sets
-    // _classifierGenericType = optimization::GenericType_Generalization).
-    let emptyGen = new(meta::pure::metamodel::type::generics::optimization::GenericType_Generalization)->cast(@Generalization);
+    // Platform fix in MetaNatives.new auto-anchors ^Generalization(...) classifier
+    // at canonical GenericType_Generalization (UDPGT), matching Java's
+    // GeneralizationImpl(model) ctor.
     if($protocolGeneralizations->isEmpty(),
         | ^CompilerListResult<Generalization>(
-              values = [^$emptyGen(
+              values = [^Generalization(
                   general = buildUserDefinedGenericType(Any),
                   specific = $skeleton
               )],
@@ -43,7 +41,7 @@ function meta::pure::compiler::structural::generalizationCompiler::compileGenera
         | $protocolGeneralizations->fold({g, acc |
               let gtResult = $g.general->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParams, 'super type', $ownerContext);
               ^$acc(
-                  values += ^$emptyGen(
+                  values += ^Generalization(
                       general = $gtResult.value->toOne(),
                       specific = $skeleton
                   ),

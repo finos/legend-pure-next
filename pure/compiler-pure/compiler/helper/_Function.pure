@@ -58,8 +58,8 @@ function <<test.Test>> meta::pure::compiler::helper::function::tests::testGetFun
 function <<test.Test>> meta::pure::compiler::helper::function::tests::testValidateFunctionParameters():Boolean[1]
 {
     let params = [
-        ^VariableExpression(name='a', genericType=^InferredGenericType(type=String), multiplicity=PureOne),
-        ^VariableExpression(name='b', genericType=^InferredGenericType(type=Integer), multiplicity=PureOne)
+        ^VariableExpression(name='a', genericType=buildInferredGenericType(String), multiplicity=PureOne),
+        ^VariableExpression(name='b', genericType=buildInferredGenericType(Integer), multiplicity=PureOne)
     ];
     assert(validateFunctionParameters($params));
 }

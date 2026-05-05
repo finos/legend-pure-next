@@ -22,7 +22,7 @@ import meta::pure::compiler::*;
 
 function meta::pure::compiler::structural::packageableFunctionCompiler::compileTypeParameters(typeParameters:meta::pure::protocol::grammar::type::generics::TypeParameter[*]):TypeParameter[*]
 {
-    $typeParameters->map(tp | ^TypeParameter(name = $tp.name, contravariant = false)->cast(@TypeParameter));
+    $typeParameters->map(tp | buildTypeParameter($tp.name, false));
 }
 
 function meta::pure::compiler::structural::packageableFunctionCompiler::compileFunctionClassifierGenericType(functionMetaType:Type[1], parameters:VariableExpression[*], returnGenericType:GenericType[1], returnMultiplicity:Multiplicity[1]):UserDefinedGenericType[1]

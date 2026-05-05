@@ -545,8 +545,8 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printMul(m
 
 function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintTypeParameter():Boolean[1]
 {
-    let tp = ^TypeParameter(name='T', contravariant=false);
-    let gt = ^UserDefinedGenericType(type=$tp);
+    let tp = buildTypeParameter('T', false);
+    let gt = buildUserDefinedGenericType($tp);
     assertEquals('T', $gt->printType());
 }
 
@@ -554,7 +554,8 @@ function <<test.Test>> meta::pure::compiler::test::printer::tests::testPrintType
 {
     let owner = new(^UserDefinedGenericType(type=Class, typeArguments=[^UserDefinedGenericType(type=Any)]))->cast(@Class<Any>);
     let builtOwner = ^$owner(name='MyClass', package=^Package(name='test', package=^Package(name='Root')));
-    let tp = ^TypeParameter(name='T', contravariant=false, owner=$builtOwner);
+    let baseTp = buildTypeParameter('T', false);
+    let tp = ^$baseTp(owner=$builtOwner);
     let gt = ^UserDefinedGenericType(type=$tp);
     assertEquals('T~test::MyClass', $gt->printType());
 }

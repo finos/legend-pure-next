@@ -85,7 +85,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                 context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
                             ),
                           | debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
-                            let enumGT = ^InferredGenericType(type = $enumeration);
+                            let enumGT = buildInferredGenericType($enumeration);
                             ^CompilerResult<ValueSpecification>(
                                 value = ^$dot(
                                     func = $matchedProp->at(0),

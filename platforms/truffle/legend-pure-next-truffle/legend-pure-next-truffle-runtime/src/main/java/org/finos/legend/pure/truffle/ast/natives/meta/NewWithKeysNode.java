@@ -145,7 +145,11 @@ public final class NewWithKeysNode extends PureNode
                 Object firstArg = typeArgs.getBoxed(0);
                 if (instance instanceof Any any && firstArg instanceof GenericTypeValue gtv)
                 {
-                    any._classifierGenericType(gtv);
+                    // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
+                    // prefer the canonical GenericType_<TypeName> UDPGT element from core.pdb.
+                    // Mirrors bootstrap MetaNatives.preferCanonicalAnchor.
+                    GenericTypeValue resolved = preferCanonicalAnchor(gtv, eval.resolver());
+                    any._classifierGenericType(resolved);
                 }
             }
             else if (instance instanceof Any any && !"Unknown".equals(classPath))
@@ -309,6 +313,60 @@ public final class NewWithKeysNode extends PureNode
             }
         }
         return "Unknown";
+    }
+
+    /**
+     * For a parser-built classifier UDGT, prefer the canonical
+     * {@code GenericType_<TypeName>} anchor from core.pdb when one exists and
+     * the UDGT has no type/multiplicity arguments. Mirrors the bootstrap
+     * MetaNatives.preferCanonicalAnchor — keeps {@code ^Type(...)} classifier
+     * chains identical between Pure runtime construction and Java's
+     * {@code new XxxImpl(model)} ctor pattern.
+     */
+    /**
+     * Public alias of {@link #preferCanonicalAnchor} so sibling natives
+     * ({@link NewSimpleNode}, {@link NewGenericTypeNode}) can share the
+     * canonical-anchor lookup without duplicating it.
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public static GenericTypeValue preferCanonicalAnchorPublic(
+            GenericTypeValue gtv,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return preferCanonicalAnchor(gtv, resolver);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static GenericTypeValue preferCanonicalAnchor(
+            GenericTypeValue gtv,
+            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        PureSequence typeArgs = _GenericType.typeArguments(gtv);
+        if (typeArgs != null && typeArgs.size() > 0)
+        {
+            return gtv;
+        }
+        Object mulArgs = gtv._multiplicityArguments();
+        if (mulArgs instanceof PureSequence ms && ms.size() > 0)
+        {
+            return gtv;
+        }
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = _GenericType.type(gtv);
+        if (!(rawType instanceof PackageableElement pe))
+        {
+            return gtv;
+        }
+        String simpleName = pe._name();
+        if (simpleName == null || simpleName.isEmpty())
+        {
+            return gtv;
+        }
+        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
+        if (canonical instanceof GenericTypeValue canonicalGT)
+        {
+            return canonicalGT;
+        }
+        return gtv;
     }
 
     /**

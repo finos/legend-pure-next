@@ -356,7 +356,6 @@ public final class DotApplicationResolver
 
         meta.pure.metamodel.valuespecification.DotApplicationImpl dotBody =
                 new meta.pure.metamodel.valuespecification.DotApplicationImpl(model);
-        dotBody._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::DotApplication"), model));
         dotBody._functionName(accessName);
         dotBody._parametersValues(dotBodyParams);
         dotBody._sourceInformation(expr._sourceInformation());
@@ -370,14 +369,12 @@ public final class DotApplicationResolver
         // Wrap in an AtomicValue (no genericType — treated as unresolved lambda)
         meta.pure.metamodel.valuespecification.AtomicValueImpl lambdaAV =
                 new meta.pure.metamodel.valuespecification.AtomicValueImpl(model);
-        lambdaAV._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::AtomicValue"), model));
         lambdaAV._value(lambda);
         lambdaAV._multiplicity(pureOne);
 
         // Create a new FunctionApplication for 'map' wrapping the DotApplication
         meta.pure.metamodel.valuespecification.FunctionInvocationImpl mapExpr =
                 new meta.pure.metamodel.valuespecification.FunctionInvocationImpl(model);
-        mapExpr._classifierGenericType(_GenericType.buildUserDefinedGenericType((meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::valuespecification::FunctionInvocation"), model));
         mapExpr._functionName("map");
         mapExpr._parametersValues(Lists.mutable.with(receiver, lambdaAV));
         mapExpr._sourceInformation(expr._sourceInformation());

@@ -18,13 +18,14 @@ import meta::pure::metamodel::multiplicity::*;
 import meta::pure::functions::lang::*;
 import meta::pure::compiler::helper::type::*;
 import meta::pure::compiler::helper::variableExpression::*;
+import meta::pure::compiler::helper::genericType::*;
 
 function meta::pure::compiler::helper::variableExpression::newVariableExpression():VariableExpression[1]
 {
-    let ve = new(^InferredGenericType(type = VariableExpression))->cast(@VariableExpression);
+    let ve = new(buildInferredGenericType(VariableExpression))->cast(@VariableExpression);
     ^$ve(
         name = '',
-        genericType = ^InferredGenericType(type = Any),
+        genericType = buildInferredGenericType(Any),
         multiplicity = PureOne
     );
 }

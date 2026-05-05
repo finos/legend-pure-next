@@ -26,8 +26,7 @@ public final class _VariableExpression
 
     public static VariableExpressionImpl newVariableExpression(MetadataAccess model)
     {
-        return new VariableExpressionImpl(model)
-                ._classifierGenericType(
-                        _GenericType.buildUserDefinedGenericType((Type) model.getElement("meta::pure::metamodel::valuespecification::VariableExpression"), model));
+        // Ctor sets classifier to canonical GenericType_VariableExpression (UDPGT).
+        return new VariableExpressionImpl(model);
     }
 }

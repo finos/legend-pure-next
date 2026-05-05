@@ -11,12 +11,12 @@ function meta::pure::compiler::helper::functionExpression::extractResolvedParame
     
     let withTypes = if($expr.resolvedTypeParameters->isEmpty(),
        | $emptyBindings,
-       | $expr.resolvedTypeParameters->fold({param, bb | $bb->addTypeBinding(^TypeParameter(name=$param.name, contravariant=false), $param.value)}, $emptyBindings->cast(@ParametersBinding))
+       | $expr.resolvedTypeParameters->fold({param, bb | $bb->addTypeBinding(buildTypeParameter($param.name, false), $param.value)}, $emptyBindings->cast(@ParametersBinding))
     );
     
     let withMultiplicities = if($expr.resolvedMultiplicityParameters->isEmpty(),
        | $withTypes,
-       | $expr.resolvedMultiplicityParameters->fold({param, bb | $bb->addMultiplicityBinding(^InferredMultiplicityParameter(name=$param.name), $param.value)}, $withTypes->cast(@ParametersBinding))
+       | $expr.resolvedMultiplicityParameters->fold({param, bb | $bb->addMultiplicityBinding(buildInferredMultiplicityParameter($param.name), $param.value)}, $withTypes->cast(@ParametersBinding))
     );
     
     $withMultiplicities;
@@ -34,11 +34,11 @@ function meta::pure::compiler::helper::functionExpression::populateResolvedParam
     let rtp = fold($tbKeys, {k, resolved |
         let vals = get($bindings.typeBindings, $k)->toOne();
         if([pair(| $doFilterType && !$ownTypeParams->contains($k), | $resolved),
-            pair(| $vals.values->size() == 1, | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$vals.values->at(0)))),
+            pair(| $vals.values->size() == 1, | $resolved->concatenate(buildResolvedTypeParameter($k, $vals.values->at(0)))),
             pair(| $vals.values->size() > 1,
                  | let common = findCommonGenericType($vals.values, false, $context);
                    if($common->isNotEmpty(),
-                       | $resolved->concatenate(^ResolvedTypeParameter(name=$k, value=$common->toOne())),
+                       | $resolved->concatenate(buildResolvedTypeParameter($k, $common->toOne())),
                        | $resolved
                    );)],
            | $resolved
@@ -50,7 +50,7 @@ function meta::pure::compiler::helper::functionExpression::populateResolvedParam
     let rmp = fold($mbKeys, {k, resolved |
         let vals = get($bindings.multiplicityBindings, $k)->toOne();
         if([pair(| $doFilterMul && !$ownMulParams->contains($k), | $resolved),
-            pair(| $vals.values->size() == 1, | $resolved->concatenate(^ResolvedMultiplicityParameter(name=$k, value=$vals.values->at(0))))],
+            pair(| $vals.values->size() == 1, | $resolved->concatenate(buildResolvedMultiplicityParameter($k, $vals.values->at(0))))],
            | $resolved
         );
     }, []->cast(@ResolvedMultiplicityParameter));
@@ -79,13 +79,13 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testExt
 function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPopulateAndExtract():Boolean[1]
 {
     let targetClass = String;
-    let targetGT = ^InferredGenericType(type=$targetClass);
+    let targetGT = buildInferredGenericType($targetClass);
     let mul = PureOne;
     
     let b1 = newPlainParametersBinding();
-    let b2 = $b1->addTypeBinding(^TypeParameter(name='T', contravariant=false), $targetGT);
-    let b3 = $b2->addTypeBinding(^TypeParameter(name='Z', contravariant=false), $targetGT);
-    let bindings = $b3->addMultiplicityBinding(^InferredMultiplicityParameter(name='m'), $mul);
+    let b2 = $b1->addTypeBinding(buildTypeParameter('T', false), $targetGT);
+    let b3 = $b2->addTypeBinding(buildTypeParameter('Z', false), $targetGT);
+    let bindings = $b3->addMultiplicityBinding(buildInferredMultiplicityParameter('m'), $mul);
     
     let expr = ^FunctionInvocation(
         functionName = 'test',
@@ -109,14 +109,14 @@ function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPop
 function <<test.Test>> meta::pure::compiler::helper::functionExpression::testPopulateWithOwnership():Boolean[1]
 {
     let targetClass = String;
-    let targetGT = ^InferredGenericType(type=$targetClass);
+    let targetGT = buildInferredGenericType($targetClass);
     let mul = PureOne;
     
     let b1 = newPlainParametersBinding();
-    let b2 = $b1->addTypeBinding(^TypeParameter(name='T', contravariant=false), $targetGT);
-    let b3 = $b2->addTypeBinding(^TypeParameter(name='Z', contravariant=false), $targetGT);
-    let b4 = $b3->addMultiplicityBinding(^InferredMultiplicityParameter(name='m'), $mul);
-    let bindings = $b4->addMultiplicityBinding(^InferredMultiplicityParameter(name='n'), $mul);
+    let b2 = $b1->addTypeBinding(buildTypeParameter('T', false), $targetGT);
+    let b3 = $b2->addTypeBinding(buildTypeParameter('Z', false), $targetGT);
+    let b4 = $b3->addMultiplicityBinding(buildInferredMultiplicityParameter('m'), $mul);
+    let bindings = $b4->addMultiplicityBinding(buildInferredMultiplicityParameter('n'), $mul);
     
     let expr = ^FunctionInvocation(
         functionName = 'test',

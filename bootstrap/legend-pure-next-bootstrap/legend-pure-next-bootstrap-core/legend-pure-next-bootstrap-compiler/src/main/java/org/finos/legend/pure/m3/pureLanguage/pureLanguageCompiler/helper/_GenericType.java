@@ -66,10 +66,13 @@ public class _GenericType
 
     public static UserDefinedGenericTypeImpl buildUserDefinedGenericType(meta.pure.metamodel.type.Type rawType, MetadataAccess model)
     {
-        // Anchor classifierGenericType at the canonical UDPGT in core.pdb so
-        // both compilers converge on the same chain shape. Pure-side can't
-        // build a fresh self-loop UDGT in immutable construction, so we
-        // converge on this path-based anchor instead.
+        // Always create a fresh UDGT (callers may add typeArguments). The
+        // canonical anchor is set as the classifier so chain bottoms at the
+        // canonical UDPGT (`GenericType_UserDefinedGenericType`). Note: this
+        // helper is for "I want a UDGT wrapping rawType" — for "I want the
+        // canonical PackageableGenericType for rawType" use the platform-level
+        // `^Type(...)` syntax (Pure) or `new XxxImpl(model)` ctor (Java),
+        // which anchor at `GenericType_<TypeName>` UDPGT directly.
         meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl gt = new meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
         if (rawType != null)
         {

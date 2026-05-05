@@ -104,7 +104,7 @@ function meta::pure::compiler::helper::relationType::findCommonRelationType_buil
               ^Column<Any,Any|*>(
                   name = $colName,
                   nameWildCard = false,
-                  genericType = if($commonType->isEmpty(), | ^InferredGenericType(type=Any), | $commonType->toOne()),
+                  genericType = if($commonType->isEmpty(), | buildInferredGenericType(Any), | $commonType->toOne()),
                   multiplicity = if($commonMul->isEmpty(), | PureOne, | $commonMul->toOne())
               );
           });
@@ -207,10 +207,10 @@ function meta::pure::compiler::helper::relationType::makeRelationTypeAsConcreteA
                     let origCol = $p.values->at(0)->cast(@Column<Any,Any|*>);
                     let gt = $p.values->at(2)->cast(@GenericType);
                     let mul = $p.values->at(3)->cast(@Multiplicity);
-                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | ^InferredGenericType(type=Any)), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | PureOne));
+                    ^Column<Any,Any|*>(name = $origCol.name, nameWildCard = if($origCol.nameWildCard->isEmpty(), | false, | $origCol.nameWildCard), genericType = if($gt->isNotEmpty(), | $gt->toOne(), | buildInferredGenericType(Any)), multiplicity = if($mul->isNotEmpty(), | $mul->toOne(), | PureOne));
                 );
                 let newRT = ^RelationType<Any>(columns = $newCols);
-                ^InferredGenericType(type = $newRT);,
+                buildInferredGenericType($newRT);,
               | []
           );
     );
@@ -300,12 +300,12 @@ function <<test.Test>> meta::pure::compiler::helper::relationType::tests::testEv
 {
     let rt1 = ^RelationType<Any>(
         columns = [
-            buildColumn('age', ^InferredGenericType(type=RelationType), ^InferredGenericType(type=Integer), PureOne, false)
+            buildColumn('age', buildInferredGenericType(RelationType), buildInferredGenericType(Integer), PureOne, false)
         ]
     );
     let rt2 = ^RelationType<Any>(
         columns = [
-            buildColumn('name', ^InferredGenericType(type=RelationType), ^InferredGenericType(type=String), PureOne, false)
+            buildColumn('name', buildInferredGenericType(RelationType), buildInferredGenericType(String), PureOne, false)
         ]
     );
 

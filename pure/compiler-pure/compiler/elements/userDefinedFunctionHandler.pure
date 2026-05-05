@@ -44,13 +44,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass1(fn:meta
         name = $mangledName,
         functionName = if($fn.functionName->isEmpty(), | $fn.name, | $fn.functionName->toOne()),
         package = $pkgRes.value->toOne(),
-        sourceInformation = $fn.p_sourceInformation->map(si | ^SourceInformation(
-            sourceId = $si.sourceId,
-            startLine = $si.startLine,
-            startColumn = $si.startColumn,
-            endLine = $si.endLine,
-            endColumn = $si.endColumn
-        ))
+        sourceInformation = compileSourceInformation($fn.p_sourceInformation)
     );
 
     putElementUnderPackage($pkgRes.context, $fName, $packagePath, $skeleton);
@@ -72,7 +66,7 @@ function meta::pure::compiler::elements::compileUserDefinedFunctionPass2(fn:meta
     let fnTypeParams = compileTypeParameters($fn.typeParameters)->map(tp | ^$tp(owner = $skeleton));
 
     // Compile multiplicity parameters — set owner to the function skeleton (mirrors Java PackageableFunctionCompiler.compileShared line 57-59)
-    let fnMulParams = $fn.multiplicityParameters->map(mp | ^UserDefinedMultiplicityParameter(name = $mp.name, owner = $skeleton)->cast(@MultiplicityParameter));
+    let fnMulParams = $fn.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name, $skeleton)->cast(@MultiplicityParameter));
 
     let ctx1b = ^$ctx1(ownerTypeParams = $fnTypeParams, ownerMulParams = $fnMulParams);
 

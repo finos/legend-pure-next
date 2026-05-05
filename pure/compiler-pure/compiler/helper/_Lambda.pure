@@ -26,10 +26,8 @@ function meta::pure::compiler::helper::lambda::buildFunctionType(lambda:LambdaFu
 
 function meta::pure::compiler::helper::lambda::getLambdaClassifierGenericType(lambda:LambdaFunction<Any>[1]):GenericType[1]
 {
-    ^InferredGenericType(
-        type = LambdaFunction,
-        typeArguments = [^InferredGenericType(type = $lambda->buildFunctionType())]
-    );
+    let base = buildInferredGenericType(LambdaFunction);
+    ^$base(typeArguments = [buildInferredGenericType($lambda->buildFunctionType())]);
 }
 
 // Tests
