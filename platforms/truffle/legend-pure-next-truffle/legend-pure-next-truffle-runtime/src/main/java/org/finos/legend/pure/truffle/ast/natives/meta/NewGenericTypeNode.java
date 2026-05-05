@@ -80,7 +80,12 @@ public final class NewGenericTypeNode extends PureNode
         Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
         if (instance instanceof Any any)
         {
-            any._classifierGenericType(gt);
+            // Platform-level canonical anchor: when the input GT has no type/mult args,
+            // prefer the canonical GenericType_<TypeName> UDPGT from core.pdb. Mirrors
+            // bootstrap MetaNatives.preferCanonicalAnchor and Java's `new XxxImpl(model)`
+            // ctor anchoring. Without this, `new(buildUserDefinedGenericType(SomeType))`
+            // leaves classifier as a fresh inline UDGT, while Java emits canonical UDPGT.
+            any._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(gt, resolver));
         }
 
         return instance;

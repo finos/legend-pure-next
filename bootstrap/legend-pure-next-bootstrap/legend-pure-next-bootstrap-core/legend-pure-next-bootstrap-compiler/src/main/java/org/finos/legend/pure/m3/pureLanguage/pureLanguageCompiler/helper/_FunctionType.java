@@ -38,15 +38,14 @@ public final class _FunctionType
     }
 
     /**
-     * Create a new {@link FunctionTypeImpl} with its {@code classifierGenericType}
-     * properly set to {@code GenericType(rawType=FunctionType)}.
+     * Create a new {@link FunctionTypeImpl} anchored at the canonical
+     * {@code GenericType_FunctionType} UDPGT — matching Pure's
+     * {@code ^FunctionType(...)} which goes through preferCanonicalAnchor.
+     * The {@code (model)} ctor wires the canonical anchor; no explicit override.
      */
     public static FunctionTypeImpl newFunctionType(MetadataAccess model)
     {
-        FunctionTypeImpl ft = new FunctionTypeImpl(model);
-        ft._classifierGenericType(_GenericType.buildUserDefinedGenericType(
-                (meta.pure.metamodel.type.Type) model.getElement("meta::pure::metamodel::type::FunctionType"), model));
-        return ft;
+        return new FunctionTypeImpl(model);
     }
 
     /**
