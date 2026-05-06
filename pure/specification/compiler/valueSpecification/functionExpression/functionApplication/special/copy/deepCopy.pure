@@ -1,0 +1,64 @@
+###Pure
+function test::copy::testDeepCopy(): Any[*]
+{
+  let a = ^test::copy::Address(name='NYC');
+  let p = ^test::copy::Person(name='Pierre', address=$a);
+  let q = ^$p(address.name = 'Paris');
+}
+
+Class test::copy::Person
+{
+  name: String[1];
+  address: test::copy::Address[1];
+}
+
+Class test::copy::Address
+{
+  name: String[1];
+}
+
+###CompiledGraph
+function test::copy::testDeepCopy__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::Address##[1]#  ~@FunctionInvocation@  @4:3-4:42
+    typeParam T -> #test::copy::Address#
+    mulParam m -> #[1]#
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @4:7-4:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::Address##[1]#  ~@FunctionInvocation@  @4:11-4:42
+      typeParam T -> test::copy::Address
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::Address|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::Address|1>  @4:11-4:42
+      Collection :#KeyExpression#[1]  ~@Collection@  @4:11-4:42
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @4:32-4:41
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @4:32-4:41
+          AtomicValue  'NYC' :@String@[1]  ~@AtomicValue@  @4:37-4:41
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::Person##[1]#  ~@FunctionInvocation@  @5:3-5:56
+    typeParam T -> #test::copy::Person#
+    mulParam m -> #[1]#
+    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @5:7-5:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::Person##[1]#  ~@FunctionInvocation@  @5:11-5:56
+      typeParam T -> test::copy::Person
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::Person|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::Person|1>  @5:11-5:56
+      Collection :#KeyExpression#[2]  ~@Collection@  @5:11-5:56
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @5:31-5:43
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @5:31-5:43
+          AtomicValue  'Pierre' :@String@[1]  ~@AtomicValue@  @5:36-5:43
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @5:46-5:55
+          AtomicValue  'address' :@String@[1]  ~@AtomicValue@  @5:46-5:55
+          Variable a :#test::copy::Address##[1]#  ~@VariableExpression@  @5:54-5:55
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::Person##[1]#  ~@FunctionInvocation@  @6:3-6:37
+    typeParam T -> #test::copy::Person#
+    mulParam m -> #[1]#
+    AtomicValue  'q' :@String@[1]  ~@AtomicValue@  @6:7-6:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::Person##[1]#  ~@FunctionInvocation@  @6:11-6:37
+      typeParam T -> #test::copy::Person#
+      Variable p :#test::copy::Person##[1]#  ~@VariableExpression@  @6:12-6:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:37
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:15-6:36
+          AtomicValue  'address.name' :@String@[1]  ~@AtomicValue@  @6:15-6:36
+          AtomicValue  'Paris' :@String@[1]  ~@AtomicValue@  @6:30-6:36
+
+class test::copy::Person extends Any  ~Class<test::copy::Person>  @9:1-13:1
+  property name :@String@[1]  ~Property<test::copy::Person, @String@|1>
+  property address :test::copy::Address[1]  ~Property<test::copy::Person, test::copy::Address|1>
+
+class test::copy::Address extends Any  ~Class<test::copy::Address>  @15:1-18:1
+  property name :@String@[1]  ~Property<test::copy::Address, @String@|1>

@@ -1,0 +1,96 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::qualifiedPropertyCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::structural::generalizationCompiler::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::extension::*;
+
+function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::protocol::grammar::type::Class[1], context:CompilerContext[1]):CompilerResult<Class<Any>>[1]
+{
+    let packagePath = if($protocolClass.package->isEmpty(), | '', | $protocolClass.package->toOne().value);
+    let className = if($packagePath == '', | $protocolClass.name, | $packagePath + '::' + $protocolClass.name);
+    let skeleton = $context->resolveElement($className)->toOne()->cast(@Class<Any>);
+
+    let propertyAccum = $protocolClass.properties->fold({p, acc |
+        let result = $p->compileProperty($acc.context, $packagePath, $skeleton);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^CompilerListResult<Property<Nil, Any|*>>(context = $context));
+    let compiledProperties = $propertyAccum.values;
+    let ctx1 = $propertyAccum.context;
+
+    let ownerCtx = 'class \'' + $className + '\'';
+
+    let genAccum = compileGeneralizations($protocolClass.generalizations, $skeleton, $ctx1, $packagePath, $ownerCtx);
+    let compiledGeneralizations = $genAccum.values;
+    let ctx2 = $genAccum.context;
+
+    let stereoAccum = $protocolClass.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^CompilerListResult<Stereotype>(context = $ctx2));
+    let compiledStereotypes = $stereoAccum.values;
+    let ctx3 = $stereoAccum.context;
+
+    let tvAccum = $protocolClass.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^CompilerListResult<TaggedValue>(context = $ctx3));
+    let compiledTaggedValues = $tvAccum.values;
+    let ctx4 = $tvAccum.context;
+
+    let typeVariables = if($protocolClass.typeVariables->isEmpty(), | [],
+        | $protocolClass.typeVariables->map(tv |
+            let genType = $tv.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->toOne()->cast(@meta::pure::protocol::grammar::type::Type_Pointer).value;
+            let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
+            ^meta::pure::metamodel::valuespecification::VariableExpression(
+                name = $tv.name,
+                genericType = meta::pure::compiler::helper::genericType::buildCanonicalOrUserDefinedGenericType($ctx4->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type), $ctx4),
+                multiplicity = $mMult
+            );
+        )
+    );
+
+    let ownerGenericType = $skeleton.classifierGenericType->toOne()->genericTypeTypeArguments()->at(0);
+    let constraintAccum = compileConstraints($protocolClass.constraints, $ownerGenericType, $typeVariables, $ctx4);
+    let compiledConstraints = $constraintAccum.values;
+    let ctx5 = $constraintAccum.context;
+
+    // Compile qualified properties
+    let qpAccum = $protocolClass.qualifiedProperties->fold({qp, acc |
+        let result = $qp->compileQualifiedProperty($acc.context, $packagePath, $skeleton);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^CompilerListResult<QualifiedProperty<Any>>(context = $ctx5));
+    let compiledQPs = $qpAccum.values;
+    let ctx6 = $qpAccum.context;
+
+    ^CompilerResult<Class<Any>>(
+        value = ^$skeleton(
+            stereotypes = $compiledStereotypes,
+            taggedValues = $compiledTaggedValues,
+            typeVariables = $typeVariables,
+            generalizations = $compiledGeneralizations->map(g | ^$g(specific = ~.~)),
+            properties = $compiledProperties->map(p | ^$p(owner = ~.~)),
+            qualifiedProperties = $compiledQPs->map(qp | ^$qp(owner = ~.~)),
+            constraints = $compiledConstraints
+        ),
+        context = $ctx6
+    );
+}
+
+

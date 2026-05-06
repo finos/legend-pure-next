@@ -1,0 +1,46 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::functions::lang::*;
+
+function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::protocol::grammar::extension::Profile[1], ctx:CompilerContext[1]):CompilerContext[1]
+{
+    let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
+    let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    let profileSkeletonInt = ^Profile(
+        name = $pr.name,
+        package = $pkgRes.value->toOne(),
+        p_stereotypes = $pr.p_stereotypes->map(s |
+            ^Stereotype(value = $s.value, profile = ~.~);
+        ),
+        p_tags = $pr.p_tags->map(t |
+            ^Tag(value = $t.value, profile = ~.~);
+        ),
+        sourceInformation = compileSourceInformation($pr.p_sourceInformation)
+    );
+
+    // ^Profile(...) above already sets classifierGenericType to the canonical
+    // GenericType_Profile UDPGT-PE via the platform new() native's
+    // preferCanonicalAnchor. Don't override with a fresh inline UDGT — that
+    // would lose the canonical reference and diverge from how Stereotype, Tag,
+    // and other M3 elements are built (which don't override).
+    putElementUnderPackage($pkgRes.context, $prName, $packagePath, $profileSkeletonInt);
+}

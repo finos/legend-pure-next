@@ -1,0 +1,67 @@
+// Copyright 2024 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package org.finos.legend.pure.truffle.ast.natives.assert_;
+
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.NodeInfo;
+import org.finos.legend.pure.truffle.ast.PureNode;
+
+/**
+ * {@code assert(Boolean[1], Function<{->String[1]}>[1]) : Boolean[1]} -- assert with lazy message.
+ * {@code assert(Boolean[1]) : Boolean[1]} -- assert without message.
+ */
+@NodeInfo(shortName = "assert")
+public final class AssertNode extends PureNode
+{
+    @Child
+    private PureNode conditionArg;
+
+    @Child
+    private PureNode messageFnArg;
+
+    @Child
+    private org.finos.legend.pure.truffle.ast.RawLambdaCallNode msgCallNode = new org.finos.legend.pure.truffle.ast.RawLambdaCallNode();
+
+    public AssertNode(PureNode conditionArg, PureNode messageFnArg)
+    {
+        this.conditionArg = conditionArg;
+        this.messageFnArg = messageFnArg;
+    }
+
+    @Override
+    public Object executeGeneric(VirtualFrame frame)
+    {
+        if (!conditionArg.executeBoolean(frame))
+        {
+            if (messageFnArg != null)
+            {
+                Object msgFn = messageFnArg.executeGeneric(frame);
+                throwWithMessage(msgFn);
+            }
+            else
+            {
+                throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError("Assert failed", this);
+            }
+        }
+        return true;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private void throwWithMessage(Object msgFn)
+    {
+        Object message = msgCallNode.call(msgFn);
+        throw new org.finos.legend.pure.truffle.ast.PureException.AssertionError(String.valueOf(message), this);
+    }
+}

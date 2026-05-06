@@ -1,0 +1,24 @@
+Class a::G<T>
+{
+    p: T[1];
+}
+
+function test():Integer[1]
+{
+    let g = a::G;
+    $g.properties->size();
+}
+
+###CompiledGraph
+class a::G extends Any  ~Class<a::G<T~a::G>>  @1:1-4:1
+  property p :T~a::G[1]  ~Property<a::G<T~a::G>, T~a::G|1>
+
+function test__Integer_1_():@Integer@[1]  ~UserDefinedFunction<{->@Integer@[1]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<#a::G<?>#>##[1]#  ~@FunctionInvocation@  @8:5-8:16
+    typeParam T -> #Class<#a::G<?>#>#
+    mulParam m -> [1]
+    AtomicValue  'g' :@String@[1]  ~@AtomicValue@  @8:9-8:9
+    AtomicValue  a::G :#Class<#a::G<?>#>#[1]  ~@AtomicValue@  @8:13-8:16
+  ArrowInvocation size_Any_MANY__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @9:18-9:25
+    DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @9:7-9:17
+      Variable g :#Class<#a::G<?>#>##[1]#  ~@VariableExpression@  @9:5-9:6

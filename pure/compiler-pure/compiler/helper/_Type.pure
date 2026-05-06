@@ -1,0 +1,301 @@
+import meta::pure::compiler::helper::type::*;
+
+// Compare two types by path — equivalent to Java's pointer equality since Java resolves to unique singletons.
+// In Pure, types loaded from PDB may be different instances for the same type, so we compare by path.
+function meta::pure::compiler::helper::type::typeEquals(t1:Type[1], t2:Type[1]):Boolean[1]
+{
+    if($t1 == $t2,
+        | true,
+        | $t1->match([
+              pa:PackageableElement[1] | $t2->match([pb:PackageableElement[1] | $pa->elementToPath() == $pb->elementToPath(), other:Any[1] | false]),
+              // Experiment: rely on identity (the $t1 == $t2 short-circuit) for
+              // TypeParameter equality. If TypeParameters are identity-preserved
+              // within their owner scope, this is strictly more correct than the
+              // previous name-only compare (which returned true for cross-scope
+              // collisions like `f<T>` vs `g<T>`).
+              tp1:TypeParameter[1] | false,
+              other:Any[1] | false
+          ])
+    );
+}
+
+function meta::pure::compiler::helper::type::isTopType(t:Type[1]):Boolean[1]
+{
+    $t->match(
+        [
+            pe : PackageableElement[1] | $pe.name == 'Any',
+            a  : Any[1] | false
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::type::isBottomType(t:Type[1]):Boolean[1]
+{
+    $t->match(
+        [
+            pe : PackageableElement[1] | $pe.name == 'Nil',
+            a  : Any[1] | false
+        ]
+    )
+}
+
+function meta::pure::compiler::helper::type::directSupertypes(t:Type[1]):Type[*]
+{
+    $t.generalizations->map(g | $g.general->genericTypeRawType())
+}
+
+function meta::pure::compiler::helper::type::genericTypeRawType(gt:GenericType[1]):Type[0..1]
+{
+    $gt->match(
+        [
+            gtv : GenericTypeValue[1] | $gtv.type,
+            a   : Any[1]              | []
+        ]
+    )
+}
+
+// Returns the C3 linearization of {@code t} as element paths. Non-PackageableElement
+// types (FunctionType / RelationType / TypeParameter instances) have no path and no
+// inheritance to walk, so the result is empty for those inputs. Callers that need
+// identity equality on non-PE types should short-circuit via {@link typeEquals}
+// before consulting linearize.
+//
+// PE-typed inputs hit the {@code linearizationCache} on
+// {@code context} — a map from path to the precomputed linearization. The cache
+// is built between pass 2 and pass 3 by {@code buildLinearizationCache} and
+// covers source elements + universe-reachable built-ins. A miss is reported via
+// {@code println} so coverage gaps are visible during development; callers fall
+// back to a full C3 walk in that case.
+function meta::pure::compiler::helper::type::linearize(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+{
+    if(!$t->instanceOf(PackageableElement),
+        | [],
+        | let path = $t->cast(@PackageableElement)->elementToPath();
+          let cached = $context.linearizationCache->get($path);
+          assert($cached->isNotEmpty(), | 'LINEARIZE MISS: ' + $path + ' — buildLinearizationCache must seed every PE Type before this call');
+          $cached->toOne().values;
+    );
+}
+
+// Path-based linearization is unaffected by path-preserving resolves —
+// canonicalizing a Type to a different instance doesn't change its path. Apply
+// resolve once at the entry, then go through the cached 1-arg overload. This
+// keeps the hot {@code findCommonType} caller on the cache fast path instead of
+// walking generalizations on every call.
+function meta::pure::compiler::helper::type::linearize(t:Type[1], resolve:Function<{Type[1]->Type[1]}>[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+{
+    $resolve->eval($t)->linearize($context)
+}
+
+// Actual C3 walk — used to populate the cache and as the cache-miss fallback.
+// Recurses into itself for ancestors (rather than {@code linearize}) so that
+// during cache build we don't trigger spurious miss prints on every ancestor:
+// the cache is empty during the build, and entries are only inserted in bulk
+// at the end.
+function meta::pure::compiler::helper::type::linearizeWalk(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):String[*]
+{
+    if(!$t->instanceOf(PackageableElement),
+        | [],
+        | let resolvedPath = $t->cast(@PackageableElement)->elementToPath();
+          let parents = $t->directSupertypes();
+          if($parents->isEmpty(),
+              | $resolvedPath,
+              | let parentLins = $parents->map(p | $p->linearizeWalk($context)->list());
+                let parentPathLists = $parents->map(p |
+                    if($p->instanceOf(PackageableElement),
+                        | ^List<String>(values = $p->cast(@PackageableElement)->elementToPath()),
+                        | ^List<String>(values = [])
+                    )
+                );
+                let listsToMerge = $parentLins->concatenate($parentPathLists);
+                $resolvedPath->concatenate($listsToMerge->c3merge());
+          );
+    );
+}
+
+function meta::pure::compiler::helper::type::c3merge(lists:List<String>[*]):String[*]
+{
+    let nonEmpty = $lists->filter(l | $l.values->isNotEmpty());
+    if($nonEmpty->isEmpty(),
+        | [],
+        | let heads = $nonEmpty->map(l | $l.values->at(0));
+          let goodHead = $heads->filter(h | $nonEmpty->filter(l | if($l.values->size() <= 1, | true, | $l.values->tail()->filter(v | $v == $h)->isEmpty()))->size() == $nonEmpty->size());
+          if($goodHead->isEmpty(),
+              | [],
+              | let c = $goodHead->at(0);
+                let reduced = $nonEmpty->map(l | if($l.values->at(0) == $c, | ^List<String>(values = $l.values->tail()), | $l));
+                $c->concatenate($reduced->c3merge());
+          );
+    );
+}
+
+function meta::pure::compiler::helper::type::subtypeOf(sub:Type[1], super:Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+{
+    if([pair(| typeEquals($sub, $super), | true),
+        pair(| $sub->isBottomType() || $super->isTopType(), | true),
+        pair(| !$super->instanceOf(PackageableElement), | false)],
+       | let superPath = $super->cast(@PackageableElement)->elementToPath();
+         $sub->linearize($context)->contains($superPath);
+    );
+}
+
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+{
+    $types->findCommonType(false, $context)
+}
+
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+{
+    findCommonType($types, $contravariant, {x:Type[1] | $x}, $context);
+}
+
+function meta::pure::compiler::helper::type::findCommonType(types:Type[*], contravariant:Boolean[1], resolve:Function<{Type[1]->Type[1]}>[1], context:meta::pure::compiler::CompilerContext[1]):Type[0..1]
+{
+    if([pair(| $types->isEmpty(), | []),
+        pair(| $types->size() == 1, | $types->at(0))],
+       | let first = $types->at(0);
+         if($types->forAll(t | typeEquals($t, $first)),
+             | $first,
+             | let nonNil = $types->filter(t | !$t->isBottomType());
+               if($nonNil->size() < $types->size(),
+                   | // Nil is present
+                     if([pair(| $contravariant, | Nil),
+                         pair(| $nonNil->isEmpty(), | Nil)],
+                        | $nonNil->findCommonType(false, $resolve, $context)
+                     ),
+                   | // RelationType logic blocked here since it is Tier 3
+                     let linearizations = $types->map(t | $t->linearize($resolve, $context)->list());
+                     let firstLin = $linearizations->at(0).values;
+
+                     if($contravariant,
+                         | Nil, // GLB of unrelated types defaults to Nil
+                         | let commonPath = $firstLin->filter(candidate |
+                               $linearizations->forAll(lin | $lin.values->contains($candidate))
+                           )->head();
+                           if($commonPath->isEmpty(),
+                               | Any,
+                               | // Walk the first input's generalization chain to recover
+                                 // a Type instance for the common path. The path was produced
+                                 // by walking that same chain, so the lookup always finds a
+                                 // match.
+                                 let resolvedFirst = $resolve->eval($types->at(0));
+                                 let found = findTypeByPath($resolvedFirst, $commonPath->toOne());
+                                 if($found->isEmpty(), | Any, | $found->toOne());
+                           );
+                     );
+               );
+         );
+    );
+}
+
+// Walk the type's generalization chain to find a Type whose path matches.
+// Used by findCommonType to convert a c3merge path result back to a Type.
+function meta::pure::compiler::helper::type::findTypeByPath(t:Type[1], path:String[1]):Type[0..1]
+{
+    if($t->instanceOf(PackageableElement) && $t->cast(@PackageableElement)->elementToPath() == $path,
+        | $t,
+        | $t->directSupertypes()->map(p | findTypeByPath($p, $path))->head();
+    )
+}
+
+
+function meta::pure::compiler::helper::type::isFunctionType(t:Type[1], context:meta::pure::compiler::CompilerContext[1]):Boolean[1]
+{
+    $t->linearize($context)->contains('meta::pure::metamodel::function::Function')
+}
+
+// Tests
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsTopType():Boolean[1]
+{
+    assert(Any->isTopType());
+    assertFalse(String->isTopType());
+    assertFalse(Integer->isTopType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsBottomType():Boolean[1]
+{
+    assert(Nil->isBottomType());
+    assertFalse(Any->isBottomType());
+    assertFalse(String->isBottomType());
+}
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testLinearize():Boolean[1]
+{
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let anyPath = Any->elementToPath();
+    let numberPath = Number->elementToPath();
+    let integerPath = Integer->elementToPath();
+    let stringPath = String->elementToPath();
+    let floatPath = Float->elementToPath();
+
+    // Any linearizes to just itself (no parents)
+    let anyLin = Any->linearize($ctx);
+    assertEquals(1, $anyLin->size());
+    assertEquals($anyPath, $anyLin->at(0));
+
+    // Integer -> Number -> Any
+    let intLin = Integer->linearize($ctx);
+    assertEquals(3, $intLin->size());
+    assertEquals($integerPath, $intLin->at(0));
+    assertEquals($numberPath, $intLin->at(1));
+    assertEquals($anyPath, $intLin->at(2));
+
+    // String -> Any
+    let strLin = String->linearize($ctx);
+    assertEquals(2, $strLin->size());
+    assertEquals($stringPath, $strLin->at(0));
+    assertEquals($anyPath, $strLin->at(1));
+
+    // Float -> Number -> Any
+    let floatLin = Float->linearize($ctx);
+    assertEquals(3, $floatLin->size());
+    assertEquals($floatPath, $floatLin->at(0));
+    assertEquals($numberPath, $floatLin->at(1));
+    assertEquals($anyPath, $floatLin->at(2));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testSubtypeOf():Boolean[1]
+{
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    assert(Integer->subtypeOf(Integer, $ctx));
+    assert(Integer->subtypeOf(Number, $ctx));
+    assert(Integer->subtypeOf(Any, $ctx));
+    assertFalse(Any->subtypeOf(Integer, $ctx));
+    assert(Nil->subtypeOf(Integer, $ctx));
+    assert(Nil->subtypeOf(String, $ctx));
+    assert(Nil->subtypeOf(Any, $ctx));
+    assert(String->subtypeOf(Any, $ctx));
+}
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testFindCommonType():Boolean[1]
+{
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    let sameTypes = [Integer, Integer];
+    assertEquals(Integer, $sameTypes->findCommonType($ctx));
+    let numTypes = [Integer, Float];
+    assertEquals(Number, $numTypes->findCommonType($ctx));
+    let mixedTypes = [Integer, String];
+    assertEquals(Any, $mixedTypes->findCommonType($ctx));
+
+    // Covariant with Nil: Nil is ignored (LCA of {X, Nil} = X)
+    let withNil = [Integer, Nil]->cast(@Type);
+    assertEquals(Integer, $withNil->findCommonType(false, $ctx));
+
+    // Contravariant (GLB): result is always Nil for nominal types
+    assertEquals(Nil, [Integer, Float]->cast(@Type)->findCommonType(true, $ctx));
+    assertEquals(Nil, [Integer, String]->cast(@Type)->findCommonType(true, $ctx));
+
+    // Contravariant with Nil input: result is Nil
+    assertEquals(Nil, [Integer, Nil]->cast(@Type)->findCommonType(true, $ctx));
+}
+
+
+function <<test.Test>> meta::pure::compiler::helper::type::tests::testIsFunctionType():Boolean[1]
+{
+    let ctx = meta::pure::compiler::newPlainCompilerContext();
+    assertFalse(Integer->isFunctionType($ctx));
+    assertFalse(String->isFunctionType($ctx));
+    assertFalse(Class->isFunctionType($ctx));
+    assertFalse(Any->isFunctionType($ctx));
+}

@@ -1,0 +1,45 @@
+###Pure
+import test::copy::parentRef::*;
+
+function test::copy::parentRef::testCopySelfReference(): Any[*]
+{
+  let n = ^Node(value=1);
+  let c = ^$n(next=~);
+}
+
+Class test::copy::parentRef::Node
+{
+  value: Integer[1];
+  next: Node[0..1];
+}
+
+###CompiledGraph
+function test::copy::parentRef::testCopySelfReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:3-6:24
+    typeParam T -> #test::copy::parentRef::Node#
+    mulParam m -> #[1]#
+    AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @6:7-6:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:11-6:24
+      typeParam T -> test::copy::parentRef::Node
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::copy::parentRef::Node|1>  @6:11-6:24
+      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:24
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:17-6:23
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @6:17-6:23
+          AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:23-6:23
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @7:3-7:21
+    typeParam T -> #test::copy::parentRef::Node#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @7:7-7:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::copy::parentRef::Node##[1]#  ~@FunctionInvocation@  @7:11-7:21
+      typeParam T -> #test::copy::parentRef::Node#
+      Variable n :#test::copy::parentRef::Node##[1]#  ~@VariableExpression@  @7:12-7:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @7:11-7:21
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:15-7:20
+          AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @7:15-7:20
+          FunctionInvocation parentReference_Integer_1__String_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @7:20-7:20
+            AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @7:20-7:20
+            AtomicValue  '' :@String@[1]  ~@AtomicValue@  @7:20-7:20
+
+class test::copy::parentRef::Node extends Any  ~Class<test::copy::parentRef::Node>  @10:1-14:1
+  property value :@Integer@[1]  ~Property<test::copy::parentRef::Node, @Integer@|1>
+  property next :test::copy::parentRef::Node[0..1]  ~Property<test::copy::parentRef::Node, test::copy::parentRef::Node|0..1>

@@ -1,0 +1,80 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::*;
+import meta::pure::compiler::*;
+
+// Mirrors Java SourceInformationCompiler.compile(src, model) — element-level
+// metadata path with NO fallback. Used for declarative/structural source info
+// (class, association, property, profile declarations, etc.). If grammar
+// parser emits null sourceId, the resulting SI also has null sourceId.
+function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformation(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1]):SourceInformation[0..1]
+{
+    $grammarSI->map(si |
+        ^SourceInformation(
+            sourceId = $si.sourceId,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        );
+    )
+}
+
+// Mirrors Java SourceInformationCompiler.compile(src, fallbackSourceId, model)
+// — body VS path WITH fallback. Used for VS expressions inside function bodies
+// where the parser builds line/column but doesn't carry the section path.
+function meta::pure::compiler::structural::sourceInformationCompiler::compileSourceInformationWithFallback(grammarSI:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):SourceInformation[0..1]
+{
+    $grammarSI->map(si |
+        let sid = if($si.sourceId->isNotEmpty(), | $si.sourceId, | $context.sourceId);
+        ^SourceInformation(
+            sourceId = $sid,
+            startLine = $si.startLine,
+            startColumn = $si.startColumn,
+            endLine = $si.endLine,
+            endColumn = $si.endColumn
+        );
+    )
+}
+
+function meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo(si:meta::pure::protocol::grammar::SourceInformation[0..1], context:CompilerContext[1]):String[1]
+{
+    if($si->isEmpty(),
+        | '',
+        | let psi = $si->toOne();
+          let sid = if([pair(| $psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
+          if($sid->length() > 0,
+              | ' (at ' + $sid + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
+              | ''
+          );
+    );
+}
+
+function meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo(si:SourceInformation[0..1], context:CompilerContext[1]):String[1]
+{
+    if($si->isEmpty(),
+        | '',
+        | let msi = $si->toOne();
+          let sid = if([pair(| $msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne()),
+                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
+                       | '');
+          if($sid->length() > 0,
+              | ' (at ' + $sid + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
+              | ''
+          );
+    );
+}

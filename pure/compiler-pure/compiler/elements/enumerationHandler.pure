@@ -1,0 +1,80 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::propertyCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::functions::lang::*;
+
+function meta::pure::compiler::elements::compileEnumeration(protocolEnum:meta::pure::protocol::grammar::type::Enumeration[1], context:CompilerContext[1]):CompilerResult<Enumeration<Any>>[1]
+{
+    let packagePath = $protocolEnum.package->toOne().value;
+    let enumName = $packagePath + '::' + $protocolEnum.name;
+    let skeleton = $context->resolveElement($enumName)->toOne()->cast(@Enumeration<Any>);
+
+    let ownerCtx = 'enumeration \'' + $enumName + '\'';
+    let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatSourceInfo($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $context);
+
+    // Check for duplicate enum value names
+    let dupNames = $protocolEnum.properties->map(p | $p.name)->filter(n | $protocolEnum.properties->filter(p | $p.name == $n)->size() > 1)->removeDuplicates();
+    let ctx0 = $dupNames->fold({d, c |
+        ^$c(errors += 'Duplicate enum value \'' + $d + '\' in ' + $ownerCtx + $siCtx);
+    }, $context);
+
+    // Add stereotypes/taggedValues to existing enum value properties (created by newEnumeration in pass 1)
+    let updatedProps = $skeleton.properties->map(prop |
+        let protocolProp = $protocolEnum.properties->filter(p | $p.name == $prop.name);
+        if($protocolProp->isEmpty(),
+            | $prop,
+            | let pp = $protocolProp->head()->toOne();
+              let stereoResult = compilePropertyStereotypes($pp, $ctx0, $ownerCtx);
+              let tvResult = compilePropertyTaggedValues($pp, $ctx0, $ownerCtx);
+              let si = compileSourceInformation($pp.p_sourceInformation);
+              ^$prop(
+                  stereotypes = $stereoResult.values,
+                  taggedValues = $tvResult.values,
+                  sourceInformation = $si
+              );
+        );
+    );
+
+    // Compile stereotypes and tagged values on the enumeration itself
+    let stereoAccum = $protocolEnum.stereotypes->fold({s, acc |
+                                compileStereotype($s, $acc, $ownerCtx);
+                            }, ^CompilerListResult<Stereotype>(context = $ctx0));
+    let tvAccum = $protocolEnum.taggedValues->fold({t, acc |
+                                compileTaggedValue($t, $acc, $ownerCtx);
+                            }, ^CompilerListResult<TaggedValue>(context = $stereoAccum.context));
+
+    let si = compileSourceInformation($protocolEnum->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation);
+    ^CompilerResult<Enumeration<Any>>(
+        value = ^$skeleton(
+            stereotypes = $stereoAccum.values,
+            taggedValues = $tvAccum.values,
+            properties = $updatedProps,
+            sourceInformation = $si
+        ),
+        context = $tvAccum.context
+    );
+}
+

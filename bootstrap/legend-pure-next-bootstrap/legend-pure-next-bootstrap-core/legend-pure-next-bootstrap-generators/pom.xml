@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2024 Goldman Sachs
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.finos.legend.pure</groupId>
+        <artifactId>legend-pure-next-bootstrap-core</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>legend-pure-next-bootstrap-generators</artifactId>
+    <name>Legend Pure - Next - Bootstrap - Java Generators</name>
+    <description>Java and FlatBuffer code generators from RDF/TTL files.</description>
+
+    <dependencies>
+        <!-- Apache Jena for RDF parsing -->
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-arq</artifactId>
+            <version>${jena.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-core</artifactId>
+            <version>${jena.version}</version>
+        </dependency>
+
+        <!-- Eclipse Collections -->
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.collections</groupId>
+            <artifactId>eclipse-collections-api</artifactId>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <spec.dir>${project.basedir}/../../../../pure/specification</spec.dir>
+        <gen.spec.dir>${project.build.directory}/generated-specification</gen.spec.dir>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <!-- Generate m3.pure from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-pure</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfPureGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}/m3.pure</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3.fbs from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-fbs</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfFbsSchemaGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}</argument>
+                                <argument>--ids</argument>
+                                <argument>${spec.dir}/m3-fbs-field-ids.txt</argument>
+                                <argument>${spec.dir}/m3_fbs_addition.fbs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3_protocol.ttl from m3.ttl -->
+                    <execution>
+                        <id>generate-m3-protocol-ttl</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.M3ProtocolGenerator</mainClass>
+                            <arguments>
+                                <argument>${spec.dir}/m3.ttl</argument>
+                                <argument>${gen.spec.dir}/m3_protocol.ttl</argument>
+                                <argument>${spec.dir}/m3_protocol_addition.ttl</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <!-- Generate m3_protocol.pure from m3_protocol.ttl -->
+                    <execution>
+                        <id>generate-m3-protocol-pure</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>org.finos.legend.pure.specification.generation.RdfPureGenerator</mainClass>
+                            <arguments>
+                                <argument>${gen.spec.dir}/m3_protocol.ttl</argument>
+                                <argument>${gen.spec.dir}/protocol/m3_protocol.pure</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Package generated spec files as JAR resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package-generated-spec</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/generated-specification</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${gen.spec.dir}</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${spec.dir}</directory>
+                                    <includes>
+                                        <include>m3.ttl</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

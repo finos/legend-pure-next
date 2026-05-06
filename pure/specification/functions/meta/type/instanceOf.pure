@@ -1,0 +1,163 @@
+// Copyright 2022 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::functions::meta::tests::model::*;
+import meta::pure::test::pct::*;
+
+native function <<PCT.function, PCT.platformOnly>> meta::pure::functions::meta::instanceOf(instance:Any[1], type:Type[1]):Boolean[1];
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitive():Boolean[1]
+{
+    assert(1->instanceOf(Integer));
+    assert(1->instanceOf(Number));
+    assert(1->instanceOf(Any));
+    assertFalse(1->instanceOf(String));
+    assertFalse(1->instanceOf(Boolean));
+    assertFalse(1->instanceOf(Date));
+    assertFalse(1->instanceOf(Float));
+
+    assert('the quick brown fox jumps over the lazy dog'->instanceOf(String));
+    assert('the quick brown fox jumps over the lazy dog'->instanceOf(Any));
+    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Integer));
+    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Number));
+    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Boolean));
+    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Date));
+    assertFalse('the quick brown fox jumps over the lazy dog'->instanceOf(Float));
+
+    assert(true->instanceOf(Boolean));
+    assert(true->instanceOf(Any));
+    assertFalse(true->instanceOf(Integer));
+    assertFalse(true->instanceOf(Number));
+    assertFalse(true->instanceOf(String));
+    assertFalse(true->instanceOf(Date));
+    assertFalse(true->instanceOf(Float));
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfPrimitiveType():Boolean[1]
+{
+    assert(Boolean->instanceOf(PrimitiveType));
+    assert(Date->instanceOf(PrimitiveType));
+    assert(Integer->instanceOf(PrimitiveType));
+    assert(Float->instanceOf(PrimitiveType));
+    assert(Number->instanceOf(PrimitiveType));
+    assert(String->instanceOf(PrimitiveType));
+}
+
+function <<test.Test>>   meta::pure::functions::meta::tests::instanceOf::testInstanceOfDate():Boolean[1]
+{
+    assert(%2015-01-01->instanceOf(Date));
+    assertFalse(1->instanceOf(Date));
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfInstance():Boolean[1]
+{
+    let a = ^CC_Address(name='Jersey City', type=CC_GeographicEntityType.CITY);
+    assert($a->instanceOf(CC_Address));
+    assert($a->instanceOf(CC_GeographicEntity));
+    assert($a->instanceOf(Any));
+    assertFalse($a->instanceOf(CC_Person));
+    assertFalse($a->instanceOf(Integer));
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfClass():Boolean[1]
+{
+    assert(CC_Person->instanceOf(Class));
+    assert(CC_Person->instanceOf(Type));
+    assert(CC_Person->instanceOf(Any));
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfEnum():Boolean[1]
+{
+    assert(CC_GeographicEntityType->instanceOf(Type));
+    assert(CC_GeographicEntityType->instanceOf(Any));
+    assertFalse(CC_GeographicEntityType->instanceOf(Class));
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromEnumVal():Boolean[1]
+{
+    assert(CC_GeographicEntityType.CITY->instanceOf(CC_GeographicEntityType));
+    assert(CC_GeographicEntityType.CITY->instanceOf(Enum));
+    assert(CC_GeographicEntityType.CITY->instanceOf(Any));
+    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Enumeration));
+    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Type));
+    assertFalse(CC_GeographicEntityType.CITY->instanceOf(Integer));
+}
+
+// Pins the runtime-type-preservation expectation across platforms: when a
+// Java primitive value is extracted from a property whose declared type is
+// `Any[*]` (e.g. AtomicValue.value), `instanceOf` must use the value's
+// runtime type rather than the property's declared `Any` type. Otherwise
+// `subtypeOf(Any, Integer)` is false and `instanceOf(Integer)` returns false.
+//
+// This is the bug exposed by `_CompiledGraphPrinter.formatLiteral` when it
+// switched from declared-type strings to value-based `instanceOf` checks —
+// Truffle handled it correctly, Pure-on-Java did not.
+Class meta::pure::functions::meta::tests::instanceOf::AnyHolder
+{
+    value: Any[1];
+}
+
+Class meta::pure::functions::meta::tests::instanceOf::NumberHolder
+{
+    value: Number[1];
+}
+
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty():Boolean[1]
+{
+    let h1 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 42);
+    assert($h1.value->instanceOf(Integer));
+    assert($h1.value->instanceOf(Number));
+    assert($h1.value->instanceOf(Any));
+    assertFalse($h1.value->instanceOf(String));
+
+    let h2 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = 'hello');
+    assert($h2.value->instanceOf(String));
+    assert($h2.value->instanceOf(Any));
+    assertFalse($h2.value->instanceOf(Integer));
+
+    let h3 = ^meta::pure::functions::meta::tests::instanceOf::AnyHolder(value = true);
+    assert($h3.value->instanceOf(Boolean));
+    assertFalse($h3.value->instanceOf(Integer));
+}
+
+// Pins runtime-type narrowing through a non-Any supertype property: a Number
+// property holding an Integer must report as Integer when checked, not just
+// Number. Without this, `instanceOf(Integer)` on a value extracted from a
+// Number-typed field would return false even though the runtime value IS an
+// Integer.
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromSupertypeProperty():Boolean[1]
+{
+    let n = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 7);
+    assert($n.value->instanceOf(Integer));
+    assert($n.value->instanceOf(Number));
+    assert($n.value->instanceOf(Any));
+
+    let f = ^meta::pure::functions::meta::tests::instanceOf::NumberHolder(value = 3.14);
+    assert($f.value->instanceOf(Float));
+    assert($f.value->instanceOf(Number));
+    assertFalse($f.value->instanceOf(Integer));
+}
+
+// Pins that a property declared with a more-specific type than the Java
+// representation is honored over the runtime type: `%2015-03-14` is stored as
+// a Java String, but its declared type is StrictDate (or the property type
+// might be Date). `instanceOf` must return StrictDate, not String.
+function <<test.Test>> meta::pure::functions::meta::tests::instanceOf::testInstanceOfDateLiteralKeepsDateType():Boolean[1]
+{
+    assert(%2015-03-14->instanceOf(StrictDate));
+    assert(%2015-03-14->instanceOf(Date));
+    assert(%2015-03-14->instanceOf(Any));
+    assertFalse(%2015-03-14->instanceOf(String));
+    assertFalse(%2015-03-14->instanceOf(Integer));
+}

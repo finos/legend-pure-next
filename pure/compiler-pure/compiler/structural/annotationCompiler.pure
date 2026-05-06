@@ -1,0 +1,77 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::functions::lang::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::structural::annotationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::annotationCompiler::compileStereotype(s:meta::pure::protocol::grammar::extension::Stereotype_Pointer[1], acc:CompilerListResult<Stereotype>[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
+{
+    let ctx = $acc.context;
+    let profileOpt = $ctx->resolveElement($s.value);
+    if($profileOpt->isEmpty(),
+        | let siCtx = formatSourceInfo($s->cast(@meta::pure::protocol::grammar::type::Any).p_sourceInformation, $ctx);
+          let newCtx = ^$ctx(errors += 'The profile \'' + $s.value + '\' can\'t be found in ' + $ownerCtx + $siCtx);
+          ^$acc(context = $newCtx);,
+        | let profile = $profileOpt->toOne()->cast(@Profile);
+          let stereotypeName = $s.extraPointerValues->at(0).value;
+          let matched = $profile.p_stereotypes->filter(x | $x.value == $stereotypeName);
+          if($matched->isEmpty(),
+              | let siCtx = formatSourceInfo($s.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
+                let newCtx = ^$ctx(errors += 'The stereotype \'' + $stereotypeName + '\' can\'t be found in profile \'' + $s.value + '\' in ' + $ownerCtx + $siCtx);
+                ^$acc(context = $newCtx);,
+              | ^$acc(values += $matched->toOne())
+          );
+    );
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyStereotypes(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<Stereotype>[1]
+{
+    let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
+    $p.stereotypes->fold({s, acc |
+        compileStereotype($s, $acc, $propCtx);
+    }, ^CompilerListResult<Stereotype>(context = $ctx));
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compilePropertyTaggedValues(p:meta::pure::protocol::grammar::function::property::Property[1], ctx:CompilerContext[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
+{
+    let propCtx = 'property \'' + $p.name + '\' in ' + $ownerCtx;
+    $p.taggedValues->fold({t, acc |
+        compileTaggedValue($t, $acc, $propCtx);
+    }, ^CompilerListResult<TaggedValue>(context = $ctx));
+}
+
+function meta::pure::compiler::structural::annotationCompiler::compileTaggedValue(t:meta::pure::protocol::grammar::extension::TaggedValue[1], acc:CompilerListResult<TaggedValue>[1], ownerCtx:String[1]):CompilerListResult<TaggedValue>[1]
+{
+    let ctx = $acc.context;
+    let profileOpt = $ctx->resolveElement($t.tag.value);
+    if($profileOpt->isEmpty(),
+        | $acc,
+        | let profile = $profileOpt->toOne()->cast(@Profile);
+          let tagName = $t.tag.extraPointerValues->at(0).value;
+          let matched = $profile.p_tags->filter(x | $x.value == $tagName);
+          if($matched->isEmpty(),
+              | let siCtx = formatSourceInfo($t.tag.extraPointerValues->at(0).p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx);
+                let newCtx = ^$ctx(errors += 'The tag \'' + $tagName + '\' can\'t be found in profile \'' + $t.tag.value + '\' in ' + $ownerCtx + $siCtx);
+                ^$acc(context = $newCtx);,
+              | let tvGT = buildUserDefinedGenericType(TaggedValue);
+                let inst = new($tvGT)->cast(@TaggedValue);
+                ^$acc(values += ^$inst(tag = $matched->toOne(), value = $t.value));
+          );
+    );
+}

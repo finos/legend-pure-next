@@ -1,0 +1,38 @@
+###Pure
+Class test::Pair<A, B>
+{
+    first : A[1];
+    second : B[1];
+}
+
+function test::use():Any[*]
+{
+    let p = ^test::Pair<String, Integer>(first='hello', second=42);
+    $p.first + ' world';
+}
+
+
+###CompiledGraph
+class test::Pair extends Any  ~Class<test::Pair<A~test::Pair, B~test::Pair>>  @2:1-6:1
+  property first :A~test::Pair[1]  ~Property<test::Pair<A~test::Pair, B~test::Pair>, A~test::Pair|1>
+  property second :B~test::Pair[1]  ~Property<test::Pair<A~test::Pair, B~test::Pair>, B~test::Pair|1>
+
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Pair<@String@, @Integer@>##[1]#  ~@FunctionInvocation@  @10:5-10:66
+    typeParam T -> #test::Pair<@String@, @Integer@>#
+    mulParam m -> #[1]#
+    AtomicValue  'p' :@String@[1]  ~@AtomicValue@  @10:9-10:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Pair<@String@, @Integer@>##[1]#  ~@FunctionInvocation@  @10:13-10:66
+      typeParam T -> test::Pair<@String@, @Integer@>
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Pair<@String@, @Integer@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Pair<@String@, @Integer@>|1>  @10:13-10:66
+      Collection :#KeyExpression#[2]  ~@Collection@  @10:13-10:66
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:42-10:54
+          AtomicValue  'first' :@String@[1]  ~@AtomicValue@  @10:42-10:54
+          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @10:48-10:54
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:57-10:65
+          AtomicValue  'second' :@String@[1]  ~@AtomicValue@  @10:57-10:65
+          AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @10:64-10:65
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @11:14-11:23
+    DotApplication test::Pair.first :#String##[1]#  ~@DotApplication@  @11:7-11:12
+      Variable p :#test::Pair<@String@, @Integer@>##[1]#  ~@VariableExpression@  @11:5-11:6
+    AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @11:16-11:23

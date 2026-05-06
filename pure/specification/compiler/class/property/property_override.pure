@@ -1,0 +1,38 @@
+###Pure
+Class test::SuperClass
+{
+    demo : String[1];
+}
+
+Class test::SubClass extends test::SuperClass
+{
+    // Valid override - simple property with exact invariant type
+    demo : String[1];
+}
+
+function test::myFunc():Any[*]
+{
+    let x = ^test::SubClass(demo='a string');
+    $x.demo;
+}
+###CompiledGraph
+class test::SuperClass extends Any  ~Class<test::SuperClass>  @2:1-5:1
+  property demo :@String@[1]  ~Property<test::SuperClass, @String@|1>
+
+class test::SubClass extends test::SuperClass  ~Class<test::SubClass>  @7:1-11:1
+  property demo :@String@[1]  ~Property<test::SubClass, @String@|1>
+
+function test::myFunc__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @15:5-15:44
+    typeParam T -> #test::SubClass#
+    mulParam m -> #[1]#
+    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @15:9-15:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::SubClass##[1]#  ~@FunctionInvocation@  @15:13-15:44
+      typeParam T -> test::SubClass
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::SubClass|1>  @15:13-15:44
+      Collection :#KeyExpression#[1]  ~@Collection@  @15:13-15:44
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @15:29-15:43
+          AtomicValue  'demo' :@String@[1]  ~@AtomicValue@  @15:29-15:43
+          AtomicValue  'a string' :@String@[1]  ~@AtomicValue@  @15:34-15:43
+  DotApplication test::SubClass.demo :#String##[1]#  ~@DotApplication@  @16:7-16:11
+    Variable x :#test::SubClass##[1]#  ~@VariableExpression@  @16:5-16:6

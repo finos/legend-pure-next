@@ -1,0 +1,617 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::*;
+import meta::pure::compiler::elements::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::relationship::*;
+import meta::pure::metamodel::extension::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::functions::lang::*;
+import meta::pure::functions::date::*;
+import meta::pure::ui::progress::*;
+
+// Convenience entry for callers that have a (sourceId, content) pair rather
+// than a pre-parsed PureFile. Wraps `parse` + `compile` so the parsing
+// happens through the runtime-registered Pure parser (the test harness in
+// compilerTest.pure follows the same pattern).
+function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compileSource($sourceId, $content, false);
+}
+
+function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], debug:Boolean[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compileSource($sourceId, $content, newCompilerContext($debug), $debug);
+}
+
+function meta::pure::compiler::compileSource(sourceId:String[1], content:String[1], inputCtx:CompilerContext[1], debug:Boolean[1]):CompilationResult[1]
+{
+    let parseStart = currentTimeMillis();
+    let parsed = meta::pure::functions::meta::parse($sourceId, $content);
+    let parseMillis = currentTimeMillis() - $parseStart;
+    let result = meta::pure::compiler::compile($parsed, $inputCtx, $debug);
+    if($result.statistics->isEmpty(),
+        | $result,
+        | let s = $result.statistics->toOne();
+          ^$result(statistics = ^$s(
+              parsingMillis = $parseMillis,
+              totalMillis = $s.totalMillis + $parseMillis
+          ));
+    );
+}
+
+// One-shot directory compile: walk every `.pure` under `dir`, parse +
+// compile each via {@link compileSource}, and aggregate the
+// PackageableElements and errors into a single CompilationResult. Used by
+// self-host CLI orchestrators (`pure-bootstrap compile-via-pure`,
+// `pure-truffle compile`) — the Java side just calls this and serializes
+// the resulting elements to a `.pdb`.
+function meta::pure::compiler::compileDir(dir:String[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compileDir($dir, false);
+}
+
+function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):CompilationResult[1]
+{
+    let dirStart = currentTimeMillis();
+    let files = directoryTree($dir)->filter(f | $f->endsWith('.pure'));
+    let total = $files->size();
+    let prefixLen = $dir->length() + 1;
+    let names = $files->map(f | substring($f, $prefixLen, $f->length()));
+    startProgress('  compileDir: ' + $total->toString() + ' files under ' + $dir);
+    let folded = range(0, $total)->fold({i, acc |
+        let priorCtx = $acc.context;
+        let priorResults = $acc.values;
+        let name = $names->at($i);
+        tickProgress($i + 1, $total, $name);
+        let result = compileSource($name, readFile($files->at($i)), $priorCtx, $debug);
+        ^CompilerListResult<CompilationResult>(values = $priorResults->concatenate($result), context = $result.context->toOne());
+    }, ^CompilerListResult<CompilationResult>(values = []->cast(@CompilationResult), context = newCompilerContext($debug)));
+    finishProgress();
+    let finalCtx = $folded.context;
+    let perFileResults = $folded.values;
+    // Per-file errors are buffered (the progress bar can't share screen real estate with
+    // scrolling output). Replay them once the bar is gone so they're still surfaced before
+    // the stats summary.
+    range(0, $total)->map(i |
+        let r = $perFileResults->at($i);
+        $r.errors->map(e | println('      ERR ' + $names->at($i) + ': ' + $e));
+    );
+    let mergedElements = $finalCtx.elementMap->values();
+
+    // Aggregate per-file CompilationStatistics into a single summary. Pass timings
+    // and rollback/candidate counts sum across files; per-element entries from
+    // pass 2 and pass 3 are merged by elementPath so one row reports total wall
+    // time and total counter deltas for that element across both passes.
+    let perFileStats = $perFileResults->map(r | $r.statistics)->filter(s | $s->isNotEmpty())->map(s | $s->toOne());
+    let aggregatedStatsPreElements = aggregateCompilationStatistics($perFileStats, currentTimeMillis() - $dirStart, $total);
+    let aggregatedStats = ^$aggregatedStatsPreElements(elementCount = $mergedElements->size());
+    println(printCompilationStatisticsSummary($aggregatedStats));
+
+    ^CompilationResult(
+        elements = $mergedElements,
+        errors   = $perFileResults->map(r | $r.errors),
+        statistics = $aggregatedStats,
+        context = $finalCtx
+    );
+}
+
+// Sum per-file statistics into a single CompilationStatistics. Per-element
+// entries with the same elementPath are merged (totalMillis summed, deltas
+// summed) — pass 2 and pass 3 each produce an entry per element.
+function meta::pure::compiler::aggregateCompilationStatistics(perFile:CompilationStatistics[*], totalWallMillis:Integer[1], sourceFileCount:Integer[1]):CompilationStatistics[1]
+{
+    let allElementStats = $perFile->map(s | $s.elementStatistics)->cast(@ElementStatistics);
+    let mergedElementMap = $allElementStats->fold({es, m | mergeElementStat($m, $es)}, newMap([]->cast(@Pair<String, ElementStatistics>)));
+
+    ^CompilationStatistics(
+        totalMillis = $totalWallMillis,
+        parsingMillis = $perFile->map(s | $s.parsingMillis)->fold({a, b | $a + $b}, 0),
+        firstPassMillis = $perFile->map(s | $s.firstPassMillis)->fold({a, b | $a + $b}, 0),
+        secondPassMillis = $perFile->map(s | $s.secondPassMillis)->fold({a, b | $a + $b}, 0),
+        thirdPassMillis = $perFile->map(s | $s.thirdPassMillis)->fold({a, b | $a + $b}, 0),
+        elementCount = $perFile->map(s | $s.elementCount)->fold({a, b | $a + $b}, 0),
+        sourceFileCount = $sourceFileCount,
+        inferenceRollbackCount = $perFile->map(s | $s.inferenceRollbackCount)->fold({a, b | $a + $b}, 0),
+        candidateEvaluationCount = $perFile->map(s | $s.candidateEvaluationCount)->fold({a, b | $a + $b}, 0),
+        elementStatistics = $mergedElementMap->values()
+    );
+}
+
+function meta::pure::compiler::mergeElementStat(m:Map<String, ElementStatistics>[1], es:ElementStatistics[1]):Map<String, ElementStatistics>[1]
+{
+    let existing = $m->get($es.elementPath);
+    if($existing->isEmpty(),
+        | $m->put($es.elementPath, $es),
+        | let prev = $existing->toOne();
+          let merged = ^$prev(
+              totalMillis = $prev.totalMillis + $es.totalMillis,
+              inferenceRollbacks = $prev.inferenceRollbacks + $es.inferenceRollbacks,
+              candidateEvaluations = $prev.candidateEvaluations + $es.candidateEvaluations
+          );
+          $m->put($es.elementPath, $merged);
+    );
+}
+
+// Format CompilationStatistics as a human-readable summary block — mirrors
+// the layout produced by Java's CompilationStatistics.summary() so a side-by-side
+// comparison of Java- vs Pure-built compiler output reads identically.
+function meta::pure::compiler::printCompilationStatisticsSummary(s:CompilationStatistics[1]):String[1]
+{
+    let header = '  Compilation Statistics\n';
+    let body = [
+        '    Total time:       ' + padLeft($s.totalMillis->toString() + ' ms', 11),
+        '      Parsing:        ' + padLeft($s.parsingMillis->toString() + ' ms', 11),
+        '      First pass:     ' + padLeft($s.firstPassMillis->toString() + ' ms', 11),
+        '      Second pass:    ' + padLeft($s.secondPassMillis->toString() + ' ms', 11),
+        '      Third pass:     ' + padLeft($s.thirdPassMillis->toString() + ' ms', 11),
+        '    Elements:         ' + padLeft($s.elementCount->toString(), 8),
+        '    Source files:     ' + padLeft($s.sourceFileCount->toString(), 8),
+        '    Inference rollbacks:     ' + $s.inferenceRollbackCount->toString(),
+        '    Candidate evaluations:   ' + $s.candidateEvaluationCount->toString()
+    ]->joinStrings('\n');
+    let topHeader = if($s.elementStatistics->isEmpty(), | '', | '\n    Top 10 Elements by Compilation Time');
+    let sortedElements = $s.elementStatistics->sort({a, b | $b.totalMillis - $a.totalMillis});
+    let topN = if($sortedElements->size() > 10, | $sortedElements->take(10), | $sortedElements);
+    let topRows = $topN->map(e |
+        // padRight elementType to 20 to fit 'UserDefinedFunction' (19 chars)
+        // without overflow; shorter labels (Class, Profile…) keep
+        // rollbacks=/candidates= columns aligned.
+        '      ' + padLeft($e.totalMillis->toString() + ' ms', 9)
+            + '  ' + padRight($e.elementType, 20)
+            + '  rollbacks=' + padRight($e.inferenceRollbacks->toString(), 6)
+            + ' candidates=' + padRight($e.candidateEvaluations->toString(), 6)
+            + '  ' + $e.elementPath
+    )->joinStrings('\n');
+    $header + $body + $topHeader + if($topN->isEmpty(), | '', | '\n' + $topRows);
+}
+
+function meta::pure::compiler::padLeft(s:String[1], width:Integer[1]):String[1]
+{
+    let pad = $width - $s->length();
+    if($pad <= 0, | $s, | repeatString(' ', $pad) + $s);
+}
+
+function meta::pure::compiler::padRight(s:String[1], width:Integer[1]):String[1]
+{
+    let pad = $width - $s->length();
+    if($pad <= 0, | $s, | $s + repeatString(' ', $pad));
+}
+
+function meta::pure::compiler::repeatString(s:String[1], n:Integer[1]):String[1]
+{
+    range(0, $n)->fold({i, acc | $acc + $s}, '');
+}
+
+function meta::pure::compiler::getOrCreatePackagePath(ctx:CompilerContext[1], packagePath:String[1]):CompilerResult<Package>[1]
+{
+    let rootPkg = ^Package(name = 'Root');
+    let parts = if($packagePath == '', | []->cast(@String), | $packagePath->split('::'));
+    let walked = $parts->fold({part, acc |
+        let curCtx = $acc.first;
+        let parentPkg = $acc.second.first;
+        let parentPath = $acc.second.second;
+        let curPath = if($parentPath == '', | $part, | $parentPath + '::' + $part);
+        let existing = $curCtx.elementMap->get($curPath);
+        if($existing->isNotEmpty(),
+            | pair($curCtx, pair($existing->toOne()->cast(@Package), $curPath)),
+            | let newPkg = ^Package(name = $part, package = $parentPkg);
+              let newMap = if($parentPath == '',
+                  | $curCtx.elementMap->put($curPath, $newPkg),
+                  | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($newPkg));
+                    $curCtx.elementMap->put($parentPath, $updatedParent)->put($curPath, $newPkg);
+              );
+              pair(^$curCtx(elementMap = $newMap), pair($newPkg, $curPath));
+        );
+    }, pair($ctx, pair($rootPkg, '')));
+    ^CompilerResult<Package>(value = $walked.second.first, context = $walked.first);
+}
+
+function meta::pure::compiler::putElementUnderPackage(ctx:CompilerContext[1], elementPath:String[1], packagePath:String[1], element:PackageableElement[1]):CompilerContext[1]
+{
+    let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+    let parentPkg = $pkgRes.value->toOne();
+    let ctxWithPkg = $pkgRes.context;
+    if($packagePath == '',
+        | ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($elementPath, $element)),
+        | let updatedParent = ^$parentPkg(children = $parentPkg.children->concatenate($element));
+          ^$ctxWithPkg(elementMap = $ctxWithPkg.elementMap->put($packagePath, $updatedParent)->put($elementPath, $element));
+    );
+}
+
+function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):CompilerContext[1]
+{
+    ^CompilerContext(
+        debugState = ^DebugState(debug = $debugMode, space = ''),
+        imports = [],
+        elementMap = newMap([]->cast(@Pair<String, PackageableElement>)),
+        localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+        linearizationCache = newMap([]->cast(@Pair<String, List<String>>)),
+        inferenceRollbacks = 0,
+        candidateEvaluations = 0
+    );
+}
+
+function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compile($file, false);
+}
+
+function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], debugMode:Boolean[1]):CompilationResult[1]
+{
+    meta::pure::compiler::compile($file, newCompilerContext($debugMode), $debugMode);
+}
+
+function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], inputCtx:CompilerContext[1], debugMode:Boolean[1]):CompilationResult[1]
+{
+    let debug = ^DebugState(debug = $debugMode, space = '');
+    let compileStart = currentTimeMillis();
+
+    let allElements = $file.sections.elements;
+    let defaultImports = [
+        'meta::pure::metamodel::type::primitives',
+        'meta::pure::metamodel',
+        'meta::pure::metamodel::function::property',
+        'meta::pure::metamodel::type',
+        'meta::pure::metamodel::type::generics',
+        'meta::pure::metamodel::function',
+        'meta::pure::metamodel::multiplicity',
+        'meta::pure::metamodel::relation',
+        'meta::pure::metamodel::valuespecification',
+        'meta::pure::functions::math',
+        'meta::pure::functions::lang',
+        'meta::pure::functions::string',
+        'meta::pure::functions::collection',
+        'meta::pure::functions::boolean',
+        'meta::pure::functions::relation',
+        'meta::pure::functions::multiplicity',
+        'meta::pure::functions::asserts',
+        'meta::pure::functions::meta',
+        'meta::pure::functions::io',
+        'meta::pure::profiles'
+    ];
+    let fileImports = $file.sections.imports->map(i | if($i->endsWith('::*'), | $i->substring(0, $i->length() - 3), | $i));
+    let allImports = $defaultImports->concatenate($fileImports)->removeDuplicates();
+
+    // Pass 1: Build structural scaffolding
+    let pass1Start = currentTimeMillis();
+    let pass1Context = $allElements->fold({e, ctx |
+        $e->match([
+            c:meta::pure::protocol::grammar::type::Class[1] |
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
+                let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let typeParams = $c.typeParameters->map(tp | buildTypeParameter($tp.name, false));
+                let mulParams = $c.multiplicityParameters->map(mp | buildUserDefinedMultiplicityParameter($mp.name)->cast(@MultiplicityParameter));
+                let emptyClass = meta::pure::functions::meta::creation::newClass($typeParams, $mulParams);
+                let skeleton = ^$emptyClass(
+                    name = $c.name,
+                    package = $pkgRes.value->toOne(),
+                    typeParameters = $typeParams,
+                    multiplicityParameters = $mulParams,
+                    sourceInformation = compileSourceInformation($c.p_sourceInformation)
+                );
+                putElementUnderPackage($pkgRes.context, $className, $packagePath, $skeleton);,
+            a:meta::pure::protocol::grammar::relationship::Association[1] |
+                let packagePath = $a.package->toOne().value;
+                let aName = $packagePath + '::' + $a.name;
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let assocSkeleton = ^Association(
+                    name = $a.name,
+                    package = $pkgRes.value->toOne(),
+                    sourceInformation = compileSourceInformation($a.p_sourceInformation)
+                );
+                putElementUnderPackage($pkgRes.context, $aName, $packagePath, $assocSkeleton);,
+            en:meta::pure::protocol::grammar::type::Enumeration[1] |
+                let packagePath = $en.package->toOne().value;
+                let enName = $packagePath + '::' + $en.name;
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let valueNames = $en.properties->map(p | $p.name);
+                let enumSkeleton = meta::pure::functions::meta::creation::newEnumeration($en.name, $pkgRes.value->toOne(), $valueNames);
+                putElementUnderPackage($pkgRes.context, $enName, $packagePath, $enumSkeleton);,
+            pr:meta::pure::protocol::grammar::extension::Profile[1] |
+                $pr->compileProfilePass1($ctx);,
+            fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
+                $fn->compileNativeFunctionPass1($ctx);,
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                $fd->compileUserDefinedFunctionPass1($ctx);,
+            p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
+                let packagePath = $p.package->toOne().value;
+                let pName = $packagePath + '::' + $p.name;
+                let pkgRes = getOrCreatePackagePath($ctx, $packagePath);
+                let primSkeleton = ^PrimitiveType(
+                    name = $p.name,
+                    package = $pkgRes.value->toOne(),
+                    sourceInformation = compileSourceInformation($p.p_sourceInformation)
+                );
+                putElementUnderPackage($pkgRes.context, $pName, $packagePath, $primSkeleton);,
+            a:meta::pure::protocol::grammar::PackageableElement[1] | $ctx
+        ]);
+    }, ^$inputCtx(debugState = $debug, sourceId = $file.sourceId, imports = $allImports));
+    let pass1Millis = currentTimeMillis() - $pass1Start;
+
+    $pass1Context->debug({| 'compile: pass 1 done (' + $pass1Context.elementMap->keys()->size()->toString() + ' skeletons), starting pass 2'});
+
+    // Pass 2: Compile elements (threading context for error collection).
+    // Per-element timing wraps each match dispatch — snapshot time + counter
+    // values before, capture deltas after, append an ElementStatistics entry
+    // when the element was actually added (the catch-all PackageableElement
+    // arm yields the unchanged acc and contributes no entry).
+    // Build the linearization cache in two stages: once between pass 1 and
+    //   pass 2 (universe + skeletons from pass 1) so pass 2 body compilation
+    //   has hits, and again between pass 2 and pass 3 so any types refined
+    //   during pass 2 (e.g. compiled bodies that change generalizations or
+    //   add new types) get refreshed entries before pass 3 resolution.
+    let pass2StartCtx = $pass1Context->buildLinearizationCache()->buildLocalFunctionIndex();
+    let pass2Start = currentTimeMillis();
+    let pass2 = $allElements->fold({e, acc |
+        let beforeT = currentTimeMillis();
+        let beforeCtx = $acc.context;
+        let beforeRb = $beforeCtx.inferenceRollbacks;
+        let beforeCa = $beforeCtx.candidateEvaluations;
+        let prevSize = $acc.values->size();
+        let newAcc = $e->match([
+            c:meta::pure::protocol::grammar::type::Class[1] |
+                let r = $c->compileClass($acc.context);
+                let compiledClass = $r.value->toOne()->cast(@PackageableElement);
+                let packagePath = if($c.package->isEmpty(), | '', | $c.package->toOne().value);
+                let className = if($packagePath == '', | $c.name, | $packagePath + '::' + $c.name);
+                let ctx = $r.context;
+                let newMap = $ctx.elementMap->put($className, $compiledClass);
+                let updatedCtx = ^$ctx(elementMap = $newMap);
+                ^$acc(values += $compiledClass, context = $updatedCtx);,
+            p:meta::pure::protocol::grammar::type::PrimitiveType[1] |
+                let r = $p->compilePrimitive($acc.context);
+                let compiledPrim = $r.value->toOne()->cast(@PackageableElement);
+                let primPackagePath = if($p.package->isEmpty(), | '', | $p.package->toOne().value);
+                let primName = if($primPackagePath == '', | $p.name, | $primPackagePath + '::' + $p.name);
+                let primRCtx = $r.context;
+                let primNewMap = $primRCtx.elementMap->put($primName, $compiledPrim);
+                let primCtx = ^$primRCtx(elementMap = $primNewMap);
+                ^$acc(values += $compiledPrim, context = $primCtx);,
+            assoc:meta::pure::protocol::grammar::relationship::Association[1] |
+                let r = $assoc->compileAssociation($acc.context);
+                let compiledAssoc = $r.value->toOne()->cast(@PackageableElement);
+                let assocPackagePath = if($assoc.package->isEmpty(), | '', | $assoc.package->toOne().value);
+                let assocName = if($assocPackagePath == '', | $assoc.name, | $assocPackagePath + '::' + $assoc.name);
+                let assocRCtx = $r.context;
+                let assocNewMap = $assocRCtx.elementMap->put($assocName, $compiledAssoc);
+                let assocCtx = ^$assocRCtx(elementMap = $assocNewMap);
+                ^$acc(values += $compiledAssoc, context = $assocCtx);,
+            en:meta::pure::protocol::grammar::type::Enumeration[1] |
+                let r = $en->compileEnumeration($acc.context);
+                let compiledEnum = $r.value->toOne()->cast(@PackageableElement);
+                let enumPackagePath = if($en.package->isEmpty(), | '', | $en.package->toOne().value);
+                let enumName = if($enumPackagePath == '', | $en.name, | $enumPackagePath + '::' + $en.name);
+                let enumRCtx = $r.context;
+                let enumNewMap = $enumRCtx.elementMap->put($enumName, $compiledEnum);
+                let enumCtx = ^$enumRCtx(elementMap = $enumNewMap);
+                ^$acc(values += $compiledEnum, context = $enumCtx);,
+            fn:meta::pure::protocol::grammar::function::NativeFunction[1] |
+                let r = $fn->compileNativeFunctionPass2($acc.context);
+                let compiledFn = $r.value->toOne()->cast(@PackageableElement);
+                let fnPackagePath = if($fn.package->isEmpty(), | '', | $fn.package->toOne().value);
+                let fnName = if($fnPackagePath == '', | $fn.name, | $fnPackagePath + '::' + $fn.name);
+                let fnRCtx = $r.context;
+                let fnNewMap = $fnRCtx.elementMap->put($fnName, $compiledFn);
+                let fnCtx = ^$fnRCtx(elementMap = $fnNewMap);
+                ^$acc(values += $compiledFn, context = $fnCtx);,
+            fd:meta::pure::protocol::grammar::function::UserDefinedFunction[1] |
+                let r = $fd->compileUserDefinedFunctionPass2($acc.context);
+                let compiledFd = $r.value->toOne()->cast(@PackageableElement);
+                let fdPackagePath = if($fd.package->isEmpty(), | '', | $fd.package->toOne().value);
+                let fdName = if($fdPackagePath == '', | $fd.name, | $fdPackagePath + '::' + $fd.name);
+                let fdRCtx = $r.context;
+                let fdNewMap = $fdRCtx.elementMap->put($fdName, $compiledFd);
+                let fdCtx = ^$fdRCtx(elementMap = $fdNewMap);
+                ^$acc(values += $compiledFd, context = $fdCtx);,
+            pr:meta::pure::protocol::grammar::extension::Profile[1] |
+                let packagePath = if($pr.package->isEmpty(), | '', | $pr.package->toOne().value);
+                let prName = if($pr.package->isEmpty(), | '', | $packagePath + '::') + $pr.name;
+                ^$acc(values += $acc.context.elementMap->get($prName)->toOne()->cast(@PackageableElement));,
+            a:meta::pure::protocol::grammar::PackageableElement[1] |
+                $acc
+        ]);
+        let elapsed = currentTimeMillis() - $beforeT;
+        let postCtx = $newAcc.context;
+        if($newAcc.values->size() > $prevSize,
+            | let lastEl = $newAcc.values->at($newAcc.values->size() - 1);
+              let stat = ^ElementStatistics(
+                  elementPath = $lastEl->elementToPath(),
+                  elementType = elementSimpleType($lastEl),
+                  totalMillis = $elapsed,
+                  inferenceRollbacks = $postCtx.inferenceRollbacks - $beforeRb,
+                  candidateEvaluations = $postCtx.candidateEvaluations - $beforeCa
+              );
+              let updatedCtx = ^$postCtx(elementStatistics = $postCtx.elementStatistics->concatenate($stat));
+              ^$newAcc(context = $updatedCtx);,
+            | $newAcc
+        );
+    }, ^CompilerListResult<PackageableElement>(context = $pass2StartCtx));
+    let pass2Millis = currentTimeMillis() - $pass2Start;
+
+    $pass2.context->debug({| 'compile: pass 2 done (' + $pass2.values->size()->toString() + ' elements compiled), starting pass 3'});
+
+    // Pass 3: Resolution — resolve expression sequences, constraints, qualified properties.
+    // Per-element timing mirrors pass 2: append an ElementStatistics entry for
+    // each element so compileDir can merge by path across passes.
+    // Build the local-function index once before resolution so the 13K
+    // findAllFunctionsByNameAndArityUnfiltered calls become O(1) lookups
+    // rather than full elementMap.values() walks.
+    let pass3StartCtx = $pass2.context->buildLocalFunctionIndex()->buildLinearizationCache();
+    let pass3Start = currentTimeMillis();
+    let pass3Ctx = $pass2.values->fold({elem, ctx |
+        let beforeT = currentTimeMillis();
+        let beforeRb = $ctx.inferenceRollbacks;
+        let beforeCa = $ctx.candidateEvaluations;
+        let newCtx = $elem->match([
+            fn:UserDefinedFunction<Any>[1] |
+                resolveFunctionDefinition($fn, $ctx);,
+            cls:Class<Any>[1] |
+                resolveClass($cls, $ctx);,
+            assoc:Association[1] |
+                resolveAssociation($assoc, $ctx);,
+            pt:PrimitiveType[1] |
+                resolvePrimitive($pt, $ctx);,
+            a:Any[1] | $ctx
+        ]);
+        let elapsed = currentTimeMillis() - $beforeT;
+        let stat = ^ElementStatistics(
+            elementPath = $elem->elementToPath(),
+            elementType = elementSimpleType($elem),
+            totalMillis = $elapsed,
+            inferenceRollbacks = $newCtx.inferenceRollbacks - $beforeRb,
+            candidateEvaluations = $newCtx.candidateEvaluations - $beforeCa
+        );
+        ^$newCtx(elementStatistics = $newCtx.elementStatistics->concatenate($stat));
+    }, $pass3StartCtx);
+    let pass3Millis = currentTimeMillis() - $pass3Start;
+
+    $pass3Ctx->debug({| 'compile: pass 3 done (' + $pass3Ctx.errors->size()->toString() + ' errors)'});
+
+    // Pull the compiled (resolved) source elements out of the map, in
+    // pass2 source order. Packages live in $pass3Ctx.elementMap too — they
+    // surface to the caller via the returned context, not through this list.
+    let resolvedElements = $pass2.values->map(e | let fromMap = $pass3Ctx.elementMap->get($e->elementToPath()); if($fromMap->isEmpty(), | $e, | $fromMap->toOne()->cast(@PackageableElement)););
+    let totalMillis = currentTimeMillis() - $compileStart;
+    let stats = ^CompilationStatistics(
+        totalMillis = $totalMillis,
+        parsingMillis = 0,
+        firstPassMillis = $pass1Millis,
+        secondPassMillis = $pass2Millis,
+        thirdPassMillis = $pass3Millis,
+        elementCount = $resolvedElements->size(),
+        sourceFileCount = 1,
+        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
+        candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
+        elementStatistics = $pass3Ctx.elementStatistics
+    );
+    ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats, context = $pass3Ctx);
+}
+
+// Extract a short element-type label (e.g. "UserDefinedFunction", "Class") from an
+// element's runtime classifier — used by per-element statistics so the summary
+// table can show what kind of element each row represents.
+function meta::pure::compiler::elementSimpleType(elem:Any[1]):String[1]
+{
+    let t = $elem->type();
+    if($t->isEmpty(),
+        | 'Unknown',
+        | $t->toOne()->elementToPath()->split('::')->last()->toOne()
+    );
+}
+
+function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<Any>[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    if($fn.expressionSequence->isEmpty(),
+        | $context,
+        | debug($context, | 'resolveAndValidate: function \'' + $fn.functionName->toOne() + '\'');
+          // Set ownerTypeParams/ownerMulParams for pass 3 — matches Java UserDefinedFunctionHandler.thirdPass setEnclosingOwner
+          let enclosingBinding = ^EnclosingOwnerParametersBinding(owner = $fn, typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>)));
+          let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@TypeParameter), ownerMulParams = $fn.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
+          let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@VariableExpression), $ctxWithOwner->debugSpaceInc());
+          let resultCtx = $result.context;
+          // Validate return type and multiplicity of the last expression
+          let validatedCtx = if($result.resolvedSpecs->isEmpty() || $resultCtx.errors->size() > $context.errors->size(),
+              | $resultCtx,
+              | let lastExpr = $result.resolvedSpecs->at($result.resolvedSpecs->size() - 1);
+                let fnName = $fn.name->toOne();
+                let siCtx = meta::pure::compiler::structural::sourceInformationCompiler::formatMetamodelSourceInfo($lastExpr.sourceInformation, $resultCtx);
+                // Type validation
+                let ctx1 = if([pair(| $lastExpr.genericType->isEmpty() || $fn.returnGenericType->isEmpty()
+                                     || $lastExpr.genericType->toOne()->instanceOf(UndefinedGenericType),
+                                   | $resultCtx),
+                              pair(| meta::pure::compiler::helper::genericType::isCompatibleGenericType($fn.returnGenericType->toOne(), $lastExpr.genericType->toOne(), $resultCtx),
+                                   | $resultCtx)],
+                             | ^$resultCtx(errors += 'Return type error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::genericType::printGenericType($fn.returnGenericType->toOne()) + ', got ' + meta::pure::compiler::helper::genericType::printGenericType($lastExpr.genericType->toOne()) + $siCtx)
+                );
+                // Multiplicity validation
+                if([pair(| $lastExpr.multiplicity->isEmpty() || $fn.returnMultiplicity->isEmpty(),
+                        | $ctx1),
+                    pair(| meta::pure::compiler::helper::multiplicity::isCompatibleMultiplicity($fn.returnMultiplicity->toOne(), $lastExpr.multiplicity->toOne(), false),
+                         | $ctx1)],
+                   | ^$ctx1(errors += 'Return multiplicity error in function \'' + $fnName + '\': expected ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($fn.returnMultiplicity->toOne()) + ', got ' + meta::pure::compiler::helper::multiplicity::printMultiplicity($lastExpr.multiplicity->toOne()) + $siCtx)
+                );
+          );
+          // Resolve function constraints
+          let preResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($fn.preConstraints, $validatedCtx);
+          let postResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($fn.postConstraints, $preResult.context);
+          // Store resolved function back into the map
+          let resolvedFn = ^$fn(
+              expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification),
+              preConstraints = $preResult.values,
+              postConstraints = $postResult.values
+          );
+          let fnPath = $fn->elementToPath();
+          let finalCtx = $postResult.context;
+          let updatedCtx = ^$finalCtx(elementMap = $finalCtx.elementMap->put($fnPath, $resolvedFn));
+          // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner
+          ^$updatedCtx(debugState = $context.debugState, ownerTypeParams = [], ownerMulParams = [], enclosingOwnerBinding = []);
+    );
+}
+
+function meta::pure::compiler::resolveClass(cls:Class<Any>[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    // Read the current class from the map (may have propertiesFromAssociations set by association handler)
+    let clsPath = $cls->elementToPath();
+    let currentCls = $context.elementMap->get($clsPath)->toOne()->cast(@Class<Any>);
+    // Set ownerTypeParams/ownerMulParams for pass 3 — matches Java ClassHandler.thirdPass setEnclosingOwner
+    let enclosingBinding = ^EnclosingOwnerParametersBinding(owner = $currentCls, typeBindings = newMap([]->cast(@Pair<String,List<GenericType>>)), multiplicityBindings = newMap([]->cast(@Pair<String,List<Multiplicity>>)));
+    let ctxWithOwner = ^$context(ownerTypeParams = $currentCls.typeParameters->cast(@TypeParameter), ownerMulParams = $currentCls.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
+    let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($currentCls.qualifiedProperties, $currentCls.typeVariables->cast(@VariableExpression), $ctxWithOwner);
+    let ctx2 = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedPropertyOverrides($currentCls, $qpResult.context);
+    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($currentCls.constraints, $ctx2);
+    let propResult = meta::pure::compiler::structural::propertyCompiler::resolvePropertyDefaultValues($currentCls.properties, $constraintResult.context);
+    let ctx5 = meta::pure::compiler::structural::propertyCompiler::validatePropertyOverrides($currentCls, $propResult.context);
+    // Store resolved class back into the map (preserving propertiesFromAssociations from currentCls)
+    let resolvedCls = ^$currentCls(
+        qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~)),
+        constraints = $constraintResult.values,
+        properties = $propResult.values->map(p | ^$p(owner = ~.~))
+    );
+    let updatedCtx = ^$ctx5(elementMap = $ctx5.elementMap->put($clsPath, $resolvedCls));
+    // Clear ownerTypeParams/ownerMulParams — matches Java clearEnclosingOwner
+    ^$updatedCtx(ownerTypeParams = [], ownerMulParams = [], enclosingOwnerBinding = []);
+}
+
+function meta::pure::compiler::resolveAssociation(assoc:Association[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    if($assoc.qualifiedProperties->isEmpty(),
+        | $context,
+        | let qpResult = meta::pure::compiler::structural::qualifiedPropertyCompiler::compileQualifiedProperties($assoc.qualifiedProperties, $context);
+          let resolvedAssoc = ^$assoc(
+              qualifiedProperties = $qpResult.values->map(qp | ^$qp(owner = ~.~))
+          );
+          let assocPath = $assoc->elementToPath();
+          let qpCtx = $qpResult.context;
+          ^$qpCtx(elementMap = $qpCtx.elementMap->put($assocPath, $resolvedAssoc));
+    );
+}
+
+function meta::pure::compiler::resolvePrimitive(pt:PrimitiveType[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    let constraintResult = meta::pure::compiler::structural::constraintCompiler::resolveConstraints($pt.constraints, $context);
+    let resolvedPt = ^$pt(constraints = $constraintResult.values);
+    let ptPath = $pt->elementToPath();
+    let crCtx = $constraintResult.context;
+    ^$crCtx(elementMap = $crCtx.elementMap->put($ptPath, $resolvedPt));
+}

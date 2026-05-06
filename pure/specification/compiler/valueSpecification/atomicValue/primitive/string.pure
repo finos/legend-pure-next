@@ -1,0 +1,14 @@
+###Pure
+function test::primitive::testString(): Any[*]
+{
+  'hello';
+  'it\'s escaped';
+  'line1\nline2';
+}
+
+###CompiledGraph
+function test::primitive::testString__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @4:3-4:9
+  AtomicValue  'it's escaped' :@String@[1]  ~@AtomicValue@  @5:3-5:17
+  AtomicValue  'line1
+line2' :@String@[1]  ~@AtomicValue@  @6:3-6:16

@@ -1,0 +1,55 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::compiler::resolution::valueSpecification::valueSpecificationResolver::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::resolution::valueSpecification::collectionResolver::resolveCollection(col:Collection[1], scope:VariableExpression[*], context:meta::pure::compiler::CompilerContext[1]):meta::pure::compiler::CompilerResult<ValueSpecification>[1]
+{
+    // Resolve each element and collect the resolved values
+    let result = $col.values->fold({v, acc |
+        let r = resolveValueSpecification($v, $scope, $acc.context);
+        ^$acc(values += if($r.value->isEmpty(), | $v, | $r.value->at(0)), context = $r.context);
+    }, ^meta::pure::compiler::CompilerListResult<ValueSpecification>(context = $context));
+
+    // Compute common genericType from resolved elements (mirrors Java CollectionResolver)
+    // Pass a resolver that looks up types from the element map to get fully compiled versions with generalizations
+    let resolvedCtx = $result.context;
+    let typeResolver = {t:Type[1] |
+        if($t->instanceOf(PackageableElement),
+            | let path = $t->cast(@PackageableElement)->elementToPath();
+              let fromMap = $resolvedCtx.elementMap->get($path);
+              if($fromMap->isNotEmpty(), | $fromMap->toOne()->cast(@Type), | $t);,
+            | $t
+        );
+    };
+    // Filter out CompilerNotSetGenericType (matches Java: nonNull.select(gt -> gt != null),
+    // then selectInstancesOf(GenericTypeValue) which excludes CompilerNotSetGenericType)
+    let elementTypes = $result.values->map(v | $v.genericType)->filter(gt | $gt->isNotEmpty() && !$gt->toOne()->instanceOf(CompilerNotSetGenericType))->map(gt | $gt->toOne());
+    let commonGTOpt = findCommonGenericType($elementTypes, $typeResolver, $resolvedCtx);
+    // If all elements were filtered out (e.g., unresolved lambdas), keep CompilerNotSet to match Java
+    // (Java returns null → collection stays unresolved for fixpoint re-processing)
+    let commonGT = if($commonGTOpt->isEmpty() || ($elementTypes->isEmpty() && $result.values->isNotEmpty()),
+        | ^CompilerNotSetGenericType(),
+        | asInferredGenericType($commonGTOpt->toOne())
+    );
+
+    ^meta::pure::compiler::CompilerResult<ValueSpecification>(
+        value = ^$col(values = $result.values, genericType = $commonGT),
+        context = $result.context
+    );
+}

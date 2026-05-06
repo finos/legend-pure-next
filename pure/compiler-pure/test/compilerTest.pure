@@ -1,0 +1,74 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::test::*;
+import meta::pure::functions::collection::*;
+import meta::pure::functions::string::*;
+import meta::pure::compiler::test::printer::*;
+
+// Harness
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    if([pair(| contains($content, '###' + 'Error'), | assertCompilationError($content, $sourceId)),
+        pair(| contains($content, '###' + 'CompiledGraph'), | assertCompiledGraphContent($content, $sourceId))],
+       | true
+    );
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
+    let expectedMessages = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim()->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
+    let pureStart = $content->indexOf('###' + 'Pure');
+    let errorLines = $content->substring(0, $pureStart)->split('\n');
+    let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
+    let pureContent = $blankedPrefix + $content->substring($pureStart);
+    let parsedFile = meta::pure::functions::meta::parse($sourceId, $pureContent);
+    let result = meta::pure::compiler::compile($parsedFile);
+    assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
+    if($expectedMessages->size() != $result.errors->size(), |println('EXPECTED: ' + $expectedMessages->joinStrings(' | ')), |[]);
+    if($expectedMessages->size() != $result.errors->size(), |println('ACTUAL:   ' + $result.errors->joinStrings(' | ')), |[]);
+    assertEquals($expectedMessages->size(), $result.errors->size());
+    assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
+    let result = meta::pure::compiler::compile($parsedFile);
+
+    // Compilation must produce zero errors. A compiler bug that still emits
+    // partial elements would otherwise pass the printed-graph comparison
+    // silently. Mirrors the bootstrap-side assertions in
+    // CompilerCompiledGraphTest and PdbRoundTripTest.
+    assert($result.errors->isEmpty(), 'Compilation errors for ' + $sourceId + ':\n  ' + $result.errors->joinStrings('\n  '));
+
+    let allElements = $parsedFile.sections.elements;
+    let expectedGraphElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
+    if($expectedGraphElement->isEmpty() && contains($content, '###CompiledGraph'),
+       | assert(false, 'Test file contains ###CompiledGraph section but CompiledGraph element was not found in parsed output for ' + $sourceId);,
+       | []
+    );
+    if($expectedGraphElement->isNotEmpty(),
+       | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
+         let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements);
+
+         let cleanedExpected = $expectedGraphValue->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
+         let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
+         if($cleanedExpected != $cleanedActual, | println('FAIL:' + $sourceId);, | []);
+         assertEquals($cleanedExpected, $cleanedActual);
+         true;,
+       | true
+    );
+}

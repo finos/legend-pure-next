@@ -1,0 +1,50 @@
+###Pure
+Class test::Base
+{
+    name : String[1];
+    greeting() {
+        'Hello ' + $this.name
+    }: String[1];
+}
+
+Class test::Child extends test::Base
+{
+    age : Integer[1];
+}
+
+function test::use():Any[*]
+{
+    let c = ^test::Child(name='Alice', age=10);
+    $c.greeting();
+}
+
+
+###CompiledGraph
+class test::Base extends Any  ~Class<test::Base>  @2:1-8:1
+  property name :@String@[1]  ~Property<test::Base, @String@|1>
+  qualifiedProperty greeting() :@String@[1]
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:18-6:29
+      AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @6:9-6:16
+      DotApplication test::Base.name :#String##[1]#  ~@DotApplication@  @6:25-6:29
+        Variable this :#test::Base##[1]#  ~@VariableExpression@  @6:20-6:24
+
+class test::Child extends test::Base  ~Class<test::Child>  @10:1-13:1
+  property age :@Integer@[1]  ~Property<test::Child, @Integer@|1>
+
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @17:5-17:46
+    typeParam T -> #test::Child#
+    mulParam m -> #[1]#
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @17:9-17:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @17:13-17:46
+      typeParam T -> test::Child
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @17:13-17:46
+      Collection :#KeyExpression#[2]  ~@Collection@  @17:13-17:46
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:26-17:37
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @17:26-17:37
+          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @17:31-17:37
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @17:40-17:45
+          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @17:40-17:45
+          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @17:44-17:45
+  DotApplication test::Base.greeting() :#String##[1]#  ~@DotApplication@  @18:7-18:17
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @18:5-18:6

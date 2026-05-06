@@ -1,0 +1,152 @@
+# bootstrap/Justfile — builds and tests the bootstrap Java compiler/CLI.
+#
+# Direct invocation:    just <recipe>             (from bootstrap/)
+# Via the root Justfile: just bootstrap::<recipe> (from repo root)
+#
+# Outputs split between bootstrap-local and shared:
+#   bootstrap/build/pure-bootstrap.jar       — bootstrap-only fat jar
+#   <repo>/shared/core.pdb                    — shared (truffle codegen reads it)
+#   <repo>/shared/compiler.pdb                — shared
+#   bootstrap/build/compiler_bootstrap.pdb   — bootstrap-only (self-host output)
+#   <repo>/shared/specification/              — shared (generated spec files)
+#
+# Two Maven modes selected by argument to a single parameterized `_mvn` recipe:
+#   `build`  → `(_mvn "skip-tests")` (mvn install -DskipTests) — fast, no Java tests
+#   `test-java` → `(_mvn "with-tests")` (mvn install)          — surefire runs unit tests inline
+#                                                                (also runs the Pure runTests / PCT
+#                                                                suites that live as Java tests)
+# `test` is one Maven launch end to end: `test-java` covers Java + Pure-via-surefire, then
+# `test-pure-compiler` adds the compiled-graph spec suite via the bootstrap CLI.
+#
+# Public steps (`stage`, `build-compiler-pdb`) have no Maven dep of their own;
+# the entry-point recipe (`build` or `test`) lists Maven + stage + build-compiler-pdb in order.
+#
+# `test-pure-testFunctions`, `test-pure-PCTs`, `test-pure-compiler` are zero-dep "expert mode" recipes — they assume
+# `just build` (or `just test`) has already produced the artifacts. Run them
+# standalone for fast Pure-side iteration without re-invoking Maven.
+
+set quiet := true
+set shell := ["bash", "-c"]
+
+bootstrap_root := source_directory()
+repo_root      := bootstrap_root / ".."
+boot           := bootstrap_root / "legend-pure-next-bootstrap"
+bcore          := boot / "legend-pure-next-bootstrap-core"
+spec           := repo_root / "pure" / "specification"
+compiler_src   := repo_root / "pure" / "compiler-pure"
+boot_out       := bootstrap_root / "build"
+shared_out     := repo_root / "shared"
+cli            := boot_out / "pure-bootstrap.jar"
+pure_bootstrap := bootstrap_root / "bin" / "pure-bootstrap"
+
+# verbose=1 disables -q and stops filtering JDK/SLF4J warnings.
+verbose := ""
+mvnq    := if verbose == "" { "-q" } else { "" }
+err_filter := if verbose == "" { "2> >(grep -E -v '^(SLF4J(\\(W\\))?:|WARNING: |Note: )' >&2)" } else { "" }
+
+banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
+
+# Default: build + run all tests.
+default: test
+
+# Build the Java compiler/CLI and stage core.pdb + compiler.pdb into shared/.
+build: (_mvn "skip-tests") stage build-compiler-pdb
+
+# Copy bootstrap CLI jar to bootstrap/build/ and core.pdb + generated specs to shared/.
+stage:
+    @{{banner}} '[stage]' 'copy bootstrap jar + core.pdb + generated specs'
+    mkdir -p {{boot_out}} {{shared_out}}/specification/protocol
+    cp {{boot}}/legend-pure-next-bootstrap-cli/target/pure-bootstrap-*-fat.jar {{cli}}
+    cp {{bcore}}/legend-pure-next-bootstrap-compiler/target/classes/core.pdb {{shared_out}}/core.pdb
+    cp -r {{bcore}}/legend-pure-next-bootstrap-generators/target/generated-specification/* {{shared_out}}/specification/
+
+# Compile compiler-pure → shared/compiler.pdb via the bootstrap CLI (also a prerequisite for truffle work).
+build-compiler-pdb:
+    @{{banner}} '[bootstrap]' 'compile compiler.pdb against core.pdb'
+    {{pure_bootstrap}} compile \
+        --base-pdb {{shared_out}}/core.pdb \
+        --source {{compiler_src}} \
+        --output {{shared_out}}/compiler.pdb {{err_filter}}
+
+# Build + run Java unit tests (surefire) + run Pure compiler-graph spec tests.
+test: test-java stage build-compiler-pdb test-pure-compiler
+
+# NB: surefire runs the full JUnit suite, which includes dynamic-test
+# factories that wrap Pure runTests (TestPureExecution) and PCT tests
+# (TestPCT) — so `test-java` already covers everything `test-pure-testFunctions`
+# and `test-pure-PCTs` run standalone. The compiler-graph spec suite is
+# covered by `CompilerCompiledGraphTest` (Java direct's own JUnit factory)
+# and additionally by `test-pure-compiler` via the bootstrap CLI; no
+# JUnit equivalent on the Pure-on-Java side.
+
+# Build with surefire-driven Java unit tests (covers Pure runTests / PCT).
+test-java: (_mvn "with-tests")
+
+# Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TestPureExecution; assumes `just build` was run).
+test-pure-testFunctions:
+    @{{banner}} '[pure→bootstrap]' 'runTests over meta::pure::functions (assumes `just build` was run)'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# Standalone Pure PCT tests over meta::pure::functions (also covered by `test-java` via TestPCT; assumes `just build` was run).
+test-pure-PCTs:
+    @{{banner}} '[pure→bootstrap]' 'runPCTTests over meta::pure::functions (assumes `just build` was run)'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runPCTTests_String_1__String_1_" \
+        --args "meta::pure::functions" {{err_filter}}
+
+# Pure compiler-graph spec tests over pure/specification/compiler via the bootstrap CLI (Pure-on-Java; assumes `just build` was run). Run as part of `just test`.
+test-pure-compiler:
+    @{{banner}} '[pure→bootstrap]' 'runCompiledGraphTests over pure/specification/compiler'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+
+# Self-host: compile compiler-pure on Pure-on-Java, run compiler tests, then diff PDBs vs Java direct (and Truffle if present).
+test-pure-self-host: build-compiler-pdb
+    @{{banner}} '[self-host-java]' 'compiler-pure → compiler_bootstrap.pdb (Pure compiler)'
+    {{pure_bootstrap}} compile-via-pure \
+        --base-pdb {{shared_out}}/core.pdb \
+        --base-pdb {{shared_out}}/compiler.pdb \
+        --source {{compiler_src}} \
+        --output {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
+    @{{banner}} '[self-host-java]' 'runCompiledGraphTests against compiler_bootstrap.pdb'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{boot_out}}/compiler_bootstrap.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
+    @{{banner}} '[self-host-java]' 'diff compiler.pdb (Java compiler) ↔ compiler_bootstrap.pdb (Pure compiler)'
+    {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
+        {{shared_out}}/compiler.pdb \
+        {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
+
+# Launch the Pure IDE via the bootstrap CLI.
+ide: build-compiler-pdb
+    @{{banner}} '[ide]' 'launch IDE via bootstrap CLI'
+    {{pure_bootstrap}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::ide::start"
+
+# Remove bootstrap/build/ and run mvn clean.
+clean:
+    @{{banner}} '[bootstrap clean]' 'remove bootstrap/build + mvn target/'
+    rm -rf {{boot_out}}
+    cd {{boot}} && mvn clean {{mvnq}}
+
+# Internal: parameterized `mvn clean install` invocation.
+# `mode` is "skip-tests" (fast, no Java tests) or "with-tests" (surefire runs unit tests).
+# just dedupes by (recipe, args), so the same mode invoked twice via different deps in one
+# `just` run executes once.
+_mvn mode:
+    @{{banner}} '[bootstrap]' '{{ if mode == "skip-tests" { "mvn clean install -DskipTests (Java + core.pdb)" } else { "mvn clean install (Java + core.pdb + unit tests)" } }}'
+    rm -rf {{boot_out}}
+    cd {{boot}} && mvn clean install {{ if mode == "skip-tests" { "-DskipTests" } else { "" } }} {{mvnq}} {{err_filter}}

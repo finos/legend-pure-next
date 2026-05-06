@@ -1,0 +1,157 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::constraint::*;
+import meta::pure::functions::lang::*;
+import meta::pure::compiler::structural::constraintCompiler::*;
+import meta::pure::compiler::structural::valueSpecificationCompiler::*;
+import meta::pure::compiler::structural::lambdaCompiler::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::structural::constraintCompiler::compileConstraints(protocolConstraints:meta::pure::protocol::grammar::constraint::Constraint[*], ownerGenericType:GenericType[1], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
+{
+    compileConstraints($protocolConstraints, $ownerGenericType, [], $context);
+}
+
+function meta::pure::compiler::structural::constraintCompiler::compileConstraints(protocolConstraints:meta::pure::protocol::grammar::constraint::Constraint[*], ownerGenericType:GenericType[1], extraScope:VariableExpression[*], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
+{
+    let thisVar = ^VariableExpression(
+        name = 'this',
+        genericType = $ownerGenericType,
+        multiplicity = PureOne
+    );
+    let scope = [$thisVar]->concatenate($extraScope);
+
+    $protocolConstraints->fold({pc, acc |
+        let result = compileConstraint($pc, $scope, $acc.context);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^CompilerListResult<Constraint>(context = $context));
+}
+
+function meta::pure::compiler::structural::constraintCompiler::compileConstraint(pc:meta::pure::protocol::grammar::constraint::Constraint[1], thisScope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<Any>[1]
+{
+    let emptyConstraint = new(
+        buildUserDefinedGenericType(Constraint)
+    )->cast(@Constraint);
+
+    let funcDef = $pc.functionDefinition->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+    let lambdaResult = $funcDef->compileLambda($context, $thisScope, [], []);
+    let ctx1 = if($lambdaResult.context->isNotEmpty(), | $lambdaResult.context->toOne(), | $context);
+
+    if($lambdaResult.values->isEmpty(),
+        | ^CompilerResult<Any>(value = $emptyConstraint, context = $ctx1),
+        | let lambda = $lambdaResult.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>);
+          let compiledLambda = ^$lambda(parameters = $thisScope->concatenate($lambda.parameters));
+
+          let msgResult = if($pc.messageFunction->isEmpty(),
+              | ^CompilerResult<Any>(context = $ctx1),
+              | let msgFunc = $pc.messageFunction->toOne()->cast(@meta::pure::protocol::grammar::function::LambdaFunction);
+                let mr = $msgFunc->compileLambda($ctx1, $thisScope, [], []);
+                let mCtx = if($mr.context->isNotEmpty(), | $mr.context->toOne(), | $ctx1);
+                if($mr.values->isEmpty(),
+                    | ^CompilerResult<Any>(context = $mCtx),
+                    | let ml = $mr.values->at(0)->cast(@AtomicValue).value->toOne()->cast(@LambdaFunction<Any>);
+                      ^CompilerResult<Any>(value = ^$ml(parameters = $thisScope->concatenate($ml.parameters)), context = $mCtx);
+                );
+          );
+          let ctx2 = $msgResult.context;
+
+          ^CompilerResult<Any>(
+              value = ^$emptyConstraint(
+                  name = $pc.name,
+                  owner = $pc.owner,
+                  externalId = $pc.externalId,
+                  enforcementLevel = $pc.enforcementLevel,
+                  functionDefinition = $compiledLambda,
+                  messageFunction = $msgResult.value->cast(@FunctionDefinition<Any>),
+                  sourceInformation = compileSourceInformation($pc.p_sourceInformation)
+              ),
+              context = $ctx2
+          );
+    );
+}
+
+function meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints(protocolConstraints:meta::pure::protocol::grammar::constraint::Constraint[*], scope:VariableExpression[*], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
+{
+    $protocolConstraints->fold({pc, acc |
+        let result = compileConstraint($pc, $scope, $acc.context);
+        ^$acc(values += $result.value, context = $result.context);
+    }, ^CompilerListResult<Constraint>(context = $context));
+}
+
+function meta::pure::compiler::structural::constraintCompiler::compileFunctionConstraints(constraints:Constraint[*], context:CompilerContext[1]):CompilerContext[1]
+{
+    $constraints->fold({constraint, cCtx |
+        if($constraint.functionDefinition->isEmpty(),
+            | $cCtx,
+            | let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+              meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $lambda.expressionSequence,
+                  $lambda.parameters->cast(@VariableExpression),
+                  $cCtx
+              ).context;
+        );
+    }, $context);
+}
+
+function meta::pure::compiler::structural::constraintCompiler::resolveConstraints(constraints:Constraint[*], context:CompilerContext[1]):CompilerListResult<Constraint>[1]
+{
+    $constraints->fold({constraint, acc |
+        if($constraint.functionDefinition->isEmpty(),
+            | ^$acc(values += $constraint),
+            | let lambda = $constraint.functionDefinition->toOne()->cast(@LambdaFunction<Any>);
+              let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                  $lambda.expressionSequence,
+                  $lambda.parameters->cast(@VariableExpression),
+                  $acc.context
+              );
+              let resolvedLambda = meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$lambda(expressionSequence = $result.resolvedSpecs->cast(@ValueSpecification)));
+              let resolvedMsgFn = if($constraint.messageFunction->isEmpty(),
+                  | [],
+                  | let msgLambda = $constraint.messageFunction->toOne()->cast(@LambdaFunction<Any>);
+                    let msgResult = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence(
+                        $msgLambda.expressionSequence,
+                        $msgLambda.parameters->cast(@VariableExpression),
+                        $result.context
+                    );
+                    meta::pure::compiler::structural::lambdaCompiler::rebuildLambdaCGT(^$msgLambda(expressionSequence = $msgResult.resolvedSpecs->cast(@ValueSpecification)));
+              );
+              let resolvedConstraint = ^$constraint(
+                  functionDefinition = $resolvedLambda,
+                  messageFunction = $resolvedMsgFn
+              );
+              ^$acc(values += $resolvedConstraint, context = $result.context);
+        );
+    }, ^CompilerListResult<Constraint>(context = $context));
+}
+
+function meta::pure::compiler::structural::constraintCompiler::compileConstraints(elem:Any[1], context:CompilerContext[1]):CompilerContext[1]
+{
+    let constraints = $elem->match(
+        [
+            c : Class<Any>[1]     | $c.constraints,
+            p : PrimitiveType[1]  | $p.constraints,
+            a : Any[1]            | []
+        ]
+    );
+    resolveConstraints($constraints, $context).context;
+}

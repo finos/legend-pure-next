@@ -1,0 +1,85 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::compiler::structural::genericTypeCompiler::*;
+import meta::pure::compiler::structural::relationTypeCompiler::*;
+import meta::pure::compiler::helper::column::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::*;
+
+// Mirrors Java RelationTypeCompiler.compile()
+// Compiles a protocol RelationType into a metamodel RelationType.
+function meta::pure::compiler::structural::relationTypeCompiler::compileRelationType(rt:meta::pure::protocol::grammar::relation::RelationType[1], context:CompilerContext[1], packagePath:String[1], typeParameters:TypeParameter[*], ownerContext:String[1]):CompilerResult<GenericType>[1]
+{
+    let ownerGT = buildUserDefinedGenericType(RelationType);
+    let colAccum = $rt.columns->cast(@meta::pure::protocol::grammar::relation::Column)->fold({col, acc |
+        let colGenType = $col.genericType;
+        let colGTResult = if($colGenType->isNotEmpty() && $colGenType->toOne()->instanceOf(meta::pure::protocol::grammar::type::generics::GenericTypeValue),
+            | $colGenType->toOne()->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($acc.context, $packagePath, $typeParameters, '', $ownerContext),
+            | ^CompilerResult<GenericType>(
+                  value = ^CompilerNotSetGenericType(),
+                  context = $acc.context
+              )
+        );
+        let colMul = if($col.multiplicity->isEmpty(),
+            | PureOne,
+            | $col.multiplicity->toOne()->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity()
+        );
+        let colNameWC = if($col.nameWildCard->isEmpty(), | false, | $col.nameWildCard);
+        ^$acc(
+            values += buildColumn(if($col.name->isEmpty(), | '', | $col.name), $ownerGT, $colGTResult.value->toOne(), $colMul, $colNameWC),
+            context = $colGTResult.context
+        );
+    }, ^CompilerListResult<Column<Nil, Any|*>>(context = $context));
+    // Wire two slots back to the RelationType *instance* (not the metaclass)
+    // so they match Java direct's `RelationTypeCompiler.compile`, which sets
+    // `ownerGT = UDGT(result-instance)` for both:
+    //   (a) each column's owner — `column.classifierGenericType.typeArguments[0]`
+    //   (b) the RelationType's own classifier typeArgument —
+    //       `relType.classifierGenericType.typeArguments[0]`
+    // Without (b) the auto-set classifier carries `Any` (which the canonical
+    // anchor swap further upgrades to `GenericType_Any` UDPGT), diverging from
+    // Java direct's plain UDGT-of-instance. Closes the deep PDB diff at
+    // `RelClass.properties[*].…classifierGenericType.typeArguments[0].classifierGenericType`
+    // surfaced by `bootstrap::test-self-host` and `truffle::test-self-host`.
+    //
+    // Construction-stack depths inside the innermost `~.~.~.~` etc:
+    //   classifierGenericType nesting (b): `~.~.~`
+    //     0 = inner UDGT (the one wrapping RT-instance)
+    //     1 = outer UDGT (the classifier itself)
+    //     2 = RelationType being built
+    //   columns map nesting (a): `~.~.~.~`
+    //     0 = innermost UDGT
+    //     1 = copied old classifier
+    //     2 = copied Column $c
+    //     3 = RelationType being built
+    let compiledRT = ^RelationType<Any>(
+        columns = $colAccum.values->map(c |
+            let oldCgt = $c.classifierGenericType->toOne()->cast(@GenericTypeValue);
+            let valueGT = $oldCgt.typeArguments->at(1);
+            ^$c(classifierGenericType = ^$oldCgt(typeArguments = [^UserDefinedGenericType(type = ~.~.~.~), $valueGT]));
+        ),
+        classifierGenericType = ^UserDefinedGenericType(
+            type = RelationType,
+            typeArguments = [^UserDefinedGenericType(type = ~.~.~)]
+        )
+    );
+    ^CompilerResult<GenericType>(
+        value = buildUserDefinedGenericType($compiledRT),
+        context = $colAccum.context
+    );
+}

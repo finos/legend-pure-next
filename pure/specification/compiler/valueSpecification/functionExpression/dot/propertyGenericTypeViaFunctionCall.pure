@@ -1,0 +1,36 @@
+###Pure
+Class test::Box<T>
+{
+  value: T[1];
+  get(){$this.value}:T[1];
+}
+
+function test::use():Any[*]
+{
+  let b = ^test::Box<String>(value='hello');
+  $b.get() + ' world';
+}
+
+###CompiledGraph
+class test::Box extends Any  ~Class<test::Box<T~test::Box>>  @2:1-6:1
+  property value :T~test::Box[1]  ~Property<test::Box<T~test::Box>, T~test::Box|1>
+  qualifiedProperty get() :T~test::Box[1]
+    DotApplication test::Box.value :#T~test::Box##[1]#  ~@DotApplication@  @5:14-5:19
+      Variable this :#test::Box<T~test::Box>##[1]#  ~@VariableExpression@  @5:9-5:13
+
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @10:3-10:43
+    typeParam T -> #test::Box<@String@>#
+    mulParam m -> #[1]#
+    AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @10:7-10:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Box<@String@>##[1]#  ~@FunctionInvocation@  @10:11-10:43
+      typeParam T -> test::Box<@String@>
+      TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Box<@String@>|1>  @10:11-10:43
+      Collection :#KeyExpression#[1]  ~@Collection@  @10:11-10:43
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:30-10:42
+          AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @10:30-10:42
+          AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @10:36-10:42
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @11:12-11:21
+    DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @11:5-11:10
+      Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @11:3-11:4
+    AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @11:14-11:21

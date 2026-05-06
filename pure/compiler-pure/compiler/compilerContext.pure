@@ -1,0 +1,345 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::compiler::helper::packageableElement::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::*;
+import meta::pure::metamodel::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::metamodel::multiplicity::*;
+
+Class meta::pure::compiler::DebugState
+{
+    debug : Boolean[1];
+    space : String[1];
+}
+
+function meta::pure::compiler::debug(context:CompilerContext[1], fn:FunctionDefinition<{->String[1]}>[1]):Any[*]
+{
+    if($context.debugState.debug,
+        | println($context.debugState.space + $fn->eval()),
+        | []
+    );
+}
+
+// Skip the context rebuild when debug is off — both functions ran 80K+ times
+// per self-host even when debug was disabled, costing 0.7s of profiler self-time
+// for an unused string concat. Returning $context unchanged keeps the nesting
+// chain a no-op for non-debug runs.
+function meta::pure::compiler::debugSpaceInc(context:CompilerContext[1]):CompilerContext[1]
+{
+    if(!$context.debugState.debug,
+        | $context,
+        | let ds = $context.debugState;
+          let newDs = ^$ds(space = $ds.space + '\t');
+          ^$context(debugState = $newDs);
+    );
+}
+
+function meta::pure::compiler::debugSpaceDec(context:CompilerContext[1]):CompilerContext[1]
+{
+    if(!$context.debugState.debug,
+        | $context,
+        | let ds = $context.debugState;
+          let newDs = ^$ds(space = $ds.space->substring(1));
+          ^$context(debugState = $newDs);
+    );
+}
+
+Class meta::pure::compiler::CompilerContext
+{
+    debugState : DebugState[1];
+    sourceId : String[0..1];
+    imports : String[*];
+    elementMap : Map<String, PackageableElement>[1];
+    // Index of locally-compiled PackageableFunctions by simple name. Populated
+    // once between pass 2 and pass 3 by buildLocalFunctionIndex (elementMap is
+    // read-only across pass 3). Replaces the O(elementMap.size()) walk inside
+    // findAllFunctionsByNameAndArityUnfiltered (180us/call × 13K calls = 2.4s
+    // of self-host time before this index existed). Empty during pass 1/2; the
+    // unfiltered lookup falls back to walking elementMap.values() when empty.
+    localFunctionIndex : Map<String, List<PackageableFunction<Any>>>[1];
+    // C3 linearization cache keyed by PackageableElement path. Built once between
+    // pass 2 and pass 3 by {@link buildLinearizationCache} from elementMap +
+    // ancestors reachable through generalizations. Looked up by {@code linearize}
+    // — non-PE types and any path not in the cache fall back to walking, with the
+    // miss reported via println so coverage gaps are visible.
+    linearizationCache : Map<String, List<String>>[1];
+    errors : String[*];
+    scopeTypeParams : String[*];
+    scopeMulParams : String[*];
+    ownerTypeParams : TypeParameter[*];
+    ownerMulParams : MultiplicityParameter[*];
+    enclosingOwnerBinding : EnclosingOwnerParametersBinding[0..1];
+    // Cumulative compilation telemetry. inferenceRollbacks is bumped centrally
+    // in rollbackErrors plus at two explicit sites in resolveFunctionApplication
+    // (pre-resolve always, failed-candidate backtrack). candidateEvaluations
+    // is bumped at the single-candidate path and per candidate in the
+    // multi-candidate fold. Per-site breakdowns below let us diagnose where
+    // counts diverge from the Java compiler.
+    inferenceRollbacks : Integer[1];
+    candidateEvaluations : Integer[1];
+
+    // Per-element timing collected across pass 2 and pass 3. Each element compile
+    // appends an ElementStatistics with wall time (millis) and the rollback /
+    // candidate deltas for that element. compileDir aggregates entries with the
+    // same elementPath across passes when building the final summary.
+    elementStatistics : ElementStatistics[*];
+}
+
+// Build a minimal CompilerContext with no source state — used by helper-module
+// unit tests that don't run a real compile but still need a context to thread
+// through ctx-taking helpers like {@code subtypeOf} / {@code linearize}.
+function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
+{
+    let plain = ^CompilerContext(
+        debugState = ^DebugState(debug=false, space=''),
+        imports=[],
+        elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
+        localFunctionIndex=newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
+        linearizationCache=newMap([]->cast(@Pair<String, List<String>>)),
+        inferenceRollbacks=0,
+        candidateEvaluations=0
+    );
+    // Seed the cache with universe types so {@code linearize} can be called
+    //   straight away — every helper-test that constructs a plain context
+    //   relies on this for hits on built-ins like Integer/Number/Any.
+    $plain->buildLinearizationCache();
+}
+
+function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integer[1]
+{
+    $context.errors->size();
+}
+
+function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1]):CompilerContext[1]
+{
+    // Mirrors Java CompilationContext.rollbackErrorsTo: bump inferenceRollbacks
+    // alongside the error-stack truncation so the Pure compiler's telemetry
+    // tracks the same speculative-compile-discarded count as the Java bootstrap.
+    ^$context(
+        errors = $context.errors->take($checkpoint),
+        inferenceRollbacks = $context.inferenceRollbacks + 1
+    );
+}
+
+function meta::pure::compiler::snapshotErrors(context:CompilerContext[1], checkpoint:Integer[1]):String[*]
+{
+    $context.errors->drop($checkpoint);
+}
+
+Class meta::pure::compiler::ElementStatistics
+{
+    elementPath : String[1];
+    elementType : String[1];
+    totalMillis : Integer[1];
+    inferenceRollbacks : Integer[1];
+    candidateEvaluations : Integer[1];
+}
+
+Class meta::pure::compiler::CompilationStatistics
+{
+    totalMillis : Integer[1];
+    parsingMillis : Integer[1];
+    firstPassMillis : Integer[1];
+    secondPassMillis : Integer[1];
+    thirdPassMillis : Integer[1];
+    elementCount : Integer[1];
+    sourceFileCount : Integer[1];
+    inferenceRollbackCount : Integer[1];
+    candidateEvaluationCount : Integer[1];
+    elementStatistics : ElementStatistics[*];
+}
+
+Class meta::pure::compiler::CompilationResult
+{
+    elements : PackageableElement[*];
+    errors : String[*];
+    statistics : CompilationStatistics[0..1];
+    context : CompilerContext[0..1];
+}
+
+Class meta::pure::compiler::CompilerResult<T>
+{
+    value : T[0..1];
+    context : CompilerContext[1];
+}
+
+Class meta::pure::compiler::CompilerListResult<T>
+{
+    values : T[*];
+    context : CompilerContext[1];
+}
+
+native function meta::pure::compiler::findFunctionsByNameAndArity(name:String[1], arity:Integer[1]):PackageableFunction<Any>[*];
+
+// Enumerates every Type-typed PackageableElement across all loaded modules.
+// Backed by a native that walks {@code TruffleMetadataAccess.elementPaths()},
+// the union of every module's path index. Used by {@link buildLinearizationCache}
+// to populate the universe-side of the cache without relying on package-tree
+// traversal (which is split per module — walking {@code Package.children}
+// from a single Root only reaches one module's contributions).
+native function meta::pure::compiler::findAllTypes():Type[*];
+
+function meta::pure::compiler::isElementVisible(context:CompilerContext[1], elementPath:String[1]):Boolean[1]
+{
+    if(!$elementPath->contains('::'),
+        | true,
+        | // Extract package path: everything before the last '::'
+          let parts = $elementPath->split('::');
+          let pkgPath = $parts->init()->joinStrings('::');
+          $context.imports->exists(imp | $imp == $pkgPath);
+    );
+}
+
+function meta::pure::compiler::findAllFunctionsByNameAndArity(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
+{
+    // Handle qualified names like 'test::if' — strip package for lookup, filter by prefix (like Java findCandidates)
+    let isQualified = $name->contains('::');
+    let lookupName = if($isQualified, | $name->split('::')->last()->toOne(), | $name);
+    let all = findAllFunctionsByNameAndArityUnfiltered($context, $lookupName, $arity);
+    if($isQualified,
+        | let parts = $name->split('::');
+          let prefix = $parts->init()->joinStrings('::');
+          $all->filter(f | $f->elementToPath()->startsWith($prefix + '::'));,
+        | $all->filter(f | $context->isElementVisible($f->elementToPath()))
+    );
+}
+
+/**
+ * Walk elementMap once and group {@link PackageableFunction}s by
+ * {@code functionName}. Call between pass 2 and pass 3 (elementMap is
+ * read-only across pass 3, so the index stays valid for all
+ * {@link findAllFunctionsByNameAndArityUnfiltered} lookups in that
+ * pass).
+ */
+/**
+ * Walk every Type-typed element reachable from {@code elementMap} (source
+ * types) and from the universe Root (built-ins like {@code Any}, {@code Number},
+ * {@code Function} that live in the base PDB). For each PackageableElement Type,
+ * compute its C3 linearization once and store the path list in
+ * {@code linearizationCache}. Call between pass 2 and pass 3 — elementMap is
+ * read-only across pass 3, so the cached lists stay valid for every
+ * {@code linearize(t, ctx)} lookup that pass makes.
+ *
+ * Source types built during pass 1 use FRESH {@code Package} instances that
+ * aren't connected to the universe Root, so we can't reach the built-ins by
+ * walking up from a source type. We anchor the universe walk via
+ * {@code lenientPathToElement} on a known canonical element.
+ */
+function meta::pure::compiler::buildLinearizationCache(context:CompilerContext[1]):CompilerContext[1]
+{
+    let sourceTypes = $context.elementMap->values()
+        ->filter(e | $e->instanceOf(Type))
+        ->cast(@Type)
+        ->filter(t | $t->instanceOf(PackageableElement));
+    // Universe types come from every loaded module via {@link findAllTypes} —
+    //   the native enumerates {@code elementPaths()} across all modules and
+    //   resolves each through the composite resolver. Bypasses package-tree
+    //   traversal (which would only reach one module's children at a time;
+    //   tried it with a {@code MergedPackage} resolver overlay and it still
+    //   missed cross-module entries on the Java bootstrap path because that
+    //   side has no merge step).
+    let universeTypes = findAllTypes()->filter(t | $t->instanceOf(PackageableElement));
+    let allTypes = $sourceTypes->concatenate($universeTypes)
+        ->removeDuplicatesBy(t | $t->cast(@PackageableElement)->elementToPath());
+    // Compute each type's linearization via the no-cache walk
+    //   ({@code linearize(t, resolve, ctx)} with identity resolve), then store
+    //   it as paths. The 1-arg overload is what hot callers use; it consults
+    //   this map.
+    let entries = $allTypes->map(t |
+        let path = $t->cast(@PackageableElement)->elementToPath();
+        let lin = $t->meta::pure::compiler::helper::type::linearizeWalk($context);
+        pair($path, ^List<String>(values = $lin));
+    );
+    ^$context(linearizationCache = newMap($entries));
+}
+
+function meta::pure::compiler::buildLocalFunctionIndex(context:CompilerContext[1]):CompilerContext[1]
+{
+    let funcs = $context.elementMap->values()
+        ->filter(e | $e->instanceOf(PackageableFunction))
+        ->cast(@PackageableFunction<Any>)
+        ->filter(f | $f.functionName->isNotEmpty());
+    let pairs = $funcs->map(f | pair($f.functionName->toOne(), $f));
+    // Group by name. Pure's `Map<K, V>` uses single-value put, so we accumulate
+    // List<V> per key explicitly. Each key's list grows in elementMap iteration
+    // order — we don't rely on inner order downstream (the arity filter is
+    // applied at lookup time).
+    let index = $pairs->fold({p, m |
+        let existing = $m->get($p.first);
+        let updated = if($existing->isEmpty(),
+            | ^List<PackageableFunction<Any>>(values = [$p.second]),
+            | ^List<PackageableFunction<Any>>(values = $existing->toOne().values->concatenate($p.second))
+        );
+        $m->put($p.first, $updated);
+    }, newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)));
+    ^$context(localFunctionIndex = $index);
+}
+
+function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:CompilerContext[1], name:String[1], arity:Integer[1]):PackageableFunction<Any>[*]
+{
+    // Union: native index (base PDB functions, indexed by short name in
+    //   {@code TruffleModuleRegistry.pathsByFunctionName}) + locally-defined
+    //   functions from {@code localFunctionIndex} (built between pass 1 and
+    //   pass 2 by {@link buildLocalFunctionIndex}). Both are O(1) lookups
+    //   keyed by short name; no scan of {@code elementMap} or
+    //   {@code elementPaths} happens on the hot path.
+    let nativeCandidates = findFunctionsByNameAndArity($name, $arity);
+    let indexedByName = $context.localFunctionIndex->get($name);
+    let localCandidates = if($indexedByName->isEmpty(),
+        | []->cast(@PackageableFunction<Any>),
+        | $indexedByName->toOne().values->filter(f | $f.parameters->size() == $arity)
+    );
+    // Self-hosting: when the same fully qualified path appears in both the
+    // base PDB and the current source, prefer the local definition. Without
+    // this, recompiling a module against a base PDB that already contains
+    // that module's functions yields AMBIGUOUS errors at every call site
+    // (two candidates with identical signatures).
+    let localPaths = $localCandidates->map(f | $f->elementToPath());
+    let nativeFiltered = $nativeCandidates->filter(f | !$localPaths->contains($f->elementToPath()));
+    // Belt-and-braces dedupe-by-path on the merged list — collapses any
+    // duplicates with identical paths from either side.
+    $nativeFiltered->concatenate($localCandidates)->removeDuplicatesBy(f | $f->elementToPath());
+}
+
+function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+{
+    // Short-name suffix matches skip Packages — Pure source never references
+    // a Package by short name, but elementMap now contains Packages alongside
+    // other elements, so `meta::pure::compiler::test` (Package) would shadow
+    // the actual Profile when resolving a stereotype value of `test`.
+    let localResolution = $context.elementMap->get($path);
+    if([pair(| $localResolution->isNotEmpty(), | $localResolution),
+        pair(| $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package))->isNotEmpty(),
+             | let shortNameMatch = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package));
+               $context.elementMap->get($shortNameMatch->at(0));),
+        pair(| $path->lenientPathToElement()->isNotEmpty(), | $path->lenientPathToElement()),
+        pair(| $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head()->isNotEmpty(),
+             | $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head())],
+       | ('meta::pure::metamodel::type::' + $path)->lenientPathToElement()
+    );
+}
+
+function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
+{
+    let localResolution = $context.elementMap->get($path);
+    if([pair(| $localResolution->isNotEmpty(), | [$path]),
+        pair(| $path->contains('::'),
+             | if($path->lenientPathToElement()->isNotEmpty(), | [$path], | []))],
+       | let shortNameMatches = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
+         let importMatches = $context.imports->map(imp | $imp + '::' + $path)->filter(candidate | $candidate->lenientPathToElement()->isNotEmpty());
+         $importMatches->concatenate($shortNameMatches)->removeDuplicates();
+    );
+}

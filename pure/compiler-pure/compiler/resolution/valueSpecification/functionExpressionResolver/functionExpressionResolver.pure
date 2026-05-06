@@ -1,0 +1,121 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::metamodel::valuespecification::*;
+import meta::pure::metamodel::type::generics::*;
+import meta::pure::metamodel::relation::*;
+import meta::pure::metamodel::function::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::dotApplicationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::*;
+import meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionSpecific::newResolver::*;
+import meta::pure::compiler::structural::sourceInformationCompiler::*;
+import meta::pure::compiler::helper::functionExpression::*;
+import meta::pure::compiler::helper::function::*;
+import meta::pure::compiler::helper::genericType::*;
+import meta::pure::compiler::helper::multiplicity::*;
+import meta::pure::compiler::helper::parametersBinding::*;
+import meta::pure::compiler::helper::class::*;
+import meta::pure::compiler::helper::type::*;
+import meta::pure::metamodel::type::*;
+import meta::pure::metamodel::function::property::*;
+import meta::pure::metamodel::multiplicity::*;
+import meta::pure::compiler::*;
+
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::resolveFunctionExpression(fi:FunctionExpression[1], scope:VariableExpression[*], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    debug($context, | 'resolveFunctionExpression: ' + $fi.functionName->toOne() + ' (' + $fi->type()->toOne()->elementToPath() + ')');
+    let deepCtx = $context->debugSpaceInc();
+    let checkpoint = $context.errors->size();
+    let result = match($fi, [
+        dot:DotApplication[1] |
+            if($dot.parametersValues->isNotEmpty(),
+                | resolveDotApplication($dot, $scope, $deepCtx),
+                | resolveFunctionApplication($dot->cast(@FunctionInvocation), $scope, $deepCtx)
+            );,
+        inv:FunctionApplication[1] |
+            resolveFunctionApplication($inv, $scope, $deepCtx)
+    ]);
+    // Finalize all FunctionExpressions (mirrors Java FunctionExpressionResolver.finalizeFunctionExpression)
+    if($result.value->isNotEmpty(),
+        | match($result.value->toOne(), [
+              fe:FunctionExpression[1] | meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression($fe, $checkpoint, $result.context),
+              a:Any[1] | $result
+          ]),
+        | $result
+    );
+}
+
+// Mirrors Java FunctionExpressionResolver.finalizeFunctionExpression (lines 87-124)
+function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::finalizeFunctionExpression(fi:FunctionExpression[1], checkpoint:Integer[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
+{
+    if($fi.func->isNotEmpty(),
+        | // func resolved — compute return type from FunctionType + bindings (like Java lines 89-107)
+          // Get the fully-compiled function from the context if available
+          let funcPath = $fi.func->toOne()->elementToPath();
+          let fromContext = $context->resolveElement($funcPath);
+          let resolvedFunc = if($fromContext->isNotEmpty(),
+              | match($fromContext->toOne(), [f:Function<Any>[1] | $f, a:Any[1] | $fi.func->toOne()]),
+              | $fi.func->toOne()
+          );
+          let ft = $resolvedFunc->getFunctionType($context);
+          let baseBindings = extractResolvedParametersBinding($fi);
+          // For class properties, enrich bindings with class type parameter bindings
+          // from the receiver's generic type so that T resolves to the concrete type argument.
+          // For non-class properties (e.g., Column on RelationType), keep DotApplicationResolver's type.
+          let isProperty = $resolvedFunc->instanceOf(AbstractProperty) || $resolvedFunc->instanceOf(Column);
+          let classBindingsAvailable = $isProperty
+                              && $fi.parametersValues->isNotEmpty()
+                              && $fi.parametersValues->at(0).genericType->isNotEmpty()
+                              && !$fi.parametersValues->at(0).genericType->toOne()->instanceOf(CompilerNotSetGenericType)
+                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->isNotEmpty()
+                              && $fi.parametersValues->at(0).genericType->toOne()->genericTypeRawType()->toOne()->instanceOf(Class);
+          let bindings = if($classBindingsAvailable,
+              | let receiverGT = $fi.parametersValues->at(0).genericType->toOne();
+                buildBindingsFromGenericType($receiverGT->genericTypeRawType()->toOne()->cast(@Class<Any>), $receiverGT);,
+              | $baseBindings
+          );
+          // For non-class properties where DotApplicationResolver already set the type, preserve it
+          let alreadyResolved = $isProperty && !$classBindingsAvailable
+                                && $fi.genericType->isNotEmpty() && !$fi.genericType->toOne()->instanceOf(CompilerNotSetGenericType);
+          let returnGT = if($alreadyResolved,
+              | asInferredGenericType($fi.genericType->toOne()),
+              | asInferredGenericType(makeAsConcreteAsPossible($ft.returnType->toOne(), $bindings, $context))
+          );
+          let returnMul = if($alreadyResolved,
+              | asInferredMultiplicity($fi.multiplicity->toOne()),
+              | asInferredMultiplicity(makeAsConcreteAsPossible($ft.returnMultiplicity->toOne(), $bindings))
+          );
+          debug($context, | 'finalize: ' + $fi.functionName->toOne()
+              + ' gt=' + printGenericType($returnGT)
+              + ' mul=' + printMultiplicity($returnMul));
+          let updated = ^$fi(genericType = $returnGT, multiplicity = $returnMul);
+
+          // Validate required properties for new expressions
+          let fnName = $fi.functionName->toOne();
+          let ctx1 = if([pair(| $context.errors->size() > $checkpoint, | $context),
+                         pair(| ($fnName == 'new' || $fnName->startsWith('new_')) && $fi->instanceOf(FunctionApplication), | validateNewFromFI($fi->cast(@FunctionApplication), $context)),
+                         pair(| ($fnName == 'copy' || $fnName->startsWith('copy_')) && $fi->instanceOf(FunctionApplication), | validateCopyFromFI($fi->cast(@FunctionApplication), $context))],
+                        | $context
+                     );
+          ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);,
+        | // func not resolved — set genericType to undefined, report error if none yet (like Java lines 109-123)
+          let updated = ^$fi(genericType = ^CompilerNotSetGenericType());
+          let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
+          let ctx1 = if($context.errors->size() == $checkpoint,
+              | ^$context(errors += 'Can\'t resolve the function \'' + $fi.functionName->toOne() + '\'' + $siCtx),
+              | $context
+          );
+          ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);
+    );
+}
