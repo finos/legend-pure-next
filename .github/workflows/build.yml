@@ -14,16 +14,21 @@
 
 # Pipeline shape:
 #
-#   bootstrap                              (Temurin 25 — `just bootstrap::test`: mvn install with surefire +
-#                                           Pure compiler-graph spec tests; produces shared/*.pdb,
-#                                           bootstrap CLI jar, and the bootstrap mvn artifacts)
+#   guard                                  (no-op gate; skips release commits and the
+#       │                                   duplicate same-repo `pull_request` event so
+#       │                                   each commit runs once. New jobs depend on this
+#       │                                   either directly or transitively via bootstrap.)
 #       │
-#       ├── bootstrap-self-host             (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
-#       │                                    compiler-pure via Pure-on-Java and PDB-diff against Java direct)
-#       ├── truffle-self-host               (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
-#       │                                    compiler-graph spec) followed by `just truffle::test-pure-self-host`
-#       │                                    — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs)
-#       └── truffle-native-self-host        (GraalVM 25 — `just truffle::native::test-pure-self-host`:
+#       └── bootstrap                       (Temurin 25 — `just bootstrap::test`: mvn install with surefire +
+#               │                            Pure compiler-graph spec tests; produces shared/*.pdb,
+#               │                            bootstrap CLI jar, and the bootstrap mvn artifacts)
+#               │
+#               ├── bootstrap-self-host     (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
+#               │                            compiler-pure via Pure-on-Java and PDB-diff against Java direct)
+#               ├── truffle-self-host       (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
+#               │                            compiler-graph spec) followed by `just truffle::test-pure-self-host`
+#               │                            — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs)
+#               └── truffle-native-self-host (GraalVM 25 — `just truffle::native::test-pure-self-host`:
 #                                            builds native-image binary, compiles compiler-pure via the
 #                                            AOT binary and PDB-diffs against Java direct)
 #
@@ -43,9 +48,28 @@ env:
 on: [push, pull_request]
 
 jobs:
+  # Single gate for the whole pipeline. Every top-level job depends on this
+  # (directly via `needs: guard`, or transitively via `needs: bootstrap`), so
+  # adding a new job just means picking the right upstream — no need to copy
+  # the skip conditions onto each one.
+  #
+  # Skips:
+  #   - `[maven-release-plugin]` commits (release machinery, not real work).
+  #   - The duplicate `pull_request` event for same-repo PRs: same-repo
+  #     branches already fire `push`, so we let `pull_request` run only when
+  #     it comes from a fork (where `push` doesn't fire on this repo).
+  guard:
+    name: Pipeline guard
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
+      && !contains(github.event.head_commit.message, '[maven-release-plugin]')
+    steps:
+      - run: echo "Pipeline authorized."
+
   bootstrap:
     name: Bootstrap (build + tests)
-    if: "!contains(github.event.head_commit.message, '[maven-release-plugin]')"
+    needs: guard
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
