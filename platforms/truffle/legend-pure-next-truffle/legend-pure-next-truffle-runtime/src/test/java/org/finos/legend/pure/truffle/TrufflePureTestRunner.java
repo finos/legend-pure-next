@@ -22,15 +22,22 @@ import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * JUnit 5 test factory that discovers and runs Pure tests via the
@@ -48,6 +55,14 @@ class TrufflePureTestRunner
     private static PDBModule coreModule;
     private static PDBModule compilerModule;
     private static Object pctAdapter;
+
+    // Captures the polyglot Engine's err stream (where TraceCompilation writes
+    // its `[engine] opt done|opt failed|...` events). Read in
+    // {@link #assertNoCompilationFailures()} to enforce that every Graal
+    // compilation Pure stdlib runTests / PCT tests trigger lands successfully.
+    private static ByteArrayOutputStream graalLog;
+    private static org.graalvm.polyglot.Context polyglotCtx;
+    private static org.graalvm.polyglot.Engine engine;
 
     private static void ensureSetup() throws java.io.IOException
     {
@@ -76,7 +91,30 @@ class TrufflePureTestRunner
         compilerLoader.setResolver(resolver);
 
         PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
-        org.graalvm.polyglot.Context polyglotCtx = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+        // Build the Engine with err redirected to a buffer + TraceCompilation
+        // enabled. The {@link #assertNoCompilationFailures()} hook below scans
+        // the buffer for `opt failed` lines and fails the build if any are
+        // present — guarantees the Pure-on-Truffle stack stays 100%
+        // Graal-compiled across the runTests / PCT suites too (mirrors the
+        // tripwire on TruffleTestCompilerPure).
+        graalLog = new ByteArrayOutputStream();
+        // CompileImmediately is kept on long-term so the tripwire below sees
+        // a Graal compilation event for *every* Pure function the test suite
+        // reaches — without it, Truffle's threshold (~10 invocations)
+        // means single-call test paths never JIT and any recursive-inlining
+        // bailout in those paths slips by silently. Trades a slower
+        // surefire run for full coverage of the Pure stdlib's compile
+        // surface.
+        engine = org.graalvm.polyglot.Engine.newBuilder()
+                .allowExperimentalOptions(true)
+                .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
+                .option("engine.TraceCompilation", "true")
+                .option("engine.WarnInterpreterOnly", "false")
+                .option("engine.CompilationFailureAction", "Diagnose")
+                .option("engine.CompileImmediately", "true")
+                .build();
+        polyglotCtx = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
+                .engine(engine)
                 .allowAllAccess(true).build();
         polyglotCtx.initialize(PureLanguage.ID);
         polyglotCtx.enter();
@@ -107,6 +145,48 @@ class TrufflePureTestRunner
                 break;
             }
         }
+    }
+
+    /**
+     * Tripwire: every compilation Graal attempts during the suite must
+     * succeed. Closing the polyglot context flushes any in-flight
+     * compilations to the captured engine err stream; we then count
+     * {@code opt failed} entries.
+     *
+     * <p>Includes a minimum-attempts guard (total > 0) so the assertion
+     * doesn't pass vacuously on a non-GraalVM JVM where Graal isn't
+     * compiling anything.</p>
+     */
+    @AfterAll
+    static void assertNoCompilationFailures()
+    {
+        if (polyglotCtx != null)
+        {
+            polyglotCtx.leave();
+            polyglotCtx.close();
+        }
+        if (engine != null)
+        {
+            engine.close();
+        }
+        if (graalLog == null)
+        {
+            return;
+        }
+        String log = graalLog.toString(StandardCharsets.UTF_8);
+        List<String> failures = log.lines()
+                .filter(line -> line.contains("opt failed"))
+                .toList();
+        long total = log.lines().filter(line -> line.contains("opt done")
+                || line.contains("opt failed")).count();
+        assertTrue(total > 0,
+                "Expected at least one Graal compilation event but got 0 — "
+                        + "the runtime is interpreted-only (likely not GraalVM). "
+                        + "Set JAVA_HOME to a GraalVM 25 JDK before running this suite.");
+        String preview = failures.stream().limit(10).collect(Collectors.joining("\n"));
+        assertEquals(0, failures.size(),
+                () -> "Graal compilation failures: " + failures.size() + " of " + total
+                        + " attempts. Top failures:\n" + preview);
     }
 
     @TestFactory

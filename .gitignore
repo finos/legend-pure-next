@@ -28,6 +28,9 @@ website/yarn-error.log*
 **/build/
 /shared/
 
+
+**/graal_dumps/
+
 # Platforms
 /platforms/typescript/node_modules/
 /platforms/typescript/dist/

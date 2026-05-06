@@ -55,6 +55,16 @@ public final class RemNumberNode extends PureNode
         }
         double a = FloatHelper.asDouble(rawA, SIG);
         double b = FloatHelper.asDouble(rawB, SIG);
+        return bigDecimalRemainder(a, b);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double bigDecimalRemainder(double a, double b)
+    {
+        // BigDecimal.remainder reaches BigInteger.pow / squareKaratsuba which
+        // is genuinely recursive (`squareKaratsuba` → `square` →
+        // `squareKaratsuba`). Without this boundary Graal inlines ~490 levels
+        // and bails out with `PermanentBailoutException: Too deep inlining`.
         return BigDecimal.valueOf(a).remainder(BigDecimal.valueOf(b)).doubleValue();
     }
 

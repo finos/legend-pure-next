@@ -195,9 +195,34 @@ public final class TruffleCompilerBinaryBuilder
         finally
         {
             // Closing the polyglot context flushes any attached engine tools
-            // (cpusampler, etc.) so their reports actually print.
+            // (cpusampler, etc.) so their reports actually print, and any
+            // in-flight Graal compilations write `opt failed` events into
+            // the captured err buffer before we scan it below.
             runtime.close();
+            failOnGraalCompilationFailures(runtime);
         }
+    }
+
+    /**
+     * Tripwire: every Graal compilation Truffle attempted during compilation
+     * must succeed. Throws if any {@code opt failed} events were recorded —
+     * the caller (e.g. {@code pure-truffle compile}) propagates the throw
+     * and exits non-zero. No-op under native-image AOT (no JIT events).
+     */
+    private static void failOnGraalCompilationFailures(PureTruffleRuntime runtime)
+    {
+        java.util.List<String> failures = runtime.graalCompilationFailures();
+        if (failures.isEmpty())
+        {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Graal compilation failures: ").append(failures.size())
+                .append(" of ").append(runtime.graalCompilationAttempts()).append(" attempts. Top failures:\n");
+        failures.stream().limit(10).forEach(line -> sb.append(line).append('\n'));
+        sb.append("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose` ")
+                .append("and inspect the produced graal_dumps/ directory.");
+        throw new RuntimeException(sb.toString());
     }
 
     private static String deriveName(Path pdbPath)

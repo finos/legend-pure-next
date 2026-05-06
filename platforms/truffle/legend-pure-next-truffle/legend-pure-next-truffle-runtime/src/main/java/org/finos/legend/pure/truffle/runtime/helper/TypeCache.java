@@ -103,9 +103,11 @@ public final class TypeCache implements TruffleTypeCache
 
     /**
      * Reflection-free factory for the Impl class at {@code classPath}. The
-     * first lookup builds a typed {@link java.util.function.Supplier} via
-     * {@link java.lang.invoke.LambdaMetafactory}; subsequent calls are
-     * direct virtual dispatches with no per-call reflection.
+     * first lookup resolves a no-arg-constructor {@link java.lang.invoke.MethodHandle};
+     * subsequent calls go through {@code MethodHandle.invoke} — slightly slower
+     * than a {@code LambdaMetafactory}-generated {@code Supplier} but
+     * native-image-compatible (AOT compilation rejects runtime
+     * {@code LambdaMetafactory.metafactory} calls because they spin a class).
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Object newInstance(String classPath)
@@ -121,22 +123,22 @@ public final class TypeCache implements TruffleTypeCache
             java.lang.invoke.MethodHandles.Lookup lookup = java.lang.invoke.MethodHandles.lookup();
             java.lang.invoke.MethodHandle ctor = lookup.findConstructor(
                     implClass, java.lang.invoke.MethodType.methodType(void.class));
-            // LambdaMetafactory turns the constructor MethodHandle into a
-            // typed Supplier<Object> implementation. Subsequent invocations
-            // of the Supplier are direct invocations of the no-arg
-            // constructor — no reflection, no access check, no permission
-            // walk. This is the standard "fast reflection" pattern.
-            java.lang.invoke.CallSite site = java.lang.invoke.LambdaMetafactory.metafactory(
-                    lookup,
-                    "get",
-                    java.lang.invoke.MethodType.methodType(java.util.function.Supplier.class),
-                    java.lang.invoke.MethodType.methodType(Object.class),
-                    ctor,
-                    java.lang.invoke.MethodType.methodType(Object.class));
-            @SuppressWarnings("unchecked")
-            java.util.function.Supplier<Object> supplier =
-                    (java.util.function.Supplier<Object>) site.getTarget().invokeExact();
-            return supplier;
+            // Wrap the MethodHandle in a source-level lambda. javac emits
+            // invokedynamic + LambdaMetafactory bootstrap for this, and the
+            // native-image builder pre-compiles that at build time — so the
+            // resulting Supplier is a normal class in the image, no runtime
+            // class definition needed.
+            return () ->
+            {
+                try
+                {
+                    return ctor.invoke();
+                }
+                catch (Throwable t)
+                {
+                    throw new RuntimeException("Failed to instantiate " + classPath, t);
+                }
+            };
         }
         catch (Throwable t)
         {

@@ -24,11 +24,15 @@ import org.finos.legend.pure.truffle.ast.PureSourceHelper;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.finos.legend.pure.next.parser.ParserExtension;
 import org.finos.legend.pure.next.parser.PureParser;
@@ -44,6 +48,8 @@ import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 public final class PureTruffleRuntime
 {
     private final org.graalvm.polyglot.Context polyglotContext;
+    private final org.graalvm.polyglot.Engine engine;
+    private final ByteArrayOutputStream graalLog;
     private final PureContext context;
     private final TruffleMetadataAccess resolver;
 
@@ -61,11 +67,43 @@ public final class PureTruffleRuntime
             PureSourceHelper.addSourceRoot(root);
         }
 
+        // Build a shared Engine with the Graal compilation tripwire wired in:
+        //   - TraceCompilation logs every `opt done` / `opt failed` event
+        //   - err is redirected into a buffer we scan in graalCompilationFailures()
+        //   - CompileImmediately forces every reached function through Tier-1
+        //     so the tripwire surfaces bailouts in code paths the suite calls
+        //     just once (Truffle's default lazy threshold ~10 invocations
+        //     would otherwise hide them).
+        // Skipped under native-image AOT — the runtime never JITs there, so
+        // there are no compilation events and no risk of "Too deep inlining"
+        // bailouts at all.
+        if (org.graalvm.nativeimage.ImageInfo.inImageRuntimeCode())
+        {
+            this.graalLog = null;
+            this.engine = null;
+        }
+        else
+        {
+            this.graalLog = new ByteArrayOutputStream();
+            this.engine = org.graalvm.polyglot.Engine.newBuilder()
+                    .allowExperimentalOptions(true)
+                    .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
+                    .option("engine.TraceCompilation", "true")
+                    .option("engine.WarnInterpreterOnly", "false")
+                    .option("engine.CompilationFailureAction", "Silent")
+                    .option("engine.CompileImmediately", "true")
+                    .build();
+        }
+
         // Configure and create the Truffle polyglot context
         PureLanguage.configure(resolver, NativeNodeRegistry.createDefault());
         org.graalvm.polyglot.Context.Builder ctxBuilder = org.graalvm.polyglot.Context.newBuilder(PureLanguage.ID)
                 .allowAllAccess(true)
                 .allowExperimentalOptions(true);
+        if (engine != null)
+        {
+            ctxBuilder.engine(engine);
+        }
         for (Map.Entry<String, String> e : polyglotOptions.entrySet())
         {
             ctxBuilder.option(e.getKey(), e.getValue());
@@ -87,8 +125,10 @@ public final class PureTruffleRuntime
     }
 
     /**
-     * Close the underlying polyglot context. Triggers any attached engine
-     * tools (e.g. {@code cpusampler}) to flush their output.
+     * Close the underlying polyglot context (and the shared Engine, if any).
+     * Triggers any attached engine tools (e.g. {@code cpusampler}) to flush
+     * their output, and flushes any in-flight Graal compilations to the
+     * captured err buffer so {@link #graalCompilationFailures()} sees them.
      */
     public void close()
     {
@@ -101,6 +141,43 @@ public final class PureTruffleRuntime
             // already left or never entered
         }
         polyglotContext.close();
+        if (engine != null)
+        {
+            engine.close();
+        }
+    }
+
+    /**
+     * Lines from the captured Graal err stream that match {@code opt failed}.
+     * Empty under native-image AOT (no JIT events at all).
+     *
+     * <p>Callers should invoke {@link #close()} first so in-flight Graal
+     * compilations have flushed their events into the buffer.</p>
+     */
+    public List<String> graalCompilationFailures()
+    {
+        if (graalLog == null)
+        {
+            return List.of();
+        }
+        return graalLog.toString(StandardCharsets.UTF_8).lines()
+                .filter(line -> line.contains("opt failed"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Total Graal compilation events ({@code opt done} + {@code opt failed})
+     * recorded during this runtime's lifetime. 0 under native-image AOT.
+     */
+    public long graalCompilationAttempts()
+    {
+        if (graalLog == null)
+        {
+            return 0;
+        }
+        return graalLog.toString(StandardCharsets.UTF_8).lines()
+                .filter(line -> line.contains("opt done") || line.contains("opt failed"))
+                .count();
     }
 
     public static final class Builder

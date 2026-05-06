@@ -24,7 +24,7 @@ explicitly so the chain works on a fresh tree.
   - `<repo>/shared/specification/` ← `legend-pure-next-bootstrap-generators/target/generated-specification/`
 - `build-compiler-pdb` — runs `pure-bootstrap compile` over `pure/compiler-pure/`, producing `<repo>/shared/compiler.pdb`. Truffle codegen reads this.
 
-The `test-pure`, `test-pct`, and `test-compiler` recipes are zero-dep
+The `test-pure-testFunctions`, `test-pure-PCTs`, and `test-pure-compiler` recipes are zero-dep
 "expert mode" entry points — they assume `just build` (or `just test`) has
 already produced the artifacts. Use them standalone for tight Pure-side
 iteration without re-invoking Maven.
@@ -49,7 +49,7 @@ test
 │                             (Java unit tests + Pure runTests/PCT via surefire)
 ├── stage                    cp pure-bootstrap.jar + core.pdb + specs/
 ├── build-compiler-pdb       pure-bootstrap compile compiler-pure → shared/compiler.pdb
-└── test-compiler
+└── test-pure-compiler
     └── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler
 ```
 
@@ -59,25 +59,25 @@ test-java
 ```
 
 ```
-test-pure
+test-pure-testFunctions
 └── body: pure-bootstrap execute meta::pure::test::runTests              meta::pure::functions
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
 ```
-test-pct
+test-pure-PCTs
 └── body: pure-bootstrap execute meta::pure::test::runPCTTests           meta::pure::functions
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
 ```
-test-compiler
+test-pure-compiler
 └── body: pure-bootstrap execute meta::pure::test::runCompiledGraphTests pure/specification/compiler
                                  (assumes `just build` was run — no Maven, no stage)
 ```
 
 ```
-test-self-host
+test-pure-self-host
 └── build-compiler-pdb     pure-bootstrap compile (assumes core.pdb staged)
     └── body
         ├── pure-bootstrap compile-via-pure compiler-pure → bootstrap/build/compiler_bootstrap.pdb
@@ -105,7 +105,7 @@ are unchanged. The previous setup had `build-mvn` (`mvn install -DskipTests`)
 followed by `test-java` doing a separate `mvn test`, paying that cost twice.
 Routing `test` through `test-java` (which uses `(_mvn "with-tests")`)
 collapses both into a single launch — surefire runs as part of the install
-lifecycle. `test-pure`, `test-pct`, and `test-compiler` standalone skip
+lifecycle. `test-pure-testFunctions`, `test-pure-PCTs`, and `test-pure-compiler` standalone skip
 Maven entirely (assume staged), giving a tight inner-loop for Pure-side
 iteration.
 
@@ -124,4 +124,4 @@ inner `println` + redundant `true` from a trailing `Boolean[1]` return).
 | `<repo>/shared/core.pdb` | `stage` | `build-compiler-pdb`, truffle codegen, all Pure CLI invocations |
 | `<repo>/shared/compiler.pdb` | `build-compiler-pdb` | truffle codegen, all Pure CLI invocations |
 | `<repo>/shared/specification/` | `stage` | reference data for tests |
-| `bootstrap/build/compiler_bootstrap.pdb` | `test-self-host` | `test-self-host`'s own `execute` step |
+| `bootstrap/build/compiler_bootstrap.pdb` | `test-pure-self-host` | `test-pure-self-host`'s own `execute` step |

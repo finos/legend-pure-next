@@ -1,14 +1,15 @@
-# Legend Pure Next — top-level build orchestrator
+# Legend Pure Next — top-level orchestrator.
 #
-# Usage:
-#   just                     # build and test everything
-#   just test                # run all tests (Java + Pure)
-#   just ide                 # launch the IDE
-#   just clean               # clean everything
+# Quickstart:
+#   just                    # build + test everything
+#   just build              # build everything (no tests)
+#   just test               # run all tests
+#   just ide                # launch the IDE
+#   just clean              # delete shared/ and per-subproject build artifacts
 #
-# Subproject-specific recipes live in per-subproject Justfiles and are
-# addressable as `just bootstrap::<recipe>`, `just truffle::<recipe>`, and
-# `just typescript::<recipe>`. Run `just --list bootstrap` (etc.) to see them.
+# Per-subproject recipes are addressable as `just bootstrap::<recipe>`,
+# `just truffle::<recipe>`, `just typescript::<recipe>`. Use
+# `just --list bootstrap` (etc.) to see what each subproject offers.
 
 set quiet := true
 # Bash needed for process substitution (filtering stderr without touching exit codes).
@@ -23,21 +24,19 @@ out  := root / "shared"
 
 banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
 
-# Default: build and test everything.
+# Build and test everything.
 default: test
 
-# Build everything by delegating to per-subproject builds.
-# Order matters: bootstrap stages core.pdb / compiler.pdb that truffle codegen reads.
-# typescript has no dependency on the others and could run in parallel; sequenced last.
+# Build all subprojects (bootstrap → truffle → typescript).
 build: bootstrap::build truffle::build typescript::build
 
-# Test everything: each module's `test` runs Java unit tests + Pure spec tests
-# on its evaluator, and `self-host` exercises the compile-via-Pure path. Together
-# these cover what the old root `test` did.
+# Run all tests across subprojects.
 test: bootstrap::test truffle::test typescript::test
 
+# Remove shared/ and per-subproject build artifacts.
 clean: bootstrap::clean truffle::clean typescript::clean
     @{{banner}} '[clean]' 'remove shared/'
     rm -rf {{out}}
 
+# Launch the bootstrap-backed Pure IDE.
 ide: bootstrap::ide

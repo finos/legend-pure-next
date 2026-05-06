@@ -42,6 +42,18 @@ public final class RoundNumberNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         double v = FloatHelper.asDouble(operand.executeGeneric(frame), SIG);
+        return roundHalfEven(v);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static long roundHalfEven(double v)
+    {
+        // BigDecimal.setScale → BigDecimal.bigTenToThe → BigInteger.pow walks
+        // into BigInteger.squareKaratsuba which is genuinely recursive
+        // (`squareKaratsuba` → `square` → `squareKaratsuba`). Without this
+        // boundary Graal inlines ~490 levels deep before bailing out with
+        // `PermanentBailoutException: Too deep inlining`. Boundary keeps
+        // BigInteger arithmetic as a runtime call, not an inlining target.
         return BigDecimal.valueOf(v).setScale(0, RoundingMode.HALF_EVEN).longValue();
     }
 }

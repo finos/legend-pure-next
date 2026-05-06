@@ -54,20 +54,32 @@ public final class ParseDecimalNode extends PureNode
         if (scaleArg != null)
         {
             long scale = IntegerHelper.asLong(scaleArg.executeGeneric(frame), SIG);
-            double d = new BigDecimal(s.trim())
-                    .setScale((int) scale, RoundingMode.HALF_UP)
-                    .doubleValue();
-            if (d == 0.0)
-            {
-                d = 0.0;
-            }
-            return d;
+            return parseAndScale(s, (int) scale);
         }
+        return parsePlain(s);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double parseAndScale(String s, int scale)
+    {
+        // BigDecimal.setScale walks into BigInteger arithmetic where
+        // squareKaratsuba recursion would blow Graal's inline budget
+        // (~490 levels). String parsing also reaches into JDK reflection
+        // (Class.getGenericInfo → SignatureParser.parseClassSignature) on
+        // some hot paths. Boundary keeps both off the inlining target list.
+        double d = new BigDecimal(s.trim())
+                .setScale(scale, RoundingMode.HALF_UP)
+                .doubleValue();
+        return d == 0.0 ? 0.0 : d;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static double parsePlain(String s)
+    {
+        // Double.parseDouble has its own deep call chain (NumberFormatException
+        // construction, Locale lookups, signature parsing in failure paths) —
+        // running it across a TruffleBoundary keeps PE-time inlining bounded.
         double d = Double.parseDouble(s.trim());
-        if (d == 0.0)
-        {
-            d = 0.0;
-        }
-        return d;
+        return d == 0.0 ? 0.0 : d;
     }
 }

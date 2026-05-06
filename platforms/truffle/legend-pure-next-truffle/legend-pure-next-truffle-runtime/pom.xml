@@ -243,6 +243,11 @@
                                 <buildArg>--no-fallback</buildArg>
                                 <buildArg>--features=org.finos.legend.pure.truffle.nativeimage.PureFeature</buildArg>
                                 <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.PureLanguageProvider</buildArg>
+                                <!-- PureProfilerProvider is referenced by static fields reachable from the
+                                     image heap (Truffle profiler service-provider lookup). Initialize at
+                                     build time so its singleton lands in the heap as a fully constructed
+                                     object rather than triggering the build-time/run-time mismatch error. -->
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.profiler.PureProfilerProvider</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

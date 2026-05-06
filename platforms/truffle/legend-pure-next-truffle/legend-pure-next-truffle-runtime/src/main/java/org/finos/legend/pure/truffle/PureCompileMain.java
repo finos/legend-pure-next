@@ -330,8 +330,46 @@ public final class PureCompileMain
         finally
         {
             // Closing the polyglot context flushes any attached engine tools
-            // (cpusampler, etc.) so their reports actually print.
+            // (cpusampler, etc.) so their reports actually print, and any
+            // in-flight Graal compilations write their `opt failed` events
+            // into the captured err buffer before we scan it below.
             runtime.close();
+            failOnGraalCompilationFailures(runtime);
         }
+    }
+
+    /**
+     * Tripwire: every Graal compilation Truffle attempted during this run
+     * must succeed. Scans the captured err buffer for {@code opt failed}
+     * lines and exits non-zero if any are present.
+     *
+     * <p>No-op under native-image AOT (no JIT events at runtime). On the JVM
+     * with GraalVM, {@link PureTruffleRuntime} runs with
+     * {@code engine.CompileImmediately=true} so every reached Pure function
+     * is JITed — recursive-inlining bailouts in cold paths surface here.</p>
+     */
+    private static void failOnGraalCompilationFailures(PureTruffleRuntime runtime)
+    {
+        long attempts = runtime.graalCompilationAttempts();
+        java.util.List<String> failures = runtime.graalCompilationFailures();
+        // Permanent CLI output — every run prints the Graal tripwire status
+        // so users see at a glance whether Truffle's optimizing compiler
+        // actually engaged. Under native-image AOT this prints "0/0" since
+        // there is no JIT at runtime; on the JVM with GraalVM, expect
+        // attempts >> 0 and failures == 0.
+        System.err.println("[graal-tripwire] " + attempts
+                + " compilations attempted, " + failures.size() + " failed.");
+        if (failures.isEmpty())
+        {
+            return;
+        }
+        System.err.println();
+        System.err.println("Graal compilation failures: " + failures.size()
+                + " of " + runtime.graalCompilationAttempts() + " attempts. Top failures:");
+        failures.stream().limit(10).forEach(System.err::println);
+        System.err.println();
+        System.err.println("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose`");
+        System.err.println("and inspect the produced graal_dumps/ directory.");
+        System.exit(1);
     }
 }

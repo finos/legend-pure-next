@@ -12,18 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Pipeline shape:
+#
+#   bootstrap                              (Temurin 25 — `just bootstrap::test`: mvn install with surefire +
+#                                           Pure compiler-graph spec tests; produces shared/*.pdb,
+#                                           bootstrap CLI jar, and the bootstrap mvn artifacts)
+#       │
+#       ├── bootstrap-self-host             (Temurin 25 — `just bootstrap::test-pure-self-host`: compile
+#       │                                    compiler-pure via Pure-on-Java and PDB-diff against Java direct)
+#       ├── truffle-self-host               (GraalVM 25 — `just truffle::test` (mvn surefire + Truffle
+#       │                                    compiler-graph spec) followed by `just truffle::test-pure-self-host`
+#       │                                    — compiles compiler-pure on Truffle JVM (JIT) and PDB-diffs)
+#       └── truffle-native-self-host        (GraalVM 25 — `just truffle::native::test-pure-self-host`:
+#                                            builds native-image binary, compiles compiler-pure via the
+#                                            AOT binary and PDB-diffs against Java direct)
+#
+# The three self-host jobs run in parallel after bootstrap finishes; all three
+# consume bootstrap's outputs via actions/upload-artifact + actions/download-artifact.
+# truffle-self-host and truffle-native-self-host need GraalVM; bootstrap-self-host
+# uses plain Temurin.
+
 name: Build CI
 
 env:
   CI_DEPLOY_USERNAME: ${{ secrets.CI_DEPLOY_USERNAME }}
   CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 
 on: [push, pull_request]
 
 jobs:
-  build:
-    name: Build
+  bootstrap:
+    name: Bootstrap (build + tests)
     if: "!contains(github.event.head_commit.message, '[maven-release-plugin]')"
     runs-on: ubuntu-latest
     steps:
@@ -72,38 +93,49 @@ jobs:
         with:
           theme: dark
 
-      # `just test` orchestrates the entire chain: it wipes build/, then runs
-      # `mvn clean install` in the bootstrap reactor (gating on bootstrap unit
-      # tests), generates truffle PDB wrappers, runs `mvn clean install` in
-      # truffle-runtime (gating on the 800+ truffle unit tests), and finally
-      # runs Pure-level spec tests on both bootstrap and truffle interpreters.
-      # A failure in any phase fails the recipe — no separate `mvn test` pass.
-      - name: Test (just test)
-        if: (github.repository != 'finos/legend-pure-next') || (github.ref != 'refs/heads/main')
-        run: just test
-        env:
-          MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
+      # Builds bootstrap (mvn install + JUnit) and runs the Pure compiler-graph
+      # spec tests on Pure-on-Java. Outputs shared/core.pdb, shared/compiler.pdb,
+      # and the bootstrap CLI fat jar — consumed by both downstream self-host jobs.
+      - name: Bootstrap test
+        run: just bootstrap::test
 
-      - name: Test + Sonar
+      - name: Sonar (main only)
         if: (github.repository == 'finos/legend-pure-next') && (github.ref == 'refs/heads/main')
         run: |
           set -e
-          just test
           cd bootstrap
           mvn -B -e javadoc:javadoc -Psonar \
             -Dorg.slf4j.simpleLogger.showDateTime=true \
             -Dorg.slf4j.simpleLogger.dateTimeFormat="yyyy-MM-dd HH:mm:ss.SSSZ"
-        env:
-          MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
+
+      # Pack the artifacts the downstream jobs need:
+      #   shared/*.pdb        — Java-direct compiler.pdb baseline + core.pdb
+      #   bootstrap/build/    — pure-bootstrap CLI fat jar (used to run the diff)
+      #   ~/.m2 maven repo    — bootstrap modules installed by `mvn install`
+      #                          (truffle build + diff-pdb pull these from local m2)
+      # The downstream `bootstrap-self-host` job also needs the bootstrap mvn
+      # artifacts to run `compile-via-pure`.
+      - name: Tar bootstrap artifacts
+        run: |
+          tar -cf bootstrap-artifacts.tar shared/ bootstrap/build/
+          tar -cf bootstrap-mvn.tar -C ~/.m2/repository org/finos/legend/pure
+
+      - name: Upload bootstrap artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-artifacts
+          path: |
+            bootstrap-artifacts.tar
+            bootstrap-mvn.tar
+          retention-days: 1
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-bootstrap
           path: |
             ${{ github.workspace }}/bootstrap/**/target/surefire-reports/*.xml
-            ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
 
       - name: Upload CI Event
         if: always()
@@ -111,3 +143,178 @@ jobs:
         with:
           name: event-file
           path: ${{ github.event_path }}
+
+  bootstrap-self-host:
+    name: Bootstrap self-host (compile-via-pure-on-Java vs Java direct)
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 25
+          java-package: jdk
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      - name: Bootstrap self-host
+        run: just bootstrap::test-pure-self-host
+
+  truffle-self-host:
+    name: Truffle build + self-host (compile-via-pure-on-Truffle vs Java direct)
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      # GraalVM (not Temurin) is required: the Truffle interpreter needs
+      # GraalVM's optimizing runtime — plain OpenJDK falls back to
+      # DefaultTruffleRuntime (Interpreted), which doesn't register
+      # engine.TraceCompilation and breaks the test harness's compile-failure
+      # tripwire. The truffle Justfile's `_check-graalvm` enforces this.
+      - name: Set up GraalVM JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install flatc
+        uses: Nugine/setup-flatc@v1
+        with:
+          version: "25.2.10"
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # `truffle::test` runs the truffle reactor with surefire (Java unit
+      # tests) and then the Pure compiler-graph spec suite on Truffle.
+      # `truffle::test-pure-self-host` then compiles compiler-pure on
+      # Truffle and diffs the output against shared/compiler.pdb (Java direct).
+      # NB: each recipe invokes mvn separately (`_mvn "with-tests"` vs
+      # `_mvn "skip-tests"`) so just dedup doesn't kick in — the second
+      # mvn run is fast since deps are already cached / installed.
+      - name: Truffle test
+        run: just truffle::test
+
+      - name: Truffle self-host
+        run: just truffle::test-pure-self-host
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-truffle
+          path: |
+            ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
+
+  truffle-native-self-host:
+    name: Truffle native build + self-host (compile-via-pure on AOT binary vs Java direct)
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-mvn-deps
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      # Same GraalVM 25 setup as truffle-self-host, plus native-image — the
+      # graalvm/setup-graalvm action installs `native-image` alongside the JDK.
+      - name: Set up GraalVM JDK + native-image
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install flatc
+        uses: Nugine/setup-flatc@v1
+        with:
+          version: "25.2.10"
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Download bootstrap artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-artifacts
+
+      - name: Restore bootstrap artifacts
+        run: |
+          tar -xf bootstrap-artifacts.tar
+          mkdir -p ~/.m2/repository
+          tar -xf bootstrap-mvn.tar -C ~/.m2/repository
+
+      # `truffle::native::test-pure-self-host` first builds the native-image
+      # binary (~5–10 min, dominated by AOT analysis + compile), then uses it
+      # to compile compiler-pure into compiler_truffle_native.pdb and PDB-diffs
+      # against shared/compiler.pdb (Java direct). The Graal tripwire reports
+      # `0/0` here since AOT does no runtime JIT — the value is in catching
+      # AOT-specific divergence (eliminated paths, native-image substitutions)
+      # that the JIT path can't surface.
+      - name: Truffle native self-host
+        run: just truffle::native::test-pure-self-host

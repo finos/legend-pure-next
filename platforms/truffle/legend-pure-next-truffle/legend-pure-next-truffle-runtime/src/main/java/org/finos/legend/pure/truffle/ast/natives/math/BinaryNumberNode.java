@@ -50,29 +50,42 @@ public final class BinaryNumberNode extends PureNode
     {
         Object rawA = left.executeGeneric(frame);
         Object rawB = right.executeGeneric(frame);
-        // If either operand is BigDecimal, use BigDecimal arithmetic
+        // BigDecimal path is routed through a @TruffleBoundary helper so
+        // Graal's inliner stops at the boundary instead of trying to inline
+        // through BigDecimal.add/subtract/multiply. Those JDK methods reach
+        // BigInteger arithmetic where `squareKaratsuba` is genuinely recursive
+        // (`squareKaratsuba` → `square` → `squareKaratsuba`) — without the
+        // boundary, Graal walks ~490 levels deep before bailing out with
+        // `PermanentBailoutException: Too deep inlining`. Even with Double
+        // operands at runtime, Graal compiles the BigDecimal branch
+        // statically, so the boundary must guard the call site.
         if (rawA instanceof java.math.BigDecimal || rawB instanceof java.math.BigDecimal)
         {
-            java.math.BigDecimal bdA = toBigDecimal(rawA);
-            java.math.BigDecimal bdB = toBigDecimal(rawB);
-            // Apply the operation via double, then construct BigDecimal from result
-            // Use BigDecimal arithmetic directly for multiply
-            if (signature.contains("times"))
-            {
-                return bdA.multiply(bdB);
-            }
-            if (signature.contains("plus"))
-            {
-                return bdA.add(bdB);
-            }
-            if (signature.contains("minus"))
-            {
-                return bdA.subtract(bdB);
-            }
+            return bigDecimalOp(rawA, rawB);
         }
         double a = FloatHelper.asDouble(rawA, signature);
         double b = FloatHelper.asDouble(rawB, signature);
         return op.applyAsDouble(a, b);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object bigDecimalOp(Object rawA, Object rawB)
+    {
+        java.math.BigDecimal bdA = toBigDecimal(rawA);
+        java.math.BigDecimal bdB = toBigDecimal(rawB);
+        if (signature.contains("times"))
+        {
+            return bdA.multiply(bdB);
+        }
+        if (signature.contains("plus"))
+        {
+            return bdA.add(bdB);
+        }
+        if (signature.contains("minus"))
+        {
+            return bdA.subtract(bdB);
+        }
+        return op.applyAsDouble(bdA.doubleValue(), bdB.doubleValue());
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

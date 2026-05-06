@@ -65,7 +65,6 @@
         <module>legend-pure-next-bootstrap-core</module>
         <module>legend-pure-next-bootstrap-ide</module>
         <module>legend-pure-next-bootstrap-cli</module>
-<!--        <module>legend-pure-next-bootstrap-test-compiler-pure</module>-->
     </modules>
 
     <build>

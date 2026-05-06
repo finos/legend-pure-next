@@ -12,6 +12,7 @@ ts_root := source_directory()
 
 banner := "printf '\\n══════════════════════════════════════════════════════════════════════════════════\\n  %-13s %s\\n══════════════════════════════════════════════════════════════════════════════════\\n'"
 
+# Default: build + run tests.
 default: test
 
 # pnpm install + pnpm run build (tsc).
@@ -19,11 +20,12 @@ build:
     @{{banner}} '[typescript]' 'pnpm install + build'
     cd {{ts_root}} && pnpm install && pnpm run build
 
-# pnpm run test. Currently a placeholder until the typescript runtime grows tests.
+# Build + run pnpm tests (placeholder until the TypeScript runtime grows real tests).
 test: build
     @{{banner}} '[typescript]' 'pnpm run test'
     cd {{ts_root}} && pnpm run test
 
+# Remove dist/ and node_modules/.
 clean:
     @{{banner}} '[typescript clean]' 'remove dist/ and node_modules/'
     rm -rf {{ts_root}}/dist {{ts_root}}/node_modules

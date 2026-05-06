@@ -191,7 +191,15 @@ public final class PdbDeepDiffer
                 byte[] bytesB = modB.archive().readSection(s);
                 if (!java.util.Arrays.equals(bytesA, bytesB))
                 {
-                    sectionDiffs.add(compareSection(s, bytesA, bytesB));
+                    SectionDiff diff = compareSection(s, bytesA, bytesB);
+                    // Drop ORDER and ENCODING diffs entirely: they describe
+                    // byte-level divergence with no semantic difference (same
+                    // entries, different traversal order or FlatBuffer layout)
+                    // and just add noise to reports.
+                    if (diff.kind != SectionDiff.Kind.ORDER && diff.kind != SectionDiff.Kind.ENCODING)
+                    {
+                        sectionDiffs.add(diff);
+                    }
                 }
             }
         }

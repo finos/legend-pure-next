@@ -20,7 +20,7 @@ one (different packages, no FQN conflict).
 
 | Path | Recipe | Invokes | Used by |
 |---|---|---|---|
-| Skip tests (fast) | `_mvn-skip-tests` | `mvn clean install -DskipTests` on the truffle parent | `build`, `test-functions`, `test-pct`, `self-host`, `bench` |
+| Skip tests (fast) | `_mvn-skip-tests` | `mvn clean install -DskipTests` on the truffle parent | `build`, `test-pure-testFunctions`, `test-pure-PCTs`, `test-pure-self-host`, `bench` |
 | With tests | `_mvn-with-tests` | `mvn clean install` on the truffle parent (surefire runs inline) | `test`, `test-java` |
 
 Both copy `runtime/target/pure-truffle-*-fat.jar` into `truffle/build/pure-truffle.jar` after the install completes.
@@ -71,7 +71,7 @@ test-java
 ```
 
 ```
-test-functions
+test-pure-testFunctions
 ├── _mvn-skip-tests
 │   ├── _check-pdbs
 │   ├── cd truffle && mvn clean install -DskipTests
@@ -81,7 +81,7 @@ test-functions
 ```
 
 ```
-test-pct
+test-pure-PCTs
 ├── _mvn-skip-tests
 │   ├── _check-pdbs
 │   ├── cd truffle && mvn clean install -DskipTests
@@ -91,7 +91,7 @@ test-pct
 ```
 
 ```
-test-native
+test-pure-compiler-native
 ├── build-native
 │   ├── _check-pdbs
 │   └── body
@@ -103,21 +103,21 @@ test-native
 ```
 
 ```
-test-functions-native
-├── build-native              (mvn -Pnative + cp binary; see test-native for full chain)
+test-pure-testFunctions-native
+├── build-native              (mvn -Pnative + cp binary; see test-pure-compiler-native for full chain)
 └── body
     └── pure-truffle-native execute meta::pure::test::runTests              meta::pure::functions
 ```
 
 ```
-test-pct-native
+test-pure-PCTs-native
 ├── build-native
 └── body
     └── pure-truffle-native execute meta::pure::test::runPCTTests           meta::pure::functions
 ```
 
 ```
-self-host
+test-pure-self-host
 ├── _mvn-skip-tests
 │   ├── _check-pdbs
 │   ├── cd truffle && mvn clean install -DskipTests
@@ -160,17 +160,17 @@ so there was never an FQN conflict to begin with. (Eventually the codegen
 pom's removal can also go away — nothing references the generated FQN.)
 
 Now `truffle::test` is one Maven launch, with surefire running as part of
-the install lifecycle. The non-`test` Pure-level recipes (`test-functions`,
-`test-pct`, `self-host`, `bench`) keep the fast skip-tests path because they
+the install lifecycle. The non-`test` Pure-level recipes (`test-pure-testFunctions`,
+`test-pure-PCTs`, `test-pure-self-host`, `bench`) keep the fast skip-tests path because they
 don't gate on Java unit tests.
 
 ## Outputs
 
 | Path | Produced by | Consumed by |
 |---|---|---|
-| `platforms/truffle/build/pure-truffle.jar` | `_mvn-skip-tests` / `_mvn-with-tests` | `pure-truffle` wrapper, JVM-mode test recipes, `self-host` |
+| `platforms/truffle/build/pure-truffle.jar` | `_mvn-skip-tests` / `_mvn-with-tests` | `pure-truffle` wrapper, JVM-mode test recipes, `test-pure-self-host` |
 | `platforms/truffle/build/pure-truffle-native` | `build-native` | native test recipes |
-| `platforms/truffle/build/compiler_truffle.pdb` | `self-host` | `self-host`'s own `execute` step |
+| `platforms/truffle/build/compiler_truffle.pdb` | `test-pure-self-host` | `test-pure-self-host`'s own `execute` step |
 
 ## Inputs (from bootstrap)
 

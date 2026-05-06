@@ -17,8 +17,14 @@ package org.finos.legend.pure.truffle.runtime;
 import com.google.flatbuffers.FlatBufferBuilder;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
+import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.FunctionType;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.truffle.runtime.codegen.GeneratedFlatBufferWriter;
+import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 
 import java.io.IOException;
@@ -78,6 +84,7 @@ public final class TrufflePdbWriter
             zos.setLevel(Deflater.BEST_COMPRESSION);
 
             List<String[]> indexEntries = new ArrayList<>();
+            List<PackageableFunction> functionEntries = new ArrayList<>();
             for (PackageableElement element : elements)
             {
                 String typeName = elementTypeName(element);
@@ -94,6 +101,10 @@ public final class TrufflePdbWriter
                 byte[] data = builder.sizedByteArray();
 
                 indexEntries.add(new String[]{path, typeName});
+                if (element instanceof PackageableFunction pf && pf._functionName() != null && !pf._functionName().isEmpty())
+                {
+                    functionEntries.add(pf);
+                }
 
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
                 ZipEntry entry = new ZipEntry(entryPath);
@@ -103,6 +114,7 @@ public final class TrufflePdbWriter
             }
 
             writeElementIndex(zos, indexEntries);
+            writeFunctionIndex(zos, functionEntries, validateRequired);
         }
     }
 
@@ -129,6 +141,62 @@ public final class TrufflePdbWriter
             return simple.substring(0, simple.length() - "FlatBufferWrapper".length());
         }
         return null;
+    }
+
+    /**
+     * Mirrors {@code PureLanguageSerialization.serializeFunctionIndex} on the
+     * bootstrap side. Writes a {@code functionIndex} archive entry with one
+     * row per packageable function ({@code fullPath}, {@code functionName},
+     * {@code functionType}, {@code isNative}). Without this section the
+     * Truffle PDB diverges from Java direct's {@code compiler.pdb} structurally
+     * (sections-only-in-A would flag one extra section in the diff).
+     */
+    private static void writeFunctionIndex(ZipOutputStream zos, List<PackageableFunction> entries, boolean validateRequired) throws IOException
+    {
+        if (entries.isEmpty())
+        {
+            return;
+        }
+        FlatBufferBuilder builder = new FlatBufferBuilder(4096);
+        GeneratedFlatBufferWriter writer = new GeneratedFlatBufferWriter(builder, validateRequired);
+        int[] entryOffsets = new int[entries.size()];
+        for (int i = 0; i < entries.size(); i++)
+        {
+            PackageableFunction fn = entries.get(i);
+            int fullPathOffset = builder.createString(_PackageableElement.path(fn));
+            int functionNameOffset = builder.createString(fn._functionName());
+            int functionTypeOffset = writeFunctionTypeOf(writer, fn);
+            boolean isNative = fn instanceof NativeFunction;
+            entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
+                    .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset, isNative);
+        }
+        int entriesVector = FunctionIndex.createEntriesVector(builder, entryOffsets);
+        builder.finish(FunctionIndex.createFunctionIndex(builder, entriesVector));
+
+        ZipEntry entry = new ZipEntry("functionIndex");
+        zos.putNextEntry(entry);
+        zos.write(builder.sizedByteArray());
+        zos.closeEntry();
+    }
+
+    /**
+     * Resolve the {@link FunctionType} for {@code fn} from its
+     * {@code classifierGenericType} (a {@code Function<{params -> retType}>}
+     * GT) and serialize it. The FunctionType lives in slot 0 of the
+     * classifier's typeArguments.
+     */
+    private static int writeFunctionTypeOf(GeneratedFlatBufferWriter writer, PackageableFunction fn)
+    {
+        Object cgt = fn._classifierGenericType();
+        if (cgt instanceof GenericTypeValue gtv && _GenericType.typeArguments(gtv) != null && _GenericType.typeArguments(gtv).size() > 0)
+        {
+            Object first = _GenericType.typeArguments(gtv).getBoxed(0);
+            if (first instanceof GenericTypeValue inner && inner._type() instanceof FunctionType ft)
+            {
+                return writer.writeFunctionType(ft);
+            }
+        }
+        return 0;
     }
 
     private static void writeElementIndex(ZipOutputStream zos, List<String[]> entries) throws IOException
