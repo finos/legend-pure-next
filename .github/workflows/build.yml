@@ -48,10 +48,6 @@ env:
   CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
-  # Opt into Node.js 24 for all JS-based actions ahead of GitHub's
-  # 2026-06-02 forced switch (Node 20 removed 2026-09-16). Once first-party
-  # actions ship Node 24-native versions we can drop this.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
   # Tool versions — pinned for reproducibility. Bump as a deliberate change,
   # not a side effect of an upstream release. Local equivalents:
@@ -68,6 +64,7 @@ env:
   GRAALVM_VERSION: '25.0.2'
   MAVEN_VERSION: '3.9.11'
   JUST_VERSION: '1.49.0'
+  FLATC_VERSION: '25.2.10'
 
 on: [push, pull_request]
 
@@ -97,10 +94,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache Maven dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-mvn-deps
         with:
@@ -112,7 +109,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ env.JDK_VERSION }}
@@ -129,12 +126,17 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
-        uses: Nugine/setup-flatc@v1
-        with:
-          version: "25.2.10"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
+          unzip -q flatc.zip
+          chmod +x flatc
+          sudo mv flatc /usr/local/bin/flatc
+          flatc --version
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
 
@@ -173,7 +175,7 @@ jobs:
           tar -cf bootstrap-mvn.tar -C ~/.m2/repository org/finos/legend/pure
 
       - name: Upload bootstrap artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bootstrap-artifacts
           path: |
@@ -183,7 +185,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-bootstrap
           path: |
@@ -191,7 +193,7 @@ jobs:
 
       - name: Upload CI Event
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: event-file
           path: ${{ github.event_path }}
@@ -202,10 +204,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache Maven dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-mvn-deps
         with:
@@ -217,19 +219,19 @@ jobs:
             ${{ runner.os }}-
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ env.JDK_VERSION }}
           java-package: jdk
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bootstrap-artifacts
 
@@ -248,10 +250,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache Maven dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-mvn-deps
         with:
@@ -267,12 +269,15 @@ jobs:
       # DefaultTruffleRuntime (Interpreted), which doesn't register
       # engine.TraceCompilation and breaks the test harness's compile-failure
       # tripwire. The truffle Justfile's `_check-graalvm` enforces this.
+      # actions/setup-java has supported `graalvm-community` since v4; using
+      # it here (vs graalvm/setup-graalvm) keeps every setup action on a
+      # Node-24-native runtime, eliminating Node 20 deprecation warnings.
       - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
+        uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.GRAALVM_VERSION }}
           distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          java-version: ${{ env.GRAALVM_VERSION }}
+          java-package: jdk
 
       - name: Install Maven
         run: |
@@ -282,17 +287,22 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
-        uses: Nugine/setup-flatc@v1
-        with:
-          version: "25.2.10"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
+          unzip -q flatc.zip
+          chmod +x flatc
+          sudo mv flatc /usr/local/bin/flatc
+          flatc --version
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bootstrap-artifacts
 
@@ -318,7 +328,7 @@ jobs:
       # see them. `if: always()` so test failures still produce reports.
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-truffle
           path: |
@@ -333,10 +343,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache Maven dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-mvn-deps
         with:
@@ -348,13 +358,13 @@ jobs:
             ${{ runner.os }}-
 
       # Same GraalVM 25 setup as truffle-self-host. `native-image` is bundled
-      # in GraalVM since JDK 17, so no `components:` input needed.
+      # in GraalVM CE since JDK 17, so just installing the JDK is enough.
       - name: Set up GraalVM JDK
-        uses: graalvm/setup-graalvm@v1
+        uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.GRAALVM_VERSION }}
           distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          java-version: ${{ env.GRAALVM_VERSION }}
+          java-package: jdk
 
       - name: Install Maven
         run: |
@@ -364,17 +374,22 @@ jobs:
           echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
-        uses: Nugine/setup-flatc@v1
-        with:
-          version: "25.2.10"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -sSL "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip" -o flatc.zip
+          unzip -q flatc.zip
+          chmod +x flatc
+          sudo mv flatc /usr/local/bin/flatc
+          flatc --version
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
         with:
           just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bootstrap-artifacts
 
