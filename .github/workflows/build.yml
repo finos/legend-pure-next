@@ -49,6 +49,18 @@ env:
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
 
+  # Tool versions — pinned for reproducibility. Bump as a deliberate change,
+  # not a side effect of an upstream release. Local equivalents:
+  #   JDK_VERSION       ↔ Temurin 25 patch the team builds on (mvn `java-version`)
+  #   GRAALVM_VERSION   ↔ Oracle GraalVM 25 patch (java -version on dev machines)
+  #   MAVEN_VERSION     ↔ system mvn locally; we install our own here so the
+  #                       runner image's preinstalled mvn can't drift the build
+  #   JUST_VERSION      ↔ `just --version` locally
+  JDK_VERSION: '25.0.1'
+  GRAALVM_VERSION: '25.0.3'
+  MAVEN_VERSION: '3.9.11'
+  JUST_VERSION: '1.49.0'
+
 on: [push, pull_request]
 
 jobs:
@@ -64,7 +76,7 @@ jobs:
   #     it comes from a fork (where `push` doesn't fire on this repo).
   guard:
     name: Pipeline guard
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: |
       (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
       && !contains(github.event.head_commit.message, '[maven-release-plugin]')
@@ -74,7 +86,7 @@ jobs:
   bootstrap:
     name: Bootstrap (build + tests)
     needs: guard
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -95,11 +107,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 25
+          java-version: ${{ env.JDK_VERSION }}
           java-package: jdk
           server-id: central
           server-username: CI_DEPLOY_USERNAME
           server-password: CI_DEPLOY_PASSWORD
+
+      - name: Install Maven
+        run: |
+          set -euo pipefail
+          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
         uses: Nugine/setup-flatc@v1
@@ -108,6 +127,8 @@ jobs:
 
       - name: Install just
         uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
 
       - name: Configure git
         run: |
@@ -170,7 +191,7 @@ jobs:
   bootstrap-self-host:
     name: Bootstrap self-host (compile-via-pure-on-Java vs Java direct)
     needs: bootstrap
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -191,11 +212,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 25
+          java-version: ${{ env.JDK_VERSION }}
           java-package: jdk
 
       - name: Install just
         uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v4
@@ -214,7 +237,7 @@ jobs:
   truffle-self-host:
     name: Truffle build + self-host (compile-via-pure-on-Truffle vs Java direct)
     needs: bootstrap
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -239,9 +262,16 @@ jobs:
       - name: Set up GraalVM JDK
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '25'
+          java-version: ${{ env.GRAALVM_VERSION }}
           distribution: 'graalvm-community'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Maven
+        run: |
+          set -euo pipefail
+          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
         uses: Nugine/setup-flatc@v1
@@ -250,6 +280,8 @@ jobs:
 
       - name: Install just
         uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v4
@@ -286,7 +318,7 @@ jobs:
   truffle-native-self-host:
     name: Truffle native build + self-host (compile-via-pure on AOT binary vs Java direct)
     needs: bootstrap
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -308,10 +340,17 @@ jobs:
       - name: Set up GraalVM JDK + native-image
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '25'
+          java-version: ${{ env.GRAALVM_VERSION }}
           distribution: 'graalvm-community'
           components: 'native-image'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Maven
+        run: |
+          set -euo pipefail
+          curl -sSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install flatc
         uses: Nugine/setup-flatc@v1
@@ -320,6 +359,8 @@ jobs:
 
       - name: Install just
         uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
 
       - name: Download bootstrap artifacts
         uses: actions/download-artifact@v4
@@ -352,7 +393,7 @@ jobs:
     name: All checks passed
     needs: [bootstrap, bootstrap-self-host, truffle-self-host, truffle-native-self-host]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Verify all dependencies succeeded
         run: |
