@@ -740,9 +740,18 @@ public final class CompiledGraphPrinter
             return "?";
         }
         String result = printTypeCore(gt);
+        // Inferred wraps as `#X#`; canonical UDPGT-PE wraps as `@X@`. Both
+        // axes can combine (InferredPackageableGenericType → `@#X#@`). This
+        // makes platform-divergent canonical-anchor preservation visible in
+        // every CompiledGraph test — drift no longer hides behind a generic
+        // `~Foo` print.
         if (gt instanceof Inferred)
         {
-            return "#" + result + "#";
+            result = "#" + result + "#";
+        }
+        if (gt instanceof PackageableElement)
+        {
+            result = "@" + result + "@";
         }
         return result;
     }

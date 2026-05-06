@@ -13,17 +13,17 @@ Profile protocol::support::AProfile
 }
 
 ###CompiledGraph
-primitive protocol::Varchar  ~PrimitiveType  @4:1-7:1
+primitive protocol::Varchar  ~@PrimitiveType@  @4:1-7:1
   <<protocol::support::AProfile.flag>>
   {protocol::support::AProfile.tag1 = 'yeah'}
-  typeVariable x :Integer[1]
+  typeVariable x :@Integer@[1]
   constraint
-    Lambda(this:protocol::Varchar[1], x:Integer[1])  ~#LambdaFunction<#{protocol::Varchar[1], Integer[1]->#Boolean##[1]#}#>#
-      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @6:21-6:24
-        ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~ArrowInvocation  @6:10-6:19
-          Variable this :#protocol::Varchar##[1]#  ~VariableExpression  @6:5-6:9
-        Variable x :#Integer##[1]#  ~VariableExpression  @6:23-6:24
+    Lambda(this:protocol::Varchar[1], x:@Integer@[1])  ~#LambdaFunction<#{protocol::Varchar[1], @Integer@[1]->#Boolean##[1]#}#>#
+      FunctionInvocation lessThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @6:21-6:24
+        ArrowInvocation length_String_1__Integer_1_ :#Integer##[1]#  ~@ArrowInvocation@  @6:10-6:19
+          Variable this :#protocol::Varchar##[1]#  ~@VariableExpression@  @6:5-6:9
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @6:23-6:24
 
-profile protocol::support::AProfile  ~Profile  @9:1-13:1
-  stereotype flag  ~Stereotype
-  tag tag1  ~Tag
+profile protocol::support::AProfile  ~@Profile@  @9:1-13:1
+  stereotype flag  ~@Stereotype@
+  tag tag1  ~@Tag@

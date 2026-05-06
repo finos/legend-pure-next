@@ -25,6 +25,7 @@ import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Type;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -199,12 +200,73 @@ public class _E_ValueSpecification
             }
             return _GenericType.type(cgt);
         }
-        // Java primitives and collections — use the VS genericType
-        if (vs != null && vs._genericType() != null)
+        // Reconcile two views of the runtime type:
+        //   - VS's declared genericType: from the AtomicValue / Collection /
+        //     property accessor; carries any specialization the parser or
+        //     compiler put there (e.g. `StrictDate` for `%2015-03-14`).
+        //   - Runtime Java class: maps Java primitive boxes to Pure primitives
+        //     (Long→Integer, String→String, etc.).
+        // Prefer whichever is the subtype (more specific). When the runtime
+        // Java class produces a type narrower than the VS's declared type
+        // (e.g. `Number[1]` property holding an Integer; `Any[*]` property
+        // holding a String), use the narrower runtime type. When the VS type
+        // is already narrower (e.g. `StrictDate` for a date literal whose Java
+        // representation is a plain String), keep the VS type.
+        // Pinned by `meta::pure::functions::meta::tests::instanceOf::testInstanceOfFromAnyProperty`.
+        Type vsType = vs != null && vs._genericType() != null ? _GenericType.type(vs._genericType()) : null;
+        Type primitiveType = primitiveTypeForJavaValue(value, resolver);
+        if (vsType != null && primitiveType != null && resolver != null)
         {
-            return _GenericType.type(vs._genericType());
+            if (_Type.subtypeOf(primitiveType, vsType, resolver))
+            {
+                return primitiveType;
+            }
+            return vsType;
+        }
+        if (primitiveType != null)
+        {
+            return primitiveType;
+        }
+        if (vsType != null)
+        {
+            return vsType;
         }
         throw new RuntimeException("Cannot determine type of value: " + value.getClass().getName());
+    }
+
+    private static Type primitiveTypeForJavaValue(Object value, MetadataAccess resolver)
+    {
+        if (resolver == null || value == null)
+        {
+            return null;
+        }
+        String pureTypePath = null;
+        if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte)
+        {
+            pureTypePath = "meta::pure::metamodel::type::primitives::Integer";
+        }
+        else if (value instanceof Double || value instanceof Float)
+        {
+            pureTypePath = "meta::pure::metamodel::type::primitives::Float";
+        }
+        else if (value instanceof java.math.BigDecimal)
+        {
+            pureTypePath = "meta::pure::metamodel::type::primitives::Decimal";
+        }
+        else if (value instanceof Boolean)
+        {
+            pureTypePath = "meta::pure::metamodel::type::primitives::Boolean";
+        }
+        else if (value instanceof String)
+        {
+            pureTypePath = "meta::pure::metamodel::type::primitives::String";
+        }
+        if (pureTypePath == null)
+        {
+            return null;
+        }
+        Object element = resolver.getElement(pureTypePath);
+        return element instanceof Type t ? t : null;
     }
 }
 

@@ -22,8 +22,8 @@ enumeration protocol::AnEnum extends Enum  ~Enumeration<protocol::AnEnum>  @4:1-
     <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
     {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
 
-profile protocol::support::AProfile  ~Profile  @10:1-14:1
-  stereotype flag  ~Stereotype
-  stereotype newFlag  ~Stereotype
-  tag tag1  ~Tag
-  tag tag2  ~Tag
+profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
+  stereotype flag  ~@Stereotype@
+  stereotype newFlag  ~@Stereotype@
+  tag tag1  ~@Tag@
+  tag tag2  ~@Tag@

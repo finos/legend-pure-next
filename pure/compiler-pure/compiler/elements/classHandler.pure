@@ -60,7 +60,7 @@ function meta::pure::compiler::elements::compileClass(protocolClass:meta::pure::
             let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^meta::pure::metamodel::valuespecification::VariableExpression(
                 name = $tv.name,
-                genericType = ^meta::pure::metamodel::type::generics::UserDefinedGenericType(type = $ctx4->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type)),
+                genericType = meta::pure::compiler::helper::genericType::buildCanonicalOrUserDefinedGenericType($ctx4->resolveElement($genType)->toOne()->cast(@meta::pure::metamodel::type::Type), $ctx4),
                 multiplicity = $mMult
             );
         )

@@ -14,12 +14,12 @@ Profile protocol::support::AProfile
 
 ###CompiledGraph
 class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @4:1-7:1
-  property value :Integer[1]  ~Property<protocol::MyClass, Integer|1>
+  property value :@Integer@[1]  ~Property<protocol::MyClass, @Integer@|1>
     <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
     {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
 
-profile protocol::support::AProfile  ~Profile  @9:1-13:1
-  stereotype flag  ~Stereotype
-  stereotype newFlag  ~Stereotype
-  tag tag1  ~Tag
-  tag tag2  ~Tag
+profile protocol::support::AProfile  ~@Profile@  @9:1-13:1
+  stereotype flag  ~@Stereotype@
+  stereotype newFlag  ~@Stereotype@
+  tag tag1  ~@Tag@
+  tag tag2  ~@Tag@

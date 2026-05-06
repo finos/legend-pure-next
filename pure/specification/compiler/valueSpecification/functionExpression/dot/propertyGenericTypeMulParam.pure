@@ -20,26 +20,26 @@ function test::use():Any[*]
 class test::Container extends Any  ~Class<test::Container<T~test::Container|m~test::Container>>  @2:1-5:1
   property items :T~test::Container[m]  ~Property<test::Container<T~test::Container|m~test::Container>, T~test::Container|m>
 
-class test::StringList extends test::Container<String|*>  ~Class<test::StringList>  @7:1-10:1
-  property label :String[1]  ~Property<test::StringList, String|1>
+class test::StringList extends test::Container<@String@|*>  ~Class<test::StringList>  @7:1-10:1
+  property label :@String@[1]  ~Property<test::StringList, @String@|1>
 
-function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::StringList##[1]#  ~FunctionInvocation  @14:5-14:65
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::StringList##[1]#  ~@FunctionInvocation@  @14:5-14:65
     typeParam T -> #test::StringList#
     mulParam m -> #[1]#
-    AtomicValue  'sl' :String[1]  ~AtomicValue  @14:9-14:10
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::StringList##[1]#  ~FunctionInvocation  @14:14-14:65
+    AtomicValue  'sl' :@String@[1]  ~@AtomicValue@  @14:9-14:10
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::StringList##[1]#  ~@FunctionInvocation@  @14:14-14:65
       typeParam T -> test::StringList
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::StringList|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::StringList|1>  @14:14-14:65
-      Collection :#KeyExpression#[2]  ~Collection  @14:14-14:65
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @14:32-14:50
-          AtomicValue  'items' :String[1]  ~AtomicValue  @14:32-14:50
-          Collection :#String#[3]  ~Collection  @14:38-14:50
-            AtomicValue  'a' :String[1]  ~AtomicValue  @14:39-14:41
-            AtomicValue  'b' :String[1]  ~AtomicValue  @14:43-14:45
-            AtomicValue  'c' :String[1]  ~AtomicValue  @14:47-14:49
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @14:53-14:64
-          AtomicValue  'label' :String[1]  ~AtomicValue  @14:53-14:64
-          AtomicValue  'test' :String[1]  ~AtomicValue  @14:59-14:64
-  DotApplication test::Container.items :#T~test::Container##[m]#  ~DotApplication  @15:8-15:13
-    Variable sl :#test::StringList##[1]#  ~VariableExpression  @15:5-15:7
+      Collection :#KeyExpression#[2]  ~@Collection@  @14:14-14:65
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:32-14:50
+          AtomicValue  'items' :@String@[1]  ~@AtomicValue@  @14:32-14:50
+          Collection :#String#[3]  ~@Collection@  @14:38-14:50
+            AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @14:39-14:41
+            AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @14:43-14:45
+            AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @14:47-14:49
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @14:53-14:64
+          AtomicValue  'label' :@String@[1]  ~@AtomicValue@  @14:53-14:64
+          AtomicValue  'test' :@String@[1]  ~@AtomicValue@  @14:59-14:64
+  DotApplication test::Container.items :#T~test::Container##[m]#  ~@DotApplication@  @15:8-15:13
+    Variable sl :#test::StringList##[1]#  ~@VariableExpression@  @15:5-15:7

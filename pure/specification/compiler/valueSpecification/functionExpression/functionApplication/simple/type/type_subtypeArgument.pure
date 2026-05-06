@@ -10,9 +10,9 @@ function test::use():Any[*]
 }
 
 ###CompiledGraph
-function test::process_Any_1__String_1_(x:Any[1]):String[1]  ~UserDefinedFunction<{Any[1]->String[1]}>
-  AtomicValue  'processed' :String[1]  ~AtomicValue  @4:3-4:13
+function test::process_Any_1__String_1_(x:@Any@[1]):@String@[1]  ~UserDefinedFunction<{@Any@[1]->@String@[1]}>
+  AtomicValue  'processed' :@String@[1]  ~@AtomicValue@  @4:3-4:13
 
-function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation test::process_Any_1__String_1_ :#String##[1]#  ~FunctionInvocation  @9:3-9:24
-    AtomicValue  'hello' :String[1]  ~AtomicValue  @9:17-9:23
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation test::process_Any_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @9:3-9:24
+    AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @9:17-9:23

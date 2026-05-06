@@ -14,7 +14,7 @@ Class protocol::support::ClassB
 }
 
 ###CompiledGraph
-association protocol::MyAssociation  ~Association  @2:1-6:1
+association protocol::MyAssociation  ~@Association@  @2:1-6:1
   property a :protocol::support::ClassA[1]  ~Property<protocol::support::ClassB, protocol::support::ClassA|1>
   property b (composite) :protocol::support::ClassB[1..*]  ~Property<protocol::support::ClassA, protocol::support::ClassB|1..*>
 

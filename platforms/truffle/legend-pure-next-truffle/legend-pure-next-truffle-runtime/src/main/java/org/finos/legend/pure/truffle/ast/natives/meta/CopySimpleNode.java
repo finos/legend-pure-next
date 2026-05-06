@@ -66,7 +66,14 @@ public final class CopySimpleNode extends PureNode
         GenericTypeValue cgt = anyOrig._classifierGenericType();
         if (copy instanceof Any anyC && cgt != null && hasSelfReference(cgt, original))
         {
-            anyC._classifierGenericType(deepCopyCgt(cgt, original, copy, resolver));
+            cgt = deepCopyCgt(cgt, original, copy, resolver);
+            anyC._classifierGenericType(cgt);
+        }
+        // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
+        // UDPGT-PE references through copy. Symmetric to new() canonical anchoring.
+        if (copy instanceof Any anyC2 && cgt != null)
+        {
+            anyC2._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(cgt, resolver));
         }
         return copy;
     }

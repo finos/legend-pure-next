@@ -38,7 +38,7 @@ function meta::pure::compiler::elements::compilePrimitive(protocolPrimitive:meta
             let mMult = $tv.multiplicity->meta::pure::compiler::structural::multiplicityCompiler::compileMultiplicity();
             ^VariableExpression(
                 name = $tv.name,
-                genericType = buildUserDefinedGenericType($ctx1->resolveElement($genType)->toOne()->cast(@Type)),
+                genericType = buildCanonicalOrUserDefinedGenericType($ctx1->resolveElement($genType)->toOne()->cast(@Type), $ctx1),
                 multiplicity = $mMult
             );
         )

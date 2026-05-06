@@ -18,65 +18,65 @@ Class test::new::support::MyClass
 }
 
 ###CompiledGraph
-function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @6:3-6:31
+function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @6:3-6:31
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'c' :String[1]  ~AtomicValue  @6:7-6:7
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @6:11-6:31
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @6:7-6:7
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @6:11-6:31
       typeParam T -> test::new::support::MyClass
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::support::MyClass|1>  @6:11-6:31
-      Collection :#KeyExpression#[1]  ~Collection  @6:11-6:31
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @6:20-6:30
-          AtomicValue  'name' :String[1]  ~AtomicValue  @6:20-6:30
-          AtomicValue  'test' :String[1]  ~AtomicValue  @6:25-6:30
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @7:3-7:27
+      Collection :#KeyExpression#[1]  ~@Collection@  @6:11-6:31
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:20-6:30
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @6:20-6:30
+          AtomicValue  'test' :@String@[1]  ~@AtomicValue@  @6:25-6:30
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @7:3-7:27
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'n' :String[1]  ~AtomicValue  @7:7-7:7
-    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @7:11-7:27
+    AtomicValue  'n' :@String@[1]  ~@AtomicValue@  @7:7-7:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @7:11-7:27
       typeParam T -> #test::new::support::MyClass#
-      Variable c :#test::new::support::MyClass##[1]#  ~VariableExpression  @7:12-7:13
-      Collection :#KeyExpression#[1]  ~Collection  @7:11-7:27
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @7:15-7:26
-          AtomicValue  'name' :String[1]  ~AtomicValue  @7:15-7:26
-          AtomicValue  'bla' :String[1]  ~AtomicValue  @7:22-7:26
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#String##[1]#  ~FunctionInvocation  @8:3-8:17
+      Variable c :#test::new::support::MyClass##[1]#  ~@VariableExpression@  @7:12-7:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @7:11-7:27
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @7:15-7:26
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @7:15-7:26
+          AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @7:22-7:26
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#String##[1]#  ~@FunctionInvocation@  @8:3-8:17
     typeParam T -> #String#
     mulParam m -> #[1]#
-    AtomicValue  'z' :String[1]  ~AtomicValue  @8:7-8:7
-    DotApplication test::new::support::MyClass.name :#String##[1]#  ~DotApplication  @8:13-8:17
-      Variable n :#test::new::support::MyClass##[1]#  ~VariableExpression  @8:11-8:12
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @9:3-9:31
+    AtomicValue  'z' :@String@[1]  ~@AtomicValue@  @8:7-8:7
+    DotApplication test::new::support::MyClass.name :#String##[1]#  ~@DotApplication@  @8:13-8:17
+      Variable n :#test::new::support::MyClass##[1]#  ~@VariableExpression@  @8:11-8:12
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @9:3-9:31
     typeParam T -> #test::new::support::MyClass#
     mulParam m -> #[1]#
-    AtomicValue  'a' :String[1]  ~AtomicValue  @9:7-9:7
-    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~FunctionInvocation  @9:11-9:31
+    AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @9:7-9:7
+    FunctionInvocation copy_T_1__KeyExpression_MANY__T_1_ :#test::new::support::MyClass##[1]#  ~@FunctionInvocation@  @9:11-9:31
       typeParam T -> #test::new::support::MyClass#
-      Variable c :#test::new::support::MyClass##[1]#  ~VariableExpression  @9:12-9:13
-      Collection :#KeyExpression#[1]  ~Collection  @9:11-9:31
-        FunctionInvocation keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @9:15-9:30
-          AtomicValue  'names' :String[1]  ~AtomicValue  @9:15-9:30
-          AtomicValue  'added' :String[1]  ~AtomicValue  @9:24-9:30
-          AtomicValue  true :Boolean[1]  ~AtomicValue  @9:15-9:30
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<Any>##[1]#  ~FunctionInvocation  @10:3-10:147
-    typeParam T -> #Class<Any>#
+      Variable c :#test::new::support::MyClass##[1]#  ~@VariableExpression@  @9:12-9:13
+      Collection :#KeyExpression#[1]  ~@Collection@  @9:11-9:31
+        FunctionInvocation keyExpression_String_1__Any_MANY__Boolean_1__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @9:15-9:30
+          AtomicValue  'names' :@String@[1]  ~@AtomicValue@  @9:15-9:30
+          AtomicValue  'added' :@String@[1]  ~@AtomicValue@  @9:24-9:30
+          AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @9:15-9:30
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#Class<@Any@>##[1]#  ~@FunctionInvocation@  @10:3-10:147
+    typeParam T -> #Class<@Any@>#
     mulParam m -> #[1]#
-    AtomicValue  'x' :String[1]  ~AtomicValue  @10:7-10:7
-    FunctionInvocation newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_ :#Class<Any>##[1]#  ~FunctionInvocation  @10:11-10:147
-      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#TypeParameter##[1]#  ~FunctionInvocation  @10:59-10:142
-        typeParam T -> TypeParameter
-        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<TypeParameter|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<TypeParameter|1>  @10:59-10:142
-        Collection :#KeyExpression#[2]  ~Collection  @10:59-10:142
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @10:113-10:131
-            AtomicValue  'contravariant' :String[1]  ~AtomicValue  @10:113-10:131
-            AtomicValue  false :Boolean[1]  ~AtomicValue  @10:127-10:131
-          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @10:134-10:141
-            AtomicValue  'name' :String[1]  ~AtomicValue  @10:134-10:141
-            AtomicValue  'T' :String[1]  ~AtomicValue  @10:139-10:141
-      Collection :#Nil#[0]  ~Collection  @10:145-10:146
+    AtomicValue  'x' :@String@[1]  ~@AtomicValue@  @10:7-10:7
+    FunctionInvocation newClass_TypeParameter_MANY__MultiplicityParameter_MANY__Class_1_ :#Class<@Any@>##[1]#  ~@FunctionInvocation@  @10:11-10:147
+      FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#TypeParameter##[1]#  ~@FunctionInvocation@  @10:59-10:142
+        typeParam T -> @TypeParameter@
+        TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<@TypeParameter@|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<@TypeParameter@|1>  @10:59-10:142
+        Collection :#KeyExpression#[2]  ~@Collection@  @10:59-10:142
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:113-10:131
+            AtomicValue  'contravariant' :@String@[1]  ~@AtomicValue@  @10:113-10:131
+            AtomicValue  false :@Boolean@[1]  ~@AtomicValue@  @10:127-10:131
+          FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:134-10:141
+            AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @10:134-10:141
+            AtomicValue  'T' :@String@[1]  ~@AtomicValue@  @10:139-10:141
+      Collection :#Nil#[0]  ~@Collection@  @10:145-10:146
 
 class test::new::support::MyClass extends Any  ~Class<test::new::support::MyClass>  @13:1-18:1
-  property name :String[1]  ~Property<test::new::support::MyClass, String|1>
-  property value :Integer[0..1]  ~Property<test::new::support::MyClass, Integer|0..1>
-  property names :String[*]  ~Property<test::new::support::MyClass, String|*>
+  property name :@String@[1]  ~Property<test::new::support::MyClass, @String@|1>
+  property value :@Integer@[0..1]  ~Property<test::new::support::MyClass, @Integer@|0..1>
+  property names :@String@[*]  ~Property<test::new::support::MyClass, @String@|*>

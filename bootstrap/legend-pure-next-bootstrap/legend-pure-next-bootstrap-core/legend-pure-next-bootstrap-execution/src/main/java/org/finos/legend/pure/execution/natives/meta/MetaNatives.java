@@ -68,7 +68,7 @@ public class MetaNatives
             }
 
             // Get the value's type from VS genericType
-            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0));
+            meta.pure.metamodel.type.Type valueType = _E_ValueSpecification.getValueOriginalType(args.get(0), resolver);
 
             // Check type hierarchy
             if (valueType == null)
@@ -183,6 +183,29 @@ public class MetaNatives
                     validateConstraints(targetType, _GenericType.typeArguments(gtmh._genericType()).getFirst(), instance, eval, resolver);
                 }
             }
+            else if (instance instanceof Any any && !"Unknown".equals(classPath))
+            {
+                // No type arguments — set classifier from resolved class path.
+                // Mirror Java direct's `new XxxImpl(model)` ctor pattern: prefer
+                // the canonical `GenericType_<ClassName>` UDPGT-PE from core.pdb
+                // when one exists. Falls through to a fresh UDGT wrapping the
+                // class when no canonical anchor exists.
+                Object typeElement = resolver.getElement(classPath);
+                if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
+                {
+                    String className = pe._name();
+                    if (className != null && !className.isEmpty())
+                    {
+                        Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
+                        if (canonical instanceof GenericTypeValue canonicalGT)
+                        {
+                            any._classifierGenericType(canonicalGT);
+                            return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
+                        }
+                    }
+                    any._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType(t, resolver));
+                }
+            }
 
             return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
         });
@@ -216,13 +239,22 @@ public class MetaNatives
             }
 
             Object instance = createInstanceByPath(classPath);
+            // Platform-level canonical anchor: when the input GT has no type/mult args,
+            // prefer the canonical GenericType_<TypeName> UDPGT from core.pdb. Mirrors
+            // Truffle's NewGenericTypeNode.doNewGenericType — without this, calls like
+            // `new(buildUserDefinedGenericType(FunctionType))->cast(@FunctionType)` from
+            // compiler-pure's functionTypeCompiler leave classifier as a fresh inline
+            // UDGT, while Java direct's `new FunctionTypeImpl(model)` ctor anchors at
+            // the canonical UDPGT. Aligning the platform-level new() native here keeps
+            // compile-via-pure output byte-equivalent to Java direct + Truffle.
+            meta.pure.metamodel.type.generics.GenericType anchoredGt = preferCanonicalAnchor(gt, resolver);
             if (instance instanceof Any any)
             {
-                any._classifierGenericType(gt);
+                any._classifierGenericType((GenericTypeValue) anchoredGt);
             }
             else if (instance instanceof DynamicInstance di)
             {
-                di.setClassifierGenericType(gt);
+                di.setClassifierGenericType((GenericTypeValue) anchoredGt);
             }
 
             return _E_ValueSpecification.wrap(instance, genericType, multiplicity, resolver);
@@ -275,6 +307,30 @@ public class MetaNatives
                     else if (instance instanceof DynamicInstance di)
                     {
                         di.setClassifierGenericType((GenericTypeValue) cgt);
+                    }
+                }
+                else if (instance instanceof Any any && !"Unknown".equals(classPath))
+                {
+                    // Same as the simple-new-helper above: prefer canonical
+                    // GenericType_<ClassName> UDPGT-PE when one exists.
+                    Object typeElement = resolver.getElement(classPath);
+                    if (typeElement instanceof meta.pure.metamodel.type.Type t && t instanceof meta.pure.metamodel.PackageableElement pe)
+                    {
+                        String className = pe._name();
+                        boolean setClassifier = false;
+                        if (className != null && !className.isEmpty())
+                        {
+                            Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + className);
+                            if (canonical instanceof GenericTypeValue canonicalGT)
+                            {
+                                any._classifierGenericType(canonicalGT);
+                                setClassifier = true;
+                            }
+                        }
+                        if (!setClassifier)
+                        {
+                            any._classifierGenericType(org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType.buildUserDefinedGenericType(t, resolver));
+                        }
                     }
                 }
 
@@ -398,6 +454,13 @@ public class MetaNatives
             shallowCopyProperties(original, copy, cgt, resolver);
             // Then fix and set the self-referential classifierGenericType to point to the copy
             GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            // Platform-level canonical anchor: if the copy's classifier could be
+            // a canonical GenericType_<TypeName> UDPGT-PE, prefer it. Symmetric
+            // to new() — preserves canonical references through copy operations.
+            if (copyCgt != null)
+            {
+                copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
+            }
             if (copy instanceof Any anyC && copyCgt != null)
             {
                 anyC._classifierGenericType(copyCgt);
@@ -452,6 +515,12 @@ public class MetaNatives
             Object copy = createInstanceByPath(classPath);
             shallowCopyProperties(original, copy, cgt, resolver);
             GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, resolver);
+            // Platform-level canonical anchor: same as copy() above — preserve
+            // canonical GenericType_<TypeName> UDPGT-PE references through copy.
+            if (copyCgt != null)
+            {
+                copyCgt = (GenericTypeValue) preferCanonicalAnchor(copyCgt, resolver);
+            }
             if (copy instanceof Any anyC && copyCgt != null)
             {
                 anyC._classifierGenericType(copyCgt);
@@ -1145,6 +1214,13 @@ public class MetaNatives
      * Falls through to the original {@code cgt} when no canonical exists or args
      * are present (e.g. {@code ^Class<T>(...)}).
      */
+    public static meta.pure.metamodel.type.generics.GenericType preferCanonicalAnchorPublic(
+            meta.pure.metamodel.type.generics.GenericType cgt,
+            MetadataAccess resolver)
+    {
+        return preferCanonicalAnchor(cgt, resolver);
+    }
+
     private static meta.pure.metamodel.type.generics.GenericType preferCanonicalAnchor(
             meta.pure.metamodel.type.generics.GenericType cgt,
             MetadataAccess resolver)
@@ -1428,6 +1504,58 @@ public class MetaNatives
         return entries;
     }
 
+    /**
+     * Reject a user-supplied {@code classifierGenericType=...} key expression
+     * whose raw type doesn't match the system-derived classifier. The raw type
+     * is the metaclass identity ({@code LA_Person}, {@code RelationType}, ...)
+     * and is system-managed — changing it would corrupt type integrity (covered
+     * by spec test {@code testCantSetClassifierGenericType}). Type-arguments,
+     * multiplicity-arguments and type-variable values can be user-supplied
+     * without changing identity, so an override whose raw type matches the
+     * system-set one is allowed (this is what the {@code RelationTypeCompiler}
+     * self-classifier wiring relies on).
+     */
+    static void validateClassifierOverride(Object proposed, Object instance)
+    {
+        meta.pure.metamodel.type.generics.GenericType currentCgt = null;
+        if (instance instanceof meta.pure.metamodel.type.Any any)
+        {
+            currentCgt = any._classifierGenericType();
+        }
+        else if (instance instanceof DynamicInstance di)
+        {
+            currentCgt = di.getClassifierGenericType();
+        }
+        meta.pure.metamodel.type.Type expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
+        meta.pure.metamodel.type.Type proposedType = proposed instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv ? _GenericType.type(gtv) : null;
+        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
+        {
+            return;
+        }
+        String expectedName = expected instanceof meta.pure.metamodel.PackageableElement peE
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peE) : "<unknown>";
+        String proposedName = proposedType instanceof meta.pure.metamodel.PackageableElement peP
+                ? org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peP) : "<unknown>";
+        throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
+                + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
+                + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
+                + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+    }
+
+    private static boolean samePackageableElement(meta.pure.metamodel.type.Type a, meta.pure.metamodel.type.Type b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a instanceof meta.pure.metamodel.PackageableElement peA && b instanceof meta.pure.metamodel.PackageableElement peB)
+        {
+            return org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peA).equals(
+                    org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement.path(peB));
+        }
+        return false;
+    }
+
     static void processKeyExpression(Object ke, Object instance,
                                      List<Map.Entry<String, Object>> keyValues,
                                      MetadataAccess resolver)
@@ -1444,12 +1572,27 @@ public class MetaNatives
 
             if (key != null)
             {
-                // classifierGenericType is system-managed — block user assignment
                 if ("classifierGenericType".equals(key))
                 {
-                    throw new RuntimeException("Cannot set 'classifierGenericType' directly. "
-                            + "This field is system-managed and derived from the instantiation. "
-                            + "Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.");
+                    // Allow override only when the proposed classifier wraps the
+                    // same raw type as the system-derived one — this preserves
+                    // spec test `testCantSetClassifierGenericType` while letting
+                    // legitimate self-classifier wiring through (e.g. setting
+                    // `RelationType.classifierGenericType.typeArguments[0]` to
+                    // `~` so it points back at the instance).
+                    validateClassifierOverride(rawExpr, instance);
+                    if (rawExpr instanceof meta.pure.metamodel.type.generics.GenericTypeValue gtv)
+                    {
+                        if (instance instanceof meta.pure.metamodel.type.Any any)
+                        {
+                            any._classifierGenericType(gtv);
+                        }
+                        else if (instance instanceof DynamicInstance dynInstance)
+                        {
+                            dynInstance.setClassifierGenericType(gtv);
+                        }
+                    }
+                    return;
                 }
                 // For DynamicInstance targets with [0..1] properties, pass the raw
                 // expression value to avoid the wrap→unwrap cycle that flattens Collections.

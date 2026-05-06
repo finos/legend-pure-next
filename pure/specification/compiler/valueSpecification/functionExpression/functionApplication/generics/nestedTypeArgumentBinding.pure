@@ -15,21 +15,21 @@ function test::wrapAndPut<K,V>(map:Map<K,List<V>>[1], key:K[1], value:V[1]):Map<
 
 ###CompiledGraph
 function test::wrapAndPut_Map_1__K_1__V_1__Map_1_(map:Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], key:K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], value:V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]):Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]  ~UserDefinedFunction<{Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1], K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1], V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_[1]->Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>[1]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~FunctionInvocation  @12:5-12:38
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @12:5-12:38
     typeParam T -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
     mulParam m -> #[1]#
-    AtomicValue  'nl' :String[1]  ~AtomicValue  @12:9-12:10
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~FunctionInvocation  @12:14-12:38
+    AtomicValue  'nl' :@String@[1]  ~@AtomicValue@  @12:9-12:10
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@FunctionInvocation@  @12:14-12:38
       typeParam T -> List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>|1>  @12:14-12:38
-      Collection :#KeyExpression#[1]  ~Collection  @12:14-12:38
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @12:23-12:37
-          AtomicValue  'values' :String[1]  ~AtomicValue  @12:23-12:37
-          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~Collection  @12:30-12:37
-            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~VariableExpression  @12:31-12:36
-  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~ArrowInvocation  @13:9-13:24
+      Collection :#KeyExpression#[1]  ~@Collection@  @12:14-12:38
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @12:23-12:37
+          AtomicValue  'values' :@String@[1]  ~@AtomicValue@  @12:23-12:37
+          Collection :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_#[1]  ~@Collection@  @12:30-12:37
+            Variable value :#V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @12:31-12:36
+  ArrowInvocation put_Map_1__U_1__V_1__Map_1_ :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#>##[1]#  ~@ArrowInvocation@  @13:9-13:24
     typeParam U -> K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_
     typeParam V -> #List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>#
-    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~VariableExpression  @13:5-13:8
-    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~VariableExpression  @13:15-13:18
-    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~VariableExpression  @13:21-13:23
+    Variable map :#Map<K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_, List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>>##[1]#  ~@VariableExpression@  @13:5-13:8
+    Variable key :#K~test::wrapAndPut_Map_1__K_1__V_1__Map_1_##[1]#  ~@VariableExpression@  @13:15-13:18
+    Variable nl :#List<V~test::wrapAndPut_Map_1__K_1__V_1__Map_1_>##[1]#  ~@VariableExpression@  @13:21-13:23

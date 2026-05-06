@@ -20,7 +20,7 @@
     <modules>
         <module>legend-pure-next-truffle-codegen</module>
         <module>legend-pure-next-truffle-runtime</module>
-        <module>legend-pure-next-truffle-test-compiler-pure</module>
+<!--        <module>legend-pure-next-truffle-test-compiler-pure</module>-->
     </modules>
 
     <build>

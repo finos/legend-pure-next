@@ -21,6 +21,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
+import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -173,19 +174,14 @@ public final class NewWithKeysNode extends PureNode
                     + ")");
         }
 
-        // classifierGenericType is system-managed — derived from the type
-        // holder above. Catching attempts to set it through the literal
-        // ^Foo(classifierGenericType=...) syntax keeps a single source of
-        // truth and matches the spec's testCantSetClassifierGenericType.
-        for (int i = 0; i < assignments.length; i++)
-        {
-            if ("classifierGenericType".equals(assignments[i].propertyName()))
-            {
-                throw new org.finos.legend.pure.truffle.ast.PureException(
-                        "Cannot set 'classifierGenericType' directly. This field is system-managed and derived from the instantiation. Use meta::pure::functions::lang::new(GenericType[1]) to create instances with a specific classifierGenericType.",
-                        this);
-            }
-        }
+        // The classifier rawType is system-managed — derived from the type
+        // holder above. The user may still override the classifier when their
+        // value's rawType matches the one we already set; this is the
+        // legitimate case of supplying typeArguments / multiplicity arguments
+        // / typeVariableValues (e.g. wiring `RelationType.classifierGenericType.
+        // typeArguments[0]` back at the surrounding instance via `~`).
+        // A mismatch — e.g. `^LA_Person(classifierGenericType=^UDGT(type=Any))`
+        // from spec test `testCantSetClassifierGenericType` — is rejected.
 
         // Push onto construction stack for parentReference() access across call boundaries
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
@@ -195,6 +191,20 @@ public final class NewWithKeysNode extends PureNode
             java.util.List<java.util.Map.Entry<String, Object>> keyValues = new java.util.ArrayList<>();
             for (int i = 0; i < assignments.length; i++)
             {
+                if ("classifierGenericType".equals(assignments[i].propertyName()))
+                {
+                    // Evaluate the value WITHOUT writing it to the instance —
+                    // PropertyAssignNode.execute() would write before we get
+                    // a chance to compare against the system-set classifier,
+                    // making validation a no-op.
+                    Object propValue = assignments[i].evaluateValue(frame);
+                    validateClassifierOverride(propValue, instance);
+                    if (instance instanceof Any any && propValue instanceof GenericTypeValue gtv)
+                    {
+                        any._classifierGenericType(gtv);
+                    }
+                    continue;
+                }
                 Object propValue = assignments[i].execute(frame, instance);
                 if (propValue != null)
                 {
@@ -313,6 +323,47 @@ public final class NewWithKeysNode extends PureNode
             }
         }
         return "Unknown";
+    }
+
+    /**
+     * Reject a user-supplied {@code classifierGenericType=...} key expression
+     * whose raw type doesn't match the system-derived classifier. The raw type
+     * is the metaclass identity ({@code LA_Person}, {@code RelationType}, ...)
+     * and is system-managed — changing it would corrupt type integrity
+     * (covered by spec test {@code testCantSetClassifierGenericType}).
+     * Type-arguments, multiplicity-arguments and type-variable values can be
+     * user-supplied without changing identity, so an override whose raw type
+     * matches the system one is allowed (this is what the
+     * {@code RelationTypeCompiler} self-classifier wiring relies on).
+     */
+    private static void validateClassifierOverride(Object proposed, Object instance)
+    {
+        GenericTypeValue currentCgt = instance instanceof Any any ? any._classifierGenericType() : null;
+        Type expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
+        Type proposedType = proposed instanceof GenericTypeValue gtv ? _GenericType.type(gtv) : null;
+        if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
+        {
+            return;
+        }
+        String expectedName = expected instanceof PackageableElement peE ? _PackageableElement.path(peE) : "<unknown>";
+        String proposedName = proposedType instanceof PackageableElement peP ? _PackageableElement.path(peP) : "<unknown>";
+        throw new RuntimeException("Cannot change classifierGenericType.type from '" + expectedName + "' to '" + proposedName
+                + "'. The classifier's raw type is system-managed (derived from the instance's metaclass)"
+                + " — only typeArguments, multiplicityArguments and typeVariableValues are user-customizable."
+                + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
+    }
+
+    private static boolean samePackageableElement(Type a, Type b)
+    {
+        if (a == b)
+        {
+            return true;
+        }
+        if (a instanceof PackageableElement peA && b instanceof PackageableElement peB)
+        {
+            return _PackageableElement.path(peA).equals(_PackageableElement.path(peB));
+        }
+        return false;
     }
 
     /**

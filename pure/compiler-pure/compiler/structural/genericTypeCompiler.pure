@@ -180,25 +180,40 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     let typeVarValues = $protocolGT.typeVariableValues->map(tvv | $tvv->meta::pure::compiler::structural::valueSpecificationCompiler::compileValueSpecification($typeArgResult.context, [])).values->cast(@ValueSpecification);
 
     let resultGT = $result.value->toOne();
-    $resultGT->match(
-        [
-            resultValue : UserDefinedGenericType[1] |
-                ^CompilerResult<GenericType>(
-                    value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs, typeVariableValues = $typeVarValues),
-                    context = $typeArgResult.context
-                ),
-            resultValue : GenericTypeValue[1] |
-                ^CompilerResult<GenericType>(
-                    value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs),
-                    context = $typeArgResult.context
-                ),
-            a : Any[1] |
-                // UndefinedGenericType or other non-GenericTypeValue — return as-is
-                ^CompilerResult<GenericType>(
-                    value = $resultGT,
-                    context = $typeArgResult.context
-                )
-        ]
+    // Canonical-anchor preservation: when the parser-built GT is a leaf (no
+    // type/mult/typeVar args) wrapping a named PE rawType with a `GenericType_<name>`
+    // UDPGT-PE in core.pdb, return the canonical anchor instead of a fresh UDGT.
+    // Mirrors Java GenericTypeCompiler.java lines 99-117.
+    let canonicalAnchor = $resultGT->match([
+        gtv : GenericTypeValue[1] |
+            if($typeArgResult.values->isEmpty() && $mulArgs->isEmpty() && $typeVarValues->isEmpty() && $gtv.type->isNotEmpty() && $gtv.type->toOne()->instanceOf(PackageableElement) && $gtv.type->toOne()->cast(@PackageableElement).name->isNotEmpty(),
+                | meta::pure::compiler::helper::genericType::canonicalAnchorFor($gtv.type->toOne(), [], [], [], $resultGT, $typeArgResult.context),
+                | []->cast(@GenericType)
+            ),
+        a : Any[1] | []->cast(@GenericType)
+    ]);
+    if($canonicalAnchor->isNotEmpty(),
+        | ^CompilerResult<GenericType>(value = $canonicalAnchor->toOne(), context = $typeArgResult.context),
+        | $resultGT->match(
+            [
+                resultValue : UserDefinedGenericType[1] |
+                    ^CompilerResult<GenericType>(
+                        value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs, typeVariableValues = $typeVarValues),
+                        context = $typeArgResult.context
+                    ),
+                resultValue : GenericTypeValue[1] |
+                    ^CompilerResult<GenericType>(
+                        value = ^$resultValue(typeArguments = $typeArgResult.values, multiplicityArguments = $mulArgs),
+                        context = $typeArgResult.context
+                    ),
+                a : Any[1] |
+                    // UndefinedGenericType or other non-GenericTypeValue — return as-is
+                    ^CompilerResult<GenericType>(
+                        value = $resultGT,
+                        context = $typeArgResult.context
+                    )
+            ]
+        )
     );
 }
 

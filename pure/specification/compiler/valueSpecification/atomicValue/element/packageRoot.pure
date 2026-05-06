@@ -7,5 +7,5 @@ function test::new::testNew(): Any[*]
 }
 
 ###CompiledGraph
-function test::new::testNew__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  AtomicValue  :: :#Package#[1]  ~AtomicValue  @6:3-6:4
+function test::new::testNew__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  AtomicValue  :: :#Package#[1]  ~@AtomicValue@  @6:3-6:4

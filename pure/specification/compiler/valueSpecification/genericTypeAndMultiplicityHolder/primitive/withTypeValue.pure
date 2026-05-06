@@ -9,12 +9,12 @@ function test():String[1]
 }
 
 ###CompiledGraph
-primitive prim::Varchar  ~PrimitiveType  @4:1-4:53
-  typeVariable x :Integer[1]
+primitive prim::Varchar  ~@PrimitiveType@  @4:1-4:53
+  typeVariable x :@Integer@[1]
 
-function test__String_1_():String[1]  ~UserDefinedFunction<{->String[1]}>
-  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#prim::Varchar##[1]#  ~ArrowInvocation  @8:6-8:26
+function test__String_1_():@String@[1]  ~UserDefinedFunction<{->@String@[1]}>
+  ArrowInvocation cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_ :#prim::Varchar##[1]#  ~@ArrowInvocation@  @8:6-8:26
     typeParam T -> prim::Varchar(200)
     mulParam m -> [1]
-    AtomicValue  '' :String[1]  ~AtomicValue  @8:4-8:5
+    AtomicValue  '' :@String@[1]  ~@AtomicValue@  @8:4-8:5
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<prim::Varchar(200)|?>  @8:13-8:25

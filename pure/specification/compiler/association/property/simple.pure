@@ -16,7 +16,7 @@ Class pack::ClassB
 }
 
 ###CompiledGraph
-association pack::MyAssociation  ~Association  @4:1-8:1
+association pack::MyAssociation  ~@Association@  @4:1-8:1
   property a :pack::ClassA[1]  ~Property<pack::ClassB, pack::ClassA|1>
   property b :pack::ClassB[*]  ~Property<pack::ClassA, pack::ClassB|*>
 

@@ -31,6 +31,7 @@ shared_out      := repo_root / "shared"
 truffle_cli     := truffle_out / "pure-truffle.jar"
 truffle_native  := truffle_out / "pure-truffle-native"
 pure_truffle    := truffle_root / "bin" / "pure-truffle"
+pure_bootstrap  := repo_root / "bootstrap" / "bin" / "pure-bootstrap"
 
 verbose := ""
 mvnq    := if verbose == "" { "-q" } else { "" }
@@ -58,14 +59,10 @@ build-native: _check-pdbs _check-graalvm
     mkdir -p {{truffle_out}}
     cp {{truffle_runtime}}/target/pure-truffle-native {{truffle_native}}
 
-# --- Public: test (single Maven run with tests + Pure spec tests) ---
-test: (_mvn "with-tests")
-    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over pure/specification/compiler'
-    {{pure_truffle}} execute \
-        --pdb {{shared_out}}/core.pdb \
-        --pdb {{shared_out}}/compiler.pdb \
-        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
-        --args "{{spec}}/compiler" {{err_filter}}
+# --- Public: test (Maven unit tests + Pure compiler-graph spec tests) ---
+# Dependencies do the work — `test-java` runs the surefire suite during
+# `mvn install`, and `test-compiler` runs the Pure spec compiler-graph tests.
+test: test-java test-compiler
 
 # --- Public: Java unit tests only — surefire runs as part of `mvn install` ---
 test-java: (_mvn "with-tests")
@@ -77,6 +74,20 @@ test-functions: (_mvn "skip-tests")
         --pdb {{shared_out}}/compiler.pdb \
         --function "meta::pure::test::runTests_String_1__String_1_" \
         --args "meta::pure::functions" {{err_filter}}
+
+# --- Public: Compiler tests over pure/specification/compiler ---
+# Zero-dep: assumes `just build` has produced shared/core.pdb + compiler.pdb
+# and truffle/build/pure-truffle.jar. Mirrors bootstrap::test-compiler so the
+# same compiler-graph spec suite runs on both platforms — any divergence
+# between the Pure printer's output across platforms is caught here.
+# This recipe doesn't need to run in the main build as the tests are run in maven
+test-compiler:
+    @{{banner}} '[pure→truffle]' 'runCompiledGraphTests over pure/specification/compiler'
+    {{pure_truffle}} execute \
+        --pdb {{shared_out}}/core.pdb \
+        --pdb {{shared_out}}/compiler.pdb \
+        --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
+        --args "{{spec}}/compiler" {{err_filter}}
 
 test-pct: (_mvn "skip-tests")
     @{{banner}} '[pure→truffle]' 'runPCTTests'
@@ -127,6 +138,10 @@ test-self-host: (_mvn "skip-tests")
         --pdb {{truffle_out}}/compiler_truffle.pdb \
         --function "meta::pure::test::runCompiledGraphTests_String_1__String_1_" \
         --args "{{spec}}/compiler" {{err_filter}}
+    @{{banner}} '[self-host-truffle]' 'diff compiler.pdb (Java compiler) ↔ compiler_truffle.pdb (Truffle compiler)'
+    {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
+        {{shared_out}}/compiler.pdb \
+        {{truffle_out}}/compiler_truffle.pdb {{err_filter}}
 
 bench: (_mvn "skip-tests")
     @{{banner}} '[truffle]' 'PureEvaluatorBenchmark'

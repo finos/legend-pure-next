@@ -1205,13 +1205,36 @@ public class _GenericType
                 newType = _RelationType.reconcileInferred(expectedRT, actualRT, model);
             }
 
+            MutableList<GenericType> reconciledArgs = expectedV._typeArguments().zip(actualV._typeArguments())
+                    .collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model));
+            MutableList<Multiplicity> reconciledMulArgs = actualV._multiplicityArguments();
+            // Canonical-anchor preservation: when the rebuild would produce a
+            // leaf GT (no type/mult/typeVar args) wrapping a named PE rawType
+            // with a `GenericType_<name>` UDPGT-PE in core.pdb, return that
+            // canonical anchor. Mirrors the platform-level preferCanonicalAnchor
+            // applied by `new()` and `copy()` natives — this closes the lambda
+            // classifier's canonical drift exposed by
+            // `function/lambda/canonicalAnchor.pure`. Skipped for Inferred to
+            // preserve the inferred-marker semantics.
+            if (!(actual instanceof Inferred)
+                    && (reconciledArgs == null || reconciledArgs.isEmpty())
+                    && (reconciledMulArgs == null || reconciledMulArgs.isEmpty())
+                    && (actualV._typeVariableValues() == null || actualV._typeVariableValues().isEmpty())
+                    && newType instanceof PackageableElement pe
+                    && pe._name() != null && !pe._name().isEmpty())
+            {
+                Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + pe._name());
+                if (canonical instanceof GenericTypeValue canonicalGT && canonicalGT._type() == newType)
+                {
+                    return canonicalGT;
+                }
+            }
             GenericTypeValue base = actual instanceof Inferred
                     ? buildInferredGenericType(newType, model)
                     : buildUserDefinedGenericType(newType, model);
             return base
-                    ._typeArguments(expectedV._typeArguments().zip(actualV._typeArguments())
-                            .collect(pair -> reconcileInferred(pair.getOne(), pair.getTwo(), model)))
-                    ._multiplicityArguments(actualV._multiplicityArguments())
+                    ._typeArguments(reconciledArgs)
+                    ._multiplicityArguments(reconciledMulArgs)
                     ._typeVariableValues(actualV._typeVariableValues());
         }
         return actual;

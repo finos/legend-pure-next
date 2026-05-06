@@ -2,5 +2,5 @@
 Primitive protocol::Varchar(x: Integer[1]) extends String
 
 ###CompiledGraph
-primitive protocol::Varchar  ~PrimitiveType  @2:1-2:57
-  typeVariable x :Integer[1]
+primitive protocol::Varchar  ~@PrimitiveType@  @2:1-2:57
+  typeVariable x :@Integer@[1]

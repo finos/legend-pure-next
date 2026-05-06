@@ -10,22 +10,22 @@ function protocol::constrained(x: Integer[1]): Integer[1]
 }
 
 ###CompiledGraph
-function protocol::constrained_Integer_1__Integer_1_(x:Integer[1]):Integer[1]  ~UserDefinedFunction<{Integer[1]->Integer[1]}>
+function protocol::constrained_Integer_1__Integer_1_(x:@Integer@[1]):@Integer@[1]  ~UserDefinedFunction<{@Integer@[1]->@Integer@[1]}>
   preConstraint
-    Lambda(x:Integer[1])  ~#LambdaFunction<#{Integer[1]->#Boolean##[1]#}#>#
-      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @4:8-4:10
-        Variable x :#Integer##[1]#  ~VariableExpression  @4:5-4:6
-        AtomicValue  0 :Integer[1]  ~AtomicValue  @4:10-4:10
+    Lambda(x:@Integer@[1])  ~#LambdaFunction<#{@Integer@[1]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @4:8-4:10
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @4:5-4:6
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:10-4:10
   preConstraint positive
-    Lambda(x:Integer[1])  ~#LambdaFunction<#{Integer[1]->#Boolean##[1]#}#>#
-      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @5:18-5:20
-        Variable x :#Integer##[1]#  ~VariableExpression  @5:15-5:16
-        AtomicValue  0 :Integer[1]  ~AtomicValue  @5:20-5:20
+    Lambda(x:@Integer@[1])  ~#LambdaFunction<#{@Integer@[1]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @5:18-5:20
+        Variable x :#Integer##[1]#  ~@VariableExpression@  @5:15-5:16
+        AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @5:20-5:20
   postConstraint
-    Lambda(x:Integer[1], return:Integer[1])  ~#LambdaFunction<#{Integer[1], Integer[1]->#Boolean##[1]#}#>#
-      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~FunctionInvocation  @6:13-6:15
-        Variable return :#Integer##[1]#  ~VariableExpression  @6:5-6:11
-        AtomicValue  2 :Integer[1]  ~AtomicValue  @6:15-6:15
-  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~FunctionInvocation  @9:8-9:10
-    Variable x :#Integer##[1]#  ~VariableExpression  @9:5-9:6
-    AtomicValue  1 :Integer[1]  ~AtomicValue  @9:10-9:10
+    Lambda(x:@Integer@[1], return:@Integer@[1])  ~#LambdaFunction<#{@Integer@[1], @Integer@[1]->#Boolean##[1]#}#>#
+      FunctionInvocation greaterThan_Number_1__Number_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @6:13-6:15
+        Variable return :#Integer##[1]#  ~@VariableExpression@  @6:5-6:11
+        AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @6:15-6:15
+  FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @9:8-9:10
+    Variable x :#Integer##[1]#  ~@VariableExpression@  @9:5-9:6
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:10-9:10

@@ -188,6 +188,14 @@ public final class CopyWithKeysNode extends PureNode
             shallowCopyProperties(original, copy, cgt);
         }
         GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
+        // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
+        // UDPGT-PE references through copy operations. Symmetric to NewWithKeysNode's
+        // preferCanonicalAnchor — without this, copies of canonical-classified
+        // values can lose their canonical reference if any earlier step diverged.
+        if (copyCgt != null)
+        {
+            copyCgt = NewWithKeysNode.preferCanonicalAnchorPublic(copyCgt, eval.resolver());
+        }
         if (copy instanceof Any anyC && copyCgt != null)
         {
             anyC._classifierGenericType(copyCgt);

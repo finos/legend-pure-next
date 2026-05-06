@@ -6,6 +6,6 @@ function test::primitive::testInteger(): Any[*]
 }
 
 ###CompiledGraph
-function test::primitive::testInteger__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  AtomicValue  42 :Integer[1]  ~AtomicValue  @4:3-4:4
-  AtomicValue  -1 :Integer[1]  ~AtomicValue  @5:4-5:4
+function test::primitive::testInteger__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  AtomicValue  42 :@Integer@[1]  ~@AtomicValue@  @4:3-4:4
+  AtomicValue  -1 :@Integer@[1]  ~@AtomicValue@  @5:4-5:4

@@ -135,6 +135,10 @@ test-self-host: build-compiler-pdb
     {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
         {{shared_out}}/compiler.pdb \
         {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
+    @{{banner}} '[self-host-java]' 'diff compiler_truffle.pdb ↔ compiler_bootstrap.pdb (cross-platform)'
+    {{pure_bootstrap}} diff-pdb --deep --core {{shared_out}}/core.pdb \
+        {{repo_root}}/platforms/truffle/build/compiler_truffle.pdb \
+        {{boot_out}}/compiler_bootstrap.pdb {{err_filter}}
 
 ide: build-compiler-pdb
     @{{banner}} '[ide]' 'launch IDE via bootstrap CLI'

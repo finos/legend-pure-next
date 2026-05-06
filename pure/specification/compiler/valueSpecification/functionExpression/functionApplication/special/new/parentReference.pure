@@ -18,43 +18,43 @@ Class test::new::parentRef::Node
 }
 
 ###CompiledGraph
-function test::new::parentRef::testNewSelfReference__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~FunctionInvocation  @6:3-6:24
+function test::new::parentRef::testNewSelfReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @6:3-6:24
     typeParam T -> test::new::parentRef::Node
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @6:3-6:24
-    Collection :#KeyExpression#[2]  ~Collection  @6:3-6:24
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @6:9-6:15
-        AtomicValue  'value' :String[1]  ~AtomicValue  @6:9-6:15
-        AtomicValue  1 :Integer[1]  ~AtomicValue  @6:15-6:15
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @6:18-6:23
-        AtomicValue  'next' :String[1]  ~AtomicValue  @6:18-6:23
-        FunctionInvocation parentReference_Integer_1__String_1__Any_1_ :#Any##[1]#  ~FunctionInvocation  @6:23-6:23
-          AtomicValue  0 :Integer[1]  ~AtomicValue  @6:23-6:23
-          AtomicValue  '' :String[1]  ~AtomicValue  @6:23-6:23
+    Collection :#KeyExpression#[2]  ~@Collection@  @6:3-6:24
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:9-6:15
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @6:9-6:15
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @6:15-6:15
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @6:18-6:23
+        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @6:18-6:23
+        FunctionInvocation parentReference_Integer_1__String_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @6:23-6:23
+          AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @6:23-6:23
+          AtomicValue  '' :@String@[1]  ~@AtomicValue@  @6:23-6:23
 
-function test::new::parentRef::testNewNestedParentReference__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~FunctionInvocation  @11:3-11:47
+function test::new::parentRef::testNewNestedParentReference__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @11:3-11:47
     typeParam T -> test::new::parentRef::Node
     TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @11:3-11:47
-    Collection :#KeyExpression#[2]  ~Collection  @11:3-11:47
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @11:9-11:15
-        AtomicValue  'value' :String[1]  ~AtomicValue  @11:9-11:15
-        AtomicValue  1 :Integer[1]  ~AtomicValue  @11:15-11:15
-      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @11:18-11:46
-        AtomicValue  'next' :String[1]  ~AtomicValue  @11:18-11:46
-        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~FunctionInvocation  @11:23-11:46
+    Collection :#KeyExpression#[2]  ~@Collection@  @11:3-11:47
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:9-11:15
+        AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @11:9-11:15
+        AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @11:15-11:15
+      FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:18-11:46
+        AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @11:18-11:46
+        FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::new::parentRef::Node##[1]#  ~@FunctionInvocation@  @11:23-11:46
           typeParam T -> test::new::parentRef::Node
           TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::new::parentRef::Node|1>  @11:23-11:46
-          Collection :#KeyExpression#[2]  ~Collection  @11:23-11:46
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @11:29-11:35
-              AtomicValue  'value' :String[1]  ~AtomicValue  @11:29-11:35
-              AtomicValue  2 :Integer[1]  ~AtomicValue  @11:35-11:35
-            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @11:38-11:45
-              AtomicValue  'next' :String[1]  ~AtomicValue  @11:38-11:45
-              FunctionInvocation parentReference_Integer_1__String_1__Any_1_ :#Any##[1]#  ~FunctionInvocation  @11:43-11:45
-                AtomicValue  1 :Integer[1]  ~AtomicValue  @11:43-11:45
-                AtomicValue  '' :String[1]  ~AtomicValue  @11:43-11:45
+          Collection :#KeyExpression#[2]  ~@Collection@  @11:23-11:46
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:29-11:35
+              AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @11:29-11:35
+              AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @11:35-11:35
+            FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @11:38-11:45
+              AtomicValue  'next' :@String@[1]  ~@AtomicValue@  @11:38-11:45
+              FunctionInvocation parentReference_Integer_1__String_1__Any_1_ :#Any##[1]#  ~@FunctionInvocation@  @11:43-11:45
+                AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @11:43-11:45
+                AtomicValue  '' :@String@[1]  ~@AtomicValue@  @11:43-11:45
 
 class test::new::parentRef::Node extends Any  ~Class<test::new::parentRef::Node>  @14:1-18:1
-  property value :Integer[1]  ~Property<test::new::parentRef::Node, Integer|1>
+  property value :@Integer@[1]  ~Property<test::new::parentRef::Node, @Integer@|1>
   property next :test::new::parentRef::Node[0..1]  ~Property<test::new::parentRef::Node, test::new::parentRef::Node|0..1>

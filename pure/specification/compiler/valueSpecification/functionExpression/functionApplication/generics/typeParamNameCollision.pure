@@ -22,16 +22,16 @@ function test::withTypeParam<T>(x: T[1]): Any[1]
 
 ###CompiledGraph
 function test::first_T_1__T_1__T_1_(a:T~test::first_T_1__T_1__T_1_[1], b:T~test::first_T_1__T_1__T_1_[1]):T~test::first_T_1__T_1__T_1_[1]  ~UserDefinedFunction<{T~test::first_T_1__T_1__T_1_[1], T~test::first_T_1__T_1__T_1_[1]->T~test::first_T_1__T_1__T_1_[1]}>
-  Variable a :#T~test::first_T_1__T_1__T_1_##[1]#  ~VariableExpression  @7:5-7:6
+  Variable a :#T~test::first_T_1__T_1__T_1_##[1]#  ~@VariableExpression@  @7:5-7:6
 
-function test::baselineNoTypeParam__Any_1_():Any[1]  ~UserDefinedFunction<{->Any[1]}>
-  FunctionInvocation test::first_T_1__T_1__T_1_ :#Any##[1]#  ~FunctionInvocation  @13:5-13:27
+function test::baselineNoTypeParam__Any_1_():@Any@[1]  ~UserDefinedFunction<{->@Any@[1]}>
+  FunctionInvocation test::first_T_1__T_1__T_1_ :#Any##[1]#  ~@FunctionInvocation@  @13:5-13:27
     typeParam T -> #Any#
-    AtomicValue  1 :Integer[1]  ~AtomicValue  @13:17-13:17
-    AtomicValue  'hello' :String[1]  ~AtomicValue  @13:20-13:26
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @13:17-13:17
+    AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @13:20-13:26
 
-function test::withTypeParam_T_1__Any_1_(x:T~test::withTypeParam_T_1__Any_1_[1]):Any[1]  ~UserDefinedFunction<{T~test::withTypeParam_T_1__Any_1_[1]->Any[1]}>
-  FunctionInvocation test::first_T_1__T_1__T_1_ :#Any##[1]#  ~FunctionInvocation  @20:5-20:27
+function test::withTypeParam_T_1__Any_1_(x:T~test::withTypeParam_T_1__Any_1_[1]):@Any@[1]  ~UserDefinedFunction<{T~test::withTypeParam_T_1__Any_1_[1]->@Any@[1]}>
+  FunctionInvocation test::first_T_1__T_1__T_1_ :#Any##[1]#  ~@FunctionInvocation@  @20:5-20:27
     typeParam T -> #Any#
-    AtomicValue  1 :Integer[1]  ~AtomicValue  @20:17-20:17
-    AtomicValue  'hello' :String[1]  ~AtomicValue  @20:20-20:26
+    AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @20:17-20:17
+    AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @20:20-20:26

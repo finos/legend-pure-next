@@ -24,6 +24,33 @@ function meta::pure::compiler::helper::genericType::buildUserDefinedGenericType(
     ^UserDefinedGenericType(type = $rawType);
 }
 
+// Canonical-anchor-aware variant of buildUserDefinedGenericType: when rawType
+// is a named PackageableElement with a `GenericType_<name>` UDPGT-PE in
+// core.pdb, returns that canonical anchor; otherwise returns a fresh UDGT.
+// Mirrors Java GenericTypeCompiler.java's canonical-anchor swap (lines 99-117)
+// for sites that build leaf UDGTs directly (e.g. typeVariable genericType).
+function meta::pure::compiler::helper::genericType::buildCanonicalOrUserDefinedGenericType(rawType:Type[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
+{
+    let fallback = buildUserDefinedGenericType($rawType)->cast(@GenericType);
+    if(!$rawType->instanceOf(PackageableElement),
+        | $fallback,
+        | let peName = $rawType->cast(@PackageableElement).name;
+          if($peName->isEmpty(),
+              | $fallback,
+              | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $peName->toOne();
+                let resolved = $context->resolveElement($canonicalPath);
+                if($resolved->isEmpty() || !$resolved->toOne()->instanceOf(GenericTypeValue),
+                    | $fallback,
+                    | let canonicalGT = $resolved->toOne()->cast(@GenericTypeValue);
+                      if($canonicalGT.type->isNotEmpty() && typeEquals($canonicalGT.type->toOne(), $rawType),
+                          | $canonicalGT->cast(@GenericType),
+                          | $fallback
+                      );
+                );
+          );
+    );
+}
+
 function meta::pure::compiler::helper::genericType::buildInferredGenericType(rawType:Type[1]):InferredGenericType[1]
 {
     ^InferredGenericType(type = $rawType);
@@ -991,6 +1018,34 @@ function meta::pure::compiler::helper::genericType::inferLiteralType(value:Any[1
 
 // Mirrors Java _GenericType.reconcileInferred
 // Reconciles expected type with actual type, preserving inferred markers from actual.
+// Canonical-anchor preservation helper. Mirrors Java _GenericType.reconcileInferred
+// lines 1219-1231. When a rebuild would produce a leaf GT (no type/mult/typeVar args)
+// wrapping a named PE rawType with a `GenericType_<name>` UDPGT-PE in core.pdb,
+// returns that canonical anchor (else empty). Skipped for Inferred to preserve
+// inferred-marker semantics.
+function meta::pure::compiler::helper::genericType::canonicalAnchorFor(newType:Type[1], reconciledTypeArgs:GenericType[*], mulArgs:Multiplicity[*], typeVarVals:ValueSpecification[*], actual:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[0..1]
+{
+    let isLeaf = !$actual->instanceOf(Inferred)
+        && $reconciledTypeArgs->isEmpty()
+        && $mulArgs->isEmpty()
+        && $typeVarVals->isEmpty()
+        && $newType->instanceOf(PackageableElement)
+        && $newType->cast(@PackageableElement).name->isNotEmpty();
+    if(!$isLeaf,
+        | []->cast(@GenericType),
+        | let canonicalPath = 'meta::pure::metamodel::type::generics::optimization::GenericType_' + $newType->cast(@PackageableElement).name->toOne();
+          let resolved = $context->resolveElement($canonicalPath);
+          if($resolved->isEmpty() || !$resolved->toOne()->instanceOf(GenericTypeValue),
+              | []->cast(@GenericType),
+              | let canonicalGT = $resolved->toOne()->cast(@GenericTypeValue);
+                if($canonicalGT.type->isNotEmpty() && typeEquals($canonicalGT.type->toOne(), $newType),
+                    | $canonicalGT->cast(@GenericType),
+                    | []->cast(@GenericType)
+                );
+          );
+    );
+}
+
 function meta::pure::compiler::helper::genericType::reconcileInferred(expected:GenericType[1], actual:GenericType[1], context:meta::pure::compiler::CompilerContext[1]):GenericType[1]
 {
     $expected->match([
@@ -1026,13 +1081,24 @@ function meta::pure::compiler::helper::genericType::reconcileInferred(expected:G
                               );
                               // Preserve typeVariableValues from actual (mirrors Java line 1196)
                               let actualTVV = $actual->match([u:UserDefinedGenericType[1] | $u.typeVariableValues, a:Any[1] | []->cast(@ValueSpecification)]);
-                              let baseGT = buildUserDefinedGenericType($newType);
-                              let userDefinedGT = ^$baseGT(typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments, typeVariableValues = $actualTVV);
-                              let inferredBase = buildInferredGenericType($newType);
-                              let inferredGT = ^$inferredBase(typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments);
-                              if($actual->instanceOf(Inferred),
-                                  | $inferredGT,
-                                  | $userDefinedGT
+                              // Canonical-anchor preservation: when the rebuild would produce a
+                              // leaf GT (no type/mult/typeVar args) wrapping a named PE rawType
+                              // with a `GenericType_<name>` UDPGT-PE in core.pdb, return that
+                              // canonical anchor. Mirrors Java _GenericType.reconcileInferred lines
+                              // 1219-1231 — closes the lambda classifier's canonical drift exposed
+                              // by `function/lambda/canonicalAnchor.pure`. Skipped for Inferred to
+                              // preserve the inferred-marker semantics.
+                              let canonicalAnchor = canonicalAnchorFor($newType, $reconciledTypeArgs, $actualV.multiplicityArguments, $actualTVV, $actual, $context);
+                              if($canonicalAnchor->isNotEmpty(),
+                                  | $canonicalAnchor->toOne(),
+                                  | let baseGT = buildUserDefinedGenericType($newType);
+                                    let userDefinedGT = ^$baseGT(typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments, typeVariableValues = $actualTVV);
+                                    let inferredBase = buildInferredGenericType($newType);
+                                    let inferredGT = ^$inferredBase(typeArguments = $reconciledTypeArgs, multiplicityArguments = $actualV.multiplicityArguments);
+                                    if($actual->instanceOf(Inferred),
+                                        | $inferredGT,
+                                        | $userDefinedGT
+                                    );
                               );
                           );
                     );,

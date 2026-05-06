@@ -446,9 +446,9 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::formatLite
 {
     if($value->instanceOf(PackageableElement),
         | $value->cast(@PackageableElement)->fullPath(),
-        | if($declaredType == 'Integer' || $declaredType == 'Float' || $declaredType == 'Boolean' || $declaredType == 'Decimal',
+        | if($value->instanceOf(Integer) || $value->instanceOf(Float) || $value->instanceOf(Boolean) || $value->instanceOf(Decimal),
               | $value->toString(),
-              | if($declaredType == 'String',
+              | if($value->instanceOf(String),
                   | '\'' + $value->cast(@String) + '\'',
                   | '\'' + $value->toString() + '\''
               )
@@ -463,6 +463,13 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::formatLite
 function <<test.TestDependency>> meta::pure::compiler::test::printer::printType(gt:GenericType[1]):String[1]
 {
     let isInferred = $gt->instanceOf(Inferred);
+    // Canonical UDPGT-PE marker: GenericType instances that are also
+    // PackageableElement-instances are canonical GenericType_<TypeName> anchors
+    // (e.g. GenericType_Nil, GenericType_Any). They appear as `@X@` in the
+    // printed graph to distinguish from inline UDGT (`X`) and Inferred (`#X#`).
+    // Both annotations combine: InferredPackageableGenericType renders as `@#X#@`.
+    // Always-on so canonical-anchor drift is visible in every compiler test.
+    let isCanonicalAnchor = $gt->instanceOf(PackageableElement);
     let coreType = $gt->match(
         [
             gto:GenericTypeOperation[1] |
@@ -506,7 +513,8 @@ function <<test.TestDependency>> meta::pure::compiler::test::printer::printType(
             ),
         a:Any[1] | $typeStr
     ]);
-    if($isInferred, | '#' + $withTVV + '#', | $withTVV);
+    let withInferred = if($isInferred, | '#' + $withTVV + '#', | $withTVV);
+    if($isCanonicalAnchor, | '@' + $withInferred + '@', | $withInferred);
 }
 
 function <<test.TestDependency>> meta::pure::compiler::test::printer::printValueInline(vs:ValueSpecification[1]):String[1]

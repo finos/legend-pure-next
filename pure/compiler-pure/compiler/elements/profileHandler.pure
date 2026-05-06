@@ -37,9 +37,10 @@ function meta::pure::compiler::elements::compileProfilePass1(pr:meta::pure::prot
         sourceInformation = compileSourceInformation($pr.p_sourceInformation)
     );
 
-    let profileSkeleton = ^$profileSkeletonInt(
-        classifierGenericType = buildUserDefinedGenericType(Profile)
-    );
-
-    putElementUnderPackage($pkgRes.context, $prName, $packagePath, $profileSkeleton);
+    // ^Profile(...) above already sets classifierGenericType to the canonical
+    // GenericType_Profile UDPGT-PE via the platform new() native's
+    // preferCanonicalAnchor. Don't override with a fresh inline UDGT — that
+    // would lose the canonical reference and diverge from how Stereotype, Tag,
+    // and other M3 elements are built (which don't override).
+    putElementUnderPackage($pkgRes.context, $prName, $packagePath, $profileSkeletonInt);
 }

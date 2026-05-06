@@ -92,10 +92,30 @@ public final class GenericTypeCompiler
                     yield null;
                 }
 
-                yield _GenericType.buildUserDefinedGenericType(rawType, model)
+                meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl built = _GenericType.buildUserDefinedGenericType(rawType, model)
                         ._typeArguments(gtv._typeArguments().collect(arg -> compile(arg, imports, model, context)))
                         ._multiplicityArguments(gtv._multiplicityArguments().collect(m -> MultiplicityCompiler.compile(m, model, context)))
                         ._typeVariableValues(gtv._typeVariableValues().collect(vs -> ValueSpecificationCompiler.compile(vs, imports, model, context)));
+                // Canonical-anchor preservation: when the compiled GT is a leaf
+                // (no type/mult/typeVar args) wrapping a named PE rawType with
+                // a `GenericType_<name>` UDPGT-PE in core.pdb, return the
+                // canonical anchor instead of the fresh inline UDGT. Mirrors the
+                // platform-level preferCanonicalAnchor applied by `new()`/`copy()`
+                // natives — closes the canonical drift exposed by
+                // `function/lambda/canonicalAnchor.pure`.
+                if ((built._typeArguments() == null || built._typeArguments().isEmpty())
+                        && (built._multiplicityArguments() == null || built._multiplicityArguments().isEmpty())
+                        && (built._typeVariableValues() == null || built._typeVariableValues().isEmpty())
+                        && rawType instanceof PackageableElement rawPE
+                        && rawPE._name() != null && !rawPE._name().isEmpty())
+                {
+                    Object canonical = model.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + rawPE._name());
+                    if (canonical instanceof meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT && canonicalGT._type() == rawType)
+                    {
+                        yield canonicalGT;
+                    }
+                }
+                yield built;
             }
             default -> throw new IllegalArgumentException("Unexpected GenericType: " + inline.getClass());
         };

@@ -9,27 +9,27 @@ function test():Any[*]
 }
 
 ###CompiledGraph
-native function check_String_1__Boolean_1_(s:String[1]):Boolean[1]  ~NativeFunction<{String[1]->Boolean[1]}>
+native function check_String_1__Boolean_1_(s:@String@[1]):@Boolean@[1]  ~NativeFunction<{@String@[1]->@Boolean@[1]}>
 
 function k_Function_1__Function_1_(f:Function<W~k_Function_1__Function_1_>[1]):Function<W~k_Function_1__Function_1_>[1]  ~UserDefinedFunction<{Function<W~k_Function_1__Function_1_>[1]->Function<W~k_Function_1__Function_1_>[1]}>
-  Variable f :#Function<W~k_Function_1__Function_1_>##[1]#  ~VariableExpression  @3:48-3:49
+  Variable f :#Function<W~k_Function_1__Function_1_>##[1]#  ~@VariableExpression@  @3:48-3:49
 
-function g_Function_1__K_$0_1$_(f:Function<{K~g_Function_1__K_$0_1$_[1]->Boolean[1]}>[1]):K~g_Function_1__K_$0_1$_[0..1]  ~UserDefinedFunction<{Function<{K~g_Function_1__K_$0_1$_[1]->Boolean[1]}>[1]->K~g_Function_1__K_$0_1$_[0..1]}>
-  Collection :#Nil#[0]  ~Collection  @4:58-4:59
+function g_Function_1__K_$0_1$_(f:Function<{K~g_Function_1__K_$0_1$_[1]->@Boolean@[1]}>[1]):K~g_Function_1__K_$0_1$_[0..1]  ~UserDefinedFunction<{Function<{K~g_Function_1__K_$0_1$_[1]->@Boolean@[1]}>[1]->K~g_Function_1__K_$0_1$_[0..1]}>
+  Collection :#Nil#[0]  ~@Collection@  @4:58-4:59
 
-function f_T_MANY__T_$0_1$__String_1_(s:T~f_T_MANY__T_$0_1$__String_1_[*], a:T~f_T_MANY__T_$0_1$__String_1_[0..1]):String[1]  ~UserDefinedFunction<{T~f_T_MANY__T_$0_1$__String_1_[*], T~f_T_MANY__T_$0_1$__String_1_[0..1]->String[1]}>
-  AtomicValue  'a' :String[1]  ~AtomicValue  @5:44-5:46
+function f_T_MANY__T_$0_1$__String_1_(s:T~f_T_MANY__T_$0_1$__String_1_[*], a:T~f_T_MANY__T_$0_1$__String_1_[0..1]):@String@[1]  ~UserDefinedFunction<{T~f_T_MANY__T_$0_1$__String_1_[*], T~f_T_MANY__T_$0_1$__String_1_[0..1]->@String@[1]}>
+  AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @5:44-5:46
 
-function test__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation f_T_MANY__T_$0_1$__String_1_ :#String##[1]#  ~FunctionInvocation  @8:5-8:37
+function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation f_T_MANY__T_$0_1$__String_1_ :#String##[1]#  ~@FunctionInvocation@  @8:5-8:37
     typeParam T -> #String#
-    Collection :#String#[2]  ~Collection  @8:7-8:15
-      AtomicValue  'a' :String[1]  ~AtomicValue  @8:8-8:10
-      AtomicValue  'b' :String[1]  ~AtomicValue  @8:12-8:14
-    FunctionInvocation g_Function_1__K_$0_1$_ :#String##[0..1]#  ~FunctionInvocation  @8:18-8:36
+    Collection :#String#[2]  ~@Collection@  @8:7-8:15
+      AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @8:8-8:10
+      AtomicValue  'b' :@String@[1]  ~@AtomicValue@  @8:12-8:14
+    FunctionInvocation g_Function_1__K_$0_1$_ :#String##[0..1]#  ~@FunctionInvocation@  @8:18-8:36
       typeParam K -> #String#
-      FunctionInvocation k_Function_1__Function_1_ :#Function<#{#String##[1]#->#Boolean##[1]#}#>##[1]#  ~FunctionInvocation  @8:20-8:35
+      FunctionInvocation k_Function_1__Function_1_ :#Function<#{#String##[1]#->#Boolean##[1]#}#>##[1]#  ~@FunctionInvocation@  @8:20-8:35
         typeParam W -> #{#String##[1]#->#Boolean##[1]#}#
-        Lambda(t:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#Boolean##[1]#}#>#[1]  ~AtomicValue  @8:22-8:34
-          ArrowInvocation check_String_1__Boolean_1_ :#Boolean##[1]#  ~ArrowInvocation  @8:26-8:34
-            Variable t :#String##[1]#  ~VariableExpression  @8:24-8:25
+        Lambda(t:#String##[1]#) :#LambdaFunction<#{#String##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @8:22-8:34
+          ArrowInvocation check_String_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @8:26-8:34
+            Variable t :#String##[1]#  ~@VariableExpression@  @8:24-8:25

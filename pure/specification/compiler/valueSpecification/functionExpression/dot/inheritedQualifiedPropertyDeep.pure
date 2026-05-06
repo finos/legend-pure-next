@@ -25,29 +25,29 @@ function test::use():Any[*]
 
 ###CompiledGraph
 class test::GrandParent extends Any  ~Class<test::GrandParent>  @2:1-7:1
-  qualifiedProperty tag() :String[1]
-    AtomicValue  'gp' :String[1]  ~AtomicValue  @5:9-5:12
+  qualifiedProperty tag() :@String@[1]
+    AtomicValue  'gp' :@String@[1]  ~@AtomicValue@  @5:9-5:12
 
 class test::Parent extends test::GrandParent  ~Class<test::Parent>  @9:1-12:1
-  property name :String[1]  ~Property<test::Parent, String|1>
+  property name :@String@[1]  ~Property<test::Parent, @String@|1>
 
 class test::Child extends test::Parent  ~Class<test::Child>  @14:1-17:1
-  property age :Integer[1]  ~Property<test::Child, Integer|1>
+  property age :@Integer@[1]  ~Property<test::Child, @Integer@|1>
 
-function test::use__Any_MANY_():Any[*]  ~UserDefinedFunction<{->Any[*]}>
-  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~FunctionInvocation  @21:5-21:46
+function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::Child##[1]#  ~@FunctionInvocation@  @21:5-21:46
     typeParam T -> #test::Child#
     mulParam m -> #[1]#
-    AtomicValue  'c' :String[1]  ~AtomicValue  @21:9-21:9
-    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~FunctionInvocation  @21:13-21:46
+    AtomicValue  'c' :@String@[1]  ~@AtomicValue@  @21:9-21:9
+    FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::Child##[1]#  ~@FunctionInvocation@  @21:13-21:46
       typeParam T -> test::Child
       TypeHolder :UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>[1]  ~UserDefinedGenericTypeAndMultiplicityHolder<test::Child|1>  @21:13-21:46
-      Collection :#KeyExpression#[2]  ~Collection  @21:13-21:46
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @21:26-21:37
-          AtomicValue  'name' :String[1]  ~AtomicValue  @21:26-21:37
-          AtomicValue  'Alice' :String[1]  ~AtomicValue  @21:31-21:37
-        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~FunctionInvocation  @21:40-21:45
-          AtomicValue  'age' :String[1]  ~AtomicValue  @21:40-21:45
-          AtomicValue  10 :Integer[1]  ~AtomicValue  @21:44-21:45
-  DotApplication test::GrandParent.tag() :#String##[1]#  ~DotApplication  @22:7-22:12
-    Variable c :#test::Child##[1]#  ~VariableExpression  @22:5-22:6
+      Collection :#KeyExpression#[2]  ~@Collection@  @21:13-21:46
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:26-21:37
+          AtomicValue  'name' :@String@[1]  ~@AtomicValue@  @21:26-21:37
+          AtomicValue  'Alice' :@String@[1]  ~@AtomicValue@  @21:31-21:37
+        FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @21:40-21:45
+          AtomicValue  'age' :@String@[1]  ~@AtomicValue@  @21:40-21:45
+          AtomicValue  10 :@Integer@[1]  ~@AtomicValue@  @21:44-21:45
+  DotApplication test::GrandParent.tag() :#String##[1]#  ~@DotApplication@  @22:7-22:12
+    Variable c :#test::Child##[1]#  ~@VariableExpression@  @22:5-22:6

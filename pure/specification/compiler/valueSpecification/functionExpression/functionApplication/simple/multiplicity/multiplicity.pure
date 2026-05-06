@@ -25,25 +25,25 @@ function pack::testOverloadString(s: String[*]): String[1]
 }
 
 ###CompiledGraph
-native function pack::doStuff_String_1__String_1_(a:String[1]):String[1]  ~NativeFunction<{String[1]->String[1]}>
+native function pack::doStuff_String_1__String_1_(a:@String@[1]):@String@[1]  ~NativeFunction<{@String@[1]->@String@[1]}>
 
-native function pack::doStuff_String_MANY__String_1_(a:String[*]):String[1]  ~NativeFunction<{String[*]->String[1]}>
+native function pack::doStuff_String_MANY__String_1_(a:@String@[*]):@String@[1]  ~NativeFunction<{@String@[*]->@String@[1]}>
 
-native function pack::global_String_MANY__String_1_(a:String[*]):String[1]  ~NativeFunction<{String[*]->String[1]}>
+native function pack::global_String_MANY__String_1_(a:@String@[*]):@String@[1]  ~NativeFunction<{@String@[*]->@String@[1]}>
 
-function pack::computeSubsumes_String_1__String_1_(x:String[1]):String[1]  ~UserDefinedFunction<{String[1]->String[1]}>
-  ArrowInvocation pack::global_String_MANY__String_1_ :#String##[1]#  ~ArrowInvocation  @9:5-9:14
-    Variable x :#String##[1]#  ~VariableExpression  @9:3-9:4
+function pack::computeSubsumes_String_1__String_1_(x:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1]->@String@[1]}>
+  ArrowInvocation pack::global_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @9:5-9:14
+    Variable x :#String##[1]#  ~@VariableExpression@  @9:3-9:4
 
-function pack::compute_String_MANY__String_1_(x:String[*]):String[1]  ~UserDefinedFunction<{String[*]->String[1]}>
-  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~ArrowInvocation  @14:5-14:26
-    ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~ArrowInvocation  @14:5-14:26
-      Variable x :#String##[*]#  ~VariableExpression  @14:3-14:4
+function pack::compute_String_MANY__String_1_(x:@String@[*]):@String@[1]  ~UserDefinedFunction<{@String@[*]->@String@[1]}>
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @14:5-14:26
+    ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @14:5-14:26
+      Variable x :#String##[*]#  ~@VariableExpression@  @14:3-14:4
 
-function pack::testOverloadNumber_String_1__String_1_(n:String[1]):String[1]  ~UserDefinedFunction<{String[1]->String[1]}>
-  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~ArrowInvocation  @19:5-19:15
-    Variable n :#String##[1]#  ~VariableExpression  @19:3-19:4
+function pack::testOverloadNumber_String_1__String_1_(n:@String@[1]):@String@[1]  ~UserDefinedFunction<{@String@[1]->@String@[1]}>
+  ArrowInvocation pack::doStuff_String_1__String_1_ :#String##[1]#  ~@ArrowInvocation@  @19:5-19:15
+    Variable n :#String##[1]#  ~@VariableExpression@  @19:3-19:4
 
-function pack::testOverloadString_String_MANY__String_1_(s:String[*]):String[1]  ~UserDefinedFunction<{String[*]->String[1]}>
-  ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~ArrowInvocation  @24:5-24:15
-    Variable s :#String##[*]#  ~VariableExpression  @24:3-24:4
+function pack::testOverloadString_String_MANY__String_1_(s:@String@[*]):@String@[1]  ~UserDefinedFunction<{@String@[*]->@String@[1]}>
+  ArrowInvocation pack::doStuff_String_MANY__String_1_ :#String##[1]#  ~@ArrowInvocation@  @24:5-24:15
+    Variable s :#String##[*]#  ~@VariableExpression@  @24:3-24:4

@@ -412,3 +412,74 @@ function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyClearOp
     // Verify original unchanged
     assert($pierre.firm->isNotEmpty());
 }
+
+// Platform-level invariant: ^$expr(field=value) (copy-with-keys) must preserve
+// the original's classifierGenericType identity when no keys touch the
+// classifier. Specifically, if the original's classifier is a canonical UDPGT-PE
+// from core.pdb, the copy's classifier must still point to the same canonical PE
+// (i.e. must be a PackageableElement, not a freshly-built inline UDGT).
+// This frames the copy native's behavior across Java direct, Truffle, and
+// compile-via-pure platforms.
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyPreservesCanonicalClassifierAnchor():Boolean[1]
+{
+    let ft = ^meta::pure::metamodel::type::FunctionType(
+        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    // Sanity: original is canonical UDPGT-PE
+    assert($ft.classifierGenericType->toOne()->instanceOf(meta::pure::metamodel::PackageableElement),
+        'Precondition: ^FunctionType should produce canonical UDPGT-PE classifier'
+    );
+
+    // Copy with a key that doesn't affect classifier
+    let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
+
+    // Copy's classifier must still be a canonical UDPGT-PE
+    let copyCgt = $ft2.classifierGenericType->toOne();
+    assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
+        'Expected copy classifierGenericType to remain canonical UDPGT-PE after ^$expr(...)'
+    );
+    assertEquals(
+        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+    );
+}
+
+// copy(T[1]) without keys — must also preserve canonical UDPGT-PE classifier.
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testCopyNoKeysPreservesCanonicalAnchor():Boolean[1]
+{
+    let ft = ^meta::pure::metamodel::type::FunctionType(
+        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    let ft2 = $ft->copy();
+    let copyCgt = $ft2.classifierGenericType->toOne();
+    assert($copyCgt->instanceOf(meta::pure::metamodel::PackageableElement),
+        'Expected copy() (no keys) classifierGenericType to remain canonical UDPGT-PE'
+    );
+    assertEquals(
+        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        $copyCgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+    );
+}
+
+// Chained copies: each copy operation should preserve canonical anchor.
+function <<test.Test>> meta::pure::functions::lang::tests::copy::testChainedCopiesPreserveCanonicalAnchor():Boolean[1]
+{
+    let ft = ^meta::pure::metamodel::type::FunctionType(
+        returnType = ^meta::pure::metamodel::type::generics::InferredGenericType(type = meta::pure::metamodel::type::Any),
+        returnMultiplicity = meta::pure::metamodel::multiplicity::PureOne
+    );
+    let ft2 = ^$ft(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroOne);
+    let ft3 = ^$ft2(returnMultiplicity = meta::pure::metamodel::multiplicity::ZeroMany);
+    let ft4 = $ft3->copy();
+
+    let cgt = $ft4.classifierGenericType->toOne();
+    assert($cgt->instanceOf(meta::pure::metamodel::PackageableElement),
+        'Expected chained-copy classifierGenericType to remain canonical UDPGT-PE'
+    );
+    assertEquals(
+        'meta::pure::metamodel::type::generics::optimization::GenericType_FunctionType',
+        $cgt->cast(@meta::pure::metamodel::PackageableElement)->elementToPath()
+    );
+}

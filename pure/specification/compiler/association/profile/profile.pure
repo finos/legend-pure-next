@@ -22,17 +22,17 @@ Class protocol::support::ClassB
 }
 
 ###CompiledGraph
-association protocol::MyAssociation  ~Association  @4:1-8:1
+association protocol::MyAssociation  ~@Association@  @4:1-8:1
   <<protocol::support::AProfile.flag, protocol::support::AProfile.newFlag>>
   {protocol::support::AProfile.tag1 = 'yeah', protocol::support::AProfile.tag2 = 'ok'}
   property a :protocol::support::ClassA[1]  ~Property<protocol::support::ClassB, protocol::support::ClassA|1>
   property b :protocol::support::ClassB[*]  ~Property<protocol::support::ClassA, protocol::support::ClassB|*>
 
-profile protocol::support::AProfile  ~Profile  @10:1-14:1
-  stereotype flag  ~Stereotype
-  stereotype newFlag  ~Stereotype
-  tag tag1  ~Tag
-  tag tag2  ~Tag
+profile protocol::support::AProfile  ~@Profile@  @10:1-14:1
+  stereotype flag  ~@Stereotype@
+  stereotype newFlag  ~@Stereotype@
+  tag tag1  ~@Tag@
+  tag tag2  ~@Tag@
 
 class protocol::support::ClassA extends Any  ~Class<protocol::support::ClassA>  @16:1-18:1
 
