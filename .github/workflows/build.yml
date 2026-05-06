@@ -36,6 +36,10 @@
 # consume bootstrap's outputs via actions/upload-artifact + actions/download-artifact.
 # truffle-self-host and truffle-native-self-host need GraalVM; bootstrap-self-host
 # uses plain Temurin.
+#
+# Finally, `all-green` aggregates the four real jobs. Branch protection on main
+# only needs to require this single check — adding a new parallel job means
+# listing it in `all-green.needs`, no branch-protection edit required.
 
 name: Build CI
 
@@ -111,11 +115,6 @@ jobs:
           git config --global committer.name "FINOS Admin"
           git config --global author.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git config --global author.name "${GITHUB_ACTOR}"
-
-      - name: Collect Workflow Telemetry
-        uses: runforesight/workflow-telemetry-action@v1
-        with:
-          theme: dark
 
       # Builds bootstrap (mvn install + JUnit) and runs the Pure compiler-graph
       # spec tests on Pure-on-Java. Outputs shared/core.pdb, shared/compiler.pdb,
@@ -342,3 +341,23 @@ jobs:
       # that the JIT path can't surface.
       - name: Truffle native self-host
         run: just truffle::native::test-pure-self-host
+
+  # Single aggregation job: branch protection only needs to require this one.
+  # Adding a new parallel job means listing it in `needs:` here — no changes
+  # to branch-protection settings. `if: always()` lets this run even if a
+  # dependency failed, so the explicit `contains(... 'failure' / 'cancelled')`
+  # check below produces a clean pass/fail (a plain skip would also block,
+  # but for the wrong reason).
+  all-green:
+    name: All checks passed
+    needs: [bootstrap, bootstrap-self-host, truffle-self-host, truffle-native-self-host]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all dependencies succeeded
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required checks failed or were cancelled."
+            exit 1
+          fi
+          echo "All required checks passed."
