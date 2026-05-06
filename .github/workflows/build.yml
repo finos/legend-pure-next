@@ -48,6 +48,10 @@ env:
   CI_DEPLOY_PASSWORD: ${{ secrets.CI_DEPLOY_PASSWORD }}
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   MAVEN_OPTS: -XX:MaxRAMPercentage=25.0
+  # Opt into Node.js 24 for all JS-based actions ahead of GitHub's
+  # 2026-06-02 forced switch (Node 20 removed 2026-09-16). Once first-party
+  # actions ship Node 24-native versions we can drop this.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
   # Tool versions — pinned for reproducibility. Bump as a deliberate change,
   # not a side effect of an upstream release. Local equivalents:
@@ -308,9 +312,10 @@ jobs:
       - name: Truffle test
         run: just truffle::test
 
-      - name: Truffle self-host
-        run: just truffle::test-pure-self-host
-
+      # Upload surefire XMLs *before* `Truffle self-host`: the self-host
+      # recipe re-invokes `_mvn "skip-tests"` which runs `mvn clean install`,
+      # wiping `target/surefire-reports/` before the end-of-job upload could
+      # see them. `if: always()` so test failures still produce reports.
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -318,6 +323,9 @@ jobs:
           name: test-results-truffle
           path: |
             ${{ github.workspace }}/platforms/truffle/**/target/surefire-reports/*.xml
+
+      - name: Truffle self-host
+        run: just truffle::test-pure-self-host
 
   truffle-native-self-host:
     name: Truffle native build + self-host (compile-via-pure on AOT binary vs Java direct)
@@ -339,14 +347,13 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
-      # Same GraalVM 25 setup as truffle-self-host, plus native-image — the
-      # graalvm/setup-graalvm action installs `native-image` alongside the JDK.
-      - name: Set up GraalVM JDK + native-image
+      # Same GraalVM 25 setup as truffle-self-host. `native-image` is bundled
+      # in GraalVM since JDK 17, so no `components:` input needed.
+      - name: Set up GraalVM JDK
         uses: graalvm/setup-graalvm@v1
         with:
           java-version: ${{ env.GRAALVM_VERSION }}
           distribution: 'graalvm-community'
-          components: 'native-image'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Maven
