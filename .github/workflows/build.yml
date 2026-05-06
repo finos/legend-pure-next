@@ -52,12 +52,16 @@ env:
   # Tool versions — pinned for reproducibility. Bump as a deliberate change,
   # not a side effect of an upstream release. Local equivalents:
   #   JDK_VERSION       ↔ Temurin 25 patch the team builds on (mvn `java-version`)
-  #   GRAALVM_VERSION   ↔ Oracle GraalVM 25 patch (java -version on dev machines)
+  #   GRAALVM_VERSION   ↔ latest graalvm-ce-builds tag for JDK 25
+  #                       (`gh release list --repo graalvm/graalvm-ce-builds`).
+  #                       NB: GraalVM Community lags Oracle GraalVM by one
+  #                       patch; local devs on Oracle GraalVM 25.0.3 won't
+  #                       match exactly, that's expected.
   #   MAVEN_VERSION     ↔ system mvn locally; we install our own here so the
   #                       runner image's preinstalled mvn can't drift the build
   #   JUST_VERSION      ↔ `just --version` locally
   JDK_VERSION: '25.0.1'
-  GRAALVM_VERSION: '25.0.3'
+  GRAALVM_VERSION: '25.0.2'
   MAVEN_VERSION: '3.9.11'
   JUST_VERSION: '1.49.0'
 
