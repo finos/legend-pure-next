@@ -49,6 +49,14 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
 
 // Context-aware findProperty: resolves each parent class from the element map
 // so that association properties (registered during pass 2) are visible.
+//
+// Generalizations are walked with a short-circuiting fold rather than
+// `->map(...)->filter(p | $p->isNotEmpty())->head()`, which evaluates findProperty
+// recursively on EVERY ancestor before picking the first non-empty result.
+// Eager descent on a class with N ancestors costs N recursive walks even when the
+// first ancestor already has the property; the fold version stops after the first
+// hit. Property lookup is on the hot path of every dot-application resolution
+// (see resolveDotApplication), so the saved walks compound across the compile.
 function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:String[1], context:CompilerContext[1]):Property<Nil, Any|*>[0..1]
 {
     $owner->match(
@@ -60,21 +68,7 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                     | let assocMatch = $cls.propertiesFromAssociations->filter(p | $p.name == $name);
                       if($assocMatch->isNotEmpty(),
                           | $assocMatch->head(),
-                          | let inherited = $cls.generalizations
-                                ->map(g | $g.general->genericTypeRawType())
-                                ->filter(t | $t->instanceOf(Class) || $t->instanceOf(Enumeration))
-                                ->map(t |
-                                    let superPath = $t->cast(@PackageableElement)->elementToPath();
-                                    let resolved = $context->resolveElement($superPath);
-                                    let superCls = if($resolved->isNotEmpty(),
-                                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $t]),
-                                        | $t
-                                    );
-                                    $superCls->findProperty($name, $context);
-                                )
-                                ->filter(p | $p->isNotEmpty())
-                                ->head();
-                            $inherited;
+                          | findInheritedProperty($cls.generalizations, $name, $context);
                       );
                 );,
             // Enumeration is not a Class<Any> at the Pure type level (it extends
@@ -86,25 +80,36 @@ function meta::pure::compiler::helper::class::findProperty(owner:Any[1], name:St
                 let directMatch = $en.properties->filter(p | $p.name == $name);
                 if($directMatch->isNotEmpty(),
                     | $directMatch->head(),
-                    | let inherited = $en.generalizations
-                          ->map(g | $g.general->genericTypeRawType())
-                          ->filter(t | $t->instanceOf(Class) || $t->instanceOf(Enumeration))
-                          ->map(t |
-                              let superPath = $t->cast(@PackageableElement)->elementToPath();
-                              let resolved = $context->resolveElement($superPath);
-                              let superCls = if($resolved->isNotEmpty(),
-                                  | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $t]),
-                                  | $t
-                              );
-                              $superCls->findProperty($name, $context);
-                          )
-                          ->filter(p | $p->isNotEmpty())
-                          ->head();
-                      $inherited;
+                    | findInheritedProperty($en.generalizations, $name, $context);
                 );,
             a : Any[1] | []
         ]
     )
+}
+
+// Walks generalizations in order with early-exit on first match. Skips entries
+// whose raw type isn't a Class or Enumeration (mirroring the original filter).
+// Pure's fold returns U[*] from a U[*] seed even when each iteration produces
+// at most one element, so coerce with ->head() for the [0..1] signature.
+function meta::pure::compiler::helper::class::findInheritedProperty(generalizations:meta::pure::metamodel::relationship::Generalization[*], name:String[1], context:CompilerContext[1]):Property<Nil, Any|*>[0..1]
+{
+    $generalizations->fold({g, acc |
+        if($acc->isNotEmpty(),
+            | $acc,
+            | let t = $g.general->genericTypeRawType();
+              if($t->isEmpty() || (!$t->toOne()->instanceOf(Class) && !$t->toOne()->instanceOf(Enumeration)),
+                  | $acc,
+                  | let actualT = $t->toOne();
+                    let superPath = $actualT->cast(@PackageableElement)->elementToPath();
+                    let resolved = $context->resolveElement($superPath);
+                    let superCls = if($resolved->isNotEmpty(),
+                        | $resolved->toOne()->match([c:Class<Any>[1] | $c, e:Enumeration<Any>[1] | $e, a:Any[1] | $actualT]),
+                        | $actualT
+                    );
+                    $superCls->findProperty($name, $context);
+              );
+        );
+    }, []->cast(@Property<Nil, Any|*>))->head();
 }
 
 function meta::pure::compiler::helper::class::findQualifiedProperties(cls:Class<Any>[1], name:String[1]):QualifiedProperty<Any>[*]

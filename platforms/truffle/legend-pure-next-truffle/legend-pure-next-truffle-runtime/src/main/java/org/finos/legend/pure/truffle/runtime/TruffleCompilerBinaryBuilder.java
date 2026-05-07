@@ -134,7 +134,38 @@ public final class TruffleCompilerBinaryBuilder
             // every byte of orchestration logic lives in Pure, only the runtime
             // changes. Returns a `CompilationResult` whose `elements` already
             // includes the hierarchical Package set built by `buildPackages`.
-            Object result = runtime.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), false);
+            Object result;
+            try
+            {
+                result = runtime.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), Boolean.getBoolean("legend.pure.compileDebug"));
+            }
+            catch (Throwable t)
+            {
+                // compileDir's 3-line progress display parks the cursor on
+                // line 1 (header) after each tickProgress3. When pass 1/2/3
+                // throws (e.g. unguarded ->toOne() in a resolver) the Pure
+                // side never reaches finishProgress3, so without intervention
+                // the JVM's uncaught-exception handler writes straight on top
+                // of the bar's last frame — looking like it ate the bar.
+                // Mirror finishProgress3's behaviour: do not clear the 3 lines
+                // (the user wants to see what was being processed at the
+                // moment of the throw), just move the cursor below the
+                // 3-line region so the exception text lands on a fresh line.
+                System.out.print("\u001B[3B\r\n");
+                System.out.flush();
+                // Print the Pure call stack — PureException carries Truffle
+                // Node locations and the polyglot stack records each Pure
+                // frame with file:line:col. Without this, the JVM's default
+                // uncaught-exception handler only renders Java frames, so
+                // "toOne expected exactly 1 element, got 0" tells the user
+                // nothing about *which* Pure call chain produced the error.
+                String pureStack = PureStackFormatter.format(t);
+                if (!pureStack.isEmpty())
+                {
+                    System.err.println(pureStack);
+                }
+                throw t;
+            }
             if (result == null)
             {
                 throw new RuntimeException("compileDir returned null");

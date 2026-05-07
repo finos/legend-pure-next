@@ -103,7 +103,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             debug($context, | '  column lookup: ' + $functionName + ' ' + if($col->isNotEmpty(), | 'found', | 'NOT FOUND'));
                             if($col->isNotEmpty(),
                                 | let resolvedCol = $col->at(0);
-                                  let colGT = if($resolvedCol.genericType->isNotEmpty(), | asInferredGenericType($resolvedCol.genericType->toOne()), | ^CompilerNotSetGenericType());
+                                  let colGT = firstNonEmpty([
+                                      | $resolvedCol.genericType->map(gt | asInferredGenericType($gt)),
+                                      | ^CompilerNotSetGenericType()
+                                  ])->toOne();
                                   let colMul = if($resolvedCol.multiplicity->isNotEmpty(), | $resolvedCol.multiplicity->toOne(), | PureOne);
                                   let receiverMul = $receiver.multiplicity;
                                   // Check if automap needed: receiver multiplicity is NOT [1] (mirrors Java lines 131-148)

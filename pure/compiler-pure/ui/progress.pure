@@ -128,9 +128,14 @@ function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[
     true;
 }
 
-// Clear all 3 reserved lines and drop the cursor onto a fresh line below.
+// Leave the 3 reserved lines in place (header / bar / current item visible
+// to the user as a record of the final state), and drop the cursor onto
+// a fresh line below them so subsequent output appears underneath.
+//   \u001B[3B  cursor down 3 lines (no scroll, no overwrite)
+//   \r         column 0
+//   \n         newline so subsequent output starts below a blank gap
 function meta::pure::ui::progress::finishProgress3():Boolean[1]
 {
-    print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
+    print('\u001B[3B\r\n');
     true;
 }

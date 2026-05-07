@@ -49,9 +49,19 @@ function meta::pure::compiler::resolution::valueSpecification::atomicValueResolv
                           context = ^$context(errors += 'Can\'t resolve lambda parameter types' + $siCtx)
                       );,
                     | // Skip body resolution if lambda params don't have concrete types.
+                      // Mirror Java AtomicValueResolver:109 — `isConcreteInContext`
+                      // with the enclosing-owner type parameters in scope. A
+                      // lambda parameter typed with the *outer* function's type
+                      // variable (e.g. `T` from `firstNonEmpty<T>(...)` propagated
+                      // through `fold`'s binding) is "concrete enough" to type-
+                      // check the body, even though the type variable itself
+                      // isn't yet bound to a concrete type. The previous check
+                      // used `isConcreteGenericType()` (no context), which
+                      // rejected such lambdas and emitted "Can't resolve lambda
+                      // parameter types" — see
+                      // known_issues/lambda_generic_inference_through_fold.
                       let paramsAreConcrete = $lambdaParams->forAll(p |
-                          $p.genericType->toOne()->isConcreteGenericType()
-                          && $p.multiplicity->toOne()->isConcreteMultiplicity()
+                          isConcreteInContext($p.genericType, $p.multiplicity, $context)
                       );
                       if(!$paramsAreConcrete,
                           | debug($context, | 'resolveAtomicValue: LAMBDA params not concrete in context, deferring');

@@ -42,7 +42,17 @@ public final class PropertyReadNode extends Node
     public Object execute(Object target, String propName)
     {
         Object result = executeOrAbsent(target, propName);
-        return result == ABSENT ? org.finos.legend.pure.truffle.types.PureSequence.EMPTY : result;
+        // Normalise both ABSENT (no such getter) and Java null (getter returned
+        // null because a [0..1] field is unset) to PureSequence.EMPTY. Without
+        // the null branch a `null` would propagate as an accumulator value into
+        // a subsequent fold lambda's frame, where the next read of that var
+        // looks like "Unknown variable" — exactly the firstNonEmpty self-host
+        // failure where a thunk like `| $psi.sourceId` returned Java null.
+        if (result == ABSENT || result == null)
+        {
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        }
+        return result;
     }
 
     /**

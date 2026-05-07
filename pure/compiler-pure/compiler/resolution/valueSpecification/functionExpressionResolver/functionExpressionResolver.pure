@@ -64,10 +64,10 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           // Get the fully-compiled function from the context if available
           let funcPath = $fi.func->toOne()->elementToPath();
           let fromContext = $context->resolveElement($funcPath);
-          let resolvedFunc = if($fromContext->isNotEmpty(),
-              | match($fromContext->toOne(), [f:Function<Any>[1] | $f, a:Any[1] | $fi.func->toOne()]),
-              | $fi.func->toOne()
-          );
+          let resolvedFunc = firstNonEmpty([
+              | $fromContext->filter(f | $f->instanceOf(Function))->cast(@Function<Any>),
+              | $fi.func
+          ])->toOne();
           let ft = $resolvedFunc->getFunctionType($context);
           let baseBindings = extractResolvedParametersBinding($fi);
           // For class properties, enrich bindings with class type parameter bindings

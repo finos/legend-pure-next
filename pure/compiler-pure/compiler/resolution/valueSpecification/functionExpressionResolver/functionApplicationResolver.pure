@@ -780,10 +780,18 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | $b1
     );
 
-    let isResolved = $resolved.genericType->isNotEmpty()
-        && $resolved.genericType->toOne()->isConcreteGenericType()
-        && $resolved.multiplicity->isNotEmpty()
-        && $resolved.multiplicity->toOne()->isConcreteMultiplicity();
+    // Use isConcreteInContext (owner-aware) — same pattern as
+    // atomicValueResolver.pure for lambda parameters. A resolved type that
+    // references the enclosing function's own TypeParameter (e.g.
+    // `LambdaFunction<...T...>` inside `firstNonEmpty<T>`) is "concrete enough"
+    // for the surrounding fixpoint — Java treats it as resolved. The previous
+    // strict check (`isConcreteGenericType`) marked such results unresolved,
+    // causing the multi-candidate path to take the early-exit branch and
+    // never populate resolvedTypeParameters; finalize then read empty
+    // bindings and left the function's V parameter unsubstituted, surfacing
+    // as "Return type error: expected T, got V". See
+    // known_issues/lambda_generic_inference_through_fold.
+    let isResolved = isConcreteInContext($resolved.genericType, $resolved.multiplicity, $context);
 
     ^ResolveOneParamResult(resolved = $isResolved, newParam = $resolved, bindings = $b2, context = $ctx1, savedErrors = []);
 }
@@ -943,10 +951,23 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::functionSignature(f:PackageableFunction<Any>[1], context:CompilerContext[1]):String[1]
 {
+    // Used by buildFunctionSuggestions to render "did you mean" hints.
+    // Stay defensive: a candidate's pass 2 may have errored upstream (leaving
+    // its FunctionType partially populated — e.g. parameter genericType empty
+    // because its own dependency types weren't resolvable), and we don't want
+    // suggestion-rendering to crash the surrounding compile error report.
+    // Substitute `?` for any field that's unexpectedly empty so the user
+    // still gets a useful hint and the real errors flow through.
     let ft = $f->getFunctionType($context);
     let params = $ft.parameters->cast(@VariableExpression);
-    let paramDesc = $params->map(p | $p.name + ': ' + printGenericType($p.genericType->toOne()) + printMultiplicity($p.multiplicity->toOne()))->joinStrings(', ');
-    let retDesc = printGenericType($ft.returnType->toOne()) + printMultiplicity($ft.returnMultiplicity->toOne());
+    let paramDesc = $params->map(p |
+        let typeStr = if($p.genericType->isEmpty(), | '?', | printGenericType($p.genericType->toOne()));
+        let mulStr = if($p.multiplicity->isEmpty(), | '', | printMultiplicity($p.multiplicity->toOne()));
+        $p.name + ': ' + $typeStr + $mulStr;
+    )->joinStrings(', ');
+    let retTypeStr = if($ft.returnType->isEmpty(), | '?', | printGenericType($ft.returnType->toOne()));
+    let retMulStr = if($ft.returnMultiplicity->isEmpty(), | '', | printMultiplicity($ft.returnMultiplicity->toOne()));
+    let retDesc = $retTypeStr + $retMulStr;
     // Build path with short name: extract package from path, short name from mangled name
     let fullPath = $f->elementToPath();
     let mangledName = $f.name->toOne();

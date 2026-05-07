@@ -1,0 +1,79 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import meta::pure::test::pct::*;
+
+// Try a list of strategies in order; return the result of the first one that
+// yields a non-empty value. Each strategy is a no-arg thunk
+// (Function<{->T[*]}>[1]); the helper short-circuits — once a thunk returns
+// non-empty, later thunks are not evaluated.
+//
+// Replaces the `if(list-of-pairs, default)` idiom for fallback chains, which
+// re-evaluates each lookup once for the condition and once for the value.
+// `firstNonEmpty` collapses each attempt into a single thunk so the
+// duplicate-work smell can't sneak in.
+//
+// Example:
+//   firstNonEmpty([
+//       | $localCache->get($key),
+//       | $remoteIndex->lookup($key),
+//       | $defaults->get($key)
+//   ])
+function <<PCT.function>> meta::pure::functions::collection::firstNonEmpty<T>(thunks:Function<{->T[*]}>[*]):T[*]
+{
+    $thunks->fold({t, acc | if($acc->isNotEmpty(), | $acc, | $t->eval())}, []->cast(@T));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testFirstThunkWins<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    assertEquals('first', $f->eval(|firstNonEmpty([| 'first', | 'second'])->toOne()));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testEmptyFirstFallsThrough<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let empty = []->cast(@String);
+    assertEquals('second', $f->eval(|firstNonEmpty([| $empty, | 'second'])->toOne()));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testAllEmptyReturnsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let empty = []->cast(@String);
+    assertEquals(true, $f->eval(|firstNonEmpty([| $empty, | $empty])->isEmpty()));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testCapturesParameter<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // Each thunk closes over the local `pick` variable. Mirrors how
+    // production callers use firstNonEmpty (e.g. resolveElement walks
+    // imports closing over $context). Pre-bisection this was the case
+    // working same-file but broken cross-PDB; PCT runs each platform's
+    // dispatch end-to-end, so this test also serves as a regression
+    // anchor for closure-capture-through-PCT-dispatch.
+    let pick = 'matched';
+    assertEquals('matched', $f->eval(|firstNonEmpty([| []->cast(@String), | $pick])->toOne()));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testShortCircuit<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    // The second thunk would error if evaluated (toOne on empty). If
+    // firstNonEmpty short-circuits correctly, the first thunk's non-empty
+    // result is returned without evaluating the second.
+    assertEquals('first', $f->eval(|firstNonEmpty([| 'first', | []->cast(@String)->toOne()])->toOne()));
+}
+
+function <<PCT.test>> meta::pure::functions::collection::tests::firstNonEmpty::testThreeStrategies<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
+{
+    let empty = []->cast(@String);
+    assertEquals('third', $f->eval(|firstNonEmpty([| $empty, | $empty, | 'third'])->toOne()));
+}
