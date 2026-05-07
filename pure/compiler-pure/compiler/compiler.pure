@@ -503,8 +503,15 @@ function meta::pure::compiler::compile(file:meta::pure::protocol::PureFile[1], i
         thirdPassMillis = $pass3Millis,
         elementCount = $resolvedElements->size(),
         sourceFileCount = 1,
-        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
-        candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
+        // Per-file stats report this file's CONTRIBUTION (delta), not cumulative
+        // counters. compileDir's aggregate sums per-file contributions to arrive at
+        // total compile rollback/candidate counts. Reporting cumulative caused
+        // quadratic over-counting on multi-file builds (each subsequent file's
+        // cumulative was added to the running sum, which already included its prior
+        // files' work). For self-host on compiler-pure (58 files), this inflated
+        // the inferenceRollbackCount from ~10K actual events to ~120K reported.
+        inferenceRollbackCount = $pass3Ctx.inferenceRollbacks - $inputCtx.inferenceRollbacks,
+        candidateEvaluationCount = $pass3Ctx.candidateEvaluations - $inputCtx.candidateEvaluations,
         elementStatistics = $pass3Ctx.elementStatistics
     );
     ^CompilationResult(elements = $resolvedElements, errors = $pass3Ctx.errors, statistics = $stats, context = $pass3Ctx);
