@@ -17,14 +17,19 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler;
 import meta.pure.metamodel.multiplicity.MultiplicityParameter;
 import meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner;
 import meta.pure.metamodel.type.generics.TypeParameter;
+import meta.pure.metamodel.valuespecification.AtomicValue;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.stack.MutableStack;
 import org.eclipse.collections.impl.factory.Stacks;
+import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilerContextExtension;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
@@ -55,6 +60,45 @@ public class PureLanguageCompilerContext implements CompilerContextExtension
 
     /** The current function call node, null when not inside a function call. */
     private FunctionCallParametersBinding currentFunctionCallNode;
+
+    /**
+     * Memoizes lambda body resolution outcomes by (sourceInfo, paramShape, openVar-types).
+     * Cached value is a {@link CachedLambdaOutcome} — the resolved AtomicValue plus the
+     * errors fired during body resolution. On hit we return the AV and replay the errors
+     * so callers' error-count delta matches a fresh walk. Symmetric to the Pure compiler's
+     * lambdaResolutionCache.
+     */
+    public static final class CachedLambdaOutcome
+    {
+        public final AtomicValue av;
+        public final ImmutableList<CompilationError> errorsFired;
+        public CachedLambdaOutcome(AtomicValue av, ImmutableList<CompilationError> errorsFired)
+        {
+            this.av = av;
+            this.errorsFired = errorsFired;
+        }
+    }
+
+    private final MutableMap<String, CachedLambdaOutcome> lambdaResolutionCache = Maps.mutable.empty();
+
+    public MutableMap<String, CachedLambdaOutcome> lambdaResolutionCache()
+    {
+        return lambdaResolutionCache;
+    }
+
+    /**
+     * Memoizes the early-exit gate of {@code processLambda} (lambda params not concrete).
+     * Distinct from {@link #lambdaResolutionCache} because the gate doesn't run body
+     * resolution — it just adds a fixed error and returns AV unchanged. Free-shape keys
+     * (paramShape includes a free TypeParameter name) live here; concrete-shape keys live
+     * in lambdaResolutionCache. They don't collide.
+     */
+    private final MutableSet<String> lambdaFailureCache = Sets.mutable.empty();
+
+    public MutableSet<String> lambdaFailureCache()
+    {
+        return lambdaFailureCache;
+    }
 
     // ========================================================================
     // Binding tree management

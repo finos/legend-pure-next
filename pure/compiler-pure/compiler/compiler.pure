@@ -246,6 +246,8 @@ function meta::pure::compiler::newCompilerContext(debugMode:Boolean[1]):Compiler
         elementMap = newMap([]->cast(@Pair<String, PackageableElement>)),
         localFunctionIndex = newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
         linearizationCache = newMap([]->cast(@Pair<String, List<String>>)),
+        lambdaResolutionCache = newMap([]->cast(@Pair<String, CachedLambdaOutcome>)),
+        lambdaFailureCache = newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks = 0,
         candidateEvaluations = 0
     );

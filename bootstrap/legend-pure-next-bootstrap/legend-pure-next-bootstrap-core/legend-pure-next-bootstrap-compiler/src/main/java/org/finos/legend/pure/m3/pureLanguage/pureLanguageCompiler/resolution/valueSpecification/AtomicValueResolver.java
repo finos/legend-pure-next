@@ -75,23 +75,65 @@ public class AtomicValueResolver
 
     private static @Nullable AtomicValue processLambda(AtomicValue av, MetadataAccess model, CompilationContext context, LambdaFunction _lambda)
     {
+        // Lazily populate the lambda's _openVariables (structurally — names of var refs that
+        // aren't lambda's own params). The lambda body resolution depends on the SCOPE-RESOLVED
+        // types of these names, which we include in the cache key. Without this, two visits with
+        // identical paramShape but different outer bindings collide and return stale resolutions.
+        if (_lambda._openVariables() == null || _lambda._openVariables().isEmpty())
+        {
+            MutableList<VariableExpression> openVarsForKey = computeOpenVariablesStructurally(_lambda);
+            if (!openVarsForKey.isEmpty())
+            {
+                ((LambdaFunctionImpl) _lambda)._openVariables(openVarsForKey);
+            }
+        }
+
         LambdaFunction lambda = (LambdaFunction) _lambda._copy();
         MutableList<VariableExpression> params = lambda._parameters();
+        PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
 
-        // Skip body resolution if lambda params don't have concrete types.
-        // Phase 2 (resolveLambdaWithBindings) will set param types
-        // from bindings before calling resolve again.
-        // Use isConcreteInContext to allow in-scope type params (e.g., class-level T)
-        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeTypeParamNames()) ||
-                !_Multiplicity.isConcreteInContext(p._multiplicity(), context.compilerContextExtensions(PureLanguageCompilerContext.class).inScopeMultiplicityParamNames())))
+        // Cache key shape: sourceInfo + paramShape + openVar-name=current-scope-type pairs.
+        // Key includes scope-resolved open-var types so failure caching is safe.
+        String cacheKey = buildLambdaCacheKey(av, params, lambda._openVariables(), plcc);
+
+        // (1) Failure cache: previously determined this exact key can't resolve. Re-emit
+        // the standard error and return immediately.
+        if (cacheKey != null && plcc.lambdaFailureCache().contains(cacheKey))
         {
             context.addError(new CompilationError("Can't resolve lambda parameter types", av._sourceInformation()));
             return av;
         }
 
+        // Skip body resolution if lambda params don't have concrete types.
+        // Use isConcreteInContext to allow in-scope type params (e.g., class-level T)
+        if (params.anySatisfy(p -> !_GenericType.isConcreteInContext(p._genericType(), plcc.inScopeTypeParamNames()) ||
+                !_Multiplicity.isConcreteInContext(p._multiplicity(), plcc.inScopeMultiplicityParamNames())))
+        {
+            // Record the failure verdict so subsequent identical visits short-circuit at (1).
+            // When setMissingLambdaParameterInformation later substitutes a free T → Integer
+            // the shape (and therefore cacheKey) changes, so this entry won't match the new
+            // attempt — we never block a retry that could legitimately succeed.
+            if (cacheKey != null) plcc.lambdaFailureCache().add(cacheKey);
+            context.addError(new CompilationError("Can't resolve lambda parameter types", av._sourceInformation()));
+            return av;
+        }
+
+        // (2) Body cache: memoized body resolution outcomes including errors fired.
+        if (cacheKey != null)
+        {
+            PureLanguageCompilerContext.CachedLambdaOutcome cached = plcc.lambdaResolutionCache().get(cacheKey);
+            if (cached != null)
+            {
+                context.debug("resolveAtomicValue: LAMBDA cache hit");
+                cached.errorsFired.forEach(context::addError);
+                return cached.av;
+            }
+        }
+        int errorCheckpointForCache = context.currentErrorCount();
+
         // Check for lambda param names that conflict with existing scope variables
         _Function.validateFunctionParameters(params, context, av._sourceInformation());
-        context.compilerContextExtensions(PureLanguageCompilerContext.class).pushScope(params);
+        plcc.pushScope(params);
         try
         {
             context.debug("resolveAtomicValue: LAMBDA resolving body");
@@ -99,7 +141,7 @@ public class AtomicValueResolver
         }
         finally
         {
-            context.compilerContextExtensions(PureLanguageCompilerContext.class).popScope();
+            plcc.popScope();
         }
 
         // Collect open variables: variable references whose names
@@ -118,9 +160,89 @@ public class AtomicValueResolver
 
         context.debug("resolveAtomicValue: LAMBDA gt=%s", lazy(() -> _GenericType.print(lambdaGT)));
 
-        return (AtomicValue) ((AtomicValue) av._copy())
+        AtomicValue resolvedAv = (AtomicValue) ((AtomicValue) av._copy())
                 ._value(lambda._classifierGenericType((GenericTypeValue) lambdaGT))
                 ._genericType(lambdaGT);
+
+        // Cache the body resolution outcome including any errors fired. Cache key captures
+        // (sourceInfo, paramShape, openVar-types) — fully determines body resolution given
+        // the immutable AST + read-only metadata. Errors are replayed on hit to preserve
+        // caller error-count delta.
+        if (cacheKey != null)
+        {
+            org.eclipse.collections.api.list.MutableList<CompilationError> errorsFired =
+                    context.snapshotErrorsFrom(errorCheckpointForCache);
+            plcc.lambdaResolutionCache().put(cacheKey,
+                    new PureLanguageCompilerContext.CachedLambdaOutcome(resolvedAv, errorsFired.toImmutable()));
+        }
+        return resolvedAv;
+    }
+
+    private static @Nullable String buildLambdaCacheKey(AtomicValue av, MutableList<VariableExpression> params,
+                                                        MutableList<VariableExpression> openVars, PureLanguageCompilerContext plcc)
+    {
+        meta.pure.metamodel.SourceInformation si = av._sourceInformation();
+        if (si == null)
+        {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(si._sourceId() != null ? si._sourceId() : "?");
+        sb.append(':').append(si._startLine())
+          .append(':').append(si._startColumn())
+          .append('-').append(si._endLine())
+          .append(':').append(si._endColumn())
+          .append("||");
+        for (int i = 0; i < params.size(); i++)
+        {
+            if (i > 0) sb.append('|');
+            VariableExpression p = params.get(i);
+            sb.append(_GenericType.print(p._genericType()));
+            sb.append(':');
+            sb.append(_Multiplicity.print(p._multiplicity()));
+        }
+        // Open-variable types: look each up in current scope, sort by name for determinism.
+        if (openVars != null && !openVars.isEmpty())
+        {
+            sb.append("||");
+            MutableList<VariableExpression> sorted = Lists.mutable.withAll(openVars).sortThisBy(VariableExpression::_name);
+            for (int i = 0; i < sorted.size(); i++)
+            {
+                if (i > 0) sb.append('|');
+                String name = sorted.get(i)._name();
+                sb.append(name).append('=');
+                VariableExpression resolved = plcc.resolveVariable(name);
+                if (resolved != null)
+                {
+                    sb.append(_GenericType.print(resolved._genericType())).append(':');
+                    sb.append(_Multiplicity.print(resolved._multiplicity()));
+                }
+                else
+                {
+                    sb.append('?');
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Walk a lambda's unresolved expressionSequence to collect variable references whose
+     * names aren't in the lambda's own parameter list. Result identifies external (open)
+     * variables — purely structural, no resolution needed.
+     */
+    private static MutableList<VariableExpression> computeOpenVariablesStructurally(LambdaFunction lambda)
+    {
+        MutableSet<String> paramNames = lambda._parameters() != null
+                ? lambda._parameters().collect(VariableExpression::_name).toSet()
+                : Sets.mutable.empty();
+        MutableList<VariableExpression> openVars = Lists.mutable.empty();
+        MutableSet<String> seenNames = Sets.mutable.empty();
+        if (lambda._expressionSequence() != null)
+        {
+            lambda._expressionSequence().forEach(vs -> collectVariableReferences(vs, paramNames, seenNames, openVars));
+        }
+        return openVars;
     }
 
 

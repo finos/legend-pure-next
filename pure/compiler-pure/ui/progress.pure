@@ -88,3 +88,49 @@ function meta::pure::ui::progress::finishProgress():Boolean[1]
     print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
     true;
 }
+
+// ---------------------------------------------------------------------------
+// Three-line ANSI progress display: phase header / bar / current item.
+// Mirrors the Java native compiler's live status view (CompilerBinaryBuilder)
+// so the user sees the same UX whether they run `pure-bootstrap compile` or
+// `pure-bootstrap compile-via-pure` / `pure-truffle compile`.
+//
+// Invariant: after startProgress3 and after every tickProgress3, the cursor
+// sits at column 0 of the header line (line 1). finishProgress3 leaves the
+// cursor on a fresh line below the cleared 3-line area.
+//
+// Usage:
+//   startProgress3();
+//   range(0, $total)->map(i |
+//     tickProgress3('Pass 3/3', $i + 1, $total, $elementName); doWork($i);
+//   );
+//   finishProgress3();
+// ---------------------------------------------------------------------------
+
+// Reserve 3 lines and park cursor on line 1. Unlike startProgress, no header
+// is printed — the header is rendered live by tickProgress3 so it can change.
+function meta::pure::ui::progress::startProgress3():Boolean[1]
+{
+    println('');
+    println('');
+    println('');
+    print('\u001B[3A');
+    true;
+}
+
+// Redraw all 3 lines: header / bar / current item. Writes content first then
+// clears tail (\u001B[K) on each line - minimises flicker when content shrinks.
+function meta::pure::ui::progress::tickProgress3(header:String[1], done:Integer[1], total:Integer[1], current:String[1]):Boolean[1]
+{
+    print('\r' + $header + '\u001B[K\u001B[B\r  '
+          + meta::pure::ui::progress::renderBar($done, $total) + '\u001B[K\u001B[B\r  '
+          + $current + '\u001B[K\u001B[A\u001B[A\r');
+    true;
+}
+
+// Clear all 3 reserved lines and drop the cursor onto a fresh line below.
+function meta::pure::ui::progress::finishProgress3():Boolean[1]
+{
+    print('\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r\u001B[K\u001B[B\r');
+    true;
+}

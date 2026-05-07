@@ -96,6 +96,24 @@ Class meta::pure::compiler::CompilerContext
     // candidate deltas for that element. compileDir aggregates entries with the
     // same elementPath across passes when building the final summary.
     elementStatistics : ElementStatistics[*];
+
+    // Memoizes lambda body resolution outcomes by (sourceInfo, paramShape, openVar-types).
+    // The cached value is a CachedLambdaOutcome — the resolved AtomicValue plus any errors
+    // that fired during body resolution. On a hit we return the AV and replay the errors
+    // so callers (multi-candidate fold, fixpoint retries) see the same context delta they
+    // would from a fresh walk.
+    lambdaResolutionCache : Map<String, CachedLambdaOutcome>[1];
+
+    // Memoizes the early-exit gate of resolveAtomicValue's lambda branch — i.e. visits
+    // where the lambda's params aren't concrete and we addError + return AV unchanged.
+    // Membership is O(1); the value is unused (Boolean true sentinel).
+    lambdaFailureCache : Map<String, Boolean>[1];
+}
+
+Class meta::pure::compiler::CachedLambdaOutcome
+{
+    av : meta::pure::metamodel::valuespecification::AtomicValue[1];
+    errorsFired : String[*];
 }
 
 // Build a minimal CompilerContext with no source state — used by helper-module
@@ -109,6 +127,8 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
         localFunctionIndex=newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
         linearizationCache=newMap([]->cast(@Pair<String, List<String>>)),
+        lambdaResolutionCache=newMap([]->cast(@Pair<String, CachedLambdaOutcome>)),
+        lambdaFailureCache=newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks=0,
         candidateEvaluations=0
     );

@@ -168,9 +168,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     );
     let preResolvedFI = ^$fi(parametersValues = $preResolvedParams);
 
-    // Step 2: Try each candidate with the fixpoint — first clean resolution wins (like Java lines 97-126)
+    // Step 2: Try each candidate with the fixpoint — first clean resolution wins (like Java lines 97-126).
     // The candidate try uses ORIGINAL context (each attempt is independent); counters
     // accumulate in $acc.context so totals/per-element deltas survive across iterations.
+    // The lambdaResolutionCache and lambdaFailureCache, however, MUST survive across
+    // attempts: a lambda body resolved during candidate A is the same body when exploring
+    // candidate B (the cache key already gates that). Without this threading, the cache
+    // resets per candidate and never amortizes across the candidate explosion.
     let tryResult = $candidates->fold({candidate, acc |
         if($acc.resolved,
             | $acc,
@@ -178,7 +182,11 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               let accCtx = $acc.context;
               let bumpedAccCtx = ^$accCtx(candidateEvaluations = $accCtx.candidateEvaluations + 1);
               let checkpoint = $context->errorCheckpoint();
-              let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $context);
+              // Seed candidate try with the original context, but carry forward the cache
+              // state accumulated by prior candidate attempts.
+              let ctxWithCache1 = ^$context(lambdaResolutionCache = $accCtx.lambdaResolutionCache);
+              let candidateCtx = ^$ctxWithCache1(lambdaFailureCache = $accCtx.lambdaFailureCache);
+              let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $candidateCtx);
               let resultCtx = $result.context;
               if($resultCtx->errorCheckpoint() == $checkpoint,
                   | // Clean resolution — success. Merge accumulated counters into the
@@ -192,9 +200,12 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     let mergedResult = ^$result(context = $mergedResultCtx);
                     ^$acc(resolved = true, result = $mergedResult, resolvedCandidate = $candidate, context = $bumpedAccCtx);,
                   | // Resolution produced errors — backtrack. Bump rollback counter,
-                    // save first candidate's errors, try next.
+                    // save first candidate's errors, try next. Carry the cache state
+                    // from the failed attempt forward.
                     debug($deepCtx, | 'candidate produced errors, trying next');
-                    let rollbackCtx = ^$bumpedAccCtx(inferenceRollbacks = $bumpedAccCtx.inferenceRollbacks + 1);
+                    let rollbackCtx1 = ^$bumpedAccCtx(inferenceRollbacks = $bumpedAccCtx.inferenceRollbacks + 1);
+                    let rollbackCtx2 = ^$rollbackCtx1(lambdaResolutionCache = $resultCtx.lambdaResolutionCache);
+                    let rollbackCtx = ^$rollbackCtx2(lambdaFailureCache = $resultCtx.lambdaFailureCache);
                     let savedErrors = if($acc.firstErrors->isEmpty(), | $resultCtx->snapshotErrors($checkpoint), | $acc.firstErrors);
                     ^$acc(firstErrors = $savedErrors, context = $rollbackCtx);
               );
