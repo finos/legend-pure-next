@@ -41,18 +41,40 @@ public final class MapPutNode extends PureNode
         this.valueArg = valueArg;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object map = mapArg.executeGeneric(frame);
         Object key = keyArg.executeGeneric(frame);
         Object value = valueArg.executeGeneric(frame);
-        var cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        return doPut(map, key, value, lookupMapCgt());
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        if (cgt == null)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            cgt = populateMapCgt();
+        }
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
+                getContext().cgtForType("meta::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[MapPutNode] Cannot resolve Map type from PDB");
         }
-        return doPut(map, key, value, cgt);
+        cachedMapCgt = cgt;
+        return cgt;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

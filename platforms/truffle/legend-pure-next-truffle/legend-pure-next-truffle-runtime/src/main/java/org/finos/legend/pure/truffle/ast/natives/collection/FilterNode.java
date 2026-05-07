@@ -47,8 +47,12 @@ public final class FilterNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collection.executeGeneric(frame);
-        Object fn = lambda.executeGeneric(frame);
         int sz = CollectionHelper.size(col);
+        if (sz == 0)
+        {
+            return PureSequence.EMPTY;
+        }
+        Object fn = lambda.executeGeneric(frame);
         Object[] kept = new Object[sz];
         int count = 0;
         for (int i = 0; i < sz; i++)

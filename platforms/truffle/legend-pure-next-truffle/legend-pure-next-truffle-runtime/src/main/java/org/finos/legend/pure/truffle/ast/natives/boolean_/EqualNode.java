@@ -48,6 +48,13 @@ public final class EqualNode extends PureNode
     {
         Object rawA = normalizeForEquals(left.executeGeneric(frame));
         Object rawB = normalizeForEquals(right.executeGeneric(frame));
+        // Identity short-circuit before the @TruffleBoundary getResolver()
+        // — most equality checks on the same logical value (e.g. small
+        // integers, interned Strings, cached Type instances) hit this.
+        if (rawA == rawB)
+        {
+            return true;
+        }
         return callPureEquals(rawA, rawB, getResolver());
     }
 

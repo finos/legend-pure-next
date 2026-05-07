@@ -44,9 +44,17 @@ public final class RemoveAllNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object set = setArg.executeGeneric(frame);
-        Object other = otherArg.executeGeneric(frame);
         int setSz = CollectionHelper.size(set);
+        if (setSz == 0)
+        {
+            return PureSequence.EMPTY;
+        }
+        Object other = otherArg.executeGeneric(frame);
         int otherSz = CollectionHelper.size(other);
+        if (otherSz == 0)
+        {
+            return set;
+        }
         Object[] buf = new Object[setSz];
         int count = 0;
         for (int i = 0; i < setSz; i++)

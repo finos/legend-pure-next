@@ -48,11 +48,23 @@ public final class MatchNode extends PureNode
         this.children = children;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.PureContext cachedContext;
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object[] values = evaluateChildren(frame);
-        return invokeMatch(values, getContext(), matchCallNode);
+        org.finos.legend.pure.truffle.PureContext ctx = cachedContext;
+        if (ctx == null)
+        {
+            // First-call population — flag the field as no-longer-default so
+            // PE constant-folds subsequent reads.
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            ctx = getContext();
+            cachedContext = ctx;
+        }
+        return invokeMatch(values, ctx, matchCallNode);
     }
 
     @ExplodeLoop

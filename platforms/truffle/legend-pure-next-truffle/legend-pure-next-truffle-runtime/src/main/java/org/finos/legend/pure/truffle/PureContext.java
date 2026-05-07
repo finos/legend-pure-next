@@ -244,7 +244,7 @@ public final class PureContext
                     }
                 }
                 RawLambdaRootNode root = new RawLambdaRootNode(
-                        language, "lambda@" + System.identityHashCode(lambda),
+                        language, lambdaProfileName(lambda),
                         cf.layout(), cf.layout().paramSlots(), openVarNames, body);
                 RootCallTarget ct = root.getCallTarget();
                 lambdaCache.put(lambda, ct);
@@ -591,5 +591,28 @@ public final class PureContext
             catch (RuntimeException ignored) {}
         }
         return "fn@" + System.identityHashCode(fd);
+    }
+
+    /**
+     * Profiler-friendly name for a lambda: prefer the source location
+     * (file:line:col) so the per-function CPU report points back to the
+     * lambda's body in source. Falls back to identity hash when the
+     * lambda has no SourceInformation attached.
+     */
+    private static String lambdaProfileName(LambdaFunction lambda)
+    {
+        try
+        {
+            if (lambda instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+            {
+                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si = any._sourceInformation();
+                if (si != null && si._sourceId() != null)
+                {
+                    return "lambda@" + si._sourceId() + ":" + si._startLine() + ":" + si._startColumn();
+                }
+            }
+        }
+        catch (RuntimeException ignored) {}
+        return "lambda@" + System.identityHashCode(lambda);
     }
 }

@@ -55,10 +55,15 @@ public final class RemoveDuplicatesNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collectionArg.executeGeneric(frame);
+        int sz = CollectionHelper.size(col);
+        if (sz == 0)
+        {
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        }
+
         Object keyFn = keyFnArg != null ? keyFnArg.executeGeneric(frame) : null;
         Object eqlFn = eqlFnArg != null ? eqlFnArg.executeGeneric(frame) : null;
 
-        int sz = CollectionHelper.size(col);
         boolean hasKeyFn = keyFn != null && !CollectionHelper.isEmpty(keyFn);
         boolean hasEqlFn = eqlFn != null && !CollectionHelper.isEmpty(eqlFn);
 
