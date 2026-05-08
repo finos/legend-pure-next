@@ -50,15 +50,38 @@ public final class PureFunctionRootNode extends RootNode
     @CompilationFinal
     private final com.oracle.truffle.api.source.SourceSection rootSourceSection;
 
+    /**
+     * {@code true} iff this function may need {@link
+     * PureContext#bindQpTypeVariablesStatic} to install type-variable values
+     * from {@code arguments[0]}'s classifier generic type — i.e., it is a
+     * {@code QualifiedProperty} whose owner has type variables. The vast
+     * majority of compiler-pure user functions are plain
+     * {@code FunctionDefinition}s with no type-variable binding to do, so
+     * baking this in compilation-final lets PE drop the QP path entirely
+     * (saving a property read + instanceof chain + slot-name lookup on every
+     * call). Currently set conservatively from {@code fd instanceof
+     * QualifiedProperty}.
+     */
+    @CompilationFinal
+    private final boolean mayBindTypeVars;
+
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body)
     {
-        this(language, name, layout, body, null);
+        this(language, name, layout, body, null, false);
     }
 
     public PureFunctionRootNode(PureLanguage language, String name,
                                 FrameLayout layout, PureNode[] body,
                                 com.oracle.truffle.api.source.SourceSection sourceSection)
+    {
+        this(language, name, layout, body, sourceSection, false);
+    }
+
+    public PureFunctionRootNode(PureLanguage language, String name,
+                                FrameLayout layout, PureNode[] body,
+                                com.oracle.truffle.api.source.SourceSection sourceSection,
+                                boolean mayBindTypeVars)
     {
         super(language, layout.descriptor());
         this.name = name;
@@ -66,6 +89,7 @@ public final class PureFunctionRootNode extends RootNode
         this.paramSlots = layout.paramSlots();
         this.body = java.util.Arrays.copyOf(body, body.length, Node[].class);
         this.rootSourceSection = sourceSection;
+        this.mayBindTypeVars = mayBindTypeVars;
     }
 
     @Override
@@ -93,8 +117,10 @@ public final class PureFunctionRootNode extends RootNode
         }
 
 
-        // Bind type variables from the target's CGT (for QPs with type parameters)
-        if (arguments.length > 0 && arguments[0] != null)
+        // Bind type variables from the target's CGT (for QPs with type parameters).
+        // mayBindTypeVars is @CompilationFinal so PE folds this whole branch out
+        // for plain FunctionDefinitions — which is most of compiler-pure.
+        if (mayBindTypeVars && arguments.length > 0 && arguments[0] != null)
         {
             PureContext.bindQpTypeVariablesStatic(arguments[0], frame, layout);
         }

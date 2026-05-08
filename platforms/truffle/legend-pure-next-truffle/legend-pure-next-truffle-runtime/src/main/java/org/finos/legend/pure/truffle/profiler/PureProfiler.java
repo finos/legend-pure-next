@@ -87,10 +87,24 @@ public final class PureProfiler extends TruffleInstrument
     /**
      * Set to true when an instrument instance is enabled. Read by the
      * {@code enter}/{@code exit} hot paths to short-circuit when no
-     * instrument is attached. {@code volatile} so flips are visible
-     * across threads without a fence.
+     * instrument is attached. {@code @CompilationFinal} so PE can
+     * constant-fold the {@code if (!ENABLED) return;} branch out of
+     * every Pure-function entry/exit when the profiler is off (the
+     * common case). The paired {@link #ENABLED_DISABLED} assumption
+     * is invalidated when the flag flips, forcing recompile of any
+     * Truffle code that baked in the off path.
      */
-    private static volatile boolean ENABLED;
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private static boolean ENABLED;
+
+    /**
+     * Held while {@link #ENABLED} is {@code false}. PE folds the
+     * profiler hooks away while this assumption holds; flipping the
+     * profiler on calls {@link Assumption#invalidate()} and recompiles
+     * affected RootNodes.
+     */
+    static final com.oracle.truffle.api.Assumption ENABLED_DISABLED =
+            com.oracle.truffle.api.Assumption.create("PureProfiler disabled");
     private static volatile PureProfiler ACTIVE;
 
     static final class Stats
@@ -124,7 +138,7 @@ public final class PureProfiler extends TruffleInstrument
      */
     public static void enter(String name)
     {
-        if (!ENABLED)
+        if (ENABLED_DISABLED.isValid())
         {
             return;
         }
@@ -137,7 +151,7 @@ public final class PureProfiler extends TruffleInstrument
      */
     public static void exit()
     {
-        if (!ENABLED)
+        if (ENABLED_DISABLED.isValid())
         {
             return;
         }
@@ -189,6 +203,10 @@ public final class PureProfiler extends TruffleInstrument
         {
             ACTIVE = this;
             ENABLED = true;
+            // Invalidates compiled Truffle code that baked in the
+            // "profiler disabled" PE constant — next compile will see
+            // ENABLED=true and emit the recordEnter/recordExit calls.
+            ENABLED_DISABLED.invalidate();
         }
     }
 

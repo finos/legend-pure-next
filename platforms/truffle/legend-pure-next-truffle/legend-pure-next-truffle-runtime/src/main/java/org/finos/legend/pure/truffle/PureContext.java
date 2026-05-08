@@ -569,7 +569,8 @@ public final class PureContext
                     rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
                 }
                 catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
-                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource);
+                boolean mayBindTypeVars = fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty;
+                PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource, mayBindTypeVars);
                 cf.setCallTarget(root.getCallTarget());
             }
         }

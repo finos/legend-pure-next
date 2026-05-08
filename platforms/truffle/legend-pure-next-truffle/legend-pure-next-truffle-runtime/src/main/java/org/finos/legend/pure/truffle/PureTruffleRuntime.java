@@ -90,8 +90,7 @@ public final class PureTruffleRuntime
                     .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
                     .option("engine.TraceCompilation", "true")
                     .option("engine.WarnInterpreterOnly", "false")
-                    .option("engine.CompilationFailureAction", "Silent")
-                    .option("engine.CompileImmediately", "true");
+                    .option("engine.CompilationFailureAction", "Silent");
             // Instrument options (cpusampler.*, pureprofiler.*) and explicit
             // engine.* overrides must go on the Engine, not the Context — when
             // a Context shares an Engine, instrument-scope options can only
