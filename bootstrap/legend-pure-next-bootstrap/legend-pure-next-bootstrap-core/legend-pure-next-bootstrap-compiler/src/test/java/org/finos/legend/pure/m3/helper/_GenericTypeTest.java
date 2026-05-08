@@ -1,4 +1,4 @@
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.helper;
 
 import meta.pure.metamodel.function.property.Property;
 import meta.pure.metamodel.type.Class;
@@ -13,6 +13,8 @@ import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -73,7 +75,7 @@ public class _GenericTypeTest
     public void testPrintGenericTypeSimple()
     {
         GenericType intGT = getPropGT("intProp");
-        assertEquals("Integer", _GenericType.print(intGT, true));
+        Assertions.assertEquals("Integer", _GenericType.print(intGT, true));
         assertEquals("Integer", _GenericType.print(intGT, false));
     }
 

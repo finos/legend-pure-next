@@ -96,7 +96,7 @@ public final class _GenericTypeOperation
      * Evaluate a relation type operation on two concrete {@link RelationType}s.
      * Package-visible for testing.
      */
-    static RelationType evaluateRelationTypeOperation(
+    public static RelationType evaluateRelationTypeOperation(
             RelationType leftRT,
             RelationType rightRT,
             String operationName,

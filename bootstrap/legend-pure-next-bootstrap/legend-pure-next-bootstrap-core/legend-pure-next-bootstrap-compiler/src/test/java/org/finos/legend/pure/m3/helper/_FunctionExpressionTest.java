@@ -1,4 +1,4 @@
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.helper;
 
 import meta.pure.metamodel.type.Class;
 import meta.pure.metamodel.type.generics.GenericType;
@@ -14,6 +14,7 @@ import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.ParametersBinding;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._FunctionExpression;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

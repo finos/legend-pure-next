@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3;
+package org.finos.legend.pure.m3.specification;
 
 import meta.pure.metamodel.PackageableElement;
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
+import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
@@ -37,7 +38,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveWriter;
 import org.finos.legend.pure.m3.module.pdbModule.archive.PDBExtension;
-import org.finos.legend.pure.m3.pureLanguage.PureLanguageSerialization;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +46,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -59,7 +58,7 @@ import java.util.stream.Stream;
  * <p>This ensures the PDB preserves all compiled information:
  * properties, generalizations, expression sequences, lambda open variables, etc.</p>
  */
-public class PdbRoundTripTest
+public class CompilerCompiledGraphPdbRoundTripTest
 {
     private static final String SECTION_MARKER = "###CompiledGraph";
 

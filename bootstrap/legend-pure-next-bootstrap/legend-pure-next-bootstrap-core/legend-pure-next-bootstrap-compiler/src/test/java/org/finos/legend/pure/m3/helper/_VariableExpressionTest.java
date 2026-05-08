@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.helper;
 
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import org.eclipse.collections.api.factory.Lists;
@@ -21,8 +21,9 @@ import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
-import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._VariableExpression;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

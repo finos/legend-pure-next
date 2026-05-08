@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.m3;
+package org.finos.legend.pure.m3.specification;
 
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
+import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
 import org.finos.legend.pure.m3.extensions.error.Error;
 import org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension;

@@ -1,10 +1,9 @@
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.helper;
 
 import meta.pure.metamodel.function.FunctionDefinition;
 import meta.pure.metamodel.function.LambdaFunction;
 import meta.pure.metamodel.type.FunctionType;
 import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.valuespecification.FunctionExpression;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
@@ -14,6 +13,10 @@ import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Lambda;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -61,7 +64,7 @@ public class _LambdaTest
         
         ValueSpecification lastExpr = lambda._expressionSequence().getLast();
         assertEquals(lastExpr._genericType(), ft._returnType());
-        assertEquals(1L, _Multiplicity.lowerBound(ft._returnMultiplicity()));
+        Assertions.assertEquals(1L, _Multiplicity.lowerBound(ft._returnMultiplicity()));
     }
 
     @Test

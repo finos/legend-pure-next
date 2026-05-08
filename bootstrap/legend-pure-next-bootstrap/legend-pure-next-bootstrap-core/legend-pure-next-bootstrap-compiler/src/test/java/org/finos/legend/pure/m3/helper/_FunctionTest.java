@@ -1,4 +1,4 @@
-package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper;
+package org.finos.legend.pure.m3.helper;
 
 import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.type.FunctionType;
@@ -10,6 +10,10 @@ import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.finos.legend.pure.m3.module.localModule.PureContent;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Function;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Multiplicity;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +63,6 @@ public class _FunctionTest
         
         assertNotNull(ft);
         assertEquals("Boolean", ((meta.pure.metamodel.PackageableElement) _GenericType.type(ft._returnType()))._name());
-        assertEquals(1L, _Multiplicity.lowerBound(ft._returnMultiplicity()));
+        Assertions.assertEquals(1L, _Multiplicity.lowerBound(ft._returnMultiplicity()));
     }
 }
