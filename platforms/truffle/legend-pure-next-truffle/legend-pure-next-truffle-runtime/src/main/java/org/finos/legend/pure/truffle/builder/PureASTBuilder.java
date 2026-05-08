@@ -144,6 +144,52 @@ public final class PureASTBuilder
         return node;
     }
 
+    /**
+     * Lower a property access. For the common case (single-argument
+     * non-enum non-QP property read), emit a {@link
+     * org.finos.legend.pure.truffle.ast.DirectPropertyAccessNode} which
+     * has the receiver as a single {@code @Child}, the property name
+     * baked in {@code @CompilationFinal}, and a 2-entry class cache
+     * inlined into {@code executeGeneric} — no helper indirection,
+     * no {@code Object[] args} allocation per call. Falls back to
+     * {@link RawPropertyAccessNode} when the receiver type might be
+     * an Enumeration (which has special property-vs-enum-value
+     * dispatch) or when the call has unusual shape.
+     */
+    private PureNode lowerPropertyAccess(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty prop,
+                                         FunctionExpression fe)
+    {
+        PureNode[] args = lowerArgs(fe);
+        if (args.length == 1
+                && !(prop instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty)
+                && prop instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property property
+                && property._name() != null
+                && !canTargetBeEnumeration(prop))
+        {
+            return new org.finos.legend.pure.truffle.ast.DirectPropertyAccessNode(args[0], property._name());
+        }
+        return new RawPropertyAccessNode(fe, args);
+    }
+
+    /**
+     * True if the property's owning type might be an Enumeration. Enum
+     * targets have special semantics ({@code $enum.someValue} can
+     * resolve to either a metaclass property OR an enum value), so the
+     * direct-access node can't safely handle them.
+     */
+    private static boolean canTargetBeEnumeration(
+            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty prop)
+    {
+        Object owner = prop._owner();
+        // Conservative: if owner is anything other than a non-Enumeration
+        // PackageableElement Class, we don't know — fall back to the full
+        // RawPropertyAccessNode path. Most properties have a non-Enumeration
+        // owning class, so the direct path catches the vast majority.
+        if (owner == null) return true;
+        if (owner instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration) return true;
+        return false;
+    }
+
     private PureNode lowerFunctionExpression(FunctionExpression fe)
     {
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func = fe._func();
@@ -191,7 +237,7 @@ public final class PureASTBuilder
         {
             case NativeFunction nf -> lowerNativeCall(nf, fe);
             case FunctionDefinition fd -> new RawUserFunctionCallNode(fd, lowerArgs(fe));
-            case AbstractProperty prop -> new RawPropertyAccessNode(fe, lowerArgs(fe));
+            case AbstractProperty prop -> lowerPropertyAccess(prop, fe);
             default -> throw new RuntimeException(
                     "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: " + fe._functionName());
         };

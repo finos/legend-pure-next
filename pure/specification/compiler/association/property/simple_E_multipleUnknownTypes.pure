@@ -10,3 +10,7 @@ Association pack::MyAssociation
   a: UnknownA[1];
   b: UnknownB[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

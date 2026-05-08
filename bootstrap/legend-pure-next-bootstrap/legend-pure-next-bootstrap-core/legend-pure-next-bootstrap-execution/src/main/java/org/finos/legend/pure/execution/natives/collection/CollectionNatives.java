@@ -482,6 +482,16 @@ public class CollectionNatives
             return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
         });
 
+        // remove(Map<U,V>[1], key:U[1]) : Map<U,V>[1]
+        natives.put("remove_Map_1__U_1__Map_1_", (args, eval, genericType, multiplicity) ->
+        {
+            PureMap original = (PureMap) _E_ValueSpecification.unwrap(args.get(0));
+            ValueSpecification keyVS = args.get(1);
+            java.util.LinkedHashMap<ValueSpecification, ValueSpecification> m = new java.util.LinkedHashMap<>(original.getMap());
+            m.keySet().removeIf(k -> org.finos.legend.pure.execution.NativeRepository.pureEquals(k, keyVS, resolver));
+            return _E_ValueSpecification.wrap(new PureMap(m), genericType, multiplicity, resolver);
+        });
+
         // get(Map<U,V>[1], key:U[1]) : V[0..1]
         natives.put("get_Map_1__U_1__V_$0_1$_", (args, eval, genericType, multiplicity) ->
         {

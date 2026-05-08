@@ -34,6 +34,9 @@ public final class ZipNode extends PureNode
     @Child
     private PureNode rightArg;
 
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedPairCgt;
+
     public ZipNode(PureNode leftArg, PureNode rightArg)
     {
         this.leftArg = leftArg;
@@ -45,17 +48,10 @@ public final class ZipNode extends PureNode
     {
         Object left = leftArg.executeGeneric(frame);
         Object right = rightArg.executeGeneric(frame);
-        var cgt = getContext().cgtForType("meta::pure::functions::collection::Pair");
-        if (cgt == null)
-        {
-            throw new RuntimeException("[ZipNode] Cannot resolve Pair type from PDB");
-        }
-        return doZip(left, right, cgt);
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object doZip(Object left, Object right, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT)
-    {
+        // Empty short-circuit BEFORE the Pair CGT lookup — many call sites
+        // (e.g. resolveForTarget_GenericTypeValue's multiplicityArguments
+        // zip) hit this with one or both sides empty, and cgtForType is a
+        // @TruffleBoundary that's pure overhead in that case.
         int leftSz = CollectionHelper.size(left);
         int rightSz = CollectionHelper.size(right);
         int sz = Math.min(leftSz, rightSz);
@@ -63,6 +59,41 @@ public final class ZipNode extends PureNode
         {
             return PureSequence.EMPTY;
         }
+        return doZip(left, right, sz, lookupPairCgt());
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupPairCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedPairCgt;
+        if (cgt == null)
+        {
+            // First-call population — invalidate so PE re-specialises with
+            // the @CompilationFinal field treated as a constant on subsequent
+            // executions. Without this, the JIT would treat cachedPairCgt as
+            // null (its initial value at compile time) and never benefit from
+            // the cache on JIT-compiled code paths.
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            cgt = populatePairCgt();
+        }
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populatePairCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
+                getContext().cgtForType("meta::pure::functions::collection::Pair");
+        if (cgt == null)
+        {
+            throw new RuntimeException("[ZipNode] Cannot resolve Pair type from PDB");
+        }
+        cachedPairCgt = cgt;
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static Object doZip(Object left, Object right, int sz, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT)
+    {
         Object[] pairs = new Object[sz];
         for (int i = 0; i < sz; i++)
         {

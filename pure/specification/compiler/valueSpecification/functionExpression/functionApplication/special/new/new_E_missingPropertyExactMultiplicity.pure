@@ -11,3 +11,9 @@ Class test::new::Holder
 {
   pair: String[2];
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 2
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

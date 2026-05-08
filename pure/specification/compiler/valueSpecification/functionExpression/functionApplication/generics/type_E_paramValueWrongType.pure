@@ -5,3 +5,9 @@ No matching function 'pl' found for argument types (Integer[1], String[1]) (at v
 function f<T>(s:T[1]):T[1]{$s}
 function pl(a:String[1], b:String[1]):String[1]{$a+$b}
 function test():Any[*]{f(1)->pl('ok')}
+
+###CompilerStats
+inferenceRollbacks: 5
+candidateEvaluations: 7
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

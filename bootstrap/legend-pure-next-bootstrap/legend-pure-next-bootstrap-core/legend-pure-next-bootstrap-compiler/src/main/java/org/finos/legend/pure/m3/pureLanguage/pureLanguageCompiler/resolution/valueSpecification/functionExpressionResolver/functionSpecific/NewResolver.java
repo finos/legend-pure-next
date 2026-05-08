@@ -1,8 +1,12 @@
 package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.resolution.valueSpecification.functionExpressionResolver.functionSpecific;
 
 import meta.pure.metamodel.SourceInformation;
+import meta.pure.metamodel.type.Type;
+import meta.pure.metamodel.type.generics.CompilerNotSetGenericType;
 import meta.pure.metamodel.type.generics.GenericType;
+import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.valuespecification.FunctionExpression;
+import meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import meta.pure.metamodel.valuespecification.ValueSpecification;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
@@ -54,9 +58,19 @@ public class NewResolver
 
     public static void validateNewRequiredProperties(FunctionExpression fe, MetadataAccess model, CompilationContext context)
     {
-        // Get the class being instantiated from the return type
-        GenericType returnGT = fe._genericType();
-        if (returnGT == null || !(_GenericType.type(returnGT) instanceof meta.pure.metamodel.type.Class cls))
+        // Mirrors Pure newResolver.pure validateNewFromFI (line 31-73): extract the
+        // class being instantiated from the FIRST PARAMETER (the holder), not from
+        // the return type. This is what distinguishes the static `new<T>(holder<T>):T`
+        // form (where the class is statically determinable from the holder) from
+        // the dynamic `new(GenericType[1]):Any[1]` form (where param 1 is a runtime
+        // GenericType expression and the actual class isn't statically known — so
+        // we must skip validation rather than mis-flag the carrier return type Any
+        // as "abstract").
+        org.eclipse.collections.api.list.ListIterable<? extends ValueSpecification> params = fe._parametersValues();
+        meta.pure.metamodel.type.Class cls = !params.isEmpty()
+                ? extractClassFromGTMH(params.getFirst())
+                : extractClassFromGenericType(fe._genericType());
+        if (cls == null)
         {
             return;
         }
@@ -76,7 +90,6 @@ public class NewResolver
 
         // Collect all provided property names from key expressions
         org.eclipse.collections.api.set.MutableSet<String> providedNames = org.eclipse.collections.impl.factory.Sets.mutable.empty();
-        org.eclipse.collections.api.list.ListIterable<? extends ValueSpecification> params = fe._parametersValues();
         if (params.size() >= 2)
         {
             ValueSpecification keyParam = params.get(1);
@@ -101,6 +114,49 @@ public class NewResolver
 
         // Check unknown properties, multiplicity and type compatibility for each provided key expression
         checkKeyExpressions(cls, providedNames, fe, model, context);
+    }
+
+    /**
+     * Mirrors Pure newResolver.pure extractClassFromGTMH (line 75-95). Given the
+     * FIRST PARAMETER value of a {@code new(...)} call, return the Class being
+     * instantiated when it can be derived from a holder, or {@code null} when the
+     * parameter isn't a holder (the dynamic-dispatch {@code new(GenericType):Any}
+     * form — caller skips validation).
+     */
+    private static meta.pure.metamodel.type.Class extractClassFromGTMH(ValueSpecification vs)
+    {
+        if (!(vs instanceof GenericTypeAndMultiplicityHolder gtmh))
+        {
+            return null;
+        }
+        GenericType gtmhGT = (gtmh._genericType() != null && !(gtmh._genericType() instanceof CompilerNotSetGenericType))
+                ? gtmh._genericType()
+                : gtmh._classifierGenericType();
+        if (gtmhGT == null || !(gtmhGT instanceof GenericTypeValue gtv))
+        {
+            return null;
+        }
+        org.eclipse.collections.api.list.MutableList<GenericType> typeArgs = gtv._typeArguments();
+        if (typeArgs == null || typeArgs.isEmpty())
+        {
+            return null;
+        }
+        return extractClassFromGenericType(typeArgs.getFirst());
+    }
+
+    /**
+     * Mirrors Pure newResolver.pure extractClassFromGenericType (line 97-113).
+     * Given a {@link GenericType}, return the underlying {@link meta.pure.metamodel.type.Class}
+     * if the GT carries one, else {@code null}.
+     */
+    private static meta.pure.metamodel.type.Class extractClassFromGenericType(GenericType gt)
+    {
+        if (gt == null || !(gt instanceof GenericTypeValue gtv))
+        {
+            return null;
+        }
+        Type t = gtv._type();
+        return t instanceof meta.pure.metamodel.type.Class cls ? cls : null;
     }
 
     /**

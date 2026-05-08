@@ -11,3 +11,9 @@ function test::tst():Any[*]
 {
     ['a', 'b']->fl(x|$x->sw('ok'));
 }
+
+###CompilerStats
+inferenceRollbacks: 1
+candidateEvaluations: 2
+rollbackSites:
+  LAMBDA_DISPATCH = 1

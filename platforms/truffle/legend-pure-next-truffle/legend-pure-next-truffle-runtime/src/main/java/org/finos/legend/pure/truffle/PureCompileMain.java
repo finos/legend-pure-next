@@ -300,6 +300,7 @@ public final class PureCompileMain
                 .withResolver(resolver)
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.truffle.runtime.TruffleCompiledGraphLanguageExtension(),
+                        new org.finos.legend.pure.truffle.runtime.TruffleCompilerStatsLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()));
         profiling.apply(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();

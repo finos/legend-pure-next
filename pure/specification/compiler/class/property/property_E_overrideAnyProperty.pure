@@ -11,3 +11,7 @@ Class test::override::MyClass
 {
   sourceInformation: test::override::MySourceInfo[0..1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

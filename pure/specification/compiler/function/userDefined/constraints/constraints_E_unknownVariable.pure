@@ -9,3 +9,9 @@ function pack::constrained(x: Integer[1]): Integer[1]
 {
     $x + 1
 }
+
+###CompilerStats
+inferenceRollbacks: 20
+candidateEvaluations: 19
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

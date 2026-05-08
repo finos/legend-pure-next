@@ -59,6 +59,7 @@ import meta.pure.protocol.grammar.Package_Pointer;
 import org.eclipse.collections.api.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphImpl;
+import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsImpl;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 
 import java.util.List;
@@ -132,6 +133,7 @@ public final class CompiledGraphPrinter
             case Profile p -> printProfile(p, sb);
             case PrimitiveType p -> printPrimitiveType(p, sb);
             case CompiledGraphImpl c -> {}
+            case CompilerStatsImpl c -> {}
             default -> sb.append("// unsupported: ").append(element.getClass().getSimpleName())
                          .append(' ').append(fullPath(element)).append('\n');
         }

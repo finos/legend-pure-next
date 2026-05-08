@@ -33,6 +33,13 @@ public interface TruffleTypeCache
     /** C3-style linearization: {@code self → supertypes → … → Any}. */
     List<?> linearization(Object type);
 
+    /**
+     * Identity-keyed set of {@code type}'s ancestors (same Types as {@link
+     * #linearization} but addressable in O(1)). Use for subtype checks
+     * where we need to test membership but not traversal order.
+     */
+    Set<?> ancestors(Object type);
+
     /** Names of properties stereotyped {@code <<meta::pure::profiles::equality.Key>>}. */
     Set<String> equalityKeyProperties(Object type);
 

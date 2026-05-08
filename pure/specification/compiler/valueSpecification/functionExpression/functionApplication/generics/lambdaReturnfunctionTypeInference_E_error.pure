@@ -7,3 +7,9 @@ function test():Any[*]
 {
     f(|1)+'1';
 }
+
+###CompilerStats
+inferenceRollbacks: 6
+candidateEvaluations: 6
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

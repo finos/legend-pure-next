@@ -14,6 +14,7 @@
 
 import meta::pure::metamodel::*;
 import meta::pure::compiler::*;
+import meta::pure::functions::collection::*;
 
 // Mirrors Java SourceInformationCompiler.compile(src, model) — element-level
 // metadata path with NO fallback. Used for declarative/structural source info
@@ -54,11 +55,12 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatSour
     if($si->isEmpty(),
         | '',
         | let psi = $si->toOne();
-          let sid = if([pair(| $psi.sourceId->isNotEmpty(), | $psi.sourceId->toOne()),
-                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
-                       | '');
-          if($sid->length() > 0,
-              | ' (at ' + $sid + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
+          let sid = firstNonEmpty([
+              | $psi.sourceId,
+              | $context.sourceId
+          ])->head();
+          if($sid->isNotEmpty() && $sid->toOne()->length() > 0,
+              | ' (at ' + $sid->toOne() + ' ' + $psi.startLine->toOne()->toString() + ':' + $psi.startColumn->toOne()->toString() + '-' + $psi.endLine->toOne()->toString() + ':' + $psi.endColumn->toOne()->toString() + ')',
               | ''
           );
     );
@@ -69,11 +71,12 @@ function meta::pure::compiler::structural::sourceInformationCompiler::formatMeta
     if($si->isEmpty(),
         | '',
         | let msi = $si->toOne();
-          let sid = if([pair(| $msi.sourceId->isNotEmpty(), | $msi.sourceId->toOne()),
-                        pair(| $context.sourceId->isNotEmpty(), | $context.sourceId->toOne())],
-                       | '');
-          if($sid->length() > 0,
-              | ' (at ' + $sid + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
+          let sid = firstNonEmpty([
+              | $msi.sourceId,
+              | $context.sourceId
+          ])->head();
+          if($sid->isNotEmpty() && $sid->toOne()->length() > 0,
+              | ' (at ' + $sid->toOne() + ' ' + $msi.startLine->toOne()->toString() + ':' + $msi.startColumn->toOne()->toString() + '-' + $msi.endLine->toOne()->toString() + ':' + $msi.endColumn->toOne()->toString() + ')',
               | ''
           );
     );

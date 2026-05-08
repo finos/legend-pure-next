@@ -8,3 +8,7 @@ function test::f():Any[*]
     let x = 2;
     $x;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 2

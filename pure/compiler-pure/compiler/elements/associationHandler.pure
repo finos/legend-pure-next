@@ -121,11 +121,24 @@ function meta::pure::compiler::elements::compileAssociation(protocolAssoc:meta::
           let registeredProp2 = $compiledAssoc.properties->at(1);
           let class2Path = $mGenType2->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
           let class1Path = $mGenType1->genericTypeRawType()->toOne()->cast(@PackageableElement)->elementToPath();
-          let class2 = $ctx3->resolveElement($class2Path)->toOne()->cast(@Class<Any>);
-          let class1 = $ctx3->resolveElement($class1Path)->toOne()->cast(@Class<Any>);
-          let updatedClass2 = ^$class2(propertiesFromAssociations = $class2.propertiesFromAssociations->concatenate($registeredProp1));
-          let updatedClass1 = ^$class1(propertiesFromAssociations = $class1.propertiesFromAssociations->concatenate($registeredProp2));
-          let ctx4 = ^$ctx3(elementMap = $ctx3.elementMap->put($class2Path, $updatedClass2)->put($class1Path, $updatedClass1));
+          // Self-association (both ends point at the same class, e.g. `Package.parent`
+          // / `Package.children`): apply BOTH property additions to the same instance
+          // before writing back. The Java side mutates `class._propertiesFromAssociations()`
+          // in place, so the two register calls naturally accumulate; the immutable
+          // Pure equivalent here used to do two `put`s back-to-back, the second
+          // overwriting the first and losing one property — which is what made
+          // `Package.parent` errors appear in self-host that don't appear under Java.
+          let isSelfAssoc = $class2Path == $class1Path;
+          let ctx4 = if($isSelfAssoc,
+              | let cls = $ctx3->resolveElement($class1Path)->toOne()->cast(@Class<Any>);
+                let updatedCls = ^$cls(propertiesFromAssociations = $cls.propertiesFromAssociations->concatenate($registeredProp1)->concatenate($registeredProp2));
+                ^$ctx3(elementMap = $ctx3.elementMap->put($class1Path, $updatedCls));,
+              | let class2 = $ctx3->resolveElement($class2Path)->toOne()->cast(@Class<Any>);
+                let class1 = $ctx3->resolveElement($class1Path)->toOne()->cast(@Class<Any>);
+                let updatedClass2 = ^$class2(propertiesFromAssociations = $class2.propertiesFromAssociations->concatenate($registeredProp1));
+                let updatedClass1 = ^$class1(propertiesFromAssociations = $class1.propertiesFromAssociations->concatenate($registeredProp2));
+                ^$ctx3(elementMap = $ctx3.elementMap->put($class2Path, $updatedClass2)->put($class1Path, $updatedClass1));
+          );
 
           ^CompilerResult<Association>(
               value = $compiledAssoc,

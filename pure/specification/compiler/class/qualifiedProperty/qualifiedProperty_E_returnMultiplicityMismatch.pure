@@ -7,3 +7,7 @@ Class test::MyClass
   names: String[*];
   badMulProp(s: String[1]){$this.names}: String[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

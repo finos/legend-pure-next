@@ -168,8 +168,22 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileAt
         pp:meta::pure::protocol::grammar::Package_Pointer[1] |
             let resolved = $ctx->resolveElement($pp.value);
             if($resolved->isEmpty(),
-                | let siCtx = if($vs.p_sourceInformation->isNotEmpty(), | formatSourceInfo($vs.p_sourceInformation->toOne()->cast(@meta::pure::protocol::grammar::SourceInformation), $ctx), | '');
-                  ^ValueCompileResult(values = [], openVariables = [], context = ^$ctx(errors += 'The element \'' + $pp.value + '\' can\'t be found' + $siCtx));,
+                | // Defer the "element can't be found" error to pass 3 (atomicValueResolver).
+                  // Mirrors Java: pass 2 keeps the Package_Pointer as the AtomicValue's value
+                  // so pass 3 can re-attempt resolution INSIDE a candidate trial. When the
+                  // surrounding function call has multiple candidates and they all fail, the
+                  // resolver's snapshot/rollback discards these errors — they only stick if no
+                  // other failure swallows them. Without this deferral, ~27 cascade errors fire
+                  // permanently in pass 2 for prohibited-functions lists in language/java.
+                  ^ValueCompileResult(
+                      values = [^AtomicValue(
+                          value = $pp,
+                          genericType = ^CompilerNotSetGenericType(),
+                          multiplicity = ^CompilerNotSetMultiplicity(),
+                          sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                      )],
+                      openVariables = []
+                  );,
                 | let element = $resolved->toOne();
                   // Use classifierGenericType if available (includes FunctionType type args for functions)
                   // Otherwise fall back to InferredGenericType(element->type()) — mirrors Java where Package_Pointer gt=NotSet

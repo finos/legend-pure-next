@@ -21,6 +21,7 @@ public final class _Type
         return (List<Type>) resolver.typeCache().linearization(type);
     }
 
+    @SuppressWarnings("unchecked")
     public static boolean subtypeOf(Type sub, Type sup, TruffleMetadataAccess resolver)
     {
         if (sub == sup)
@@ -31,18 +32,15 @@ public final class _Type
         {
             return false;
         }
-        if (isTopType(sup))
+        if (isTopType(sup, resolver))
         {
             return true;
         }
-        for (Type ancestor : linearize(sub, resolver))
-        {
-            if (ancestor == sup)
-            {
-                return true;
-            }
-        }
-        return false;
+        // O(1) identity-keyed lookup against the pre-built ancestors set —
+        // replaces a linear scan over the linearization List that JFR
+        // identified as the dominant subtypeOf hot path (~7% of warm CPU
+        // on the metamodel_factories.pure self-host).
+        return ((java.util.Set<Type>) resolver.typeCache().ancestors(sub)).contains(sup);
     }
 
     public static Type findCommonType(List<Type> types, boolean contravariant, TruffleMetadataAccess resolver)
@@ -73,6 +71,38 @@ public final class _Type
             }
         }
         return null;
+    }
+
+    /**
+     * Identity-compare against the cached canonical "Any" type instead of
+     * walking string equality every call. JFR identified ~19 samples on
+     * the {@code "Any".equals(pe._name())} path before this caching.
+     * The volatile field is initialised once on first call; subsequent
+     * calls hit the cached reference directly.
+     */
+    private static volatile Type anyTypeRef;
+
+    private static boolean isTopType(Type type, TruffleMetadataAccess resolver)
+    {
+        if (type == null) return false;
+        Type any = anyTypeRef;
+        if (any != null)
+        {
+            return type == any;
+        }
+        // First call: resolve and cache. Volatile write publishes the
+        // reference for subsequent unsynchronised reads.
+        if (resolver != null)
+        {
+            Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
+            if (resolved instanceof Type t)
+            {
+                anyTypeRef = t;
+                return type == t;
+            }
+        }
+        // Fallback: string compare (only hits before "Any" is in the resolver).
+        return type instanceof PackageableElement pe && "Any".equals(pe._name());
     }
 
     private static boolean isTopType(Type type)

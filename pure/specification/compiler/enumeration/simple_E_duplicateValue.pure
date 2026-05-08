@@ -10,3 +10,7 @@ Enum pack::MyEnum
   Other,
   Val
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

@@ -28,8 +28,16 @@ public final class _PackageableElement
      * {@code packagePath} (StringBuilder.insert chain) at ~5% of self-
      * compile CPU before this cache.
      */
-    private static final java.util.Map<PackageableElement, String> PATH_CACHE =
-            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    // Volatile copy-on-write IdentityHashMap. Reads (cache hits — the hot
+    // path) are unsynchronized via the volatile reference. Writes take a
+    // monitor on PATH_CACHE_LOCK, copy the full map, and atomically
+    // install the new snapshot. Same pattern as TypeCache.entries; the
+    // synchronizedMap wrapper showed up at ~1% of warm CPU on this site
+    // alone before this change because path() is on the hot path of every
+    // type/element comparison and metaprogramming operation.
+    private static volatile java.util.IdentityHashMap<PackageableElement, String> PATH_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object PATH_CACHE_LOCK = new Object();
 
     // @TruffleBoundary — the fallback walks the package chain via
     // StringBuilder.insert(0, ...), which Graal's PE follows into
@@ -61,9 +69,23 @@ public final class _PackageableElement
         String result = computePath(pe);
         if (result != null && !result.isEmpty())
         {
-            PATH_CACHE.put(pe, result);
+            putPathCache(pe, result);
         }
         return result;
+    }
+
+    private static void putPathCache(PackageableElement pe, String result)
+    {
+        synchronized (PATH_CACHE_LOCK)
+        {
+            if (PATH_CACHE.containsKey(pe))
+            {
+                return;
+            }
+            java.util.IdentityHashMap<PackageableElement, String> next = new java.util.IdentityHashMap<>(PATH_CACHE);
+            next.put(pe, result);
+            PATH_CACHE = next;
+        }
     }
 
     private static String computePath(PackageableElement pe)

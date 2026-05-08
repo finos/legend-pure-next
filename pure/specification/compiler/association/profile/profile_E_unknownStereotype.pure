@@ -23,3 +23,7 @@ Class pack::ClassA
 Class pack::ClassB
 {
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

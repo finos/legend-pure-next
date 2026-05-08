@@ -85,14 +85,25 @@ public final class PureTruffleRuntime
         else
         {
             this.graalLog = new ByteArrayOutputStream();
-            this.engine = org.graalvm.polyglot.Engine.newBuilder()
+            org.graalvm.polyglot.Engine.Builder engineBuilder = org.graalvm.polyglot.Engine.newBuilder()
                     .allowExperimentalOptions(true)
                     .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
                     .option("engine.TraceCompilation", "true")
                     .option("engine.WarnInterpreterOnly", "false")
-                    .option("engine.CompilationFailureAction", "Silent")
-                    .option("engine.CompileImmediately", "true")
-                    .build();
+                    .option("engine.CompilationFailureAction", "Silent");
+            // Instrument options (cpusampler.*, pureprofiler.*) and explicit
+            // engine.* overrides must go on the Engine, not the Context — when
+            // a Context shares an Engine, instrument-scope options can only
+            // be set when the Engine is built. Routing them here lets
+            // `--cpu-sampler` / `--pure-profiler` flags actually take effect.
+            for (Map.Entry<String, String> e : polyglotOptions.entrySet())
+            {
+                if (isEngineOption(e.getKey()))
+                {
+                    engineBuilder.option(e.getKey(), e.getValue());
+                }
+            }
+            this.engine = engineBuilder.build();
         }
 
         // Configure and create the Truffle polyglot context
@@ -106,7 +117,10 @@ public final class PureTruffleRuntime
         }
         for (Map.Entry<String, String> e : polyglotOptions.entrySet())
         {
-            ctxBuilder.option(e.getKey(), e.getValue());
+            if (!isEngineOption(e.getKey()))
+            {
+                ctxBuilder.option(e.getKey(), e.getValue());
+            }
         }
         this.polyglotContext = ctxBuilder.build();
         this.polyglotContext.initialize(PureLanguage.ID);
@@ -122,6 +136,16 @@ public final class PureTruffleRuntime
         this.context.setPureParser(PureParser.builder()
                 .withExtensions(allExtensions)
                 .build());
+    }
+
+    private static boolean isEngineOption(String key)
+    {
+        // Engine-level instruments and engine.* options must be configured
+        // when the Engine is built; setting them on a Context that shares
+        // an Engine throws an IllegalArgumentException.
+        return key.startsWith("engine.")
+                || key.startsWith("cpusampler")
+                || key.startsWith("pureprofiler");
     }
 
     /**

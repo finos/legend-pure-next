@@ -8,3 +8,7 @@ function pack::test(x: Integer[1]): String[1]
 {
   $x->doStuff();
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 1

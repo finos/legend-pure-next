@@ -91,13 +91,23 @@ public final class DotApplicationResolver
                     "Can't resolve property '" + functionName + "' on unresolved type parameter '"
                             + _GenericType.print(receiver._genericType()) + "'",
                     expr._sourceInformation()));
-            return expr;
+            // Preserve resolved receiver in the returned $expr so downstream
+            // passes / validation see the receiver's resolved genericType.
+            // Mirrors the corresponding error-path fix in
+            // pure/compiler-pure/.../dotApplicationResolver.pure (the Pure
+            // compiler), which also writes processParameters into $dot here.
+            return expr._parametersValues(processParameters);
         }
 
         Function result = lookupFunction(functionName, processParameters, receiver, ownerType, expr, model, context);
         if (result == null)
         {
-            return expr;  // error already recorded in lookupFunction
+            // Preserve resolved receiver — see comment above. Without this,
+            // the unresolved $expr keeps the parser-default (NotSet)
+            // genericType on $v in the AST, and any post-resolution validation
+            // (or PDB write) reports "Can't find property X in class 'NotSet'"
+            // instead of the real receiver type.
+            return expr._parametersValues(processParameters);
         }
 
         // Resolve return type and multiplicity; for qualified properties, apply class type bindings

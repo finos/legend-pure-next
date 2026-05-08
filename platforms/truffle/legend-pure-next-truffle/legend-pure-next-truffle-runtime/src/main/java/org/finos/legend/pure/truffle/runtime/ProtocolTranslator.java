@@ -46,6 +46,28 @@ public final class ProtocolTranslator
 
     private final Map<Object, Object> seen = new IdentityHashMap<>();
 
+    /**
+     * Per-class cache of {@code Class.getMethods()} results. {@code getMethods()}
+     * defensively copies the entire methods array on every call (JFR-visible
+     * at ~17 samples on the metamodel_factories.pure compile). The result is
+     * deterministic per Class, so caching makes the second-and-onwards lookups
+     * a single map read.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<Class<?>, Method[]> METHODS_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static Method[] cachedMethods(Class<?> clazz)
+    {
+        Method[] cached = METHODS_CACHE.get(clazz);
+        if (cached != null)
+        {
+            return cached;
+        }
+        Method[] computed = clazz.getMethods();
+        METHODS_CACHE.put(clazz, computed);
+        return computed;
+    }
+
     public ProtocolTranslator(TruffleMetadataAccess resolver)
     {
         this.resolver = resolver;
@@ -126,7 +148,7 @@ public final class ProtocolTranslator
             seen.put(source, target);
 
             // Copy properties via _xxx() getters and _xxx(value) setters
-            for (Method getter : source.getClass().getMethods())
+            for (Method getter : cachedMethods(source.getClass()))
             {
                 String name = getter.getName();
                 if (!name.startsWith("_") || name.equals("_copy") || getter.getParameterCount() != 0
@@ -219,7 +241,7 @@ public final class ProtocolTranslator
     private static Method findSetter(Class<?> clazz, String getterName, Object value)
     {
         // The setter has the same name as the getter but takes one parameter
-        for (Method m : clazz.getMethods())
+        for (Method m : cachedMethods(clazz))
         {
             if (m.getName().equals(getterName) && m.getParameterCount() == 1)
             {

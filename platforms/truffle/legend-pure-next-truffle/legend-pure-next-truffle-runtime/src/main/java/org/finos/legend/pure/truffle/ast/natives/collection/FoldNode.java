@@ -48,9 +48,19 @@ public final class FoldNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collection.executeGeneric(frame);
-        Object fn = lambda.executeGeneric(frame);
-        Object acc = seed.executeGeneric(frame);
         int sz = CollectionHelper.size(col);
+        Object acc = seed.executeGeneric(frame);
+        if (sz == 0)
+        {
+            // Skip evaluating the lambda when there's nothing to fold —
+            // a `lambda.executeGeneric(frame)` on a literal lambda runs
+            // RawLambdaCaptureNode which allocates a RawClosure even
+            // though the body is never invoked. Hot call sites (e.g.
+            // `multiplicityArguments->zip(...)->fold(...)` in
+            // resolveForTarget_GenericTypeValue) often hit empty inputs.
+            return acc;
+        }
+        Object fn = lambda.executeGeneric(frame);
         for (int i = 0; i < sz; i++)
         {
             acc = callNode.call(fn, CollectionHelper.at(col, i), acc);

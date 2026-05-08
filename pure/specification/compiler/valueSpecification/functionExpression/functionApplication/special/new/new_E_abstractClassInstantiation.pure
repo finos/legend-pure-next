@@ -13,3 +13,7 @@ function pack::testAbstractInstantiation():Any[*]
 {
     let x = ^MyAbstractClass(name='test');
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 3

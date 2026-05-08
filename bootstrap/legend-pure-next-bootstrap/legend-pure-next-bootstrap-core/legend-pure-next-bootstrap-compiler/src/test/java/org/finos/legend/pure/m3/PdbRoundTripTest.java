@@ -19,6 +19,7 @@ import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraph;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
+import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
 import org.finos.legend.pure.m3.module.Module;
@@ -122,15 +123,16 @@ public class PdbRoundTripTest
         }
 
         CompiledGraphLanguageExtension cgExt = new CompiledGraphLanguageExtension();
+        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
         PureLanguageExtension pureExt = new PureLanguageExtension();
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, pureExt)).build();
+        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(cgExt, csExt, pureExt)).build();
 
         // --- Step 1: Compile in memory ---
         PDBModule baseModule = new PDBModule(BootstrapModule.locateCorePdb(), PDBModule.Mode.COMPILATION);
         PureModel model = PureModel.withModules(
                         Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(baseModule.getName()),
                                 Lists.mutable.with(new PureContent(content, testName))), baseModule))
-                .withExtensions(Lists.mutable.with(cgExt, pureExt))
+                .withExtensions(Lists.mutable.with(cgExt, csExt, pureExt))
                 .build();
         CompilationResult result = model.compile();
 

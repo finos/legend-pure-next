@@ -15,3 +15,9 @@ function test::tst():Any[*]
 {
     ['a', 'b', 'c']->fold({val, acc| test::processParent($acc, $val)}, ^test::Child(name = 'init:', extra = 'x'))
 }
+
+###CompilerStats
+inferenceRollbacks: 8
+candidateEvaluations: 12
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

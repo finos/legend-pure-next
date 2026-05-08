@@ -767,6 +767,19 @@ public class PdbJavaGenerator
             sb.append("    private ").append(javaType).append(" __load_").append(pr.name).append("()\n    {\n");
             sb.append("        Object __raw = null;\n");
             generateWrapperGetterBody(sb, pr, fbsField);
+            // Normalize null → PureSequence.EMPTY for sequence-typed fields.
+            // The cache lookup at the fast path uses {@code __cached != null};
+            // without this normalization an unset [0..1] / [*] field returns
+            // null, the cache stays null, and every read re-enters the
+            // boundary __load_. With normalization, unset returns become
+            // EMPTY (non-null sentinel) and cache properly. Downstream
+            // consumers (DirectPropertyAccessNode etc.) no longer need
+            // explicit null-vs-EMPTY branches — PE proves the value is
+            // non-null and folds the check away.
+            if (javaType.equals("PureSequence") || javaType.endsWith(".PureSequence"))
+            {
+                sb.append("        if (__raw == null) __raw = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+            }
             sb.append("        ").append(cacheField).append(" = (").append(boxedType).append(") __raw;\n");
             sb.append("        return ").append(cacheField).append(";\n");
             sb.append("    }\n\n");

@@ -13,3 +13,7 @@ Class pack::MyClass
 {
   items: Wrapper<Unknown>[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

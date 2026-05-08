@@ -51,13 +51,23 @@ public final class GroupByNode extends PureNode
         this.keyFnArg = keyFnArg;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedListCgt;
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collectionArg.executeGeneric(frame);
+        int sz = CollectionHelper.size(col);
+        if (sz == 0)
+        {
+            return buildMap(new Object[0], new Object[0], 0, lookupMapCgt(), lookupListCgt());
+        }
         Object keyFn = keyFnArg.executeGeneric(frame);
 
-        int sz = CollectionHelper.size(col);
         Object[] items = new Object[sz];
         Object[] keys = new Object[sz];
         for (int i = 0; i < sz; i++)
@@ -65,11 +75,49 @@ public final class GroupByNode extends PureNode
             items[i] = CollectionHelper.at(col, i);
             keys[i] = callNode.call(keyFn, items[i]);
         }
-        var mapCgt = getContext().cgtForType("meta::pure::functions::collection::Map");
-        var listCgt = getContext().cgtForType("meta::pure::functions::collection::List");
-        if (mapCgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
-        if (listCgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
-        return buildMap(items, keys, sz, mapCgt, listCgt);
+        return buildMap(items, keys, sz, lookupMapCgt(), lookupListCgt());
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        if (cgt == null)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            cgt = populateMapCgt();
+        }
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
+                getContext().cgtForType("meta::pure::functions::collection::Map");
+        if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
+        cachedMapCgt = cgt;
+        return cgt;
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupListCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedListCgt;
+        if (cgt == null)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            cgt = populateListCgt();
+        }
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateListCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
+                getContext().cgtForType("meta::pure::functions::collection::List");
+        if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
+        cachedListCgt = cgt;
+        return cgt;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

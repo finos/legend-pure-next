@@ -40,8 +40,12 @@ public final class ForAllNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object col = collection.executeGeneric(frame);
-        Object fn = lambda.executeGeneric(frame);
         int sz = CollectionHelper.size(col);
+        if (sz == 0)
+        {
+            return true;
+        }
+        Object fn = lambda.executeGeneric(frame);
         for (int i = 0; i < sz; i++)
         {
             Object test = callNode.call(fn, CollectionHelper.at(col, i));

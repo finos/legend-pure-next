@@ -75,12 +75,79 @@ public final class CopyWithKeysNode extends PureNode
         return invoke(frame);
     }
 
+    /**
+     * Memoise per Class — `getInterfaces()` is reflection, `getName()` walks
+     * the constant pool, and `replace(".", "::")` is a String allocation;
+     * the result is purely a function of the input class so we cache it.
+     * 72 of 72 StringLatin1.replace JFR samples on the metamodel_factories
+     * compile traced back to this method's String.replace call.
+     *
+     * Identity-keyed because Class equality is identity. Synchronised so
+     * concurrent compile threads don't race on the put; the read path is
+     * a plain {@code get} and dominates by orders of magnitude.
+     */
+    // Volatile copy-on-write IdentityHashMap. See _PackageableElement.PATH_CACHE
+    // for the rationale: synchronizedMap.get goes through a monitor; a volatile
+    // snapshot lets reads (the hot path) skip the monitor entirely.
+    private static volatile java.util.IdentityHashMap<Class<?>, String> CLASS_PATH_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object CLASS_PATH_CACHE_LOCK = new Object();
+
+    /**
+     * Cache of {@code classPath.replace("org::finos::legend::pure::truffle::pdb::", "")}
+     * results. Called from {@link #finalizeCopy} on every {@code ^X(...)}
+     * operation; the input is the same per receiver class so it's worth
+     * memoising. JFR identified 19 samples on this {@code String.replace}
+     * after the {@code classPathFromInstance} cache landed — same shape
+     * of fix.
+     */
+    private static volatile java.util.IdentityHashMap<String, String> PURE_CLASS_PATH_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object PURE_CLASS_PATH_CACHE_LOCK = new Object();
+    private static final String PDB_PREFIX = "org::finos::legend::pure::truffle::pdb::";
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static String stripPdbPrefix(String classPath)
+    {
+        // Identity-keyed cache works because classPath comes from the
+        // (interned) classPathFromInstance cache — same Class always
+        // produces the same String reference on subsequent reads.
+        String cached = PURE_CLASS_PATH_CACHE.get(classPath);
+        if (cached != null) return cached;
+        String result = classPath.startsWith(PDB_PREFIX) ? classPath.substring(PDB_PREFIX.length()) : classPath;
+        synchronized (PURE_CLASS_PATH_CACHE_LOCK)
+        {
+            if (!PURE_CLASS_PATH_CACHE.containsKey(classPath))
+            {
+                java.util.IdentityHashMap<String, String> next = new java.util.IdentityHashMap<>(PURE_CLASS_PATH_CACHE);
+                next.put(classPath, result);
+                PURE_CLASS_PATH_CACHE = next;
+            }
+        }
+        return result;
+    }
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String classPathFromInstance(Object instance)
     {
-        Class<?>[] interfaces = instance.getClass().getInterfaces();
-        return interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
+        Class<?> cls = instance.getClass();
+        String cached = CLASS_PATH_CACHE.get(cls);
+        if (cached != null) return cached == ABSENT ? null : cached;
+        Class<?>[] interfaces = cls.getInterfaces();
+        String result = interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
+        synchronized (CLASS_PATH_CACHE_LOCK)
+        {
+            if (!CLASS_PATH_CACHE.containsKey(cls))
+            {
+                java.util.IdentityHashMap<Class<?>, String> next = new java.util.IdentityHashMap<>(CLASS_PATH_CACHE);
+                next.put(cls, result == null ? ABSENT : result);
+                CLASS_PATH_CACHE = next;
+            }
+        }
+        return result;
     }
+
+    private static final String ABSENT = "<no-interface>";
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String headBeforeDot(String s)
@@ -116,7 +183,7 @@ public final class CopyWithKeysNode extends PureNode
                 }
             }
         }
-        String pureClassPath = classPath.replace("org::finos::legend::pure::truffle::pdb::", "");
+        String pureClassPath = stripPdbPrefix(classPath);
         java.util.Set<String> keyPropNames = new java.util.HashSet<>();
         for (var kv : keyValues) keyPropNames.add(kv.getKey());
         addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
@@ -298,19 +365,29 @@ public final class CopyWithKeysNode extends PureNode
         java.util.Set<String> visited = new java.util.HashSet<>();
         collectPropertyNamesRecursive(type, names, seen, visited);
         java.util.List<String> result = java.util.List.copyOf(names);
-        PROPERTY_NAMES_CACHE.put(type, result);
+        synchronized (PROPERTY_NAMES_CACHE_LOCK)
+        {
+            if (!PROPERTY_NAMES_CACHE.containsKey(type))
+            {
+                java.util.IdentityHashMap<Type, java.util.List<String>> next =
+                        new java.util.IdentityHashMap<>(PROPERTY_NAMES_CACHE);
+                next.put(type, result);
+                PROPERTY_NAMES_CACHE = next;
+            }
+        }
         return result;
     }
 
     /**
-     * Identity-keyed cache for {@link #collectAllPropertyNames}. Types are
-     * singletons per resolver, so identity-equality is correct; structural
-     * equals on generated metamodel types can recurse through cyclic
-     * generalisations and blow the stack (mirrors the rationale in
-     * {@code TypeCache.entries}).
+     * Volatile copy-on-write IdentityHashMap. Reads (cache hits) are
+     * unsynchronized; writes copy the map under PROPERTY_NAMES_CACHE_LOCK.
+     * Identity-keyed because types are singletons per resolver and
+     * structural equals on generated metamodel types can recurse through
+     * cyclic generalisations and blow the stack.
      */
-    private static final java.util.Map<Type, java.util.List<String>> PROPERTY_NAMES_CACHE =
-            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    private static volatile java.util.IdentityHashMap<Type, java.util.List<String>> PROPERTY_NAMES_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object PROPERTY_NAMES_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectPropertyNamesRecursive(Type type, java.util.List<String> names,
@@ -606,26 +683,15 @@ public final class CopyWithKeysNode extends PureNode
         {
             return;
         }
-        java.util.List<String> propertyNames = collectAllPropertyNames(type);
-        for (String propName : propertyNames)
+        // Pre-filter the loop: most types have 0-2 properties with a reverse
+        // association, but the original loop iterated ALL properties (often
+        // 20+) and called findReverseAssociationProperty per-property. The
+        // result is purely a function of (type, classPath) — cache the
+        // pre-filtered list once per type.
+        java.util.List<String> assocProps = associationPropsForType(type, classPath, eval.resolver());
+        for (String propName : assocProps)
         {
-            // Skip the framework-managed properties — equivalent of the
-            // old method-name skip list (_copy / _classifierGenericType /
-            // _sourceInformation / _elementOverride / _class / _hashCode).
-            // The metadata-driven walk only yields user-declared properties
-            // so most of those don't appear here, but the system ones may.
-            if ("classifierGenericType".equals(propName)
-                    || "sourceInformation".equals(propName)
-                    || "elementOverride".equals(propName))
-            {
-                continue;
-            }
             if (existingKeys.contains(propName))
-            {
-                continue;
-            }
-            String reversePropName = NewWithKeysNode.findReverseAssociationProperty(propName, classPath, eval.resolver());
-            if (reversePropName == null)
             {
                 continue;
             }
@@ -638,6 +704,60 @@ public final class CopyWithKeysNode extends PureNode
             }
             keyValues.add(java.util.Map.entry(propName, propValue));
         }
+    }
+
+    /**
+     * Cache of "properties of {@code type} that have a reverse association
+     * targeting {@code classPath}" — the only ones {@link #addCopiedAssociationProps}
+     * actually emits. Pre-computed once per type, makes the per-copy loop
+     * iterate only the association-relevant properties (typically 0-2 instead
+     * of 20+) and skips the per-property findReverseAssociationProperty call
+     * + framework-name string-equals chain.
+     *
+     * <p>Identity-keyed on Type. Volatile copy-on-write for unsynchronized
+     * reads — same pattern as the other static caches in this module.</p>
+     */
+    private static volatile java.util.IdentityHashMap<Type, java.util.List<String>> ASSOC_PROPS_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object ASSOC_PROPS_CACHE_LOCK = new Object();
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static java.util.List<String> associationPropsForType(Type type, String classPath,
+                                                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        java.util.List<String> cached = ASSOC_PROPS_CACHE.get(type);
+        if (cached != null)
+        {
+            return cached;
+        }
+        java.util.List<String> propertyNames = collectAllPropertyNames(type);
+        java.util.List<String> result = new java.util.ArrayList<>();
+        for (String propName : propertyNames)
+        {
+            if ("classifierGenericType".equals(propName)
+                    || "sourceInformation".equals(propName)
+                    || "elementOverride".equals(propName))
+            {
+                continue;
+            }
+            String reversePropName = NewWithKeysNode.findReverseAssociationProperty(propName, classPath, resolver);
+            if (reversePropName != null)
+            {
+                result.add(propName);
+            }
+        }
+        java.util.List<String> immut = java.util.List.copyOf(result);
+        synchronized (ASSOC_PROPS_CACHE_LOCK)
+        {
+            if (!ASSOC_PROPS_CACHE.containsKey(type))
+            {
+                java.util.IdentityHashMap<Type, java.util.List<String>> next =
+                        new java.util.IdentityHashMap<>(ASSOC_PROPS_CACHE);
+                next.put(type, immut);
+                ASSOC_PROPS_CACHE = next;
+            }
+        }
+        return immut;
     }
 
     /**

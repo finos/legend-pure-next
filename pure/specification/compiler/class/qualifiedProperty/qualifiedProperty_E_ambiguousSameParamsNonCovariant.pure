@@ -22,3 +22,9 @@ Class test::Child extends test::Parent
         'text'
     }: String[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 3
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

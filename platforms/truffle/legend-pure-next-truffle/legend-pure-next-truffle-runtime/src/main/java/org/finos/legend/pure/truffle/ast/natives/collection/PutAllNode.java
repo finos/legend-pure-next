@@ -41,17 +41,39 @@ public final class PutAllNode extends PureNode
         this.otherArg = otherArg;
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object map = mapArg.executeGeneric(frame);
         Object other = otherArg.executeGeneric(frame);
-        var cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
+        return doPutAll(map, other, lookupMapCgt());
+    }
+
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        if (cgt == null)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            cgt = populateMapCgt();
+        }
+        return cgt;
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    {
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
+                getContext().cgtForType("meta::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[PutAllNode] Cannot resolve Map type from PDB");
         }
-        return doPutAll(map, other, cgt);
+        cachedMapCgt = cgt;
+        return cgt;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary

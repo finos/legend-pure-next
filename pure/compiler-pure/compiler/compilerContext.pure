@@ -91,11 +91,34 @@ Class meta::pure::compiler::CompilerContext
     inferenceRollbacks : Integer[1];
     candidateEvaluations : Integer[1];
 
+    // Diagnostic: per-call-site rollback counts, keyed by tag matching Java's
+    // FunctionApplicationResolver.<method>:<line> form so a Java-vs-Pure histogram
+    // diff is callable without renaming.
+    rollbackSites : Map<String, Integer>[1];
+
     // Per-element timing collected across pass 2 and pass 3. Each element compile
     // appends an ElementStatistics with wall time (millis) and the rollback /
     // candidate deltas for that element. compileDir aggregates entries with the
     // same elementPath across passes when building the final summary.
     elementStatistics : ElementStatistics[*];
+
+    // Memoizes lambda body resolution outcomes by (sourceInfo, paramShape, openVar-types).
+    // The cached value is a CachedLambdaOutcome — the resolved AtomicValue plus any errors
+    // that fired during body resolution. On a hit we return the AV and replay the errors
+    // so callers (multi-candidate fold, fixpoint retries) see the same context delta they
+    // would from a fresh walk.
+    lambdaResolutionCache : Map<String, CachedLambdaOutcome>[1];
+
+    // Memoizes the early-exit gate of resolveAtomicValue's lambda branch — i.e. visits
+    // where the lambda's params aren't concrete and we addError + return AV unchanged.
+    // Membership is O(1); the value is unused (Boolean true sentinel).
+    lambdaFailureCache : Map<String, Boolean>[1];
+}
+
+Class meta::pure::compiler::CachedLambdaOutcome
+{
+    av : meta::pure::metamodel::valuespecification::AtomicValue[1];
+    errorsFired : String[*];
 }
 
 // Build a minimal CompilerContext with no source state — used by helper-module
@@ -109,8 +132,11 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         elementMap=newMap([]->cast(@Pair<String, PackageableElement>)),
         localFunctionIndex=newMap([]->cast(@Pair<String, List<PackageableFunction<Any>>>)),
         linearizationCache=newMap([]->cast(@Pair<String, List<String>>)),
+        lambdaResolutionCache=newMap([]->cast(@Pair<String, CachedLambdaOutcome>)),
+        lambdaFailureCache=newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks=0,
-        candidateEvaluations=0
+        candidateEvaluations=0,
+        rollbackSites=newMap([]->cast(@Pair<String, Integer>))
     );
     // Seed the cache with universe types so {@code linearize} can be called
     //   straight away — every helper-test that constructs a plain context
@@ -123,14 +149,32 @@ function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integ
     $context.errors->size();
 }
 
-function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1]):CompilerContext[1]
+function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1], site:String[1]):CompilerContext[1]
 {
     // Mirrors Java CompilationContext.rollbackErrorsTo: bump inferenceRollbacks
     // alongside the error-stack truncation so the Pure compiler's telemetry
     // tracks the same speculative-compile-discarded count as the Java bootstrap.
+    // The {@code site} tag is bucketed into rollbackSites so per-call-site
+    // counts can be diffed against Java's StackWalker-derived histogram.
+    let prev = $context.rollbackSites->get($site);
+    let newCount = if($prev->isEmpty(), | 1, | $prev->toOne() + 1);
     ^$context(
         errors = $context.errors->take($checkpoint),
-        inferenceRollbacks = $context.inferenceRollbacks + 1
+        inferenceRollbacks = $context.inferenceRollbacks + 1,
+        rollbackSites = $context.rollbackSites->put($site, $newCount)
+    );
+}
+
+// Bump-only variant for the two direct-bump sites in resolveFunctionApplication
+// (multi-candidate pre-resolve, candidate-failed) where the error stack is
+// either separately rolled back or doesn't need truncation.
+function meta::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site:String[1]):CompilerContext[1]
+{
+    let prev = $context.rollbackSites->get($site);
+    let newCount = if($prev->isEmpty(), | 1, | $prev->toOne() + 1);
+    ^$context(
+        inferenceRollbacks = $context.inferenceRollbacks + 1,
+        rollbackSites = $context.rollbackSites->put($site, $newCount)
     );
 }
 
@@ -160,6 +204,7 @@ Class meta::pure::compiler::CompilationStatistics
     inferenceRollbackCount : Integer[1];
     candidateEvaluationCount : Integer[1];
     elementStatistics : ElementStatistics[*];
+    rollbackSites : Map<String, Integer>[1];
 }
 
 Class meta::pure::compiler::CompilationResult
@@ -314,32 +359,63 @@ function meta::pure::compiler::findAllFunctionsByNameAndArityUnfiltered(context:
     $nativeFiltered->concatenate($localCandidates)->removeDuplicatesBy(f | $f->elementToPath());
 }
 
+// Path → element using the freshest known version. The native
+// `lenientPathToElement` walks the Package tree, which is frozen at the
+// pass-1 skeleton state for local-module elements (pass 2 / pass 3 only
+// update elementMap, not Package.children). So *always* check elementMap
+// first; only fall through to the package-tree walk for elements that were
+// never put into elementMap (i.e. base PDB universe types).
+function meta::pure::compiler::pathToElementInContext(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
+{
+    firstNonEmpty([
+        | $context.elementMap->get($path),
+        | $path->lenientPathToElement()
+    ])->head();
+}
+
+// Two-branch lookup:
+//   1. Try the path as-given via `pathToElementInContext` (covers FQ paths;
+//      with a short name this misses since elementMap keys are FQ and the
+//      package tree has no top-level "Class"/"Number"/etc.).
+//   2. For short names, qualify with each import in turn and try again.
+//
+// What we used to do but don't anymore:
+//   * Suffix-match across all elementMap keys ending in "::Class" — that
+//     bypassed scoping (returned a Java-metamodel `Class` even when the file
+//     didn't import it) and tie-broke arbitrarily on map iteration order.
+//     The correct lookup goes through imports.
+//   * Hard-coded `meta::pure::metamodel::type::` fallback — already handled
+//     by the imports loop since `defaultFileImports()` includes that package.
 function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:String[1]):PackageableElement[0..1]
 {
-    // Short-name suffix matches skip Packages — Pure source never references
-    // a Package by short name, but elementMap now contains Packages alongside
-    // other elements, so `meta::pure::compiler::test` (Package) would shadow
-    // the actual Profile when resolving a stereotype value of `test`.
-    let localResolution = $context.elementMap->get($path);
-    if([pair(| $localResolution->isNotEmpty(), | $localResolution),
-        pair(| $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package))->isNotEmpty(),
-             | let shortNameMatch = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path))->filter(k | !$context.elementMap->get($k)->toOne()->instanceOf(Package));
-               $context.elementMap->get($shortNameMatch->at(0));),
-        pair(| $path->lenientPathToElement()->isNotEmpty(), | $path->lenientPathToElement()),
-        pair(| $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head()->isNotEmpty(),
-             | $context.imports->map(imp | ($imp + '::' + $path)->lenientPathToElement())->filter(e | $e->isNotEmpty())->head())],
-       | ('meta::pure::metamodel::type::' + $path)->lenientPathToElement()
-    );
+    firstNonEmpty([
+        | $context->pathToElementInContext($path),
+        | $context.imports
+              ->map(imp | $context->pathToElementInContext($imp + '::' + $path))
+              ->filter(e | $e->isNotEmpty())
+              ->head()
+    ])->head();
 }
 
 function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
 {
-    let localResolution = $context.elementMap->get($path);
-    if([pair(| $localResolution->isNotEmpty(), | [$path]),
-        pair(| $path->contains('::'),
-             | if($path->lenientPathToElement()->isNotEmpty(), | [$path], | []))],
-       | let shortNameMatches = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
-         let importMatches = $context.imports->map(imp | $imp + '::' + $path)->filter(candidate | $candidate->lenientPathToElement()->isNotEmpty());
-         $importMatches->concatenate($shortNameMatches)->removeDuplicates();
+    // Mirrors Java _PackageableElement.findElementOrReportError (lines 95-98):
+    // ambiguity is reported only when MULTIPLE IMPORTED packages define the
+    // same short name. We must NOT include arbitrary same-short-name elements
+    // from elsewhere in the source tree — that would falsely flag e.g.
+    // `Enumeration` as ambiguous between `meta::pure::metamodel::type::Enumeration`
+    // (the only one in scope via imports) and
+    // `meta::external::language::java::metamodel::Enumeration` (a peer package
+    // present in the source tree but not imported by the file under
+    // compilation).
+    if($context.elementMap->get($path)->isNotEmpty(),
+        | [$path],
+        | if($path->contains('::'),
+            | if($context->pathToElementInContext($path)->isNotEmpty(), | [$path], | []),
+            | $context.imports
+                  ->map(imp | $imp + '::' + $path)
+                  ->filter(candidate | $context->pathToElementInContext($candidate)->isNotEmpty())
+                  ->removeDuplicates();
+        )
     );
 }

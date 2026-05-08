@@ -13,3 +13,9 @@ function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z
 {
     $f->eval(|^TPR_Person(firstName='A', lastName='B')->head()).lastName;
 }
+
+###CompilerStats
+inferenceRollbacks: 2
+candidateEvaluations: 9
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

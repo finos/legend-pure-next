@@ -18,3 +18,7 @@ Class test::copy::Address
 {
   name: String[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 9

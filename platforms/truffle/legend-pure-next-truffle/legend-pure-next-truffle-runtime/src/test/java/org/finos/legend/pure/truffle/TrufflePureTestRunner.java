@@ -173,20 +173,35 @@ class TrufflePureTestRunner
         {
             return;
         }
+        // Tripwire: the Truffle runtime MUST be the optimizing variant (Graal-
+        // backed HotSpotTruffleRuntime). If it falls back to DefaultTruffleRuntime
+        // we'd silently lose all JIT-related coverage and any compilation
+        // bailout in the Pure stdlib would slip through. Check the runtime
+        // directly rather than scanning a TraceCompilation log — log line
+        // formats have drifted between Oracle GraalVM (where this assertion
+        // was originally tuned) and GraalVM CE 25.0.2 (where the same
+        // HotSpotTruffleRuntime emits zero recognisable "opt done"/"opt failed"
+        // lines, tripping the old log-based check on CI).
+        com.oracle.truffle.api.TruffleRuntime rt = com.oracle.truffle.api.Truffle.getRuntime();
+        String runtimeName = rt.getClass().getName();
+        assertTrue(
+                runtimeName.contains("HotSpotTruffleRuntime")
+                        || runtimeName.contains("GraalRuntime"),
+                () -> "Expected Graal-backed Truffle runtime but got " + runtimeName
+                        + " (name=" + rt.getName() + "). The runtime is interpreted-only — "
+                        + "set JAVA_HOME to a GraalVM 25 JDK before running this suite.");
+
+        // Belt-and-braces: if TraceCompilation produced any "opt failed" lines,
+        // surface them. (On Oracle GraalVM the log is rich; on CE it may be
+        // empty even though compilation IS happening — which is fine: silence
+        // here means no failures rather than no compilations.)
         String log = graalLog.toString(StandardCharsets.UTF_8);
         List<String> failures = log.lines()
                 .filter(line -> line.contains("opt failed"))
                 .toList();
-        long total = log.lines().filter(line -> line.contains("opt done")
-                || line.contains("opt failed")).count();
-        assertTrue(total > 0,
-                "Expected at least one Graal compilation event but got 0 — "
-                        + "the runtime is interpreted-only (likely not GraalVM). "
-                        + "Set JAVA_HOME to a GraalVM 25 JDK before running this suite.");
         String preview = failures.stream().limit(10).collect(Collectors.joining("\n"));
         assertEquals(0, failures.size(),
-                () -> "Graal compilation failures: " + failures.size() + " of " + total
-                        + " attempts. Top failures:\n" + preview);
+                () -> "Graal compilation failures: " + failures.size() + ". Top failures:\n" + preview);
     }
 
     @TestFactory

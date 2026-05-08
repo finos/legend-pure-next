@@ -16,6 +16,7 @@ package org.finos.legend.pure.m3;
 
 import meta.pure.protocol.PureFile;
 import org.eclipse.collections.api.factory.Lists;
+import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
 import org.finos.legend.pure.m3.extensions.error.Error;
 import org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension;
 import org.finos.legend.pure.m3.module.CompilationError;
@@ -121,11 +122,14 @@ public class CompilerErrorTest
         ClassLoader cl = getClass().getClassLoader();
         String content = loadResource(cl, resourcePath);
 
-        // Parse for assertion extraction (with Error section support)
+        // Parse for assertion extraction (with Error + CompilerStats section support).
+        // CompilerStats may appear alongside Error in spec tests now that
+        // ###CompilerStats is part of the canonical test format.
         ErrorLanguageExtension errExt = new ErrorLanguageExtension();
+        CompilerStatsLanguageExtension csExt = new CompilerStatsLanguageExtension();
         PureLanguageExtension pureExt = new PureLanguageExtension();
 
-        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(errExt, pureExt)).build();
+        PureParser parser = PureParser.builder().withExtensions(Lists.mutable.with(errExt, csExt, pureExt)).build();
         PureFile pureFile = parser.parse(testName, content);
 
         // Extract expected errors from Error elements.
@@ -172,7 +176,7 @@ public class CompilerErrorTest
         CompilationResult result = PureModel.withModules(
                 Lists.mutable.with(new LocalModule("test", "*", Lists.mutable.with(module.getName()),
                         Lists.mutable.with(new PureContent(content, testName))), module))
-                .withExtensions(Lists.mutable.with(errExt, pureExt)).build().compile();
+                .withExtensions(Lists.mutable.with(errExt, csExt, pureExt)).build().compile();
 
         Assertions.assertFalse(result.errors().isEmpty(),
                 "Expected compilation errors for: " + testName);

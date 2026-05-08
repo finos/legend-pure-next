@@ -19,3 +19,7 @@ Class test::copy::Holder
   value: Integer[0..1];
   many: Any[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 15

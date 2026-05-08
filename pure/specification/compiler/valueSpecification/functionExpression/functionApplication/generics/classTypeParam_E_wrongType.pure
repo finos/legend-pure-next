@@ -16,3 +16,9 @@ function test():Any[*]
 {
     f(['a','b']).value + 1;
 }
+
+###CompilerStats
+inferenceRollbacks: 6
+candidateEvaluations: 8
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

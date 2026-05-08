@@ -18,7 +18,9 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.function.Function;
 import meta.pure.metamodel.function.property.Property;
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.factory.Maps;
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.MutableMap;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._PackageableElement;
 
 import java.util.function.Supplier;
@@ -42,6 +44,10 @@ public class CompilationContext
     private final MutableList<CompilationError> currentErrors = Lists.mutable.empty();
     private int inferenceRollbackCount;
     private int candidateEvaluationCount;
+    // Diagnostic: per-call-site rollback counts. Bucketed by stable semantic
+    // tags (see {@link RollbackSite}) so resolver shape can be diffed against
+    // the Pure compiler without coupling to Java source-line numbers.
+    private final MutableMap<String, Integer> rollbackSites = Maps.mutable.empty();
     private String sourceId;
     private MutableList<String> imports = Lists.mutable.empty();
 
@@ -208,15 +214,27 @@ public class CompilationContext
      * Removes all errors added after the given index.
      * Use with {@link #currentErrorCount()} to snapshot
      * the staging area before a speculative compilation.
+     *
+     * @param site stable semantic identifier of the call site (one of the
+     *             {@link RollbackSite} constants). Bucketed into
+     *             {@link #rollbackSites()} so resolver shape can be diffed
+     *             across compilers without coupling tags to source-line
+     *             numbers.
      */
-    public void rollbackErrorsTo(int checkpoint)
+    public void rollbackErrorsTo(int checkpoint, String site)
     {
         this.debug(() -> "ERRORS ROLLED BACK from " + this.currentErrors.size() + " to " + checkpoint);
         this.inferenceRollbackCount++;
+        this.rollbackSites.merge(site, 1, Integer::sum);
         while (this.currentErrors.size() > checkpoint)
         {
             this.currentErrors.remove(this.currentErrors.size() - 1);
         }
+    }
+
+    public MutableMap<String, Integer> rollbackSites()
+    {
+        return this.rollbackSites;
     }
 
     /**

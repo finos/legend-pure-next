@@ -3,3 +3,7 @@ The type 'UnknownType' can't be found in native function 'pack::broken_String_1_
 
 ###Pure
 native function pack::broken(x: String[1]): UnknownType[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

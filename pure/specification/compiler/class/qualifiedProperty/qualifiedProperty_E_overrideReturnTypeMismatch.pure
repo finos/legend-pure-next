@@ -15,3 +15,7 @@ Class test::SubClass extends test::SuperClass
         'ok'
     }: String[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

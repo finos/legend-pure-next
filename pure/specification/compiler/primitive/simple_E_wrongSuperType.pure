@@ -3,3 +3,7 @@ The type 'WrongType' can't be found in super type in primitive type 'protocol::V
 
 ###Pure
 Primitive protocol::Varchar extends WrongType
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

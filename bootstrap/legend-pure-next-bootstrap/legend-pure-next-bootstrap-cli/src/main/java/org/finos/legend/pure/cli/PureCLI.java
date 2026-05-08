@@ -20,6 +20,7 @@ import org.finos.legend.pure.execution.PureExecution;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.SpecificationBinaryBuilder;
 import org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension;
+import org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension;
 import org.finos.legend.pure.m3.module.ScopedMetadataAccess;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
 import org.finos.legend.pure.m3.pureLanguage.PureLanguageExtension;
@@ -255,7 +256,7 @@ public class PureCLI
         PureExecution execution = PureExecution.builder()
                 .withResolver(resolver)
                 .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
-                .withParserExtensions(List.of(new CompiledGraphLanguageExtension()))
+                .withParserExtensions(List.of(new CompiledGraphLanguageExtension(), new CompilerStatsLanguageExtension()))
                 .build();
 
         FunctionDefinition fd = (FunctionDefinition) lastModule.getElement(function);

@@ -36,13 +36,57 @@ public final class PropertyReadNode extends Node
      */
     public static final Object ABSENT = PropertyAccessor.ABSENT;
 
+    /**
+     * Property name bound at AST-build time when the call site has a fixed
+     * name (the {@link RawPropertyAccessNode} case — every {@code $obj.foo}
+     * literal in Pure source). {@code @CompilationFinal} so PE bakes it in
+     * per-instance and the {@code readProperty(boundName)} switch in the
+     * generated {@code XImpl}/{@code XFlatBufferWrapper} folds to a direct
+     * typed accessor (e.g. {@code _foo()}). When {@code null}, the call
+     * site is dynamic (e.g. deep-path readers in {@code CopyWithKeysNode}
+     * or {@code ToStringNode} where the property is computed) and the
+     * back-compat {@code execute(target, propName)} overload uses the
+     * runtime argument.
+     */
+    @CompilationFinal
+    private final String boundName;
+
+    /**
+     * 2-entry inline cache. Compiler-pure property-read sites overwhelmingly
+     * see exactly two classes (the {@code XImpl} compiled in-memory and the
+     * {@code XFlatBufferWrapper} loaded from a PDB), so a single-entry cache
+     * misses ~half the time and the polymorphic fallthrough can't fold the
+     * readProperty(name) switch through interface dispatch. Two slots fit
+     * the common case exactly: at most two transferToInterpreterAndInvalidate
+     * deopts during warmup, then steady state with both classes hot.
+     *
+     * <p>An earlier 4-entry attempt regressed by ~5% — the extra deopts cost
+     * more than the higher hit rate saved. 2 is empirically the right shape
+     * for this workload's class diversity.</p>
+     */
     @CompilationFinal
     private Class<?> cachedClass;
+    @CompilationFinal
+    private Class<?> cachedClass2;
+
+    public PropertyReadNode()
+    {
+        this.boundName = null;
+    }
+
+    public PropertyReadNode(String propertyName)
+    {
+        this.boundName = propertyName;
+    }
 
     public Object execute(Object target, String propName)
     {
         Object result = executeOrAbsent(target, propName);
-        return result == ABSENT ? org.finos.legend.pure.truffle.types.PureSequence.EMPTY : result;
+        if (result == ABSENT || result == null)
+        {
+            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        }
+        return result;
     }
 
     /**
@@ -56,42 +100,51 @@ public final class PropertyReadNode extends Node
         {
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
-        // RawClosure wraps a LambdaFunction in a plain record (capturedValues,
-        // callTarget, ...) and doesn't implement the LambdaFunction interface.
-        // Delegate property reads to the underlying lambda — otherwise
-        // `$closure.expressionSequence` etc. silently return EMPTY, which made
-        // testShortCircuitInDynamicEvaluation observe a lambda with an empty
-        // body when it copied `$fn.expressionSequence` to ^LambdaFunction(...).
         if (target instanceof RawClosure rc)
         {
             target = rc.lambda();
         }
+        // Prefer the bound name when present — guarantees PE sees a
+        // per-instance constant for the readProperty(name) switch even
+        // if the caller site doesn't propagate {@code propName} as a PE
+        // constant through the call boundary.
+        String name = (boundName != null) ? boundName : propName;
         Class<?> tc = target.getClass();
-        if (tc == cachedClass)
+        if (tc == cachedClass || tc == cachedClass2)
         {
-            // PE knows tc is the cached class — the cast then devirtualizes
-            //   readProperty to that exact class's implementation, and with
-            //   constant propName the inner switch collapses to a single
-            //   typed accessor call.
-            return ((PropertyAccessor) target).readProperty(propName);
+            // PE has both cached classes baked in via @CompilationFinal —
+            // the disjunction folds to a known-class check at each site,
+            // and the readProperty(name) switch reduces to the typed
+            // accessor for that class.
+            return ((PropertyAccessor) target).readProperty(name);
         }
+        return cacheMissOrPoly(target, name);
+    }
+
+    private Object cacheMissOrPoly(Object target, String name)
+    {
         if (cachedClass == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            // Only cache when the target actually implements PropertyAccessor
-            // — caching a non-PropertyAccessor class (e.g. a Java enum like
-            //   GenericTypeOperationTypeEnum, which the metamodel uses for
-            //   relation operations) would cause the fast-path cast above to
-            //   fail with ClassCastException on subsequent calls of the same
-            //   shape.
             if (target instanceof PropertyAccessor pa)
             {
-                cachedClass = tc;
-                return pa.readProperty(propName);
+                cachedClass = target.getClass();
+                return pa.readProperty(name);
             }
             return ABSENT;
         }
-        // Polymorphic call site — virtual dispatch through the interface.
-        return target instanceof PropertyAccessor pa ? pa.readProperty(propName) : ABSENT;
+        if (cachedClass2 == null)
+        {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            if (target instanceof PropertyAccessor pa)
+            {
+                cachedClass2 = target.getClass();
+                return pa.readProperty(name);
+            }
+            return ABSENT;
+        }
+        // Both slots filled with different classes — third+ class is fully
+        // polymorphic. PE can't fold readProperty switch here.
+        return target instanceof PropertyAccessor pa ? pa.readProperty(name) : ABSENT;
     }
 }

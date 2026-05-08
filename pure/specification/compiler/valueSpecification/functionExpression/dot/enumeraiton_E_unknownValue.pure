@@ -15,3 +15,7 @@ function test::primitive::testEnumValue(): Any[*]
   test::primitive::MyEnum.EW;
   test::primitive::MyEnum.EWW;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0
