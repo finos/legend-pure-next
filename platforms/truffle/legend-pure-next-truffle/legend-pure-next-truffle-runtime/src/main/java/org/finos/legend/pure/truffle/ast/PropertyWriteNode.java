@@ -43,7 +43,18 @@ public final class PropertyWriteNode extends Node
 
     public void execute(Object target, String propName, Object value)
     {
-        ensureEnumCGT(value);
+        // Pre-filter the enum-CGT backfill: only Java enum constants ever
+        // need this work. The boundary path used to fire on every property
+        // write, including the overwhelming majority where {@code value} is
+        // a String/PureSequence/other Pure object — paying a boundary
+        // entry/exit per write across pass-2 object construction. Java
+        // {@code Enum} is a single instanceof check that PE evaluates to
+        // a constant for known non-enum types, folding the boundary
+        // call away entirely.
+        if (value instanceof Enum<?>)
+        {
+            ensureEnumCGT(value);
+        }
         Class<?> tc = target.getClass();
         if (tc == cachedClass)
         {

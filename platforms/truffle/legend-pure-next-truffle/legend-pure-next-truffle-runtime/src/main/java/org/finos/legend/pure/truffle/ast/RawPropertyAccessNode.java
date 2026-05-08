@@ -38,7 +38,7 @@ public final class RawPropertyAccessNode extends PureNode
     private PureNode[] argNodes;
 
     @Child
-    private PropertyReadNode reader = new PropertyReadNode();
+    private PropertyReadNode reader;
 
     // Cached enum value — monomorphic cache by (Enumeration identity, propName)
     @CompilationFinal
@@ -76,6 +76,14 @@ public final class RawPropertyAccessNode extends PureNode
         {
             this.propertyName = null;
         }
+        // Bind the property name into the reader at construction so PE
+        // baked-in constant-folds the per-class readProperty(name) switch
+        // to the direct typed accessor (e.g. _rawType()) — equivalent to
+        // a field load after PE. QPs have no static name, so an unbound
+        // reader handles their dynamic-name case.
+        this.reader = (this.propertyName != null)
+                ? new PropertyReadNode(this.propertyName)
+                : new PropertyReadNode();
     }
 
     @Override
