@@ -134,8 +134,12 @@ public final class CastNode extends PureNode
      * <p>Constraints (and generalizations) are immutable PDB metadata, so
      * the answer is a pure function of the type's structure.</p>
      */
-    private static final java.util.Map<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Boolean> NEEDS_VALIDATION_CACHE =
-            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    // Volatile copy-on-write IdentityHashMap. See _PackageableElement.PATH_CACHE
+    // for the rationale: synchronizedMap.get goes through a monitor; a
+    // volatile snapshot lets reads (the hot path) skip the monitor.
+    private static volatile java.util.IdentityHashMap<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Boolean> NEEDS_VALIDATION_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object NEEDS_VALIDATION_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean needsConstraintValidation(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type)
@@ -147,7 +151,16 @@ public final class CastNode extends PureNode
         }
         boolean result = computeNeedsValidation(type,
                 java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-        NEEDS_VALIDATION_CACHE.put(type, result);
+        synchronized (NEEDS_VALIDATION_CACHE_LOCK)
+        {
+            if (!NEEDS_VALIDATION_CACHE.containsKey(type))
+            {
+                java.util.IdentityHashMap<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Boolean> next =
+                        new java.util.IdentityHashMap<>(NEEDS_VALIDATION_CACHE);
+                next.put(type, result);
+                NEEDS_VALIDATION_CACHE = next;
+            }
+        }
         return result;
     }
 

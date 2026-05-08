@@ -60,13 +60,23 @@ public final class TypeCache implements TruffleTypeCache
     private static final String EQUALITY_KEY_VALUE = "Key";
     private static final int MAX_GENERALIZATION_DEPTH = 64;
 
-    private static final Entry EMPTY = new Entry(Collections.emptyList(), Collections.emptySet());
+    private static final Entry EMPTY = new Entry(Collections.emptyList(), Collections.emptySet(), Collections.emptySet());
 
-    // IdentityHashMap (synchronized) — the generated PDB Type classes have
-    // structural equals/hashCode that recurse through generalizations and
-    // can blow the stack on any cyclic shape. Identity is also semantically
-    // correct: top-level PDB types are singletons per resolver.
-    private final Map<Type, Entry> entries = Collections.synchronizedMap(new IdentityHashMap<>());
+    // IdentityHashMap with copy-on-write semantics — the generated PDB Type
+    // classes have structural equals/hashCode that recurse through
+    // generalizations and can blow the stack on any cyclic shape, so
+    // ConcurrentHashMap is unsafe; identity is also semantically correct
+    // (top-level PDB types are singletons per resolver).
+    //
+    // Reads (cache hits, the hot path) are unsynchronized — they see the
+    // current snapshot via the volatile reference. Writes take a monitor,
+    // copy the entire map, add the new entry, and atomically install the
+    // new snapshot. This is the right shape for a JFR-measured workload
+    // where ~all subtypeOf / equalityKey lookups hit a cache populated
+    // during warmup; under the previous synchronizedMap wrapper, every
+    // read paid a monitor enter/exit (46 JFR samples = ~2.7% of warm CPU
+    // on the metamodel_factories.pure self-host).
+    private volatile IdentityHashMap<Type, Entry> entries = new IdentityHashMap<>();
     private final Map<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     /**
      * Pre-built {@link java.util.function.Supplier} per Pure class path.
@@ -92,6 +102,13 @@ public final class TypeCache implements TruffleTypeCache
     public Set<String> equalityKeyProperties(Object type)
     {
         return entryFor(type).equalityKeys;
+    }
+
+    @Override
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    public Set<Type> ancestors(Object type)
+    {
+        return entryFor(type).ancestors;
     }
 
     @Override
@@ -152,7 +169,30 @@ public final class TypeCache implements TruffleTypeCache
         {
             return EMPTY;
         }
-        return entries.computeIfAbsent(t, TypeCache::compute);
+        // Fast path — unsynchronized read of the volatile snapshot. Once
+        // entries are populated during warmup, this is the only branch
+        // hit and avoids the monitor enter/exit.
+        Entry hit = entries.get(t);
+        if (hit != null)
+        {
+            return hit;
+        }
+        return computeAndCache(t);
+    }
+
+    private synchronized Entry computeAndCache(Type t)
+    {
+        // Re-check inside the lock — another thread may have populated.
+        Entry hit = entries.get(t);
+        if (hit != null)
+        {
+            return hit;
+        }
+        Entry computed = compute(t);
+        IdentityHashMap<Type, Entry> next = new IdentityHashMap<>(entries);
+        next.put(t, computed);
+        entries = next;
+        return computed;
     }
 
     private static Entry compute(Type type)
@@ -164,9 +204,17 @@ public final class TypeCache implements TruffleTypeCache
         {
             collectEqualityKeysInto(spo, keys, new LinkedHashSet<>(), 0);
         }
+        // Identity-keyed set of ancestors for O(1) subtypeOf check. We can't
+        // use HashSet (Type's structural equals/hashCode recurse through
+        // generalisations and blow the stack on cyclic shapes); identity is
+        // semantically correct here since top-level PDB types are singletons
+        // per resolver.
+        Set<Type> ancestors = Collections.newSetFromMap(new IdentityHashMap<>(lin.size() * 2));
+        ancestors.addAll(lin);
         return new Entry(
                 List.copyOf(lin),
-                keys.isEmpty() ? Collections.emptySet() : Set.copyOf(keys));
+                keys.isEmpty() ? Collections.emptySet() : Set.copyOf(keys),
+                ancestors);
     }
 
     // --- linearization ------------------------------------------------------
@@ -269,5 +317,5 @@ public final class TypeCache implements TruffleTypeCache
         return false;
     }
 
-    private record Entry(List<Type> linearization, Set<String> equalityKeys) {}
+    private record Entry(List<Type> linearization, Set<String> equalityKeys, Set<Type> ancestors) {}
 }

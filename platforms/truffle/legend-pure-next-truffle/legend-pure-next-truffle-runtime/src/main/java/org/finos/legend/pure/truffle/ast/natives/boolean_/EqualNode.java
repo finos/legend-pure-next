@@ -46,11 +46,49 @@ public final class EqualNode extends PureNode
     @Override
     public boolean executeBoolean(VirtualFrame frame)
     {
-        Object rawA = normalizeForEquals(left.executeGeneric(frame));
-        Object rawB = normalizeForEquals(right.executeGeneric(frame));
-        // Identity short-circuit before the @TruffleBoundary getResolver()
-        // — most equality checks on the same logical value (e.g. small
-        // integers, interned Strings, cached Type instances) hit this.
+        Object a = left.executeGeneric(frame);
+        Object b = right.executeGeneric(frame);
+        // Identity short-circuit (works on cached Long/Boolean/Type instances).
+        if (a == b)
+        {
+            return true;
+        }
+        // Fast paths PE can fold completely — avoid the @TruffleBoundary
+        // call to normalizeForEquals + callPureEquals for the cases that
+        // dominate compiler-pure type comparisons (multiplicity bounds,
+        // type-name equality, primitive constant comparisons). Per-instance
+        // class-caching was tested as an alternative and regressed by ~5%
+        // because compiler-pure equality sites are diverse enough that
+        // inline-cache misses cost more than the instanceof chain saves on
+        // hits — the JVM-level instanceof on final-shaped boxed primitives
+        // is ~2 cycles and the chain short-circuits aggressively.
+        if (a instanceof Long la && b instanceof Long lb)
+        {
+            return la.longValue() == lb.longValue();
+        }
+        if (a instanceof Boolean ba && b instanceof Boolean bb)
+        {
+            return ba.booleanValue() == bb.booleanValue();
+        }
+        if (a instanceof String sa && b instanceof String sb)
+        {
+            return sa.equals(sb);
+        }
+        return slowEquals(a, b);
+    }
+
+    /**
+     * Slow path — handles AtomicValue/PureSequence wrappers, deep PureSequence
+     * equality, generated-Impl property-key equality (uses reflection), Map
+     * deep equality, etc. Boundary-isolated so PE doesn't try to inline the
+     * recursive {@code callPureEquals} chain (would bust the inlining budget,
+     * see comment on callPureEquals).
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private boolean slowEquals(Object a, Object b)
+    {
+        Object rawA = normalizeForEquals(a);
+        Object rawB = normalizeForEquals(b);
         if (rawA == rawB)
         {
             return true;

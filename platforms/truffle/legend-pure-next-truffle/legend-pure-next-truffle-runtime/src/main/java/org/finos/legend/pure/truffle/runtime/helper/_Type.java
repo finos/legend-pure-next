@@ -21,6 +21,7 @@ public final class _Type
         return (List<Type>) resolver.typeCache().linearization(type);
     }
 
+    @SuppressWarnings("unchecked")
     public static boolean subtypeOf(Type sub, Type sup, TruffleMetadataAccess resolver)
     {
         if (sub == sup)
@@ -35,14 +36,11 @@ public final class _Type
         {
             return true;
         }
-        for (Type ancestor : linearize(sub, resolver))
-        {
-            if (ancestor == sup)
-            {
-                return true;
-            }
-        }
-        return false;
+        // O(1) identity-keyed lookup against the pre-built ancestors set —
+        // replaces a linear scan over the linearization List that JFR
+        // identified as the dominant subtypeOf hot path (~7% of warm CPU
+        // on the metamodel_factories.pure self-host).
+        return ((java.util.Set<Type>) resolver.typeCache().ancestors(sub)).contains(sup);
     }
 
     public static Type findCommonType(List<Type> types, boolean contravariant, TruffleMetadataAccess resolver)

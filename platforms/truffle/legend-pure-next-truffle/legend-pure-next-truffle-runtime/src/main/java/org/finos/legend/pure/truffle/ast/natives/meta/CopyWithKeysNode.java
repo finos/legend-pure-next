@@ -75,12 +75,45 @@ public final class CopyWithKeysNode extends PureNode
         return invoke(frame);
     }
 
+    /**
+     * Memoise per Class — `getInterfaces()` is reflection, `getName()` walks
+     * the constant pool, and `replace(".", "::")` is a String allocation;
+     * the result is purely a function of the input class so we cache it.
+     * 72 of 72 StringLatin1.replace JFR samples on the metamodel_factories
+     * compile traced back to this method's String.replace call.
+     *
+     * Identity-keyed because Class equality is identity. Synchronised so
+     * concurrent compile threads don't race on the put; the read path is
+     * a plain {@code get} and dominates by orders of magnitude.
+     */
+    // Volatile copy-on-write IdentityHashMap. See _PackageableElement.PATH_CACHE
+    // for the rationale: synchronizedMap.get goes through a monitor; a volatile
+    // snapshot lets reads (the hot path) skip the monitor entirely.
+    private static volatile java.util.IdentityHashMap<Class<?>, String> CLASS_PATH_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object CLASS_PATH_CACHE_LOCK = new Object();
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String classPathFromInstance(Object instance)
     {
-        Class<?>[] interfaces = instance.getClass().getInterfaces();
-        return interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
+        Class<?> cls = instance.getClass();
+        String cached = CLASS_PATH_CACHE.get(cls);
+        if (cached != null) return cached == ABSENT ? null : cached;
+        Class<?>[] interfaces = cls.getInterfaces();
+        String result = interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
+        synchronized (CLASS_PATH_CACHE_LOCK)
+        {
+            if (!CLASS_PATH_CACHE.containsKey(cls))
+            {
+                java.util.IdentityHashMap<Class<?>, String> next = new java.util.IdentityHashMap<>(CLASS_PATH_CACHE);
+                next.put(cls, result == null ? ABSENT : result);
+                CLASS_PATH_CACHE = next;
+            }
+        }
+        return result;
     }
+
+    private static final String ABSENT = "<no-interface>";
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String headBeforeDot(String s)
@@ -298,19 +331,29 @@ public final class CopyWithKeysNode extends PureNode
         java.util.Set<String> visited = new java.util.HashSet<>();
         collectPropertyNamesRecursive(type, names, seen, visited);
         java.util.List<String> result = java.util.List.copyOf(names);
-        PROPERTY_NAMES_CACHE.put(type, result);
+        synchronized (PROPERTY_NAMES_CACHE_LOCK)
+        {
+            if (!PROPERTY_NAMES_CACHE.containsKey(type))
+            {
+                java.util.IdentityHashMap<Type, java.util.List<String>> next =
+                        new java.util.IdentityHashMap<>(PROPERTY_NAMES_CACHE);
+                next.put(type, result);
+                PROPERTY_NAMES_CACHE = next;
+            }
+        }
         return result;
     }
 
     /**
-     * Identity-keyed cache for {@link #collectAllPropertyNames}. Types are
-     * singletons per resolver, so identity-equality is correct; structural
-     * equals on generated metamodel types can recurse through cyclic
-     * generalisations and blow the stack (mirrors the rationale in
-     * {@code TypeCache.entries}).
+     * Volatile copy-on-write IdentityHashMap. Reads (cache hits) are
+     * unsynchronized; writes copy the map under PROPERTY_NAMES_CACHE_LOCK.
+     * Identity-keyed because types are singletons per resolver and
+     * structural equals on generated metamodel types can recurse through
+     * cyclic generalisations and blow the stack.
      */
-    private static final java.util.Map<Type, java.util.List<String>> PROPERTY_NAMES_CACHE =
-            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    private static volatile java.util.IdentityHashMap<Type, java.util.List<String>> PROPERTY_NAMES_CACHE =
+            new java.util.IdentityHashMap<>();
+    private static final Object PROPERTY_NAMES_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectPropertyNamesRecursive(Type type, java.util.List<String> names,
