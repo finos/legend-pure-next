@@ -26,6 +26,7 @@ import org.eclipse.collections.impl.factory.Sets;
 import org.finos.legend.pure.m3.module.MetadataAccess;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationContext;
 import org.finos.legend.pure.m3.module.localModule.topLevel.CompilationError;
+import org.finos.legend.pure.m3.module.localModule.topLevel.RollbackSite;
 import org.finos.legend.pure.m3.pureLanguage.metadata.CompositePureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.PureLanguageMetadata;
 import org.finos.legend.pure.m3.pureLanguage.metadata.lazyFunctions.FunctionIndexEntry;
@@ -91,7 +92,7 @@ public class FunctionApplicationResolver
                                     ? pv
                                     : ValueSpecificationResolver.resolve(pv, model, context))
                     );
-            context.rollbackErrorsTo(preResolveCheckpoint);
+            context.rollbackErrorsTo(preResolveCheckpoint, RollbackSite.MULTI_CANDIDATE_PRE_RESOLVE);
 
             // Multiple candidates — sort most-specific-first, then try each with rollback.
             candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model));
@@ -119,7 +120,7 @@ public class FunctionApplicationResolver
 
                 // Resolution produced errors — snapshot and roll back for next candidate
                 MutableList<CompilationError> candidateErrors = context.snapshotErrorsFrom(errorCheckpoint);
-                context.rollbackErrorsTo(errorCheckpoint);
+                context.rollbackErrorsTo(errorCheckpoint, RollbackSite.CANDIDATE_FAILED);
                 if (bestCandidateErrors == null)
                 {
                     bestCandidateErrors = candidateErrors;
@@ -262,7 +263,7 @@ public class FunctionApplicationResolver
         else
         {
             MutableList<CompilationError> errors = context.snapshotErrorsFrom(checkpoint);
-            context.rollbackErrorsTo(checkpoint);
+            context.rollbackErrorsTo(checkpoint, RollbackSite.PARAM_UNRESOLVED);
             context.debug("=> NOT RESOLVED");
             return ParameterInfo.unresolved(reprocessed, errors);
         }
@@ -445,7 +446,7 @@ public class FunctionApplicationResolver
         }
         else if (processed instanceof AtomicValue av && av._value() instanceof LambdaFunction lambda)
         {
-            context.rollbackErrorsTo(checkpoint);
+            context.rollbackErrorsTo(checkpoint, RollbackSite.LAMBDA_DISPATCH);
             context.debug("resolveArg: LAMBDA");
             LambdaFunction reprocessedLambda = setMissingLambdaParameterInformation(lambda, paramGT, bindings, model);
             AtomicValue withReprocessedLambda = ((AtomicValue) processed._copy())._value(reprocessedLambda);
@@ -453,13 +454,13 @@ public class FunctionApplicationResolver
         }
         else if (processed instanceof FunctionApplication childExpr && childExpr._func() != null)
         {
-            context.rollbackErrorsTo(checkpoint);
+            context.rollbackErrorsTo(checkpoint, RollbackSite.REVERSE_MATCH_DISPATCH);
             context.debug("resolveArg: REVERSE_MATCH func=%s childGT=%s", childExpr._functionName(), lazy(() -> _GenericType.print(childExpr._genericType())));
             return finishProcessing(paramGT, paramMul, bindings, model, context, reverseMatch(childExpr, paramGT, paramMul, bindings, model, context));
         }
         else if (processed instanceof Collection col && col._values() != null)
         {
-            context.rollbackErrorsTo(checkpoint);
+            context.rollbackErrorsTo(checkpoint, RollbackSite.COLLECTION_DISPATCH);
             GenericType resolvedParamGT = _GenericType.makeAsConcreteAsPossible(paramGT, bindings, model);
             Multiplicity resolvedParamMul = _Multiplicity.makeAsConcreteAsPossible(paramMul, bindings);
             // Enrich scope with type params still referenced in the resolved param type
@@ -492,7 +493,7 @@ public class FunctionApplicationResolver
             ValueSpecification finished = finishProcessing(paramGT, paramMul, bindings, model, context, newCollection);
             if (context.currentErrorCount() > preFinishCheckpoint)
             {
-                context.rollbackErrorsTo(preFinishCheckpoint);
+                context.rollbackErrorsTo(preFinishCheckpoint, RollbackSite.POST_FINISH_COLLECTION_ROLLBACK);
             }
             return finished;
         }

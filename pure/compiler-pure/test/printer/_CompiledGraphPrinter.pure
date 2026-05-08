@@ -37,7 +37,16 @@ import meta::pure::compiler::test::printer::primitive::*;
 
 function <<test.TestDependency>> meta::pure::compiler::test::printer::printCompiledGraph(elements:PackageableElement[*]):String[1]
 {
-    $elements->map(e | $e->printElement()->stripTrailingNewlines())->joinStrings('\n\n')
+    // Skip the test-section elements themselves — ###CompiledGraph and
+    // ###CompilerStats parse into PackageableElements that show up in the
+    // compiled output but aren't part of the resolved-graph snapshot we're
+    // asserting against. Without this filter the printer would emit
+    // `// unsupported: CompiledGraph ...` / `// unsupported: CompilerStats ...`
+    // lines that don't appear in any test's expected ###CompiledGraph block.
+    $elements
+        ->filter(e | !$e->instanceOf(meta::pure::compiler::test::CompiledGraph) && !$e->instanceOf(meta::pure::compiler::test::CompilerStats))
+        ->map(e | $e->printElement()->stripTrailingNewlines())
+        ->joinStrings('\n\n')
 }
 
 function <<test.TestDependency>> meta::pure::compiler::test::printer::stripTrailingNewlines(s:String[1]):String[1]

@@ -7,3 +7,7 @@ function test::t():Any[*]
     let z = 10;
     let w = z:String[1]|1;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 2

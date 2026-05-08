@@ -104,6 +104,7 @@ public class TruffleCompileToPdbTest
                 .withResolver(resolver)
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
+                        new TruffleCompilerStatsLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 

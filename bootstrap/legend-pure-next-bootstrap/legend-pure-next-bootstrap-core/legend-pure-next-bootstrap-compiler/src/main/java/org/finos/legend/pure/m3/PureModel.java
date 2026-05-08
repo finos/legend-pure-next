@@ -221,6 +221,7 @@ public class PureModel
             int rollbackTotal = 0;
             int candidateTotal = 0;
             MutableMap<String, ElementStatistics> allElementStats = Maps.mutable.empty();
+            MutableMap<String, Integer> allRollbackSites = Maps.mutable.empty();
 
             // Compile each module in dependency order
             for (Module module : modules)
@@ -243,6 +244,7 @@ public class PureModel
                     rollbackTotal += s.inferenceRollbackCount();
                     candidateTotal += s.candidateEvaluationCount();
                     allElementStats.putAll(s.elementStatistics());
+                    s.rollbackSites().forEachKeyValue((k, v) -> allRollbackSites.merge(k, v, Integer::sum));
                 }
             }
 
@@ -254,7 +256,7 @@ public class PureModel
             CompilationStatistics aggregated = new CompilationStatistics(
                     totalDuration, parsingTotal, firstPassTotal, secondPassTotal, thirdPassTotal,
                     elementTotal, sourceFileTotal, memoryDeltaTotal, rollbackTotal, candidateTotal,
-                    allElementStats);
+                    allElementStats, allRollbackSites);
             return new CompilationResult(List.of(), aggregated);
         }
         finally

@@ -14,3 +14,7 @@ Class pack::MyClass
 {
   <<AProfile.unknown>> value: Integer[1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

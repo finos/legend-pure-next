@@ -6,3 +6,7 @@ Class MyClass<T>
 {
 }
 native function pack::broken(x: MyClass<U>[1]): Any[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

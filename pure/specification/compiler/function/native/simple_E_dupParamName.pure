@@ -3,3 +3,7 @@ Duplicate parameter name 'x' in native function 'pack::broken_String_1__Integer_
 
 ###Pure
 native function pack::broken(x: String[1], x:Integer[1]): String[1];
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

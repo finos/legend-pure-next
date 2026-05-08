@@ -7,3 +7,10 @@ function test():Any[1]
 {
    ~name:x|'ok'
 }
+
+###CompilerStats
+inferenceRollbacks: 4
+candidateEvaluations: 1
+rollbackSites:
+  LAMBDA_DISPATCH = 2
+  PARAM_UNRESOLVED = 2

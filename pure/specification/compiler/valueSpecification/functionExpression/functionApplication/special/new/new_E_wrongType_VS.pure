@@ -6,3 +6,7 @@ function test::new::testNewWrongTypeVS(): Any[*]
 {
   ^meta::pure::functions::lang::KeyExpression(name = ^meta::pure::metamodel::valuespecification::AtomicValue(value='values', genericType=^meta::pure::metamodel::type::generics::UserDefinedGenericType(type=String), multiplicity=meta::pure::metamodel::multiplicity::PureOne), expression = 'hello');
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 9

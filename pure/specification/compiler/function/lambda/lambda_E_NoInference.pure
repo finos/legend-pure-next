@@ -6,3 +6,7 @@ function test::myTest():Any[*]
 {
     z|$x+$z;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

@@ -8,3 +8,11 @@ function test():Any[1]
 {
    test(~name:{p,f,r|'ok'});
 }
+
+###CompilerStats
+inferenceRollbacks: 10
+candidateEvaluations: 3
+rollbackSites:
+  PARAM_UNRESOLVED = 5
+  LAMBDA_DISPATCH = 4
+  REVERSE_MATCH_DISPATCH = 1

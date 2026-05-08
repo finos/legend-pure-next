@@ -13,3 +13,7 @@ Association pack::MyAssociation
 Class pack::ClassA
 {
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

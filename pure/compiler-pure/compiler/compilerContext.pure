@@ -91,6 +91,11 @@ Class meta::pure::compiler::CompilerContext
     inferenceRollbacks : Integer[1];
     candidateEvaluations : Integer[1];
 
+    // Diagnostic: per-call-site rollback counts, keyed by tag matching Java's
+    // FunctionApplicationResolver.<method>:<line> form so a Java-vs-Pure histogram
+    // diff is callable without renaming.
+    rollbackSites : Map<String, Integer>[1];
+
     // Per-element timing collected across pass 2 and pass 3. Each element compile
     // appends an ElementStatistics with wall time (millis) and the rollback /
     // candidate deltas for that element. compileDir aggregates entries with the
@@ -130,7 +135,8 @@ function meta::pure::compiler::newPlainCompilerContext():CompilerContext[1]
         lambdaResolutionCache=newMap([]->cast(@Pair<String, CachedLambdaOutcome>)),
         lambdaFailureCache=newMap([]->cast(@Pair<String, Boolean>)),
         inferenceRollbacks=0,
-        candidateEvaluations=0
+        candidateEvaluations=0,
+        rollbackSites=newMap([]->cast(@Pair<String, Integer>))
     );
     // Seed the cache with universe types so {@code linearize} can be called
     //   straight away — every helper-test that constructs a plain context
@@ -143,14 +149,32 @@ function meta::pure::compiler::errorCheckpoint(context:CompilerContext[1]):Integ
     $context.errors->size();
 }
 
-function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1]):CompilerContext[1]
+function meta::pure::compiler::rollbackErrors(context:CompilerContext[1], checkpoint:Integer[1], site:String[1]):CompilerContext[1]
 {
     // Mirrors Java CompilationContext.rollbackErrorsTo: bump inferenceRollbacks
     // alongside the error-stack truncation so the Pure compiler's telemetry
     // tracks the same speculative-compile-discarded count as the Java bootstrap.
+    // The {@code site} tag is bucketed into rollbackSites so per-call-site
+    // counts can be diffed against Java's StackWalker-derived histogram.
+    let prev = $context.rollbackSites->get($site);
+    let newCount = if($prev->isEmpty(), | 1, | $prev->toOne() + 1);
     ^$context(
         errors = $context.errors->take($checkpoint),
-        inferenceRollbacks = $context.inferenceRollbacks + 1
+        inferenceRollbacks = $context.inferenceRollbacks + 1,
+        rollbackSites = $context.rollbackSites->put($site, $newCount)
+    );
+}
+
+// Bump-only variant for the two direct-bump sites in resolveFunctionApplication
+// (multi-candidate pre-resolve, candidate-failed) where the error stack is
+// either separately rolled back or doesn't need truncation.
+function meta::pure::compiler::bumpRollbackSite(context:CompilerContext[1], site:String[1]):CompilerContext[1]
+{
+    let prev = $context.rollbackSites->get($site);
+    let newCount = if($prev->isEmpty(), | 1, | $prev->toOne() + 1);
+    ^$context(
+        inferenceRollbacks = $context.inferenceRollbacks + 1,
+        rollbackSites = $context.rollbackSites->put($site, $newCount)
     );
 }
 
@@ -180,6 +204,7 @@ Class meta::pure::compiler::CompilationStatistics
     inferenceRollbackCount : Integer[1];
     candidateEvaluationCount : Integer[1];
     elementStatistics : ElementStatistics[*];
+    rollbackSites : Map<String, Integer>[1];
 }
 
 Class meta::pure::compiler::CompilationResult

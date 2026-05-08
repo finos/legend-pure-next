@@ -45,13 +45,14 @@ public record CompilationStatistics(
         long memoryDeltaBytes,
         int inferenceRollbackCount,
         int candidateEvaluationCount,
-        MutableMap<String, ElementStatistics> elementStatistics)
+        MutableMap<String, ElementStatistics> elementStatistics,
+        MutableMap<String, Integer> rollbackSites)
 {
     /**
      * An empty statistics instance for modules that don't collect stats (e.g. PDBModule).
      */
     public static final CompilationStatistics EMPTY = new CompilationStatistics(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Maps.mutable.empty());
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Maps.mutable.empty(), Maps.mutable.empty());
 
     /**
      * Return a human-readable summary of the compilation statistics.
@@ -84,6 +85,13 @@ public record CompilationStatistics(
             sorted.take(10).forEach(e ->
                     sb.append(String.format("      %8.2f ms  %-20s  rollbacks=%-6d candidates=%-6d  %s\n",
                             e.totalMillis(), e.elementType(), e.inferenceRollbacks(), e.candidateEvaluations(), e.elementPath())));
+        }
+        if (!rollbackSites.isEmpty())
+        {
+            sb.append("    Rollback sites (count desc)\n");
+            MutableList<java.util.Map.Entry<String, Integer>> entries = Lists.mutable.withAll(rollbackSites.entrySet());
+            entries.sortThisBy(e -> -e.getValue());
+            entries.forEach(e -> sb.append(String.format("      %8d  %s\n", e.getValue(), e.getKey())));
         }
         return sb.toString();
     }

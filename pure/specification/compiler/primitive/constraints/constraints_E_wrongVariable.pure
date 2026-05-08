@@ -8,3 +8,9 @@ Primitive protocol::Varchar(x: Integer[1]) extends String
 ]
 
 native function _length(str:String[1]):Integer[1];
+
+###CompilerStats
+inferenceRollbacks: 17
+candidateEvaluations: 16
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

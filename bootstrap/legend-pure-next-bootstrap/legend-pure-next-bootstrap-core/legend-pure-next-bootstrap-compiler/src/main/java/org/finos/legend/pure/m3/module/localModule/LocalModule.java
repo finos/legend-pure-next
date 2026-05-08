@@ -305,7 +305,8 @@ public class LocalModule implements Module
                 memAfter - memBefore,
                 compilationContext.inferenceRollbackCount(),
                 compilationContext.candidateEvaluationCount(),
-                elementStats);
+                elementStats,
+                compilationContext.rollbackSites());
 
         List<CompilationError> errors = compilationContext.errors().collect(
                 e -> new CompilationError(e.formatMessage(), e.sourceInformation())).toList();

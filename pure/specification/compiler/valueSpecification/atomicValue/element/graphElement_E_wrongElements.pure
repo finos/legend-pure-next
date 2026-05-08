@@ -13,3 +13,6 @@ function test():Any[*]
     ]
 }
 
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

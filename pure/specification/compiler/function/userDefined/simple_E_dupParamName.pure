@@ -6,3 +6,9 @@ function test::greet(name: String[1], name:String[1]): String[1]
 {
   'Hello ' + $name;
 }
+
+###CompilerStats
+inferenceRollbacks: 5
+candidateEvaluations: 5
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1

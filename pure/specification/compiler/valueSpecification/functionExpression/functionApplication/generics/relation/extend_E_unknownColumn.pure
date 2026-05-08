@@ -12,3 +12,11 @@ function ftest(x:Relation<(legal:String[1], other:Integer[0..1])>[1]):Any[*]
 native function over<T>():Window<T>[1];
 native function extend<T,R>(r:Relation<T>[1], window:Window<T>[1], f:FuncColSpec<{Relation<T>[1],Window<T>[1],T[1]->Any[0..1]},R>[1]):Relation<T+R>[1];
 native function lag<T>(w:Relation<T>[1],r:T[1]):T[0..1];
+
+###CompilerStats
+inferenceRollbacks: 21
+candidateEvaluations: 8
+rollbackSites:
+  PARAM_UNRESOLVED = 10
+  LAMBDA_DISPATCH = 8
+  REVERSE_MATCH_DISPATCH = 3

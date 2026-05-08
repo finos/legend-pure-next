@@ -13,3 +13,7 @@ Class test::copy::Holder
   name: String[1];
   value: Integer[0..1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 6

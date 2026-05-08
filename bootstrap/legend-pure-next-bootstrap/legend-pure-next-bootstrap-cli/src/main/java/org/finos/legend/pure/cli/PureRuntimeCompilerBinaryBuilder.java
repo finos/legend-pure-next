@@ -138,6 +138,7 @@ public final class PureRuntimeCompilerBinaryBuilder
                 .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
                 .withParserExtensions(List.of(
                         new org.finos.legend.pure.m3.extensions.compiledgraph.CompiledGraphLanguageExtension(),
+                        new org.finos.legend.pure.m3.extensions.compilerstats.CompilerStatsLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 

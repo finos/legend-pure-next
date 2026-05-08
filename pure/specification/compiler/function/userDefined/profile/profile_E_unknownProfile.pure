@@ -14,3 +14,7 @@ Profile pack::AProfile
   stereotypes: [flag];
   tags: [tag1];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

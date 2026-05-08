@@ -23,4 +23,8 @@ function test::testChainedAutomap():Any[*]
     [$p1, $p2].address.name;
 }
 
-
+###CompilerStats
+inferenceRollbacks: 5
+candidateEvaluations: 13
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 2

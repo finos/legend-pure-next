@@ -6,3 +6,7 @@ function test():Relation<(name:String[1])>[1]
 {
    @Relation<(name:String[*])>;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

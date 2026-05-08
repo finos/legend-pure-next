@@ -1,0 +1,297 @@
+###Pure
+// Distilled from legend-pure-next/pure/language/java/pure/metamodel_factories.pure ::inferImports.
+// Reproduces the structural shape that makes that function the dominant pass-3 cost for the
+// Pure compiler on Truffle (~60% of total compile time on the metamodel-factories build) without
+// depending on the language/java metamodel — uses self-contained classes and core stdlib only so
+// it can stand alone as a parity test.
+//
+// The cost driver is the wide fluent chain
+//   `->concatenate(...)->concatenate(...)->...->filter(lambda)->exists(lambda)`
+// over heterogeneous property types (Field/Method/Constructor), where each chain link's
+// type-parameter binding depends on the resolved type of the previous link, and the inner
+// lambdas use `removeDuplicatesBy` / `filter` / `exists` overloads that drive the multi-candidate
+// resolution path. This is the same shape that produced 21 candidate-failed rollbacks on Java
+// and 0 on Pure-on-Truffle while both still produce identical compiled graphs — i.e. exercises
+// the divergent rollback distribution we want to track in regression.
+import test::factory::*;
+
+Class test::factory::TestType
+{
+    pkg : String[1];
+    name : String[1];
+}
+
+Class test::factory::TestField
+{
+    name : String[1];
+    fieldType : TestType[1];
+    annotations : TestType[*];
+}
+
+Class test::factory::TestMethod
+{
+    name : String[1];
+    returnType : TestType[1];
+    paramTypes : TestType[*];
+    annotations : TestType[*];
+}
+
+Class test::factory::TestConstructor
+{
+    paramTypes : TestType[*];
+    annotations : TestType[*];
+}
+
+Class test::factory::TestClass
+{
+    pkg : String[1];
+    name : String[1];
+    superType : TestType[0..1];
+    interfaces : TestType[*];
+    fields : TestField[*];
+    methods : TestMethod[*];
+    constructors : TestConstructor[*];
+    annotations : TestType[*];
+}
+
+function test::factory::qualifiedName(t : TestType[1]) : String[1]
+{
+    $t.pkg + '::' + $t.name
+}
+
+function test::factory::collectAnnotationTypes(c : TestClass[1]) : TestType[*]
+{
+    $c.annotations
+        ->concatenate($c.fields.annotations)
+        ->concatenate($c.methods.annotations)
+        ->concatenate($c.constructors.annotations)
+}
+
+function test::factory::collectStructuralTypes(c : TestClass[1]) : TestType[*]
+{
+    $c.interfaces
+        ->concatenate(if($c.superType->isEmpty(), | [], | $c.superType->toOne()))
+        ->concatenate($c.fields.fieldType)
+        ->concatenate($c.methods.returnType)
+        ->concatenate($c.methods.paramTypes)
+        ->concatenate($c.constructors.paramTypes)
+}
+
+function test::factory::inferImportsLike(c : TestClass[1]) : String[*]
+{
+    let annotationsTypes = collectAnnotationTypes($c);
+    let structuralTypes = collectStructuralTypes($c);
+    let allTypes = $structuralTypes
+                       ->concatenate($annotationsTypes)
+                       ->removeDuplicatesBy(t | qualifiedName($t));
+    let inSamePackage = $allTypes->filter(t | $t.pkg == $c.pkg);
+    let toImport = $allTypes->filter(t | !$inSamePackage->exists(s | qualifiedName($s) == qualifiedName($t)));
+    $toImport->map(t | qualifiedName($t))->sort();
+}
+
+###CompiledGraph
+class test::factory::TestType extends Any  ~Class<test::factory::TestType>  @18:1-22:1
+  property pkg :@String@[1]  ~Property<test::factory::TestType, @String@|1>
+  property name :@String@[1]  ~Property<test::factory::TestType, @String@|1>
+
+class test::factory::TestField extends Any  ~Class<test::factory::TestField>  @24:1-29:1
+  property name :@String@[1]  ~Property<test::factory::TestField, @String@|1>
+  property fieldType :test::factory::TestType[1]  ~Property<test::factory::TestField, test::factory::TestType|1>
+  property annotations :test::factory::TestType[*]  ~Property<test::factory::TestField, test::factory::TestType|*>
+
+class test::factory::TestMethod extends Any  ~Class<test::factory::TestMethod>  @31:1-37:1
+  property name :@String@[1]  ~Property<test::factory::TestMethod, @String@|1>
+  property returnType :test::factory::TestType[1]  ~Property<test::factory::TestMethod, test::factory::TestType|1>
+  property paramTypes :test::factory::TestType[*]  ~Property<test::factory::TestMethod, test::factory::TestType|*>
+  property annotations :test::factory::TestType[*]  ~Property<test::factory::TestMethod, test::factory::TestType|*>
+
+class test::factory::TestConstructor extends Any  ~Class<test::factory::TestConstructor>  @39:1-43:1
+  property paramTypes :test::factory::TestType[*]  ~Property<test::factory::TestConstructor, test::factory::TestType|*>
+  property annotations :test::factory::TestType[*]  ~Property<test::factory::TestConstructor, test::factory::TestType|*>
+
+class test::factory::TestClass extends Any  ~Class<test::factory::TestClass>  @45:1-55:1
+  property pkg :@String@[1]  ~Property<test::factory::TestClass, @String@|1>
+  property name :@String@[1]  ~Property<test::factory::TestClass, @String@|1>
+  property superType :test::factory::TestType[0..1]  ~Property<test::factory::TestClass, test::factory::TestType|0..1>
+  property interfaces :test::factory::TestType[*]  ~Property<test::factory::TestClass, test::factory::TestType|*>
+  property fields :test::factory::TestField[*]  ~Property<test::factory::TestClass, test::factory::TestField|*>
+  property methods :test::factory::TestMethod[*]  ~Property<test::factory::TestClass, test::factory::TestMethod|*>
+  property constructors :test::factory::TestConstructor[*]  ~Property<test::factory::TestClass, test::factory::TestConstructor|*>
+  property annotations :test::factory::TestType[*]  ~Property<test::factory::TestClass, test::factory::TestType|*>
+
+function test::factory::qualifiedName_TestType_1__String_1_(t:test::factory::TestType[1]):@String@[1]  ~UserDefinedFunction<{test::factory::TestType[1]->@String@[1]}>
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:12-59:27
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:12-59:27
+      DotApplication test::factory::TestType.pkg :#String##[1]#  ~@DotApplication@  @59:7-59:10
+        Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @59:5-59:6
+      AtomicValue  '::' :@String@[1]  ~@AtomicValue@  @59:14-59:17
+    DotApplication test::factory::TestType.name :#String##[1]#  ~@DotApplication@  @59:23-59:27
+      Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @59:21-59:22
+
+function test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_(c:test::factory::TestClass[1]):test::factory::TestType[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->test::factory::TestType[*]}>
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @65:9-67:50
+    typeParam T -> #test::factory::TestType#
+    ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @65:9-67:50
+      typeParam T -> #test::factory::TestType#
+      ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @65:9-67:50
+        typeParam T -> #test::factory::TestType#
+        DotApplication test::factory::TestClass.annotations :#test::factory::TestType##[*]#  ~@DotApplication@  @64:7-64:18
+          Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @64:5-64:6
+        FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @65:32-65:43
+          typeParam T -> #test::factory::TestField#
+          typeParam V -> #test::factory::TestType#
+          DotApplication test::factory::TestClass.fields :#test::factory::TestField##[*]#  ~@DotApplication@  @65:25-65:31
+            Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @65:23-65:24
+          Lambda(v_automap:#test::factory::TestField#[1]) :#LambdaFunction<#{#test::factory::TestField#[1]->#test::factory::TestType##[*]#}#>#[1]  ~@AtomicValue@
+            DotApplication test::factory::TestField.annotations :#test::factory::TestType##[*]#  ~@DotApplication@  @65:32-65:43
+              Variable v_automap :#test::factory::TestField##[1]#  ~@VariableExpression@
+      FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @66:33-66:44
+        typeParam T -> #test::factory::TestMethod#
+        typeParam V -> #test::factory::TestType#
+        DotApplication test::factory::TestClass.methods :#test::factory::TestMethod##[*]#  ~@DotApplication@  @66:25-66:32
+          Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @66:23-66:24
+        Lambda(v_automap:#test::factory::TestMethod#[1]) :#LambdaFunction<#{#test::factory::TestMethod#[1]->#test::factory::TestType##[*]#}#>#[1]  ~@AtomicValue@
+          DotApplication test::factory::TestMethod.annotations :#test::factory::TestType##[*]#  ~@DotApplication@  @66:33-66:44
+            Variable v_automap :#test::factory::TestMethod##[1]#  ~@VariableExpression@
+    FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @67:38-67:49
+      typeParam T -> #test::factory::TestConstructor#
+      typeParam V -> #test::factory::TestType#
+      DotApplication test::factory::TestClass.constructors :#test::factory::TestConstructor##[*]#  ~@DotApplication@  @67:25-67:37
+        Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @67:23-67:24
+      Lambda(v_automap:#test::factory::TestConstructor#[1]) :#LambdaFunction<#{#test::factory::TestConstructor#[1]->#test::factory::TestType##[*]#}#>#[1]  ~@AtomicValue@
+        DotApplication test::factory::TestConstructor.annotations :#test::factory::TestType##[*]#  ~@DotApplication@  @67:38-67:49
+          Variable v_automap :#test::factory::TestConstructor##[1]#  ~@VariableExpression@
+
+function test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_(c:test::factory::TestClass[1]):test::factory::TestType[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->test::factory::TestType[*]}>
+  ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @73:9-77:49
+    typeParam T -> #test::factory::TestType#
+    ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @73:9-77:49
+      typeParam T -> #test::factory::TestType#
+      ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @73:9-77:49
+        typeParam T -> #test::factory::TestType#
+        ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @73:9-77:49
+          typeParam T -> #test::factory::TestType#
+          ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @73:9-77:49
+            typeParam T -> #test::factory::TestType#
+            DotApplication test::factory::TestClass.interfaces :#test::factory::TestType##[*]#  ~@DotApplication@  @72:7-72:17
+              Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @72:5-72:6
+            FunctionInvocation if_Boolean_1__Function_1__Function_1__T_m_ :#test::factory::TestType##[0..1]#  ~@FunctionInvocation@  @73:23-73:80
+              typeParam T -> #test::factory::TestType#
+              mulParam m -> #[0..1]#
+              ArrowInvocation isEmpty_Any_$0_1$__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @73:38-73:48
+                DotApplication test::factory::TestClass.superType :#test::factory::TestType##[0..1]#  ~@DotApplication@  @73:28-73:37
+                  Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @73:26-73:27
+              Lambda :#LambdaFunction<#{->#Nil#[0]}#>#[1]  ~@AtomicValue@  @73:51-73:54
+                Collection :#Nil#[0]  ~@Collection@  @73:53-73:54
+              Lambda :#LambdaFunction<#{->#test::factory::TestType##[1]#}#>#[1]  ~@AtomicValue@  @73:57-73:79
+                openVar c :#test::factory::TestClass##[1]#
+                ArrowInvocation toOne_T_MANY__T_1_ :#test::factory::TestType##[1]#  ~@ArrowInvocation@  @73:71-73:79
+                  typeParam T -> #test::factory::TestType#
+                  DotApplication test::factory::TestClass.superType :#test::factory::TestType##[0..1]#  ~@DotApplication@  @73:61-73:70
+                    Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @73:59-73:60
+          FunctionInvocation map_T_m__Function_1__V_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @74:32-74:41
+            typeParam T -> #test::factory::TestField#
+            typeParam V -> #test::factory::TestType#
+            mulParam m -> #[*]#
+            DotApplication test::factory::TestClass.fields :#test::factory::TestField##[*]#  ~@DotApplication@  @74:25-74:31
+              Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @74:23-74:24
+            Lambda(v_automap:#test::factory::TestField#[1]) :#LambdaFunction<#{#test::factory::TestField#[1]->#test::factory::TestType##[1]#}#>#[1]  ~@AtomicValue@
+              DotApplication test::factory::TestField.fieldType :#test::factory::TestType##[1]#  ~@DotApplication@  @74:32-74:41
+                Variable v_automap :#test::factory::TestField##[1]#  ~@VariableExpression@
+        FunctionInvocation map_T_m__Function_1__V_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @75:33-75:43
+          typeParam T -> #test::factory::TestMethod#
+          typeParam V -> #test::factory::TestType#
+          mulParam m -> #[*]#
+          DotApplication test::factory::TestClass.methods :#test::factory::TestMethod##[*]#  ~@DotApplication@  @75:25-75:32
+            Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @75:23-75:24
+          Lambda(v_automap:#test::factory::TestMethod#[1]) :#LambdaFunction<#{#test::factory::TestMethod#[1]->#test::factory::TestType##[1]#}#>#[1]  ~@AtomicValue@
+            DotApplication test::factory::TestMethod.returnType :#test::factory::TestType##[1]#  ~@DotApplication@  @75:33-75:43
+              Variable v_automap :#test::factory::TestMethod##[1]#  ~@VariableExpression@
+      FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @76:33-76:43
+        typeParam T -> #test::factory::TestMethod#
+        typeParam V -> #test::factory::TestType#
+        DotApplication test::factory::TestClass.methods :#test::factory::TestMethod##[*]#  ~@DotApplication@  @76:25-76:32
+          Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @76:23-76:24
+        Lambda(v_automap:#test::factory::TestMethod#[1]) :#LambdaFunction<#{#test::factory::TestMethod#[1]->#test::factory::TestType##[*]#}#>#[1]  ~@AtomicValue@
+          DotApplication test::factory::TestMethod.paramTypes :#test::factory::TestType##[*]#  ~@DotApplication@  @76:33-76:43
+            Variable v_automap :#test::factory::TestMethod##[1]#  ~@VariableExpression@
+    FunctionInvocation map_T_MANY__Function_1__V_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @77:38-77:48
+      typeParam T -> #test::factory::TestConstructor#
+      typeParam V -> #test::factory::TestType#
+      DotApplication test::factory::TestClass.constructors :#test::factory::TestConstructor##[*]#  ~@DotApplication@  @77:25-77:37
+        Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @77:23-77:24
+      Lambda(v_automap:#test::factory::TestConstructor#[1]) :#LambdaFunction<#{#test::factory::TestConstructor#[1]->#test::factory::TestType##[*]#}#>#[1]  ~@AtomicValue@
+        DotApplication test::factory::TestConstructor.paramTypes :#test::factory::TestType##[*]#  ~@DotApplication@  @77:38-77:48
+          Variable v_automap :#test::factory::TestConstructor##[1]#  ~@VariableExpression@
+
+function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::factory::TestClass[1]):@String@[*]  ~UserDefinedFunction<{test::factory::TestClass[1]->@String@[*]}>
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @82:5-82:53
+    typeParam T -> #test::factory::TestType#
+    mulParam m -> #[*]#
+    AtomicValue  'annotationsTypes' :@String@[1]  ~@AtomicValue@  @82:9-82:24
+    FunctionInvocation test::factory::collectAnnotationTypes_TestClass_1__TestType_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @82:28-82:53
+      Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @82:51-82:52
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @83:5-83:52
+    typeParam T -> #test::factory::TestType#
+    mulParam m -> #[*]#
+    AtomicValue  'structuralTypes' :@String@[1]  ~@AtomicValue@  @83:9-83:23
+    FunctionInvocation test::factory::collectStructuralTypes_TestClass_1__TestType_MANY_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @83:27-83:52
+      Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @83:50-83:51
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @84:5-86:66
+    typeParam T -> #test::factory::TestType#
+    mulParam m -> #[*]#
+    AtomicValue  'allTypes' :@String@[1]  ~@AtomicValue@  @84:9-84:16
+    ArrowInvocation removeDuplicatesBy_T_MANY__Function_1__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @85:24-86:66
+      typeParam T -> #test::factory::TestType#
+      ArrowInvocation concatenate_T_MANY__T_MANY__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @85:24-86:66
+        typeParam T -> #test::factory::TestType#
+        Variable structuralTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @84:20-84:35
+        Variable annotationsTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @85:38-85:54
+      Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @86:45-86:65
+        FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @86:49-86:65
+          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @86:63-86:64
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @87:5-87:63
+    typeParam T -> #test::factory::TestType#
+    mulParam m -> #[*]#
+    AtomicValue  'inSamePackage' :@String@[1]  ~@AtomicValue@  @87:9-87:21
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @87:34-87:63
+      typeParam T -> #test::factory::TestType#
+      Variable allTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @87:25-87:33
+      Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @87:43-87:62
+        openVar c :#test::factory::TestClass##[1]#
+        FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @87:54-87:62
+          DotApplication test::factory::TestType.pkg :#String##[1]#  ~@DotApplication@  @87:49-87:52
+            Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @87:47-87:48
+          DotApplication test::factory::TestClass.pkg :#String##[1]#  ~@DotApplication@  @87:59-87:62
+            Variable c :#test::factory::TestClass##[1]#  ~@VariableExpression@  @87:57-87:58
+  FunctionInvocation letFunction_String_1__T_m__T_m_ :#test::factory::TestType##[*]#  ~@FunctionInvocation@  @88:5-88:109
+    typeParam T -> #test::factory::TestType#
+    mulParam m -> #[*]#
+    AtomicValue  'toImport' :@String@[1]  ~@AtomicValue@  @88:9-88:16
+    ArrowInvocation filter_T_MANY__Function_1__T_MANY_ :#test::factory::TestType##[*]#  ~@ArrowInvocation@  @88:29-88:109
+      typeParam T -> #test::factory::TestType#
+      Variable allTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @88:20-88:28
+      Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @88:38-88:108
+        openVar inSamePackage :#test::factory::TestType##[*]#
+        FunctionInvocation not_Boolean_1__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @88:42-88:108
+          ArrowInvocation exists_T_MANY__Function_1__Boolean_1_ :#Boolean##[1]#  ~@ArrowInvocation@  @88:57-88:108
+            typeParam T -> #test::factory::TestType#
+            Variable inSamePackage :#test::factory::TestType##[*]#  ~@VariableExpression@  @88:43-88:56
+            Lambda(s:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @88:66-88:107
+              openVar t :#test::factory::TestType##[1]#
+              FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @88:88-88:107
+                FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @88:70-88:86
+                  Variable s :#test::factory::TestType##[1]#  ~@VariableExpression@  @88:84-88:85
+                FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @88:91-88:107
+                  Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @88:105-88:106
+  ArrowInvocation sort_T_m__T_m_ :#String##[*]#  ~@ArrowInvocation@  @89:14-89:49
+    typeParam T -> #String#
+    mulParam m -> #[*]#
+    ArrowInvocation map_T_m__Function_1__V_m_ :#String##[*]#  ~@ArrowInvocation@  @89:14-89:49
+      typeParam T -> #test::factory::TestType#
+      typeParam V -> #String#
+      mulParam m -> #[*]#
+      Variable toImport :#test::factory::TestType##[*]#  ~@VariableExpression@  @89:5-89:13
+      Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#String##[1]#}#>#[1]  ~@AtomicValue@  @89:20-89:40
+        FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @89:24-89:40
+          Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @89:38-89:39

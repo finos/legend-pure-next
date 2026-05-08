@@ -23,3 +23,7 @@ Association pack::AnimalPairLink
   owner: Animal[1];
   pets: Pair<Dog, String>[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

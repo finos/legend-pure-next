@@ -17,16 +17,65 @@ import meta::pure::functions::collection::*;
 import meta::pure::functions::string::*;
 import meta::pure::compiler::test::printer::*;
 
-// Harness
+// Harness — single parse + single compile per test file, with all section
+// assertions running over the shared result so the test suite's wall time
+// stays linear in the number of tests rather than (#tests × #sections).
+//
+// A {@code .pure} file under the spec tree MUST carry a ###Pure section,
+// otherwise it's a malformed test (or a misplaced fixture) and the harness
+// fails loudly. Silently passing such files hid divergences in earlier
+// iterations of this work.
+//
+// Parser support: ###CompiledGraph and ###CompilerStats are recognized via
+// registered language extensions (CompiledGraphLanguageExtension /
+// CompilerStatsLanguageExtension on bootstrap; the corresponding Truffle
+// extensions on the Truffle path). No string-substring extraction needed —
+// each section parses into a typed grammar element.
 function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph(content:String[1], sourceId:String[1]):Boolean[1]
 {
-    if([pair(| contains($content, '###' + 'Error'), | assertCompilationError($content, $sourceId)),
-        pair(| contains($content, '###' + 'CompiledGraph'), | assertCompiledGraphContent($content, $sourceId))],
-       | true
+    if(!contains($content, '###' + 'Pure'),
+        | assert(false, 'Test file has no ###Pure section: ' + $sourceId);,
+        | // Blank out lines preceding ###Pure (mirrors the original
+          // assertCompilationError fixup) so ###Error blocks don't get
+          // parsed as Pure code while line numbers stay aligned with
+          // ###CompiledGraph references.
+          let pureStart = $content->indexOf('###' + 'Pure');
+          let preparedContent = if($pureStart > 0,
+              | let prefix = $content->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n');
+                $prefix + $content->substring($pureStart);,
+              | $content
+          );
+          let parsedFile = meta::pure::functions::meta::parse($sourceId, $preparedContent);
+          let result = meta::pure::compiler::compile($parsedFile);
+
+          let errorCheck = if(contains($content, '###' + 'Error'),
+                              | assertCompilationErrorOnResult($content, $result, $sourceId);,
+                              | true);
+          let graphCheck = if(contains($content, '###' + 'CompiledGraph'),
+                              | assertCompiledGraphOnResult($parsedFile, $result, $sourceId);,
+                              | true);
+          let statsCheck = if(contains($content, '###' + 'CompilerStats'),
+                              | assertCompilerStatsOnResult($parsedFile, $result, $sourceId);,
+                              | true);
+          $errorCheck && $graphCheck && $statsCheck;
     );
 }
 
+// Back-compat shims for any external callers that still invoke the old
+// per-section entry points. Each one re-runs the shared parse+compile path
+// internally — the perf benefit only materialises when callers route through
+// {@code assertCompiledGraph}.
 function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    assertCompiledGraph($content, $sourceId);
+}
+
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    assertCompiledGraph($content, $sourceId);
+}
+
+function meta::pure::compiler::test::assertCompilationErrorOnResult(content:String[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
     let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
     // Mirrors Java: each compiler error is a single (possibly multi-line) message.
@@ -34,37 +83,24 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationEr
     // suggestion candidates beneath a "function not found" message are part of
     // the same error, not separate errors.
     let expectedText = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim();
-    let pureStart = $content->indexOf('###' + 'Pure');
-    let errorLines = $content->substring(0, $pureStart)->split('\n');
-    let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
-    let pureContent = $blankedPrefix + $content->substring($pureStart);
-    let parsedFile = meta::pure::functions::meta::parse($sourceId, $pureContent);
-    let result = meta::pure::compiler::compile($parsedFile);
-    assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
+    assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred for ' + $sourceId);
     let actualText = $result.errors->joinStrings('\n');
     if($expectedText != $actualText, |println('EXPECTED:\n' + $expectedText), |[]);
     if($expectedText != $actualText, |println('ACTUAL:\n' + $actualText), |[]);
     assertEquals($expectedText, $actualText);
 }
 
-function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]
+function meta::pure::compiler::test::assertCompiledGraphOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
 {
-    let parsedFile = meta::pure::functions::meta::parse($sourceId, $content);
-    let result = meta::pure::compiler::compile($parsedFile);
-
-    // Compilation must produce zero errors. A compiler bug that still emits
-    // partial elements would otherwise pass the printed-graph comparison
-    // silently. Mirrors the bootstrap-side assertions in
-    // CompilerCompiledGraphTest and PdbRoundTripTest.
+    // Compilation must produce zero errors when ###CompiledGraph is asserted.
+    // A compiler bug that still emits partial elements would otherwise pass
+    // the printed-graph comparison silently.
     assert($result.errors->isEmpty(), 'Compilation errors for ' + $sourceId + ':\n  ' + $result.errors->joinStrings('\n  '));
 
     let allElements = $parsedFile.sections.elements;
     let expectedGraphElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompiledGraph))->head();
-    if($expectedGraphElement->isEmpty() && contains($content, '###CompiledGraph'),
+    if($expectedGraphElement->isEmpty(),
        | assert(false, 'Test file contains ###CompiledGraph section but CompiledGraph element was not found in parsed output for ' + $sourceId);,
-       | []
-    );
-    if($expectedGraphElement->isNotEmpty(),
        | let expectedGraphValue = $expectedGraphElement->toOne()->cast(@meta::pure::compiler::test::CompiledGraph).value;
          let actualGraph = meta::pure::compiler::test::printer::printCompiledGraph($result.elements);
 
@@ -72,7 +108,108 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
          let cleanedActual = $actualGraph->replace('\r', '')->split('\n')->map(s | $s->trim())->joinStrings('\n')->trim();
          if($cleanedExpected != $cleanedActual, | println('FAIL:' + $sourceId);, | []);
          assertEquals($cleanedExpected, $cleanedActual);
-         true;,
-       | true
+         true;
     );
+}
+
+function meta::pure::compiler::test::assertCompilerStatsOnResult(parsedFile:meta::pure::protocol::PureFile[1], result:meta::pure::compiler::CompilationResult[1], sourceId:String[1]):Boolean[1]
+{
+    // Pull expected text from the parsed ###CompilerStats element. Routed
+    // through the registered parser extension (CompilerStatsLanguageExtension
+    // / TruffleCompilerStatsLanguageExtension), so no string substring hack.
+    let allElements = $parsedFile.sections.elements;
+    let statsElement = $allElements->filter(e | $e->instanceOf(meta::pure::compiler::test::CompilerStats))->head();
+    assert($statsElement->isNotEmpty(), '###CompilerStats parsed element not found for ' + $sourceId);
+    let expectedRaw = $statsElement->toOne()->cast(@meta::pure::compiler::test::CompilerStats).value;
+    let expected = $expectedRaw->split('\n')->map(s | $s->trim())->filter(s | $s != '')->joinStrings('\n');
+
+    assert($result.statistics->isNotEmpty(), 'CompilationResult missing statistics for ' + $sourceId);
+    let actualRaw = printCompilerStatsForTest($result.statistics->toOne());
+    let actual = $actualRaw->split('\n')->map(s | $s->trim())->filter(s | $s != '')->joinStrings('\n');
+    if($expected != $actual, | println('FAIL CompilerStats:' + $sourceId), | []);
+    assertEquals($expected, $actual);
+}
+
+// Bulk dump of CompilerStats for every {@code .pure} test file under a directory.
+// Used to bootstrap or refresh ###CompilerStats sections across the spec tree.
+// Emits {@code @@@STATS_BEGIN <fullPath>} ... {@code @@@STATS_END} blocks to
+// stdout for an external post-processor to inject back into the source files.
+//
+// Includes ###Error tests: the resolver telemetry is captured even when the
+// compile itself produces errors, so the section reflects the work attempted
+// before each candidate's error count tripped the rollback. This is exactly
+// the behavior we want to lock in — error compiles ARE part of the resolver
+// shape we're tracking.
+function <<test.TestDependency>> meta::pure::compiler::test::dumpAllCompilerStats(testDir:String[1]):String[1]
+{
+    let files = meta::pure::functions::io::directoryTree($testDir)
+        ->filter(f | $f->endsWith('.pure'));
+    let total = $files->size();
+    let prefixLen = $testDir->length() + 1;
+    range(0, $total)->map(i |
+        let f = $files->at($i);
+        let name = $f->substring($prefixLen, $f->length() - 5);
+        let raw = meta::pure::functions::io::readFile($f);
+        println('@@@STATS_BEGIN ' + $f);
+        if(!contains($raw, '###' + 'Pure'),
+            | // Surface these — a {@code .pure} file under the spec tree
+              // without a ###Pure section bypasses every assertion in
+              // {@code assertCompiledGraph} (the harness defaults to
+              // {@code true}). Either it's missing the marker by mistake,
+              // or it's a fixture that should be relocated. We emit a
+              // FAIL block so the post-processor flags it instead of
+              // silently dropping it.
+              println('STATUS: FAIL_NO_PURE_SECTION'),
+            | // Pre-blank ###Error prefix lines (mirrors assertCompilationError's
+              // parse fixup). The ###CompilerStats section is parsed by the
+              // registered language extension — no strip needed.
+              let pureStart = $raw->indexOf('###' + 'Pure');
+              let prefix = $raw->substring(0, $pureStart)->split('\n')->map(l | '')->joinStrings('\n');
+              let toCompile = $prefix + $raw->substring($pureStart);
+              let parsedFile = meta::pure::functions::meta::parse($name, $toCompile);
+              let result = meta::pure::compiler::compile($parsedFile);
+              let stats = if($result.statistics->isEmpty(),
+                  | 'inferenceRollbacks: 0\ncandidateEvaluations: 0',
+                  | printCompilerStatsForTest($result.statistics->toOne())
+              );
+              println($stats);
+        );
+        println('@@@STATS_END');
+    );
+    'Dumped CompilerStats for ' + $total->toString() + ' files';
+}
+
+// Render the deterministic subset of CompilationStatistics — counts and the
+// rollback-site histogram, but not wall-clock timings — so a Java run and a
+// Pure run on the same source can be string-compared. Sites are emitted in
+// descending count order; ties broken by site name for determinism.
+function meta::pure::compiler::test::printCompilerStatsForTest(stats:meta::pure::compiler::CompilationStatistics[1]):String[1]
+{
+    let header = 'inferenceRollbacks: ' + $stats.inferenceRollbackCount->toString() + '\n'
+               + 'candidateEvaluations: ' + $stats.candidateEvaluationCount->toString();
+    let entries = $stats.rollbackSites->keyValues();
+    if($entries->isEmpty(),
+        | $header,
+        | let sorted = $entries->sort({a, b |
+              let cmp = $b.second - $a.second;
+              if($cmp != 0, | $cmp, | if($a.first < $b.first, | -1, | if($a.first > $b.first, | 1, | 0)));
+          });
+          let lines = $sorted->map(p | '  ' + $p.first + ' = ' + $p.second->toString())->joinStrings('\n');
+          $header + '\nrollbackSites:\n' + $lines;
+    );
+}
+
+// Assert that the resolver-telemetry section of the test file matches what the
+// compiler actually produced. Captures: total inferenceRollbacks, total
+// candidateEvaluations, and the per-call-site rollback histogram. Wall-clock
+// fields are deliberately excluded — non-deterministic across runs.
+//
+// The expected text is whatever follows the ###CompilerStats marker until EOF
+// (or the next ### section). Each line is trimmed and blank lines are dropped
+// before comparison so indentation is forgiving.
+// Back-compat shim. The single-pass entry point is {@code assertCompiledGraph};
+// this routes to it so older callers keep working.
+function <<test.TestDependency>> meta::pure::compiler::test::assertCompilerStats(content:String[1], sourceId:String[1]):Boolean[1]
+{
+    assertCompiledGraph($content, $sourceId);
 }

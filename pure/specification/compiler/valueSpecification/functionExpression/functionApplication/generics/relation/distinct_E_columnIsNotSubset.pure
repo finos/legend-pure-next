@@ -10,3 +10,9 @@ function f(x:Relation<(legal:String[1], other:Integer[0..1], yeah:Float[1])>[1])
 }
 
 native function distinct<X,T>(rel:Relation<T>[1], columns:ColSpecArray<X⊆T>[1]):Relation<X>[1];
+
+###CompilerStats
+inferenceRollbacks: 1
+candidateEvaluations: 3
+rollbackSites:
+  REVERSE_MATCH_DISPATCH = 1

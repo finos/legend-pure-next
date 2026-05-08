@@ -7,3 +7,7 @@ function test::new::testNew(): Any[*]
   let x = 1;
   let x = 'a';
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 2

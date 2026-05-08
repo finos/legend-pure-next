@@ -10,3 +10,7 @@ function pack::test(x: String[*]): String[1]
 {
   $x->doStuff();
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 1

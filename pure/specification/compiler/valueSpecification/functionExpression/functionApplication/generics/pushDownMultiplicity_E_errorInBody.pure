@@ -9,3 +9,11 @@ function test():Any[*]
 {
     f(['a','b'], g(t|$t->check()))
 }
+
+###CompilerStats
+inferenceRollbacks: 4
+candidateEvaluations: 4
+rollbackSites:
+  LAMBDA_DISPATCH = 2
+  PARAM_UNRESOLVED = 1
+  REVERSE_MATCH_DISPATCH = 1

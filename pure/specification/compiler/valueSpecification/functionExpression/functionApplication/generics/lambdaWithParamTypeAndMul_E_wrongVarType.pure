@@ -12,3 +12,7 @@ function test::tst():Boolean[1]
     ['a', 'b']->fl(x:Integer[1]|$x->sw('ok'));
     true;
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 2

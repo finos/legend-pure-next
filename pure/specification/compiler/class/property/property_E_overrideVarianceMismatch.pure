@@ -1,3 +1,7 @@
+###Error
+Property override variance mismatch for 'demo'. Overridden property has type 'Any[1]', but overriding property has type 'String[1]'. Simple property overrides must be strictly invariant in type and multiplicity. (at class/property/property_E_overrideVarianceMismatch 18:5-18:21)
+
+###Pure
 function test::myFunc():Any[*]
 {
     let x = ^test::SubClass(demo='a string');
@@ -13,5 +17,7 @@ Class test::SubClass extends test::SuperClass
 {
     demo : String[1];
 }
-###CompilerError
-Property override variance mismatch for 'demo'. Overridden property has type 'Any[1]', but overriding property has type 'String[1]'. Simple property overrides must be strictly invariant in type and multiplicity. (at property_E_overrideVarianceMismatch.pure 12:1-15:1)
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 3

@@ -19,3 +19,7 @@ Association pack::AnimalPairLink
   owner: Animal[1];
   pets: XPair<Unknown, String>[*];
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

@@ -9,3 +9,7 @@ function pack::test(a: Number[1], b: Number[1], c: Number[1]): Number[1]
 {
   $a->myPlus($b, $c);
 }
+
+###CompilerStats
+inferenceRollbacks: 0
+candidateEvaluations: 0

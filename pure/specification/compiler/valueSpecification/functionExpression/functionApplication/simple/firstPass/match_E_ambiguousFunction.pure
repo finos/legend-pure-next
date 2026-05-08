@@ -10,3 +10,9 @@ function pack::test(a: Number[1], b: Number[1]): Number[1]
 {
   $a->compute($b);
 }
+
+###CompilerStats
+inferenceRollbacks: 1
+candidateEvaluations: 1
+rollbackSites:
+  MULTI_CANDIDATE_PRE_RESOLVE = 1
