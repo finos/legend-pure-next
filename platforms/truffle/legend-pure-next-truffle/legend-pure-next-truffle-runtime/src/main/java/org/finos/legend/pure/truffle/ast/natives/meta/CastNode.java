@@ -57,20 +57,27 @@ public final class CastNode extends PureNode
     private static Object doCast(Object inputResult, Object targetResult, TruffleMetadataAccess resolver, RawLambdaCallNode constraintCallNode)
     {
 
-        // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder
+        // Resolve the target GenericType from the GenericTypeAndMultiplicityHolder.
+        // Hoist typeArguments() — was called 3 times on the same GT before
+        // (~22 JFR samples on the metamodel_factories.pure compile combined
+        // across the three sites).
         GenericType targetGT = null;
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType = null;
         if (targetResult instanceof GenericTypeAndMultiplicityHolder gtmh
-                && gtmh._genericType() != null
-                && org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gtmh._genericType()) != null
-                && org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gtmh._genericType()).size() > 0)
+                && gtmh._genericType() != null)
         {
-            Object rawTargetGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gtmh._genericType()).getBoxed(0);
-            if (rawTargetGT instanceof GenericType gt)
+            Object hoistedGT = gtmh._genericType();
+            org.finos.legend.pure.truffle.types.PureSequence hoistedTypeArgs =
+                    org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(hoistedGT);
+            if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
             {
-                targetGT = gt;
+                Object rawTargetGT = hoistedTypeArgs.getBoxed(0);
+                if (rawTargetGT instanceof GenericType gt)
+                {
+                    targetGT = gt;
+                }
+                targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
             }
-            targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
         }
 
         // Validate type compatibility for scalar values.

@@ -221,16 +221,35 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
     @Override
     public Object getElement(String path)
     {
+        // Cache: string-keyed lookups dominate the JFR for the
+        // metamodel_factories.pure compile (~40 samples on cumulative
+        // resolver.getElement paths). The result is stable for the
+        // registry's lifetime — once a module has registered an element,
+        // it's the canonical instance. ConcurrentHashMap keeps the read
+        // path lock-free; the {@link #ABSENT_PATH} sentinel caches
+        // not-found results so repeated lookups for missing paths don't
+        // re-iterate the module list.
+        Object cached = elementCache.get(path);
+        if (cached != null)
+        {
+            return cached == ABSENT_PATH ? null : cached;
+        }
         for (TruffleModule m : modules.values())
         {
             Object e = m.getElement(path);
             if (e != null)
             {
+                elementCache.put(path, e);
                 return e;
             }
         }
+        elementCache.put(path, ABSENT_PATH);
         return null;
     }
+
+    private static final Object ABSENT_PATH = new Object();
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> elementCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
     public boolean hasElement(String path)

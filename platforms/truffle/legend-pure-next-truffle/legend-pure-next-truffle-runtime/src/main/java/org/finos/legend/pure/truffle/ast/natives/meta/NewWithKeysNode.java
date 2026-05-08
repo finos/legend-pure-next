@@ -103,19 +103,26 @@ public final class NewWithKeysNode extends PureNode
 
         // Extract class path from type holder
         String classPath = "Unknown";
+        // Hoist genericType + typeArgs once — both the classpath
+        // resolution and the classifier-setting paths below need them.
+        // The previous code called _GenericType.typeArguments twice on
+        // the same GT, which was a JFR hotspot at ~3% of warm CPU on
+        // the metamodel_factories.pure compile.
+        Object hoistedGt = null;
+        PureSequence hoistedTypeArgs = null;
         if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh
                 && gtmh._genericType() != null)
         {
-            Object gt = gtmh._genericType();
-            PureSequence typeArgs = _GenericType.typeArguments(gt);
-            if (typeArgs != null && typeArgs.size() > 0)
+            hoistedGt = gtmh._genericType();
+            hoistedTypeArgs = _GenericType.typeArguments(hoistedGt);
+            if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
             {
-                classPath = resolveClassPathFromTypeArg(typeArgs.getBoxed(0), eval.resolver());
+                classPath = resolveClassPathFromTypeArg(hoistedTypeArgs.getBoxed(0), eval.resolver());
             }
             if ("Unknown".equals(classPath))
             {
                 // Try direct type from the generic type
-                var type = _GenericType.type(gt);
+                var type = _GenericType.type(hoistedGt);
                 if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
                 {
                     String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe, eval.resolver());
@@ -126,9 +133,9 @@ public final class NewWithKeysNode extends PureNode
                 }
                 if ("Unknown".equals(classPath))
                 {
-                    throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + gt.getClass().getName()
-                            + " typeArgs=" + (typeArgs != null ? typeArgs.size() : "null")
-                            + " type=" + (_GenericType.type(gt) != null ? _GenericType.type(gt).getClass().getName() : "null"));
+                    throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + hoistedGt.getClass().getName()
+                            + " typeArgs=" + (hoistedTypeArgs != null ? hoistedTypeArgs.size() : "null")
+                            + " type=" + (_GenericType.type(hoistedGt) != null ? _GenericType.type(hoistedGt).getClass().getName() : "null"));
                 }
             }
         }
@@ -137,10 +144,9 @@ public final class NewWithKeysNode extends PureNode
         Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
 
         // Set classifier generic type from the type holder's first type argument
-        if (typeHolder instanceof GenericTypeAndMultiplicityHolder gtmh
-                && gtmh._genericType() != null)
+        if (hoistedGt != null)
         {
-            PureSequence typeArgs = _GenericType.typeArguments(gtmh._genericType());
+            PureSequence typeArgs = hoistedTypeArgs;
             if (typeArgs != null && typeArgs.size() > 0)
             {
                 Object firstArg = typeArgs.getBoxed(0);
@@ -407,18 +413,44 @@ public final class NewWithKeysNode extends PureNode
         {
             return gtv;
         }
+        // Cache by Type identity — avoids string concatenation per call
+        // and amortises the resolver lookup across `^X(...)` operations.
+        // ABSENT_GTV sentinel caches "no canonical anchor for this type"
+        // so repeated lookups for non-anchored types stay O(1) too.
+        Object cached = CANONICAL_ANCHOR_CACHE.get(rawType);
+        if (cached == ABSENT_GTV)
+        {
+            return gtv;
+        }
+        if (cached != null)
+        {
+            return (GenericTypeValue) cached;
+        }
         String simpleName = pe._name();
         if (simpleName == null || simpleName.isEmpty())
         {
+            CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
             return gtv;
         }
         Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
         if (canonical instanceof GenericTypeValue canonicalGT)
         {
+            CANONICAL_ANCHOR_CACHE.put(rawType, canonicalGT);
             return canonicalGT;
         }
+        CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
         return gtv;
     }
+
+    /**
+     * Per-Type cache of canonical anchor lookups. Synchronised because
+     * IdentityHashMap is not thread-safe; reads dominate writes after warmup
+     * so the lock contention is negligible. Identity-keyed because PDB Type
+     * classes have structural equals that recurse through generalizations.
+     */
+    private static final Object ABSENT_GTV = new Object();
+    private static final java.util.Map<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Object> CANONICAL_ANCHOR_CACHE =
+            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 
     /**
      * After constructing an instance, set reverse association pointers.

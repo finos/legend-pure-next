@@ -32,7 +32,7 @@ public final class _Type
         {
             return false;
         }
-        if (isTopType(sup))
+        if (isTopType(sup, resolver))
         {
             return true;
         }
@@ -71,6 +71,38 @@ public final class _Type
             }
         }
         return null;
+    }
+
+    /**
+     * Identity-compare against the cached canonical "Any" type instead of
+     * walking string equality every call. JFR identified ~19 samples on
+     * the {@code "Any".equals(pe._name())} path before this caching.
+     * The volatile field is initialised once on first call; subsequent
+     * calls hit the cached reference directly.
+     */
+    private static volatile Type anyTypeRef;
+
+    private static boolean isTopType(Type type, TruffleMetadataAccess resolver)
+    {
+        if (type == null) return false;
+        Type any = anyTypeRef;
+        if (any != null)
+        {
+            return type == any;
+        }
+        // First call: resolve and cache. Volatile write publishes the
+        // reference for subsequent unsynchronised reads.
+        if (resolver != null)
+        {
+            Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
+            if (resolved instanceof Type t)
+            {
+                anyTypeRef = t;
+                return type == t;
+            }
+        }
+        // Fallback: string compare (only hits before "Any" is in the resolver).
+        return type instanceof PackageableElement pe && "Any".equals(pe._name());
     }
 
     private static boolean isTopType(Type type)

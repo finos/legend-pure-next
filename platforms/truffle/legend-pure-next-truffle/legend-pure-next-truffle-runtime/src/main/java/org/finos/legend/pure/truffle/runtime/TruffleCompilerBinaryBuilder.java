@@ -52,14 +52,6 @@ public final class TruffleCompilerBinaryBuilder
     {
     }
 
-    private static int parseRepeatEnv()
-    {
-        String s = System.getenv("PURE_REPEAT_COMPILES");
-        if (s == null || s.isBlank()) return 1;
-        try { return Math.max(1, Integer.parseInt(s.trim())); }
-        catch (NumberFormatException e) { return 1; }
-    }
-
     /**
      * Compile {@code sourceDir} against the given base PDBs and write to
      * {@code outputFile}. Each base PDB is loaded read-only to provide
@@ -137,18 +129,16 @@ public final class TruffleCompilerBinaryBuilder
 
         try
         {
-            int repeats = parseRepeatEnv();
-            Object result = null;
-            for (int run = 1; run <= repeats; run++)
-            {
-                long t0 = System.nanoTime();
+            // 3. Hand the whole walk-parse-compile-aggregate pipeline to
+            // compile-pure's `compileDir` — same entry point the bootstrap
+            // orchestrator uses. Keeps the platforms structurally identical:
+            // every byte of orchestration logic lives in Pure, only the runtime
+            // changes. Returns a `CompilationResult` whose `elements` already
+            // includes the hierarchical Package set built by `buildPackages`.
+            Object result;
             try
             {
                 result = runtime.execute(compileDirFn, sourceDir.toAbsolutePath().toString(), Boolean.getBoolean("legend.pure.compileDebug"));
-                if (repeats > 1)
-                {
-                    System.err.printf("[run %d/%d] %.3fs%n", run, repeats, (System.nanoTime() - t0) / 1e9);
-                }
             }
             catch (Throwable t)
             {
@@ -177,7 +167,6 @@ public final class TruffleCompilerBinaryBuilder
                 }
                 throw t;
             }
-            } // end repeat loop
             if (result == null)
             {
                 throw new RuntimeException("compileDir returned null");
