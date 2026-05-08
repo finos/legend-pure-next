@@ -54,7 +54,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
               + ' additionalParams=' + $resolvedParams->size()->toString());
           if($receiver.genericType->isEmpty() || $receiver.genericType->toOne()->instanceOf(CompilerNotSetGenericType),
               | ^CompilerResult<ValueSpecification>(
-                    value = $dot,
+                    value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                     context = ^$ctx1(errors += 'Can\'t resolve property \'' + $functionName + '\' on unresolved receiver' + $siCtx)
                 ),
               | let ownerType = $receiver.genericType->toOne()->cast(@GenericTypeValue).type->toOne();
@@ -81,7 +81,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                       let matchedProp = $enumOwner.properties->filter(p | $p.name == $functionName);
                       if($matchedProp->isEmpty(),
                           | ^CompilerResult<ValueSpecification>(
-                                value = $dot,
+                                value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                                 context = ^$ctx1(errors += 'Can\'t find enum value \'' + $functionName + '\' in enumeration \'' + $enumPath + '\'' + $siCtx)
                             ),
                           | debug($context, | '  enum property found: ' + $matchedProp->at(0).name->toOne());
@@ -127,7 +127,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                         buildAutomap($dot, $receiver, $functionName, $colGT, $colMul, $scope, $ctx1);
                                   );,
                                 | ^CompilerResult<ValueSpecification>(
-                                      value = $dot,
+                                      value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                                       context = ^$ctx1(errors += 'Can\'t find column \'' + $functionName + '\' in relation type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
                                   )
                             );,
@@ -208,7 +208,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                       | 'Can\'t find property \'' + $functionName + '\' in class \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx
                                   );
                                   ^CompilerResult<ValueSpecification>(
-                                      value = $dot,
+                                      value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                                       context = ^$ctx1(errors += $errorMsg)
                                   );,
                                 | debug($context, | '  property found: ' + $foundFunc->toOne().name->toOne());
@@ -255,7 +255,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             let foundProp = findProperty($resolvedOwner, $functionName, $context);
                             if($foundProp->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(
-                                      value = $dot,
+                                      value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)),
                                       context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
                                   ),
                                 | let resolvedProp = $foundProp->toOne();
@@ -282,7 +282,9 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             // WITHOUT emitting a "can't find property" error. The outer
                             // finalizeFunctionExpression then emits "Can't resolve the function 'X'"
                             // — same surface error as Java for receivers like TypeParameters.
-                            ^CompilerResult<ValueSpecification>(value = $dot, context = $ctx1)
+                            // Preserve $resolvedParams on the returned $dot so the receiver's
+                            // resolved genericType is visible to downstream passes / validation.
+                            ^CompilerResult<ValueSpecification>(value = ^$dot(parametersValues = $resolvedParams->cast(@ValueSpecification)), context = $ctx1)
                       ]); // end ownerType match
                 ); // end enum if
           );

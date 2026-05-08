@@ -84,15 +84,63 @@ public class FunctionApplicationResolver
             // independent of the parent candidate's expected type.  Lambdas are
             // excluded because their parameter types depend on the candidate's
             // type-parameter bindings.
-            int preResolveCheckpoint = context.currentErrorCount();
+            //
+            // Per-parameter rollback decision (mirrors functionApplicationResolver.pure
+            // line 171-207): if the resolved value comes back FULLY surface-resolved
+            // (FunctionExpression with `func` set AND a concrete genericType /
+            // multiplicity in the enclosing scope), any errors fired during its
+            // resolution are real — they describe a problem inside that
+            // sub-expression's body (e.g. unresolved property access in a lambda
+            // inside the sub-call) and must propagate up. Otherwise (failure or
+            // partial — `_func()=null`, or a non-concrete genericType
+            // parameterised by type variables) the errors are speculative — the
+            // candidate trial will re-attempt with candidate-specific bindings,
+            // so we drop them here to avoid noise.
+            //
+            // Without this distinction, the surrounding multi-candidate dispatch
+            // can silently mask real errors by picking a permissive cast variant
+            // (e.g. `cast(Any[m])`) that treats the unresolved-internals
+            // sub-expression as already-concrete and skips re-resolving it —
+            // exactly the regression covered by spec
+            // valueSpecification/functionExpression/dot/property_E_unknownPropertyOnAnyInLambda.
+            //
+            // Hot-path optimisation: when a sub-expression resolves cleanly
+            // (no errors added), we skip the surface-resolved check and
+            // rollback entirely — the only thing rollback would have done is
+            // bump counters, and there are no errors to drop.
+            PureLanguageCompilerContext preResolvePlcc = null;
+            MutableSet<String> preResolveScopeTypeParams = null;
+            MutableSet<String> preResolveScopeMulParams = null;
+            MutableList<ValueSpecification> preResolvedParams = Lists.mutable.empty();
+            for (ValueSpecification pv : expr._parametersValues())
+            {
+                if (pv instanceof AtomicValue av && av._value() instanceof LambdaFunction)
+                {
+                    preResolvedParams.add(pv);
+                    continue;
+                }
+                int paramCheckpoint = context.currentErrorCount();
+                ValueSpecification resolved = ValueSpecificationResolver.resolve(pv, model, context);
+                if (context.currentErrorCount() != paramCheckpoint)
+                {
+                    if (preResolvePlcc == null)
+                    {
+                        preResolvePlcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+                        preResolveScopeTypeParams = preResolvePlcc.inScopeTypeParamNames();
+                        preResolveScopeMulParams = preResolvePlcc.inScopeMultiplicityParamNames();
+                    }
+                    boolean isSurfaceResolved = (resolved instanceof FunctionExpression fe)
+                            && fe._func() != null
+                            && isConcreteInContext(fe._genericType(), fe._multiplicity(), preResolveScopeTypeParams, preResolveScopeMulParams);
+                    if (!isSurfaceResolved)
+                    {
+                        context.rollbackErrorsTo(paramCheckpoint, RollbackSite.MULTI_CANDIDATE_PRE_RESOLVE);
+                    }
+                }
+                preResolvedParams.add(resolved);
+            }
             FunctionApplication preResolvedExpr = (FunctionApplication)
-                    ((FunctionApplication) expr._copy())._parametersValues(
-                            expr._parametersValues().collect(
-                            pv -> (pv instanceof AtomicValue av && av._value() instanceof LambdaFunction)
-                                    ? pv
-                                    : ValueSpecificationResolver.resolve(pv, model, context))
-                    );
-            context.rollbackErrorsTo(preResolveCheckpoint, RollbackSite.MULTI_CANDIDATE_PRE_RESOLVE);
+                    ((FunctionApplication) expr._copy())._parametersValues(preResolvedParams);
 
             // Multiple candidates — sort most-specific-first, then try each with rollback.
             candidates.sortThis(FunctionIndexEntry.mostSpecificFirst(model));

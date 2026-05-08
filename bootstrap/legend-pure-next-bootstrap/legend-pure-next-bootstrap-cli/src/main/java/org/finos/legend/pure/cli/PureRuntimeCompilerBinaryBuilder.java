@@ -174,12 +174,16 @@ public final class PureRuntimeCompilerBinaryBuilder
         }
         if (!allErrors.isEmpty())
         {
-            // Report but DO NOT abort — we want to see how far the compile
-            // gets across the whole tree, not stop at the first file with
-            // errors. Each error is already reported live by compileDir's
-            // per-file `println('      ERR ...')`; this final summary
-            // restates the count for visibility.
-            System.err.println("  " + allErrors.size() + " compilation error(s) — continuing to write the PDB so the partial output can be inspected.");
+            // Abort on errors. Mirrors the Java-compiler path
+            // (CompilerBinaryBuilder line 78): if compilation produced any
+            // errors, do not attempt PDB write — the partial output would
+            // contain unresolved FunctionExpressions that the FlatBuffer
+            // serializer rejects with `null _func()` IllegalStateException,
+            // masking the real compile diagnostic.
+            //
+            // Each error has already been reported live by compileDir's
+            // per-file `println` chain; this is the abort step.
+            throw new RuntimeException("Pure compilation failed with " + allErrors.size() + " error(s)");
         }
 
         // `CompilationResult.elements` already contains only source-compiled

@@ -24,7 +24,7 @@ function test::testChainedAutomap():Any[*]
 }
 
 ###CompilerStats
-inferenceRollbacks: 5
-candidateEvaluations: 13
+inferenceRollbacks: 11
+candidateEvaluations: 19
 rollbackSites:
-  MULTI_CANDIDATE_PRE_RESOLVE = 2
+  MULTI_CANDIDATE_PRE_RESOLVE = 3

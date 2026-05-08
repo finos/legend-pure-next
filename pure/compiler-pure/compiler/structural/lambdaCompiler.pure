@@ -69,7 +69,7 @@ function meta::pure::compiler::structural::lambdaCompiler::compileLambda(l:meta:
           let compiledParams = $l.parameters->map(p |
               let hasType = $p.genericType->isNotEmpty() && $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue).type->isNotEmpty();
               let pmGenType = if($hasType,
-                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value,
+                  | $p.genericType->cast(@meta::pure::protocol::grammar::type::generics::GenericTypeValue)->compileGenericType($ctx3, '', []).value->toOne(),
                   | ^CompilerNotSetGenericType()
               );
               // For untyped lambda params, use CompilerNotSetMultiplicity (matching Java null).

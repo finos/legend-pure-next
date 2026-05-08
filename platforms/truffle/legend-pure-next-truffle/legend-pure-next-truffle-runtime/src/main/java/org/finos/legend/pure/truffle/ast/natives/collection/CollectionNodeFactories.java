@@ -120,6 +120,8 @@ public final class CollectionNodeFactories
                 (args, gt, mul, fe) -> new NewMapNode("newMap_Pair_MANY__Property_MANY__Map_1_", args[0], args[1]));
         registry.register("put_Map_1__U_1__V_1__Map_1_",
                 (args, gt, mul, fe) -> new MapPutNode(args[0], args[1], args[2]));
+        registry.register("remove_Map_1__U_1__Map_1_",
+                (args, gt, mul, fe) -> new MapRemoveNode(args[0], args[1]));
         registry.register("get_Map_1__U_1__V_$0_1$_",
                 (args, gt, mul, fe) -> new MapGetNode(args[0], args[1]));
         registry.register("keys_Map_1__U_MANY_",

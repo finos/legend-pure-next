@@ -10,6 +10,6 @@ function test():Any[*]
 
 ###CompilerStats
 inferenceRollbacks: 6
-candidateEvaluations: 5
+candidateEvaluations: 6
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 1

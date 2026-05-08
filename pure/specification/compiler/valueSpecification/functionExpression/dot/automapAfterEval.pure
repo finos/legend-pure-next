@@ -16,6 +16,6 @@ function test::testTypeParamResolution<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z
 
 ###CompilerStats
 inferenceRollbacks: 2
-candidateEvaluations: 7
+candidateEvaluations: 9
 rollbackSites:
   MULTI_CANDIDATE_PRE_RESOLVE = 1

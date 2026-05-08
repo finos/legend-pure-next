@@ -153,23 +153,60 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
 // Mirrors Java resolveFunctionApplication multi-candidate path
 function meta::pure::compiler::resolution::valueSpecification::functionExpressionResolver::functionApplicationResolver::resolveWithMultipleCandidates(fi:FunctionApplication[1], candidates:PackageableFunction<Any>[*], scope:VariableExpression[*], deepCtx:CompilerContext[1], context:CompilerContext[1]):CompilerResult<ValueSpecification>[1]
 {
-    // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94)
+    // Step 1: Pre-resolve non-lambda params once (like Java lines 86-94).
     // Lambdas are excluded because their param types depend on the candidate's type-parameter bindings.
-    // Errors from pre-resolution are discarded (matching Java rollbackErrorsTo behavior).
-    // Ambiguous sub-expressions return unresolved values (func cleared), which get re-resolved in candidate attempts.
-    let preResolvedParams = $fi.parametersValues->map(pv |
-        $pv->match([
+    //
+    // Error handling: errors that fire while resolving a sub-expression that
+    // *itself* came back surface-resolved (FunctionExpression with `func` set)
+    // are *real* — they describe a problem inside that sub-expression's body
+    // (e.g. an unresolved property access in a lambda inside the sub-call).
+    // These must propagate up so the surrounding multi-candidate dispatch
+    // doesn't silently mask them by picking a permissive cast variant
+    // (e.g. `cast(Any[m])`) that treats the unresolved-internals
+    // sub-expression as already-concrete and skips re-resolving it.
+    //
+    // Errors from sub-expressions that fail to surface-resolve (no `func`)
+    // are speculative — the candidate trial will re-attempt them with
+    // candidate-specific bindings, so we drop them here to avoid noise.
+    let preResolvedAcc = $fi.parametersValues->fold({pv, acc |
+        let pvRes = $pv->match([
             av : AtomicValue[1] |
                 if($av.value->toOne()->instanceOf(LambdaFunction),
-                    | $pv,
-                    | let r = resolveValueSpecification($pv, $scope, $context);
-                      if($r.value->isEmpty(), | $pv, | $r.value->toOne());
+                    | ^CompilerResult<ValueSpecification>(value = $pv, context = $acc.context),
+                    | resolveValueSpecification($pv, $scope, $acc.context)
                 );,
             other : Any[1] |
-                let r = resolveValueSpecification($pv, $scope, $context);
-                if($r.value->isEmpty(), | $pv, | $r.value->toOne());
-        ])
-    );
+                resolveValueSpecification($pv, $scope, $acc.context)
+        ]);
+        let resolvedValue = if($pvRes.value->isEmpty(), | $pv, | $pvRes.value->toOne());
+        // Determine if the sub-expression came back FULLY surface-resolved:
+        //   FunctionExpression with both `func` AND a concrete (non-NotSet)
+        //   `genericType`. resolveFunctionApplicationUsingTemplateFunction
+        //   sets `func` even on its partial-success path (when params remain
+        //   unresolved or validation fails), but in those cases the
+        //   genericType is left empty / NotSet — so checking just `func`
+        //   would falsely classify a partially-resolved sub-expression as
+        //   "surface-resolved" and let its body errors propagate. Only the
+        //   full-success path (line ~449 of this file) sets both.
+        //
+        // When fully surface-resolved, any errors fired are real and must
+        // propagate up so the surrounding multi-candidate dispatch can't
+        // silently mask them by picking a permissive variant (e.g.
+        // `cast(Any[m])`) that treats the sub-expression as already-concrete
+        // and skips re-resolving. Otherwise (failure / partial), drop the
+        // trial context — the candidate trial will re-attempt with
+        // candidate-specific bindings and can produce its own diagnostics.
+        let isSurfaceResolved = $resolvedValue->match([
+            fe : FunctionExpression[1] |
+                $fe.func->isNotEmpty()
+                    && isConcreteInContext($fe.genericType, $fe.multiplicity, $context),
+            a  : Any[1]                | false
+        ]);
+        let nextCtx = if($isSurfaceResolved, | $pvRes.context, | $acc.context);
+        ^$acc(values = $acc.values->concatenate($resolvedValue), context = $nextCtx);
+    }, ^CompilerListResult<ValueSpecification>(context = $context, values = []->cast(@ValueSpecification)));
+    let preResolvedParams = $preResolvedAcc.values;
+    let preResolveCtx = $preResolvedAcc.context;
     let preResolvedFI = ^$fi(parametersValues = $preResolvedParams);
 
     // Step 2: Try each candidate with the fixpoint — first clean resolution wins (like Java lines 97-126).
@@ -185,10 +222,15 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
             | debug($deepCtx, | 'trying candidate: ' + $candidate->elementToPath());
               let accCtx = $acc.context;
               let bumpedAccCtx = ^$accCtx(candidateEvaluations = $accCtx.candidateEvaluations + 1);
-              let checkpoint = $context->errorCheckpoint();
-              // Seed candidate try with the original context, but carry forward the cache
-              // state accumulated by prior candidate attempts.
-              let ctxWithCache1 = ^$context(lambdaResolutionCache = $accCtx.lambdaResolutionCache);
+              // Use preResolveCtx as the baseline: errors that fire here are
+              // those *added by this candidate trial*, not pre-existing
+              // errors from pre-resolve (which are real and must not cause
+              // a trial-rollback).
+              let checkpoint = $preResolveCtx->errorCheckpoint();
+              // Seed candidate try with preResolveCtx (which carries the
+              // pre-resolve errors), but carry forward the cache state
+              // accumulated by prior candidate attempts.
+              let ctxWithCache1 = ^$preResolveCtx(lambdaResolutionCache = $accCtx.lambdaResolutionCache);
               let candidateCtx = ^$ctxWithCache1(lambdaFailureCache = $accCtx.lambdaFailureCache);
               let result = resolveFunctionApplicationUsingTemplateFunction($preResolvedFI, $candidate, $scope, $candidateCtx);
               let resultCtx = $result.context;
@@ -217,7 +259,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                     ^$acc(firstErrors = $savedErrors, context = $rollbackCtx);
               );
         );
-    }, ^CandidateTryAccumulator(resolved = false, context = $context));
+    }, ^CandidateTryAccumulator(resolved = false, context = $preResolveCtx));
 
     // Step 3: Return result or restore first candidate's errors (like Java lines 127-133)
     if($tryResult.resolved,
@@ -255,14 +297,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
           if($tryResult.firstErrors->isNotEmpty(),
               | ^CompilerResult<ValueSpecification>(
                     value = $fi,
-                    context = ^$context(
+                    context = ^$preResolveCtx(
                         errors += $tryResult.firstErrors,
                         inferenceRollbacks = $tryResult.context.inferenceRollbacks,
                         candidateEvaluations = $tryResult.context.candidateEvaluations
                     ));,
               | ^CompilerResult<ValueSpecification>(
                     value = $fi,
-                    context = ^$context(
+                    context = ^$preResolveCtx(
                         inferenceRollbacks = $tryResult.context.inferenceRollbacks,
                         candidateEvaluations = $tryResult.context.candidateEvaluations
                     ));
