@@ -108,15 +108,19 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
     // Find visible candidates by name and arity
     let candidates = $context->findAllFunctionsByNameAndArity($functionName, $paramCount);
     if([pair(| $candidates->isEmpty(),
-             | // No visible candidates — build error with suggestions
+             | // No visible candidates — build error with suggestions.
+               // Mirrors Java: one error per failed call, regardless of how many
+               // suggestion lines the printer adds. Splitting by '\n' inflates the
+               // error count by ~N (one per suggestion candidate); concretely
+               // ~6700 of the 8063 errors observed against language/java came from
+               // this split.
                let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
                debug($deepCtx, | 'no candidates found');
                let suggestions = buildFunctionSuggestions($context, $functionName, $paramCount);
                let mainError = 'The function \'' + $functionName + '\' with ' + $paramCount->toString() + ' parameter(s) can\'t be found' + $suggestions + $siCtx;
-               let errorLines = $mainError->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
                ^CompilerResult<ValueSpecification>(
                    value = $fi,
-                   context = ^$context(errors += $errorLines)
+                   context = ^$context(errors += $mainError)
                );),
         pair(| $candidates->size() == 1,
              | // Single candidate — resolve directly, errors are legitimate.
@@ -366,14 +370,20 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | ^CompilerResult<ValueSpecification>(
               value = ^$cleanFI(func = $entry, parametersValues = $enrichedParams),
               context = $enrichedCtx),
-        | // All resolved — validate arg types against param types (like Java validateParameterValuesToFunctionType)
-          // Skip validation if fixpoint already produced errors (body resolution errors are the right errors)
+        | // All resolved — validate arg types against param types. Mirrors Java
+          // FunctionApplicationResolver.resolveFunctionApplicationUsingTemplateFunctionForInference
+          // (lines 178-186): when all unresolved params have been processed, Java
+          // unconditionally calls `validateAndPopulate` (which emits
+          // "No matching function 'X' found for argument types (...)" if the
+          // resolved arg type/multiplicity is incompatible with the candidate's
+          // parameter signature). Pure previously short-circuited this when any
+          // earlier error was produced during fixpoint (e.g. a lambda body's
+          // missing property), suppressing the legit type-mismatch error that
+          // would let the user see "lambda returns Boolean[*] but filter wants
+          // Boolean[1]". Removing the guard recovers ~4 errors that match Java's
+          // "No matching function" output for filter/map/j_code/plus.
           let fiSrcInfo = $fi.sourceInformation;
-          let fixpointProducedErrors = $enrichedCtx.errors->size() > $context.errors->size();
-          let validationResult = if($fixpointProducedErrors,
-              | ^ValidationResult(reconciledParams = $enrichedParams, bindings = $enrichedBindings, context = $enrichedCtx),
-              | validateParameterTypes($fi.functionName->toOne(), $enrichedParams, $funcParams, $enrichedBindings, $fiSrcInfo, $enrichedCtx)
-          );
+          let validationResult = validateParameterTypes($fi.functionName->toOne(), $enrichedParams, $funcParams, $enrichedBindings, $fiSrcInfo, $enrichedCtx);
           let validationCtx = $validationResult.context;
           let validatedParams = $validationResult.reconciledParams;
           let validatedBindings = $validationResult.bindings;

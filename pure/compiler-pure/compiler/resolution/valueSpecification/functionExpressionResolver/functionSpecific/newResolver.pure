@@ -204,10 +204,16 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
         | newPlainParametersBinding()->cast(@ParametersBinding)
     );
 
-    // Check unknown properties (including deep paths)
+    // Check unknown properties (including deep paths). Use the context-aware
+    // findProperty from _Class.pure (matching Java _Class.findProperty): walking
+    // generalizations through `genericTypeRawType()` + resolveElement picks up
+    // properties registered later (e.g. via associations) and handles deeper
+    // inheritance chains. The previous local findPropertyOnClass missed
+    // properties inherited via mid-chain classes like GenericDeclaration on
+    // Method/Constructor (Method extends [AnnotatedElement, Member, GenericDeclaration]).
     let ctx1 = $providedNames->fold({name, ctx |
         if([pair(| $name->contains('.'), | validateDeepPropertyPath($cls, $name, $fi, $ctx)),
-            pair(| findPropertyOnClass($cls, $name)->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
+            pair(| $cls->findProperty($name, $ctx)->isEmpty(), | let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $ctx);
                     ^$ctx(errors += 'Unknown property \'' + $name + '\' in class \'' + $cls->fullPath() + '\'' + $siCtx);)],
            | $ctx
         );

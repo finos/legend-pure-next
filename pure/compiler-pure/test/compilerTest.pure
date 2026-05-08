@@ -29,7 +29,11 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraph
 function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationError(content:String[1], sourceId:String[1]):Boolean[1]
 {
     let errorSection = $content->substring($content->indexOf('###' + 'Error') + 8);
-    let expectedMessages = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim()->split('\n')->map(s | $s->trim())->filter(s | $s->length() > 0);
+    // Mirrors Java: each compiler error is a single (possibly multi-line) message.
+    // Compare the joined-with-newline text rather than splitting per line — the
+    // suggestion candidates beneath a "function not found" message are part of
+    // the same error, not separate errors.
+    let expectedText = $errorSection->substring(0, $errorSection->indexOf('\n\n'))->trim();
     let pureStart = $content->indexOf('###' + 'Pure');
     let errorLines = $content->substring(0, $pureStart)->split('\n');
     let blankedPrefix = $errorLines->map(l | '')->joinStrings('\n');
@@ -37,10 +41,10 @@ function <<test.TestDependency>> meta::pure::compiler::test::assertCompilationEr
     let parsedFile = meta::pure::functions::meta::parse($sourceId, $pureContent);
     let result = meta::pure::compiler::compile($parsedFile);
     assert($result.errors->isNotEmpty(), 'Expected compilation error but none occurred');
-    if($expectedMessages->size() != $result.errors->size(), |println('EXPECTED: ' + $expectedMessages->joinStrings(' | ')), |[]);
-    if($expectedMessages->size() != $result.errors->size(), |println('ACTUAL:   ' + $result.errors->joinStrings(' | ')), |[]);
-    assertEquals($expectedMessages->size(), $result.errors->size());
-    assertEquals($expectedMessages->joinStrings('\n'), $result.errors->joinStrings('\n'));
+    let actualText = $result.errors->joinStrings('\n');
+    if($expectedText != $actualText, |println('EXPECTED:\n' + $expectedText), |[]);
+    if($expectedText != $actualText, |println('ACTUAL:\n' + $actualText), |[]);
+    assertEquals($expectedText, $actualText);
 }
 
 function <<test.TestDependency>> meta::pure::compiler::test::assertCompiledGraphContent(content:String[1], sourceId:String[1]):Boolean[1]

@@ -109,8 +109,21 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                         | $context
                      );
           ^CompilerResult<ValueSpecification>(value = $updated, context = $ctx1);,
-        | // func not resolved — set genericType to undefined, report error if none yet (like Java lines 109-123)
-          let updated = ^$fi(genericType = ^CompilerNotSetGenericType());
+        | // func not resolved — set genericType AND multiplicity to NotSet markers,
+          // mirroring Java FunctionExpressionResolver lines 161-163 which sets both
+          // (`new CompilerNotSetGenericTypeImpl()` and `new CompilerNotSetMultiplicityImpl()`).
+          // Pure was leaving the multiplicity at whatever the receiver/expected slot
+          // started with — typically PureOne — which then propagated up: when this
+          // expression appears as the body of a match-arm lambda, the lambda's
+          // classifierGenericType becomes `LambdaFunction<{...->NotSet[1]}>` instead of
+          // `LambdaFunction<{...->NotSet[*]}>`. The collection's common-type then
+          // narrows to `[1]` instead of widening to `[*]`, and the outer function's
+          // return-multiplicity validation no longer fires (because `m` binds to PureOne
+          // rather than ZeroMany). Setting NotSet here keeps the Java-equivalent
+          // "Return multiplicity error: expected [1], got [*]" surfacing for
+          // functions like `isAssignment` whose match arms include unresolved
+          // `$inf.op->in(...)` calls.
+          let updated = ^$fi(genericType = ^CompilerNotSetGenericType(), multiplicity = ^CompilerNotSetMultiplicity());
           let siCtx = formatMetamodelSourceInfo($fi.sourceInformation, $context);
           let ctx1 = if($context.errors->size() == $checkpoint,
               | ^$context(errors += 'Can\'t resolve the function \'' + $fi.functionName->toOne() + '\'' + $siCtx),

@@ -198,9 +198,14 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   );
                             );
                             if($foundFunc->isEmpty(),
-                                | let errorMsg = if($qps->size() > 1,
+                                | // Match Java's `_GenericType.print(receiver.genericType)` rendering
+                                  // (short name, e.g. `Function<Any>`) instead of the full path
+                                  // (`meta::pure::metamodel::function::Function`). The two compilers
+                                  // produced identical error counts but slightly different
+                                  // class-name output before this change.
+                                  let errorMsg = if($qps->size() > 1,
                                       | 'Ambiguous qualified property \'' + $functionName + '\' with ' + ($paramCount - 1)->toString() + ' parameter(s) in class \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx,
-                                      | 'Can\'t find property \'' + $functionName + '\' in class \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx
+                                      | 'Can\'t find property \'' + $functionName + '\' in class \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx
                                   );
                                   ^CompilerResult<ValueSpecification>(
                                       value = $dot,
@@ -251,7 +256,7 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                             if($foundProp->isEmpty(),
                                 | ^CompilerResult<ValueSpecification>(
                                       value = $dot,
-                                      context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + $resolvedOwner->elementToPath() + '\'' + $siCtx)
+                                      context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + printGenericType($receiver.genericType->toOne()) + '\'' + $siCtx)
                                   ),
                                 | let resolvedProp = $foundProp->toOne();
                                   let propGT = asInferredGenericType($resolvedProp.genericType->toOne());
@@ -271,10 +276,13 @@ function meta::pure::compiler::resolution::valueSpecification::functionExpressio
                                   );
                             );,
                           a:Any[1] |
-                            ^CompilerResult<ValueSpecification>(
-                                value = $dot,
-                                context = ^$ctx1(errors += 'Can\'t find property \'' + $functionName + '\' on type \'' + $ownerType->cast(@PackageableElement)->elementToPath() + '\'' + $siCtx)
-                            )
+                            // Match Java's DotApplicationResolver.lookupFunction (lines 184-285):
+                            // when the ownerType is not a recognised property owner (Class /
+                            // Enumeration / RelationType), return the unresolved expression
+                            // WITHOUT emitting a "can't find property" error. The outer
+                            // finalizeFunctionExpression then emits "Can't resolve the function 'X'"
+                            // — same surface error as Java for receivers like TypeParameters.
+                            ^CompilerResult<ValueSpecification>(value = $dot, context = $ctx1)
                       ]); // end ownerType match
                 ); // end enum if
           );

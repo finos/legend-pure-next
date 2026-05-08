@@ -189,10 +189,16 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
     }, ^CompilerListResult<FileWorkItem>(context = $pass2StartCtx, values = []->cast(@FileWorkItem)));
     let pass2Millis = currentTimeMillis() - $pass2Start;
 
-    // Refresh linearization cache between pass 2 and pass 3 — types may have been
-    // refined by pass 2 (e.g. compiled bodies that change generalizations) and
-    // those refinements need to land in the cache before resolution starts.
-    let pass3StartCtx = $pass2Result.context->buildLinearizationCache();
+    // Refresh linearization cache + local function index between pass 2 and
+    // pass 3 — pass 2 fills in parameters/returnType on each FunctionDefinition,
+    // and {@link buildLocalFunctionIndex} indexes by name from elementMap. Without
+    // this rebuild, pass 3's `findAllFunctionsByNameAndArity` lookups still see
+    // pass-1 skeletons (empty `parameters` list), so the `parameters.size() == arity`
+    // filter rejects every locally-defined overload — every call site of a function
+    // defined in the source then errors with "function not found", inflating the
+    // total error count by the number of usage sites (e.g. ~300 cascade errors per
+    // unresolved local function on the language/java compile).
+    let pass3StartCtx = $pass2Result.context->buildLinearizationCache()->buildLocalFunctionIndex();
     let pass2Files = $pass2Result.values;
 
     // ============================================================================
@@ -630,8 +636,15 @@ function meta::pure::compiler::resolveFunctionDefinition(fn:UserDefinedFunction<
           let ctxWithOwner = ^$context(ownerTypeParams = $fn.typeParameters->cast(@TypeParameter), ownerMulParams = $fn.multiplicityParameters->cast(@MultiplicityParameter), enclosingOwnerBinding = $enclosingBinding);
           let result = meta::pure::compiler::resolution::functionDefinitionResolver::resolveExpressionSequence($fn.expressionSequence, $fn.parameters->cast(@VariableExpression), $ctxWithOwner->debugSpaceInc());
           let resultCtx = $result.context;
-          // Validate return type and multiplicity of the last expression
-          let validatedCtx = if($result.resolvedSpecs->isEmpty() || $resultCtx.errors->size() > $context.errors->size(),
+          // Validate return type and multiplicity of the last expression. Mirrors
+          // Java FunctionDefinitionResolver.{validateReturnType, validateReturnMultiplicity}:
+          // only skip when the resolved value's type/multiplicity is null. Earlier
+          // errors during body resolution don't suppress this check — Java reports
+          // "Return multiplicity error in function 'X': expected [1], got [*]" even
+          // when the body had unrelated errors, and matching that lets Pure surface
+          // a class of real bugs (functions whose declared return shape disagrees
+          // with the inferred last-expr shape) that were silently swallowed before.
+          let validatedCtx = if($result.resolvedSpecs->isEmpty(),
               | $resultCtx,
               | let lastExpr = $result.resolvedSpecs->at($result.resolvedSpecs->size() - 1);
                 let fnName = $fn.name->toOne();

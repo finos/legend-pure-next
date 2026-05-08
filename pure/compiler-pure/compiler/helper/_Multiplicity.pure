@@ -97,7 +97,13 @@ function meta::pure::compiler::helper::multiplicity::isUniversalMultiplicity(m:M
 
 function meta::pure::compiler::helper::multiplicity::multiplicitySubsumes(general:Multiplicity[1], specific:Multiplicity[1]):Boolean[1]
 {
-    if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter),
+    // Mirror Java _Multiplicity.subsumes lines 41-46: a CompilerNotSetMultiplicity
+    // marker on either side counts as a wildcard match. This prevents cascade
+    // errors when an unresolved FunctionExpression's multiplicity has been
+    // stamped as NotSet — the outer return-multiplicity check should pass through
+    // rather than fire spurious "expected [1], got [*]" messages.
+    if($general->instanceOf(MultiplicityParameter) || $specific->instanceOf(MultiplicityParameter)
+       || $general->instanceOf(CompilerNotSetMultiplicity) || $specific->instanceOf(CompilerNotSetMultiplicity),
         | true,
         |
         let generalUndefined = $general->instanceOf(UndefinedMultiplicity);
