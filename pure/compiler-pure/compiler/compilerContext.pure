@@ -399,15 +399,23 @@ function meta::pure::compiler::resolveElement(context:CompilerContext[1], path:S
 
 function meta::pure::compiler::resolveAllElements(context:CompilerContext[1], path:String[1]):String[*]
 {
+    // Mirrors Java _PackageableElement.findElementOrReportError (lines 95-98):
+    // ambiguity is reported only when MULTIPLE IMPORTED packages define the
+    // same short name. We must NOT include arbitrary same-short-name elements
+    // from elsewhere in the source tree — that would falsely flag e.g.
+    // `Enumeration` as ambiguous between `meta::pure::metamodel::type::Enumeration`
+    // (the only one in scope via imports) and
+    // `meta::external::language::java::metamodel::Enumeration` (a peer package
+    // present in the source tree but not imported by the file under
+    // compilation).
     if($context.elementMap->get($path)->isNotEmpty(),
         | [$path],
         | if($path->contains('::'),
             | if($context->pathToElementInContext($path)->isNotEmpty(), | [$path], | []),
-            | let shortNameMatches = $context.elementMap->keys()->filter(k | $k->endsWith('::' + $path));
-              let importMatches = $context.imports
+            | $context.imports
                   ->map(imp | $imp + '::' + $path)
-                  ->filter(candidate | $context->pathToElementInContext($candidate)->isNotEmpty());
-              $importMatches->concatenate($shortNameMatches)->removeDuplicates();
+                  ->filter(candidate | $context->pathToElementInContext($candidate)->isNotEmpty())
+                  ->removeDuplicates();
         )
     );
 }
