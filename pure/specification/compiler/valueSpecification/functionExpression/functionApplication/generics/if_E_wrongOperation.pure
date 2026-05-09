@@ -1,5 +1,5 @@
 ###Error
-No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/if_E_wrongOperation 9:30-9:32)
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/if_E_wrongOperation 9:5-9:32)
 
 ###Pure
 native function test::if<T|m>(test:Boolean[1], valid:Function<{->T[m]}>[1], invalid:Function<{->T[m]}>[1]):T[m];

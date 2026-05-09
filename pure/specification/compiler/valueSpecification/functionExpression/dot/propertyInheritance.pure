@@ -18,7 +18,7 @@ Class test::MyClass extends test::Super
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:40-6:44
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:35-6:44
     DotApplication test::Super.sup :#String##[1]#  ~@DotApplication@  @6:35-6:38
       FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:5-6:34
         typeParam T -> test::MyClass

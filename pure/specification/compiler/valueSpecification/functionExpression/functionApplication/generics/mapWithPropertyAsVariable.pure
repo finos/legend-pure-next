@@ -59,7 +59,7 @@ function test::testMapWithPropertyAsVariable__Boolean_1_():@Boolean@[1]  ~UserDe
         DotApplication meta::pure::metamodel::SimplePropertyOwner.properties :#Property<@Nil@, @Any@|*>##[*]#  ~@DotApplication@  @16:30-16:40
           AtomicValue  test::MPV_Person :#Class<test::MPV_Person>#[1]  ~@AtomicValue@  @16:20-16:29
         Lambda(p:#Property<@Nil@, @Any@|*>##[1]#) :#LambdaFunction<#{#Property<@Nil@, @Any@|*>##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @16:50-16:74
-          FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @16:62-16:74
+          FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @16:56-16:74
             DotApplication meta::pure::metamodel::function::property::AbstractProperty.name :#String##[1]#  ~@DotApplication@  @16:56-16:60
               Variable p :#Property<@Nil@, @Any@|*>##[1]#  ~@VariableExpression@  @16:54-16:55
             AtomicValue  'lastName' :@String@[1]  ~@AtomicValue@  @16:65-16:74

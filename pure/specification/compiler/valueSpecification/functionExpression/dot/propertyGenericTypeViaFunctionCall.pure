@@ -30,7 +30,7 @@ function test::use__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
         FunctionInvocation keyExpression_String_1__Any_MANY__KeyExpression_1_ :#KeyExpression##[1]#  ~@FunctionInvocation@  @10:30-10:42
           AtomicValue  'value' :@String@[1]  ~@AtomicValue@  @10:30-10:42
           AtomicValue  'hello' :@String@[1]  ~@AtomicValue@  @10:36-10:42
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @11:12-11:21
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @11:5-11:21
     DotApplication test::Box.get() :#String##[1]#  ~@DotApplication@  @11:5-11:10
       Variable b :#test::Box<@String@>##[1]#  ~@VariableExpression@  @11:3-11:4
     AtomicValue  ' world' :@String@[1]  ~@AtomicValue@  @11:14-11:21

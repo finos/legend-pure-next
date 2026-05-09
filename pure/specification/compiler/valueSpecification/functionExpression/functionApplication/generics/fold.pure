@@ -14,7 +14,7 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
       AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @4:13-4:13
       AtomicValue  3 :@Integer@[1]  ~@AtomicValue@  @4:15-4:15
     Lambda(val:#Integer##[1]#, acc:#Integer##[1]#) :#LambdaFunction<#{#Integer##[1]#, #Integer##[1]#->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @4:19-4:41
-      FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:35-4:40
+      FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @4:30-4:40
         Variable acc :#Integer##[1]#  ~@VariableExpression@  @4:30-4:33
         Variable val :#Integer##[1]#  ~@VariableExpression@  @4:37-4:40
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @4:44-4:44

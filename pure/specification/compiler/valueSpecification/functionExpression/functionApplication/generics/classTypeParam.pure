@@ -28,7 +28,7 @@ function f_T_MANY__MyClass_1_(s:T~f_T_MANY__MyClass_1_[*]):MyClass<T~f_T_MANY__M
         AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @9:23-9:26
 
 function test__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:23-14:27
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @14:17-14:27
     DotApplication MyClass.value :#String##[1]#  ~@DotApplication@  @14:17-14:22
       FunctionInvocation f_T_MANY__MyClass_1_ :#MyClass<#String#>##[1]#  ~@FunctionInvocation@  @14:5-14:16
         typeParam T -> #String#

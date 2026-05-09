@@ -70,6 +70,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.Token;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.list.mutable.ListAdapter;
@@ -713,61 +714,155 @@ public class M3ProtocolBuilder
                         visitCombinedExpr(ctx.combinedExpression(), typeParamNames, multParamNames)));
     }
 
+    // ------------------------------------------------------------------------
+    // Precedence ladder. The grammar encodes operator precedence as a chain
+    // of rules (or → and → equality → relational → additive → multiplicative
+    // → expression). Each visit method walks left-to-right, left-folding
+    // binary operations into nested FunctionInvocation nodes.
+    // ------------------------------------------------------------------------
+
     private ValueSpecification visitCombinedExpr(final M3Parser.CombinedExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
-        // combinedExpression: expressionOrExpressionGroup expressionPart*
-        // Precedence handling: batch arithmetic parts and boolean
-        // parts separately to apply operator precedence via
-        // snatching (see applyArithmeticParts).
-        ValueSpecification result = visitExprOrGroup(ctx.expressionOrExpressionGroup(), typeParamNames, multParamNames);
+        return visitOrExpr(ctx.orExpression(), typeParamNames, multParamNames);
+    }
 
-        MutableList<M3Parser.ArithmeticPartContext> arth = Lists.mutable.empty();
-        MutableList<M3Parser.BooleanPartContext> bool = Lists.mutable.empty();
-
-        // Invariant: arth.isEmpty() || bool.isEmpty()
-        final ValueSpecification[] accum = {result, result}; // [0]=boolResult, [1]=arithResult
-        ListAdapter.adapt(ctx.expressionPart()).each(partCtx ->
+    private ValueSpecification visitOrExpr(final M3Parser.OrExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        List<M3Parser.AndExpressionContext> operands = ctx.andExpression();
+        ValueSpecification result = visitAndExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
         {
-            if (partCtx.arithmeticPart() != null)
-            {
-                if (!bool.isEmpty())
-                {
-                    accum[0] = applyBooleanParts(bool, accum[1], typeParamNames, multParamNames);
-                    bool.clear();
-                }
-                arth.add(partCtx.arithmeticPart());
-            }
-            else if (partCtx.booleanPart() != null)
-            {
-                if (!arth.isEmpty())
-                {
-                    accum[1] = applyArithmeticParts(arth, accum[0], typeParamNames, multParamNames);
-                    arth.clear();
-                }
-                bool.add(partCtx.booleanPart());
-            }
-        });
-
-        if (!arth.isEmpty())
-        {
-            result = applyArithmeticParts(arth, accum[0], typeParamNames, multParamNames);
-        }
-        else if (!bool.isEmpty())
-        {
-            result = applyBooleanParts(bool, accum[1], typeParamNames, multParamNames);
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.AndExpressionContext rhsCtx = operands.get(i);
+            result = buildBinaryCall("or", opTok, rhsCtx, result, visitAndExpr(rhsCtx, typeParamNames, multParamNames));
         }
         return result;
     }
 
-    private ValueSpecification visitExprOrGroup(final M3Parser.ExpressionOrExpressionGroupContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitAndExpr(final M3Parser.AndExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
-        return visitExpr(ctx.expression(), typeParamNames, multParamNames);
+        List<M3Parser.EqualityExpressionContext> operands = ctx.equalityExpression();
+        ValueSpecification result = visitEqualityExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
+        {
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.EqualityExpressionContext rhsCtx = operands.get(i);
+            result = buildBinaryCall("and", opTok, rhsCtx, result, visitEqualityExpr(rhsCtx, typeParamNames, multParamNames));
+        }
+        return result;
+    }
+
+    private ValueSpecification visitEqualityExpr(final M3Parser.EqualityExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        List<M3Parser.RelationalExpressionContext> operands = ctx.relationalExpression();
+        ValueSpecification result = visitRelationalExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
+        {
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.RelationalExpressionContext rhsCtx = operands.get(i);
+            ValueSpecification right = visitRelationalExpr(rhsCtx, typeParamNames, multParamNames);
+            ValueSpecification eq = buildBinaryCall("equal", opTok, rhsCtx, result, right);
+            result = (opTok.getType() == M3Lexer.TEST_NOT_EQUAL)
+                    ? new FunctionInvocationImpl()
+                            ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, result))
+                            ._functionName("not")
+                            ._parametersValues(Lists.mutable.with(eq))
+                    : eq;
+        }
+        return result;
+    }
+
+    private ValueSpecification visitRelationalExpr(final M3Parser.RelationalExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        List<M3Parser.AdditiveExpressionContext> operands = ctx.additiveExpression();
+        ValueSpecification result = visitAdditiveExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
+        {
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.AdditiveExpressionContext rhsCtx = operands.get(i);
+            String funcName = relationalFuncName(opTok.getType());
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitAdditiveExpr(rhsCtx, typeParamNames, multParamNames));
+        }
+        return result;
+    }
+
+    private ValueSpecification visitAdditiveExpr(final M3Parser.AdditiveExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        List<M3Parser.MultiplicativeExpressionContext> operands = ctx.multiplicativeExpression();
+        ValueSpecification result = visitMultiplicativeExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
+        {
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.MultiplicativeExpressionContext rhsCtx = operands.get(i);
+            String funcName = (opTok.getType() == M3Lexer.PLUS) ? "plus" : "minus";
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitMultiplicativeExpr(rhsCtx, typeParamNames, multParamNames));
+        }
+        return result;
+    }
+
+    private ValueSpecification visitMultiplicativeExpr(final M3Parser.MultiplicativeExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    {
+        List<M3Parser.ExpressionContext> operands = ctx.expression();
+        ValueSpecification result = visitExpr(operands.get(0), typeParamNames, multParamNames);
+        for (int i = 1; i < operands.size(); i++)
+        {
+            Token opTok = operatorTokenAt(ctx, i);
+            M3Parser.ExpressionContext rhsCtx = operands.get(i);
+            String funcName = (opTok.getType() == M3Lexer.STAR) ? "times" : "divide";
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitExpr(rhsCtx, typeParamNames, multParamNames));
+        }
+        return result;
+    }
+
+    private static Token operatorTokenAt(final ParserRuleContext ctx, final int operandIndex)
+    {
+        // children alternate: operand0, op0, operand1, op1, operand2, ... so the operator
+        // preceding operand[i] is at child position 2*i - 1.
+        return ((org.antlr.v4.runtime.tree.TerminalNode) ctx.getChild(2 * operandIndex - 1)).getSymbol();
+    }
+
+    private FunctionInvocationImpl buildBinaryCall(final String funcName, final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left, final ValueSpecification right)
+    {
+        return new FunctionInvocationImpl()
+                ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, left))
+                ._functionName(funcName)
+                ._parametersValues(Lists.mutable.with(left, right));
+    }
+
+    private SourceInformationImpl buildOpSourceInfo(final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left)
+    {
+        // Modern full-expression span: from the LHS's start to the RHS's end. This matches
+        // how Rust/TypeScript/Roslyn report binary-expression locations and gives IDE error
+        // squigglies the natural "highlight the whole expression" behaviour. For a left-fold
+        // chain a + b + c, the inner plus spans [a, b], the outer plus spans [a, c].
+        // Falls back to the operator token if the LHS has no recorded source info.
+        meta.pure.protocol.grammar.SourceInformation leftSrc = left._p_sourceInformation();
+        long startLine = leftSrc != null && leftSrc._startLine() != null
+                ? leftSrc._startLine()
+                : (long) opTok.getLine() + lineOffset;
+        long startCol = leftSrc != null && leftSrc._startColumn() != null
+                ? leftSrc._startColumn()
+                : (long) opTok.getCharPositionInLine() + 1;
+        return new SourceInformationImpl()
+                ._startLine(startLine)
+                ._startColumn(startCol)
+                ._endLine((long) rhsCtx.getStop().getLine() + lineOffset)
+                ._endColumn((long) (rhsCtx.getStop().getCharPositionInLine() + rhsCtx.getStop().getText().length()));
+    }
+
+    private static String relationalFuncName(final int tokenType)
+    {
+        if (tokenType == M3Lexer.LESSTHAN) return "lessThan";
+        if (tokenType == M3Lexer.LESSTHANEQUAL) return "lessThanEqual";
+        if (tokenType == M3Lexer.GREATERTHAN) return "greaterThan";
+        if (tokenType == M3Lexer.GREATERTHANEQUAL) return "greaterThanEqual";
+        throw new RuntimeException("Unknown relational operator token type: " + tokenType);
     }
 
     private ValueSpecification visitExpr(final M3Parser.ExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
-        // expression: nonArrowOrEqualExpression (propertyOrFunctionExpression)* (equalNotEqual)?
-        ValueSpecification result = ListAdapter.adapt(
+        // expression: nonArrowOrEqualExpression (propertyOrFunctionExpression)*
+        return ListAdapter.adapt(
                 ctx.propertyOrFunctionExpression()).injectInto(
                 visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression(), typeParamNames, multParamNames),
                 (acc, pofCtx) ->
@@ -782,13 +877,6 @@ public class M3ProtocolBuilder
                     }
                     return acc;
                 });
-
-        if (ctx.equalNotEqual() != null)
-        {
-            result = applyEqualNotEqual(result, ctx.equalNotEqual(), typeParamNames, multParamNames);
-        }
-
-        return result;
     }
 
     private ValueSpecification visitNonArrowOrEqual(final M3Parser.NonArrowOrEqualExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
@@ -1556,111 +1644,9 @@ public class M3ProtocolBuilder
     }
 
     // ========================================================================
-    // Expression Parts (arithmetic, boolean, equal/notEqual)
+    // simpleExpression (used by notExpression / signedExpression)
     // ========================================================================
 
-    // ----- Arithmetic precedence helpers -----
-
-    private static boolean isAdditiveOp(final String op)
-    {
-        return "plus".equals(op) || "minus".equals(op);
-    }
-
-    private static boolean isProductOp(final String op)
-    {
-        return "times".equals(op) || "divide".equals(op);
-    }
-
-    private static boolean isRelationalOp(final String op)
-    {
-        return "lessThan".equals(op)
-                || "lessThanEqual".equals(op)
-                || "greaterThan".equals(op)
-                || "greaterThanEqual".equals(op);
-    }
-
-    /**
-     * Returns true if operator1 has strictly lower precedence
-     * than operator2.
-     * Precedence: relational < additive < multiplicative
-     */
-    private static boolean isStrictlyLowerPrecedence(final String operator1, final String operator2)
-    {
-        return (isRelationalOp(operator1)
-                && (isAdditiveOp(operator2)
-                || isProductOp(operator2)))
-                || (isAdditiveOp(operator1)
-                && isProductOp(operator2));
-    }
-
-    // ----- Arithmetic part building -----
-
-    private String getArithFuncName(final M3Parser.ArithmeticPartContext ctx)
-    {
-        if (ctx.PLUS() != null && !ctx.PLUS().isEmpty())
-        {
-            return "plus";
-        }
-        if (ctx.STAR() != null && !ctx.STAR().isEmpty())
-        {
-            return "times";
-        }
-        if (ctx.MINUS() != null && !ctx.MINUS().isEmpty())
-        {
-            return "minus";
-        }
-        if (ctx.DIVIDE() != null && !ctx.DIVIDE().isEmpty())
-        {
-            return "divide";
-        }
-        if (ctx.LESSTHAN() != null)
-        {
-            return "lessThan";
-        }
-        if (ctx.LESSTHANEQUAL() != null)
-        {
-            return "lessThanEqual";
-        }
-        if (ctx.GREATERTHAN() != null)
-        {
-            return "greaterThan";
-        }
-        if (ctx.GREATERTHANEQUAL() != null)
-        {
-            return "greaterThanEqual";
-        }
-        throw new RuntimeException("Unknown arithmetic: " + ctx.getText());
-    }
-
-    /**
-     * Build ONE FunctionExpression from an arithmetic
-     * part context with the given initial value.
-     * All operators use direct binary (two-param) form.
-     * For >2 operands, left-fold into nested binary calls:
-     * e.g. a + b + c -> plus(plus(a, b), c)
-     */
-    private FunctionInvocationImpl buildArithSfe(final M3Parser.ArithmeticPartContext ctx, final String funcName, final ValueSpecification initialValue, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        MutableList<ValueSpecification> allOperands = Lists.mutable.<ValueSpecification>with(initialValue)
-                .withAll(ListAdapter.adapt(ctx.simpleExpression()).collect(e -> visitSimpleExpr(e, typeParamNames, multParamNames)));
-
-        // Left-fold into nested binary calls
-        ValueSpecification result = allOperands.get(0);
-        for (int i = 1; i < allOperands.size(); i++)
-        {
-            result = new FunctionInvocationImpl()
-                    ._p_sourceInformation(buildSourceInfo(ctx))
-                    ._functionName(funcName)
-                    ._parametersValues(Lists.mutable.with(result, allOperands.get(i)));
-        }
-
-        return (FunctionInvocationImpl) result;
-    }
-
-    /**
-     * Visit a simpleExpression (expression without trailing
-     * equalNotEqual).
-     */
     private ValueSpecification visitSimpleExpr(final M3Parser.SimpleExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
     {
         ValueSpecification result = visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression(), typeParamNames, multParamNames);
@@ -1678,193 +1664,6 @@ public class M3ProtocolBuilder
                     }
                     return acc;
                 });
-    }
-
-    /**
-     * Process a batch of arithmetic parts with precedence
-     * snatching. When a higher-precedence op follows a lower
-     * one, the last operand of the previous expression is
-     * snatched and becomes the initial operand of the new one.
-     * E.g. 2 + 2 * 4 -> plus([2, times([2, 4])])
-     */
-    private ValueSpecification applyArithmeticParts(final MutableList<M3Parser.ArithmeticPartContext> parts, final ValueSpecification initialValue, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        final FunctionInvocationImpl[] accum = {null};
-        parts.each(ctx ->
-        {
-            String funcName = getArithFuncName(ctx);
-            if (accum[0] == null)
-            {
-                accum[0] = buildArithSfe(ctx, funcName, initialValue, typeParamNames, multParamNames);
-            }
-            else if (isStrictlyLowerPrecedence((String) accum[0]._functionName(), funcName))
-            {
-                ValueSpecification lastParam = getLastParam(accum[0]);
-                FunctionInvocationImpl newSfe = buildArithSfe(ctx, funcName, lastParam, typeParamNames, multParamNames);
-                replaceLastParam(accum[0], newSfe);
-            }
-            else
-            {
-                accum[0] = buildArithSfe(ctx, funcName, accum[0], typeParamNames, multParamNames);
-            }
-        });
-        return accum[0];
-    }
-
-    /**
-     * Get the last parameter value from an expression.
-     * All operators now use direct binary params.
-     */
-    private ValueSpecification getLastParam(final FunctionExpression sfe)
-    {
-        MutableList<ValueSpecification> params = ListAdapter.adapt(sfe._parametersValues());
-        return params.getLast();
-    }
-
-    /**
-     * Replace the last parameter value in an expression.
-     * All operators now use direct binary params.
-     */
-    private void replaceLastParam(final FunctionExpression sfe, final ValueSpecification newVal)
-    {
-        MutableList<ValueSpecification> newParams = ListAdapter.adapt(sfe._parametersValues());
-        newParams.set(newParams.size() - 1, newVal);
-        sfe._parametersValues(newParams);
-    }
-
-    // ----- Boolean parts -----
-
-    /**
-     * Returns true if boolOp1 has lower precedence than
-     * boolOp2. OR has lower precedence than AND.
-     */
-    private static boolean isLowerPrecedenceBoolean(final String boolOp1, final String boolOp2)
-    {
-        return "or".equals(boolOp1) && "and".equals(boolOp2);
-    }
-
-    /**
-     * Returns true if the function is AND or OR (used to
-     * determine if equalNotEqual should snatch).
-     */
-    private static boolean isAndOrOr(final String funcName)
-    {
-        return "and".equals(funcName) || "or".equals(funcName);
-    }
-
-    /**
-     * Build a boolean SFE from a BooleanPartContext.
-     */
-    private FunctionInvocationImpl buildBoolSfe(final M3Parser.BooleanPartContext ctx, final String funcName, final ValueSpecification initialValue, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        return new FunctionInvocationImpl()
-                ._p_sourceInformation(buildSourceInfo(ctx))
-                ._functionName(funcName)
-                ._parametersValues(Lists.mutable.with(initialValue, processCombinedArithmeticOnly(ctx.combinedArithmeticOnly(), typeParamNames, multParamNames)));
-    }
-
-    /**
-     * Process a batch of boolean parts with precedence
-     * snatching. AND has higher precedence than OR, so
-     * when AND follows OR, the last operand of OR is
-     * snatched and becomes the first operand of AND.
-     * E.g. a || b && c -> or(a, and(b, c))
-     */
-    private ValueSpecification applyBooleanParts(final MutableList<M3Parser.BooleanPartContext> parts, final ValueSpecification initialValue, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        FunctionInvocationImpl sfe = null;
-        for (M3Parser.BooleanPartContext ctx : parts)
-        {
-            if (ctx.AND() != null)
-            {
-                if (sfe == null)
-                {
-                    sfe = buildBoolSfe(ctx, "and", initialValue, typeParamNames, multParamNames);
-                }
-                else if (isLowerPrecedenceBoolean((String) sfe._functionName(), "and"))
-                {
-                    MutableList<ValueSpecification> params = ListAdapter.adapt(sfe._parametersValues());
-                    ValueSpecification lastParam = params.get(params.size() - 1);
-                    FunctionInvocationImpl newSfe = buildBoolSfe(ctx, "and", lastParam, typeParamNames, multParamNames);
-                    params.set(params.size() - 1, newSfe);
-                    sfe._parametersValues(params);
-                }
-                else
-                {
-                    sfe = buildBoolSfe(ctx, "and", sfe, typeParamNames, multParamNames);
-                }
-            }
-            else if (ctx.OR() != null)
-            {
-                if (sfe == null)
-                {
-                    sfe = buildBoolSfe(ctx, "or", initialValue, typeParamNames, multParamNames);
-                }
-                else
-                {
-                    sfe = buildBoolSfe(ctx, "or", sfe, typeParamNames, multParamNames);
-                }
-            }
-            else if (ctx.equalNotEqual() != null)
-            {
-                if (sfe != null && isAndOrOr((String) sfe._functionName()))
-                {
-                    MutableList<ValueSpecification> params = ListAdapter.adapt(sfe._parametersValues());
-                    ValueSpecification lastParam = params.get(params.size() - 1);
-                    ValueSpecification eqResult = applyEqualNotEqual(lastParam, ctx.equalNotEqual(), typeParamNames, multParamNames);
-                    params.set(params.size() - 1, eqResult);
-                    sfe._parametersValues(params);
-                }
-                else
-                {
-                    ValueSpecification eqResult = applyEqualNotEqual(
-                            sfe == null ? initialValue : sfe,
-                            ctx.equalNotEqual(), typeParamNames, multParamNames);
-                    if (eqResult instanceof FunctionInvocationImpl sfeResult)
-                    {
-                        sfe = sfeResult;
-                    }
-                    else
-                    {
-                        return eqResult;
-                    }
-                }
-            }
-        }
-        return sfe;
-    }
-
-    private ValueSpecification applyEqualNotEqual(final ValueSpecification left, final M3Parser.EqualNotEqualContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        // equalNotEqual: (TEST_EQUAL | TEST_NOT_EQUAL) combinedArithmeticOnly
-        FunctionInvocationImpl equalSfe = new FunctionInvocationImpl()
-                ._p_sourceInformation(buildSourceInfo(ctx))
-                ._functionName("equal")
-                ._parametersValues(Lists.mutable.with(
-                        left,
-                        processCombinedArithmeticOnly(ctx.combinedArithmeticOnly(), typeParamNames, multParamNames)));
-
-        if (ctx.TEST_EQUAL() != null)
-        {
-            return equalSfe;
-        }
-
-        // != is not(equal(a, b))
-        return new FunctionInvocationImpl()
-                ._p_sourceInformation(buildSourceInfo(ctx))
-                ._functionName("not")
-                ._parametersValues(Lists.mutable.with(equalSfe));
-    }
-
-    private ValueSpecification processCombinedArithmeticOnly(final M3Parser.CombinedArithmeticOnlyContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
-    {
-        ValueSpecification result = visitExprOrGroup(ctx.expressionOrExpressionGroup(), typeParamNames, multParamNames);
-        MutableList<M3Parser.ArithmeticPartContext> parts = ListAdapter.adapt(ctx.arithmeticPart());
-        if (!parts.isEmpty())
-        {
-            result = applyArithmeticParts(parts, result, typeParamNames, multParamNames);
-        }
-        return result;
     }
 
     // ========================================================================

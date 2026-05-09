@@ -18,7 +18,7 @@ class pack::MyClass extends Any  ~Class<pack::MyClass>  @4:1-9:1
       AtomicValue  'ok' :@String@[1]  ~@AtomicValue@  @7:21-7:24
   property advanced :@String@[1]  ~Property<pack::MyClass, @String@|1>
     defaultValue Lambda()  ~#LambdaFunction<#{->#String##[1]#}#>#
-      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @8:36-8:42
+      FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @8:31-8:42
         DotApplication pack::MyClass.str :#String##[1]#  ~@DotApplication@  @8:31-8:34
           Variable this :#pack::MyClass##[1]#  ~@VariableExpression@  @8:26-8:30
         AtomicValue  'bla' :@String@[1]  ~@AtomicValue@  @8:38-8:42
