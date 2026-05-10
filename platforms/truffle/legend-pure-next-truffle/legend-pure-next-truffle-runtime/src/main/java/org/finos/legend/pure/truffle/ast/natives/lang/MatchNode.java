@@ -98,10 +98,14 @@ public final class MatchNode extends PureNode
             Object mfRaw = CollectionHelper.at(matchFns, i);
             // Unwrap AtomicValue wrapper — FlatBuffer-based collections may
             // deliver match lambdas still wrapped in their VS envelope.
-            if (mfRaw instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                    && av._value() != null)
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(mfRaw,
+                    "meta::pure::metamodel::valuespecification::AtomicValue"))
             {
-                mfRaw = av._value();
+                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mfRaw, "value");
+                if (inner != null)
+                {
+                    mfRaw = inner;
+                }
             }
             // Extract the FunctionDefinition for type matching, but keep the
             // original (possibly RawClosure) for invocation so captured open
@@ -127,7 +131,10 @@ public final class MatchNode extends PureNode
 
             // Build args: [value, optionalExtra]
             Object[] args;
-            if (values.length > 2 && fd._parameters() != null && fd._parameters().size() >= 2)
+            Object fdParams = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
+            if (values.length > 2
+                    && fdParams instanceof org.finos.legend.pure.truffle.types.PureSequence fdParamSeq
+                    && fdParamSeq.size() >= 2)
             {
                 args = new Object[]{value, values[2]};
             }
@@ -140,8 +147,10 @@ public final class MatchNode extends PureNode
             Object matchResult = matchCallNode.callWithArgs(mfRaw, args);
             return matchResult;
         }
-        String vtPath = (valueType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe) : "n/a";
+        String vtPath = valueType != null
+                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(valueType, resolver)
+                : "n/a";
+        if (vtPath == null) vtPath = "n/a";
         Object cgt = context.classifierGenericType(value);
         throw new RuntimeException("No match function matched the value: " + value
                 + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getName()) + ", fnCount=" + fnCount + "]");
@@ -188,7 +197,8 @@ public final class MatchNode extends PureNode
             }
             return org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
         }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+        // Pure metamodel object (any subtype of Any) — read CGT via context
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(value) != null)
         {
             var cgt = context.classifierGenericType(value);
             if (cgt == null)
@@ -259,40 +269,44 @@ public final class MatchNode extends PureNode
                                          int valueCount,
                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (fd._parameters() == null || fd._parameters().isEmpty())
+        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
+        if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
         {
             return true;
         }
 
-        Object paramObj = fd._parameters().getBoxed(0);
-        if (!(paramObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression param))
+        Object param = params.getBoxed(0);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(param,
+                "meta::pure::metamodel::valuespecification::VariableExpression"))
         {
             throw new RuntimeException("Error");
         }
 
+        Object paramMul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(param, "multiplicity");
         // For null/empty values (count=0), skip type check — Nil is compatible with everything.
         // Only check multiplicity.
         if (valueCount == 0)
         {
-            if (param._multiplicity() != null)
+            if (paramMul != null)
             {
-                return multiplicityAccepts(param._multiplicity(), 0);
+                return multiplicityAccepts(paramMul, 0);
             }
             return true;
         }
 
-        if (param._genericType() != null)
+        Object paramGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(param, "genericType");
+        if (paramGT != null)
         {
-            Type paramType = _GenericType.type(param._genericType());
+            Type paramType = _GenericType.type(paramGT);
             if (paramType != null && valueType != null && !_Type.subtypeOf(valueType, paramType, resolver))
             {
                 return false;
             }
         }
 
-        if (param._multiplicity() != null)
+        if (paramMul != null)
         {
-            if (!multiplicityAccepts(param._multiplicity(), valueCount))
+            if (!multiplicityAccepts(paramMul, valueCount))
             {
                 return false;
             }
@@ -302,23 +316,36 @@ public final class MatchNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean multiplicityAccepts(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity mult, int count)
+    private static boolean multiplicityAccepts(Object mult, int count)
     {
-        if (!(mult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.ConcreteMultiplicity cm))
+        if (mult == null)
+        {
+            return true;
+        }
+        // Bound-driven — covers ConcreteMultiplicity and all its Pure subtypes
+        // (UserDefinedAdHocMultiplicity, InferredAdHocMultiplicity, …) without
+        // a resolver-backed isType check. Param-typed multiplicities have neither
+        // lowerBound nor upperBound, so this returns true for them — matches the
+        // original `!instanceof ConcreteMultiplicity → return true` shortcut.
+        Object lb = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mult, "lowerBound");
+        Object ub = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mult, "upperBound");
+        if (lb == null && ub == null)
         {
             return true;
         }
 
         long lower = 0;
-        if (cm._lowerBound() != null)
+        if (lb != null)
         {
-            lower = cm._lowerBound()._value();
+            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lb, "value");
+            if (v instanceof Number n) lower = n.longValue();
         }
 
         long upper = -1;
-        if (cm._upperBound() != null)
+        if (ub != null)
         {
-            upper = cm._upperBound()._value();
+            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ub, "value");
+            if (v instanceof Number n) upper = n.longValue();
         }
 
         if (count < lower)

@@ -155,16 +155,18 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             for (String path : m.elementPaths())
             {
                 Object element = getElement(path);
-                if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction pf))
+                if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                        "meta::pure::metamodel::function::PackageableFunction", this))
                 {
                     continue;
                 }
-                String fnName = pf._functionName();
-                if (fnName == null)
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "functionName");
+                if (!(fnNameObj instanceof String fnName))
                 {
                     continue;
                 }
-                int arity = pf._parameters() == null ? 0 : pf._parameters().size();
+                Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "parameters");
+                int arity = paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence ps ? ps.size() : 0;
                 idx.computeIfAbsent(fnName, k -> new HashMap<>())
                    .computeIfAbsent(arity, k -> new ArrayList<>())
                    .add(element);

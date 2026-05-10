@@ -130,15 +130,16 @@ public final class MultiIfNode extends PureNode
         for (int i = 0; i < n; i++)
         {
             Object item = CollectionHelper.at(condList, i);
-            if (!(item instanceof Pair pair))
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(item,
+                    "meta::pure::functions::collection::Pair"))
             {
                 continue;
             }
-            Object condFn = pair._first();
+            Object condFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "first");
             Object condResult = condCallNode.call(condFn);
             if (Boolean.TRUE.equals(condResult))
             {
-                Object bodyFn = pair._second();
+                Object bodyFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "second");
                 return bodyCallNode.call(bodyFn);
             }
         }

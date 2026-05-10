@@ -98,9 +98,9 @@ public final class ZipNode extends PureNode
         for (int i = 0; i < sz; i++)
         {
             PairImpl pair = new PairImpl();
-            pair._first(CollectionHelper.at(left, i));
-            pair._second(CollectionHelper.at(right, i));
-            pair._classifierGenericType(pairCGT);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "first", CollectionHelper.at(left, i));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "second", CollectionHelper.at(right, i));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "classifierGenericType", pairCGT);
             pairs[i] = pair;
         }
         return new ObjectSequence(pairs);

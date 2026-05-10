@@ -140,6 +140,9 @@
                     <argLine>
                         --add-opens=java.base/sun.misc=ALL-UNNAMED
                         --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                        -XX:+UnlockExperimentalVMOptions
+                        -XX:+EnableJVMCI
+                        -XX:+UseJVMCICompiler
                     </argLine>
                     <!-- <includes> inherited from platforms/truffle/pom.xml -->
                 </configuration>

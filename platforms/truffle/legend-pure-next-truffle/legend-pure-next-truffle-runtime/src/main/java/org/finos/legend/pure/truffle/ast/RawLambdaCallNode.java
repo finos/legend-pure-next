@@ -177,7 +177,8 @@ public final class RawLambdaCallNode extends Node
             Object[] rawArgs = extractArgs(args);
             if (rawArgs.length > 0)
             {
-                return propertyReader.execute(rawArgs[0], prop._name());
+                return propertyReader.execute(rawArgs[0],
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name"));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }

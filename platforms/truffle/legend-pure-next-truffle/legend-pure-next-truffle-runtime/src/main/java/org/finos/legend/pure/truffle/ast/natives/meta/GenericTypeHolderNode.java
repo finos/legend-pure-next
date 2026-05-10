@@ -59,14 +59,16 @@ public final class GenericTypeHolderNode extends PureNode
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(holderType, resolver);
         if (heldGT != null)
         {
-            classifierGT._typeArguments(new ObjectSequence(new Object[]{heldGT}));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(classifierGT, "typeArguments",
+                    new ObjectSequence(new Object[]{heldGT}));
         }
 
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
-                new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl()
-                        ._classifierGenericType(classifierGT)
-                        ._genericType(classifierGT)
-                        ._multiplicity((Multiplicity) resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
+                new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl();
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "classifierGenericType", classifierGT);
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "genericType", classifierGT);
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "multiplicity",
+                resolver.getElement("meta::pure::metamodel::multiplicity::PureOne"));
         return holder;
     }
 }

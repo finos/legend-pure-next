@@ -150,13 +150,15 @@ public final class GroupByNode extends PureNode
         }
 
         // Build MapImpl backed by LinkedHashMap
+        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         MapImpl mapInstance = new MapImpl();
         mapInstance._classifierGenericType(mapCgt);
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
             ListImpl listInstance = new ListImpl();
-            listInstance._classifierGenericType(listCgt);
-            listInstance._values(new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(listInstance, "classifierGenericType", listCgt);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(listInstance, "values",
+                    new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));
             mapInstance.put(e.getKey(), listInstance);
         }
         return mapInstance;

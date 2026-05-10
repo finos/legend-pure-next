@@ -209,12 +209,12 @@ public final class ProtocolTranslator
 
     private void setClassifierGenericType(Object target, String bootstrapClassName)
     {
-        if (resolver == null || !(target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any))
+        if (resolver == null || target == null)
         {
             return;
         }
         // Already has CGT (e.g. copied from source) — don't overwrite
-        if (any._classifierGenericType() != null)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "classifierGenericType") != null)
         {
             return;
         }
@@ -229,7 +229,8 @@ public final class ProtocolTranslator
         Object classType = resolver.getElement(purePath);
         if (classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type)
         {
-            any._classifierGenericType(org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(target, "classifierGenericType",
+                    org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver));
         }
         else
         {

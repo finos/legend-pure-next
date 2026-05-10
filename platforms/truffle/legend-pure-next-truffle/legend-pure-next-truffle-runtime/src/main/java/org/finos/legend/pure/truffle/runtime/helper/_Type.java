@@ -1,8 +1,8 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 
 import java.util.List;
 
@@ -102,12 +102,8 @@ public final class _Type
             }
         }
         // Fallback: string compare (only hits before "Any" is in the resolver).
-        return type instanceof PackageableElement pe && "Any".equals(pe._name());
-    }
-
-    private static boolean isTopType(Type type)
-    {
-        return type instanceof PackageableElement pe && "Any".equals(pe._name());
+        // Type extends PackageableElement, so the instanceof guard is implicit.
+        return "Any".equals(PureObj.read(type, "name"));
     }
 
     public static String print(Type type, TruffleMetadataAccess resolver)
@@ -116,18 +112,16 @@ public final class _Type
         {
             return "null";
         }
-        if (type instanceof PackageableElement pe)
+        // Type extends PackageableElement; path() handles the lookup uniformly.
+        String path = _PackageableElement.path(type, resolver);
+        if (path != null && !path.isEmpty())
         {
-            String path = _PackageableElement.path(pe, resolver);
-            if (path != null && !path.isEmpty())
-            {
-                return path;
-            }
-            String name = pe._name();
-            if (name != null)
-            {
-                return name;
-            }
+            return path;
+        }
+        Object name = PureObj.read(type, "name");
+        if (name instanceof String s && !s.isEmpty())
+        {
+            return s;
         }
         return type.getClass().getName();
     }

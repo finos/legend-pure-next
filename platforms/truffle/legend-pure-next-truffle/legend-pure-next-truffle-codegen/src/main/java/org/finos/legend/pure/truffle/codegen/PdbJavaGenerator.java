@@ -120,16 +120,12 @@ public class PdbJavaGenerator
                         generateImpl(cr).getBytes(StandardCharsets.UTF_8));
                 impls++;
 
-                // Generate FlatBuffer wrapper if FBS schema is available
-                if (fbsSchema != null)
-                {
-                    String wrapperCode = generateFlatBufferWrapper(cr);
-                    if (wrapperCode != null)
-                    {
-                        Files.write(packageDir.resolve(cr.name + "FlatBufferWrapper.java"),
-                                wrapperCode.getBytes(StandardCharsets.UTF_8));
-                    }
-                }
+                // XFlatBufferWrapper is no longer emitted — the merged XImpl
+                // (above) handles BOTH the Pure-built and FB-loaded modes
+                // through its dual constructor. The loader flip on
+                // {@code TrufflePdbLoader.TYPE_TO_WRAPPER} now points at
+                // XImpl directly, eliminating the bi-morphic Impl/FBW guard
+                // at every Pure property access site.
             }
         }
 
@@ -488,8 +484,31 @@ public class PdbJavaGenerator
         for (PropRecord pr : cr.properties)
         {
             String javaType = resolveJavaType(pr);
-            sb.append("    ").append(javaType).append(" _").append(pr.name).append("();\n\n");
-            sb.append("    ").append(cr.name).append(" _").append(pr.name).append("(").append(javaType).append(" value);\n\n");
+            // Default-method getter/setter bodies that delegate to
+            // PropertyAccessor.read/writeProperty. Lets PureDynamicObject
+            // pick up the typed surface for free once it's the canonical
+            // metamodel-object class — without these defaults, every
+            // property would need an explicit override on PureDynamicObject
+            // (impossible at scale across ~750 interfaces). Existing
+            // generated XImpl / XFlatBufferWrapper classes already emit
+            // explicit @Override implementations; those win over the
+            // defaults so legacy behaviour is unchanged. PropertyAccessor
+            // (vs the runtime-module PureObj helper) is used here because
+            // the codegen module's classpath can't see runtime-module classes
+            // — PropertyAccessor lives alongside the codegen.
+            sb.append("    default ").append(javaType).append(" _").append(pr.name).append("()\n");
+            sb.append("    {\n");
+            sb.append("        Object __v = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) this).readProperty(\"")
+                    .append(pr.name).append("\");\n");
+            sb.append("        return __v == org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT ? null : (")
+                    .append(javaType).append(") __v;\n");
+            sb.append("    }\n\n");
+            sb.append("    default ").append(cr.name).append(" _").append(pr.name).append("(").append(javaType).append(" value)\n");
+            sb.append("    {\n");
+            sb.append("        ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) this).writeProperty(\"")
+                    .append(pr.name).append("\", value);\n");
+            sb.append("        return (").append(cr.name).append(") this;\n");
+            sb.append("    }\n\n");
         }
 
         // _copy() — declared on every interface (concrete or abstract) so
@@ -510,35 +529,118 @@ public class PdbJavaGenerator
     // Impl generation
     // =========================================================================
 
+    /**
+     * Emits the merged Pure-type Impl class. One class per Pure type
+     * supports BOTH:
+     * <ul>
+     *   <li><b>Pure-built mode</b> — default constructor, fields populated
+     *       via setters from {@code ^X(prop=val)} construction.</li>
+     *   <li><b>PDB-loaded mode</b> — {@code (fb, resolver[, parent])}
+     *       constructor; fields lazy-decoded from a FlatBuffer source on
+     *       first read, then cached.</li>
+     * </ul>
+     *
+     * <p>This replaces the previous two-class design ({@code XImpl} +
+     * {@code XFlatBufferWrapper}) which forced every Pure property access
+     * to carry a bi-morphic class guard at runtime — even though Pure's
+     * type system says regular (non-QP) properties are statically dispatched.
+     * After the merge, every site is monomorphic at the Java class level
+     * and PE specialises directly to the merged class.</p>
+     *
+     * <p>Storage uses an {@link #UNSET_CLASS_NAME UNSET} sentinel per
+     * property to distinguish "never set / not yet decoded" from "set to
+     * null". The sentinel lives at the package-level via the static field
+     * (only emitted on classes that have FBW backing).</p>
+     */
     private String generateImpl(ClassRecord cr)
     {
         StringBuilder sb = new StringBuilder();
         String pkg = toJavaPackage(cr.packagePath);
 
+        // Determine if this class has a FlatBuffer schema definition. If so,
+        // we generate the merged class with FBW lazy-decode capability.
+        // Otherwise we generate the plain Impl form (no fb field, no UNSET
+        // sentinel — saves memory for classes that can never come from PDB).
+        String defName = (fbsSchema != null) ? fbsSchema.findDefTableName(cr.name) : null;
+        java.util.List<FbsSchema.FbsField> fbsFields = (defName != null) ? fbsSchema.getTableFields(defName) : null;
+        boolean hasFbw = (fbsFields != null);
+
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
+        if (hasFbw)
+        {
+            sb.append("import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;\n");
+            sb.append("import org.finos.legend.pure.truffle.types.ObjectSequence;\n");
+            sb.append("import org.finos.legend.pure.truffle.types.PureSequence;\n\n");
+        }
         sb.append("public class ").append(cr.name).append("Impl");
         sb.append(" implements ").append(cr.name);
         sb.append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor");
+        if (hasFbw)
+        {
+            sb.append(", org.finos.legend.pure.truffle.runtime.FbParented");
+        }
         sb.append("\n{\n");
 
         // Collect all properties (own + inherited)
         MutableList<PropRecord> allProps = collectAllProperties(cr);
 
-        // Fields
+        // UNSET sentinel — only needed for FBW-capable classes to
+        // distinguish "never decoded" from "decoded as null".
+        if (hasFbw)
+        {
+            sb.append("    private static final Object UNSET = new Object();\n\n");
+        }
+
+        // Storage fields. For FBW-capable classes, fields are Object-typed
+        // and initialised to UNSET so the getter can detect "never read".
+        // For pure-Impl-only classes, fields use the natural Java type and
+        // initialise to null/0.
         for (PropRecord pr : allProps)
         {
             String javaType = resolveJavaType(pr);
             String fieldName = escapeKeyword(pr.name);
-            sb.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
+            if (hasFbw)
+            {
+                sb.append("    private Object ").append(fieldName).append(" = UNSET;\n");
+            }
+            else
+            {
+                sb.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
+            }
         }
-        if (!allProps.isEmpty())
+        // FBW back-reference (null for Pure-built instances). Final so PE
+        // can branch-fold the lazy-decode path away when the instance was
+        // built via the default constructor.
+        if (hasFbw)
+        {
+            sb.append("    private final ").append(FBS_PKG).append(".").append(defName).append(" fb;\n");
+            sb.append("    private final TruffleMetadataAccess resolver;\n");
+            sb.append("    private final Object _parent;\n");
+        }
+        if (!allProps.isEmpty() || hasFbw)
         {
             sb.append("\n");
         }
 
-        // Constructor
-        sb.append("    public ").append(cr.name).append("Impl() {}\n\n");
+        // Default constructor (Pure-built mode)
+        if (hasFbw)
+        {
+            sb.append("    public ").append(cr.name).append("Impl()\n");
+            sb.append("    {\n        this.fb = null;\n        this.resolver = null;\n        this._parent = null;\n    }\n\n");
+            // FBW-built constructors
+            sb.append("    public ").append(cr.name).append("Impl(")
+                    .append(FBS_PKG).append(".").append(defName).append(" fb, TruffleMetadataAccess resolver)\n");
+            sb.append("    {\n        this(fb, resolver, null);\n    }\n\n");
+            sb.append("    public ").append(cr.name).append("Impl(")
+                    .append(FBS_PKG).append(".").append(defName).append(" fb, TruffleMetadataAccess resolver, Object parent)\n");
+            sb.append("    {\n        this.fb = fb;\n        this.resolver = resolver;\n        this._parent = parent;\n    }\n\n");
+            sb.append("    @Override\n    public Object _fbParent() { return this._parent; }\n\n");
+        }
+        else
+        {
+            sb.append("    public ").append(cr.name).append("Impl() {}\n\n");
+        }
 
         // Getters and setters
         for (PropRecord pr : allProps)
@@ -550,15 +652,56 @@ public class PdbJavaGenerator
             sb.append("    @Override\n");
             sb.append("    public ").append(javaType).append(" _").append(pr.name).append("()\n");
             sb.append("    {\n");
-            if (pr.isMany)
+            if (hasFbw)
             {
-                sb.append("        return this.").append(fieldName).append(" != null ? this.").append(fieldName).append(" : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+                FbsSchema.FbsField fbsField = findFbsField(fbsFields, pr.name);
+                // Read field (Object). UNSET → either decode (fb != null) or
+                // return default (Pure-built never set this property).
+                // Pure-built after setter, or FBW after decode, returns the
+                // cached value directly via cast.
+                sb.append("        Object v = this.").append(fieldName).append(";\n");
+                sb.append("        if (v != UNSET) return (").append(javaType).append(") v;\n");
+                sb.append("        if (this.fb == null)\n        {\n");
+                if (pr.isMany || javaType.equals("PureSequence") || javaType.endsWith(".PureSequence"))
+                {
+                    sb.append("            this.").append(fieldName).append(" = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+                    sb.append("            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+                }
+                else
+                {
+                    sb.append("            this.").append(fieldName).append(" = null;\n");
+                    sb.append("            return null;\n");
+                }
+                sb.append("        }\n");
+                sb.append("        return __load_").append(pr.name).append("();\n");
+                sb.append("    }\n\n");
+
+                // Lazy-decode boundary helper
+                sb.append("    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary\n");
+                sb.append("    private ").append(javaType).append(" __load_").append(pr.name).append("()\n    {\n");
+                sb.append("        Object __raw = null;\n");
+                generateWrapperGetterBody(sb, pr, fbsField);
+                if (pr.isMany || javaType.equals("PureSequence") || javaType.endsWith(".PureSequence"))
+                {
+                    sb.append("        if (__raw == null) __raw = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+                }
+                sb.append("        this.").append(fieldName).append(" = __raw;\n");
+                sb.append("        return (").append(javaType).append(") __raw;\n");
+                sb.append("    }\n\n");
             }
             else
             {
-                sb.append("        return this.").append(fieldName).append(";\n");
+                // Plain Impl form — no FBW capability.
+                if (pr.isMany)
+                {
+                    sb.append("        return this.").append(fieldName).append(" != null ? this.").append(fieldName).append(" : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+                }
+                else
+                {
+                    sb.append("        return this.").append(fieldName).append(";\n");
+                }
+                sb.append("    }\n\n");
             }
-            sb.append("    }\n\n");
 
             // Setter
             sb.append("    @Override\n");
@@ -609,15 +752,31 @@ public class PdbJavaGenerator
         }
         sb.append("    }\n\n");
 
-        // _copy()
+        // _copy() — for FBW-capable classes, must use getter+setter pairs
+        // (not direct field copy) so any UNSET-sentinel fields force-decode
+        // from the source's FB before being transferred to the copy.
+        // Matches the legacy XFlatBufferWrapper._copy() behaviour, which
+        // Pure tests like testFunctionDefinitionCopy depend on for the
+        // copy to have all properties materialised. For plain (non-FBW)
+        // Impls there are no UNSET sentinels — fields are already typed
+        // and direct copy is fine.
         sb.append("    @Override\n");
         sb.append("    public ").append(cr.name).append("Impl _copy()\n");
         sb.append("    {\n");
         sb.append("        ").append(cr.name).append("Impl copy = new ").append(cr.name).append("Impl();\n");
         for (PropRecord pr : allProps)
         {
-            String fieldName = escapeKeyword(pr.name);
-            sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";\n");
+            if (hasFbw)
+            {
+                // Getter forces decode-from-FB; setter writes to the new
+                // (Pure-built, fb=null) copy.
+                sb.append("        copy._").append(pr.name).append("(this._").append(pr.name).append("());\n");
+            }
+            else
+            {
+                String fieldName = escapeKeyword(pr.name);
+                sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";\n");
+            }
         }
         sb.append("        return copy;\n");
         sb.append("    }\n\n");
@@ -1977,7 +2136,10 @@ public class PdbJavaGenerator
         ClassRecord cr = findClassByShortName(pureName);
         if (cr != null)
         {
-            return toJavaPackage(cr.packagePath) + "." + cr.name + "FlatBufferWrapper";
+            // Post-XFBW-drop: nested decode constructs Impl directly (which
+            // has the same {@code (XDef fb, TruffleMetadataAccess resolver,
+            // Object parent)} constructor as the old FBW had).
+            return toJavaPackage(cr.packagePath) + "." + cr.name + "Impl";
         }
         return null;
     }

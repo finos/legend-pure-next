@@ -53,39 +53,51 @@ public final class NewGenericTypeNode extends PureNode
     private static Object doNewGenericType(Object result,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (!(result instanceof GenericTypeValue gt))
+        if (result == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(result,
+                        "meta::pure::metamodel::type::generics::GenericTypeValue", resolver))
         {
             throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
         }
 
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
+        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType =
+                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(result);
         String classPath = "Unknown";
-        if (rawType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+        if (rawType != null)
         {
-            classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-            if (classPath.isEmpty())
+            classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(rawType);
+            if (classPath == null || classPath.isEmpty())
             {
-                classPath = pe._name() != null ? pe._name() : "Unknown";
+                Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawType, "name");
+                classPath = n instanceof String s && !s.isEmpty() ? s : "Unknown";
             }
         }
 
         if ("meta::pure::metamodel::type::Class".equals(classPath))
         {
-            if (org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gt) == null || org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gt).isEmpty())
+            if (org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(result) == null
+                    || org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(result).isEmpty())
             {
                 throw new RuntimeException("Cannot instantiate Class<Class<T>> because the typeArgs are not set for the typeParam");
             }
         }
 
         Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, resolver);
-        if (instance instanceof Any any)
+        if (instance != null)
         {
             // Platform-level canonical anchor: when the input GT has no type/mult args,
             // prefer the canonical GenericType_<TypeName> UDPGT from core.pdb. Mirrors
             // bootstrap MetaNatives.preferCanonicalAnchor and Java's `new XxxImpl(model)`
             // ctor anchoring. Without this, `new(buildUserDefinedGenericType(SomeType))`
             // leaves classifier as a fresh inline UDGT, while Java emits canonical UDPGT.
-            any._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(gt, resolver));
+            // result was just isType-validated as GenericTypeValue above; the
+            // cast is safe as long as legacy FBWs still implement the typed
+            // interface (they do during migration). Drops out when
+            // preferCanonicalAnchorPublic is widened to Object in a later pass.
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
+                    NewWithKeysNode.preferCanonicalAnchorPublic(
+                            (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue) result,
+                            resolver));
         }
 
         return instance;

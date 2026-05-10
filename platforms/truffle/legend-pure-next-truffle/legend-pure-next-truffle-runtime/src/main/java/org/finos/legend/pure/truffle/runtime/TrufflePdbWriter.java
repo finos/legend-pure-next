@@ -101,9 +101,10 @@ public final class TrufflePdbWriter
                 byte[] data = builder.sizedByteArray();
 
                 indexEntries.add(new String[]{path, typeName});
-                if (element instanceof PackageableFunction pf && pf._functionName() != null && !pf._functionName().isEmpty())
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "functionName");
+                if (fnNameObj instanceof String fnName && !fnName.isEmpty())
                 {
-                    functionEntries.add(pf);
+                    functionEntries.add((PackageableFunction) element);
                 }
 
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
@@ -164,9 +165,11 @@ public final class TrufflePdbWriter
         {
             PackageableFunction fn = entries.get(i);
             int fullPathOffset = builder.createString(_PackageableElement.path(fn));
-            int functionNameOffset = builder.createString(fn._functionName());
+            int functionNameOffset = builder.createString(
+                    (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fn, "functionName"));
             int functionTypeOffset = writeFunctionTypeOf(writer, fn);
-            boolean isNative = fn instanceof NativeFunction;
+            boolean isNative = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                    "meta::pure::metamodel::function::NativeFunction");
             entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
                     .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset, isNative);
         }
@@ -187,13 +190,18 @@ public final class TrufflePdbWriter
      */
     private static int writeFunctionTypeOf(GeneratedFlatBufferWriter writer, PackageableFunction fn)
     {
-        Object cgt = fn._classifierGenericType();
-        if (cgt instanceof GenericTypeValue gtv && _GenericType.typeArguments(gtv) != null && _GenericType.typeArguments(gtv).size() > 0)
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fn, "classifierGenericType");
+        org.finos.legend.pure.truffle.types.PureSequence args = _GenericType.typeArguments(cgt);
+        if (args != null && args.size() > 0)
         {
-            Object first = _GenericType.typeArguments(gtv).getBoxed(0);
-            if (first instanceof GenericTypeValue inner && inner._type() instanceof FunctionType ft)
+            Object first = args.getBoxed(0);
+            if (first != null)
             {
-                return writer.writeFunctionType(ft);
+                Object innerType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(first, "type");
+                if (innerType instanceof FunctionType ft)
+                {
+                    return writer.writeFunctionType(ft);
+                }
             }
         }
         return 0;

@@ -216,10 +216,11 @@ public final class PureContext
             FrameLayout prevLayout = astBuilder.pushLayout(cf.layout());
             try
             {
-                PureNode[] body = astBuilder.lowerBody(lambda._expressionSequence(), cf.layout());
-                org.finos.legend.pure.truffle.types.PureSequence openVars = lambda._openVariables();
+                Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "expressionSequence");
+                PureNode[] body = astBuilder.lowerBody(exprSeqObj, cf.layout());
+                Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "openVariables");
                 String[] openVarNames;
-                if (openVars == null || openVars.isEmpty())
+                if (!(openVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence openVars) || openVars.isEmpty())
                 {
                     openVarNames = new String[0];
                 }
@@ -229,9 +230,10 @@ public final class PureContext
                     for (int i = 0; i < openVars.size(); i++)
                     {
                         Object ov = openVars.getBoxed(i);
-                        if (ov instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ov, "name");
+                        if (nameObj instanceof String s)
                         {
-                            openVarNames[i] = ve._name();
+                            openVarNames[i] = s;
                         }
                         else if (ov instanceof String s)
                         {
@@ -275,11 +277,15 @@ public final class PureContext
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
     {
-        if (!(en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe))
+        if (en == null)
         {
             return null;
         }
-        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(en);
+        if (enumPath == null)
+        {
+            return null;
+        }
         String enumClassName = "org.finos.legend.pure.truffle.pdb." + pureFqnToJavaFqn(enumPath) + "Enum";
         Class<?> enumClass;
         try
@@ -355,16 +361,22 @@ public final class PureContext
      */
     public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType(Object value)
     {
-        if (value instanceof java.lang.Enum<?>
-                && value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
+        if (value == null)
+        {
+            return null;
+        }
+        // Java enum constants implementing a generated Pure-Enum interface get
+        // their CGT cached per-context (they're JVM singletons; can't stamp).
+        if (value.getClass().isEnum())
         {
             return enumCgt(value);
         }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
-        {
-            return any._classifierGenericType();
-        }
-        return null;
+        // Anything else — read CGT via PropertyAccessor.readProperty (works
+        // for both legacy XImpl and the future PureDynamicObject). The cast
+        // is safe: only Pure metamodel objects (which all implement
+        // PropertyAccessor) ever reach this method's `value`.
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "classifierGenericType");
+        return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue) cgt;
     }
 
     /**
@@ -461,23 +473,28 @@ public final class PureContext
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type runtimeType =
                 org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         if (runtimeType == null) return staticQp;
-        String qpName = staticQp._name();
+        String qpName = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(staticQp, "name");
         int argCount = rawArgs.length;
         java.util.List<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type> mro =
                 org.finos.legend.pure.truffle.runtime.helper._Type.linearize(runtimeType, resolver);
         for (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type : mro)
         {
-            if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls && cls._qualifiedProperties() != null)
+            Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "qualifiedProperties");
+            if (!(qpsObj instanceof org.finos.legend.pure.truffle.types.PureSequence qps))
             {
-                for (Object candidate : cls._qualifiedProperties().toBoxedArray())
+                continue;
+            }
+            for (Object candidate : qps.toBoxedArray())
+            {
+                if (candidate == null) continue;
+                Object cqpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "name");
+                if (!qpName.equals(cqpName)) continue;
+                Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "parameters");
+                if (cqpParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence cqpParams
+                        && cqpParams.size() == argCount
+                        && candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty cqp)
                 {
-                    if (candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty cqp
-                            && qpName.equals(cqp._name())
-                            && cqp._parameters() != null
-                            && cqp._parameters().size() == argCount)
-                    {
-                        return cqp;
-                    }
+                    return cqp;
                 }
             }
         }
@@ -486,33 +503,35 @@ public final class PureContext
 
     public static void bindQpTypeVariablesStatic(Object target, VirtualFrame frame, FrameLayout layout)
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
-        if (!(cgt instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv)
-                || gtv._typeVariableValues() == null || gtv._typeVariableValues().isEmpty())
+        Object cgt = getClassifierGenericType(target);
+        if (cgt == null) return;
+        Object tvvObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cgt, "typeVariableValues");
+        if (!(tvvObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVarVals) || typeVarVals.isEmpty())
         {
             return;
         }
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type ownerType =
                 org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
-        org.finos.legend.pure.truffle.types.PureSequence typeVars = null;
-        if (ownerType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls)
+        Object typeVarsObj = ownerType != null
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ownerType, "typeVariables") : null;
+        if (!(typeVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVars) || typeVars.isEmpty())
         {
-            typeVars = cls._typeVariables();
+            return;
         }
-        if (typeVars == null || typeVars.isEmpty()) return;
-        org.finos.legend.pure.truffle.types.PureSequence typeVarVals = gtv._typeVariableValues();
         int count = Math.min(typeVars.size(), typeVarVals.size());
         for (int i = 0; i < count; i++)
         {
             Object tvObj = typeVars.getBoxed(i);
-            String name = (tvObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve) ? ve._name() : String.valueOf(tvObj);
+            Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(tvObj, "name");
+            String name = tvNameObj instanceof String s ? s : String.valueOf(tvObj);
             Integer slot = layout.slotFor(name);
             if (slot != null)
             {
                 Object tvVal = typeVarVals.getBoxed(i);
-                if (tvVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(tvVal,
+                        "meta::pure::metamodel::valuespecification::AtomicValue"))
                 {
-                    tvVal = av._value();
+                    tvVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(tvVal, "value");
                 }
                 if (tvVal != null)
                 {
@@ -545,7 +564,8 @@ public final class PureContext
         functionCache.put(fd, cf);
         try
         {
-            PureNode[] body = astBuilder.lowerBody(fd._expressionSequence(), layout);
+            Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "expressionSequence");
+            PureNode[] body = astBuilder.lowerBody(exprSeqObj, layout);
             cf.setBody(body);
             if (!(fd instanceof LambdaFunction))
             {
@@ -553,18 +573,11 @@ public final class PureContext
                 com.oracle.truffle.api.source.SourceSection rootSource = null;
                 try
                 {
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si = null;
-                    if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+                    Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "sourceInformation");
+                    if (si == null && exprSeqObj instanceof org.finos.legend.pure.truffle.types.PureSequence exprSeq && !exprSeq.isEmpty())
                     {
-                        si = any._sourceInformation();
-                    }
-                    if (si == null && fd._expressionSequence() != null && !fd._expressionSequence().isEmpty())
-                    {
-                        Object firstExpr = fd._expressionSequence().getBoxed(0);
-                        if (firstExpr instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vs)
-                        {
-                            si = vs._sourceInformation();
-                        }
+                        Object firstExpr = exprSeq.getBoxed(0);
+                        si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(firstExpr, "sourceInformation");
                     }
                     rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
                 }
@@ -583,14 +596,12 @@ public final class PureContext
 
     private static String getFunctionName(FunctionDefinition fd)
     {
-        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+        try
         {
-            try
-            {
-                return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-            }
-            catch (RuntimeException ignored) {}
+            String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(fd);
+            if (path != null) return path;
         }
+        catch (RuntimeException ignored) {}
         return "fn@" + System.identityHashCode(fd);
     }
 
@@ -604,12 +615,15 @@ public final class PureContext
     {
         try
         {
-            if (lambda instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "sourceInformation");
+            if (si != null)
             {
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si = any._sourceInformation();
-                if (si != null && si._sourceId() != null)
+                Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "sourceId");
+                if (sourceIdObj instanceof String sourceId)
                 {
-                    return "lambda@" + si._sourceId() + ":" + si._startLine() + ":" + si._startColumn();
+                    return "lambda@" + sourceId
+                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startLine")
+                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startColumn");
                 }
             }
         }

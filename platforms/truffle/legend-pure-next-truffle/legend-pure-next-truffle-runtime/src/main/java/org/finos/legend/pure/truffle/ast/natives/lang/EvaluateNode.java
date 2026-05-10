@@ -94,9 +94,10 @@ public final class EvaluateNode extends PureNode
     private static void unwrapListValues(Object listObj, List<Object> out)
     {
         // ListImpl has _values() returning collection (Object / ObjectSequence / MutableList)
-        if (listObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.List listInst)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(listObj,
+                "meta::pure::functions::collection::List"))
         {
-            Object vals = listInst._values();
+            Object vals = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(listObj, "values");
             int sz = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.size(vals);
             if (sz == 0)
             {

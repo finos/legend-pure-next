@@ -57,8 +57,8 @@ public final class MapKeyValuesNode extends PureNode
             for (java.util.Map.Entry<Object, Object> entry : raw.entrySet())
             {
                 PairImpl pair = new PairImpl();
-                pair._first(entry.getKey());
-                pair._second(entry.getValue());
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "first", entry.getKey());
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "second", entry.getValue());
                 pairs[i++] = pair;
             }
             return new ObjectSequence(pairs);

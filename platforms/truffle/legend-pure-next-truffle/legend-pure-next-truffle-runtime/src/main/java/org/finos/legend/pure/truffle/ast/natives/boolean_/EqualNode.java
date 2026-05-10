@@ -181,12 +181,23 @@ public final class EqualNode extends PureNode
             }
             return true;
         }
-        // Enum equality — same name AND same enumeration type
-        if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea)
+        // Enum equality — same name AND same enumeration type.
+        // pureTypeIs is class-keyed-cached so the PE inlining-budget hazard
+        // that originally tripped IsNode is gone (single CHM.get(Class) per
+        // call after warmup).
+        boolean aIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(a,
+                "meta::pure::metamodel::type::Enum");
+        boolean bIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(b,
+                "meta::pure::metamodel::type::Enum");
+        if (aIsEnum)
         {
-            if (b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb)
+            Object ea = a;
+            if (bIsEnum)
             {
-                if (!Objects.equals(ea._name(), eb._name()))
+                Object eb = b;
+                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "name");
+                Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(eb, "name");
+                if (!Objects.equals(eaName, ebName))
                 {
                     return false;
                 }
@@ -199,19 +210,21 @@ public final class EqualNode extends PureNode
                     return true;
                 }
                 // FlatBuffer-wrapped enums: compare classifierGenericType by path
-                if (ea._classifierGenericType() != null && eb._classifierGenericType() != null)
+                Object eaCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "classifierGenericType");
+                Object ebCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(eb, "classifierGenericType");
+                if (eaCgt != null && ebCgt != null)
                 {
-                    var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(ea._classifierGenericType());
-                    var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(eb._classifierGenericType());
+                    var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(eaCgt);
+                    var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(ebCgt);
                     if (typeA == typeB)
                     {
                         return true;
                     }
-                    if (typeA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peA
-                            && typeB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peB)
+                    if (typeA != null && typeB != null)
                     {
-                        return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peA)
-                                .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
+                        String pathA = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeA);
+                        String pathB = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeB);
+                        return pathA != null && pathA.equals(pathB);
                     }
                 }
                 // Same name but cannot prove same enum type — be strict and
@@ -222,13 +235,15 @@ public final class EqualNode extends PureNode
             }
             if (b instanceof String s)
             {
-                return Objects.equals(ea._name(), extractEnumValueName(s));
+                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "name");
+                return Objects.equals(eaName, extractEnumValueName(s));
             }
             return false;
         }
-        if (b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb && a instanceof String s)
+        if (bIsEnum && a instanceof String s)
         {
-            return Objects.equals(extractEnumValueName(s), eb._name());
+            Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(b, "name");
+            return Objects.equals(extractEnumValueName(s), ebName);
         }
         // Two enum value strings: compare by extracted value name
         if (a instanceof String sa && b instanceof String sb && sa.contains("::") && sb.contains("::"))
@@ -240,13 +255,14 @@ public final class EqualNode extends PureNode
                 return sa.equals(sb);
             }
         }
-        // Generated Impl equality — compare by property values respecting <<equality.Key>>
-        // Also handles cross-class comparisons (FlatBufferWrapper vs Impl) when both
-        // represent the same Pure type (checked via classifierGenericType path).
-        if (a instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyA
-                && b instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any anyB)
+        // Generated Impl equality — compare by property values respecting <<equality.Key>>.
+        // Both are Pure metamodel objects iff their pureTypeOf is non-null
+        // (covers PureDynamicObject + legacy XImpl).
+        boolean aIsPure = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(a) != null;
+        boolean bIsPure = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(b) != null;
+        if (aIsPure && bIsPure)
         {
-            if (a.getClass() == b.getClass() || samePureType(anyA, anyB))
+            if (a.getClass() == b.getClass() || samePureType(a, b))
             {
                 // Guard against circular property references (e.g. Property→owner→Property)
                 int depth = EQUALS_DEPTH.get();
@@ -257,7 +273,7 @@ public final class EqualNode extends PureNode
                 EQUALS_DEPTH.set(depth + 1);
                 try
                 {
-                    return equalByProperties(anyA, anyB, resolver);
+                    return equalByProperties(a, b, resolver);
                 }
                 finally
                 {
@@ -277,12 +293,10 @@ public final class EqualNode extends PureNode
      * matching FlatBufferWrapper vs Impl of the same type.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean samePureType(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a,
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b)
+    private static boolean samePureType(Object a, Object b)
     {
-        var cgtA = a._classifierGenericType();
-        var cgtB = b._classifierGenericType();
+        Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(a, "classifierGenericType");
+        Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(b, "classifierGenericType");
         if (cgtA == null || cgtB == null)
         {
             return false;
@@ -293,11 +307,11 @@ public final class EqualNode extends PureNode
         {
             return true;
         }
-        if (typeA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peA
-                && typeB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peB)
+        if (typeA != null && typeB != null)
         {
-            return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peA)
-                    .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
+            String pathA = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeA);
+            String pathB = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeB);
+            return pathA != null && pathA.equals(pathB);
         }
         return false;
     }
@@ -315,28 +329,19 @@ public final class EqualNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean equalByProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any b, TruffleMetadataAccess resolver)
+    private static boolean equalByProperties(Object a, Object b, TruffleMetadataAccess resolver)
     {
         // Check for <<equality.Key>> properties — only compare those if present.
-        // Try runtime metamodel first, then Java interface name fallback.
         java.util.Set<String> keyProps = collectEqualityKeyProperties(a, resolver);
         if (keyProps != null && !keyProps.isEmpty())
         {
             for (String propName : keyProps)
             {
-                try
+                Object va = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(a, propName);
+                Object vb = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(b, propName);
+                if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb), resolver))
                 {
-                    java.lang.reflect.Method m = a.getClass().getMethod("_" + propName);
-                    Object va = m.invoke(a);
-                    Object vb = m.invoke(b);
-                    if (!callPureEquals(normalizeForEquals(va), normalizeForEquals(vb), resolver))
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException("Equality comparison failed for property '" + propName + "' on " + a.getClass().getName(), e);
+                    return false;
                 }
             }
             return true;
@@ -353,9 +358,9 @@ public final class EqualNode extends PureNode
      * Type on the resolver — see {@link org.finos.legend.pure.truffle.runtime.helper.TypeCache}.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.Set<String> collectEqualityKeyProperties(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any obj, TruffleMetadataAccess resolver)
+    private static java.util.Set<String> collectEqualityKeyProperties(Object obj, TruffleMetadataAccess resolver)
     {
-        var cgt = obj._classifierGenericType();
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(obj, "classifierGenericType");
         if (cgt == null)
         {
             return null;
@@ -364,13 +369,12 @@ public final class EqualNode extends PureNode
                 org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         if (type == null)
         {
-            // Fall back to interface-name resolution for FlatBuffer wrappers
-            // whose generic type doesn't surface a resolved Type.
-            String ifaceName = obj.getClass().getInterfaces().length > 0
-                    ? obj.getClass().getInterfaces()[0].getName().replace(".", "::") : null;
-            if (ifaceName != null)
+            // Fall back to deriving the Pure path from the Java class — handles
+            // legacy XImpl whose CGT may not surface a resolved Type.
+            String purePath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(obj);
+            if (purePath != null)
             {
-                Object elem = resolver.getElement(ifaceName);
+                Object elem = resolver.getElement(purePath);
                 if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
                 {
                     type = t;
@@ -397,11 +401,15 @@ public final class EqualNode extends PureNode
     {
         while (true)
         {
-            if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                    && av._value() != null)
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(v,
+                    "meta::pure::metamodel::valuespecification::AtomicValue"))
             {
-                v = av._value();
-                continue;
+                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "value");
+                if (inner != null)
+                {
+                    v = inner;
+                    continue;
+                }
             }
             if (v instanceof PureDate pd)
             {

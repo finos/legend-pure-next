@@ -79,9 +79,9 @@ public final class PropertyWriteNode extends Node
     @CompilerDirectives.TruffleBoundary
     private void ensureEnumCGT(Object value)
     {
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any
-                && any._classifierGenericType() == null
-                && value.getClass().isEnum())
+        if (value != null
+                && value.getClass().isEnum()
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "classifierGenericType") == null)
         {
             Class<?>[] ifaces = value.getClass().getInterfaces();
             if (ifaces.length > 0)
@@ -95,7 +95,7 @@ public final class PropertyWriteNode extends Node
                     Object enumType = resolver.getElement(purePath);
                     if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
                     {
-                        any._classifierGenericType(
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(value, "classifierGenericType",
                                 org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver));
                     }
                 }

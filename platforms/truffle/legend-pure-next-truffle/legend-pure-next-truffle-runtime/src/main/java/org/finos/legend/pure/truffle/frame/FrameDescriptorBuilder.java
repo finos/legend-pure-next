@@ -70,23 +70,23 @@ public final class FrameDescriptorBuilder
 
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
         Map<String, Integer> slots = new LinkedHashMap<>();
-        org.finos.legend.pure.truffle.types.PureSequence params = fd._parameters();
+        org.finos.legend.pure.truffle.types.PureSequence params = (org.finos.legend.pure.truffle.types.PureSequence) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
         int[] paramSlots = new int[params == null ? 0 : params.size()];
 
         if (params != null)
         {
             for (int i = 0; i < params.size(); i++)
             {
-                String name = ((VariableExpression) params.getBoxed(i))._name();
+                String name = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(params.getBoxed(i), "name");
                 int slot = allocateSlot(builder, slots, name);
                 paramSlots[i] = slot;
             }
         }
 
-        collectLetTargets(fd._expressionSequence(), builder, slots);
+        collectLetTargets(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "expressionSequence"), builder, slots);
         // Safety net: scan for variable reads to catch let targets missed
         // by collectLetTargets (e.g. when FlatBuffer _func() resolution fails)
-        collectVariableReads(fd._expressionSequence(), builder, slots);
+        collectVariableReads(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "expressionSequence"), builder, slots);
 
         return new FrameLayout(builder.build(), slots, paramSlots);
     }
@@ -102,13 +102,13 @@ public final class FrameDescriptorBuilder
     {
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
         Map<String, Integer> slots = new LinkedHashMap<>();
-        org.finos.legend.pure.truffle.types.PureSequence params = fd._parameters();
+        org.finos.legend.pure.truffle.types.PureSequence params = (org.finos.legend.pure.truffle.types.PureSequence) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
         int[] paramSlots = new int[params == null ? 0 : params.size()];
         if (params != null)
         {
             for (int i = 0; i < params.size(); i++)
             {
-                paramSlots[i] = allocateSlot(builder, slots, ((VariableExpression) params.getBoxed(i))._name());
+                paramSlots[i] = allocateSlot(builder, slots, (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(params.getBoxed(i), "name"));
             }
         }
         return new FrameLayout(builder.build(), slots, paramSlots);
@@ -132,28 +132,28 @@ public final class FrameDescriptorBuilder
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
         Map<String, Integer> slots = new LinkedHashMap<>();
 
-        org.finos.legend.pure.truffle.types.PureSequence params = lambda._parameters();
+        org.finos.legend.pure.truffle.types.PureSequence params = (org.finos.legend.pure.truffle.types.PureSequence) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "parameters");
         int[] paramSlots = new int[params == null ? 0 : params.size()];
         if (params != null)
         {
             for (int i = 0; i < params.size(); i++)
             {
-                paramSlots[i] = allocateSlot(builder, slots, ((VariableExpression) params.getBoxed(i))._name());
+                paramSlots[i] = allocateSlot(builder, slots, (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(params.getBoxed(i), "name"));
             }
         }
 
-        org.finos.legend.pure.truffle.types.PureSequence openVars = lambda._openVariables();
+        org.finos.legend.pure.truffle.types.PureSequence openVars = (org.finos.legend.pure.truffle.types.PureSequence) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "openVariables");
         if (openVars != null)
         {
             for (int i = 0; i < openVars.size(); i++)
             {
-                allocateSlot(builder, slots, ((VariableExpression) openVars.getBoxed(i))._name());
+                allocateSlot(builder, slots, (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(openVars.getBoxed(i), "name"));
             }
         }
 
-        collectLetTargets(lambda._expressionSequence(), builder, slots);
+        collectLetTargets(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "expressionSequence"), builder, slots);
         // Safety net: scan for variable reads to catch let targets missed
-        collectVariableReads(lambda._expressionSequence(), builder, slots);
+        collectVariableReads(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "expressionSequence"), builder, slots);
 
         return new FrameLayout(builder.build(), slots, paramSlots);
     }
@@ -194,17 +194,28 @@ public final class FrameDescriptorBuilder
                                           FrameDescriptor.Builder builder,
                                           Map<String, Integer> slots)
     {
-        if (!(vs instanceof FunctionExpression fe))
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                "meta::pure::metamodel::valuespecification::FunctionInvocation")
+                && !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                        "meta::pure::metamodel::valuespecification::DotApplication")
+                && !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                        "meta::pure::metamodel::valuespecification::ArrowInvocation"))
         {
             return;
         }
         boolean isLet = false;
         try
         {
-            if (fe._func() instanceof NativeFunction nf
-                    && LET_FUNCTION_SIGNATURE.equals(nf._name()))
+            Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "func");
+            if (func != null
+                    && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(func,
+                            "meta::pure::metamodel::function::NativeFunction"))
             {
-                isLet = true;
+                Object nfName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(func, "name");
+                if (LET_FUNCTION_SIGNATURE.equals(nfName))
+                {
+                    isLet = true;
+                }
             }
         }
         catch (RuntimeException ignored)
@@ -212,13 +223,13 @@ public final class FrameDescriptorBuilder
             // FlatBuffer wrapper may fail to resolve _func() lazily.
             // Fall back to checking _functionName().
         }
-        if (!isLet && "letFunction".equals(fe._functionName()))
+        if (!isLet && "letFunction".equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "functionName")))
         {
             isLet = true;
         }
         if (isLet)
         {
-            String name = extractLetName(fe);
+            String name = extractLetName(vs);
             if (name != null)
             {
                 allocateSlot(builder, slots, name);
@@ -244,17 +255,27 @@ public final class FrameDescriptorBuilder
 
     private static boolean containsLambdaIn(Object vs)
     {
-        if (vs instanceof AtomicValue av && av._value() instanceof LambdaFunction)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                "meta::pure::metamodel::valuespecification::AtomicValue"))
         {
-            return true;
-        }
-        if (vs instanceof Collection col)
-        {
-            for (Object child : col._values().toBoxedArray())
+            Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "value");
+            if (inner instanceof LambdaFunction)
             {
-                if (containsLambdaIn(child))
+                return true;
+            }
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                "meta::pure::metamodel::valuespecification::Collection"))
+        {
+            Object valsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "values");
+            if (valsObj instanceof org.finos.legend.pure.truffle.types.PureSequence vals)
+            {
+                for (Object child : vals.toBoxedArray())
                 {
-                    return true;
+                    if (containsLambdaIn(child))
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -270,17 +291,22 @@ public final class FrameDescriptorBuilder
         return false;
     }
 
-    private static String extractLetName(FunctionExpression fe)
+    private static String extractLetName(Object fe)
     {
-        org.finos.legend.pure.truffle.types.PureSequence args = fe._parametersValues();
-        if (args == null || args.isEmpty())
+        Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
+        if (!(argsObj instanceof org.finos.legend.pure.truffle.types.PureSequence args) || args.isEmpty())
         {
             return null;
         }
         Object first = args.getBoxed(0);
-        if (first instanceof AtomicValue av && av._value() instanceof String s)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(first,
+                "meta::pure::metamodel::valuespecification::AtomicValue"))
         {
-            return s;
+            Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(first, "value");
+            if (inner instanceof String s)
+            {
+                return s;
+            }
         }
         return null;
     }
@@ -314,34 +340,44 @@ public final class FrameDescriptorBuilder
                                              FrameDescriptor.Builder builder,
                                              Map<String, Integer> slots)
     {
-        if (vs instanceof VariableExpression ve)
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(vs);
+        if ("meta::pure::metamodel::valuespecification::VariableExpression".equals(pureType))
         {
-            String name = ve._name();
-            if (name != null)
+            Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "name");
+            if (n instanceof String name)
             {
                 allocateSlot(builder, slots, name);
             }
             return;
         }
-        if (vs instanceof AtomicValue av)
+        if ("meta::pure::metamodel::valuespecification::AtomicValue".equals(pureType))
         {
             // Don't recurse into lambdas — they get their own layout
             return;
         }
-        if (vs instanceof Collection col && col._values() != null)
+        if ("meta::pure::metamodel::valuespecification::Collection".equals(pureType))
         {
-            for (Object child : col._values().toBoxedArray())
+            Object valsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "values");
+            if (valsObj instanceof org.finos.legend.pure.truffle.types.PureSequence vals)
             {
-                scanForVariableReads(child, builder, slots);
+                for (Object child : vals.toBoxedArray())
+                {
+                    scanForVariableReads(child, builder, slots);
+                }
             }
             return;
         }
-        if (vs instanceof FunctionExpression fe)
+        // FunctionInvocation / DotApplication / ArrowInvocation share a
+        // parametersValues slot — recurse into their args
+        if (pureType != null
+                && (pureType.endsWith("FunctionInvocation")
+                    || pureType.endsWith("DotApplication")
+                    || pureType.endsWith("ArrowInvocation")))
         {
             try
             {
-                org.finos.legend.pure.truffle.types.PureSequence args = fe._parametersValues();
-                if (args != null)
+                Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "parametersValues");
+                if (argsObj instanceof org.finos.legend.pure.truffle.types.PureSequence args)
                 {
                     for (Object arg : args.toBoxedArray())
                     {

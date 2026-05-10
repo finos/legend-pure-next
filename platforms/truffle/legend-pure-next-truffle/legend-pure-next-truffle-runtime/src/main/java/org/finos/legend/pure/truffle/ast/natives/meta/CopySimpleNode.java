@@ -56,51 +56,54 @@ public final class CopySimpleNode extends PureNode
         {
             throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
         }
-        // Typed _copy() on Any — codegen-emitted, replaces what used to be
-        // an O(N×M) reflective getter/setter walk per copy. JFR identified
-        // the reflection path as ~75% of self-compile CPU.
+        // Typed _copy() on Any — covariant return per generated subclass
+        // produces an XImpl with all properties materialised. To be replaced
+        // when the typed Any interface is dropped (step 3 of Goal 1) with a
+        // PureDynamicObject.pureCopy() equivalent.
         Object copy = anyOrig._copy();
         // Fix self-referencing CGT (e.g., Class<x> where x == original) —
         // _copy() preserves the CGT reference to the source object, but
         // for self-referential cases we need to rewire it to the copy.
-        GenericTypeValue cgt = anyOrig._classifierGenericType();
-        if (copy instanceof Any anyC && cgt != null && hasSelfReference(cgt, original))
+        Object cgtObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(original, "classifierGenericType");
+        GenericTypeValue cgt = (GenericTypeValue) cgtObj;
+        if (cgt != null && hasSelfReference(cgt, original))
         {
             cgt = deepCopyCgt(cgt, original, copy, resolver);
-            anyC._classifierGenericType(cgt);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType", cgt);
         }
         // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
         // UDPGT-PE references through copy. Symmetric to new() canonical anchoring.
-        if (copy instanceof Any anyC2 && cgt != null)
+        if (cgt != null)
         {
-            anyC2._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(cgt, resolver));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType",
+                    NewWithKeysNode.preferCanonicalAnchorPublic(cgt, resolver));
         }
         return copy;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String printGtv(GenericTypeValue gtv, Object original, Object copy, int depth)
+    private static String printGtv(Object gtv, Object original, Object copy, int depth)
     {
         if (gtv == null) return "null";
         String indent = "  ".repeat(depth);
         StringBuilder sb = new StringBuilder();
-        var type = gtv._type();
+        Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type");
         String typeName = type == null ? "null"
                 : type == original ? "ORIGINAL@" + System.identityHashCode(original)
                 : type == copy ? "COPY@" + System.identityHashCode(copy)
                 : type.getClass().getName() + "@" + System.identityHashCode(type);
         sb.append("GT(type=").append(typeName);
-        var ta = gtv._typeArguments();
-        if (ta != null && !ta.isEmpty())
+        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
+        if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence ta && !ta.isEmpty())
         {
             sb.append(", typeArgs=[");
             for (int i = 0; i < ta.size(); i++)
             {
                 if (i > 0) sb.append(", ");
                 Object elem = ta.getBoxed(i);
-                if (elem instanceof GenericTypeValue inner)
+                if (elem != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(elem) != null)
                 {
-                    sb.append("\n").append(indent).append("  ").append(printGtv(inner, original, copy, depth + 1));
+                    sb.append("\n").append(indent).append("  ").append(printGtv(elem, original, copy, depth + 1));
                 }
                 else
                 {
@@ -114,16 +117,16 @@ public final class CopySimpleNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean hasSelfReference(GenericTypeValue gtv, Object original)
+    private static boolean hasSelfReference(Object gtv, Object original)
     {
-        if (gtv._type() == original) return true;
-        var typeArgs = gtv._typeArguments();
-        if (typeArgs != null)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type") == original) return true;
+        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
+        if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeArgs)
         {
             for (int i = 0; i < typeArgs.size(); i++)
             {
                 Object ta = typeArgs.getBoxed(i);
-                if (ta instanceof GenericTypeValue inner && hasSelfReference(inner, original)) return true;
+                if (ta != null && hasSelfReference(ta, original)) return true;
             }
         }
         return false;
@@ -141,27 +144,27 @@ public final class CopySimpleNode extends PureNode
         var result = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
                 null, resolver);
         // Copy type — substitute self-references
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type = gtv._type();
+        Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type");
         if (type == original && copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
         {
-            result._type(copyType);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", copyType);
         }
-        else if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp && tp._owner() == original)
+        else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(type,
+                "meta::pure::metamodel::type::generics::TypeParameter")
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "owner") == original
+                && type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp)
         {
             var tpCopy = tp._copy();
-            if (copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner tmpo)
-            {
-                tpCopy._owner(tmpo);
-            }
-            result._type(tpCopy);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(tpCopy, "owner", copy);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", tpCopy);
         }
         else
         {
-            result._type(type);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", type);
         }
         // Deep-copy typeArguments recursively
-        var typeArgs = gtv._typeArguments();
-        if (typeArgs != null && !typeArgs.isEmpty())
+        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
+        if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeArgs && !typeArgs.isEmpty())
         {
             Object[] copied = new Object[typeArgs.size()];
             for (int i = 0; i < typeArgs.size(); i++)
@@ -176,7 +179,8 @@ public final class CopySimpleNode extends PureNode
                     copied[i] = ta;
                 }
             }
-            result._typeArguments(new org.finos.legend.pure.truffle.types.ObjectSequence(copied));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "typeArguments",
+                    new org.finos.legend.pure.truffle.types.ObjectSequence(copied));
         }
         return result;
     }

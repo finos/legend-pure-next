@@ -48,24 +48,24 @@ public final class ElementPathNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildPath(Object element)
     {
-        if (!(element instanceof PackageableElement pe))
-        {
-            return element;
-        }
+        // PackageableElement-ness is established by carrying a package + name
+        // pair; collectAncestors() reads via PureObj which gracefully no-ops
+        // on non-PE values, so an upfront type check would just be redundant.
         List<Object> path = new ArrayList<>();
-        collectAncestors(pe, path);
+        collectAncestors(element, path);
         return new ObjectSequence(path.toArray());
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void collectAncestors(PackageableElement pe, List<Object> path)
+    private static void collectAncestors(Object pe, List<Object> path)
     {
-        if (pe._package() instanceof PackageableElement parent)
+        Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "package");
+        if (parent != null)
         {
             collectAncestors(parent, path);
         }
-        String name = pe._name();
-        if (name != null && !name.isEmpty())
+        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "name");
+        if (nameObj instanceof String name && !name.isEmpty())
         {
             String elPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
             if (!"::".equals(elPath))

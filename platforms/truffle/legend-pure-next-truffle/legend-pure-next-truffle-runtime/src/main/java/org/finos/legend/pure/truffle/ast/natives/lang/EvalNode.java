@@ -124,7 +124,8 @@ public final class EvalNode extends PureNode
             // property on the first argument
             if (args.length > 0)
             {
-                return propertyReader.execute(args[0], prop._name());
+                return propertyReader.execute(args[0],
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name"));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
@@ -134,7 +135,7 @@ public final class EvalNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object executeNativeViaRegistry(org.finos.legend.pure.truffle.PureContext evaluator, NativeFunction nf, Object[] args)
     {
-        String signature = nf._name();
+        String signature = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(nf, "name");
         NativeNodeRegistry registry = evaluator.astBuilder().specialized();
         NativeNodeRegistry.Factory factory = registry.lookup(signature);
         if (factory == null)

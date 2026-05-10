@@ -55,27 +55,31 @@ public final class NewSimpleNode extends PureNode
     private static Object doNew(Object result,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (!(result instanceof GenericTypeAndMultiplicityHolder gtmh))
+        if (result == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(result,
+                        "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
         {
             throw new RuntimeException("new(GenericTypeAndMultiplicityHolder[1]) requires a GenericTypeAndMultiplicityHolder argument, got: "
                     + (result == null ? "null" : result.getClass().getName()));
         }
 
         String classPath = "Unknown";
-        PureSequence typeArgs = gtmh._genericType() != null
-                ? org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(gtmh._genericType())
+        Object holderGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(result, "genericType");
+        PureSequence typeArgs = holderGT != null
+                ? org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(holderGT)
                 : null;
         if (typeArgs != null && typeArgs.size() > 0)
         {
             Object heldGTObj = typeArgs.getBoxed(0);
             org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type heldType =
                     org.finos.legend.pure.truffle.runtime.helper._GenericType.type(heldGTObj);
-            if (heldType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
+            if (heldType != null)
             {
-                classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
+                classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(heldType);
                 if (classPath == null || classPath.isEmpty())
                 {
-                    classPath = pe._name() != null ? pe._name() : "Unknown";
+                    Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(heldType, "name");
+                    classPath = n instanceof String s && !s.isEmpty() ? s : "Unknown";
                 }
             }
         }
@@ -90,11 +94,12 @@ public final class NewSimpleNode extends PureNode
         if (typeArgs != null && typeArgs.size() > 0)
         {
             Object cgtObj = typeArgs.getBoxed(0);
-            if (instance instanceof Any any && cgtObj instanceof GenericTypeValue gtv)
+            if (cgtObj instanceof GenericTypeValue gtv)
             {
                 // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
                 // prefer canonical GenericType_<TypeName> UDPGT from core.pdb.
-                any._classifierGenericType(NewWithKeysNode.preferCanonicalAnchorPublic(gtv, resolver));
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
+                        NewWithKeysNode.preferCanonicalAnchorPublic(gtv, resolver));
             }
         }
 

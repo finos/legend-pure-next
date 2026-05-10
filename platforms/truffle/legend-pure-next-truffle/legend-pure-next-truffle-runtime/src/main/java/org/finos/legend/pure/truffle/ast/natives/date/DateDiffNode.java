@@ -136,9 +136,10 @@ public final class DateDiffNode extends PureNode
 
     static String resolveUnitName(Object unit)
     {
-        if (unit instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum e)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(unit,
+                "meta::pure::metamodel::type::Enum"))
         {
-            return e._name();
+            return (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(unit, "name");
         }
         if (unit instanceof String s)
         {

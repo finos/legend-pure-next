@@ -84,14 +84,17 @@ public final class NewMapNode extends PureNode
     private static Object buildMap(Object pairs, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl map = new MapImpl();
+        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         map._classifierGenericType(mapCGT);
         int sz = CollectionHelper.size(pairs);
         for (int i = 0; i < sz; i++)
         {
             Object pair = CollectionHelper.at(pairs, i);
-            if (pair instanceof PairImpl p)
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pair,
+                    "meta::pure::functions::collection::Pair"))
             {
-                map.put(p._first(), p._second());
+                map.put(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "first"),
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "second"));
             }
         }
         return map;

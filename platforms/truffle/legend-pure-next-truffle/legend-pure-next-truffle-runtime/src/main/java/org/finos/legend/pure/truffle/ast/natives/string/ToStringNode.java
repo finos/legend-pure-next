@@ -78,16 +78,24 @@ public final class ToStringNode extends PureNode
         {
             return normalizeDateString(pd.dateString());
         }
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(v);
         // Enum values — return just the enum constant name
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumVal && enumVal._name() != null)
+        if ("meta::pure::metamodel::type::Enum".equals(pureType))
         {
-            return enumVal._name();
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "name");
+            if (name instanceof String s)
+            {
+                return s;
+            }
         }
         // List — [a, b, c]
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.List list)
+        if ("meta::pure::functions::collection::List".equals(pureType))
         {
-            var values = list._values();
-            if (values == null || values.isEmpty()) return "[]";
+            Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "values");
+            if (!(valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence values) || values.isEmpty())
+            {
+                return "[]";
+            }
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < values.size(); i++)
             {
@@ -97,23 +105,26 @@ public final class ToStringNode extends PureNode
             return sb.append("]").toString();
         }
         // Pair — <a, b>
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.Pair pair)
+        if ("meta::pure::functions::collection::Pair".equals(pureType))
         {
-            return "<" + pureToString(pair._first(), reader) + ", " + pureToString(pair._second(), reader) + ">";
+            return "<" + pureToString(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "first"), reader)
+                    + ", " + pureToString(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "second"), reader) + ">";
         }
-        // Named metamodel elements — return just the name
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe && pe._name() != null)
+        // Named metamodel elements (PE-typed) — return just the name. We've
+        // already handled Enum above, so this catches Class/Property/etc.
+        if (pureType != null)
         {
-            return pe._name();
-        }
-        // For class instances (Any), try to invoke Pure's toString() QP
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
-        {
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "name");
+            if (name instanceof String s && !s.isEmpty())
+            {
+                return s;
+            }
+            // For class instances (Any), try to invoke Pure's toString() QP
             if (reader != null)
             {
                 try
                 {
-                    Object result = reader.execute(any, "toString");
+                    Object result = reader.execute(v, "toString");
                     if (result instanceof String s)
                     {
                         return s;

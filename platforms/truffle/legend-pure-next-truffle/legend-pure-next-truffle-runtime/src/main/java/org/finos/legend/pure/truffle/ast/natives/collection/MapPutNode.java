@@ -81,6 +81,7 @@ public final class MapPutNode extends PureNode
     private static Object doPut(Object map, Object key, Object value, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();
+        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         newMap._classifierGenericType(mapCGT);
         if (map instanceof MapImpl mi)
         {

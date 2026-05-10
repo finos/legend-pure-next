@@ -80,6 +80,7 @@ public final class PutAllNode extends PureNode
     private static Object doPutAll(Object map, Object other, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();
+        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         newMap._classifierGenericType(mapCGT);
         if (map instanceof MapImpl mi)
         {
@@ -96,9 +97,11 @@ public final class PutAllNode extends PureNode
             for (int i = 0; i < sz; i++)
             {
                 Object pair = CollectionHelper.at(other, i);
-                if (pair instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl p)
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pair,
+                        "meta::pure::functions::collection::Pair"))
                 {
-                    newMap.put(p._first(), p._second());
+                    newMap.put(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "first"),
+                            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "second"));
                 }
             }
         }

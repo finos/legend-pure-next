@@ -14,13 +14,9 @@
 
 package org.finos.legend.pure.truffle.runtime.helper;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleTypeCache;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.ArrayList;
@@ -200,10 +196,10 @@ public final class TypeCache implements TruffleTypeCache
         List<Type> lin = new ArrayList<>();
         linearizeInto(type, lin);
         Set<String> keys = new LinkedHashSet<>();
-        if (type instanceof SimplePropertyOwner spo)
-        {
-            collectEqualityKeysInto(spo, keys, new LinkedHashSet<>(), 0);
-        }
+        // Type IS-A SimplePropertyOwner in Pure (Class, Association, etc.) —
+        // PureObj.read returns null for the absent slot when this isn't true,
+        // and collectEqualityKeysInto gracefully no-ops on a null _properties.
+        collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0);
         // Identity-keyed set of ancestors for O(1) subtypeOf check. We can't
         // use HashSet (Type's structural equals/hashCode recurse through
         // generalisations and blow the stack on cyclic shapes); identity is
@@ -235,14 +231,14 @@ public final class TypeCache implements TruffleTypeCache
             }
         }
         out.add(type);
-        Object gens = type._generalizations();
+        Object gens = PureObj.read(type, "generalizations");
         if (gens instanceof PureSequence seq)
         {
             for (Object gen : seq.toBoxedArray())
             {
-                if (gen instanceof Generalization g)
+                if (gen != null)
                 {
-                    Type superType = _GenericType.type(g._general());
+                    Type superType = _GenericType.type(PureObj.read(gen, "general"));
                     linearizeInto(superType, out);
                 }
             }
@@ -251,7 +247,7 @@ public final class TypeCache implements TruffleTypeCache
 
     // --- equality keys ------------------------------------------------------
 
-    private static void collectEqualityKeysInto(SimplePropertyOwner owner, Set<String> keys,
+    private static void collectEqualityKeysInto(Object owner, Set<String> keys,
             Set<String> seenPropNames, int depth)
     {
         // Cycle/runaway guard — generalization chains are usually shallow but
@@ -261,17 +257,17 @@ public final class TypeCache implements TruffleTypeCache
         {
             return;
         }
-        PureSequence properties = owner._properties();
-        if (properties != null)
+        Object propsObj = PureObj.read(owner, "properties");
+        if (propsObj instanceof PureSequence properties)
         {
-            for (Object p : properties.toBoxedArray())
+            for (Object prop : properties.toBoxedArray())
             {
-                if (!(p instanceof Property prop))
+                if (prop == null)
                 {
                     continue;
                 }
-                String propName = prop._name();
-                if (propName == null || !seenPropNames.add(propName))
+                Object nameObj = PureObj.read(prop, "name");
+                if (!(nameObj instanceof String propName) || !seenPropNames.add(propName))
                 {
                     continue;
                 }
@@ -281,35 +277,48 @@ public final class TypeCache implements TruffleTypeCache
                 }
             }
         }
-        if (owner instanceof Type type && type._generalizations() != null)
+        Object gensObj = PureObj.read(owner, "generalizations");
+        if (gensObj instanceof PureSequence gens)
         {
-            for (Object gen : type._generalizations().toBoxedArray())
+            for (Object gen : gens.toBoxedArray())
             {
-                if (gen instanceof Generalization g && g._general() != null)
+                if (gen == null)
                 {
-                    Type superType = _GenericType.type(g._general());
-                    if (superType instanceof SimplePropertyOwner superOwner)
-                    {
-                        collectEqualityKeysInto(superOwner, keys, seenPropNames, depth + 1);
-                    }
+                    continue;
+                }
+                Object general = PureObj.read(gen, "general");
+                if (general == null)
+                {
+                    continue;
+                }
+                Type superType = _GenericType.type(general);
+                if (superType != null)
+                {
+                    collectEqualityKeysInto(superType, keys, seenPropNames, depth + 1);
                 }
             }
         }
     }
 
-    private static boolean hasEqualityKeyStereotype(Property prop)
+    private static boolean hasEqualityKeyStereotype(Object prop)
     {
-        PureSequence stereotypes = prop._stereotypes();
-        if (stereotypes == null)
+        Object stereotypesObj = PureObj.read(prop, "stereotypes");
+        if (!(stereotypesObj instanceof PureSequence stereotypes))
         {
             return false;
         }
-        for (Object st : stereotypes.toBoxedArray())
+        for (Object ster : stereotypes.toBoxedArray())
         {
-            if (st instanceof Stereotype ster
-                    && EQUALITY_KEY_VALUE.equals(ster._value())
-                    && ster._profile() instanceof PackageableElement profile
-                    && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
+            if (ster == null)
+            {
+                continue;
+            }
+            if (!EQUALITY_KEY_VALUE.equals(PureObj.read(ster, "value")))
+            {
+                continue;
+            }
+            Object profile = PureObj.read(ster, "profile");
+            if (profile != null && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
             {
                 return true;
             }

@@ -63,10 +63,10 @@ public final class CastNode extends PureNode
         // across the three sites).
         GenericType targetGT = null;
         org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType = null;
-        if (targetResult instanceof GenericTypeAndMultiplicityHolder gtmh
-                && gtmh._genericType() != null)
+        Object hoistedGT = targetResult != null
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetResult, "genericType") : null;
+        if (hoistedGT != null)
         {
-            Object hoistedGT = gtmh._genericType();
             org.finos.legend.pure.truffle.types.PureSequence hoistedTypeArgs =
                     org.finos.legend.pure.truffle.runtime.helper._GenericType.typeArguments(hoistedGT);
             if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
@@ -86,17 +86,18 @@ public final class CastNode extends PureNode
                 && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence)
                 && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter)
                 && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter)
-                && targetType instanceof PackageableElement targetPe)
+                && targetType != null)
         {
-            String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetPe);
-            if (!"meta::pure::metamodel::type::Any".equals(targetPath)
+            String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType);
+            if (targetPath != null
+                    && !"meta::pure::metamodel::type::Any".equals(targetPath)
                     && !targetPath.startsWith("meta::pure::metamodel::valuespecification::"))
             {
                 org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type sourceType = MetaHelper.getRawValueType(inputResult, resolver);
-                if (sourceType instanceof PackageableElement sourcePe)
+                if (sourceType != null)
                 {
-                    String sourcePath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(sourcePe);
-                    if (!"meta::pure::metamodel::type::Nil".equals(sourcePath))
+                    String sourcePath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(sourceType);
+                    if (sourcePath != null && !"meta::pure::metamodel::type::Nil".equals(sourcePath))
                     {
                         boolean related = false;
                         try
@@ -110,7 +111,9 @@ public final class CastNode extends PureNode
                         }
                         if (!related)
                         {
-                            throw new RuntimeException("Cast exception: " + sourcePe._name() + " cannot be cast to " + targetPe._name());
+                            Object srcName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(sourceType, "name");
+                            Object tgtName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetType, "name");
+                            throw new RuntimeException("Cast exception: " + srcName + " cannot be cast to " + tgtName);
                         }
                     }
                 }
@@ -179,23 +182,21 @@ public final class CastNode extends PureNode
         {
             return false;
         }
-        if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.ElementWithConstraints ewc)
+        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "constraints");
+        if (constraintsObj instanceof org.finos.legend.pure.truffle.types.PureSequence constraints && !constraints.isEmpty())
         {
-            var constraints = ewc._constraints();
-            if (constraints != null && !constraints.isEmpty())
-            {
-                return true;
-            }
+            return true;
         }
-        Object gens = type._generalizations();
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "generalizations");
         if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence genSeq)
         {
             for (Object gen : genSeq.toBoxedArray())
             {
-                if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g
-                        && g._general() != null)
+                Object general = gen != null
+                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general") : null;
+                if (general != null)
                 {
-                    var superType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general());
+                    var superType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general);
                     if (computeNeedsValidation(superType, visited))
                     {
                         return true;
@@ -221,15 +222,18 @@ public final class CastNode extends PureNode
         }
         validateConstraintsOnType(type, targetGT, value, resolver, constraintCallNode);
         // Walk up the type hierarchy
-        Object gens = type._generalizations();
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "generalizations");
         if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence genSeq)
         {
             for (Object gen : genSeq.toBoxedArray())
             {
-                if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g
-                        && g._general() != null && org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general()) != null)
+                Object general = gen != null
+                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general") : null;
+                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type genType =
+                        general != null ? org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general) : null;
+                if (genType != null && general instanceof GenericType genGT)
                 {
-                    validateConstraints(org.finos.legend.pure.truffle.runtime.helper._GenericType.type(g._general()), g._general(), value, resolver, constraintCallNode);
+                    validateConstraints(genType, genGT, value, resolver, constraintCallNode);
                 }
             }
         }
@@ -242,54 +246,38 @@ public final class CastNode extends PureNode
                                                    TruffleMetadataAccess resolver,
                                                    RawLambdaCallNode constraintCallNode)
     {
-        if (!(type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.ElementWithConstraints ewc))
+        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "constraints");
+        if (!(constraintsObj instanceof org.finos.legend.pure.truffle.types.PureSequence constraints) || constraints.isEmpty())
         {
             return;
         }
-        var constraints = ewc._constraints();
-        if (constraints == null || constraints.isEmpty())
-        {
-            return;
-        }
-        String typeName = (type instanceof PackageableElement pe) ? pe._name() : "Unknown";
+        Object typeNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "name");
+        String typeName = typeNameObj instanceof String s ? s : "Unknown";
 
         // Resolve type variable bindings (e.g., x=8 for P(8))
         java.util.Map<String, Object> typeVarBindings = new java.util.HashMap<>();
-        if (targetGT instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue gtv
-                && gtv._typeVariableValues() != null && gtv._typeVariableValues().size() > 0)
+        Object typeVarValsObj = targetGT != null
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetGT, "typeVariableValues") : null;
+        if (typeVarValsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVarVals
+                && typeVarVals.size() > 0)
         {
-            org.finos.legend.pure.truffle.types.PureSequence typeVars = null;
-            if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.PrimitiveType pt)
+            Object typeVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "typeVariables");
+            if (typeVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVars)
             {
-                typeVars = pt._typeVariables();
-            }
-            else if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls)
-            {
-                typeVars = cls._typeVariables();
-            }
-            if (typeVars != null)
-            {
-                org.finos.legend.pure.truffle.types.PureSequence typeVarVals = gtv._typeVariableValues();
                 int count = Math.min(typeVars.size(), typeVarVals.size());
                 for (int i = 0; i < count; i++)
                 {
                     Object rawVal = typeVarVals.getBoxed(i);
                     // PDB metadata values may be AtomicValue FlatBuffer wrappers — unwrap
-                    if (rawVal instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av && av._value() != null)
+                    if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawVal,
+                            "meta::pure::metamodel::valuespecification::AtomicValue"))
                     {
-                        rawVal = av._value();
+                        Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawVal, "value");
+                        if (inner != null) rawVal = inner;
                     }
                     Object rawTypeVar = typeVars.getBoxed(i);
-                    String tvName = null;
-                    if (rawTypeVar instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp)
-                    {
-                        tvName = tp._name();
-                    }
-                    else if (rawTypeVar instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
-                    {
-                        tvName = ve._name();
-                    }
-                    if (tvName != null)
+                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawTypeVar, "name");
+                    if (tvNameObj instanceof String tvName)
                     {
                         typeVarBindings.put(tvName, rawVal);
                     }
@@ -299,11 +287,12 @@ public final class CastNode extends PureNode
 
         for (int idx = 0; idx < constraints.size(); idx++)
         {
-            if (!(constraints.getBoxed(idx) instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.constraint.Constraint c))
+            Object c = constraints.getBoxed(idx);
+            if (c == null)
             {
                 continue;
             }
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition funcDef = c._functionDefinition();
+            Object funcDef = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "functionDefinition");
             if (funcDef == null)
             {
                 continue;
@@ -312,15 +301,16 @@ public final class CastNode extends PureNode
             // Build args: [this, typeVarValues...]
             java.util.List<Object> constraintArgs = new java.util.ArrayList<>();
             constraintArgs.add(value);
-            org.finos.legend.pure.truffle.types.PureSequence funcParams = funcDef._parameters();
-            if (funcParams != null && funcParams.size() > 1)
+            Object funcParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(funcDef, "parameters");
+            if (funcParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence funcParams && funcParams.size() > 1)
             {
                 for (int p = 1; p < funcParams.size(); p++)
                 {
                     Object rawParam = funcParams.getBoxed(p);
-                    if (rawParam instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawParam, "name");
+                    if (tvNameObj instanceof String tvName)
                     {
-                        Object tvVal = typeVarBindings.get(ve._name());
+                        Object tvVal = typeVarBindings.get(tvName);
                         if (tvVal != null)
                         {
                             constraintArgs.add(tvVal);
@@ -332,24 +322,27 @@ public final class CastNode extends PureNode
             Object result = constraintCallNode.callWithArgs(funcDef, constraintArgs.toArray());
             if (Boolean.FALSE.equals(result))
             {
-                String constraintName = c._name() != null ? c._name() : String.valueOf(idx);
+                Object cNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "name");
+                String constraintName = cNameObj instanceof String cn ? cn : String.valueOf(idx);
                 String message = "Constraint :[" + constraintName + "] violated in the Class " + typeName;
 
-                if (c._messageFunction() != null)
+                Object messageFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "messageFunction");
+                if (messageFn != null)
                 {
                     try
                     {
                         java.util.List<Object> msgArgs = new java.util.ArrayList<>();
                         msgArgs.add(value);
-                        org.finos.legend.pure.truffle.types.PureSequence msgParams = c._messageFunction()._parameters();
-                        if (msgParams != null && msgParams.size() > 1)
+                        Object msgParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(messageFn, "parameters");
+                        if (msgParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence msgParams && msgParams.size() > 1)
                         {
                             for (int p = 1; p < msgParams.size(); p++)
                             {
                                 Object rawParam = msgParams.getBoxed(p);
-                                if (rawParam instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                                Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawParam, "name");
+                                if (tvNameObj instanceof String tvName)
                                 {
-                                    Object tvVal = typeVarBindings.get(ve._name());
+                                    Object tvVal = typeVarBindings.get(tvName);
                                     if (tvVal != null)
                                     {
                                         msgArgs.add(tvVal);
@@ -357,7 +350,7 @@ public final class CastNode extends PureNode
                                 }
                             }
                         }
-                        Object msgResult = constraintCallNode.callWithArgs(c._messageFunction(), msgArgs.toArray());
+                        Object msgResult = constraintCallNode.callWithArgs(messageFn, msgArgs.toArray());
                         if (msgResult != null)
                         {
                             message += ", Message: " + msgResult;

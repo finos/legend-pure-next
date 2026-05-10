@@ -56,19 +56,18 @@ public final class RawPropertyAccessNode extends PureNode
         this.argNodes = argNodes;
 
         // Pre-resolve property name and kind at construction time
-        var func = fe._func();
+        Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
         this.isQualifiedProperty = func instanceof QualifiedProperty;
         if (!isQualifiedProperty)
         {
-            String name = null;
-            if (func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+            Object nameObj = func != null
+                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(func, "name")
+                    : null;
+            String name = nameObj instanceof String s ? s : null;
+            if (name == null)
             {
-                name = prop._name();
-            }
-            if (name == null) name = fe._functionName();
-            if (name == null && func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-            {
-                name = pe._name();
+                Object fnName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName");
+                if (fnName instanceof String s) name = s;
             }
             this.propertyName = name;
         }
@@ -93,7 +92,8 @@ public final class RawPropertyAccessNode extends PureNode
 
         if (isQualifiedProperty)
         {
-            return getContext().executeFunction((FunctionDefinition) fe._func(), argValues);
+            FunctionDefinition func = (FunctionDefinition) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
+            return getContext().executeFunction(func, argValues);
         }
 
         String propName = propertyName;
@@ -112,9 +112,13 @@ public final class RawPropertyAccessNode extends PureNode
             //   3. runtime _values() traversal (handles enums made via newEnumeration)
             //   4. throw — better than silently returning empty (which is what
             //      hid testIsEnum / testEqualEnum / testNewEnumeration for so long)
-            if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en)
+            // Enumeration branch — slow path, only triggered when target is
+            // a Pure Enumeration. pureTypeIs is class-keyed-cached so the
+            // hot non-Enumeration path avoids the lookup cost entirely.
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(target,
+                    "meta::pure::metamodel::type::Enumeration"))
             {
-                if (cachedEnumTarget == en && cachedEnumValue != null
+                if (cachedEnumTarget == target && cachedEnumValue != null
                         && cachedPropName != null && cachedPropName.equals(propName))
                 {
                     return cachedEnumValue;
@@ -127,11 +131,13 @@ public final class RawPropertyAccessNode extends PureNode
                 {
                     return viaProp;
                 }
-                Object enumVal = getContext().coerceToJavaEnum(en, propName);
+                Object enumVal = getContext().coerceToJavaEnum(
+                        (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration) target,
+                        propName);
                 if (enumVal != null)
                 {
                     CompilerDirectives.transferToInterpreterAndInvalidate();
-                    cachedEnumTarget = en;
+                    cachedEnumTarget = target;
                     cachedEnumValue = enumVal;
                     cachedPropName = propName;
                     return enumVal;
@@ -139,34 +145,35 @@ public final class RawPropertyAccessNode extends PureNode
                 // Runtime enum (no Java class): values live on _properties()
                 // as Property instances whose default-value lambda wraps the
                 // Enum. Walk the properties looking for a matching name.
-                org.finos.legend.pure.truffle.types.PureSequence properties = en._properties();
-                if (properties != null)
+                Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "properties");
+                if (propsObj instanceof org.finos.legend.pure.truffle.types.PureSequence properties)
                 {
                     for (int i = 0; i < properties.size(); i++)
                     {
-                        Object p = properties.getBoxed(i);
-                        if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop
-                                && propName.equals(prop._name()))
+                        Object prop = properties.getBoxed(i);
+                        if (prop != null && propName.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name")))
                         {
                             // The default-value lambda's expressionSequence[0]
                             // is an AtomicValue whose _value() is the Enum.
-                            var dv = prop._defaultValue();
-                            if (dv != null && dv._expressionSequence() != null && !dv._expressionSequence().isEmpty())
+                            Object dv = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "defaultValue");
+                            if (dv == null) continue;
+                            Object dvSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(dv, "expressionSequence");
+                            if (!(dvSeqObj instanceof org.finos.legend.pure.truffle.types.PureSequence dvSeq) || dvSeq.isEmpty())
                             {
-                                Object expr = dv._expressionSequence().getBoxed(0);
-                                if (expr instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av)
-                                {
-                                    return av._value();
-                                }
+                                continue;
+                            }
+                            Object expr = dvSeq.getBoxed(0);
+                            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(expr,
+                                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+                            {
+                                return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(expr, "value");
                             }
                         }
                     }
                 }
+                String enPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(target);
                 throw new RuntimeException("No property or enum value '" + propName + "' on enumeration '"
-                        + (en instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement enpe
-                                ? org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(enpe)
-                                : en.toString())
-                        + "'");
+                        + (enPath != null ? enPath : target.toString()) + "'");
             }
             return reader.execute(target, propName);
         }

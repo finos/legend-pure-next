@@ -2,38 +2,33 @@ package org.finos.legend.pure.truffle.runtime.helper;
 
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 public final class _GenericType
 {
     private _GenericType() {}
 
+    private static final String GENERIC_TYPE_VALUE_PATH = "meta::pure::metamodel::type::generics::GenericTypeValue";
+    private static final String FUNCTION_TYPE_PATH = "meta::pure::metamodel::type::FunctionType";
+    private static final String VARIABLE_EXPRESSION_PATH =
+            "meta::pure::metamodel::valuespecification::VariableExpression";
+
     public static Type type(Object gt)
     {
-        if (gt instanceof GenericTypeValue gtv)
-        {
-            Object t = gtv._type();
-            return t instanceof Type type ? type : null;
-        }
-        if (gt instanceof GenericType g)
-        {
-            // GenericType base interface has no _type() — only GenericTypeValue does.
-            // If it's not a GenericTypeValue, we can't extract the type.
-            return null;
-        }
-        return null;
+        // Only GenericTypeValue subtypes carry a _type slot; the GenericType
+        // base interface doesn't. We can't subtype-check against
+        // GenericTypeValue without a resolver here, but readers tolerate a
+        // missing slot — PureObj.read returns null when the property is
+        // absent. Treat null-Object Result as "no type".
+        Object t = PureObj.read(gt, "type");
+        return t instanceof Type type ? type : null;
     }
 
     public static PureSequence typeArguments(Object gt)
     {
-        if (gt instanceof GenericTypeValue gtv)
-        {
-            Object ta = gtv._typeArguments();
-            return ta instanceof PureSequence seq ? seq : null;
-        }
-        return null;
+        Object ta = PureObj.read(gt, "typeArguments");
+        return ta instanceof PureSequence seq ? seq : null;
     }
 
     public static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl
@@ -73,14 +68,22 @@ public final class _GenericType
         {
             return "null";
         }
-        if (gt instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe
-                && !(gt instanceof GenericTypeValue))
+        boolean isGtv = PureObj.isType(gt, GENERIC_TYPE_VALUE_PATH, resolver);
+        if (!isGtv)
         {
-            String path = _PackageableElement.path(pe, resolver);
-            return "[Type:" + (path != null ? path : (pe._name() != null ? pe._name() : gt.getClass().getName())) + "]";
-        }
-        if (!(gt instanceof GenericTypeValue gtv))
-        {
+            // Bare Pure type rather than a GenericType wrapper — print as
+            // [Type:path]. _PackageableElement.path is widened to Object
+            // and falls through gracefully if `gt` doesn't carry a name.
+            String path = _PackageableElement.path(gt, resolver);
+            if (path != null && !path.isEmpty())
+            {
+                return "[Type:" + path + "]";
+            }
+            Object n = PureObj.read(gt, "name");
+            if (n instanceof String s && !s.isEmpty())
+            {
+                return "[Type:" + s + "]";
+            }
             return gt.getClass().getName();
         }
 
@@ -88,24 +91,19 @@ public final class _GenericType
 
         // Raw type name
         Type rawType = type(gt);
-        if (rawType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)
-        {
-            String path = _PackageableElement.path(pe, resolver);
-            sb.append(path != null ? path : (pe._name() != null ? pe._name() : "?"));
-        }
-        else if (rawType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.FunctionType ft)
+        if (rawType != null && PureObj.pureTypeIs(rawType, FUNCTION_TYPE_PATH))
         {
             sb.append("{");
-            PureSequence params = ft._parameters();
-            if (params != null)
+            Object paramsObj = PureObj.read(rawType, "parameters");
+            if (paramsObj instanceof PureSequence params)
             {
                 for (int i = 0; i < params.size(); i++)
                 {
                     if (i > 0) sb.append(", ");
                     Object p = params.getBoxed(i);
-                    if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
+                    if (PureObj.pureTypeIs(p, VARIABLE_EXPRESSION_PATH))
                     {
-                        sb.append(print(ve._genericType(), resolver));
+                        sb.append(print(PureObj.read(p, "genericType"), resolver));
                     }
                     else
                     {
@@ -114,8 +112,23 @@ public final class _GenericType
                 }
             }
             sb.append("->");
-            sb.append(print(ft._returnType(), resolver));
+            sb.append(print(PureObj.read(rawType, "returnType"), resolver));
             sb.append("}");
+        }
+        else if (rawType != null)
+        {
+            // Default: any other Type (Class, Enumeration, PrimitiveType, …)
+            // is a PackageableElement at the Pure level — render via path.
+            String path = _PackageableElement.path(rawType, resolver);
+            if (path != null && !path.isEmpty())
+            {
+                sb.append(path);
+            }
+            else
+            {
+                Object n = PureObj.read(rawType, "name");
+                sb.append(n instanceof String s && !s.isEmpty() ? s : "?");
+            }
         }
         else
         {

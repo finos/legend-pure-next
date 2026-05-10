@@ -75,6 +75,7 @@ public final class MapRemoveNode extends PureNode
     private static Object doRemove(Object map, Object key, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
     {
         MapImpl newMap = new MapImpl();
+        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         newMap._classifierGenericType(mapCGT);
         if (map instanceof MapImpl mi)
         {

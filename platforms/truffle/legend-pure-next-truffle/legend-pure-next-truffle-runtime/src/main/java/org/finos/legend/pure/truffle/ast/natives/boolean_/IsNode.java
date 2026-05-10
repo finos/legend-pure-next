@@ -56,42 +56,55 @@ public final class IsNode extends PureNode
         {
             return callPureEquals(rawA, rawB);
         }
-        if (rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea
-                && rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb)
+        // pureTypeOf is class-keyed-cached (PureObj.LEGACY_CLASS_PATH_CACHE)
+        // so post-warmup it's a single ConcurrentHashMap.get(Class) — bounded
+        // PE cost. Earlier the uncached pureTypeIs blew Graal's inlining
+        // budget here; the cache fixes that. Validated on TrufflePureTestRunner.
+        boolean aIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawA,
+                "meta::pure::metamodel::type::Enum");
+        boolean bIsEnum = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawB,
+                "meta::pure::metamodel::type::Enum");
+        if (aIsEnum && bIsEnum)
         {
-            // Same value name AND same parent enum type. Comparing only by
-            // name (the previous Objects.equals path) wrongly returned true
-            // for TestEnum1.FIRST is TestEnum2.FIRST.
-            if (!Objects.equals(ea._name(), eb._name()))
+            Object nameA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "name");
+            Object nameB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "name");
+            if (!Objects.equals(nameA, nameB))
             {
                 return false;
             }
-            if (ea._classifierGenericType() == null || eb._classifierGenericType() == null)
+            if (rawA.getClass() == rawB.getClass() && rawA.getClass().isEnum())
             {
-                return ea.getClass() == eb.getClass();
+                return true;
             }
-            var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(ea._classifierGenericType());
-            var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(eb._classifierGenericType());
+            Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "classifierGenericType");
+            Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "classifierGenericType");
+            if (cgtA == null || cgtB == null)
+            {
+                return rawA.getClass() == rawB.getClass();
+            }
+            var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtA);
+            var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtB);
             if (typeA == typeB)
             {
                 return true;
             }
-            if (typeA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peA
-                    && typeB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement peB)
+            if (typeA != null && typeB != null)
             {
-                return org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peA)
-                        .equals(org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(peB));
+                String pathA = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeA);
+                String pathB = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(typeB);
+                return pathA != null && pathA.equals(pathB);
             }
             return false;
         }
-        // Enum-String cross-comparison: extract enum value name from qualified path
-        if (rawA instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum ea && rawB instanceof String s)
+        if (aIsEnum && rawB instanceof String s)
         {
-            return Objects.equals(ea._name(), extractEnumValueName(s));
+            return Objects.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "name"),
+                    extractEnumValueName(s));
         }
-        if (rawB instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum eb && rawA instanceof String s)
+        if (bIsEnum && rawA instanceof String s)
         {
-            return Objects.equals(extractEnumValueName(s), eb._name());
+            return Objects.equals(extractEnumValueName(s),
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "name"));
         }
         return false;
     }
