@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.assert_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureException;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
@@ -82,9 +81,12 @@ public final class AssertErrorNode extends PureNode
             {
                 bodyCallNode.call(rc);
             }
-            else if (fn instanceof LambdaFunction lf)
+            else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                    "meta::pure::metamodel::function::LambdaFunction"))
             {
-                RawClosure closure = new RawClosure(lf, new Object[0], new String[0], null);
+                // RawClosure accepts Object lambda — handles both typed
+                // LambdaFunction (XImpl) and PureDynamicObject post-flip.
+                RawClosure closure = new RawClosure(fn, new Object[0], new String[0], null);
                 bodyCallNode.call(closure);
             }
             else

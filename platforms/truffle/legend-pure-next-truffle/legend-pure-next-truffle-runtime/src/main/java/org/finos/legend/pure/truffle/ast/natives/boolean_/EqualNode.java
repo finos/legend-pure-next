@@ -258,11 +258,15 @@ public final class EqualNode extends PureNode
         // Generated Impl equality — compare by property values respecting <<equality.Key>>.
         // Both are Pure metamodel objects iff their pureTypeOf is non-null
         // (covers PureDynamicObject + legacy XImpl).
-        boolean aIsPure = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(a) != null;
-        boolean bIsPure = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(b) != null;
+        String ptA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(a);
+        String ptB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(b);
+        boolean aIsPure = ptA != null;
+        boolean bIsPure = ptB != null;
         if (aIsPure && bIsPure)
         {
-            if (a.getClass() == b.getClass() || samePureType(a, b))
+            // For PDO, getClass() is always PureDynamicObject — doesn't
+            // distinguish Pure types. Use pureTypeOf for the same-type check.
+            if (ptA.equals(ptB) || samePureType(a, b))
             {
                 // Guard against circular property references (e.g. Property→owner→Property)
                 int depth = EQUALS_DEPTH.get();
@@ -360,25 +364,30 @@ public final class EqualNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static java.util.Set<String> collectEqualityKeyProperties(Object obj, TruffleMetadataAccess resolver)
     {
+        // Fast path: PropertyMetadataRegistry is populated by each XImpl's
+        // static{} block with the @equality.Key property names — direct
+        // lookup by Pure path, no resolver/Type walk needed.
+        String purePath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(obj);
+        if (purePath != null)
+        {
+            String[] keys = org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.getEqualityKeys(purePath);
+            if (keys != null && keys.length > 0)
+            {
+                return new java.util.LinkedHashSet<>(java.util.Arrays.asList(keys));
+            }
+        }
         Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(obj, "classifierGenericType");
         if (cgt == null)
         {
             return null;
         }
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
-                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+        Object type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         if (type == null)
         {
-            // Fall back to deriving the Pure path from the Java class — handles
-            // legacy XImpl whose CGT may not surface a resolved Type.
-            String purePath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(obj);
             if (purePath != null)
             {
                 Object elem = resolver.getElement(purePath);
-                if (elem instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-                {
-                    type = t;
-                }
+                if (elem != null) type = elem;
             }
         }
         if (type == null)

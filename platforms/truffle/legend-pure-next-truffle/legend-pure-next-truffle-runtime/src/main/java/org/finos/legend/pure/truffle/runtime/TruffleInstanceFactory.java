@@ -42,29 +42,28 @@ public final class TruffleInstanceFactory
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath, TruffleMetadataAccess resolver)
     {
-        // newInstance() goes through a LambdaMetafactory-built Supplier —
-        // no Constructor.newInstance / AccessibleObject.checkAccess per
-        // call. JFR profile showed those frames at ~7% of self-compile CPU
-        // before this overload existed.
-        return resolver.typeCache().newInstance(classPath);
+        // For user-defined Pure classes there's no codegen'd XImpl static{}
+        // block to populate the metadata registry; walk the Class element's
+        // properties + stereotypes from the resolver instead. Idempotent and
+        // memoised per pure-path so this is a one-shot cost on first
+        // construction. Must run BEFORE shapeFor so the resulting Shape's
+        // sharedData snapshot picks up the entries.
+        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.ensurePopulated(classPath, resolver);
+        return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(classPath),
+                /*fb=*/ null,
+                resolver,
+                /*parent=*/ null);
     }
 
-    /** Back-compat overload — no caching. Prefer the resolver-aware overload above. */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath)
     {
-        try
-        {
-            return resolveClass(classPath).getDeclaredConstructor().newInstance();
-        }
-        catch (RuntimeException re)
-        {
-            throw re;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Failed to instantiate '" + classPath + "'", e);
-        }
+        return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(classPath),
+                /*fb=*/ null,
+                /*resolver=*/ null,
+                /*parent=*/ null);
     }
 
     /**

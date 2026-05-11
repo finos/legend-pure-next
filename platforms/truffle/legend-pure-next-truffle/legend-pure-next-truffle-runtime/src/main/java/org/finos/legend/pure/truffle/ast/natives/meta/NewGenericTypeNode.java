@@ -16,10 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
@@ -32,10 +28,10 @@ public final class NewGenericTypeNode extends PureNode
     @Child
     private PureNode child;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public NewGenericTypeNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
+    public NewGenericTypeNode(PureNode child, Object genericType, Object multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
@@ -57,11 +53,11 @@ public final class NewGenericTypeNode extends PureNode
                 || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(result,
                         "meta::pure::metamodel::type::generics::GenericTypeValue", resolver))
         {
-            throw new RuntimeException("new(GenericType[1]) requires a GenericType argument");
+            String pt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(result);
+            throw new RuntimeException("new(GenericType[1]) requires a GenericType argument; got pureType=" + pt + " class=" + (result == null ? "null" : result.getClass().getName()));
         }
 
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType =
-                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(result);
+        Object rawType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(result);
         String classPath = "Unknown";
         if (rawType != null)
         {
@@ -90,14 +86,8 @@ public final class NewGenericTypeNode extends PureNode
             // bootstrap MetaNatives.preferCanonicalAnchor and Java's `new XxxImpl(model)`
             // ctor anchoring. Without this, `new(buildUserDefinedGenericType(SomeType))`
             // leaves classifier as a fresh inline UDGT, while Java emits canonical UDPGT.
-            // result was just isType-validated as GenericTypeValue above; the
-            // cast is safe as long as legacy FBWs still implement the typed
-            // interface (they do during migration). Drops out when
-            // preferCanonicalAnchorPublic is widened to Object in a later pass.
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
-                    NewWithKeysNode.preferCanonicalAnchorPublic(
-                            (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue) result,
-                            resolver));
+                    NewWithKeysNode.preferCanonicalAnchorPublic(result, resolver));
         }
 
         return instance;

@@ -19,9 +19,6 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
 /**
  * Property access node -- evaluates target and optional args, then dispatches
  * via the evaluator's accessProperty() for simple properties or
@@ -30,7 +27,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.
 @NodeInfo(shortName = "propertyAccess")
 public final class RawPropertyAccessNode extends PureNode
 {
-    private final FunctionExpression fe;
+    private final Object fe;
     private final boolean isQualifiedProperty;
     private final String propertyName;
 
@@ -50,14 +47,15 @@ public final class RawPropertyAccessNode extends PureNode
     @CompilationFinal
     private String cachedPropName;
 
-    public RawPropertyAccessNode(FunctionExpression fe, PureNode[] argNodes)
+    public RawPropertyAccessNode(Object fe, PureNode[] argNodes)
     {
         this.fe = fe;
         this.argNodes = argNodes;
 
         // Pre-resolve property name and kind at construction time
         Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
-        this.isQualifiedProperty = func instanceof QualifiedProperty;
+        this.isQualifiedProperty = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(func,
+                "meta::pure::metamodel::function::property::QualifiedProperty");
         if (!isQualifiedProperty)
         {
             Object nameObj = func != null
@@ -92,7 +90,7 @@ public final class RawPropertyAccessNode extends PureNode
 
         if (isQualifiedProperty)
         {
-            FunctionDefinition func = (FunctionDefinition) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
+            Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
             return getContext().executeFunction(func, argValues);
         }
 
@@ -131,9 +129,11 @@ public final class RawPropertyAccessNode extends PureNode
                 {
                     return viaProp;
                 }
-                Object enumVal = getContext().coerceToJavaEnum(
-                        (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration) target,
-                        propName);
+                // We already gated on pureTypeIs(target, Enumeration), so
+                // target is a Pure Enumeration value (typed XImpl pre-flip,
+                // PureDynamicObject post-flip). coerceToJavaEnum accepts
+                // Object — it resolves the path generically.
+                Object enumVal = getContext().coerceToJavaEnum(target, propName);
                 if (enumVal != null)
                 {
                     CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -141,6 +141,28 @@ public final class RawPropertyAccessNode extends PureNode
                     cachedEnumValue = enumVal;
                     cachedPropName = propName;
                     return enumVal;
+                }
+                // Enumeration values live in `values` (typed Enum list). Walk
+                // that first — covers all enums (PDB-loaded and dynamically
+                // constructed). The legacy `properties`-as-defaultValue path
+                // below is for newEnumeration()-built ones that don't yet
+                // populate `values`.
+                Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "values");
+                if (valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence values)
+                {
+                    for (int i = 0; i < values.size(); i++)
+                    {
+                        Object enumValue = values.getBoxed(i);
+                        if (enumValue != null && propName.equals(
+                                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(enumValue, "name")))
+                        {
+                            CompilerDirectives.transferToInterpreterAndInvalidate();
+                            cachedEnumTarget = target;
+                            cachedEnumValue = enumValue;
+                            cachedPropName = propName;
+                            return enumValue;
+                        }
+                    }
                 }
                 // Runtime enum (no Java class): values live on _properties()
                 // as Property instances whose default-value lambda wraps the

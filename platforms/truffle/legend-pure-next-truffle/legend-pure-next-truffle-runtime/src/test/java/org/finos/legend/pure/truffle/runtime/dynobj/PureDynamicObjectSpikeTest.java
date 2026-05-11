@@ -15,9 +15,6 @@ import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.object.DynamicObjectLibrary;
 import com.oracle.truffle.api.object.Shape;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.PropertyDef;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.PropertyImpl;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry;
 import org.finos.legend.pure.truffle.runtime.TrufflePdbLoader;
@@ -45,7 +42,10 @@ class PureDynamicObjectSpikeTest
 {
     private static TrufflePdbLoader coreLoader;
     private static TruffleModuleRegistry resolver;
-    private static PropertyImpl sampleFbw;
+    // Post-FB-decode flip: sampled Property is a PureDynamicObject backed by
+    // the raw FB sub-table. The typed PropertyImpl path went away when FB
+    // decode stopped creating typed XImpls for nested refs.
+    private static Object sampleFbw;
     private static PropertyDef samplePdef;
     private static Shape propertyShape;
     private static org.graalvm.polyglot.Engine engine;
@@ -77,17 +77,21 @@ class PureDynamicObjectSpikeTest
         // Find any Class with at least one Property; use its first property
         // as the sample. We pick PackageableElement because it's small and
         // stable.
+        // Post-loader-flip resolver.getElement returns a PureDynamicObject —
+        // read via PureObj.read instead of the typed (Class) cast.
         Object cls = resolver.getElement("meta::pure::metamodel::PackageableElement");
         assertNotNull(cls, "PackageableElement should be loaded");
-        PureSequence props = ((Class) cls)._properties();
-        assertNotNull(props, "PackageableElement._properties() should be non-null");
+        PureSequence props = (PureSequence) PureObj.read(cls, "properties");
+        assertNotNull(props, "PackageableElement.properties should be non-null");
 
-        // Find the first Property (vs QualifiedProperty)
+        // Find the first Property (vs QualifiedProperty). FB-decoded entries
+        // may be typed PropertyImpl (legacy path) or PureDynamicObject with
+        // Shape's dynamicType set to ::Property (post-flip).
         for (Object p : props.toBoxedArray())
         {
-            if (p instanceof PropertyImpl fbw)
+            if ("meta::pure::metamodel::function::property::Property".equals(PureObj.pureTypeOf(p)))
             {
-                sampleFbw = fbw;
+                sampleFbw = p;
                 break;
             }
         }
@@ -100,8 +104,8 @@ class PureDynamicObjectSpikeTest
 
         propertyShape = PureShapeRegistry.shapeFor("meta::pure::metamodel::function::property::Property");
 
-        System.out.println("[spike] sample property name=" + sampleFbw._name()
-                + "  owner=" + sampleFbw._owner());
+        System.out.println("[spike] sample property name=" + PureObj.read(sampleFbw, "name")
+                + "  owner=" + PureObj.read(sampleFbw, "owner"));
     }
 
     @AfterAll
@@ -134,14 +138,19 @@ class PureDynamicObjectSpikeTest
 
         // Second read: hit the materialized slot
         Object secondName = dol.getOrDefault(sampleDo, "name", PureFbDecoder.LAZY);
-        assertEquals(sampleFbw._name(), secondName, "DOL hit must match FBW");
+        assertEquals(PureObj.read(sampleFbw, "name"), secondName, "DOL hit must match FBW read");
 
         // Repeat for a more interesting field — owner — to confirm the
-        // decoder works for cross-element resolution too.
+        // decoder works for cross-element resolution too. Compare via
+        // PureObj.read instead of the typed `_owner()` getter: post-loader-flip
+        // the FBW's typed getter can return null when the stored value is a
+        // PureDynamicObject (cast-safe getter), while the DOL holds the raw
+        // PDO. PureObj.read goes through readProperty and returns the raw value
+        // on both sides — equivalent comparison.
         Object decodedOwner = PureFbDecoder.decode(sampleDo, "owner");
         dol.put(sampleDo, "owner", decodedOwner);
-        assertEquals(sampleFbw._owner(), dol.getOrDefault(sampleDo, "owner", null),
-                "owner DOL hit must match FBW");
+        assertEquals(PureObj.read(sampleFbw, "owner"), dol.getOrDefault(sampleDo, "owner", null),
+                "owner DOL hit must match FBW read");
     }
 
     @Test
@@ -157,7 +166,11 @@ class PureDynamicObjectSpikeTest
         assertNotNull(cls, "Class must be loaded");
         assertNotNull(t, "Type must be loaded");
 
-        // Property: PE -> get Class via dynamic path, compare _name()
+        // Property: PE -> get Class via dynamic path, compare via PureObj.read.
+        // Post-loader-flip, `pe` is itself already a PureDynamicObject — the
+        // separate dynamic-wrapping path is only needed if the loader returned
+        // typed XImpl. getElementAsDynamic still works (it wraps if needed
+        // or returns the existing PDO).
         PureDynamicObject peDyn = coreLoader.getElementAsDynamic("meta::pure::metamodel::PackageableElement");
         PureDynamicObject clsDyn = coreLoader.getElementAsDynamic("meta::pure::metamodel::type::Class");
         assertNotNull(peDyn, "dynamic PE wrapping must succeed");
@@ -168,16 +181,16 @@ class PureDynamicObjectSpikeTest
                 "PackageableElement is itself a Class — Shape's dynamic type encodes that");
 
         // Read primitive String property — name
-        assertEquals(((org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement) pe)._name(),
+        assertEquals(PureObj.read(pe, "name"),
                 PureObj.read(peDyn, "name"),
-                "PureObj.read of name must match legacy _name()");
+                "PureObj.read of name must agree between resolver-returned and freshly-wrapped PDO");
 
         // Read a sequence property — properties (PureSequence of Property FBWs)
-        Object legacyProps = ((org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class) pe)._properties();
+        Object resolverProps = PureObj.read(pe, "properties");
         Object dynProps = PureObj.read(peDyn, "properties");
         assertNotNull(dynProps, "properties should not be null");
-        // Same identity — the FBW's readProperty returns the same cached PureSequence
-        assertSame(legacyProps, dynProps, "PureObj.read of properties must return the FBW-cached sequence");
+        // Same identity — both wrappers delegate to the same FBW-cached PureSequence
+        assertSame(resolverProps, dynProps, "PureObj.read of properties must return the FBW-cached sequence");
     }
 
     @Test
@@ -264,12 +277,13 @@ class PureDynamicObjectSpikeTest
                 doRawBest / (double) fbwBest);
     }
 
-    /** Single-property read via the typed getter — the existing path. */
+    /** Single-property read via {@link PureObj#read} — the path that works
+     *  for both typed XImpl and PureDynamicObject backings. */
     private static final class FbwReadRoot extends RootNode
     {
-        private final Property property;
+        private final Object property;
 
-        FbwReadRoot(Property property, FrameDescriptor fd)
+        FbwReadRoot(Object property, FrameDescriptor fd)
         {
             super(null, fd);
             this.property = property;
@@ -278,7 +292,7 @@ class PureDynamicObjectSpikeTest
         @Override
         public Object execute(VirtualFrame frame)
         {
-            return property._name();
+            return PureObj.read(property, "name");
         }
     }
 

@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TrufflePureTestRunner
 {
     private static PureContext context;
+    private static org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader coreLoader;
     private static org.finos.legend.pure.truffle.runtime.TrufflePdbLoader compilerLoader;
     private static PDBModule coreModule;
@@ -81,8 +82,7 @@ class TrufflePureTestRunner
 
         // Module registry replaces the previous anonymous-class composite resolver.
         // Registration order is dependency-first: core, then compiler.
-        org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry resolver =
-                new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
+        resolver = new org.finos.legend.pure.truffle.runtime.TruffleModuleRegistry();
         resolver.register(coreLoader);
         resolver.register(compilerLoader);
 
@@ -139,7 +139,9 @@ class TrufflePureTestRunner
         for (String path : coreLoader.elementPaths())
         {
             Object element = coreLoader.getElement(path);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition && isPCTAdapter(element))
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    && isPCTAdapter(element))
             {
                 pctAdapter = element;
                 break;
@@ -213,18 +215,22 @@ class TrufflePureTestRunner
         for (String path : coreLoader.elementPaths())
         {
             Object element = coreLoader.getElement(path);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd && isTestStereotype(element) && isZeroArg(fd))
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    && isTestStereotype(element) && isZeroArg(element))
             {
-                tests.add(createTest(path, fd, null));
+                tests.add(createTest(path, element, null));
             }
         }
         // Also scan compiler.pdb for test functions
         for (String path : compilerLoader.elementPaths())
         {
             Object element = compilerLoader.getElement(path);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd && isTestStereotype(element) && isZeroArg(fd))
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    && isTestStereotype(element) && isZeroArg(element))
             {
-                tests.add(createTest(path, fd, null));
+                tests.add(createTest(path, element, null));
             }
         }
 
@@ -241,9 +247,11 @@ class TrufflePureTestRunner
         for (String path : coreLoader.elementPaths())
         {
             Object element = coreLoader.getElement(path);
-            if (element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd && isPCTTest(element))
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                    "meta::pure::metamodel::function::FunctionDefinition", resolver)
+                    && isPCTTest(element))
             {
-                tests.add(createTest(path, fd, pctAdapter));
+                tests.add(createTest(path, element, pctAdapter));
             }
         }
 
@@ -251,7 +259,7 @@ class TrufflePureTestRunner
         return tests;
     }
 
-    private DynamicTest createTest(String path, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd, Object adapter)
+    private DynamicTest createTest(String path, Object fd, Object adapter)
     {
         return DynamicTest.dynamicTest(path, () ->
         {
@@ -308,52 +316,44 @@ class TrufflePureTestRunner
 
     private static boolean hasStereotype(Object element, String value, String profileName)
     {
-        if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.ElementWithStereotypes ews))
+        Object stObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "stereotypes");
+        if (!(stObj instanceof org.finos.legend.pure.truffle.types.PureSequence st))
         {
             return false;
         }
-        var st = ews._stereotypes();
-        if (st == null)
+        // Stereotypes resolve to Stereotype objects; iterate and match by
+        // value + profile name. Stereotype is a leaf concrete Pure type so
+        // pureTypeIs is exact-match (no resolver needed) and class-keyed-cached.
+        for (Object stereotype : st.toBoxedArray())
         {
-            return false;
-        }
-        // Stereotypes are stored as [string] in PDB — format: "profile::path.StereotypeName"
-        // The wrapper resolves via resolver but stereotypes aren't top-level elements.
-        // Read the raw strings from the FBS directly.
-        if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition))
-        {
-            return false;
-        }
-        // Access the raw FBS stereotype strings via the wrapper's underlying data
-        // For now, iterate the resolved values — they may be null (unresolved) or Stereotype objects
-        for (Object s : st.toBoxedArray())
-        {
-            if (s == null) continue;
-            if (s instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype stereotype)
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(stereotype,
+                    "meta::pure::metamodel::extension::Stereotype"))
             {
-                String stValue = stereotype._value();
-                if (value.equals(stValue))
+                continue;
+            }
+            Object stValue = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(stereotype, "value");
+            if (value.equals(stValue))
+            {
+                Object profile = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(stereotype, "profile");
+                if (profile != null)
                 {
-                    Object profile = stereotype._profile();
-                    if (profile instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Profile p)
+                    Object profileN = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(profile, "name");
+                    if (profileName.equals(profileN))
                     {
-                        if (profileName.equals(p._name()))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
-                    // Profile might not resolve — match by value alone as fallback
-                    return true;
                 }
+                // Profile might not resolve — match by value alone as fallback
+                return true;
             }
         }
         return false;
     }
 
-    private static boolean isZeroArg(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
+    private static boolean isZeroArg(Object fd)
     {
-        var params = fd._parameters();
-        return params == null || params.isEmpty();
+        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
+        return !(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty();
     }
 
     /**

@@ -143,6 +143,7 @@
                         -XX:+UnlockExperimentalVMOptions
                         -XX:+EnableJVMCI
                         -XX:+UseJVMCICompiler
+                        -Dpure.truffle.compileImmediately=true
                     </argLine>
                     <!-- <includes> inherited from platforms/truffle/pom.xml -->
                 </configuration>

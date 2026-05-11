@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.runtime;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveReader;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -217,32 +216,29 @@ public final class TrufflePdbLoader implements TruffleModule
             return null;
         }
 
+        // Loader flip: construct PureDynamicObject backed by the raw FB Def.
+        // The Shape's dynamic type is the Pure-class path (derived from the
+        // wrapperClassName); per-class decoders registered by each generated
+        // XImpl's static{} block in PureFbDecoderRegistry handle property reads.
+        // Each XImpl's class is loaded lazily on first read (via Class.forName
+        // in PureFbDecoderRegistry.lazyLoad), which triggers static-init and
+        // registers the decoder.
+        String purePath = wrapperClassName
+                .replace("org.finos.legend.pure.truffle.pdb.", "")
+                .replaceFirst("Impl$", "")
+                .replace(".", "::");
         try
         {
-            // Create the FBS Def from the byte buffer
             Class<?> defClass = Class.forName(defClassName);
             var getRootMethod = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class);
             Object def = getRootMethod.invoke(null, bb);
-
-            // Create the truffle wrapper
-            Class<?> wrapperClass = Class.forName(wrapperClassName);
-            return wrapperClass.getConstructor(defClass, TruffleMetadataAccess.class).newInstance(def, resolver);
+            return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(purePath),
+                    def, resolver, null);
         }
         catch (Exception e)
         {
-            // Fallback: try without "Def" suffix in getRootAs method
-            try
-            {
-                Class<?> defClass = Class.forName(defClassName);
-                Object def = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class, defClass)
-                        .invoke(null, bb, defClass.getDeclaredConstructor().newInstance());
-                Class<?> wrapperClass = Class.forName(wrapperClassName);
-                return wrapperClass.getConstructor(defClass, TruffleMetadataAccess.class).newInstance(def, resolver);
-            }
-            catch (Exception e2)
-            {
-                throw new RuntimeException("Failed to deserialize element type=" + typeName + ": " + e.getMessage() + " / " + e2.getMessage());
-            }
+            throw new RuntimeException("Failed to deserialize element type=" + typeName + ": " + e.getMessage(), e);
         }
     }
 

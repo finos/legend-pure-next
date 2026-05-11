@@ -1,7 +1,6 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -14,15 +13,14 @@ public final class _GenericType
     private static final String VARIABLE_EXPRESSION_PATH =
             "meta::pure::metamodel::valuespecification::VariableExpression";
 
-    public static Type type(Object gt)
+    public static Object type(Object gt)
     {
         // Only GenericTypeValue subtypes carry a _type slot; the GenericType
         // base interface doesn't. We can't subtype-check against
         // GenericTypeValue without a resolver here, but readers tolerate a
         // missing slot — PureObj.read returns null when the property is
         // absent. Treat null-Object Result as "no type".
-        Object t = PureObj.read(gt, "type");
-        return t instanceof Type type ? type : null;
+        return PureObj.read(gt, "type");
     }
 
     public static PureSequence typeArguments(Object gt)
@@ -31,11 +29,14 @@ public final class _GenericType
         return ta instanceof PureSequence seq ? seq : null;
     }
 
-    public static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl
-    buildUserDefinedGenericType(Type type, TruffleMetadataAccess resolver)
+    public static Object buildUserDefinedGenericType(Object type, TruffleMetadataAccess resolver)
     {
-        var gt = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl();
-        gt._type(type);
+        Object gt = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                "meta::pure::metamodel::type::generics::UserDefinedGenericType", resolver);
+        if (type != null)
+        {
+            PureObj.write(gt, "type", type);
+        }
         // Anchor at the canonical GenericType_UserDefinedGenericType (UDPGT)
         // element from core.pdb, mirroring bootstrap's _GenericType.buildUserDefinedGenericType.
         // Without canonical anchoring the classifier chain bottoms at a fresh
@@ -44,9 +45,9 @@ public final class _GenericType
         if (resolver != null)
         {
             Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_UserDefinedGenericType");
-            if (canonical instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue canonicalGT)
+            if (canonical != null)
             {
-                gt._classifierGenericType(canonicalGT);
+                PureObj.write(gt, "classifierGenericType", canonical);
             }
         }
         return gt;
@@ -90,7 +91,7 @@ public final class _GenericType
         StringBuilder sb = new StringBuilder();
 
         // Raw type name
-        Type rawType = type(gt);
+        Object rawType = type(gt);
         if (rawType != null && PureObj.pureTypeIs(rawType, FUNCTION_TYPE_PATH))
         {
             sb.append("{");

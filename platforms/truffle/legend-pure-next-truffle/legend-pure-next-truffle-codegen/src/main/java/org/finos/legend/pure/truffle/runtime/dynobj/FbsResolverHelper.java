@@ -1,5 +1,7 @@
-package org.finos.legend.pure.truffle.runtime;
+package org.finos.legend.pure.truffle.runtime.dynobj;
 
+import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
@@ -26,6 +28,14 @@ public final class FbsResolverHelper
             {
                 String p = ref.path(0);
                 Object r = resolver.getElement(p);
+                if (r == null && p.contains("."))
+                {
+                    // Enum value references and nested members come through
+                    // here — `meta::pure::functions::date::DurationUnit.HOURS`
+                    // isn't stored as a top-level archive element; fall back
+                    // to navigating the owner type's properties/values.
+                    r = resolveNestedElement(p, resolver);
+                }
                 if (r == null) System.err.println("[PTR-FAIL] Element kind=0 path=" + p);
                 yield r;
             }
@@ -86,28 +96,42 @@ public final class FbsResolverHelper
         return null;
     }
 
-    /** Search a list property for an element whose _value() matches the target. */
+    /** Search a list property for an element whose value property matches the target. */
     private static Object searchListByValue(Object owner, String listName, String targetValue)
     {
-        try
+        // Use PropertyAccessor + PureDynamicObject access so this works for
+        // both PureDynamicObject (post-flip) and legacy XImpl (which
+        // implements PropertyAccessor). Reflection-on-typed-getter wouldn't
+        // find _p_stereotypes / _value on PureDynamicObject because those
+        // typed getters only live on the per-class XImpl.
+        Object list = readProperty(owner, listName);
+        if (list instanceof PureSequence seq)
         {
-            java.lang.reflect.Method getter = owner.getClass().getMethod("_" + listName);
-            Object list = getter.invoke(owner);
-            if (list instanceof PureSequence seq)
+            for (int i = 0; i < seq.size(); i++)
             {
-                for (int i = 0; i < seq.size(); i++)
+                Object item = seq.getBoxed(i);
+                Object value = readProperty(item, "value");
+                if (targetValue.equals(value))
                 {
-                    Object item = seq.getBoxed(i);
-                    java.lang.reflect.Method valueGetter = item.getClass().getMethod("_value");
-                    String value = (String) valueGetter.invoke(item);
-                    if (targetValue.equals(value))
-                    {
-                        return item;
-                    }
+                    return item;
                 }
             }
         }
-        catch (Exception ignored) {}
+        return null;
+    }
+
+    private static Object readProperty(Object obj, String name)
+    {
+        if (obj instanceof PureDynamicObject pdo)
+        {
+            Object v = pdo.readProperty(name);
+            return v == PropertyAccessor.ABSENT ? null : v;
+        }
+        if (obj instanceof PropertyAccessor accessor)
+        {
+            Object v = accessor.readProperty(name);
+            return v == PropertyAccessor.ABSENT ? null : v;
+        }
         return null;
     }
 
@@ -139,76 +163,94 @@ public final class FbsResolverHelper
         result = searchPropertyList(owner, "properties", memberName);
         if (result != null) return result;
         result = searchPropertyList(owner, "propertiesFromAssociations", memberName);
-        return result;
+        if (result != null) return result;
+        // Enumeration values: stored in the `values` list, not `properties`.
+        // E.g. `meta::pure::functions::date::DurationUnit.HOURS` resolves to
+        // the HOURS enum constant on the DurationUnit Enumeration.
+        return searchListByName(owner, "values", memberName);
+    }
+
+    /** Search a list property for an element whose `name` matches the target. */
+    private static Object searchListByName(Object owner, String listName, String targetName)
+    {
+        Object list = readProperty(owner, listName);
+        if (list instanceof PureSequence seq)
+        {
+            for (int i = 0; i < seq.size(); i++)
+            {
+                Object item = seq.getBoxed(i);
+                Object name = readProperty(item, "name");
+                if (targetName.equals(name))
+                {
+                    return item;
+                }
+            }
+        }
+        return null;
     }
 
     private static Object searchPropertyList(Object owner, String listName, String memberName)
     {
-        try
+        // Use readProperty so this works for both PureDynamicObject (post-flip)
+        // and legacy XImpl (PropertyAccessor). Reflection-on-typed-getter
+        // (`getClass().getMethod("_properties")`) fails on PureDynamicObject
+        // because the typed `_X()` getters only live on the per-class XImpl.
+        Object list = readProperty(owner, listName);
+        if (!(list instanceof PureSequence seq))
         {
-            java.lang.reflect.Method getter = owner.getClass().getMethod("_" + listName);
-            Object list = getter.invoke(owner);
-            if (list instanceof PureSequence seq)
-            {
-                // Extract simple name from the mangled memberName
-                // e.g. "res_String_1_" → "res", "fullName_Boolean_1_" → "fullName"
-                String simpleName = memberName;
-                int underIdx = memberName.indexOf('_');
-                if (underIdx > 0)
-                {
-                    simpleName = memberName.substring(0, underIdx);
-                }
+            return null;
+        }
+        // Extract simple name from the mangled memberName
+        // e.g. "res_String_1_" → "res", "fullName_Boolean_1_" → "fullName"
+        String simpleName = memberName;
+        int underIdx = memberName.indexOf('_');
+        if (underIdx > 0)
+        {
+            simpleName = memberName.substring(0, underIdx);
+        }
 
-                java.util.List<Object> candidates = new java.util.ArrayList<>();
-                for (int i = 0; i < seq.size(); i++)
-                {
-                    Object item = seq.getBoxed(i);
-                    java.lang.reflect.Method nameGetter = item.getClass().getMethod("_name");
-                    String name = (String) nameGetter.invoke(item);
-                    if (memberName.equals(name))
-                    {
-                        return item; // exact match on simple name
-                    }
-                    if (simpleName.equals(name))
-                    {
-                        candidates.add(item);
-                    }
-                }
-                if (candidates.size() == 1)
-                {
-                    return candidates.get(0);
-                }
-                if (candidates.size() > 1)
-                {
-                    // Disambiguate overloaded QPs by matching parameter count
-                    // from the mangled signature. Count params by splitting at "__"
-                    // (double underscore separates params from return type).
-                    int expectedParamCount = countParamsFromSignature(memberName, simpleName);
-                    for (Object candidate : candidates)
-                    {
-                        try
-                        {
-                            java.lang.reflect.Method paramsGetter = candidate.getClass().getMethod("_parameters");
-                            Object params = paramsGetter.invoke(candidate);
-                            if (params instanceof PureSequence ps)
-                            {
-                                // QP params include 'this', but the signature doesn't
-                                int declaredParams = ps.size() - 1;
-                                if (declaredParams == expectedParamCount)
-                                {
-                                    return candidate;
-                                }
-                            }
-                        }
-                        catch (Exception ignored2) {}
-                    }
-                    // If no param-count match, return first candidate
-                    return candidates.get(0);
-                }
+        java.util.List<Object> candidates = new java.util.ArrayList<>();
+        for (int i = 0; i < seq.size(); i++)
+        {
+            Object item = seq.getBoxed(i);
+            Object nameObj = readProperty(item, "name");
+            if (!(nameObj instanceof String name))
+            {
+                continue;
+            }
+            if (memberName.equals(name))
+            {
+                return item; // exact match on simple name
+            }
+            if (simpleName.equals(name))
+            {
+                candidates.add(item);
             }
         }
-        catch (Exception ignored)
+        if (candidates.size() == 1)
         {
+            return candidates.get(0);
+        }
+        if (candidates.size() > 1)
+        {
+            // Disambiguate overloaded QPs by matching parameter count
+            // from the mangled signature.
+            int expectedParamCount = countParamsFromSignature(memberName, simpleName);
+            for (Object candidate : candidates)
+            {
+                Object params = readProperty(candidate, "parameters");
+                if (params instanceof PureSequence ps)
+                {
+                    // QP params include 'this', but the signature doesn't
+                    int declaredParams = ps.size() - 1;
+                    if (declaredParams == expectedParamCount)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+            // If no param-count match, return first candidate
+            return candidates.get(0);
         }
         return null;
     }

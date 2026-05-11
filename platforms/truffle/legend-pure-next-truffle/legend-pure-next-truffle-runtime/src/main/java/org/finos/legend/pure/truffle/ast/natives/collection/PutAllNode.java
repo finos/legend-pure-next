@@ -42,7 +42,7 @@ public final class PutAllNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+    private Object cachedMapCgt;
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
@@ -52,9 +52,9 @@ public final class PutAllNode extends PureNode
         return doPutAll(map, other, lookupMapCgt());
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    private Object lookupMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        Object cgt = cachedMapCgt;
         if (cgt == null)
         {
             com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -64,10 +64,9 @@ public final class PutAllNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    private Object populateMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
-                getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[PutAllNode] Cannot resolve Map type from PDB");
@@ -77,11 +76,10 @@ public final class PutAllNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object doPutAll(Object map, Object other, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
+    private static Object doPutAll(Object map, Object other, Object mapCGT)
     {
         MapImpl newMap = new MapImpl();
-        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
-        newMap._classifierGenericType(mapCGT);
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(newMap, "classifierGenericType", mapCGT);
         if (map instanceof MapImpl mi)
         {
             newMap.putAll(mi);

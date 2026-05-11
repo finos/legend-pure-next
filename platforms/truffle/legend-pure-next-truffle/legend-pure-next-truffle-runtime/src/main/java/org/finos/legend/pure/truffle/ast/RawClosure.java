@@ -15,7 +15,6 @@
 package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.RootCallTarget;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 
 /**
  * A Pure closure carrying raw (unboxed) captured values.
@@ -44,7 +43,7 @@ import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunc
  *                       the fallback path should be used
  */
 public record RawClosure(
-        LambdaFunction lambda,
+        Object lambda,
         Object[] capturedValues,
         String[] capturedNames,
         RootCallTarget callTarget)

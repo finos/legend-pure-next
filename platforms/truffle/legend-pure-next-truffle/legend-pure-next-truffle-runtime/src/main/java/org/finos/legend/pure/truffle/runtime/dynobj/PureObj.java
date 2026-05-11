@@ -45,11 +45,17 @@ public final class PureObj
             Object cached = dol.getOrDefault(pdo, name, PureFbDecoder.LAZY);
             if (cached != PureFbDecoder.LAZY)
             {
-                return cached;
+                return cached == PropertyAccessor.ABSENT ? null : cached;
             }
             Object decoded = PureFbDecoder.decode(pdo, name);
+            // Cache the raw decode result (including ABSENT) so a subsequent
+            // pdo.readProperty(name) — which is the PropertyAccessor contract
+            // and surfaces ABSENT to its callers (PropertyReadNode.executeOrAbsent
+            // distinguishes "no such property" from a null property) — sees
+            // the same answer. PureObj.read coerces ABSENT to null at this
+            // API boundary because most callers want "missing == null".
             dol.put(pdo, name, decoded);
-            return decoded;
+            return decoded == PropertyAccessor.ABSENT ? null : decoded;
         }
         // Legacy path: existing XImpl / XFlatBufferWrapper. Migration safe —
         // both already implement PropertyAccessor.
@@ -144,9 +150,13 @@ public final class PureObj
      * For interfaces with subtypes (e.g. {@code Type}, {@code GenericType}),
      * use {@link #isType} which walks linearization.
      */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static boolean pureTypeIs(Object obj, String purePath)
     {
+        // No @TruffleBoundary: the hot PDO path is a single Shape.getDynamicType()
+        // + String.equals — PE folds the entire chain when both `purePath` and
+        // the receiver's Shape are compile-final. The legacy XImpl path goes
+        // through pureTypeOf which is @TruffleBoundary, so the inlining budget
+        // is still bounded for non-PDO targets.
         String t = pureTypeOf(obj);
         return t != null && t.equals(purePath);
     }
@@ -193,12 +203,11 @@ public final class PureObj
         }
         Object objType = resolver.getElement(objTypePath);
         Object targetType = resolver.getElement(targetPurePath);
-        if (!(objType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type ot)
-                || !(targetType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type tt))
+        if (objType == null || targetType == null)
         {
             return false;
         }
-        return org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(ot, tt, resolver);
+        return org.finos.legend.pure.truffle.runtime.helper._Type.subtypeOf(objType, targetType, resolver);
     }
 
     /**

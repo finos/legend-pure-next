@@ -16,11 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
@@ -33,10 +28,10 @@ public final class CopySimpleNode extends PureNode
     @Child
     private PureNode child;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public CopySimpleNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
+    public CopySimpleNode(PureNode child, Object genericType, Object multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
@@ -52,20 +47,19 @@ public final class CopySimpleNode extends PureNode
 
     private static Object doCopy(Object original, org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (!(original instanceof Any anyOrig))
+        if (original == null)
         {
-            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
+            throw new RuntimeException("Cannot copy: null");
         }
-        // Typed _copy() on Any — covariant return per generated subclass
-        // produces an XImpl with all properties materialised. To be replaced
-        // when the typed Any interface is dropped (step 3 of Goal 1) with a
-        // PureDynamicObject.pureCopy() equivalent.
-        Object copy = anyOrig._copy();
+        // Post-flip: every user-visible Pure value is a PureDynamicObject.
+        // The typed `Any._copy()` fast path is dead now that FB-decode no
+        // longer hands back typed XImpls — transient XImpls inside decoder
+        // lambdas don't escape `readProperty`.
+        Object copy = pdoCopy(original);
         // Fix self-referencing CGT (e.g., Class<x> where x == original) —
         // _copy() preserves the CGT reference to the source object, but
         // for self-referential cases we need to rewire it to the copy.
-        Object cgtObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(original, "classifierGenericType");
-        GenericTypeValue cgt = (GenericTypeValue) cgtObj;
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(original, "classifierGenericType");
         if (cgt != null && hasSelfReference(cgt, original))
         {
             cgt = deepCopyCgt(cgt, original, copy, resolver);
@@ -77,6 +71,48 @@ public final class CopySimpleNode extends PureNode
         {
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType",
                     NewWithKeysNode.preferCanonicalAnchorPublic(cgt, resolver));
+        }
+        return copy;
+    }
+
+    /**
+     * Package-visible PDO copy used by sibling natives (CopyWithKeysNode's
+     * setDeepProperty needs to deep-copy intermediate PDO targets along a
+     * dotted path so mutations don't leak into the original).
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    static Object pdoCopyPublic(Object original) { return pdoCopy(original); }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static Object pdoCopy(Object original)
+    {
+        org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject src =
+                (org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) original;
+        // Construct against the *root* Shape for the Pure path (per-class
+        // singleton in PureShapeRegistry) — DynamicObject's constructor
+        // refuses a Shape that's already been specialized with instance
+        // properties, which src.getShape() would be after prior `dol.put`s.
+        // Carry the FB from src so the copy can lazy-decode the same
+        // properties on demand (covers fields the source hasn't materialised
+        // yet — without this they'd come back null on the copy and break
+        // structural equality with the original).
+        Object dt = src.getShape().getDynamicType();
+        com.oracle.truffle.api.object.Shape rootShape = (dt instanceof String purePath)
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(purePath)
+                : src.getShape();
+        org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject copy =
+                new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                        rootShape, src.fb, src.resolver, src.parent);
+        com.oracle.truffle.api.object.DynamicObjectLibrary dol =
+                com.oracle.truffle.api.object.DynamicObjectLibrary.getUncached();
+        // Carry over the source's already-materialised values so subsequent
+        // reads on the copy hit the DOL fast path instead of re-decoding.
+        Object[] keys = dol.getKeyArray(src);
+        for (Object key : keys)
+        {
+            if (!(key instanceof String name)) continue;
+            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(src, name);
+            dol.put(copy, name, v);
         }
         return copy;
     }
@@ -137,24 +173,27 @@ public final class CopySimpleNode extends PureNode
      * with {@code copy}. Handles type pointers and TypeParameter owner pointers.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static GenericTypeValue deepCopyCgt(GenericTypeValue gtv, Object original, Object copy,
+    private static Object deepCopyCgt(Object gtv, Object original, Object copy,
                                                 org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (gtv == null) return null;
         var result = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
                 null, resolver);
-        // Copy type — substitute self-references
+        // Copy type — substitute self-references. The typed `instanceof Type`
+        // guard on `copy` was assertion-only (copy == _copy() of original which
+        // is a Type), so widening to non-null is safe.
         Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type");
-        if (type == original && copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
+        if (type == original && copy != null)
         {
-            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", copyType);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", copy);
         }
         else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(type,
                 "meta::pure::metamodel::type::generics::TypeParameter")
-                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "owner") == original
-                && type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tp)
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "owner") == original)
         {
-            var tpCopy = tp._copy();
+            // Copy the TypeParameter (always PDO post-flip), then override
+            // owner to point at the new instance.
+            Object tpCopy = pdoCopyPublic(type);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(tpCopy, "owner", copy);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", tpCopy);
         }
@@ -170,9 +209,13 @@ public final class CopySimpleNode extends PureNode
             for (int i = 0; i < typeArgs.size(); i++)
             {
                 Object ta = typeArgs.getBoxed(i);
-                if (ta instanceof GenericTypeValue innerGtv)
+                // deepCopyCgt now accepts Object — handles PDO and typed
+                // GenericTypeValue uniformly via PureObj.read.
+                if (ta != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(ta,
+                        "meta::pure::metamodel::type::generics::GenericTypeValue",
+                        org.finos.legend.pure.truffle.PureLanguage.get(null).resolver()))
                 {
-                    copied[i] = deepCopyCgt(innerGtv, original, copy, resolver);
+                    copied[i] = deepCopyCgt(ta, original, copy, resolver);
                 }
                 else
                 {

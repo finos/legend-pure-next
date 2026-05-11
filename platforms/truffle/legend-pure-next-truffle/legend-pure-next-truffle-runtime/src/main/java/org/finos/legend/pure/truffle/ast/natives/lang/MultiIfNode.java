@@ -20,7 +20,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.Pair;
 
 /**
  * Native implementation of Pure's multi-clause {@code if} —

@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.collection;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
 

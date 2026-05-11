@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.ListImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
@@ -52,10 +51,10 @@ public final class GroupByNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+    private Object cachedMapCgt;
 
     @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedListCgt;
+    private Object cachedListCgt;
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
@@ -64,7 +63,7 @@ public final class GroupByNode extends PureNode
         int sz = CollectionHelper.size(col);
         if (sz == 0)
         {
-            return buildMap(new Object[0], new Object[0], 0, lookupMapCgt(), lookupListCgt());
+            return buildMap(new Object[0], new Object[0], 0, lookupMapCgt(), lookupListCgt(), getResolver());
         }
         Object keyFn = keyFnArg.executeGeneric(frame);
 
@@ -75,12 +74,12 @@ public final class GroupByNode extends PureNode
             items[i] = CollectionHelper.at(col, i);
             keys[i] = callNode.call(keyFn, items[i]);
         }
-        return buildMap(items, keys, sz, lookupMapCgt(), lookupListCgt());
+        return buildMap(items, keys, sz, lookupMapCgt(), lookupListCgt(), getResolver());
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    private Object lookupMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        Object cgt = cachedMapCgt;
         if (cgt == null)
         {
             com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -90,18 +89,17 @@ public final class GroupByNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    private Object populateMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
-                getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
         if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve Map type from PDB");
         cachedMapCgt = cgt;
         return cgt;
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupListCgt()
+    private Object lookupListCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedListCgt;
+        Object cgt = cachedListCgt;
         if (cgt == null)
         {
             com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -111,10 +109,9 @@ public final class GroupByNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateListCgt()
+    private Object populateListCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
-                getContext().cgtForType("meta::pure::functions::collection::List");
+        Object cgt = getContext().cgtForType("meta::pure::functions::collection::List");
         if (cgt == null) throw new RuntimeException("[GroupByNode] Cannot resolve List type from PDB");
         cachedListCgt = cgt;
         return cgt;
@@ -122,8 +119,9 @@ public final class GroupByNode extends PureNode
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildMap(Object[] items, Object[] keys, int sz,
-                                   org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCgt,
-                                   org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue listCgt)
+                                   Object mapCgt,
+                                   Object listCgt,
+                                   org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         LinkedHashMap<Object, List<Object>> grouped = new LinkedHashMap<>();
         List<Object> canonicalKeys = new ArrayList<>();
@@ -150,12 +148,12 @@ public final class GroupByNode extends PureNode
         }
 
         // Build MapImpl backed by LinkedHashMap
-        // MapImpl is hand-written runtime infra, not Pure codegen — keep typed setter.
         MapImpl mapInstance = new MapImpl();
-        mapInstance._classifierGenericType(mapCgt);
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(mapInstance, "classifierGenericType", mapCgt);
         for (Map.Entry<Object, List<Object>> e : grouped.entrySet())
         {
-            ListImpl listInstance = new ListImpl();
+            Object listInstance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::functions::collection::List", resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(listInstance, "classifierGenericType", listCgt);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(listInstance, "values",
                     new org.finos.legend.pure.truffle.types.ObjectSequence(e.getValue().toArray()));

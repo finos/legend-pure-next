@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 
@@ -34,10 +32,10 @@ public final class SplitNode extends PureNode
     @Child
     private PureNode delimArg;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public SplitNode(PureNode strArg, PureNode delimArg, GenericType genericType, Multiplicity multiplicity)
+    public SplitNode(PureNode strArg, PureNode delimArg, Object genericType, Object multiplicity)
     {
         this.strArg = strArg;
         this.delimArg = delimArg;

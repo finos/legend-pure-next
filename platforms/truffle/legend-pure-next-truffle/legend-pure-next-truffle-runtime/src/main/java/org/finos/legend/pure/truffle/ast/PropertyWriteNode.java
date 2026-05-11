@@ -93,10 +93,12 @@ public final class PropertyWriteNode extends Node
                 if (resolver != null)
                 {
                     Object enumType = resolver.getElement(purePath);
-                    if (enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
+                    // Post-loader-flip the resolver returns a PDO; build the
+                    // canonical UDPGT around it via PureObj-driven _GenericType.
+                    if (enumType != null)
                     {
                         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(value, "classifierGenericType",
-                                org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver));
+                                org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(enumType, resolver));
                     }
                 }
             }

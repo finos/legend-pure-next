@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle.runtime.helper;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleTypeCache;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -72,7 +71,7 @@ public final class TypeCache implements TruffleTypeCache
     // during warmup; under the previous synchronizedMap wrapper, every
     // read paid a monitor enter/exit (46 JFR samples = ~2.7% of warm CPU
     // on the metamodel_factories.pure self-host).
-    private volatile IdentityHashMap<Type, Entry> entries = new IdentityHashMap<>();
+    private volatile IdentityHashMap<Object, Entry> entries = new IdentityHashMap<>();
     private final Map<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     /**
      * Pre-built {@link java.util.function.Supplier} per Pure class path.
@@ -88,7 +87,7 @@ public final class TypeCache implements TruffleTypeCache
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public List<Type> linearization(Object type)
+    public List<Object> linearization(Object type)
     {
         return entryFor(type).linearization;
     }
@@ -102,7 +101,7 @@ public final class TypeCache implements TruffleTypeCache
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public Set<Type> ancestors(Object type)
+    public Set<Object> ancestors(Object type)
     {
         return entryFor(type).ancestors;
     }
@@ -161,22 +160,22 @@ public final class TypeCache implements TruffleTypeCache
 
     private Entry entryFor(Object type)
     {
-        if (!(type instanceof Type t))
+        if (type == null)
         {
             return EMPTY;
         }
         // Fast path — unsynchronized read of the volatile snapshot. Once
         // entries are populated during warmup, this is the only branch
         // hit and avoids the monitor enter/exit.
-        Entry hit = entries.get(t);
+        Entry hit = entries.get(type);
         if (hit != null)
         {
             return hit;
         }
-        return computeAndCache(t);
+        return computeAndCache(type);
     }
 
-    private synchronized Entry computeAndCache(Type t)
+    private synchronized Entry computeAndCache(Object t)
     {
         // Re-check inside the lock — another thread may have populated.
         Entry hit = entries.get(t);
@@ -185,15 +184,15 @@ public final class TypeCache implements TruffleTypeCache
             return hit;
         }
         Entry computed = compute(t);
-        IdentityHashMap<Type, Entry> next = new IdentityHashMap<>(entries);
+        IdentityHashMap<Object, Entry> next = new IdentityHashMap<>(entries);
         next.put(t, computed);
         entries = next;
         return computed;
     }
 
-    private static Entry compute(Type type)
+    private static Entry compute(Object type)
     {
-        List<Type> lin = new ArrayList<>();
+        List<Object> lin = new ArrayList<>();
         linearizeInto(type, lin);
         Set<String> keys = new LinkedHashSet<>();
         // Type IS-A SimplePropertyOwner in Pure (Class, Association, etc.) —
@@ -205,7 +204,7 @@ public final class TypeCache implements TruffleTypeCache
         // generalisations and blow the stack on cyclic shapes); identity is
         // semantically correct here since top-level PDB types are singletons
         // per resolver.
-        Set<Type> ancestors = Collections.newSetFromMap(new IdentityHashMap<>(lin.size() * 2));
+        Set<Object> ancestors = Collections.newSetFromMap(new IdentityHashMap<>(lin.size() * 2));
         ancestors.addAll(lin);
         return new Entry(
                 List.copyOf(lin),
@@ -215,7 +214,7 @@ public final class TypeCache implements TruffleTypeCache
 
     // --- linearization ------------------------------------------------------
 
-    private static void linearizeInto(Type type, List<Type> out)
+    private static void linearizeInto(Object type, List<Object> out)
     {
         if (type == null)
         {
@@ -223,7 +222,7 @@ public final class TypeCache implements TruffleTypeCache
         }
         // Identity check — generated Type.equals walks the structure and
         // can recurse through cyclic generalisations (see entries field).
-        for (Type seen : out)
+        for (Object seen : out)
         {
             if (seen == type)
             {
@@ -238,7 +237,7 @@ public final class TypeCache implements TruffleTypeCache
             {
                 if (gen != null)
                 {
-                    Type superType = _GenericType.type(PureObj.read(gen, "general"));
+                    Object superType = _GenericType.type(PureObj.read(gen, "general"));
                     linearizeInto(superType, out);
                 }
             }
@@ -291,7 +290,7 @@ public final class TypeCache implements TruffleTypeCache
                 {
                     continue;
                 }
-                Type superType = _GenericType.type(general);
+                Object superType = _GenericType.type(general);
                 if (superType != null)
                 {
                     collectEqualityKeysInto(superType, keys, seenPropNames, depth + 1);
@@ -326,5 +325,5 @@ public final class TypeCache implements TruffleTypeCache
         return false;
     }
 
-    private record Entry(List<Type> linearization, Set<String> equalityKeys, Set<Type> ancestors) {}
+    private record Entry(List<Object> linearization, Set<String> equalityKeys, Set<Object> ancestors) {}
 }

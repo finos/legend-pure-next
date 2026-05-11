@@ -38,14 +38,26 @@ public final class PureFbDecoder
         if (obj.fb == null)
         {
             // Pure-built; nothing to lazy-decode. Caller stored a null.
+            // (We surface ABSENT for names the Shape doesn't have a slot
+            // for; here we don't know the property list without a backing
+            // FB, so treat as null.)
             return null;
         }
         if (obj.fb instanceof PropertyAccessor accessor)
         {
-            Object value = accessor.readProperty(propertyName);
-            return value == PropertyAccessor.ABSENT ? null : value;
+            // Legacy backing: XImpl / XFBW. Per-class readProperty is the
+            // generated decode switch — propagate ABSENT so callers can
+            // distinguish "no such property" from "property holds null".
+            return accessor.readProperty(propertyName);
         }
-        // Unknown backing — leave the slot empty.
+        // Post-flip backing: raw XDef. Per-Pure-class decoder lives in
+        // PureFbDecoderRegistry, looked up by Shape's dynamic type.
+        Object dt = obj.getShape().getDynamicType();
+        if (dt instanceof String purePath)
+        {
+            return PureFbDecoderRegistry.decode(purePath, propertyName, obj.fb,
+                    (org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess) obj.resolver, obj);
+        }
         return null;
     }
 }

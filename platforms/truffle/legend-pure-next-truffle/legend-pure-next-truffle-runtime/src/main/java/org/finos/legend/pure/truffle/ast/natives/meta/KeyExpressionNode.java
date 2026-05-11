@@ -17,9 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.lang.KeyExpressionImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 /**
@@ -32,10 +29,10 @@ public final class KeyExpressionNode extends PureNode
     @Children
     private PureNode[] children;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public KeyExpressionNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
+    public KeyExpressionNode(PureNode[] children, Object genericType, Object multiplicity)
     {
         this.children = children;
         this.genericType = genericType;
@@ -55,7 +52,7 @@ public final class KeyExpressionNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object[] values = evaluateChildren(frame);
-        return doKeyExpression(values);
+        return doKeyExpression(values, getResolver());
     }
 
     @ExplodeLoop
@@ -70,9 +67,11 @@ public final class KeyExpressionNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object doKeyExpression(Object[] values)
+    private static Object doKeyExpression(Object[] values,
+                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        KeyExpressionImpl keyExpr = new KeyExpressionImpl();
+        Object keyExpr = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                "meta::pure::functions::lang::KeyExpression", resolver);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(keyExpr, "name", values[0]);
         Object expr = values[1];
         if (expr instanceof org.finos.legend.pure.truffle.types.PureSequence)

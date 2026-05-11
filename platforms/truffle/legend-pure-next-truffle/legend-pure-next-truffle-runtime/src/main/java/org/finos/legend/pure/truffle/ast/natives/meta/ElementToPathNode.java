@@ -16,9 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
@@ -34,10 +31,10 @@ public final class ElementToPathNode extends PureNode
     @Children
     private PureNode[] children;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ElementToPathNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
+    public ElementToPathNode(PureNode[] children, Object genericType, Object multiplicity)
     {
         this.children = children;
         this.genericType = genericType;
@@ -69,13 +66,13 @@ public final class ElementToPathNode extends PureNode
         Object element = values[0];
         String separator = values.length > 1 ? StringHelper.asString(values[1], "elementToPath") : "::";
 
-        if (element instanceof PackageableElement pe)
+        // Try _PackageableElement.path for any Pure metamodel object — works
+        // for both legacy XImpl and PureDynamicObject. The path helper walks
+        // the package chain via PureObj.read; the typed `instanceof
+        // PackageableElement` guard wouldn't match a PDO post-loader-flip.
+        if (element != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(element) != null)
         {
-            // Pass resolver — _PackageableElement.path(pe, resolver) hits the
-            // O(1) reverseCache for elements loaded from PDB before falling
-            // back to walking the package chain (recursive, surfaced as 8%
-            // of CPU on JFR before this change).
-            String path = _PackageableElement.path(pe, resolver);
+            String path = _PackageableElement.path(element, resolver);
             if (path == null || path.isEmpty() || "Root".equals(path) || "::".equals(path))
             {
                 return "";

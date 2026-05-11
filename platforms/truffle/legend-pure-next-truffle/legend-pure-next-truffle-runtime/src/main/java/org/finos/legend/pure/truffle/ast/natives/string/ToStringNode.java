@@ -17,8 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -31,10 +29,10 @@ public final class ToStringNode extends PureNode
     @Child
     private org.finos.legend.pure.truffle.ast.PropertyReadNode toStringReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ToStringNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
+    public ToStringNode(PureNode arg, Object genericType, Object multiplicity)
     {
         this.arg = arg;
         this.genericType = genericType;
@@ -63,6 +61,47 @@ public final class ToStringNode extends PureNode
         return pureToString(v, null);
     }
 
+    /**
+     * Pure-source representation of an enum value: "<EnumerationPath>.<ValueName>"
+     * (e.g. "meta::pure::...::LA_GeographicEntityType.CITY"). Returns null when
+     * {@code v} isn't recognisable as a Pure enum value — caller should fall
+     * back to the regular toString form. Used by {@code %r} (toRepresentation)
+     * since enum values in Pure source are always written in qualified form.
+     */
+    @TruffleBoundary
+    static String enumQualifiedPath(Object v)
+    {
+        if (v == null) return null;
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(v);
+        if (v instanceof java.lang.Enum<?> javaEnum && pureType != null && pureType.endsWith("Enum"))
+        {
+            return pureType.substring(0, pureType.length() - "Enum".length()) + "." + javaEnum.name();
+        }
+        if ("meta::pure::metamodel::type::Enum".equals(pureType))
+        {
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "name");
+            if (name instanceof String s)
+            {
+                Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "classifierGenericType");
+                if (cgt != null)
+                {
+                    Object enumType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+                    if (enumType != null)
+                    {
+                        var resolver = org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+                        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(enumType, resolver);
+                        if (enumPath != null && !enumPath.isEmpty())
+                        {
+                            return enumPath + "." + s;
+                        }
+                    }
+                }
+                return s;
+            }
+        }
+        return null;
+    }
+
     // @TruffleBoundary — recursive over arbitrary structure with substring,
     // StringBuilder, and reflection (toString-QP dispatch). Same JDK
     // inlining-budget hazard as normalizeDateString. Cheap to call across
@@ -79,7 +118,14 @@ public final class ToStringNode extends PureNode
             return normalizeDateString(pd.dateString());
         }
         String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(v);
-        // Enum values — return just the enum constant name
+        // Pure's `toString` of an enum value returns just the value name
+        // (e.g. "CITY"), matching the standard convention. Callers wanting
+        // the fully-qualified "<EnumerationPath>.<ValueName>" form (the
+        // toRepresentation/%r convention) must use enumQualifiedPath below.
+        if (v instanceof java.lang.Enum<?> javaEnum && pureType != null && pureType.endsWith("Enum"))
+        {
+            return javaEnum.name();
+        }
         if ("meta::pure::metamodel::type::Enum".equals(pureType))
         {
             Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "name");

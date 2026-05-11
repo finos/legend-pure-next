@@ -1,7 +1,6 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 
 import java.util.List;
@@ -11,18 +10,18 @@ public final class _Type
     private _Type() {}
 
     @SuppressWarnings("unchecked")
-    public static List<Type> linearize(Type type, TruffleMetadataAccess resolver)
+    public static List<Object> linearize(Object type, TruffleMetadataAccess resolver)
     {
         // Memoised on the resolver — identity-keyed, computed once per Type.
-        // Cast: the runtime TypeCache impl always stores List<Type>; the
+        // Cast: the runtime TypeCache impl always stores List<Object>; the
         // List<?> contract on TruffleTypeCache is purely so the interface
         // can live in codegen (where the generated Type class isn't yet on
         // the classpath at first-pass compile).
-        return (List<Type>) resolver.typeCache().linearization(type);
+        return (List<Object>) resolver.typeCache().linearization(type);
     }
 
     @SuppressWarnings("unchecked")
-    public static boolean subtypeOf(Type sub, Type sup, TruffleMetadataAccess resolver)
+    public static boolean subtypeOf(Object sub, Object sup, TruffleMetadataAccess resolver)
     {
         if (sub == sup)
         {
@@ -40,10 +39,10 @@ public final class _Type
         // replaces a linear scan over the linearization List that JFR
         // identified as the dominant subtypeOf hot path (~7% of warm CPU
         // on the metamodel_factories.pure self-host).
-        return ((java.util.Set<Type>) resolver.typeCache().ancestors(sub)).contains(sup);
+        return ((java.util.Set<Object>) resolver.typeCache().ancestors(sub)).contains(sup);
     }
 
-    public static Type findCommonType(List<Type> types, boolean contravariant, TruffleMetadataAccess resolver)
+    public static Object findCommonType(List<?> types, boolean contravariant, TruffleMetadataAccess resolver)
     {
         if (types == null || types.isEmpty())
         {
@@ -53,8 +52,8 @@ public final class _Type
         {
             return types.get(0);
         }
-        List<Type> firstLin = linearize(types.get(0), resolver);
-        for (Type candidate : firstLin)
+        List<Object> firstLin = linearize(types.get(0), resolver);
+        for (Object candidate : firstLin)
         {
             boolean inAll = true;
             for (int i = 1; i < types.size(); i++)
@@ -80,12 +79,12 @@ public final class _Type
      * The volatile field is initialised once on first call; subsequent
      * calls hit the cached reference directly.
      */
-    private static volatile Type anyTypeRef;
+    private static volatile Object anyTypeRef;
 
-    private static boolean isTopType(Type type, TruffleMetadataAccess resolver)
+    private static boolean isTopType(Object type, TruffleMetadataAccess resolver)
     {
         if (type == null) return false;
-        Type any = anyTypeRef;
+        Object any = anyTypeRef;
         if (any != null)
         {
             return type == any;
@@ -95,10 +94,10 @@ public final class _Type
         if (resolver != null)
         {
             Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
-            if (resolved instanceof Type t)
+            if (resolved != null)
             {
-                anyTypeRef = t;
-                return type == t;
+                anyTypeRef = resolved;
+                return type == resolved;
             }
         }
         // Fallback: string compare (only hits before "Any" is in the resolver).
@@ -106,7 +105,7 @@ public final class _Type
         return "Any".equals(PureObj.read(type, "name"));
     }
 
-    public static String print(Type type, TruffleMetadataAccess resolver)
+    public static String print(Object type, TruffleMetadataAccess resolver)
     {
         if (type == null)
         {

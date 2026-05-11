@@ -16,11 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
@@ -34,10 +29,10 @@ public final class NewSimpleNode extends PureNode
     @Child
     private PureNode child;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public NewSimpleNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
+    public NewSimpleNode(PureNode child, Object genericType, Object multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
@@ -71,8 +66,7 @@ public final class NewSimpleNode extends PureNode
         if (typeArgs != null && typeArgs.size() > 0)
         {
             Object heldGTObj = typeArgs.getBoxed(0);
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type heldType =
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(heldGTObj);
+            Object heldType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(heldGTObj);
             if (heldType != null)
             {
                 classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(heldType);
@@ -94,12 +88,15 @@ public final class NewSimpleNode extends PureNode
         if (typeArgs != null && typeArgs.size() > 0)
         {
             Object cgtObj = typeArgs.getBoxed(0);
-            if (cgtObj instanceof GenericTypeValue gtv)
+            // The instanceof GenericTypeValue guard wouldn't match a
+            // PureDynamicObject post-loader-flip; preferCanonicalAnchorPublic
+            // is widened to Object and tolerates any Pure GT representation.
+            if (cgtObj != null)
             {
                 // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
                 // prefer canonical GenericType_<TypeName> UDPGT from core.pdb.
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
-                        NewWithKeysNode.preferCanonicalAnchorPublic(gtv, resolver));
+                        NewWithKeysNode.preferCanonicalAnchorPublic(cgtObj, resolver));
             }
         }
 

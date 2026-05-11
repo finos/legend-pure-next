@@ -17,13 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
@@ -95,106 +88,24 @@ public final class NewWithKeysNode extends PureNode
     @com.oracle.truffle.api.nodes.ExplodeLoop
     private Object invoke(VirtualFrame frame)
     {
-        // Delegate to the evaluator which manages the construction
-        // stack. The FE's parametersValues contain: [0]=type holder, [1]=key exprs.
-        // We evaluate them lazily through the evaluator.
+        // Split into three phases:
+        //   1. createAndInitInstance — @TruffleBoundary, no frame: typeHolder
+        //      → instance creation + classifier setup.
+        //   2. The @ExplodeLoop body — frame-touching: evaluate each
+        //      assignment's value via PropertyAssignNode.execute.
+        //   3. finalizeInstance — @TruffleBoundary, no frame: reverse
+        //      association pointers + constraint validation.
+        // Without the boundaries, Graal PE inlined the entire instance-creation
+        // tree + post-loop validation into every NewWithKeysNode call site,
+        // blowing the inlining budget on generic functions like `pair<U,V>`
+        // whose root nodes also inline bindQpTypeVariablesStatic. The
+        // boundaries let PE stay shallow at the call site and reach the
+        // actual KeyExpression evaluations without exhausting depth.
         org.finos.legend.pure.truffle.PureContext eval = getContext();
         Object typeHolder = typeHolderNode.executeGeneric(frame);
-
-        // Extract class path from type holder
-        String classPath = "Unknown";
-        // Hoist genericType + typeArgs once — both the classpath
-        // resolution and the classifier-setting paths below need them.
-        // The previous code called _GenericType.typeArguments twice on
-        // the same GT, which was a JFR hotspot at ~3% of warm CPU on
-        // the metamodel_factories.pure compile.
-        Object hoistedGt = null;
-        PureSequence hoistedTypeArgs = null;
-        if (typeHolder != null)
-        {
-            Object holderGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType");
-            if (holderGT != null)
-            {
-                hoistedGt = holderGT;
-                hoistedTypeArgs = _GenericType.typeArguments(hoistedGt);
-                if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
-                {
-                    classPath = resolveClassPathFromTypeArg(hoistedTypeArgs.getBoxed(0), eval.resolver());
-                }
-                if ("Unknown".equals(classPath))
-                {
-                    // Try direct type from the generic type
-                    var type = _GenericType.type(hoistedGt);
-                    if (type != null)
-                    {
-                        String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(type, eval.resolver());
-                        if (path != null && !path.isEmpty())
-                        {
-                            classPath = path;
-                        }
-                    }
-                    if ("Unknown".equals(classPath))
-                    {
-                        throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + hoistedGt.getClass().getName()
-                                + " typeArgs=" + (hoistedTypeArgs != null ? hoistedTypeArgs.size() : "null")
-                                + " type=" + (_GenericType.type(hoistedGt) != null ? _GenericType.type(hoistedGt).getClass().getName() : "null"));
-                    }
-                }
-            }
-        }
-
-        // Create instance
-        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
-
-        // Set classifier generic type from the type holder's first type argument
-        if (hoistedGt != null && instance != null)
-        {
-            PureSequence typeArgs = hoistedTypeArgs;
-            if (typeArgs != null && typeArgs.size() > 0)
-            {
-                Object firstArg = typeArgs.getBoxed(0);
-                if (firstArg instanceof GenericTypeValue gtv)
-                {
-                    // Platform-level canonical anchor: when ^Type(...) has no type/mult args,
-                    // prefer the canonical GenericType_<TypeName> UDPGT element from core.pdb.
-                    // Mirrors bootstrap MetaNatives.preferCanonicalAnchor.
-                    GenericTypeValue resolved = preferCanonicalAnchor(gtv, eval.resolver());
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType", resolved);
-                }
-            }
-            else if (!"Unknown".equals(classPath))
-            {
-                // Build CGT from the resolved class path when no type arguments
-                Object typeElement = eval.resolver().getElement(classPath);
-                if (typeElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t)
-                {
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
-                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, eval.resolver()));
-                }
-            }
-        }
-
-        // Verify CGT was set — null CGT causes downstream match failures
-        if (instance != null
-                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType") == null)
-        {
-            Object hgt = typeHolder != null
-                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType") : null;
-            throw new RuntimeException("[NEW] classifierGenericType is NULL after creation of " + classPath
-                    + " (instance=" + instance.getClass().getName()
-                    + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getName() : "null")
-                    + ", gt=" + (hgt != null ? _GenericType.print(hgt, eval.resolver()) : "n/a")
-                    + ")");
-        }
-
-        // The classifier rawType is system-managed — derived from the type
-        // holder above. The user may still override the classifier when their
-        // value's rawType matches the one we already set; this is the
-        // legitimate case of supplying typeArguments / multiplicity arguments
-        // / typeVariableValues (e.g. wiring `RelationType.classifierGenericType.
-        // typeArguments[0]` back at the surrounding instance via `~`).
-        // A mismatch — e.g. `^LA_Person(classifierGenericType=^UDGT(type=Any))`
-        // from spec test `testCantSetClassifierGenericType` — is rejected.
+        Object[] holder = createAndInitInstance(typeHolder, eval);
+        Object instance = holder[0];
+        String classPath = (String) holder[1];
 
         // Push onto construction stack for parentReference() access across call boundaries
         var ctx = org.finos.legend.pure.truffle.PureLanguage.get(this);
@@ -212,9 +123,13 @@ public final class NewWithKeysNode extends PureNode
                     // making validation a no-op.
                     Object propValue = assignments[i].evaluateValue(frame);
                     validateClassifierOverride(propValue, instance);
-                    if (propValue instanceof GenericTypeValue gtv)
+                    // Widened to non-null check: post-loader-flip propValue may
+                    // be a PureDynamicObject (pureType=GenericTypeValue) rather
+                    // than the typed XImpl. Validation above already enforces
+                    // the raw-type compatibility constraint.
+                    if (propValue != null)
                     {
-                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType", gtv);
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType", propValue);
                     }
                     continue;
                 }
@@ -234,28 +149,125 @@ public final class NewWithKeysNode extends PureNode
                 applyDynamicKeyExpressions(frame, instance, keyValues);
             }
 
-            // Set reverse association pointers (bidirectional binding)
-            setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
-
-            // Validate constraints after all properties are set
-            if (instance instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
-            {
-                var cgt = any._classifierGenericType();
-                if (cgt != null)
-                {
-                    var type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
-                    if (type != null)
-                    {
-                        CastNode.validateConstraints(type, cgt, instance, eval.resolver(), constraintCallNode);
-                    }
-                }
-            }
-
+            finalizeInstance(instance, classPath, keyValues, eval);
             return instance;
         }
         finally
         {
             ctx.popConstruction();
+        }
+    }
+
+    /**
+     * Resolve classPath from the type holder, create the instance, and set
+     * its classifierGenericType. Returns {@code {instance, classPath}}.
+     *
+     * <p>Marked @TruffleBoundary: this is the largest non-frame chunk of
+     * NewWithKeysNode.invoke, and inlining it into the caller's PE graph
+     * is what tips generic-function root nodes (which also inline
+     * bindQpTypeVariablesStatic) past Graal's inlining budget.</p>
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object[] createAndInitInstance(Object typeHolder, org.finos.legend.pure.truffle.PureContext eval)
+    {
+        String classPath = "Unknown";
+        Object hoistedGt = null;
+        PureSequence hoistedTypeArgs = null;
+        if (typeHolder != null)
+        {
+            Object holderGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType");
+            if (holderGT != null)
+            {
+                hoistedGt = holderGT;
+                hoistedTypeArgs = _GenericType.typeArguments(hoistedGt);
+                if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
+                {
+                    classPath = resolveClassPathFromTypeArg(hoistedTypeArgs.getBoxed(0), eval.resolver());
+                }
+                if ("Unknown".equals(classPath))
+                {
+                    var type = _GenericType.type(hoistedGt);
+                    if (type != null)
+                    {
+                        String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(type, eval.resolver());
+                        if (path != null && !path.isEmpty())
+                        {
+                            classPath = path;
+                        }
+                    }
+                    if ("Unknown".equals(classPath))
+                    {
+                        throw new RuntimeException("[NEW] Cannot resolve class path: gt=" + hoistedGt.getClass().getName()
+                                + " typeArgs=" + (hoistedTypeArgs != null ? hoistedTypeArgs.size() : "null")
+                                + " type=" + (_GenericType.type(hoistedGt) != null ? _GenericType.type(hoistedGt).getClass().getName() : "null"));
+                    }
+                }
+            }
+        }
+
+        Object instance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
+
+        if (hoistedGt != null && instance != null)
+        {
+            PureSequence typeArgs = hoistedTypeArgs;
+            if (typeArgs != null && typeArgs.size() > 0)
+            {
+                Object firstArg = typeArgs.getBoxed(0);
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(firstArg,
+                        "meta::pure::metamodel::type::generics::GenericTypeValue", eval.resolver()))
+                {
+                    Object resolved = preferCanonicalAnchor(firstArg, eval.resolver());
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType", resolved);
+                }
+            }
+            else if (!"Unknown".equals(classPath))
+            {
+                Object typeElement = eval.resolver().getElement(classPath);
+                if (typeElement != null)
+                {
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
+                            org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(typeElement, eval.resolver()));
+                }
+            }
+        }
+
+        if (instance != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType") == null)
+        {
+            Object hgt = typeHolder != null
+                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType") : null;
+            throw new RuntimeException("[NEW] classifierGenericType is NULL after creation of " + classPath
+                    + " (instance=" + instance.getClass().getName()
+                    + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getName() : "null")
+                    + ", gt=" + (hgt != null ? _GenericType.print(hgt, eval.resolver()) : "n/a")
+                    + ")");
+        }
+        return new Object[]{instance, classPath};
+    }
+
+    /**
+     * Post-loop validation: reverse association pointers + constraint walk.
+     *
+     * <p>Marked @TruffleBoundary: same rationale as
+     * {@link #createAndInitInstance} — keeps PE shallow at the call site.</p>
+     */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private void finalizeInstance(Object instance, String classPath,
+                                   java.util.List<java.util.Map.Entry<String, Object>> keyValues,
+                                   org.finos.legend.pure.truffle.PureContext eval)
+    {
+        setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
+        if (instance != null)
+        {
+            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType");
+            if (cgt != null)
+            {
+                Object type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+                if (type != null)
+                {
+                    CastNode.validateConstraints(type, cgt, instance, eval.resolver(), constraintCallNode);
+                }
+            }
         }
     }
 
@@ -327,7 +339,7 @@ public final class NewWithKeysNode extends PureNode
     private static String resolveClassPathFromTypeArg(Object typeArg,
                                                        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = _GenericType.type(typeArg);
+        Object rawType = _GenericType.type(typeArg);
         if (rawType != null)
         {
             String path = _PackageableElement.path(rawType, resolver);
@@ -354,8 +366,10 @@ public final class NewWithKeysNode extends PureNode
     {
         Object currentCgt = instance != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType") : null;
-        Type expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
-        Type proposedType = proposed instanceof GenericTypeValue gtv ? _GenericType.type(gtv) : null;
+        Object expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
+        // _GenericType.type is Object-tolerant (reads `type` via PureObj.read)
+        // so it handles both typed GenericTypeValue and PDO uniformly.
+        Object proposedType = proposed != null ? _GenericType.type(proposed) : null;
         if (expected != null && proposedType != null && samePackageableElement(expected, proposedType))
         {
             return;
@@ -368,17 +382,15 @@ public final class NewWithKeysNode extends PureNode
                 + " Use meta::pure::functions::lang::new(GenericType[1]) to construct an instance with a different metaclass.");
     }
 
-    private static boolean samePackageableElement(Type a, Type b)
+    private static boolean samePackageableElement(Object a, Object b)
     {
         if (a == b)
         {
             return true;
         }
-        if (a instanceof PackageableElement peA && b instanceof PackageableElement peB)
-        {
-            return _PackageableElement.path(peA).equals(_PackageableElement.path(peB));
-        }
-        return false;
+        String pathA = _PackageableElement.path(a);
+        String pathB = _PackageableElement.path(b);
+        return pathA != null && pathA.equals(pathB);
     }
 
     /**
@@ -395,16 +407,16 @@ public final class NewWithKeysNode extends PureNode
      * canonical-anchor lookup without duplicating it.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public static GenericTypeValue preferCanonicalAnchorPublic(
-            GenericTypeValue gtv,
+    public static Object preferCanonicalAnchorPublic(
+            Object gtv,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         return preferCanonicalAnchor(gtv, resolver);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static GenericTypeValue preferCanonicalAnchor(
-            GenericTypeValue gtv,
+    private static Object preferCanonicalAnchor(
+            Object gtv,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         PureSequence typeArgs = _GenericType.typeArguments(gtv);
@@ -417,7 +429,7 @@ public final class NewWithKeysNode extends PureNode
         {
             return gtv;
         }
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type rawType = _GenericType.type(gtv);
+        Object rawType = _GenericType.type(gtv);
         if (rawType == null)
         {
             return gtv;
@@ -433,7 +445,7 @@ public final class NewWithKeysNode extends PureNode
         }
         if (cached != null)
         {
-            return (GenericTypeValue) cached;
+            return cached;
         }
         Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawType, "name");
         String simpleName = nameObj instanceof String s ? s : null;
@@ -443,10 +455,16 @@ public final class NewWithKeysNode extends PureNode
             return gtv;
         }
         Object canonical = resolver.getElement("meta::pure::metamodel::type::generics::optimization::GenericType_" + simpleName);
-        if (canonical instanceof GenericTypeValue canonicalGT)
+        // Treat any non-null resolved element as the canonical anchor — the
+        // typed `instanceof GenericTypeValue` guard fails post-loader-flip
+        // because resolver.getElement now returns PureDynamicObject. The
+        // path is curated (only GenericTypeValue elements live under the
+        // optimization::GenericType_ prefix), so the type check was always
+        // a belt-and-braces.
+        if (canonical != null)
         {
-            CANONICAL_ANCHOR_CACHE.put(rawType, canonicalGT);
-            return canonicalGT;
+            CANONICAL_ANCHOR_CACHE.put(rawType, canonical);
+            return canonical;
         }
         CANONICAL_ANCHOR_CACHE.put(rawType, ABSENT_GTV);
         return gtv;
@@ -459,7 +477,7 @@ public final class NewWithKeysNode extends PureNode
      * classes have structural equals that recurse through generalizations.
      */
     private static final Object ABSENT_GTV = new Object();
-    private static final java.util.Map<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Object> CANONICAL_ANCHOR_CACHE =
+    private static final java.util.Map<Object, Object> CANONICAL_ANCHOR_CACHE =
             java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
 
     /**
@@ -525,9 +543,9 @@ public final class NewWithKeysNode extends PureNode
             }
             // Check subtype
             Object classElement = resolver.getElement(classPath);
-            if (classElement instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type classType)
+            if (classElement != null)
             {
-                var mro = org.finos.legend.pure.truffle.runtime.helper._Type.linearize(classType, resolver);
+                var mro = org.finos.legend.pure.truffle.runtime.helper._Type.linearize(classElement, resolver);
                 for (var ancestor : mro)
                 {
                     if (ancestor != null
@@ -579,8 +597,7 @@ public final class NewWithKeysNode extends PureNode
         if (!(propNameObj instanceof String propName)) return;
         Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(otherProp, "genericType");
         if (otherGT == null) return;
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType =
-                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
+        Object targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
         if (targetType != null)
         {
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType, resolver);
@@ -620,23 +637,26 @@ public final class NewWithKeysNode extends PureNode
             }
             return;
         }
-        // Determine if the property is multi-valued by checking the setter parameter type
+        // Determine if the property is multi-valued. The PDO's
+        // PropertyMetadataRegistry holds per-property Java types populated
+        // either by an XImpl static{} block (for codegen'd metamodel
+        // classes) or by `ensurePopulated` walking the Class element (for
+        // user/compiler/protocol/functions classes). The previous reflective
+        // fallback over `target.getClass().getMethods()` covered typed
+        // XImpls — post-PDO-flip no caller produces one.
         try
         {
             boolean isMulti = false;
-            String setterName = "_" + propName;
-            for (java.lang.reflect.Method m : target.getClass().getMethods())
+            if (target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                    && pdo.getShape().getDynamicType() instanceof String purePath)
             {
-                if (m.getName().equals(setterName) && m.getParameterCount() == 1)
+                Class<?> paramType = org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.getType(purePath, propName);
+                if (paramType != null
+                        && (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType)
+                                || org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType)
+                                || java.util.Collection.class.isAssignableFrom(paramType)))
                 {
-                    Class<?> paramType = m.getParameterTypes()[0];
-                    if (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType)
-                            || org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType)
-                            || java.util.Collection.class.isAssignableFrom(paramType))
-                    {
-                        isMulti = true;
-                    }
-                    break;
+                    isMulti = true;
                 }
             }
 

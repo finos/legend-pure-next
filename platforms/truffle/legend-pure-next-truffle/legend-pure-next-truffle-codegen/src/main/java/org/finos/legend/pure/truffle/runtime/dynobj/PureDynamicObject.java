@@ -13,6 +13,7 @@ import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.api.object.DynamicObjectLibrary;
 import com.oracle.truffle.api.object.Shape;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
+import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
 /**
  * Single object kind for all Pure-on-Truffle metamodel instances.
@@ -55,10 +56,17 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
     }
 
     /**
-     * Lazy DOL-backed read — same shape as {@link PureObj#read} but on the
-     * receiver itself. Cache hit (post-warmup) is a single Shape-folded slot
-     * load. Cache miss decodes from {@link #fb} via {@link PureFbDecoder}
-     * and stores the materialised value, so subsequent reads hit the slot.
+     * Lazy DOL-backed read. Cache hit (post-warmup) is a single Shape-folded
+     * slot load. Cache miss decodes from {@link #fb} via the per-Pure-class
+     * decoder registered in {@link PureFbDecoderRegistry}, then stores the
+     * materialised value back so subsequent reads hit the slot.
+     *
+     * <p>Backwards-compatible fallback: if {@link #fb} implements {@link
+     * PropertyAccessor} (the legacy {@code XImpl} construction path), call
+     * its {@code readProperty} directly. Lets the loader flip happen
+     * incrementally — once the loader switches to constructing {@link
+     * PureDynamicObject} with raw {@code XDef} as {@link #fb}, the registry
+     * path takes over.</p>
      */
     @Override
     @TruffleBoundary
@@ -70,15 +78,100 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
         {
             return cached;
         }
-        Object decoded = PureFbDecoder.decode(this, name);
+        Object decoded = decodeFromFb(name);
         dol.put(this, name, decoded);
         return decoded;
+    }
+
+    private Object decodeFromFb(String name)
+    {
+        if (fb == null)
+        {
+            return null;
+        }
+        // Legacy path: fb is an XImpl/XFBW that implements PropertyAccessor.
+        // PropertyAccessor.readProperty does the per-class decode switch.
+        if (fb instanceof PropertyAccessor accessor)
+        {
+            Object value = accessor.readProperty(name);
+            return value == PropertyAccessor.ABSENT ? null : value;
+        }
+        // New path: fb is a raw XDef; per-Pure-class decoder is registered in
+        // PureFbDecoderRegistry, looked up by Shape's dynamic type.
+        Object dt = getShape().getDynamicType();
+        if (dt instanceof String purePath)
+        {
+            return PureFbDecoderRegistry.decode(purePath, name, fb,
+                    (TruffleMetadataAccess) resolver, this);
+        }
+        return null;
+    }
+
+    @Override
+    @TruffleBoundary
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (!(o instanceof PureDynamicObject other)) return false;
+        // Same Pure type required for equality — compare Shapes directly
+        // (Shapes are per-purePath singletons so identity ≡ purePath equality
+        // for the root Shape, and Shape transitions still point at the same
+        // dynamicType so this stays correct across instance specialization).
+        Object meta = getShape().getSharedData();
+        Object oMeta = other.getShape().getSharedData();
+        if (!(meta instanceof PureShapeRegistry.ShapeMeta m) || meta != oMeta) return false;
+        String[] keys = m.equalityKeys;
+        if (keys == null || keys.length == 0)
+        {
+            // No declared equality keys → identity. Matches XImpl's
+            // hashCode behaviour (System.identityHashCode when no keys).
+            return false;
+        }
+        for (String k : keys)
+        {
+            if (!java.util.Objects.equals(readProperty(k), other.readProperty(k))) return false;
+        }
+        return true;
+    }
+
+    @Override
+    @TruffleBoundary
+    public int hashCode()
+    {
+        Object meta = getShape().getSharedData();
+        if (!(meta instanceof PureShapeRegistry.ShapeMeta m)) return System.identityHashCode(this);
+        String[] keys = m.equalityKeys;
+        if (keys == null || keys.length == 0) return System.identityHashCode(this);
+        int h = 1;
+        for (String k : keys)
+        {
+            Object v = readProperty(k);
+            // Match XImpl's hashCode: only String/Number/Boolean contribute
+            // (XImpl filters hashProps to primitive types to avoid recursive
+            // self-references). For PDO we approximate by hashing primitive
+            // values, treating PDO-valued properties as identity-only.
+            if (v instanceof String || v instanceof Number || v instanceof Boolean)
+            {
+                h = 31 * h + v.hashCode();
+            }
+        }
+        return h;
     }
 
     @Override
     @TruffleBoundary
     public void writeProperty(String name, Object value)
     {
+        Object meta = getShape().getSharedData();
+        if (meta instanceof PureShapeRegistry.ShapeMeta m)
+        {
+            Class<?> paramType = m.propTypes.get(name);
+            if (paramType != null)
+            {
+                value = PropertyCoercion.coerce(value, paramType);
+            }
+        }
         DynamicObjectLibrary.getUncached().put(this, name, value);
     }
+
 }

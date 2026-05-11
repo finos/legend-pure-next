@@ -19,7 +19,6 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
 
 /**
@@ -31,7 +30,9 @@ import org.finos.legend.pure.truffle.frame.FrameLayout;
 @NodeInfo(shortName = "lambdaCapture")
 public final class RawLambdaCaptureNode extends PureNode
 {
-    private final LambdaFunction lambda;
+    // Widened from typed LambdaFunction so post-loader-flip PDO lambdas
+    // flow through this node uniformly. callTargetForLambda accepts Object.
+    private final Object lambda;
 
     @CompilationFinal(dimensions = 1)
     private final String[] openVarNames;
@@ -39,7 +40,7 @@ public final class RawLambdaCaptureNode extends PureNode
     @CompilationFinal(dimensions = 1)
     private final int[] openVarSlots;
 
-    public RawLambdaCaptureNode(LambdaFunction lambda,
+    public RawLambdaCaptureNode(Object lambda,
                                 org.finos.legend.pure.truffle.types.PureSequence openVars,
                                 FrameLayout layout)
     {

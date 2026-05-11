@@ -18,7 +18,6 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -62,7 +61,13 @@ public final class FindAllTypesNode extends PureNode
         for (String path : resolver.elementPaths())
         {
             Object element = resolver.getElement(path);
-            if (element instanceof Type)
+            // Filter by Pure type via isType so this works for both legacy
+            // XImpl and PureDynamicObject post-loader-flip. The typed
+            // `instanceof Type` Java guard would silently exclude every PDO,
+            // leaving primitive types out of buildLinearizationCache and
+            // tripping the Pure-side LINEARIZE MISS assert.
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                    "meta::pure::metamodel::type::Type", resolver))
             {
                 types.add(element);
             }

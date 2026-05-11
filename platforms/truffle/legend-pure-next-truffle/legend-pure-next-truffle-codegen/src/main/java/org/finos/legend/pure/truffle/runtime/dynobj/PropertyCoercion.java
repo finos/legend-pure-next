@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.finos.legend.pure.truffle.runtime.helper;
+package org.finos.legend.pure.truffle.runtime.dynobj;
 
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 import org.finos.legend.pure.truffle.types.PureSequence;
@@ -44,10 +44,20 @@ public final class PropertyCoercion
      */
     public static Object coerce(Object value, Class<?> paramType)
     {
+        // PE-inlinable fast paths: null/empty/exact-type cases handle the
+        // overwhelming majority of writes once warm. Anything past
+        // `paramType.isInstance(value)` falls through to a boundary'd helper
+        // so the rare unwrap/wrap/enum-coercion chain doesn't blow the PE
+        // budget at every call site.
         if (value == null) return null;
         if (value instanceof PureSequence ps && ps.isEmpty()) return null;
         if (paramType.isInstance(value)) return value;
+        return coerceSlow(value, paramType);
+    }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static Object coerceSlow(Object value, Class<?> paramType)
+    {
         Object unwrapped = unwrapForSetter(value);
         if (paramType.isInstance(unwrapped)) return unwrapped;
 

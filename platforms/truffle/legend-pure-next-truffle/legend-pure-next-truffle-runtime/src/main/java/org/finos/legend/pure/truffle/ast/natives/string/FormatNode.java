@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.types.PureDate;
@@ -35,10 +33,10 @@ public final class FormatNode extends PureNode
     @Child
     private PureNode argsArg;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public FormatNode(PureNode formatArg, PureNode argsArg, GenericType genericType, Multiplicity multiplicity)
+    public FormatNode(PureNode formatArg, PureNode argsArg, Object genericType, Object multiplicity)
     {
         this.formatArg = formatArg;
         this.argsArg = argsArg;
@@ -314,6 +312,14 @@ public final class FormatNode extends PureNode
                 return "%" + ToStringNode.normalizeDateString(s);
             }
             return "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'";
+        }
+        // Pure-source form for enum values: "<EnumerationPath>.<ValueName>"
+        // — toString returns just the value name, but %r renders the
+        // qualified form so error messages show enum identity unambiguously.
+        String enumPath = ToStringNode.enumQualifiedPath(v);
+        if (enumPath != null)
+        {
+            return enumPath;
         }
         // Date representation: prefix with %
         String str = pureToString(v);

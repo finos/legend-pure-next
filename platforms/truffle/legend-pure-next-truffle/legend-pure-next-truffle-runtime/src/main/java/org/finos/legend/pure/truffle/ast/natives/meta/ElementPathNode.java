@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
 

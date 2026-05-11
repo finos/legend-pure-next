@@ -137,74 +137,74 @@ public final class ProtocolTranslator
 
     private Object translateProtocolObject(Object source, String className)
     {
-        // Derive truffle class name: meta.pure.protocol.grammar.X.YImpl → org.finos.legend.pure.truffle.pdb.meta.pure.protocol.grammar.X.YImpl
-        String suffix = className.substring(BOOTSTRAP_PREFIX.length());
-        String truffleClassName = TRUFFLE_PREFIX + escapeJavaKeywords(BOOTSTRAP_PREFIX + suffix);
-
-        try
+        // Derive the truffle Pure-form path for the source:
+        //   meta.pure.protocol.grammar.relationship.AssociationImpl
+        //   → meta::pure::protocol::grammar::relationship::Association
+        String purePath = derivePurePath(className);
+        // Existence check: is the Pure type known to the resolver? This
+        // doesn't depend on a generated XImpl — user/test/compiler/protocol
+        // classes that have no codegen still resolve via their Class
+        // definition stored in the PDB. The previous `Class.forName` check
+        // returned false for any Pure type without an XImpl and silently
+        // passed the M3 source through unchanged, breaking the compile
+        // (which then operated on M3 protocol objects rather than truffle
+        // PDOs and produced empty CompilationResults).
+        if (resolver == null || resolver.getElement(purePath) == null)
         {
-            Class<?> truffleClass = Class.forName(truffleClassName);
-            Object target = truffleClass.getDeclaredConstructor().newInstance();
-            seen.put(source, target);
-
-            // Copy properties via _xxx() getters and _xxx(value) setters
-            for (Method getter : cachedMethods(source.getClass()))
-            {
-                String name = getter.getName();
-                if (!name.startsWith("_") || name.equals("_copy") || getter.getParameterCount() != 0
-                        || getter.getReturnType() == void.class)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    Object value = getter.invoke(source);
-                    // Don't skip null — let translate() handle it
-
-                    if (value == null)
-                    {
-                        continue; // null optional property — skip
-                    }
-                    Object translated = translate(value);
-                    if (translated == null)
-                    {
-                        throw new RuntimeException("translate() returned null for non-null property '" + name + "' on " + className
-                                + " (value type: " + value.getClass().getName() + ")");
-                    }
-
-                    // Find setter on target
-                    Method setter = findSetter(truffleClass, name, translated);
-                    if (setter != null)
-                    {
-                        setter.invoke(target, translated);
-                    }
-                    else
-                    {
-                        throw new RuntimeException("No setter found for '" + name + "' on " + truffleClass.getSimpleName()
-                                + " (value type: " + translated.getClass().getName() + ")");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException("Failed to translate property '" + name + "' on " + source.getClass().getName(), e);
-                }
-            }
-
-            // Set classifierGenericType so match/instanceOf works
-            setClassifierGenericType(target, className);
-
-            return target;
-        }
-        catch (ClassNotFoundException e)
-        {
-            // No truffle equivalent — pass through
             return source;
         }
-        catch (Exception e)
+
+        // Create the target as a PDO directly (no typed XImpl construction,
+        // no reflective setter dispatch). PureObj.write does the same
+        // PropertyCoercion the typed setter did for [*] / scalar wrap, but
+        // through the PDO Shape's sharedData. After this migration the
+        // generated XImpl's writeProperty switch is no longer reachable
+        // through ProtocolTranslator.
+        Object target = TruffleInstanceFactory.createInstance(purePath, resolver);
+        seen.put(source, target);
+
+        for (Method getter : cachedMethods(source.getClass()))
         {
-            throw new RuntimeException("Failed to translate " + className + " to " + truffleClassName, e);
+            String name = getter.getName();
+            if (!name.startsWith("_") || name.equals("_copy") || getter.getParameterCount() != 0
+                    || getter.getReturnType() == void.class)
+            {
+                continue;
+            }
+            try
+            {
+                Object value = getter.invoke(source);
+                if (value == null)
+                {
+                    continue; // null optional property — skip
+                }
+                Object translated = translate(value);
+                if (translated == null)
+                {
+                    throw new RuntimeException("translate() returned null for non-null property '" + name + "' on " + className
+                            + " (value type: " + value.getClass().getName() + ")");
+                }
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(target, name.substring(1), translated);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException("Failed to translate property '" + name + "' on " + source.getClass().getName(), e);
+            }
         }
+
+        // Set classifierGenericType so match/instanceOf works
+        setClassifierGenericType(target, className);
+        return target;
+    }
+
+    private static String derivePurePath(String bootstrapClassName)
+    {
+        String p = bootstrapClassName;
+        if (p.endsWith("Impl"))
+        {
+            p = p.substring(0, p.length() - 4);
+        }
+        return String.join("::", p.split("\\."));
     }
 
     private void setClassifierGenericType(Object target, String bootstrapClassName)
@@ -218,41 +218,19 @@ public final class ProtocolTranslator
         {
             return;
         }
-        // "meta.pure.protocol.grammar.relationship.AssociationImpl" → "meta::pure::protocol::grammar::relationship::Association"
-        String purePath = bootstrapClassName;
-        if (purePath.endsWith("Impl"))
-        {
-            purePath = purePath.substring(0, purePath.length() - 4);
-        }
-        purePath = String.join("::", purePath.split("\\."));
+        String purePath = derivePurePath(bootstrapClassName);
 
         Object classType = resolver.getElement(purePath);
-        if (classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type)
+        if (classType != null)
         {
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(target, "classifierGenericType",
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver));
+                    org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(classType, resolver));
         }
         else
         {
             throw new RuntimeException("[ProtocolTranslator] Cannot resolve classifierGenericType for "
                     + bootstrapClassName + " (purePath=" + purePath + ")");
         }
-    }
-
-    private static Method findSetter(Class<?> clazz, String getterName, Object value)
-    {
-        // The setter has the same name as the getter but takes one parameter
-        for (Method m : cachedMethods(clazz))
-        {
-            if (m.getName().equals(getterName) && m.getParameterCount() == 1)
-            {
-                if (m.getParameterTypes()[0].isAssignableFrom(value.getClass()))
-                {
-                    return m;
-                }
-            }
-        }
-        return null;
     }
 
     private static String escapeJavaKeywords(String dottedPath)

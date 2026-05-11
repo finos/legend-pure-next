@@ -17,8 +17,6 @@ package org.finos.legend.pure.truffle;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.TruffleLanguage;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 import org.finos.legend.pure.truffle.builder.PureASTBuilder;
@@ -46,9 +44,9 @@ public final class PureContext
     private PureParser pureParser;
 
     // Per-FD compilation cache: layout + lowered body
-    private final WeakHashMap<FunctionDefinition, CompiledFunction> functionCache = new WeakHashMap<>();
+    private final WeakHashMap<Object, CompiledFunction> functionCache = new WeakHashMap<>();
     // Per-lambda caches
-    private final WeakHashMap<LambdaFunction, RootCallTarget> lambdaCache = new WeakHashMap<>();
+    private final WeakHashMap<Object, RootCallTarget> lambdaCache = new WeakHashMap<>();
 
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
@@ -74,8 +72,8 @@ public final class PureContext
 
     private static final class ModuleState
     {
-        final java.util.IdentityHashMap<Object, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> enumCgts = new java.util.IdentityHashMap<>();
-        final java.util.HashMap<String, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue> typePathCgts = new java.util.HashMap<>();
+        final java.util.IdentityHashMap<Object, Object> enumCgts = new java.util.IdentityHashMap<>();
+        final java.util.HashMap<String, Object> typePathCgts = new java.util.HashMap<>();
     }
 
     private ModuleState moduleStateFor(String moduleKey)
@@ -185,25 +183,25 @@ public final class PureContext
     // ---------------------------------------------------------------
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public RootCallTarget getCallTarget(FunctionDefinition fd)
+    public RootCallTarget getCallTarget(Object fn)
     {
-        return compile(fd).callTarget();
+        return compile(fn).callTarget();
     }
 
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public Object executeFunction(FunctionDefinition fd, Object[] rawArgs)
+    public Object executeFunction(Object fn, Object[] rawArgs)
     {
-        RootCallTarget ct = compile(fd).callTarget();
+        RootCallTarget ct = compile(fn).callTarget();
         if (ct != null)
         {
             return ct.call(rawArgs);
         }
-        throw new RuntimeException("No CallTarget for: " + getFunctionName(fd));
+        throw new RuntimeException("No CallTarget for: " + getFunctionName(fn));
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public RootCallTarget callTargetForLambda(LambdaFunction lambda)
+    public RootCallTarget callTargetForLambda(Object lambda)
     {
         RootCallTarget cached = lambdaCache.get(lambda);
         if (cached != null)
@@ -275,7 +273,7 @@ public final class PureContext
      * the named value isn't one of its constants.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public Object coerceToJavaEnum(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enumeration en, String valueName)
+    public Object coerceToJavaEnum(Object en, String valueName)
     {
         if (en == null)
         {
@@ -359,7 +357,7 @@ public final class PureContext
      * cache enum CGTs in this context instead, so each context owns its own
      * wrapper that's GC'd when the context dies.</p>
      */
-    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType(Object value)
+    public Object classifierGenericType(Object value)
     {
         if (value == null)
         {
@@ -371,12 +369,9 @@ public final class PureContext
         {
             return enumCgt(value);
         }
-        // Anything else — read CGT via PropertyAccessor.readProperty (works
-        // for both legacy XImpl and the future PureDynamicObject). The cast
-        // is safe: only Pure metamodel objects (which all implement
-        // PropertyAccessor) ever reach this method's `value`.
-        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "classifierGenericType");
-        return (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue) cgt;
+        // Anything else — read CGT via the universal property accessor (works
+        // for both legacy XImpl and PureDynamicObject post-flip).
+        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "classifierGenericType");
     }
 
     /**
@@ -388,7 +383,7 @@ public final class PureContext
      * {@link #unregisterModule(String)} drops just this module's entries.</p>
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgtForType(String typePath)
+    public Object cgtForType(String typePath)
     {
         if (resolver == null)
         {
@@ -402,30 +397,36 @@ public final class PureContext
             return cached;
         }
         Object t = resolver.getElement(typePath);
-        if (!(t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type))
+        if (t == null)
         {
             return null;
         }
-        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
         state.typePathCgts.put(typePath, cgt);
         return cgt;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue enumCgt(Object enumConstant)
+    private Object enumCgt(Object enumConstant)
     {
         if (resolver == null)
         {
             return null;
         }
-        Class<?>[] ifaces = enumConstant.getClass().getInterfaces();
-        if (ifaces.length == 0)
+        // Derive Pure path from the Java enum class FQN. Marker interfaces
+        // are no longer emitted, so `getInterfaces()` only yields
+        // PropertyAccessor — we can't read the Pure path from there. The
+        // generated class name pattern is `<pdb-prefix>.<dotted-path>Enum`,
+        // strip the prefix + `Enum` suffix and convert dots to `::`.
+        String javaFqn = enumConstant.getClass().getName();
+        String stripped = javaFqn.startsWith("org.finos.legend.pure.truffle.pdb.")
+                ? javaFqn.substring("org.finos.legend.pure.truffle.pdb.".length())
+                : javaFqn;
+        if (stripped.endsWith("Enum"))
         {
-            return null;
+            stripped = stripped.substring(0, stripped.length() - 4);
         }
-        String purePath = ifaces[0].getName()
-                .replace("org.finos.legend.pure.truffle.pdb.", "")
-                .replace(".", "::");
+        String purePath = stripped.replace(".", "::");
         String moduleKey = ownerModuleOfPath(purePath);
         ModuleState state = moduleStateFor(moduleKey);
         var cached = state.enumCgts.get(enumConstant);
@@ -434,11 +435,11 @@ public final class PureContext
             return cached;
         }
         Object enumType = resolver.getElement(purePath);
-        if (!(enumType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t))
+        if (enumType == null)
         {
             return null;
         }
-        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(t, resolver);
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(enumType, resolver);
         state.enumCgts.put(enumConstant, cgt);
         return cgt;
     }
@@ -462,22 +463,19 @@ public final class PureContext
     // QP dispatch
     // ---------------------------------------------------------------
 
-    public FunctionDefinition resolveQpDispatch(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp,
-            Object[] rawArgs)
+    public Object resolveQpDispatch(Object staticQp, Object[] rawArgs)
     {
         if (rawArgs.length == 0) return staticQp;
         Object target = rawArgs[0];
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType cgt = getClassifierGenericType(target);
+        Object cgt = getClassifierGenericType(target);
         if (cgt == null) return staticQp;
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type runtimeType =
-                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+        Object runtimeType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         if (runtimeType == null) return staticQp;
         String qpName = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(staticQp, "name");
         int argCount = rawArgs.length;
-        java.util.List<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type> mro =
+        java.util.List<Object> mro =
                 org.finos.legend.pure.truffle.runtime.helper._Type.linearize(runtimeType, resolver);
-        for (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type : mro)
+        for (Object type : mro)
         {
             Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "qualifiedProperties");
             if (!(qpsObj instanceof org.finos.legend.pure.truffle.types.PureSequence qps))
@@ -492,9 +490,10 @@ public final class PureContext
                 Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "parameters");
                 if (cqpParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence cqpParams
                         && cqpParams.size() == argCount
-                        && candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty cqp)
+                        && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(candidate,
+                                "meta::pure::metamodel::function::property::QualifiedProperty", resolver))
                 {
-                    return cqp;
+                    return candidate;
                 }
             }
         }
@@ -510,8 +509,7 @@ public final class PureContext
         {
             return;
         }
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type ownerType =
-                org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+        Object ownerType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         Object typeVarsObj = ownerType != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ownerType, "typeVariables") : null;
         if (!(typeVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVars) || typeVars.isEmpty())
@@ -541,20 +539,22 @@ public final class PureContext
         }
     }
 
-    private static org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType getClassifierGenericType(Object target)
+    private static Object getClassifierGenericType(Object target)
     {
-        if (target instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
+        if (target == null)
         {
-            return any._classifierGenericType();
+            return null;
         }
-        return null;
+        // Read the property generically — works for both legacy XImpl
+        // (PropertyAccessor) and the post-flip PureDynamicObject.
+        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "classifierGenericType");
     }
 
     // ---------------------------------------------------------------
     // Compilation (private)
     // ---------------------------------------------------------------
 
-    private CompiledFunction compile(FunctionDefinition fd)
+    private CompiledFunction compile(Object fd)
     {
         CompiledFunction cached = functionCache.get(fd);
         if (cached != null) return cached;
@@ -567,7 +567,12 @@ public final class PureContext
             Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "expressionSequence");
             PureNode[] body = astBuilder.lowerBody(exprSeqObj, layout);
             cf.setBody(body);
-            if (!(fd instanceof LambdaFunction))
+            // LambdaFunction has its own AST-build via callTargetForLambda;
+            // top-level functions get a PureFunctionRootNode here. pureTypeIs
+            // is exact-match against the leaf Pure path — class-keyed-cached.
+            boolean isLambda = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd,
+                    "meta::pure::metamodel::function::LambdaFunction");
+            if (!isLambda)
             {
                 String name = getFunctionName(fd);
                 com.oracle.truffle.api.source.SourceSection rootSource = null;
@@ -582,7 +587,8 @@ public final class PureContext
                     rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
                 }
                 catch (Exception e) { throw new RuntimeException("Failed to set source information", e); }
-                boolean mayBindTypeVars = fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty;
+                boolean mayBindTypeVars = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd,
+                        "meta::pure::metamodel::function::property::QualifiedProperty");
                 PureFunctionRootNode root = new PureFunctionRootNode(language, name, layout, body, rootSource, mayBindTypeVars);
                 cf.setCallTarget(root.getCallTarget());
             }
@@ -594,7 +600,7 @@ public final class PureContext
         return cf;
     }
 
-    private static String getFunctionName(FunctionDefinition fd)
+    private static String getFunctionName(Object fd)
     {
         try
         {
@@ -611,7 +617,7 @@ public final class PureContext
      * lambda's body in source. Falls back to identity hash when the
      * lambda has no SourceInformation attached.
      */
-    private static String lambdaProfileName(LambdaFunction lambda)
+    private static String lambdaProfileName(Object lambda)
     {
         try
         {

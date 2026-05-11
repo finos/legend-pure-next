@@ -136,10 +136,25 @@ public final class DateDiffNode extends PureNode
 
     static String resolveUnitName(Object unit)
     {
+        if (unit == null)
+        {
+            return null;
+        }
+        // Pure enum constants — read 'name' via the universal accessor (works
+        // for both legacy XImpl and PureDynamicObject).
         if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(unit,
                 "meta::pure::metamodel::type::Enum"))
         {
-            return (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(unit, "name");
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(unit, "name");
+            return name instanceof String s ? s : null;
+        }
+        // Java enum constants implementing a generated PDB enum interface
+        // (e.g. DurationUnit.YEARS) — pureTypeOf returns the enum type's
+        // path (not "...Enum"), so the leaf-class case above doesn't match.
+        // The Java enum's name() is the unit name we want.
+        if (unit.getClass().isEnum())
+        {
+            return ((Enum<?>) unit).name();
         }
         if (unit instanceof String s)
         {

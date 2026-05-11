@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.boolean_;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -38,10 +36,10 @@ public final class CompareNode extends PureNode
     @Child
     private PureNode right;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public CompareNode(PureNode left, PureNode right, GenericType genericType, Multiplicity multiplicity)
+    public CompareNode(PureNode left, PureNode right, Object genericType, Object multiplicity)
     {
         this.left = left;
         this.right = right;

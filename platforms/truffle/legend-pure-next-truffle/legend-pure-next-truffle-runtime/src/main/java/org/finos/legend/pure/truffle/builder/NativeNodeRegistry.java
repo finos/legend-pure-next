@@ -14,9 +14,6 @@
 
 package org.finos.legend.pure.truffle.builder;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
 import java.util.HashMap;
@@ -46,7 +43,7 @@ public final class NativeNodeRegistry
     @FunctionalInterface
     public interface Factory
     {
-        PureNode create(PureNode[] args, GenericType genericType, Multiplicity multiplicity, FunctionExpression fe);
+        PureNode create(PureNode[] args, Object genericType, Object multiplicity, Object fe);
     }
 
     private final Map<String, Factory> factories = new HashMap<>();

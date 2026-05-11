@@ -19,7 +19,6 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.Node;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 
 /**
  * Raw lambda call site — no ValueSpecification anywhere.
@@ -123,6 +122,11 @@ public final class RawLambdaCallNode extends Node
         return indirectCallNode.call(target, args);
     }
 
+    private static final String LAMBDA_FUNCTION_PATH =
+            "meta::pure::metamodel::function::LambdaFunction";
+    private static final String PROPERTY_PATH =
+            "meta::pure::metamodel::function::property::Property";
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget getCallTarget(Object v)
     {
@@ -130,15 +134,15 @@ public final class RawLambdaCallNode extends Node
         {
             return rc.callTarget();
         }
-        if (v instanceof LambdaFunction lambda)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(v, LAMBDA_FUNCTION_PATH))
         {
-            return lookupCallTarget(lambda);
+            return lookupCallTarget(v);
         }
         return null;
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private RootCallTarget lookupCallTarget(LambdaFunction lambda)
+    private RootCallTarget lookupCallTarget(Object lambda)
     {
         return getContext().callTargetForLambda(lambda);
     }
@@ -160,37 +164,43 @@ public final class RawLambdaCallNode extends Node
             }
             throw new RuntimeException("Cannot compile lambda CallTarget");
         }
-        if (lambdaOrClosure instanceof LambdaFunction lf)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambdaOrClosure, LAMBDA_FUNCTION_PATH))
         {
-            com.oracle.truffle.api.RootCallTarget ct = getContext().callTargetForLambda(lf);
+            com.oracle.truffle.api.RootCallTarget ct = getContext().callTargetForLambda(lambdaOrClosure);
             if (ct != null)
             {
                 Object[] fullArgs = new Object[args.length];
-                fullArgs[0] = new RawClosure(lf, new Object[0], new String[0], ct);
+                fullArgs[0] = new RawClosure(lambdaOrClosure, new Object[0], new String[0], ct);
                 System.arraycopy(args, 1, fullArgs, 1, args.length - 1);
                 return ct.call(fullArgs);
             }
             throw new RuntimeException("Cannot compile lambda CallTarget");
         }
-        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+        // Property is a leaf (not subtyped by QualifiedProperty here — QPs route
+        // through RawUserFunctionCallNode); pureTypeIs is enough.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambdaOrClosure, PROPERTY_PATH))
         {
             Object[] rawArgs = extractArgs(args);
             if (rawArgs.length > 0)
             {
                 return propertyReader.execute(rawArgs[0],
-                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name"));
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambdaOrClosure, "name"));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
-        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver =
+                getContext().resolver();
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(lambdaOrClosure,
+                "meta::pure::metamodel::function::FunctionDefinition", resolver))
         {
             Object[] rawArgs = extractArgs(args);
-            return getContext().executeFunction(fd, rawArgs);
+            return getContext().executeFunction(lambdaOrClosure, rawArgs);
         }
-        if (lambdaOrClosure instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction nf)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambdaOrClosure,
+                "meta::pure::metamodel::function::NativeFunction"))
         {
             Object[] rawArgs = extractArgs(args);
-            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getContext(), nf, rawArgs, propertyReader);
+            return org.finos.legend.pure.truffle.ast.natives.lang.EvalNode.dispatch(getContext(), lambdaOrClosure, rawArgs, propertyReader);
         }
         throw new RuntimeException("Cannot call: " + lambdaOrClosure.getClass().getName());
     }

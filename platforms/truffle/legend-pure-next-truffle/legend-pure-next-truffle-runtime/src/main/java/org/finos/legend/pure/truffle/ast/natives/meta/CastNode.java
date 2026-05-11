@@ -16,9 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
@@ -61,8 +58,8 @@ public final class CastNode extends PureNode
         // Hoist typeArguments() — was called 3 times on the same GT before
         // (~22 JFR samples on the metamodel_factories.pure compile combined
         // across the three sites).
-        GenericType targetGT = null;
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type targetType = null;
+        Object targetGT = null;
+        Object targetType = null;
         Object hoistedGT = targetResult != null
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetResult, "genericType") : null;
         if (hoistedGT != null)
@@ -72,20 +69,23 @@ public final class CastNode extends PureNode
             if (hoistedTypeArgs != null && hoistedTypeArgs.size() > 0)
             {
                 Object rawTargetGT = hoistedTypeArgs.getBoxed(0);
-                if (rawTargetGT instanceof GenericType gt)
-                {
-                    targetGT = gt;
-                }
+                // Hold onto rawTargetGT regardless of typed-XImpl vs PDO so
+                // downstream `read(targetGT, "typeVariableValues")` finds the
+                // type-variable bindings (e.g. {x: 8} for `cast(@P(8))`).
+                targetGT = rawTargetGT;
                 targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(rawTargetGT);
             }
         }
 
         // Validate type compatibility for scalar values.
         // Skip collections (common element type is lossy), TypeParameters and MultiplicityParameters.
+        // Use pureTypeIs because post loader-flip these may be PDOs, not typed XImpls.
         if (inputResult != null
                 && !(inputResult instanceof org.finos.legend.pure.truffle.types.PureSequence)
-                && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter)
-                && !(inputResult instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter)
+                && !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inputResult,
+                        "meta::pure::metamodel::type::generics::TypeParameter")
+                && !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inputResult,
+                        "meta::pure::metamodel::multiplicity::MultiplicityParameter")
                 && targetType != null)
         {
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType);
@@ -93,7 +93,7 @@ public final class CastNode extends PureNode
                     && !"meta::pure::metamodel::type::Any".equals(targetPath)
                     && !targetPath.startsWith("meta::pure::metamodel::valuespecification::"))
             {
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type sourceType = MetaHelper.getRawValueType(inputResult, resolver);
+                Object sourceType = MetaHelper.getRawValueType(inputResult, resolver);
                 if (sourceType != null)
                 {
                     String sourcePath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(sourceType);
@@ -147,12 +147,12 @@ public final class CastNode extends PureNode
     // Volatile copy-on-write IdentityHashMap. See _PackageableElement.PATH_CACHE
     // for the rationale: synchronizedMap.get goes through a monitor; a
     // volatile snapshot lets reads (the hot path) skip the monitor.
-    private static volatile java.util.IdentityHashMap<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Boolean> NEEDS_VALIDATION_CACHE =
+    private static volatile java.util.IdentityHashMap<Object, Boolean> NEEDS_VALIDATION_CACHE =
             new java.util.IdentityHashMap<>();
     private static final Object NEEDS_VALIDATION_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static boolean needsConstraintValidation(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type)
+    private static boolean needsConstraintValidation(Object type)
     {
         Boolean cached = NEEDS_VALIDATION_CACHE.get(type);
         if (cached != null)
@@ -165,7 +165,7 @@ public final class CastNode extends PureNode
         {
             if (!NEEDS_VALIDATION_CACHE.containsKey(type))
             {
-                java.util.IdentityHashMap<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type, Boolean> next =
+                java.util.IdentityHashMap<Object, Boolean> next =
                         new java.util.IdentityHashMap<>(NEEDS_VALIDATION_CACHE);
                 next.put(type, result);
                 NEEDS_VALIDATION_CACHE = next;
@@ -175,8 +175,8 @@ public final class CastNode extends PureNode
     }
 
     private static boolean computeNeedsValidation(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
-            java.util.Set<org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type> visited)
+            Object type,
+            java.util.Set<Object> visited)
     {
         if (type == null || !visited.add(type))
         {
@@ -208,8 +208,8 @@ public final class CastNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    static void validateConstraints(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
-                                            GenericType targetGT,
+    static void validateConstraints(Object type,
+                                            Object targetGT,
                                             Object value,
                                             TruffleMetadataAccess resolver,
                                             RawLambdaCallNode constraintCallNode)
@@ -229,19 +229,22 @@ public final class CastNode extends PureNode
             {
                 Object general = gen != null
                         ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general") : null;
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type genType =
+                Object genType =
                         general != null ? org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general) : null;
-                if (genType != null && general instanceof GenericType genGT)
+                if (genType != null && general != null)
                 {
-                    validateConstraints(genType, genGT, value, resolver, constraintCallNode);
+                    // `general` is the (possibly PDO) GenericType for the
+                    // superclass — pass it through as Object so the recursive
+                    // constraint walk picks up its type-variable bindings.
+                    validateConstraints(genType, general, value, resolver, constraintCallNode);
                 }
             }
         }
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void validateConstraintsOnType(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type,
-                                                   GenericType targetGT,
+    private static void validateConstraintsOnType(Object type,
+                                                   Object targetGT,
                                                    Object value,
                                                    TruffleMetadataAccess resolver,
                                                    RawLambdaCallNode constraintCallNode)

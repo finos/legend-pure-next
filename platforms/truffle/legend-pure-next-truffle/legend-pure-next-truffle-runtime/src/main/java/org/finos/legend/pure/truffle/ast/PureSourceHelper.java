@@ -2,7 +2,6 @@ package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

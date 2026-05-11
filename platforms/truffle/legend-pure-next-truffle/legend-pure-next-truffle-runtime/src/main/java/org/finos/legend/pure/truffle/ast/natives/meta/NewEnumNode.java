@@ -44,7 +44,8 @@ public final class NewEnumNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNewEnumeration(Object name, Object pkg, Object valueNames, TruffleMetadataAccess resolver)
     {
-        var enumeration = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.EnumerationImpl();
+        Object enumeration = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                "meta::pure::metamodel::type::Enumeration", resolver);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumeration, "name",
                 name instanceof String s ? s : String.valueOf(name));
         if (pkg != null)
@@ -52,19 +53,24 @@ public final class NewEnumNode extends PureNode
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumeration, "package", pkg);
         }
 
-        // Add generalization: every user-defined enumeration extends Enum
+        // Add generalization: every user-defined enumeration extends Enum.
+        // Resolver elements are PureDynamicObject post-loader-flip; the
+        // typed `instanceof Type` guards would skip the CGT-write branches
+        // and leave the resulting Enumeration with empty `properties`,
+        // tripping the testNewEnumeration assertion.
         Object enumTypeObj = resolver.getElement("meta::pure::metamodel::type::Enum");
-        if (enumTypeObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type enumT)
+        if (enumTypeObj != null)
         {
-            var gen = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.GeneralizationImpl();
+            Object gen = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::relationship::Generalization", resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(gen, "general",
-                    _GenericType.buildUserDefinedGenericType(enumT, resolver));
+                    _GenericType.buildUserDefinedGenericType(enumTypeObj, resolver));
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(gen, "specific", enumeration);
             Object genTypeObj = resolver.getElement("meta::pure::metamodel::relationship::Generalization");
-            if (genTypeObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type genT)
+            if (genTypeObj != null)
             {
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(gen, "classifierGenericType",
-                        _GenericType.buildUserDefinedGenericType(genT, resolver));
+                        _GenericType.buildUserDefinedGenericType(genTypeObj, resolver));
             }
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumeration, "generalizations",
                     new ObjectSequence(new Object[]{gen}));
@@ -73,8 +79,7 @@ public final class NewEnumNode extends PureNode
         // Self-referencing CGT: Enumeration<self>
         var selfRef = _GenericType.buildUserDefinedGenericType(enumeration, resolver);
         Object enumerationTypeObj = resolver.getElement("meta::pure::metamodel::type::Enumeration");
-        var cgt = _GenericType.buildUserDefinedGenericType(
-                enumerationTypeObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t ? t : null, resolver);
+        var cgt = _GenericType.buildUserDefinedGenericType(enumerationTypeObj, resolver);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(cgt, "typeArguments",
                 new ObjectSequence(new Object[]{selfRef}));
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumeration, "classifierGenericType", cgt);
@@ -95,65 +100,71 @@ public final class NewEnumNode extends PureNode
             String valueName = String.valueOf(CollectionHelper.at(valueNames, i));
 
             // Create Enum instance with CGT = enumGT
-            var enumInstance = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.EnumImpl();
+            Object enumInstance = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::type::Enum", resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumInstance, "name", valueName);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumInstance, "classifierGenericType", enumGT);
 
             // Build FunctionType for the lambda: {-> EnumType[1]}
-            var ft = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.FunctionTypeImpl();
-            if (functionTypeTypeObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type ftT)
+            Object ft = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::type::FunctionType", resolver);
+            if (functionTypeTypeObj != null)
             {
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(ft, "classifierGenericType",
-                        _GenericType.buildUserDefinedGenericType(ftT, resolver));
+                        _GenericType.buildUserDefinedGenericType(functionTypeTypeObj, resolver));
             }
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(ft, "returnType", enumGT);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(ft, "returnMultiplicity", pureOne);
 
             // Lambda CGT: LambdaFunction<{-> EnumType[1]}>
             Object igtType = resolver.getElement("meta::pure::metamodel::type::generics::InferredGenericType");
-            var ftGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.InferredGenericTypeImpl();
-            if (igtType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type igtT)
+            Object ftGT = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::type::generics::InferredGenericType", resolver);
+            if (igtType != null)
             {
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(ftGT, "classifierGenericType",
-                        _GenericType.buildUserDefinedGenericType(igtT, resolver));
+                        _GenericType.buildUserDefinedGenericType(igtType, resolver));
             }
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(ftGT, "type", ft);
-            var lambdaCGT = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.InferredGenericTypeImpl();
-            if (igtType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type igtT2)
+            Object lambdaCGT = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::type::generics::InferredGenericType", resolver);
+            if (igtType != null)
             {
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(lambdaCGT, "classifierGenericType",
-                        _GenericType.buildUserDefinedGenericType(igtT2, resolver));
+                        _GenericType.buildUserDefinedGenericType(igtType, resolver));
             }
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(lambdaCGT, "type", lambdaFunctionTypeObj);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(lambdaCGT, "typeArguments",
                     new ObjectSequence(new Object[]{ftGT}));
 
             // Lambda wrapping the AtomicValue
-            var atomicValue = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValueImpl();
+            Object atomicValue = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::valuespecification::AtomicValue", resolver);
             Object avType = resolver.getElement("meta::pure::metamodel::valuespecification::AtomicValue");
-            if (avType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type avT)
+            if (avType != null)
             {
                 org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(atomicValue, "classifierGenericType",
-                        _GenericType.buildUserDefinedGenericType(avT, resolver));
+                        _GenericType.buildUserDefinedGenericType(avType, resolver));
             }
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(atomicValue, "value", enumInstance);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(atomicValue, "genericType", enumGT);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(atomicValue, "multiplicity", pureOne);
 
-            var lambda = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunctionImpl();
+            Object lambda = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::function::LambdaFunction", resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(lambda, "classifierGenericType", lambdaCGT);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(lambda, "expressionSequence",
                     new ObjectSequence(new Object[]{atomicValue}));
 
             // Property CGT: Property<Enumeration<self>, EnumType|1>
-            var propCGT = _GenericType.buildUserDefinedGenericType(
-                    propertyTypeObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type pt ? pt : null, resolver);
+            var propCGT = _GenericType.buildUserDefinedGenericType(propertyTypeObj, resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(propCGT, "typeArguments",
                     new ObjectSequence(new Object[]{cgt, enumGT}));
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(propCGT, "multiplicityArguments",
                     new ObjectSequence(new Object[]{pureOne}));
 
-            var prop = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.PropertyImpl();
+            Object prop = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::metamodel::function::property::Property", resolver);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(prop, "name", valueName);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(prop, "classifierGenericType", propCGT);
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(prop, "genericType", enumGT);

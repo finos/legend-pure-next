@@ -11,7 +11,6 @@ package org.finos.legend.pure.truffle.runtime;
 import org.finos.legend.pure.next.parser.PureParser;
 import org.finos.legend.pure.truffle.PureLanguage;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -42,7 +41,7 @@ public class MetamodelFactoriesWarmWallBenchTest
 {
     private static PureTruffleRuntime runtime;
     private static TruffleMetadataAccess resolver;
-    private static FunctionDefinition compileFn;
+    private static Object compileFn;
     private static PureParser pureParser;
     private static String metamodelFactoriesSource;
     private static String testName;
@@ -70,10 +69,14 @@ public class MetamodelFactoriesWarmWallBenchTest
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
+                // Override surefire's pure.truffle.compileImmediately=true:
+                // this bench measures warm-wall steady state, and forcing
+                // every reached CallTarget through Tier 2 on first call would
+                // inflate the measured wall by the JIT cost of cold paths.
+                .withCompileImmediately(false)
                 .build();
 
-        Object compileObj = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
-        compileFn = (FunctionDefinition) compileObj;
+        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
         pureParser = PureLanguage.get(null).pureParser();
 
         // Locate metamodel_factories.pure

@@ -16,14 +16,7 @@ package org.finos.legend.pure.truffle.frame;
 
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlotKind;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -61,11 +54,16 @@ public final class FrameDescriptorBuilder
      * scope).
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public static FrameLayout analyze(FunctionDefinition fd)
+    public static FrameLayout analyze(Object fd)
     {
-        if (fd instanceof LambdaFunction lambda)
+        // LambdaFunction is a leaf concrete Pure type — pureTypeIs is exact-
+        // match and class-keyed-cached, so this is a single CHM.get(Class)
+        // post-warmup. After the loader flip the receiver is a
+        // PureDynamicObject whose Shape's dynamic type is the Pure path.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd,
+                "meta::pure::metamodel::function::LambdaFunction"))
         {
-            return analyzeLambda(lambda);
+            return analyzeLambda(fd);
         }
 
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
@@ -98,7 +96,7 @@ public final class FrameDescriptorBuilder
      * a safe fallback during the transition).
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public static FrameLayout analyzeMinimal(FunctionDefinition fd)
+    public static FrameLayout analyzeMinimal(Object fd)
     {
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
         Map<String, Integer> slots = new LinkedHashMap<>();
@@ -127,7 +125,7 @@ public final class FrameDescriptorBuilder
      * instead of falling through to the HashMap scope.</p>
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static FrameLayout analyzeLambda(LambdaFunction lambda)
+    private static FrameLayout analyzeLambda(Object lambda)
     {
         FrameDescriptor.Builder builder = FrameDescriptor.newBuilder();
         Map<String, Integer> slots = new LinkedHashMap<>();
@@ -259,7 +257,8 @@ public final class FrameDescriptorBuilder
                 "meta::pure::metamodel::valuespecification::AtomicValue"))
         {
             Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "value");
-            if (inner instanceof LambdaFunction)
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inner,
+                    "meta::pure::metamodel::function::LambdaFunction"))
             {
                 return true;
             }

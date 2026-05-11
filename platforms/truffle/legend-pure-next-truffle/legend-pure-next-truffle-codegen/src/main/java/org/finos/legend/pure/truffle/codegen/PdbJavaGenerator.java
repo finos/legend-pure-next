@@ -107,35 +107,54 @@ public class PdbJavaGenerator
 
         for (ClassRecord cr : classes.valuesView())
         {
+            // Skip codegen for non-metamodel classes — they work entirely
+            // through PDO + PureShapeRegistry + PropertyMetadataRegistry
+            // (populated at PDB load time from the Class element's
+            // properties). Only the bootstrap metamodel + protocol/grammar
+            // + core collection types need generated XImpls, because the
+            // runtime reads their FB encoding via per-property `__load_X`
+            // logic. Test/user classes living in core.pdb / compiler.pdb
+            // are loaded as Pure-built PDOs from the resolver and never go
+            // through the per-class FB decoder lambda.
+            if (!isMetamodelClass(cr.fullPath))
+            {
+                skipped++;
+                continue;
+            }
             Path packageDir = outputDir.resolve(toJavaPackage(cr.packagePath).replace('.', '/'));
             Files.createDirectories(packageDir);
 
-            Files.write(packageDir.resolve(cr.name + ".java"),
-                    generateInterface(cr).getBytes(StandardCharsets.UTF_8));
-            interfaces++;
+            // No interfaces emitted. The runtime is fully PDO-aware and the
+            // generated writer's typed `instanceof <X>` clauses have been
+            // dropped (they were paired with `pureTypeIs`/`pureTypeOf != null`
+            // checks that already cover both PDO and the no-longer-existing
+            // typed XImpls).
 
             if (!cr.isAbstract)
             {
                 Files.write(packageDir.resolve(cr.name + "Impl.java"),
                         generateImpl(cr).getBytes(StandardCharsets.UTF_8));
                 impls++;
-
-                // XFlatBufferWrapper is no longer emitted — the merged XImpl
-                // (above) handles BOTH the Pure-built and FB-loaded modes
-                // through its dual constructor. The loader flip on
-                // {@code TrufflePdbLoader.TYPE_TO_WRAPPER} now points at
-                // XImpl directly, eliminating the bi-morphic Impl/FBW guard
-                // at every Pure property access site.
             }
         }
 
         for (EnumRecord er : enums.valuesView())
         {
+            // Mirror the user-class policy: only metamodel-scope Pure enums
+            // need a Java enum class. User/test enums load as PDO Enumeration
+            // instances at runtime; their values are PDO Enum instances
+            // looked up by name via `Enumeration._values` traversal (the
+            // existing fallback in {@code PureContext.coerceToJavaEnum}).
+            if (!isMetamodelClass(er.fullPath))
+            {
+                skipped++;
+                continue;
+            }
             Path packageDir = outputDir.resolve(toJavaPackage(er.packagePath).replace('.', '/'));
             Files.createDirectories(packageDir);
 
-            Files.write(packageDir.resolve(er.name + ".java"),
-                    generateEnumInterface(er).getBytes(StandardCharsets.UTF_8));
+            // No enum marker interface emitted; `<X>Enum` implements
+            // PropertyAccessor directly.
             Files.write(packageDir.resolve(er.name + "Enum.java"),
                     generateEnumClass(er).getBytes(StandardCharsets.UTF_8));
             enumCount++;
@@ -194,6 +213,25 @@ public class PdbJavaGenerator
             }
             System.out.println("    Class: " + cr.fullPath + " -> name=" + cr.name + " pkg=" + cr.packagePath + " props=" + cr.properties.collect(p -> p.name));
         }
+    }
+
+    /**
+     * Heuristic: is the Pure class part of the bootstrap metamodel (one that
+     * actually needs an FB-decoder XImpl)? Everything outside is treated as a
+     * user/test class — its instances are Pure-built at runtime via
+     * {@code TruffleInstanceFactory.createInstance} → {@code PureDynamicObject}
+     * and don't go through per-class FB decode. Class-element-side metadata
+     * (property types, equality keys) is populated at PDB-load time by the
+     * loader walking the {@code Class} element's {@code properties} sequence,
+     * not via {@code XImpl.static{}} blocks.
+     */
+    private static boolean isMetamodelClass(String fullPath)
+    {
+        // Codegen for Pure metamodel ONLY. compiler / protocol / functions
+        // Pure classes work through the PDO + PureShapeRegistry +
+        // PropertyMetadataRegistry.ensurePopulated path — same as any
+        // user-defined class.
+        return fullPath.startsWith("meta::pure::metamodel::");
     }
 
     private void collectClass(String fullPath, meta.pure.metamodel.type.Class classElem)
@@ -479,49 +517,15 @@ public class PdbJavaGenerator
             }
         }
 
-        sb.append("\n{\n");
-
-        for (PropRecord pr : cr.properties)
-        {
-            String javaType = resolveJavaType(pr);
-            // Default-method getter/setter bodies that delegate to
-            // PropertyAccessor.read/writeProperty. Lets PureDynamicObject
-            // pick up the typed surface for free once it's the canonical
-            // metamodel-object class — without these defaults, every
-            // property would need an explicit override on PureDynamicObject
-            // (impossible at scale across ~750 interfaces). Existing
-            // generated XImpl / XFlatBufferWrapper classes already emit
-            // explicit @Override implementations; those win over the
-            // defaults so legacy behaviour is unchanged. PropertyAccessor
-            // (vs the runtime-module PureObj helper) is used here because
-            // the codegen module's classpath can't see runtime-module classes
-            // — PropertyAccessor lives alongside the codegen.
-            sb.append("    default ").append(javaType).append(" _").append(pr.name).append("()\n");
-            sb.append("    {\n");
-            sb.append("        Object __v = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) this).readProperty(\"")
-                    .append(pr.name).append("\");\n");
-            sb.append("        return __v == org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT ? null : (")
-                    .append(javaType).append(") __v;\n");
-            sb.append("    }\n\n");
-            sb.append("    default ").append(cr.name).append(" _").append(pr.name).append("(").append(javaType).append(" value)\n");
-            sb.append("    {\n");
-            sb.append("        ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) this).writeProperty(\"")
-                    .append(pr.name).append("\", value);\n");
-            sb.append("        return (").append(cr.name).append(") this;\n");
-            sb.append("    }\n\n");
-        }
-
-        // _copy() — declared on every interface (concrete or abstract) so
-        // callers holding any metamodel reference can invoke it without
-        // reflection. Abstract intermediates rely on Java's covariant-return
-        // override: e.g. {@code Any._copy()} returns Any, {@code Class._copy()}
-        // returns Class, {@code ClassImpl._copy()} returns ClassImpl. The
-        // {@code copyViaReflection} hot loop in {@code CopyWithKeysNode}
-        // collapses to one virtual call after this — JFR profile showed
-        // that path consuming ~75% of self-compile CPU.
-        sb.append("    ").append(cr.name).append(" _copy();\n\n");
-
-        sb.append("}\n");
+        // Body intentionally empty: post-PDO-migration the typed interface
+        // is just a *marker* in the Java type system — used by the few
+        // remaining `instanceof Class`/`Type`/etc. checks in the AST builder
+        // and a handful of typed-cast sites in the runtime. The previously
+        // emitted default `_X()` / `_X(v)` bodies routed through
+        // `PropertyAccessor` but were never called; the universal
+        // `PureObj.read`/`write` is the runtime surface. `_copy()` likewise
+        // had no live caller after the typed-Any._copy() paths were dropped.
+        sb.append("\n{\n}\n");
         return sb.toString();
     }
 
@@ -574,8 +578,7 @@ public class PdbJavaGenerator
             sb.append("import org.finos.legend.pure.truffle.types.PureSequence;\n\n");
         }
         sb.append("public class ").append(cr.name).append("Impl");
-        sb.append(" implements ").append(cr.name);
-        sb.append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor");
+        sb.append(" implements org.finos.legend.pure.truffle.runtime.PropertyAccessor");
         if (hasFbw)
         {
             sb.append(", org.finos.legend.pure.truffle.runtime.FbParented");
@@ -590,25 +593,104 @@ public class PdbJavaGenerator
         if (hasFbw)
         {
             sb.append("    private static final Object UNSET = new Object();\n\n");
+            // Static-init: register a PureFbDecoderRegistry decoder for this
+            // Pure type so PureDynamicObject.readProperty can fall through
+            // to here on cache miss when constructed with a raw XDef as fb.
+            // Lambda allocates a transient XImpl and calls its readProperty
+            // (which has the per-property decode switch). PureDynamicObject
+            // caches the result in its DOL slot so subsequent reads bypass
+            // this path entirely.
+            sb.append("    static\n    {\n");
+            sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoderRegistry.register(\n");
+            sb.append("                \"").append(cr.fullPath).append("\",\n");
+            sb.append("                (__name, __fb, __resolver, __parent) -> {\n");
+            sb.append("                    ").append(cr.name).append("Impl __tmp = new ").append(cr.name).append("Impl(\n");
+            sb.append("                            (").append(FBS_PKG).append(".").append(defName).append(") __fb, __resolver, __parent);\n");
+            // Return readProperty's result verbatim — including the ABSENT
+            // sentinel for "no such property". PureFbDecoder propagates this
+            // up to PureDynamicObject.readProperty so callers like
+            // PropertyReadNode.executeOrAbsent can distinguish "missing" from
+            // "null value". Coercing to null here was the bug that caused the
+            // RawPropertyAccessNode enum-value lookup to short-circuit.
+            sb.append("                    return __tmp.readProperty(__name);\n");
+            sb.append("                });\n");
+            // Register per-property declared types so PDO.writeProperty can
+            // run PropertyCoercion (singleton → PureSequence wrapping for [*]
+            // properties, enum coercion, etc.). Same paramType the XImpl's
+            // typed setter parameter carries.
+            for (PropRecord pr : allProps)
+            {
+                String javaType = resolveJavaType(pr);
+                // Typed-interface refs (e.g. ElementOverride, GenericTypeValue)
+                // no longer exist post-typed-interface-drop; collapse to
+                // Object.class. The registry only uses these to decide
+                // whether to run PropertyCoercion at all — Object.class
+                // means "no coercion".
+                String registered = javaType.startsWith("org.finos.legend.pure.truffle.pdb.")
+                        ? "Object" : boxType(javaType);
+                sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.register(\n");
+                sb.append("                \"").append(cr.fullPath).append("\", \"").append(pr.name).append("\", ").append(registered).append(".class);\n");
+            }
+            // Register equality-key property names so PDO.equals/hashCode
+            // can match the typed XImpl's `<<equality.Key>>`-based semantics.
+            // Walks the hierarchy directly so an override that adds
+            // @equality.Key on a redeclared inherited property still gets
+            // picked up — `allProps` shadows the override.
+            MutableList<String> _keyNames = collectEqualityKeyNames(cr);
+            if (!_keyNames.isEmpty())
+            {
+                sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.registerEqualityKeys(\n");
+                sb.append("                \"").append(cr.fullPath).append("\"");
+                for (String kn : _keyNames)
+                {
+                    sb.append(", \"").append(kn).append("\"");
+                }
+                sb.append(");\n");
+            }
+            sb.append("    }\n\n");
+        }
+        else
+        {
+            // Non-FBW class: still register property metadata so PDO writes
+            // can coerce correctly for Pure-built instances of this type.
+            sb.append("    static\n    {\n");
+            for (PropRecord pr : allProps)
+            {
+                String javaType = resolveJavaType(pr);
+                // Typed-interface refs (e.g. ElementOverride, GenericTypeValue)
+                // no longer exist post-typed-interface-drop; collapse to
+                // Object.class. The registry only uses these to decide
+                // whether to run PropertyCoercion at all — Object.class
+                // means "no coercion".
+                String registered = javaType.startsWith("org.finos.legend.pure.truffle.pdb.")
+                        ? "Object" : boxType(javaType);
+                sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.register(\n");
+                sb.append("                \"").append(cr.fullPath).append("\", \"").append(pr.name).append("\", ").append(registered).append(".class);\n");
+            }
+            // Register equality-key property names so PDO.equals/hashCode
+            // can match the typed XImpl's `<<equality.Key>>`-based semantics.
+            // Walks the hierarchy directly so an override that adds
+            // @equality.Key on a redeclared inherited property still gets
+            // picked up — `allProps` shadows the override.
+            MutableList<String> _keyNames = collectEqualityKeyNames(cr);
+            if (!_keyNames.isEmpty())
+            {
+                sb.append("        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.registerEqualityKeys(\n");
+                sb.append("                \"").append(cr.fullPath).append("\"");
+                for (String kn : _keyNames)
+                {
+                    sb.append(", \"").append(kn).append("\"");
+                }
+                sb.append(");\n");
+            }
+            sb.append("    }\n\n");
         }
 
-        // Storage fields. For FBW-capable classes, fields are Object-typed
-        // and initialised to UNSET so the getter can detect "never read".
-        // For pure-Impl-only classes, fields use the natural Java type and
-        // initialise to null/0.
-        for (PropRecord pr : allProps)
-        {
-            String javaType = resolveJavaType(pr);
-            String fieldName = escapeKeyword(pr.name);
-            if (hasFbw)
-            {
-                sb.append("    private Object ").append(fieldName).append(" = UNSET;\n");
-            }
-            else
-            {
-                sb.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
-            }
-        }
+        // Per-property storage fields dropped post-XImpl-slim: the typed
+        // `_X()` getter is gone (interface defaults handle it via
+        // PropertyAccessor.readProperty), and XImpls are transient
+        // decoder-lambda locals so per-instance caching adds no value
+        // (the PDO's DOL caches the decoded value on the user-visible side).
         // FBW back-reference (null for Pure-built instances). Final so PE
         // can branch-fold the lazy-decode path away when the instance was
         // built via the default constructor.
@@ -642,147 +724,42 @@ public class PdbJavaGenerator
             sb.append("    public ").append(cr.name).append("Impl() {}\n\n");
         }
 
-        // Getters and setters
-        for (PropRecord pr : allProps)
+        // FBW lazy-decode helpers `__load_X()` — used by `__readRaw__X()`
+        // in the readProperty switch when the field is still UNSET. No
+        // longer paired with typed `_X()`/`_X(v)` overrides: the typed
+        // interface's default bodies route through PropertyAccessor, and
+        // post-FB-decode-flip no caller invokes typed getters on an XImpl
+        // (decoder lambdas use readProperty directly; user-visible values
+        // are PDOs).
+        if (hasFbw)
         {
-            String javaType = resolveJavaType(pr);
-            String fieldName = escapeKeyword(pr.name);
-
-            // Getter
-            sb.append("    @Override\n");
-            sb.append("    public ").append(javaType).append(" _").append(pr.name).append("()\n");
-            sb.append("    {\n");
-            if (hasFbw)
+            for (PropRecord pr : allProps)
             {
+                String javaType = resolveJavaType(pr);
                 FbsSchema.FbsField fbsField = findFbsField(fbsFields, pr.name);
-                // Read field (Object). UNSET → either decode (fb != null) or
-                // return default (Pure-built never set this property).
-                // Pure-built after setter, or FBW after decode, returns the
-                // cached value directly via cast.
-                sb.append("        Object v = this.").append(fieldName).append(";\n");
-                sb.append("        if (v != UNSET) return (").append(javaType).append(") v;\n");
-                sb.append("        if (this.fb == null)\n        {\n");
-                if (pr.isMany || javaType.equals("PureSequence") || javaType.endsWith(".PureSequence"))
-                {
-                    sb.append("            this.").append(fieldName).append(" = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
-                    sb.append("            return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
-                }
-                else
-                {
-                    sb.append("            this.").append(fieldName).append(" = null;\n");
-                    sb.append("            return null;\n");
-                }
-                sb.append("        }\n");
-                sb.append("        return __load_").append(pr.name).append("();\n");
-                sb.append("    }\n\n");
-
-                // Lazy-decode boundary helper
                 sb.append("    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary\n");
-                sb.append("    private ").append(javaType).append(" __load_").append(pr.name).append("()\n    {\n");
+                sb.append("    private Object __load_").append(pr.name).append("()\n    {\n");
                 sb.append("        Object __raw = null;\n");
                 generateWrapperGetterBody(sb, pr, fbsField);
                 if (pr.isMany || javaType.equals("PureSequence") || javaType.endsWith(".PureSequence"))
                 {
                     sb.append("        if (__raw == null) __raw = org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
                 }
-                sb.append("        this.").append(fieldName).append(" = __raw;\n");
-                sb.append("        return (").append(javaType).append(") __raw;\n");
+                sb.append("        return __raw;\n");
                 sb.append("    }\n\n");
             }
-            else
-            {
-                // Plain Impl form — no FBW capability.
-                if (pr.isMany)
-                {
-                    sb.append("        return this.").append(fieldName).append(" != null ? this.").append(fieldName).append(" : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
-                }
-                else
-                {
-                    sb.append("        return this.").append(fieldName).append(";\n");
-                }
-                sb.append("    }\n\n");
-            }
-
-            // Setter
-            sb.append("    @Override\n");
-            sb.append("    public ").append(cr.name).append("Impl _").append(pr.name).append("(").append(javaType).append(" value)\n");
-            sb.append("    {\n");
-            sb.append("        this.").append(fieldName).append(" = value;\n");
-            sb.append("        return this;\n");
-            sb.append("    }\n\n");
         }
 
-        // equals() / hashCode() — based on <<equality.Key>> properties
-        MutableList<PropRecord> keyProps = allProps.select(p -> p.isEqualityKey);
-        MutableList<PropRecord> equalityProps = keyProps.isEmpty() ? allProps : keyProps;
-        sb.append("    @Override\n");
-        sb.append("    public boolean equals(Object o)\n");
-        sb.append("    {\n");
-        sb.append("        if (this == o) return true;\n");
-        sb.append("        if (!(o instanceof ").append(cr.name).append("Impl other)) return false;\n");
-        for (PropRecord pr : equalityProps)
-        {
-            String field = escapeKeyword(pr.name);
-            sb.append("        if (!java.util.Objects.equals(this.").append(field).append(", other.").append(field).append(")) return false;\n");
-        }
-        sb.append("        return true;\n");
-        sb.append("    }\n\n");
+        // equals() / hashCode() — XImpls are transient (decoder-lambda
+        // locals), never compared. PDO equality goes through the Shape's
+        // ShapeMeta.equalityKeys. Default Object equals/hashCode (identity)
+        // is sufficient.
 
-        sb.append("    @Override\n");
-        sb.append("    public int hashCode()\n");
-        sb.append("    {\n");
-        // Only use primitive/String properties to avoid circular reference StackOverflow
-        MutableList<PropRecord> hashProps = equalityProps.select(p -> !p.isMany && isPrimitiveType(p.typeName));
-        if (hashProps.isEmpty())
-        {
-            sb.append("        return System.identityHashCode(this);\n");
-        }
-        else
-        {
-            sb.append("        return java.util.Objects.hash(");
-            for (int i = 0; i < hashProps.size(); i++)
-            {
-                if (i > 0)
-                {
-                    sb.append(", ");
-                }
-                sb.append("this.").append(escapeKeyword(hashProps.get(i).name));
-            }
-            sb.append(");\n");
-        }
-        sb.append("    }\n\n");
+        // _copy() — dropped entirely. The typed interface no longer declares
+        // `_copy()`; nothing remaining in the runtime calls it on an XImpl.
 
-        // _copy() — for FBW-capable classes, must use getter+setter pairs
-        // (not direct field copy) so any UNSET-sentinel fields force-decode
-        // from the source's FB before being transferred to the copy.
-        // Matches the legacy XFlatBufferWrapper._copy() behaviour, which
-        // Pure tests like testFunctionDefinitionCopy depend on for the
-        // copy to have all properties materialised. For plain (non-FBW)
-        // Impls there are no UNSET sentinels — fields are already typed
-        // and direct copy is fine.
-        sb.append("    @Override\n");
-        sb.append("    public ").append(cr.name).append("Impl _copy()\n");
-        sb.append("    {\n");
-        sb.append("        ").append(cr.name).append("Impl copy = new ").append(cr.name).append("Impl();\n");
-        for (PropRecord pr : allProps)
-        {
-            if (hasFbw)
-            {
-                // Getter forces decode-from-FB; setter writes to the new
-                // (Pure-built, fb=null) copy.
-                sb.append("        copy._").append(pr.name).append("(this._").append(pr.name).append("());\n");
-            }
-            else
-            {
-                String fieldName = escapeKeyword(pr.name);
-                sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";\n");
-            }
-        }
-        sb.append("        return copy;\n");
-        sb.append("    }\n\n");
-
-        appendReadPropertySwitch(sb, allProps);
-        appendWritePropertySwitch(sb, allProps, false);
+        appendReadPropertySwitch(sb, allProps, hasFbw);
+        appendWritePropertySwitch(sb, allProps, false, hasFbw);
 
         sb.append("}\n");
         return sb.toString();
@@ -797,16 +774,30 @@ public class PdbJavaGenerator
      * Returns {@code PropertyAccessor.ABSENT} for unknown names so callers can
      * distinguish "no such property" from "property is the empty sequence".
      */
-    private void appendReadPropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps)
+    private void appendReadPropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps, boolean hasFbw)
     {
         sb.append("    @Override\n");
         sb.append("    public Object readProperty(String name)\n");
         sb.append("    {\n");
+        // FBW classes: switch directly to `__load_X()` (FB decode). XImpls
+        // are transient — the per-instance cache that `__readRaw__X` provided
+        // is now redundant because the PDO's DOL caches the decoded value on
+        // the user-visible side. Non-FBW classes have no `fb`, no storage
+        // fields, so all property reads return the empty sequence (PDO-built
+        // values flow through PureObj.write → DOL.put on PDO instead).
         sb.append("        return switch (name)\n");
         sb.append("        {\n");
         for (PropRecord pr : allProps)
         {
-            sb.append("            case \"").append(pr.name).append("\" -> _").append(pr.name).append("();\n");
+            String esc = pr.name.replace("\"", "\\\"");
+            if (hasFbw)
+            {
+                sb.append("            case \"").append(esc).append("\" -> __load_").append(pr.name).append("();\n");
+            }
+            else
+            {
+                sb.append("            case \"").append(esc).append("\" -> org.finos.legend.pure.truffle.types.PureSequence.EMPTY;\n");
+            }
         }
         sb.append("            default -> org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT;\n");
         sb.append("        };\n");
@@ -825,25 +816,48 @@ public class PdbJavaGenerator
      * {@code ^X(prop=val)} and contributed the bulk of remaining Graal
      * compilation failures.
      */
-    private void appendWritePropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps, boolean readOnly)
+    private void appendWritePropertySwitch(StringBuilder sb, MutableList<PropRecord> allProps, boolean readOnly, boolean hasFbw)
     {
         sb.append("    @Override\n");
         sb.append("    public void writeProperty(String name, Object value)\n");
         sb.append("    {\n");
+        // Post-FB-decode flip + ProtocolTranslator migration: XImpls are
+        // transient decoder-lambda locals and never receive property writes
+        // from any runtime path. Stubbing the body removes ~30 lines × 246
+        // XImpls of dead code while preserving the PropertyAccessor contract.
+        if (true)
+        {
+            sb.append("        throw new UnsupportedOperationException(\"XImpl is transient; write to PDO instead\");\n");
+            sb.append("    }\n\n");
+            return;
+        }
         if (readOnly)
         {
             sb.append("        throw new UnsupportedOperationException(\"Read-only FlatBuffer wrapper\");\n");
         }
         else
         {
+            // For FBW-capable classes the field is Object (UNSET-sentinel
+            // storage). PropertyCoercion still runs to handle single-value
+            // → PureSequence wrapping for [*] properties (NewWithKeysNode's
+            // applyDynamicKeyExpressions unwraps single-element sequences,
+            // so [*] setters need to re-wrap). Assignment is direct to the
+            // Object field — no typed cast that would CCE on PDO values.
             sb.append("        switch (name)\n");
             sb.append("        {\n");
             for (PropRecord pr : allProps)
             {
+                String fieldName = escapeKeyword(pr.name);
+                String esc = pr.name.replace("\"", "\\\"");
                 String javaType = resolveJavaType(pr);
                 String boxed = boxType(javaType);
-                sb.append("            case \"").append(pr.name).append("\" -> _").append(pr.name)
-                        .append("((").append(boxed).append(") org.finos.legend.pure.truffle.runtime.helper.PropertyCoercion.coerce(value, ").append(boxed).append(".class));\n");
+                // Both FBW and plain Impl classes use Object storage post-flip,
+                // so the same direct-Object-assignment form works for both.
+                // PropertyCoercion handles single-value → PureSequence wrapping
+                // for [*] properties; no typed downcast that would CCE on PDO.
+                sb.append("            case \"").append(esc).append("\" -> this.").append(fieldName)
+                        .append(" = org.finos.legend.pure.truffle.runtime.dynobj.PropertyCoercion.coerce(value, ")
+                        .append(boxed).append(".class);\n");
             }
             sb.append("            default -> throw new IllegalArgumentException(\"No such property: \" + name);\n");
             sb.append("        }\n");
@@ -959,8 +973,8 @@ public class PdbJavaGenerator
         }
         sb.append("        return copy;\n    }\n\n");
 
-        appendReadPropertySwitch(sb, allProps);
-        appendWritePropertySwitch(sb, allProps, true);
+        appendReadPropertySwitch(sb, allProps, true);
+        appendWritePropertySwitch(sb, allProps, true, true);
 
         sb.append("}\n");
         return sb.toString();
@@ -994,7 +1008,9 @@ public class PdbJavaGenerator
     // in the eight per-property emit cases.
     // =========================================================================
 
-    private static final String WRITER_PKG = "org.finos.legend.pure.truffle.runtime.codegen";
+    // The generated FB writer lives alongside the XImpls in the pdb/codec
+    // package — it's part of the PDB codec, not the runtime.
+    private static final String WRITER_PKG = "org.finos.legend.pure.truffle.pdb.codec";
     private static final String FBS_FQN = "org.finos.legend.pure.m3.module.pdbModule.fbs";
 
     private void generateFlatBufferWriter(Path outputDir) throws IOException
@@ -1014,6 +1030,8 @@ public class PdbJavaGenerator
 
         sb.append("import com.google.flatbuffers.FlatBufferBuilder;\n");
         sb.append("import java.util.IdentityHashMap;\n");
+        sb.append("import org.finos.legend.pure.truffle.runtime.PropertyAccessor;\n");
+        sb.append("import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;\n");
         sb.append("import ").append(FBS_FQN).append(".*;\n\n");
         // Note: helper logic (pathOf, unwrap, sequence ops) is inlined as
         // private static methods below so this file compiles standalone within
@@ -1074,21 +1092,24 @@ public class PdbJavaGenerator
         // matching its name against "Root". Bootstrap creates the root with
         // name `"::"` (BootstrapModule), so a name-based check leaks `::::`
         // into every path that walks through it.
-        sb.append("    private static String pathOf(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n    {\n");
+        // pathOf — recursive ::-separated path of a PackageableElement.
+        // Reads via readProp so it works for both typed XImpl and PDO.
+        sb.append("    private static String pathOf(Object pe)\n    {\n");
         sb.append("        if (pe == null) { return null; }\n");
-        sb.append("        String name = pe._name();\n");
-        sb.append("        Object pkg = pe._package();\n");
-        sb.append("        if (!(pkg instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement parent))\n");
-        sb.append("        {\n            return name;\n        }\n");
-        sb.append("        String pkgPath = pathOfPkg(parent);\n");
+        sb.append("        Object nameObj = readProp(pe, \"name\");\n");
+        sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");
+        sb.append("        Object pkg = readProp(pe, \"package\");\n");
+        sb.append("        if (pkg == null) { return name; }\n");
+        sb.append("        String pkgPath = pathOfPkg(pkg);\n");
         sb.append("        return pkgPath.isEmpty() ? name : pkgPath + \"::\" + name;\n");
         sb.append("    }\n\n");
-        sb.append("    private static String pathOfPkg(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pkg)\n    {\n");
-        sb.append("        Object grandparent = pkg._package();\n");
-        sb.append("        String name = pkg._name();\n");
-        sb.append("        if (!(grandparent instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement gp) || name == null)\n");
-        sb.append("        {\n            return \"\";\n        }\n");
-        sb.append("        String parentPath = pathOfPkg(gp);\n");
+        sb.append("    private static String pathOfPkg(Object pkg)\n    {\n");
+        sb.append("        if (pkg == null) { return \"\"; }\n");
+        sb.append("        Object grandparent = readProp(pkg, \"package\");\n");
+        sb.append("        Object nameObj = readProp(pkg, \"name\");\n");
+        sb.append("        String name = nameObj instanceof String _ns ? _ns : null;\n");
+        sb.append("        if (grandparent == null || name == null) { return \"\"; }\n");
+        sb.append("        String parentPath = pathOfPkg(grandparent);\n");
         sb.append("        return parentPath.isEmpty() ? name : parentPath + \"::\" + name;\n");
         sb.append("    }\n\n");
 
@@ -1103,49 +1124,67 @@ public class PdbJavaGenerator
         sb.append("        return AncestorRef.endAncestorRef(builder);\n");
         sb.append("    }\n\n");
 
-        // pointerPath — diagnostic path for validation messages
+        // pointerPath — diagnostic path for validation messages. Uses
+        // pureTypeIs to dispatch on the Pure type, falling back to pathOf for
+        // any PackageableElement-like value (typed XImpl OR PDO).
         sb.append("    private static String pointerPath(Object obj)\n    {\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n");
-        sb.append("        {\n            return pathOf(pe);\n        }\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp\n");
-        sb.append("                && qp._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
-        sb.append("        {\n            return pathOf(owner) + \".qp:\" + qp._name();\n        }\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty ap\n");
-        sb.append("                && ap._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
-        sb.append("        {\n            return pathOf(owner) + \".\" + ap._name();\n        }\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s\n");
-        sb.append("                && s._profile() != null)\n");
-        sb.append("        {\n            return pathOf(s._profile()) + \".\" + s._value();\n        }\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag t\n");
-        sb.append("                && t._profile() != null)\n");
-        sb.append("        {\n            return pathOf(t._profile()) + \"#\" + t._value();\n        }\n");
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::QualifiedProperty\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _ow = readProp(obj, \"owner\");\n");
+        sb.append("            Object _nm = readProp(obj, \"name\");\n");
+        sb.append("            if (_ow != null) return pathOf(_ow) + \".qp:\" + _nm;\n");
+        sb.append("        }\n");
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::Property\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _ow = readProp(obj, \"owner\");\n");
+        sb.append("            Object _nm = readProp(obj, \"name\");\n");
+        sb.append("            if (_ow != null) return pathOf(_ow) + \".\" + _nm;\n");
+        sb.append("        }\n");
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::extension::Stereotype\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _pf = readProp(obj, \"profile\");\n");
+        sb.append("            Object _vl = readProp(obj, \"value\");\n");
+        sb.append("            if (_pf != null) return pathOf(_pf) + \".\" + _vl;\n");
+        sb.append("        }\n");
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::extension::Tag\"))\n");
+        sb.append("        {\n");
+        sb.append("            Object _pf = readProp(obj, \"profile\");\n");
+        sb.append("            Object _vl = readProp(obj, \"value\");\n");
+        sb.append("            if (_pf != null) return pathOf(_pf) + \"#\" + _vl;\n");
+        sb.append("        }\n");
+        sb.append("        if (pureTypeOf(obj) != null)\n");
+        sb.append("        {\n            return pathOf(obj);\n        }\n");
         sb.append("        return String.valueOf(obj);\n");
         sb.append("    }\n\n");
 
-        // writePointerRef — typed pointer for union PointerRef fields
+        // writePointerRef — typed pointer for union PointerRef fields.
         sb.append("    private int writePointerRef(Object obj)\n    {\n");
         sb.append("        byte kind;\n        String[] segments;\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp\n");
-        sb.append("                && qp._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::QualifiedProperty\"))\n");
         sb.append("        {\n            kind = 2;\n");
-        sb.append("            segments = new String[]{pathOf(owner), qp._name()};\n");
+        sb.append("            Object _ow = readProp(obj, \"owner\");\n");
+        sb.append("            Object _nm = readProp(obj, \"name\");\n");
+        sb.append("            segments = new String[]{pathOf(_ow), String.valueOf(_nm)};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty ap\n");
-        sb.append("                && ap._owner() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement owner)\n");
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::function::property::Property\"))\n");
         sb.append("        {\n            kind = 1;\n");
-        sb.append("            segments = new String[]{pathOf(owner), ap._name()};\n");
+        sb.append("            Object _ow = readProp(obj, \"owner\");\n");
+        sb.append("            Object _nm = readProp(obj, \"name\");\n");
+        sb.append("            segments = new String[]{pathOf(_ow), String.valueOf(_nm)};\n");
         sb.append("        }\n");
-        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s\n");
-        sb.append("                && s._profile() != null)\n");
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::extension::Stereotype\"))\n");
         sb.append("        {\n            kind = 3;\n");
-        sb.append("            segments = new String[]{pathOf(s._profile()), s._value()};\n        }\n");
-        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag t\n");
-        sb.append("                && t._profile() != null)\n");
+        sb.append("            Object _pf = readProp(obj, \"profile\");\n");
+        sb.append("            Object _vl = readProp(obj, \"value\");\n");
+        sb.append("            segments = new String[]{pathOf(_pf), String.valueOf(_vl)};\n        }\n");
+        sb.append("        else if (pureTypeIs(obj, \"meta::pure::metamodel::extension::Tag\"))\n");
         sb.append("        {\n            kind = 4;\n");
-        sb.append("            segments = new String[]{pathOf(t._profile()), t._value()};\n        }\n");
-        sb.append("        else if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe)\n");
+        sb.append("            Object _pf = readProp(obj, \"profile\");\n");
+        sb.append("            Object _vl = readProp(obj, \"value\");\n");
+        sb.append("            segments = new String[]{pathOf(_pf), String.valueOf(_vl)};\n        }\n");
+        sb.append("        else if (pureTypeOf(obj) != null)\n");
         sb.append("        {\n            kind = 0;\n");
-        sb.append("            segments = new String[]{pathOf(pe)};\n        }\n");
+        sb.append("            segments = new String[]{pathOf(obj)};\n        }\n");
         sb.append("        else\n        {\n            kind = 0;\n");
         sb.append("            segments = new String[]{String.valueOf(obj)};\n        }\n");
         sb.append("        int[] segOffsets = new int[segments.length];\n");
@@ -1157,21 +1196,70 @@ public class PdbJavaGenerator
         sb.append("        return PointerRef.endPointerRef(builder);\n");
         sb.append("    }\n\n");
 
-        // sourceInfo — diagnostic suffix for validation messages
+        // sourceInfo — diagnostic suffix for validation messages.
         sb.append("    private static String sourceInfo(Object obj)\n    {\n");
-        sb.append("        if (obj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any a\n");
-        sb.append("                && a._sourceInformation() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation si)\n");
-        sb.append("        {\n");
-        sb.append("            return \" at \" + si._sourceId() + \":\" + si._startLine() + \"c\" + si._startColumn();\n");
+        sb.append("        Object si = readProp(obj, \"sourceInformation\");\n");
+        sb.append("        if (si != null)\n        {\n");
+        sb.append("            Object _id = readProp(si, \"sourceId\");\n");
+        sb.append("            Object _ln = readProp(si, \"startLine\");\n");
+        sb.append("            Object _co = readProp(si, \"startColumn\");\n");
+        sb.append("            return \" at \" + _id + \":\" + _ln + \"c\" + _co;\n");
         sb.append("        }\n");
         sb.append("        return \"\";\n");
         sb.append("    }\n\n");
+
+        // readProp — single entry point for reading a Pure property off
+        // either a typed XImpl or a PureDynamicObject. Both implement
+        // PropertyAccessor. Coerces PropertyAccessor.ABSENT → null so callers
+        // see the same "missing" sentinel as the typed `_X()` getter.
+        sb.append("    private static Object readProp(Object o, String name)\n    {\n");
+        sb.append("        if (o instanceof PropertyAccessor pa)\n");
+        sb.append("        {\n");
+        sb.append("            Object v = pa.readProperty(name);\n");
+        sb.append("            return v == PropertyAccessor.ABSENT ? null : v;\n");
+        sb.append("        }\n");
+        sb.append("        return null;\n");
+        sb.append("    }\n\n");
+
+        // pureTypeOf — extracts the Pure type path from a PureDynamicObject
+        // (set by the loader at Shape.dynamicType). Returns null for legacy
+        // XImpl values; callers compare against `pureTypeOf(obj) == null` to
+        // mean "not a PDO" and route to the typed instanceof chain instead.
+        sb.append("    private static String pureTypeOf(Object o)\n    {\n");
+        sb.append("        if (o instanceof PureDynamicObject pdo\n");
+        sb.append("                && pdo.getShape().getDynamicType() instanceof String s)\n");
+        sb.append("        {\n");
+        sb.append("            return s;\n");
+        sb.append("        }\n");
+        sb.append("        return null;\n");
+        sb.append("    }\n\n");
+
+        // pureTypeIs — convenience for exact-match leaf checks.
+        sb.append("    private static boolean pureTypeIs(Object o, String purePath)\n    {\n");
+        sb.append("        String t = pureTypeOf(o);\n");
+        sb.append("        return t != null && t.equals(purePath);\n");
+        sb.append("    }\n\n");
+    }
+
+    /**
+     * Build the unique writer-method name for a class. Uses the full Pure
+     * path (underscore-separated) so two classes with the same simple name
+     * in different packages — e.g. `metamodel.extension.Annotation` and
+     * `protocol.grammar.extension.Annotation` — don't collide once we widen
+     * the parameter to {@code Object}.
+     */
+    private String writerMethodName(ClassRecord cr)
+    {
+        return "write_" + cr.fullPath.replace("::", "_");
     }
 
     private void emitWriteMethod(StringBuilder sb, ClassRecord cr)
     {
-        String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
-        sb.append("    public int write").append(cr.name).append("(").append(typeFqn).append(" obj)\n    {\n");
+        // Parameter is Object so both typed XImpl and PureDynamicObject can
+        // flow through. Method name uses the full Pure path so two classes
+        // sharing a simple name across packages don't collide on the Object
+        // overload. Reads inside use readProp(obj, "X") (PropertyAccessor).
+        sb.append("    public int ").append(writerMethodName(cr)).append("(Object obj)\n    {\n");
         sb.append("        if (obj == null) { return 0; }\n");
         sb.append("        if (_writing.containsKey(obj)) { return writeAncestorRef(obj); }\n");
         sb.append("        _writing.put(obj, _depth);\n");
@@ -1280,17 +1368,19 @@ public class PdbJavaGenerator
 
     private void emitValidation(StringBuilder sb, PropRecord pr, String className)
     {
+        // readProp returns Object; works for both XImpl (typed) and PDO.
         if ("PureOne".equals(pr.multiplicity))
         {
-            sb.append("        if (validateRequired && obj._").append(pr.name).append("() == null) { throw new IllegalArgumentException(")
+            sb.append("        if (validateRequired && readProp(obj, \"").append(pr.name).append("\") == null) { throw new IllegalArgumentException(")
                     .append("\"Validation error: Property '").append(pr.name).append("' on '").append(className)
                     .append("' has multiplicity [1] but is null: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
         }
         else if ("OneMany".equals(pr.multiplicity))
         {
-            sb.append("        if (validateRequired && (obj._").append(pr.name).append("() == null || obj._").append(pr.name).append("().isEmpty())) { throw new IllegalArgumentException(")
+            sb.append("        { Object _v = readProp(obj, \"").append(pr.name).append("\");\n");
+            sb.append("          if (validateRequired && (_v == null || (_v instanceof org.finos.legend.pure.truffle.types.PureSequence _s && _s.isEmpty()))) { throw new IllegalArgumentException(")
                     .append("\"Validation error: Property '").append(pr.name).append("' on '").append(className)
-                    .append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj) + sourceInfo(obj)); }\n");
+                    .append("' has multiplicity [1..*] but is null or empty: \" + pointerPath(obj) + sourceInfo(obj)); } }\n");
         }
     }
 
@@ -1313,25 +1403,33 @@ public class PdbJavaGenerator
             String shortName = pr.typeName == null ? "" : (pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName);
             if (enumFqn != null)
             {
-                // Enum value — extract its name(); accessor returns the typed enum.
-                sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? builder.createString(((").append(enumFqn).append(") obj._").append(pr.name).append("()).name()) : 0;\n");
+                // Enum value — extract its name() via PropertyAccessor.
+                // Works for both Java enums (XEnum constants implement PropertyAccessor)
+                // and PDO Enum values (have a "name" property).
+                sb.append("        int ").append(camel).append("Off = 0;\n");
+                sb.append("        { Object _e = readProp(obj, \"").append(pr.name).append("\");\n");
+                sb.append("          if (_e instanceof ").append(enumFqn).append(" _je) { ").append(camel).append("Off = builder.createString(_je.name()); }\n");
+                sb.append("          else if (_e != null) {\n");
+                sb.append("            Object _en = readProp(_e, \"name\");\n");
+                sb.append("            if (_en instanceof String _ens) ").append(camel).append("Off = builder.createString(_ens);\n");
+                sb.append("          } }\n");
             }
             else if ("String".equals(shortName))
             {
                 // Plain String value.
-                sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? builder.createString(obj._").append(pr.name).append("()) : 0;\n");
+                sb.append("        int ").append(camel).append("Off = 0;\n");
+                sb.append("        { Object _s = readProp(obj, \"").append(pr.name).append("\"); if (_s instanceof String _ss) ").append(camel).append("Off = builder.createString(_ss); }\n");
             }
             else
             {
                 // Pointer-typed property whose FBS encoding is the path string.
                 // Defensive: instanceof PointerValue, fall back to toString().
                 sb.append("        int ").append(camel).append("Off = 0;\n");
-                sb.append("        if (obj._").append(pr.name).append("() != null)\n");
-                sb.append("        {\n");
-                sb.append("            Object _s_").append(camel).append(" = obj._").append(pr.name).append("();\n");
-                sb.append("            String _str_").append(camel).append(" = (_s_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.protocol.grammar.PointerValue _pv) ? _pv._value() : String.valueOf(_s_").append(camel).append(");\n");
+                sb.append("        { Object _s_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+                sb.append("          if (_s_").append(camel).append(" != null) {\n");
+                sb.append("            String _str_").append(camel).append(" = pureTypeIs(_s_").append(camel).append(", \"meta::pure::protocol::grammar::PointerValue\") ? String.valueOf(((org.finos.legend.pure.truffle.runtime.PropertyAccessor) _s_").append(camel).append(").readProperty(\"value\")) : String.valueOf(_s_").append(camel).append(");\n");
                 sb.append("            ").append(camel).append("Off = builder.createString(_str_").append(camel).append(");\n");
-                sb.append("        }\n");
+                sb.append("          } }\n");
             }
             return;
         }
@@ -1342,7 +1440,8 @@ public class PdbJavaGenerator
         if (!fb.isVector() && !fb.isUnion())
         {
             String writeCall = "PointerRef".equals(fb.type()) ? "writePointerRef" : "dispatchWrite";
-            sb.append("        int ").append(camel).append("Off = obj._").append(pr.name).append("() != null ? ").append(writeCall).append("(obj._").append(pr.name).append("()) : 0;\n");
+            sb.append("        int ").append(camel).append("Off = 0;\n");
+            sb.append("        { Object _v = readProp(obj, \"").append(pr.name).append("\"); if (_v != null) ").append(camel).append("Off = ").append(writeCall).append("(_v); }\n");
             return;
         }
         // Case 4: scalar union (e.g. classifierGenericType, multiplicity)
@@ -1388,9 +1487,9 @@ public class PdbJavaGenerator
         java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
         sb.append("        int ").append(camel).append("Vec = 0;\n");
         sb.append("        int ").append(camel).append("TypeVec = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        { Object _raw_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_raw_").append(camel).append(" instanceof org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" && !_seq_").append(camel).append(".isEmpty())\n");
         sb.append("        {\n");
-        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
         sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
         sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
         sb.append("            byte[] _types_").append(camel).append(" = new byte[_n_").append(camel).append("];\n");
@@ -1413,19 +1512,7 @@ public class PdbJavaGenerator
                 sb.append("                }\n");
                 wroteFirst = true;
             }
-            if (pointerIdx >= 0)
-            {
-                sb.append("                ").append(wroteFirst ? "else " : "");
-                sb.append("if (_item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement\n");
-                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty\n");
-                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype\n");
-                sb.append("                        || _item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag)\n");
-                sb.append("                {\n");
-                sb.append("                    _offs_").append(camel).append("[i] = writePointerRef(_item);\n");
-                sb.append("                    _types_").append(camel).append("[i] = ").append(pointerIdx + 1).append(";\n");
-                sb.append("                }\n");
-                wroteFirst = true;
-            }
+            // Concrete Def members first (typed + PDO twin), PointerRef as fallback.
             for (int i = 0; i < members.size(); i++)
             {
                 String member = members.get(i);
@@ -1435,10 +1522,20 @@ public class PdbJavaGenerator
                 if (cr == null) continue;
                 String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
                 sb.append("                ").append(wroteFirst ? "else " : "");
-                sb.append("if (_item instanceof ").append(typeFqn).append(" _v_").append(camel).append("_").append(i).append(")\n");
+                sb.append("if (pureTypeIs(_item, \"").append(cr.fullPath).append("\"))\n");
                 sb.append("                {\n");
-                sb.append("                    _offs_").append(camel).append("[i] = write").append(cr.name).append("(_v_").append(camel).append("_").append(i).append(");\n");
+                sb.append("                    _offs_").append(camel).append("[i] = ").append(writerMethodName(cr)).append("(_item);\n");
                 sb.append("                    _types_").append(camel).append("[i] = ").append(i + 1).append(";\n");
+                sb.append("                }\n");
+                wroteFirst = true;
+            }
+            if (pointerIdx >= 0)
+            {
+                sb.append("                ").append(wroteFirst ? "else " : "");
+                sb.append("if (pureTypeOf(_item) != null)\n");
+                sb.append("                {\n");
+                sb.append("                    _offs_").append(camel).append("[i] = writePointerRef(_item);\n");
+                sb.append("                    _types_").append(camel).append("[i] = ").append(pointerIdx + 1).append(";\n");
                 sb.append("                }\n");
                 wroteFirst = true;
             }
@@ -1450,7 +1547,7 @@ public class PdbJavaGenerator
                 "create" + capitalize(methodCamel) + "typeVector");
         sb.append("            ").append(camel).append("Vec = ").append(defName).append(".").append(createOffsetMethod).append("(builder, _offs_").append(camel).append(");\n");
         sb.append("            ").append(camel).append("TypeVec = ").append(defName).append(".").append(createTypeMethod).append("(builder, _types_").append(camel).append(");\n");
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private void emitVectorPrimitivePreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
@@ -1458,14 +1555,14 @@ public class PdbJavaGenerator
         String primType = primitiveJavaTypeName(fb.type());
         String boxedType = primitiveBoxedTypeName(fb.type());
         sb.append("        int ").append(camel).append("Vec = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        { Object _raw_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_raw_").append(camel).append(" instanceof org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" && !_seq_").append(camel).append(".isEmpty())\n");
         sb.append("        {\n");
-        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
         sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
         sb.append("            ").append(primType).append("[] _arr_").append(camel).append(" = new ").append(primType).append("[_n_").append(camel).append("];\n");
         sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++) { _arr_").append(camel).append("[i] = (").append(boxedType).append(") _seq_").append(camel).append(".getBoxed(i); }\n");
         sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _arr_").append(camel).append(");\n");
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private void emitVectorStringPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
@@ -1473,9 +1570,9 @@ public class PdbJavaGenerator
         String enumFqn = enumValueFqn(pr);
         String shortName = pr.typeName == null ? "" : (pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName);
         sb.append("        int ").append(camel).append("Vec = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        { Object _raw_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_raw_").append(camel).append(" instanceof org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" && !_seq_").append(camel).append(".isEmpty())\n");
         sb.append("        {\n");
-        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
         sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
         sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
         sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++)\n");
@@ -1483,7 +1580,9 @@ public class PdbJavaGenerator
         sb.append("                Object _item = _seq_").append(camel).append(".getBoxed(i);\n");
         if (enumFqn != null)
         {
-            sb.append("                _offs_").append(camel).append("[i] = builder.createString(((").append(enumFqn).append(") _item).name());\n");
+            // Java enums use .name(); PDO enum values expose "name" via readProp.
+            sb.append("                if (_item instanceof ").append(enumFqn).append(" _je) { _offs_").append(camel).append("[i] = builder.createString(_je.name()); }\n");
+            sb.append("                else { Object _en = readProp(_item, \"name\"); _offs_").append(camel).append("[i] = (_en instanceof String _ens) ? builder.createString(_ens) : 0; }\n");
         }
         else if ("String".equals(shortName))
         {
@@ -1491,12 +1590,12 @@ public class PdbJavaGenerator
         }
         else
         {
-            sb.append("                String _str = (_item instanceof org.finos.legend.pure.truffle.pdb.meta.pure.protocol.grammar.PointerValue _pv) ? _pv._value() : String.valueOf(_item);\n");
+            sb.append("                String _str = pureTypeIs(_item, \"meta::pure::protocol::grammar::PointerValue\") ? String.valueOf(((org.finos.legend.pure.truffle.runtime.PropertyAccessor) _item).readProperty(\"value\")) : String.valueOf(_item);\n");
             sb.append("                _offs_").append(camel).append("[i] = builder.createString(_str);\n");
         }
         sb.append("            }\n");
         sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _offs_").append(camel).append(");\n");
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private void emitVectorRefPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel, String methodCamel, String defName)
@@ -1507,14 +1606,14 @@ public class PdbJavaGenerator
         boolean isPointerRefVector = "PointerRef".equals(fb.type());
         String writeCall = isPointerRefVector ? "writePointerRef" : "dispatchWrite";
         sb.append("        int ").append(camel).append("Vec = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null && !obj._").append(pr.name).append("().isEmpty())\n");
+        sb.append("        { Object _raw_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_raw_").append(camel).append(" instanceof org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" && !_seq_").append(camel).append(".isEmpty())\n");
         sb.append("        {\n");
-        sb.append("            org.finos.legend.pure.truffle.types.PureSequence _seq_").append(camel).append(" = obj._").append(pr.name).append("();\n");
         sb.append("            int _n_").append(camel).append(" = _seq_").append(camel).append(".size();\n");
         sb.append("            int[] _offs_").append(camel).append(" = new int[_n_").append(camel).append("];\n");
         sb.append("            for (int i = 0; i < _n_").append(camel).append("; i++) { _offs_").append(camel).append("[i] = ").append(writeCall).append("(_seq_").append(camel).append(".getBoxed(i)); }\n");
         sb.append("            ").append(camel).append("Vec = ").append(defName).append(".create").append(capitalize(methodCamel)).append("Vector(builder, _offs_").append(camel).append(");\n");
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private static String primitiveJavaTypeName(String fbsType)
@@ -1633,9 +1732,9 @@ public class PdbJavaGenerator
     {
         sb.append("        int ").append(camel).append("Off = 0;\n");
         sb.append("        byte ").append(camel).append("Type = 0;\n");
-        sb.append("        if (obj._").append(pr.name).append("() != null)\n");
+        sb.append("        { Object _av = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_av != null)\n");
         sb.append("        {\n");
-        sb.append("            Object _av = obj._").append(pr.name).append("();\n");
         // 1. Long → IntegerValueDef
         sb.append("            if (_av instanceof Long _av_long)\n");
         sb.append("            {\n");
@@ -1669,16 +1768,16 @@ public class PdbJavaGenerator
         sb.append("                ").append(camel).append("Off = DecimalValueDef.endDecimalValueDef(builder);\n");
         sb.append("                ").append(camel).append("Type = 7;\n");
         sb.append("            }\n");
-        // 5. LambdaFunction → write directly via dispatchWrite (writes LambdaFunctionDef)
-        sb.append("            else if (_av instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction _av_lf)\n");
+        // 5. LambdaFunction → write directly via the LambdaFunction writer.
+        sb.append("            else if (pureTypeIs(_av, \"meta::pure::metamodel::function::LambdaFunction\"))\n");
         sb.append("            {\n");
-        sb.append("                ").append(camel).append("Off = writeLambdaFunction(_av_lf);\n");
+        sb.append("                ").append(camel).append("Off = write_meta_pure_metamodel_function_LambdaFunction(_av);\n");
         sb.append("                ").append(camel).append("Type = 5;\n");
         sb.append("            }\n");
-        // 6. PackageableElement → PointerRef
-        sb.append("            else if (_av instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement _av_pe)\n");
+        // 6. Any other PDO with a Pure type (covers PackageableElement subtypes) → PointerRef
+        sb.append("            else if (pureTypeOf(_av) != null)\n");
         sb.append("            {\n");
-        sb.append("                ").append(camel).append("Off = writePointerRef(_av_pe);\n");
+        sb.append("                ").append(camel).append("Off = writePointerRef(_av);\n");
         sb.append("                ").append(camel).append("Type = 6;\n");
         sb.append("            }\n");
         // 7. String → StringValueDef
@@ -1690,7 +1789,7 @@ public class PdbJavaGenerator
         sb.append("                ").append(camel).append("Off = StringValueDef.endStringValueDef(builder);\n");
         sb.append("                ").append(camel).append("Type = 4;\n");
         sb.append("            }\n");
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private void emitUnionScalarPreTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String camel)
@@ -1699,15 +1798,16 @@ public class PdbJavaGenerator
         java.util.List<String> members = fbsSchema.getUnionMembers(unionName);
         sb.append("        int ").append(camel).append("Off = 0;\n");
         sb.append("        byte ").append(camel).append("Type = 0;\n");
-        // Self-ref now flows through the AncestorRef branch (encoded
-        // explicitly as depth=0), so the historical `!= obj` guard goes
-        // away. `uType == 0` strictly means "field absent."
-        sb.append("        if (obj._").append(pr.name).append("() != null)\n");
+        // Self-ref flows through the AncestorRef branch (encoded explicitly
+        // as depth=0), so `uType == 0` strictly means "field absent."
+        // Reads through readProp so both XImpl and PDO receivers work.
+        // Dispatch order: AncestorRef (cycle break) → concrete Defs (typed +
+        // PDO twin) → PointerRef as fallback for any remaining PE-like value.
+        sb.append("        { Object _u_").append(camel).append(" = readProp(obj, \"").append(pr.name).append("\");\n");
+        sb.append("        if (_u_").append(camel).append(" != null)\n");
         sb.append("        {\n");
-        sb.append("            Object _u_").append(camel).append(" = obj._").append(pr.name).append("();\n");
 
         boolean wroteFirst = false;
-        // AncestorRef (cycle break) first if it's a member
         if (members != null)
         {
             int ancestorIdx = members.indexOf("AncestorRef");
@@ -1720,22 +1820,8 @@ public class PdbJavaGenerator
                 sb.append("            }\n");
                 wroteFirst = true;
             }
-            // PointerRef next if it's a member
-            int pointerIdx = members.indexOf("PointerRef");
-            if (pointerIdx >= 0)
-            {
-                sb.append("            ").append(wroteFirst ? "else " : "");
-                sb.append("if (_u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement\n");
-                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty\n");
-                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype\n");
-                sb.append("                    || _u_").append(camel).append(" instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag)\n");
-                sb.append("            {\n");
-                sb.append("                ").append(camel).append("Off = writePointerRef(_u_").append(camel).append(");\n");
-                sb.append("                ").append(camel).append("Type = ").append(pointerIdx + 1).append(";\n");
-                sb.append("            }\n");
-                wroteFirst = true;
-            }
-            // Concrete Def members
+            // Concrete Def members first (each gets a typed instanceof branch
+            // AND a PDO pure-type-path branch so PDO union members route too).
             for (int i = 0; i < members.size(); i++)
             {
                 String member = members.get(i);
@@ -1743,17 +1829,28 @@ public class PdbJavaGenerator
                 String pureName = FbsSchema.defToPureClassName(member);
                 ClassRecord cr = findClassByShortName(pureName);
                 if (cr == null) continue;
-                String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
                 sb.append("            ").append(wroteFirst ? "else " : "");
-                sb.append("if (_u_").append(camel).append(" instanceof ").append(typeFqn).append(" _v_").append(camel).append("_").append(i).append(")\n");
+                sb.append("if (pureTypeIs(_u_").append(camel).append(", \"").append(cr.fullPath).append("\"))\n");
                 sb.append("            {\n");
-                sb.append("                ").append(camel).append("Off = write").append(cr.name).append("(_v_").append(camel).append("_").append(i).append(");\n");
+                sb.append("                ").append(camel).append("Off = ").append(writerMethodName(cr)).append("(_u_").append(camel).append(");\n");
                 sb.append("                ").append(camel).append("Type = ").append(i + 1).append(";\n");
                 sb.append("            }\n");
                 wroteFirst = true;
             }
+            // PointerRef as fallback — covers PE-like values not matched above.
+            int pointerIdx = members.indexOf("PointerRef");
+            if (pointerIdx >= 0)
+            {
+                sb.append("            ").append(wroteFirst ? "else " : "");
+                sb.append("if (pureTypeOf(_u_").append(camel).append(") != null)\n");
+                sb.append("            {\n");
+                sb.append("                ").append(camel).append("Off = writePointerRef(_u_").append(camel).append(");\n");
+                sb.append("                ").append(camel).append("Type = ").append(pointerIdx + 1).append(";\n");
+                sb.append("            }\n");
+                wroteFirst = true;
+            }
         }
-        sb.append("        }\n");
+        sb.append("        } }\n");
     }
 
     private void emitInTable(StringBuilder sb, PropRecord pr, FbsSchema.FbsField fb, String defName)
@@ -1769,9 +1866,12 @@ public class PdbJavaGenerator
         if (!fb.isVector() && !fb.isUnion() && isFbsPrimitive(fb.type()))
         {
             String defaultLit = primitiveDefaultLiteral(fb.type());
-            sb.append("        if (obj._").append(pr.name).append("() != null) { ").append(defName).append(".").append(addMethod).append("(builder, obj._").append(pr.name).append("()); }\n");
+            String boxedType = primitiveBoxedTypeName(fb.type());
+            // readProp returns Object; cast through the boxed type for the
+            // typed FBS add(...). Works for both XImpl (returns boxed) and PDO.
+            sb.append("        { Object _p = readProp(obj, \"").append(pr.name).append("\");\n");
+            sb.append("          if (_p != null) ").append(defName).append(".").append(addMethod).append("(builder, (").append(boxedType).append(") _p); }\n");
             // Rely on FBS default-omission for null; no explicit add when null.
-            // (Note: if a future required-primitive needs forced emission, add an "else" branch with the default.)
             return;
         }
         // Cases 2 and 3: scalar string or scalar reference — emit Def.addX(builder, off) when nonzero
@@ -1847,14 +1947,23 @@ public class PdbJavaGenerator
 
     private void emitDispatchWrite(StringBuilder sb, MutableList<ClassRecord> writableClasses)
     {
-        sb.append("    /** Dispatch on runtime type to the corresponding write method. */\n");
+        sb.append("    /** Dispatch on runtime type to the corresponding write method.\n");
+        sb.append("     *  Single-pass pure-type switch — every Pure value is a PDO\n");
+        sb.append("     *  post-PDO-flip. */\n");
         sb.append("    public int dispatchWrite(Object obj)\n    {\n");
         sb.append("        if (obj == null) { return 0; }\n");
+        sb.append("        String __pt = pureTypeOf(obj);\n");
+        sb.append("        if (__pt != null)\n");
+        sb.append("        {\n");
+        sb.append("            switch (__pt)\n");
+        sb.append("            {\n");
         for (ClassRecord cr : writableClasses)
         {
-            String typeFqn = toJavaPackage(cr.packagePath) + "." + cr.name;
-            sb.append("        if (obj instanceof ").append(typeFqn).append(" _v_").append(cr.name).append(") { return write").append(cr.name).append("(_v_").append(cr.name).append("); }\n");
+            sb.append("                case \"").append(cr.fullPath).append("\" -> { return ").append(writerMethodName(cr)).append("(obj); }\n");
         }
+        sb.append("                default -> { /* fall through to throw */ }\n");
+        sb.append("            }\n");
+        sb.append("        }\n");
         sb.append("        throw new IllegalArgumentException(\"GeneratedFlatBufferWriter has no writer for: \" + obj.getClass().getName());\n");
         sb.append("    }\n");
     }
@@ -1898,7 +2007,7 @@ public class PdbJavaGenerator
                 {
                     // Pointer path — resolve via MetadataAccess
                     sb.append("        { String path = fb.").append(camel).append("();\n");
-                    sb.append("          if (path != null) { __raw = resolver.getElement(path); if (__raw == null) __raw = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); } }\n");
+                    sb.append("          if (path != null) { __raw = resolver.getElement(path); if (__raw == null) __raw = org.finos.legend.pure.truffle.runtime.dynobj.FbsResolverHelper.resolveNestedElement(path, resolver); } }\n");
                 }
             }
         }
@@ -1922,7 +2031,7 @@ public class PdbJavaGenerator
             {
                 // Typed PointerRef vector — resolve via PointerRefResolver
                 sb.append("              var ref = fb.").append(camel).append("(new ").append(FBS_PKG).append(".PointerRef(), i);\n");
-                sb.append("              if (ref != null && ref.pathLength() > 0) { arr[i] = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolvePointerRef(ref, resolver); }\n");
+                sb.append("              if (ref != null && ref.pathLength() > 0) { arr[i] = org.finos.legend.pure.truffle.runtime.dynobj.FbsResolverHelper.resolvePointerRef(ref, resolver); }\n");
             }
             else if (isStringPointerVector && "Stereotype".equals(typeShortName))
             {
@@ -1932,11 +2041,12 @@ public class PdbJavaGenerator
                 sb.append("                int dotIdx = path.lastIndexOf('.');\n");
                 sb.append("                if (dotIdx > 0) {\n");
                 sb.append("                  Object prof = resolver.getElement(path.substring(0, dotIdx));\n");
-                sb.append("                  if (prof instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Profile p) {\n");
+                sb.append("                  if (prof != null) {\n");
                 sb.append("                    String stName = path.substring(dotIdx + 1);\n");
-                sb.append("                    var stSeq = p._p_stereotypes();\n");
-                sb.append("                    if (stSeq != null) for (Object st : stSeq.toBoxedArray()) {\n");
-                sb.append("                      if (st instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype s && stName.equals(s._value())) { arr[i] = s; break; }\n");
+                sb.append("                    Object _ps = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) prof).readProperty(\"p_stereotypes\");\n");
+                sb.append("                    if (_ps instanceof org.finos.legend.pure.truffle.types.PureSequence stSeq) for (Object st : stSeq.toBoxedArray()) {\n");
+                sb.append("                      Object _v = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) st).readProperty(\"value\");\n");
+                sb.append("                      if (stName.equals(_v)) { arr[i] = st; break; }\n");
                 sb.append("                    }\n");
                 sb.append("                  }\n");
                 sb.append("                }\n");
@@ -1950,11 +2060,12 @@ public class PdbJavaGenerator
                 sb.append("                int hashIdx = path.lastIndexOf('#');\n");
                 sb.append("                if (hashIdx > 0) {\n");
                 sb.append("                  Object prof = resolver.getElement(path.substring(0, hashIdx));\n");
-                sb.append("                  if (prof instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Profile p) {\n");
+                sb.append("                  if (prof != null) {\n");
                 sb.append("                    String tName = path.substring(hashIdx + 1);\n");
-                sb.append("                    var tSeq = p._p_tags();\n");
-                sb.append("                    if (tSeq != null) for (Object t : tSeq.toBoxedArray()) {\n");
-                sb.append("                      if (t instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Tag tag && tName.equals(tag._value())) { arr[i] = tag; break; }\n");
+                sb.append("                    Object _ts = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) prof).readProperty(\"p_tags\");\n");
+                sb.append("                    if (_ts instanceof org.finos.legend.pure.truffle.types.PureSequence tSeq) for (Object t : tSeq.toBoxedArray()) {\n");
+                sb.append("                      Object _v = ((org.finos.legend.pure.truffle.runtime.PropertyAccessor) t).readProperty(\"value\");\n");
+                sb.append("                      if (tName.equals(_v)) { arr[i] = t; break; }\n");
                 sb.append("                    }\n");
                 sb.append("                  }\n");
                 sb.append("                }\n");
@@ -1963,15 +2074,18 @@ public class PdbJavaGenerator
             else if (isStringPointerVector)
             {
                 sb.append("              String path = fb.").append(camel).append("(i);\n");
-                sb.append("              if (path != null) { arr[i] = resolver.getElement(path); if (arr[i] == null) arr[i] = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolveNestedElement(path, resolver); }\n");
+                sb.append("              if (path != null) { arr[i] = resolver.getElement(path); if (arr[i] == null) arr[i] = org.finos.legend.pure.truffle.runtime.dynobj.FbsResolverHelper.resolveNestedElement(path, resolver); }\n");
             }
             else
             {
                 sb.append("              var item = fb.").append(camel).append("(i);\n");
-                if (wrapperClass != null)
+                String _wppA = resolveWrapperPurePath(defType);
+                if (_wppA != null)
                 {
-                    sb.append("              if (item == null) throw new RuntimeException(\"Null element in FBS array for ").append(wrapperClass).append("\");\n");
-                    sb.append("              arr[i] = new ").append(wrapperClass).append("(item, resolver, this);\n");
+                    sb.append("              if (item == null) throw new RuntimeException(\"Null element in FBS array for ").append(_wppA).append("\");\n");
+                    sb.append("              arr[i] = new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(\n");
+                    sb.append("                      org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(_wppA).append("\"),\n");
+                    sb.append("                      item, resolver, this);\n");
                 }
                 else
                 {
@@ -1996,15 +2110,19 @@ public class PdbJavaGenerator
             {
                 // Typed pointer — resolve via PointerRefResolver
                 sb.append("        { var ref = fb.").append(camel).append("();\n");
-                sb.append("          __raw = (ref != null && ref.pathLength() > 0) ? org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolvePointerRef(ref, resolver) : null; }\n");
+                sb.append("          __raw = (ref != null && ref.pathLength() > 0) ? org.finos.legend.pure.truffle.runtime.dynobj.FbsResolverHelper.resolvePointerRef(ref, resolver) : null; }\n");
             }
             else
             {
-                String wrapperClass = resolveWrapperFqn(defType);
-                if (wrapperClass != null)
+                String wrapperPurePath = resolveWrapperPurePath(defType);
+                if (wrapperPurePath != null)
                 {
                     sb.append("        { var raw = fb.").append(camel).append("();\n");
-                    sb.append("          __raw = raw != null ? new ").append(wrapperClass).append("(raw, resolver, this) : null; }\n");
+                    sb.append("          __raw = raw != null\n");
+                    sb.append("                  ? new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(\n");
+                    sb.append("                          org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(wrapperPurePath).append("\"),\n");
+                    sb.append("                          raw, resolver, this)\n");
+                    sb.append("                  : null; }\n");
                 }
                 else
                 {
@@ -2072,7 +2190,7 @@ public class PdbJavaGenerator
                         .append(".PointerRef()");
                 if (isVector) sb.append(", i");
                 sb.append("); if (pr != null && pr.pathLength() > 0) { ")
-                  .append(target).append(" = org.finos.legend.pure.truffle.runtime.FbsResolverHelper.resolvePointerRef(pr, resolver); } break; }\n");
+                  .append(target).append(" = org.finos.legend.pure.truffle.runtime.dynobj.FbsResolverHelper.resolvePointerRef(pr, resolver); } break; }\n");
             }
             else
             {
@@ -2087,16 +2205,17 @@ public class PdbJavaGenerator
             return;
         }
 
-        String wrapperFqn = resolveWrapperFqn(defName);
+        String wrapperPurePath = resolveWrapperPurePath(defName);
         sb.append("                case ").append(discriminator).append(": { ")
                 .append(FBS_PKG).append(".").append(defName).append(" d = (")
                 .append(FBS_PKG).append(".").append(defName).append(") fb.").append(camelName)
                 .append("(new ").append(FBS_PKG).append(".").append(defName).append("()");
         if (isVector) sb.append(", i");
         sb.append("); ");
-        if (wrapperFqn != null)
+        if (wrapperPurePath != null)
         {
-            sb.append("if (d != null) ").append(target).append(" = new ").append(wrapperFqn).append("(d, resolver, this); ");
+            sb.append("if (d != null) ").append(target).append(" = new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(")
+                    .append("org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(wrapperPurePath).append("\"), d, resolver, this); ");
         }
         else if ("IntegerValueDef".equals(defName))
         {
@@ -2144,6 +2263,18 @@ public class PdbJavaGenerator
         return null;
     }
 
+    /** Pure-form path for a given FBS def name, or {@code null} if no class is registered. */
+    private String resolveWrapperPurePath(String defName)
+    {
+        if (FbsSchema.isSpecialRef(defName) || FbsSchema.isPrimitiveValueDef(defName))
+        {
+            return null;
+        }
+        String pureName = FbsSchema.defToPureClassName(defName);
+        ClassRecord cr = findClassByShortName(pureName);
+        return cr != null ? cr.fullPath : null;
+    }
+
     private static String camelToSnake(String camel)
     {
         StringBuilder sb = new StringBuilder();
@@ -2183,8 +2314,8 @@ public class PdbJavaGenerator
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("public enum ").append(er.name).append("Enum implements ").append(er.name)
-                .append(", org.finos.legend.pure.truffle.runtime.PropertyAccessor")
+        sb.append("public enum ").append(er.name).append("Enum implements ")
+                .append("org.finos.legend.pure.truffle.runtime.PropertyAccessor")
                 .append("\n{\n");
 
         for (int i = 0; i < er.values.size(); i++)
@@ -2195,24 +2326,25 @@ public class PdbJavaGenerator
 
         sb.append("\n");
 
-        // Fields from Any + AnnotatedElement + Enum (all truffle-namespaced)
-        sb.append("    private ").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType;\n");
-        sb.append("    private ").append(tp).append("meta.pure.metamodel.SourceInformation sourceInformation;\n");
-        sb.append("    private ").append(tp).append("meta.pure.metamodel.type.ElementOverride elementOverride;\n");
+        // Fields widened to Object: post-PDO-flip the typed interfaces
+        // (GenericTypeValue / SourceInformation / ElementOverride) are no
+        // longer generated. Enum constants are JVM singletons so CGT etc.
+        // live per-context here (set by PureContext.enumCgt), but the
+        // storage type is just Object.
+        sb.append("    private Object classifierGenericType;\n");
+        sb.append("    private Object sourceInformation;\n");
+        sb.append("    private Object elementOverride;\n");
         sb.append("    private org.finos.legend.pure.truffle.types.PureSequence taggedValues = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n");
         sb.append("    private org.finos.legend.pure.truffle.types.PureSequence stereotypes = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n\n");
 
-        // _classifierGenericType
-        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue _classifierGenericType() { return this.classifierGenericType; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _classifierGenericType(").append(tp).append("meta.pure.metamodel.type.generics.GenericTypeValue value) { this.classifierGenericType = value; return this; }\n\n");
+        sb.append("    public Object _classifierGenericType() { return this.classifierGenericType; }\n");
+        sb.append("    public ").append(er.name).append("Enum _classifierGenericType(Object value) { this.classifierGenericType = value; return this; }\n\n");
 
-        // _sourceInformation
-        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.SourceInformation _sourceInformation() { return this.sourceInformation; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _sourceInformation(").append(tp).append("meta.pure.metamodel.SourceInformation value) { this.sourceInformation = value; return this; }\n\n");
+        sb.append("    public Object _sourceInformation() { return this.sourceInformation; }\n");
+        sb.append("    public ").append(er.name).append("Enum _sourceInformation(Object value) { this.sourceInformation = value; return this; }\n\n");
 
-        // _elementOverride
-        sb.append("    @Override public ").append(tp).append("meta.pure.metamodel.type.ElementOverride _elementOverride() { return this.elementOverride; }\n");
-        sb.append("    @Override public ").append(er.name).append("Enum _elementOverride(").append(tp).append("meta.pure.metamodel.type.ElementOverride value) { this.elementOverride = value; return this; }\n\n");
+        sb.append("    public Object _elementOverride() { return this.elementOverride; }\n");
+        sb.append("    public ").append(er.name).append("Enum _elementOverride(Object value) { this.elementOverride = value; return this; }\n\n");
 
         // _name (from Enum interface)
         sb.append("    public String _name() { return this.name(); }\n");
@@ -2225,8 +2357,8 @@ public class PdbJavaGenerator
         sb.append("    public org.finos.legend.pure.truffle.types.PureSequence _stereotypes() { return this.stereotypes; }\n");
         sb.append("    public ").append(er.name).append("Enum _stereotypes(org.finos.legend.pure.truffle.types.PureSequence value) { this.stereotypes = value; return this; }\n\n");
 
-        // _copy() — enum values are singletons
-        sb.append("    @Override public ").append(er.name).append("Enum _copy() { return this; }\n\n");
+        // _copy() — dropped (the typed interface no longer declares it; no
+        // remaining caller uses typed _copy on enum constants).
 
         // PropertyAccessor — Pure-side `$enumValue.name`, `.stereotypes`, etc.
         // dispatch through this switch instead of a reflective method handle.
@@ -2310,6 +2442,47 @@ public class PdbJavaGenerator
                 seen.add(pr.name);
                 result.add(pr);
             }
+        }
+    }
+
+    /**
+     * Collect equality-key property names for a class. Uses the
+     * **most-derived** declaration of each property: an own declaration
+     * (with or without @equality.Key) overrides the inherited one. This
+     * handles both:
+     * - adding @equality.Key to an inherited property (own says key, parent didn't)
+     * - dropping @equality.Key from an inherited property (own declares without key,
+     *   parent had it as key)
+     */
+    private MutableList<String> collectEqualityKeyNames(ClassRecord cr)
+    {
+        // Walk hierarchy gathering the most-derived declaration per property name.
+        java.util.LinkedHashMap<String, Boolean> declarations = new java.util.LinkedHashMap<>();
+        gatherDeclarations(cr, declarations, Sets.mutable.empty());
+        MutableList<String> keys = Lists.mutable.empty();
+        for (java.util.Map.Entry<String, Boolean> e : declarations.entrySet())
+        {
+            if (Boolean.TRUE.equals(e.getValue())) keys.add(e.getKey());
+        }
+        return keys;
+    }
+
+    private void gatherDeclarations(ClassRecord cr,
+                                     java.util.LinkedHashMap<String, Boolean> declarations,
+                                     MutableSet<String> visited)
+    {
+        if (visited.contains(cr.fullPath)) return;
+        visited.add(cr.fullPath);
+        // Parents first — gives base declarations; own then overrides.
+        for (String parentName : cr.generalizations)
+        {
+            ClassRecord parent = findClass(parentName);
+            if (parent != null) gatherDeclarations(parent, declarations, visited);
+        }
+        // Own declarations override inherited ones.
+        for (PropRecord pr : cr.properties)
+        {
+            declarations.put(pr.name, pr.isEqualityKey);
         }
     }
 

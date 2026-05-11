@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
@@ -32,10 +30,10 @@ public final class GenericTypeHolderNode extends PureNode
     @Child
     private PureNode child;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public GenericTypeHolderNode(PureNode child, GenericType genericType, Multiplicity multiplicity)
+    public GenericTypeHolderNode(PureNode child, Object genericType, Object multiplicity)
     {
         this.child = child;
         this.genericType = genericType;
@@ -50,21 +48,21 @@ public final class GenericTypeHolderNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object doGenericTypeHolder(Object result, GenericType genericType, Multiplicity multiplicity, TruffleMetadataAccess resolver)
+    private static Object doGenericTypeHolder(Object result, Object genericType, Object multiplicity, TruffleMetadataAccess resolver)
     {
 
-        GenericType heldGT = MetaHelper.getRawGenericType(result, resolver);
+        Object heldGT = MetaHelper.getRawGenericType(result, resolver);
         // Build classifier GT: GenericTypeAndMultiplicityHolder<heldGT|heldMul>
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type holderType = (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) resolver.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl classifierGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(holderType, resolver);
+        Object holderType = resolver.getElement("meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder");
+        Object classifierGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(holderType, resolver);
         if (heldGT != null)
         {
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(classifierGT, "typeArguments",
                     new ObjectSequence(new Object[]{heldGT}));
         }
 
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl holder =
-                new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl();
+        Object holder = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                "meta::pure::metamodel::valuespecification::UserDefinedGenericTypeAndMultiplicityHolder", resolver);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "classifierGenericType", classifierGT);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "genericType", classifierGT);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(holder, "multiplicity",

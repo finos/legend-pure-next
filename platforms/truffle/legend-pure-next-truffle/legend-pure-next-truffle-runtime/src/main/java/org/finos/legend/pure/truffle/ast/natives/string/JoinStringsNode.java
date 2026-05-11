@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 
@@ -36,11 +34,11 @@ public final class JoinStringsNode extends PureNode
     @Child
     private PureNode suffixArg;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
     public JoinStringsNode(PureNode collectionArg, PureNode prefixArg, PureNode separatorArg,
-                           PureNode suffixArg, GenericType genericType, Multiplicity multiplicity)
+                           PureNode suffixArg, Object genericType, Object multiplicity)
     {
         this.collectionArg = collectionArg;
         this.prefixArg = prefixArg;

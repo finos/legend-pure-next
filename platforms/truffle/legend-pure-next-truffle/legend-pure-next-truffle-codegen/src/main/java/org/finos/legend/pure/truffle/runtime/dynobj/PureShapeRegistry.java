@@ -32,6 +32,27 @@ public final class PureShapeRegistry
 
     private PureShapeRegistry() {}
 
+    /**
+     * Per-Shape metadata bundle attached via Truffle's {@code sharedData} slot.
+     * Pre-resolved at Shape build time so per-write coercion and equality
+     * paths avoid the two-level {@link PropertyMetadataRegistry} CHM lookup
+     * and the {@code Class.forName} fallback. Lookups are stable for the life
+     * of the Shape; Shape transitions inherit {@code sharedData}.
+     */
+    public static final class ShapeMeta
+    {
+        public final String purePath;
+        public final java.util.Map<String, Class<?>> propTypes;
+        public final String[] equalityKeys;
+
+        ShapeMeta(String purePath, java.util.Map<String, Class<?>> propTypes, String[] equalityKeys)
+        {
+            this.purePath = purePath;
+            this.propTypes = propTypes;
+            this.equalityKeys = equalityKeys;
+        }
+    }
+
     public static Shape shapeFor(String purePath)
     {
         return SHAPES.computeIfAbsent(purePath, PureShapeRegistry::buildShape);
@@ -39,9 +60,18 @@ public final class PureShapeRegistry
 
     private static Shape buildShape(String purePath)
     {
+        // Trigger XImpl's static{} block so PropertyMetadataRegistry is
+        // populated for this Pure class before we snapshot it into the
+        // Shape's sharedData. Misses (no XImpl) leave the entries empty,
+        // which is fine — writeProperty falls through with no coercion and
+        // equals() falls back to identity.
+        java.util.Map<String, Class<?>> propTypes = PropertyMetadataRegistry.snapshotTypes(purePath);
+        String[] equalityKeys = PropertyMetadataRegistry.getEqualityKeys(purePath);
+        ShapeMeta meta = new ShapeMeta(purePath, propTypes, equalityKeys);
         return Shape.newBuilder()
                 .layout(PureDynamicObject.class)
                 .dynamicType(purePath)
+                .sharedData(meta)
                 .build();
     }
 }

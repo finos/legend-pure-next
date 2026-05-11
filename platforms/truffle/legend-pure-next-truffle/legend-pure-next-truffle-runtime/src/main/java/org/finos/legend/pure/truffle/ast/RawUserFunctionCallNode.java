@@ -21,31 +21,33 @@ import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 
 /**
  * Calls a user-defined FunctionDefinition.
  *
  * <p>Each instance is a *monomorphic* call site by construction — the AST
- * builder bakes in one {@link FunctionDefinition} per node, so the call
- * target never changes once resolved. We use a {@link DirectCallNode} with
- * the cached target, which is Truffle's canonical mechanism for letting
- * the runtime decide inlining per call site (small targets fold into the
+ * builder bakes in one FunctionDefinition per node, so the call target
+ * never changes once resolved. We use a {@link DirectCallNode} with the
+ * cached target, which is Truffle's canonical mechanism for letting the
+ * runtime decide inlining per call site (small targets fold into the
  * caller; large compiler-pure functions stay as separate JIT units, by
  * Truffle's own heuristics).</p>
  *
  * <p>QualifiedProperty calls fall back to {@link IndirectCallNode} because
  * the resolved target depends on the runtime type of the receiver.</p>
  *
- * <p>The args array is allocated on every call but escape analysis
- * virtualises it whenever {@code DirectCallNode} inlines the callee — the
- * common case for the small standard-library functions that dominate
- * compiler-pure's hot path.</p>
+ * <p>The {@code fd} field is typed as {@link Object} so a future loader
+ * flip to {@code PureDynamicObject} keeps working — the dispatch only
+ * needs the metaclass identity which {@code PureObj.pureTypeIs} reports
+ * uniformly across XImpl and PDO.</p>
  */
 @NodeInfo(shortName = "userFunctionCall")
 public final class RawUserFunctionCallNode extends PureNode
 {
-    private final FunctionDefinition fd;
+    private static final String QUALIFIED_PROPERTY_PATH =
+            "meta::pure::metamodel::function::property::QualifiedProperty";
+
+    private final Object fd;
 
     @Children
     private PureNode[] argNodes;
@@ -68,7 +70,7 @@ public final class RawUserFunctionCallNode extends PureNode
     @CompilerDirectives.CompilationFinal
     private RootCallTarget cachedTarget;
 
-    public RawUserFunctionCallNode(FunctionDefinition fd, PureNode[] argNodes)
+    public RawUserFunctionCallNode(Object fd, PureNode[] argNodes)
     {
         this.fd = fd;
         this.argNodes = argNodes;
@@ -78,9 +80,9 @@ public final class RawUserFunctionCallNode extends PureNode
     public Object executeGeneric(VirtualFrame frame)
     {
         Object[] args = evaluateArgs(frame);
-        if (fd instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp && args.length > 0)
+        if (args.length > 0 && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fd, QUALIFIED_PROPERTY_PATH))
         {
-            return dispatchQp(qp, args);
+            return dispatchQp(fd, args);
         }
         if (directCallNode != null)
         {
@@ -117,7 +119,7 @@ public final class RawUserFunctionCallNode extends PureNode
         return args;
     }
 
-    private Object dispatchQp(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp, Object[] args)
+    private Object dispatchQp(Object staticQp, Object[] args)
     {
         // QP target depends on the receiver's runtime type — install (lazily)
         // an IndirectCallNode and let it dispatch per call.
@@ -126,7 +128,7 @@ public final class RawUserFunctionCallNode extends PureNode
             CompilerDirectives.transferToInterpreterAndInvalidate();
             indirectCallNode = insert(IndirectCallNode.create());
         }
-        FunctionDefinition resolved = resolveQpTarget(staticQp, args);
+        Object resolved = resolveQpTarget(staticQp, args);
         RootCallTarget ct = lookupCallTarget(resolved);
         if (ct != null)
         {
@@ -136,21 +138,19 @@ public final class RawUserFunctionCallNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private FunctionDefinition resolveQpTarget(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty staticQp,
-            Object[] args)
+    private Object resolveQpTarget(Object staticQp, Object[] args)
     {
         return getContext().resolveQpDispatch(staticQp, args);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private RootCallTarget lookupCallTarget(FunctionDefinition resolved)
+    private RootCallTarget lookupCallTarget(Object resolved)
     {
         return getContext().getCallTarget(resolved);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private Object invokeWithoutCallTarget(FunctionDefinition resolved, Object[] args)
+    private Object invokeWithoutCallTarget(Object resolved, Object[] args)
     {
         return getContext().executeFunction(resolved, args);
     }

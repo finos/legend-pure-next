@@ -37,7 +37,8 @@ public final class NewClassNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object doNewClass(Object typeParams, Object multParams, TruffleMetadataAccess resolver)
     {
-        var cls = new org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl();
+        var cls = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                "meta::pure::metamodel::type::Class", resolver);
 
         // Normalize to PureSequence (single values get wrapped)
         PureSequence tpSeq = toSequence(typeParams);
@@ -60,9 +61,7 @@ public final class NewClassNode extends PureNode
                         "meta::pure::metamodel::type::generics::TypeParameter", resolver))
                 {
                     org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(tp, "owner", cls);
-                    org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type tpAsType =
-                            (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type) tp;
-                    var tpGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(tpAsType, resolver);
+                    var tpGT = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(tp, resolver);
                     tpGTs[i] = tpGT;
                 }
                 else
@@ -91,8 +90,7 @@ public final class NewClassNode extends PureNode
         }
 
         Object classType = resolver.getElement("meta::pure::metamodel::type::Class");
-        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
-                classType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type t ? t : null, resolver);
+        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(classType, resolver);
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(cgt, "typeArguments", new ObjectSequence(new Object[]{selfGT}));
 
         org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(cls, "classifierGenericType", cgt);

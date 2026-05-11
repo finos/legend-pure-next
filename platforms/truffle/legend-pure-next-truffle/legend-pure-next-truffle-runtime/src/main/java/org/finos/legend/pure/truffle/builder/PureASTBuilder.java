@@ -16,16 +16,6 @@ package org.finos.legend.pure.truffle.builder;
 
 import org.finos.legend.pure.truffle.ast.FrameLetFunctionNode;
 import org.finos.legend.pure.truffle.ast.PureSourceHelper;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.Collection;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.FunctionExpression;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.GenericTypeAndMultiplicityHolder;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression;
 import org.finos.legend.pure.truffle.types.PureDate;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
@@ -117,33 +107,70 @@ public final class PureASTBuilder
 
     /**
      * Lower a single {@link ValueSpecification} into an executable Truffle node.
+     *
+     * <p>Each arm matches the typed XImpl form first (covers all subtype-of-X
+     * cases for free via {@code instanceof}); a fallback resolver-driven
+     * {@link org.finos.legend.pure.truffle.runtime.dynobj.PureObj#isType}
+     * handles {@link org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject}
+     * inputs, where subtyping is encoded in PDB metadata rather than the
+     * Java class hierarchy.</p>
      */
     public PureNode lower(Object vs)
     {
-        PureNode node = switch (vs)
-        {
-            case AtomicValue av -> lowerAtomicValue(av);
-            case VariableExpression ve -> lowerVariableRead(ve);
-            case Collection col ->
-            {
-                Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(col, "values");
-                org.finos.legend.pure.truffle.types.PureSequence values = valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence vs2
-                        ? vs2 : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
-                PureNode[] children = new PureNode[values.size()];
-                for (int i = 0; i < values.size(); i++)
-                {
-                    children[i] = lower(values.getBoxed(i));
-                }
-                yield new RawCollectionNode(children);
-            }
-            case GenericTypeAndMultiplicityHolder gmh -> new AtomicValueNode(gmh);
-            case FunctionExpression fe -> lowerFunctionExpression(fe);
-            default -> throw new RuntimeException(
-                    "Unsupported ValueSpecification type: " + vs.getClass().getName());
-        };
+        PureNode node = lowerImpl(vs);
         // Attach Pure source location for stack traces
         PureSourceHelper.withSource(node, vs);
         return node;
+    }
+
+    private PureNode lowerImpl(Object vs)
+    {
+        // Dispatch by Pure metaclass via the resolver-driven isType
+        // (subtype-aware). Post-PDO-flip every Pure value reaching here is a
+        // PureDynamicObject; the typed-fast-path arms that used to live here
+        // (`vs instanceof AtomicValue` etc.) are dead.
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver =
+                org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(vs,
+                "meta::pure::metamodel::valuespecification::AtomicValue", resolver))
+        {
+            return lowerAtomicValue(vs);
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(vs,
+                "meta::pure::metamodel::valuespecification::VariableExpression", resolver))
+        {
+            return lowerVariableRead(vs);
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(vs,
+                "meta::pure::metamodel::valuespecification::Collection", resolver))
+        {
+            return lowerCollection(vs);
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(vs,
+                "meta::pure::metamodel::valuespecification::GenericTypeAndMultiplicityHolder", resolver))
+        {
+            return new AtomicValueNode(vs);
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(vs,
+                "meta::pure::metamodel::valuespecification::FunctionExpression", resolver))
+        {
+            return lowerFunctionExpression(vs);
+        }
+        throw new RuntimeException(
+                "Unsupported ValueSpecification type: " + (vs == null ? "null" : vs.getClass().getName()));
+    }
+
+    private PureNode lowerCollection(Object col)
+    {
+        Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(col, "values");
+        org.finos.legend.pure.truffle.types.PureSequence values = valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence vs2
+                ? vs2 : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        PureNode[] children = new PureNode[values.size()];
+        for (int i = 0; i < values.size(); i++)
+        {
+            children[i] = lower(values.getBoxed(i));
+        }
+        return new RawCollectionNode(children);
     }
 
     /**
@@ -158,13 +185,14 @@ public final class PureASTBuilder
      * an Enumeration (which has special property-vs-enum-value
      * dispatch) or when the call has unusual shape.
      */
-    private PureNode lowerPropertyAccess(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty prop,
-                                         FunctionExpression fe)
+    private PureNode lowerPropertyAccess(Object prop, Object fe)
     {
         PureNode[] args = lowerArgs(fe);
         Object propName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name");
+        boolean isQp = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(prop,
+                "meta::pure::metamodel::function::property::QualifiedProperty");
         if (args.length == 1
-                && !(prop instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty)
+                && !isQp
                 && propName instanceof String name
                 && !canTargetBeEnumeration(prop))
         {
@@ -179,8 +207,7 @@ public final class PureASTBuilder
      * resolve to either a metaclass property OR an enum value), so the
      * direct-access node can't safely handle them.
      */
-    private static boolean canTargetBeEnumeration(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.AbstractProperty prop)
+    private static boolean canTargetBeEnumeration(Object prop)
     {
         Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "owner");
         // Conservative: if owner is anything other than a non-Enumeration
@@ -192,7 +219,7 @@ public final class PureASTBuilder
                 "meta::pure::metamodel::type::Enumeration");
     }
 
-    private PureNode lowerFunctionExpression(FunctionExpression fe)
+    private PureNode lowerFunctionExpression(Object fe)
     {
         Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
         if (funcObj == null)
@@ -200,29 +227,28 @@ public final class PureASTBuilder
             Object fnNameDbg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName");
             throw new RuntimeException("_func() returned null for: " + fnNameDbg + " [" + fe.getClass().getName() + "]");
         }
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function func =
-                (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function) funcObj;
+        Object func = funcObj;
         // QP overload disambiguation: the PDB func path may resolve to the wrong
         // overload when multiple QPs share the same simple name (e.g. res() vs res(z)).
         // Fix by matching the QP's param count against the call's arg count.
-        if (func instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty qp)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(func,
+                "meta::pure::metamodel::function::property::QualifiedProperty"))
         {
             Object feParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
             int callArgCount = feParamsObj instanceof PureSequence feps ? feps.size() : 0;
-            Object qpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(qp, "parameters");
+            Object qpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(func, "parameters");
             int qpParamCount = qpParamsObj instanceof PureSequence qpps ? qpps.size() : 0;
             if (qpParamCount != callArgCount)
             {
                 // Wrong overload — find the right one from the owning class
-                org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty correct =
-                        findQpOverload(qp, callArgCount);
+                Object correct = findQpOverload(func, callArgCount);
                 if (correct != null)
                 {
                     func = correct;
                 }
             }
         }
-        final org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.Function resolvedFunc = func;
+        final Object resolvedFunc = func;
         // Recognise the multi-clause if pattern at AST-build time and lower
         // it to a flat conditional chain — see {@link MultiIfNode}.
         // Static-form fast path for the multi-clause if — applies whether
@@ -240,15 +266,36 @@ public final class PureASTBuilder
                 return multiIf;
             }
         }
-        return switch (resolvedFunc)
+        // Dispatch by Pure metaclass — works for both XImpl (legacy) and
+        // PureDynamicObject (post-flip). NativeFunction is a leaf concrete
+        // type (no subtypes), so pureTypeIs is enough; FunctionDefinition /
+        // AbstractProperty are interface roots requiring isType (subtype check).
+        //
+        // Order matters: QualifiedProperty extends BOTH FunctionDefinition
+        // and AbstractProperty (multiple-interface inheritance), so the
+        // FunctionDefinition branch must come first to route QPs through
+        // RawUserFunctionCallNode (which has the polymorphic-dispatch
+        // logic). lowerPropertyAccess only handles plain Property reads.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(resolvedFunc,
+                "meta::pure::metamodel::function::NativeFunction"))
         {
-            case NativeFunction nf -> lowerNativeCall(nf, fe);
-            case FunctionDefinition fd -> new RawUserFunctionCallNode(fd, lowerArgs(fe));
-            case AbstractProperty prop -> lowerPropertyAccess(prop, fe);
-            default -> throw new RuntimeException(
-                    "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: "
-                            + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName"));
-        };
+            return lowerNativeCall(resolvedFunc, fe);
+        }
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver =
+                org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(resolvedFunc,
+                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+        {
+            return new RawUserFunctionCallNode(resolvedFunc, lowerArgs(fe));
+        }
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(resolvedFunc,
+                "meta::pure::metamodel::function::property::AbstractProperty", resolver))
+        {
+            return lowerPropertyAccess(resolvedFunc, fe);
+        }
+        throw new RuntimeException(
+                "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: "
+                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName"));
     }
 
     /**
@@ -264,7 +311,7 @@ public final class PureASTBuilder
      * {@link org.finos.legend.pure.truffle.ast.natives.lang.LambdaCallNoArgNode}.
      * Either way the {@code pair()} call site is bypassed entirely.</p>
      */
-    private PureNode tryLowerMultiIf(FunctionExpression fe)
+    private PureNode tryLowerMultiIf(Object fe)
     {
         Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
         if (!(paramsObj instanceof PureSequence params) || params.size() < 2)
@@ -272,11 +319,12 @@ public final class PureASTBuilder
             return null;
         }
         Object pairsArg = params.getBoxed(0);
-        if (!(pairsArg instanceof Collection col))
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pairsArg,
+                "meta::pure::metamodel::valuespecification::Collection"))
         {
             return null;
         }
-        Object pairValuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(col, "values");
+        Object pairValuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairsArg, "values");
         if (!(pairValuesObj instanceof PureSequence pairValues))
         {
             return null;
@@ -286,13 +334,16 @@ public final class PureASTBuilder
         PureNode[] bodies = new PureNode[n];
         for (int i = 0; i < n; i++)
         {
-            Object pairExpr = pairValues.getBoxed(i);
-            if (!(pairExpr instanceof FunctionExpression pairFe))
+            Object pairFe = pairValues.getBoxed(i);
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pairFe,
+                    "meta::pure::metamodel::valuespecification::FunctionExpression"))
             {
                 return null;
             }
             Object pairFunc = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairFe, "func");
-            if (!(pairFunc instanceof FunctionDefinition)
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(pairFunc,
+                    "meta::pure::metamodel::function::FunctionDefinition",
+                    org.finos.legend.pure.truffle.PureLanguage.get(null).resolver())
                     || !PAIR_SIGNATURE.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairFunc, "name")))
             {
                 return null;
@@ -341,12 +392,15 @@ public final class PureASTBuilder
         Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
                 "meta::pure::metamodel::valuespecification::AtomicValue")
                 ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "value") : null;
-        if (inner instanceof LambdaFunction lf)
+        // Widened from `instanceof LambdaFunction` so PDO lambdas
+        // (post-loader-flip resolver returns) take the same fast path.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inner,
+                "meta::pure::metamodel::function::LambdaFunction"))
         {
-            Object lfParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lf, "parameters");
+            Object lfParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(inner, "parameters");
             if (!(lfParamsObj instanceof PureSequence lfParams) || lfParams.isEmpty())
             {
-                Object bodyObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lf, "expressionSequence");
+                Object bodyObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(inner, "expressionSequence");
                 if (bodyObj instanceof PureSequence body && body.size() == 1)
                 {
                     return lower(body.getBoxed(0));
@@ -364,8 +418,7 @@ public final class PureASTBuilder
     /**
      * Find the correct QP overload from the owning class by matching parameter count.
      */
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty findQpOverload(
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty wrongQp, int expectedParamCount)
+    private Object findQpOverload(Object wrongQp, int expectedParamCount)
     {
         Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(wrongQp, "owner");
         if (owner == null) return null;
@@ -382,15 +435,16 @@ public final class PureASTBuilder
             Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "parameters");
             if (cqpParamsObj instanceof PureSequence cqpParams
                     && cqpParams.size() == expectedParamCount
-                    && candidate instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.QualifiedProperty cqp)
+                    && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(candidate,
+                            "meta::pure::metamodel::function::property::QualifiedProperty"))
             {
-                return cqp;
+                return candidate;
             }
         }
         return null;
     }
 
-    private PureNode lowerNativeCall(NativeFunction nf, FunctionExpression fe)
+    private PureNode lowerNativeCall(Object nf, Object fe)
     {
         Object sigObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(nf, "name");
         String signature = sigObj instanceof String s ? s : null;
@@ -403,17 +457,14 @@ public final class PureASTBuilder
         {
             Object gt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "genericType");
             Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "multiplicity");
-            return factory.create(lowerArgs(fe),
-                    (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType) gt,
-                    (org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity) mul,
-                    fe);
+            return factory.create(lowerArgs(fe), gt, mul, fe);
         }
         // All signatures should be registered. If we reach here, it's a
         // new native added without a corresponding Truffle node.
         throw new RuntimeException("No specialized Truffle node for native: " + signature);
     }
 
-    private PureNode lowerVariableRead(VariableExpression ve)
+    private PureNode lowerVariableRead(Object ve)
     {
         Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ve, "name");
         String veName = nameObj instanceof String s ? s : null;
@@ -428,7 +479,7 @@ public final class PureASTBuilder
         return new FrameVariableReadNode(-1, veName);
     }
 
-    private PureNode lowerFrameLet(FunctionExpression fe)
+    private PureNode lowerFrameLet(Object fe)
     {
         if (currentLayout == null)
         {
@@ -474,17 +525,20 @@ public final class PureASTBuilder
             "Date", "StrictDate", "DateTime", "StrictTime", "LatestDate"
     );
 
-    private PureNode lowerAtomicValue(AtomicValue av)
+    private PureNode lowerAtomicValue(Object av)
     {
         Object value = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(av, "value");
-        if (value instanceof LambdaFunction lambda)
+        // Widened from `instanceof LambdaFunction` so PDO lambdas
+        // (post-loader-flip resolver returns) take the same path.
+        if (value != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(value,
+                "meta::pure::metamodel::function::LambdaFunction"))
         {
-            Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "openVariables");
+            Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "openVariables");
             if (openVarsObj instanceof PureSequence openVars && !openVars.isEmpty())
             {
-                return new RawLambdaCaptureNode(lambda, openVars, currentLayout);
+                return new RawLambdaCaptureNode(value, openVars, currentLayout);
             }
-            return new AtomicValueNode(lambda);
+            return new AtomicValueNode(value);
         }
         if (value == null)
         {
@@ -516,7 +570,7 @@ public final class PureASTBuilder
         return new AtomicValueNode(value);
     }
 
-    private static String extractTypeName(AtomicValue av)
+    private static String extractTypeName(Object av)
     {
         try
         {
@@ -525,8 +579,7 @@ public final class PureASTBuilder
             {
                 return null;
             }
-            org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type type =
-                    org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
+            Object type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
             if (type != null)
             {
                 Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "name");
@@ -540,7 +593,7 @@ public final class PureASTBuilder
         return null;
     }
 
-    private PureNode[] lowerArgs(FunctionExpression fe)
+    private PureNode[] lowerArgs(Object fe)
     {
         Object paramSpecsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
         org.finos.legend.pure.truffle.types.PureSequence paramSpecs = paramSpecsObj instanceof PureSequence ps
