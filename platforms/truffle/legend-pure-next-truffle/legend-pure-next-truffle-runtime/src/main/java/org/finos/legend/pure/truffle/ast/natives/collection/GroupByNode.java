@@ -117,6 +117,30 @@ public final class GroupByNode extends PureNode
         return cgt;
     }
 
+    /** Shared with {@link InlineGroupByNode}: build a Map<K, List<X>> from
+     *  pre-computed (item, key) arrays. Resolves Map/List CGTs through the
+     *  current Pure context. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    static Object buildFromKeys(Object[] items, Object[] keys, int sz,
+                                org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        org.finos.legend.pure.truffle.PureContext ctx = org.finos.legend.pure.truffle.PureLanguage.get(null);
+        Object mapCgt = ctx.cgtForType("meta::pure::functions::collection::Map");
+        Object listCgt = ctx.cgtForType("meta::pure::functions::collection::List");
+        if (mapCgt == null || listCgt == null)
+        {
+            throw new RuntimeException("[GroupByNode] Cannot resolve Map/List type from PDB");
+        }
+        return buildMap(items, keys, sz, mapCgt, listCgt, resolver);
+    }
+
+    /** Empty-collection fast path for {@link InlineGroupByNode}. */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    static Object buildEmpty(org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
+    {
+        return buildFromKeys(new Object[0], new Object[0], 0, resolver);
+    }
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object buildMap(Object[] items, Object[] keys, int sz,
                                    Object mapCgt,

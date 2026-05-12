@@ -34,14 +34,21 @@ public final class LangNodeFactories
 
     public static void registerIfOnly(NativeNodeRegistry registry)
     {
-        registry.register("if_Boolean_1__Function_1__Function_1__T_m_",
-                (args, gt, mul, fe) -> new IfNode(args[0], args[1], args[2]));
+        registry.register("if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
+    }
+
+    /** Static-mode (inlined then/else bodies) when both branches are literal
+     *  0-param closure-lambdas; otherwise the generic lambda-dispatch form. */
+    private static PureNode buildIfNode(PureNode[] args, Object gt, Object mul, Object fe)
+    {
+        PureNode spec = org.finos.legend.pure.truffle.PureLanguage.get(null)
+                .astBuilder().tryLowerIf(fe);
+        return spec != null ? spec : new IfNode(args[0], args[1], args[2]);
     }
 
     public static void registerAll(NativeNodeRegistry registry)
     {
-        registry.register("if_Boolean_1__Function_1__Function_1__T_m_",
-                (args, gt, mul, fe) -> new IfNode(args[0], args[1], args[2]));
+        registry.register("if_Boolean_1__Function_1__Function_1__T_m_", LangNodeFactories::buildIfNode);
 
         // Multi-clause if — declared `native` in if.pure. Two operating modes:
         //   - Static: the args are a literal pair-list ({@code [pair(|c1, |b1),
