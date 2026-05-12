@@ -29,6 +29,9 @@ import java.util.List;
 @NodeInfo(shortName = "elementPath")
 public final class ElementPathNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PACKAGE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package");
     @Child
     private PureNode child;
 
@@ -58,12 +61,12 @@ public final class ElementPathNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void collectAncestors(Object pe, List<Object> path)
     {
-        Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "package");
+        Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pe, SLOT_PACKAGE);
         if (parent != null)
         {
             collectAncestors(parent, path);
         }
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "name");
+        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pe, SLOT_NAME);
         if (nameObj instanceof String name && !name.isEmpty())
         {
             String elPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);

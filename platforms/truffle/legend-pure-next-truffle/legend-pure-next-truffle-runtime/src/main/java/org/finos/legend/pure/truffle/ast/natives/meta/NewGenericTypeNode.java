@@ -25,17 +25,14 @@ import org.finos.legend.pure.truffle.ast.PureNode;
 @NodeInfo(shortName = "newGenericType")
 public final class NewGenericTypeNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     @Child
     private PureNode child;
 
-    private final Object genericType;
-    private final Object multiplicity;
-
-    public NewGenericTypeNode(PureNode child, Object genericType, Object multiplicity)
+    public NewGenericTypeNode(PureNode child)
     {
         this.child = child;
-        this.genericType = genericType;
-        this.multiplicity = multiplicity;
     }
 
     @Override
@@ -64,7 +61,7 @@ public final class NewGenericTypeNode extends PureNode
             classPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(rawType);
             if (classPath == null || classPath.isEmpty())
             {
-                Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawType, "name");
+                Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawType, SLOT_NAME);
                 classPath = n instanceof String s && !s.isEmpty() ? s : "Unknown";
             }
         }
@@ -87,7 +84,7 @@ public final class NewGenericTypeNode extends PureNode
             // ctor anchoring. Without this, `new(buildUserDefinedGenericType(SomeType))`
             // leaves classifier as a fresh inline UDGT, while Java emits canonical UDPGT.
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(instance, "classifierGenericType",
-                    NewWithKeysNode.preferCanonicalAnchorPublic(result, resolver));
+                    NewWithKeysNode.preferCanonicalAnchor(result, resolver));
         }
 
         return instance;

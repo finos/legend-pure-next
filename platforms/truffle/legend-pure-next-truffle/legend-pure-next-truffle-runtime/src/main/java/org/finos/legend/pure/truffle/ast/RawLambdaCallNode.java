@@ -41,6 +41,8 @@ import com.oracle.truffle.api.nodes.Node;
  */
 public final class RawLambdaCallNode extends Node
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     @Child
     private DirectCallNode directCallNode;
 
@@ -52,6 +54,16 @@ public final class RawLambdaCallNode extends Node
 
     @CompilerDirectives.CompilationFinal
     private RootCallTarget cachedTarget;
+
+    /** Inline-cache the lambda/closure identity that produced
+     *  {@link #cachedTarget}. When the next call sees the same identity, we
+     *  skip {@link #getCallTarget} entirely — that method is
+     *  {@code @TruffleBoundary} so reaching it stops PE inlining and forces
+     *  a real call. Monomorphic lambda call sites (the 99% case for
+     *  fold/map/filter inside one function) hit the identity match and
+     *  go straight to {@link #directCallNode#call}. */
+    @CompilerDirectives.CompilationFinal
+    private Object cachedLambdaIdentity;
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private org.finos.legend.pure.truffle.PureContext getContext()
@@ -84,29 +96,33 @@ public final class RawLambdaCallNode extends Node
 
     private Object dispatch(Object lambdaOrClosure, Object[] args)
     {
+        // Identity-cache hot path: same lambda/closure as last call → reuse
+        // {@link #cachedTarget} and the inlined DirectCallNode without
+        // going through @TruffleBoundary {@link #getCallTarget}.
+        if (lambdaOrClosure == cachedLambdaIdentity)
+        {
+            return directCallNode.call(args);
+        }
         RootCallTarget target = getCallTarget(lambdaOrClosure);
         if (target == null)
         {
             return fallback(lambdaOrClosure, args);
         }
-        // Monomorphic fast path: same target as the cached one — the
-        // DirectCallNode is the inlining decision point. Truffle inlines
-        // the callee here when its heuristics allow, fusing the lambda
-        // body with the caller's compilation (the win for map/filter/fold).
         if (target == cachedTarget)
         {
             return directCallNode.call(args);
         }
-        return slowDispatch(target, args);
+        return slowDispatch(lambdaOrClosure, target, args);
     }
 
-    private Object slowDispatch(RootCallTarget target, Object[] args)
+    private Object slowDispatch(Object lambdaOrClosure, RootCallTarget target, Object[] args)
     {
         // First-ever call at this site: install the monomorphic cache.
         if (cachedTarget == null)
         {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             cachedTarget = target;
+            cachedLambdaIdentity = lambdaOrClosure;
             directCallNode = insert(DirectCallNode.create(target));
             return directCallNode.call(args);
         }
@@ -184,7 +200,7 @@ public final class RawLambdaCallNode extends Node
             if (rawArgs.length > 0)
             {
                 return propertyReader.execute(rawArgs[0],
-                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambdaOrClosure, "name"));
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambdaOrClosure, SLOT_NAME));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }

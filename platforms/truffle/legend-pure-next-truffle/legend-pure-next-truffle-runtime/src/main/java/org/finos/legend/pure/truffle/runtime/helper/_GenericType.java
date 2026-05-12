@@ -1,11 +1,18 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
 import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 public final class _GenericType
 {
+
+    private static final int SLOT_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_RETURN_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("returnType");
     private _GenericType() {}
 
     private static final String GENERIC_TYPE_VALUE_PATH = "meta::pure::metamodel::type::generics::GenericTypeValue";
@@ -13,19 +20,26 @@ public final class _GenericType
     private static final String VARIABLE_EXPRESSION_PATH =
             "meta::pure::metamodel::valuespecification::VariableExpression";
 
+    // Pre-resolved global slot indices for the properties this helper reads
+    // hot on the type-inference path. Lets the PDO fast path bypass the
+    // per-class slotByName HashMap.get and read directly via slot index.
+    private static final int SLOT_TYPE = PureClassRegistry.globalSlot("type");
+    private static final int SLOT_TYPE_ARGUMENTS = PureClassRegistry.globalSlot("typeArguments");
+
     public static Object type(Object gt)
     {
-        // Only GenericTypeValue subtypes carry a _type slot; the GenericType
-        // base interface doesn't. We can't subtype-check against
-        // GenericTypeValue without a resolver here, but readers tolerate a
-        // missing slot — PureObj.read returns null when the property is
-        // absent. Treat null-Object Result as "no type".
-        return PureObj.read(gt, "type");
+        if (gt instanceof PureDynamicObject pdo)
+        {
+            return pdo.readSlot(SLOT_TYPE);
+        }
+        return PureObj.readBySlot(gt, SLOT_TYPE);
     }
 
     public static PureSequence typeArguments(Object gt)
     {
-        Object ta = PureObj.read(gt, "typeArguments");
+        Object ta = gt instanceof PureDynamicObject pdo
+                ? pdo.readSlot(SLOT_TYPE_ARGUMENTS)
+                : PureObj.readBySlot(gt, SLOT_TYPE_ARGUMENTS);
         return ta instanceof PureSequence seq ? seq : null;
     }
 
@@ -80,7 +94,7 @@ public final class _GenericType
             {
                 return "[Type:" + path + "]";
             }
-            Object n = PureObj.read(gt, "name");
+            Object n = PureObj.readBySlot(gt, SLOT_NAME);
             if (n instanceof String s && !s.isEmpty())
             {
                 return "[Type:" + s + "]";
@@ -95,7 +109,7 @@ public final class _GenericType
         if (rawType != null && PureObj.pureTypeIs(rawType, FUNCTION_TYPE_PATH))
         {
             sb.append("{");
-            Object paramsObj = PureObj.read(rawType, "parameters");
+            Object paramsObj = PureObj.readBySlot(rawType, SLOT_PARAMETERS);
             if (paramsObj instanceof PureSequence params)
             {
                 for (int i = 0; i < params.size(); i++)
@@ -104,7 +118,7 @@ public final class _GenericType
                     Object p = params.getBoxed(i);
                     if (PureObj.pureTypeIs(p, VARIABLE_EXPRESSION_PATH))
                     {
-                        sb.append(print(PureObj.read(p, "genericType"), resolver));
+                        sb.append(print(PureObj.readBySlot(p, SLOT_GENERIC_TYPE), resolver));
                     }
                     else
                     {
@@ -113,7 +127,7 @@ public final class _GenericType
                 }
             }
             sb.append("->");
-            sb.append(print(PureObj.read(rawType, "returnType"), resolver));
+            sb.append(print(PureObj.readBySlot(rawType, SLOT_RETURN_TYPE), resolver));
             sb.append("}");
         }
         else if (rawType != null)
@@ -127,7 +141,7 @@ public final class _GenericType
             }
             else
             {
-                Object n = PureObj.read(rawType, "name");
+                Object n = PureObj.readBySlot(rawType, SLOT_NAME);
                 sb.append(n instanceof String s && !s.isEmpty() ? s : "?");
             }
         }

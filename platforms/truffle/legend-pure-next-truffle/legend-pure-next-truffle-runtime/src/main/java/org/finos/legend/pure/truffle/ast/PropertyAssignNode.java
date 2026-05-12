@@ -34,6 +34,10 @@ public final class PropertyAssignNode extends Node
     @CompilationFinal
     private final boolean isAdd;
 
+    /** Global slot for {@link #propertyName} — final so PE folds the array
+     *  offset. {@code -1} for dotted-path names that can't be slot-resolved. */
+    private final int boundSlot;
+
     @Child
     private PureNode valueExpr;
 
@@ -48,7 +52,10 @@ public final class PropertyAssignNode extends Node
         this.propertyName = propertyName;
         this.valueExpr = valueExpr;
         this.isAdd = isAdd;
-        this.reader = isAdd ? new PropertyReadNode() : null;
+        this.reader = isAdd ? new PropertyReadNode(propertyName) : null;
+        this.boundSlot = propertyName.contains(".")
+                ? -1
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot(propertyName);
     }
 
     public String propertyName()
@@ -78,6 +85,18 @@ public final class PropertyAssignNode extends Node
      * merge / write across a {@code @TruffleBoundary} (so the heavy
      * reflective writer doesn't expand into PE).
      */
+    /** Non-deopting per-classInfo cache for the property's coercion target.
+     *  Plain fields (no {@code @CompilationFinal}) — a miss is a regular
+     *  branch + HashMap.get, NOT a {@code transferToInterpreterAndInvalidate}.
+     *  Polymorphic receivers (e.g. {@code ^$fi(...)} where $fi is statically
+     *  FunctionApplication but concretely FunctionInvocation/DotApplication)
+     *  update the cache fields without driving the call site into Graal's
+     *  deopt-cycle threshold — eliminating the permanent compile failures
+     *  that pinned tier-2 compilation on the dominant Pure compiler hot
+     *  lambdas. */
+    private org.finos.legend.pure.truffle.runtime.dynobj.PureClassInfo cachedClassInfo;
+    private Class<?> cachedPropType;
+
     public Object executeWithValue(Object value, Object target)
     {
         if (isAdd)
@@ -88,10 +107,28 @@ public final class PropertyAssignNode extends Node
             addToMergedList(merged, value);
             value = new org.finos.legend.pure.truffle.types.ObjectSequence(merged.toArray());
         }
-        if (!propertyName.contains("."))
+        if (boundSlot < 0)
         {
-            writer.execute(target, propertyName, value);
+            return value;
         }
+        if (target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                && boundSlot < pdo.slots.length)
+        {
+            var info = pdo.classInfo;
+            Class<?> propType = cachedPropType;
+            if (info != cachedClassInfo)
+            {
+                propType = info.propTypes().get(propertyName);
+                cachedClassInfo = info;
+                cachedPropType = propType;
+            }
+            Object coerced = propType != null
+                    ? org.finos.legend.pure.truffle.runtime.dynobj.PropertyCoercion.coerce(value, propType)
+                    : value;
+            pdo.slots[boundSlot] = coerced;
+            return value;
+        }
+        writer.execute(target, propertyName, value);
         return value;
     }
 

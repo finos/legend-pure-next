@@ -31,6 +31,13 @@ import org.finos.legend.pure.truffle.types.PureSequence;
 @NodeInfo(shortName = "newWithKeys")
 public final class NewWithKeysNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_EXPRESSION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("expression");
+    private static final int SLOT_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
+    private static final int SLOT_MULTIPLICITY_ARGUMENTS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicityArguments");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
     @CompilationFinal
     private final String signature;
 
@@ -175,7 +182,7 @@ public final class NewWithKeysNode extends PureNode
         PureSequence hoistedTypeArgs = null;
         if (typeHolder != null)
         {
-            Object holderGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType");
+            Object holderGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(typeHolder, SLOT_GENERIC_TYPE);
             if (holderGT != null)
             {
                 hoistedGt = holderGT;
@@ -232,10 +239,10 @@ public final class NewWithKeysNode extends PureNode
         }
 
         if (instance != null
-                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType") == null)
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(instance, SLOT_CLASSIFIER_GENERIC_TYPE) == null)
         {
             Object hgt = typeHolder != null
-                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(typeHolder, "genericType") : null;
+                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(typeHolder, SLOT_GENERIC_TYPE) : null;
             throw new RuntimeException("[NEW] classifierGenericType is NULL after creation of " + classPath
                     + " (instance=" + instance.getClass().getName()
                     + ", typeHolder=" + (typeHolder != null ? typeHolder.getClass().getName() : "null")
@@ -259,7 +266,7 @@ public final class NewWithKeysNode extends PureNode
         setReverseAssociationPointers(instance, classPath, keyValues, eval, appendReader, appendWriter);
         if (instance != null)
         {
-            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType");
+            Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(instance, SLOT_CLASSIFIER_GENERIC_TYPE);
             if (cgt != null)
             {
                 Object type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
@@ -298,12 +305,12 @@ public final class NewWithKeysNode extends PureNode
                         "new(...) expected KeyExpression in keys list at index " + i
                                 + ", got " + (item == null ? "null" : item.getClass().getName()));
             }
-            Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "name");
+            Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(item, SLOT_NAME);
             if (!(propNameObj instanceof String propName))
             {
                 throw new RuntimeException("KeyExpression at index " + i + " has no name");
             }
-            Object value = unwrapSingleton(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "expression"));
+            Object value = unwrapSingleton(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(item, SLOT_EXPRESSION));
             dynamicKeyWriter.execute(instance, propName, value);
             if (value != null)
             {
@@ -365,7 +372,7 @@ public final class NewWithKeysNode extends PureNode
     private static void validateClassifierOverride(Object proposed, Object instance)
     {
         Object currentCgt = instance != null
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(instance, "classifierGenericType") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(instance, SLOT_CLASSIFIER_GENERIC_TYPE) : null;
         Object expected = currentCgt != null ? _GenericType.type(currentCgt) : null;
         // _GenericType.type is Object-tolerant (reads `type` via PureObj.read)
         // so it handles both typed GenericTypeValue and PDO uniformly.
@@ -401,21 +408,8 @@ public final class NewWithKeysNode extends PureNode
      * chains identical between Pure runtime construction and Java's
      * {@code new XxxImpl(model)} ctor pattern.
      */
-    /**
-     * Public alias of {@link #preferCanonicalAnchor} so sibling natives
-     * ({@link NewSimpleNode}, {@link NewGenericTypeNode}) can share the
-     * canonical-anchor lookup without duplicating it.
-     */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public static Object preferCanonicalAnchorPublic(
-            Object gtv,
-            org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
-    {
-        return preferCanonicalAnchor(gtv, resolver);
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object preferCanonicalAnchor(
+    public static Object preferCanonicalAnchor(
             Object gtv,
             org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
@@ -424,7 +418,7 @@ public final class NewWithKeysNode extends PureNode
         {
             return gtv;
         }
-        Object mulArgs = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "multiplicityArguments");
+        Object mulArgs = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gtv, SLOT_MULTIPLICITY_ARGUMENTS);
         if (mulArgs instanceof PureSequence ms && ms.size() > 0)
         {
             return gtv;
@@ -447,7 +441,7 @@ public final class NewWithKeysNode extends PureNode
         {
             return cached;
         }
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawType, "name");
+        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawType, SLOT_NAME);
         String simpleName = nameObj instanceof String s ? s : null;
         if (simpleName == null || simpleName.isEmpty())
         {
@@ -572,7 +566,7 @@ public final class NewWithKeysNode extends PureNode
             {
                 continue;
             }
-            Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "properties");
+            Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PROPERTIES);
             if (!(propsObj instanceof PureSequence props) || props.size() != 2)
             {
                 continue;
@@ -593,9 +587,9 @@ public final class NewWithKeysNode extends PureNode
                                        Object matchProp, Object otherProp,
                                        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(matchProp, "name");
+        Object propNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(matchProp, SLOT_NAME);
         if (!(propNameObj instanceof String propName)) return;
-        Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(otherProp, "genericType");
+        Object otherGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_GENERIC_TYPE);
         if (otherGT == null) return;
         Object targetType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(otherGT);
         if (targetType != null)
@@ -603,7 +597,7 @@ public final class NewWithKeysNode extends PureNode
             String targetPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(targetType, resolver);
             if (targetPath != null)
             {
-                Object otherNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(otherProp, "name");
+                Object otherNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(otherProp, SLOT_NAME);
                 if (otherNameObj instanceof String otherName)
                 {
                     index.computeIfAbsent(propName, k -> new java.util.ArrayList<>(2))
@@ -647,10 +641,9 @@ public final class NewWithKeysNode extends PureNode
         try
         {
             boolean isMulti = false;
-            if (target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
-                    && pdo.getShape().getDynamicType() instanceof String purePath)
+            if (target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)
             {
-                Class<?> paramType = org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.getType(purePath, propName);
+                Class<?> paramType = pdo.classInfo.propTypes().get(propName);
                 if (paramType != null
                         && (org.finos.legend.pure.truffle.types.PureSequence.class.isAssignableFrom(paramType)
                                 || org.eclipse.collections.api.RichIterable.class.isAssignableFrom(paramType)
@@ -706,44 +699,4 @@ public final class NewWithKeysNode extends PureNode
         }
     }
 
-    /**
-     * Unwrap VS one level for the execution stack:
-     * AtomicValue → raw value, Collection → PureSequence of unwrapped values.
-     */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object unwrapVS(Object value)
-    {
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(value,
-                "meta::pure::metamodel::valuespecification::AtomicValue"))
-        {
-            Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "value");
-            if (inner != null) return inner;
-        }
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(value,
-                "meta::pure::metamodel::valuespecification::Collection"))
-        {
-            Object valsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "values");
-            if (!(valsObj instanceof org.finos.legend.pure.truffle.types.PureSequence vals) || vals.isEmpty())
-            {
-                return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
-            }
-            Object[] unwrapped = new Object[vals.size()];
-            for (int i = 0; i < vals.size(); i++)
-            {
-                Object elem = vals.getBoxed(i);
-                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(elem,
-                        "meta::pure::metamodel::valuespecification::AtomicValue"))
-                {
-                    Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(elem, "value");
-                    unwrapped[i] = inner != null ? inner : elem;
-                }
-                else
-                {
-                    unwrapped[i] = elem;
-                }
-            }
-            return new org.finos.legend.pure.truffle.types.ObjectSequence(unwrapped);
-        }
-        return value;
-    }
 }

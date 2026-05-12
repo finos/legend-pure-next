@@ -47,6 +47,10 @@ import java.util.zip.ZipOutputStream;
  */
 public final class TrufflePdbWriter
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type");
     private TrufflePdbWriter()
     {
     }
@@ -96,7 +100,7 @@ public final class TrufflePdbWriter
                 byte[] data = builder.sizedByteArray();
 
                 indexEntries.add(new String[]{path, typeName});
-                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "functionName");
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_FUNCTION_NAME);
                 if (fnNameObj instanceof String fnName && !fnName.isEmpty())
                 {
                     functionEntries.add(element);
@@ -163,7 +167,7 @@ public final class TrufflePdbWriter
             Object fn = entries.get(i);
             int fullPathOffset = builder.createString(_PackageableElement.path(fn));
             int functionNameOffset = builder.createString(
-                    (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fn, "functionName"));
+                    (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_FUNCTION_NAME));
             int functionTypeOffset = writeFunctionTypeOf(writer, fn);
             boolean isNative = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
                     "meta::pure::metamodel::function::NativeFunction");
@@ -187,14 +191,14 @@ public final class TrufflePdbWriter
      */
     private static int writeFunctionTypeOf(GeneratedFlatBufferWriter writer, Object fn)
     {
-        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fn, "classifierGenericType");
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_CLASSIFIER_GENERIC_TYPE);
         org.finos.legend.pure.truffle.types.PureSequence args = _GenericType.typeArguments(cgt);
         if (args != null && args.size() > 0)
         {
             Object first = args.getBoxed(0);
             if (first != null)
             {
-                Object innerType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(first, "type");
+                Object innerType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(first, SLOT_TYPE);
                 if (innerType != null)
                 {
                     // Method renamed to write_meta_pure_metamodel_type_FunctionType

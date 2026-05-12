@@ -144,6 +144,7 @@
                         -XX:+EnableJVMCI
                         -XX:+UseJVMCICompiler
                         -Dpure.truffle.compileImmediately=true
+                        -XX:StartFlightRecording=filename=/tmp/jfr-bench.jfr,settings=profile,dumponexit=true,delay=8s
                     </argLine>
                     <!-- <includes> inherited from platforms/truffle/pom.xml -->
                 </configuration>

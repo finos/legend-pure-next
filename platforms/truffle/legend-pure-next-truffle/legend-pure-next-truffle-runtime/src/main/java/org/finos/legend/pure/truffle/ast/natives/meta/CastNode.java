@@ -27,6 +27,18 @@ import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 @NodeInfo(shortName = "cast")
 public final class CastNode extends PureNode
 {
+
+    private static final int SLOT_CONSTRAINTS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("constraints");
+    private static final int SLOT_FUNCTION_DEFINITION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionDefinition");
+    private static final int SLOT_GENERAL = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+    private static final int SLOT_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
+    private static final int SLOT_MESSAGE_FUNCTION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("messageFunction");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariableValues");
+    private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariables");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
     @Child
     private PureNode inputChild;
 
@@ -61,7 +73,7 @@ public final class CastNode extends PureNode
         Object targetGT = null;
         Object targetType = null;
         Object hoistedGT = targetResult != null
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetResult, "genericType") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetResult, SLOT_GENERIC_TYPE) : null;
         if (hoistedGT != null)
         {
             org.finos.legend.pure.truffle.types.PureSequence hoistedTypeArgs =
@@ -111,8 +123,8 @@ public final class CastNode extends PureNode
                         }
                         if (!related)
                         {
-                            Object srcName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(sourceType, "name");
-                            Object tgtName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetType, "name");
+                            Object srcName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(sourceType, SLOT_NAME);
+                            Object tgtName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetType, SLOT_NAME);
                             throw new RuntimeException("Cast exception: " + srcName + " cannot be cast to " + tgtName);
                         }
                     }
@@ -182,18 +194,18 @@ public final class CastNode extends PureNode
         {
             return false;
         }
-        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "constraints");
+        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_CONSTRAINTS);
         if (constraintsObj instanceof org.finos.legend.pure.truffle.types.PureSequence constraints && !constraints.isEmpty())
         {
             return true;
         }
-        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "generalizations");
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_GENERALIZATIONS);
         if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence genSeq)
         {
             for (Object gen : genSeq.toBoxedArray())
             {
                 Object general = gen != null
-                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general") : null;
+                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gen, SLOT_GENERAL) : null;
                 if (general != null)
                 {
                     var superType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general);
@@ -222,13 +234,13 @@ public final class CastNode extends PureNode
         }
         validateConstraintsOnType(type, targetGT, value, resolver, constraintCallNode);
         // Walk up the type hierarchy
-        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "generalizations");
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_GENERALIZATIONS);
         if (gens instanceof org.finos.legend.pure.truffle.types.PureSequence genSeq)
         {
             for (Object gen : genSeq.toBoxedArray())
             {
                 Object general = gen != null
-                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gen, "general") : null;
+                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gen, SLOT_GENERAL) : null;
                 Object genType =
                         general != null ? org.finos.legend.pure.truffle.runtime.helper._GenericType.type(general) : null;
                 if (genType != null && general != null)
@@ -249,22 +261,22 @@ public final class CastNode extends PureNode
                                                    TruffleMetadataAccess resolver,
                                                    RawLambdaCallNode constraintCallNode)
     {
-        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "constraints");
+        Object constraintsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_CONSTRAINTS);
         if (!(constraintsObj instanceof org.finos.legend.pure.truffle.types.PureSequence constraints) || constraints.isEmpty())
         {
             return;
         }
-        Object typeNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "name");
+        Object typeNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_NAME);
         String typeName = typeNameObj instanceof String s ? s : "Unknown";
 
         // Resolve type variable bindings (e.g., x=8 for P(8))
         java.util.Map<String, Object> typeVarBindings = new java.util.HashMap<>();
         Object typeVarValsObj = targetGT != null
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(targetGT, "typeVariableValues") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(targetGT, SLOT_TYPE_VARIABLE_VALUES) : null;
         if (typeVarValsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVarVals
                 && typeVarVals.size() > 0)
         {
-            Object typeVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "typeVariables");
+            Object typeVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_TYPE_VARIABLES);
             if (typeVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVars)
             {
                 int count = Math.min(typeVars.size(), typeVarVals.size());
@@ -275,11 +287,11 @@ public final class CastNode extends PureNode
                     if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(rawVal,
                             "meta::pure::metamodel::valuespecification::AtomicValue"))
                     {
-                        Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawVal, "value");
+                        Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawVal, SLOT_VALUE);
                         if (inner != null) rawVal = inner;
                     }
                     Object rawTypeVar = typeVars.getBoxed(i);
-                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawTypeVar, "name");
+                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawTypeVar, SLOT_NAME);
                     if (tvNameObj instanceof String tvName)
                     {
                         typeVarBindings.put(tvName, rawVal);
@@ -295,7 +307,7 @@ public final class CastNode extends PureNode
             {
                 continue;
             }
-            Object funcDef = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "functionDefinition");
+            Object funcDef = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(c, SLOT_FUNCTION_DEFINITION);
             if (funcDef == null)
             {
                 continue;
@@ -304,13 +316,13 @@ public final class CastNode extends PureNode
             // Build args: [this, typeVarValues...]
             java.util.List<Object> constraintArgs = new java.util.ArrayList<>();
             constraintArgs.add(value);
-            Object funcParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(funcDef, "parameters");
+            Object funcParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(funcDef, SLOT_PARAMETERS);
             if (funcParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence funcParams && funcParams.size() > 1)
             {
                 for (int p = 1; p < funcParams.size(); p++)
                 {
                     Object rawParam = funcParams.getBoxed(p);
-                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawParam, "name");
+                    Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawParam, SLOT_NAME);
                     if (tvNameObj instanceof String tvName)
                     {
                         Object tvVal = typeVarBindings.get(tvName);
@@ -325,24 +337,24 @@ public final class CastNode extends PureNode
             Object result = constraintCallNode.callWithArgs(funcDef, constraintArgs.toArray());
             if (Boolean.FALSE.equals(result))
             {
-                Object cNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "name");
+                Object cNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(c, SLOT_NAME);
                 String constraintName = cNameObj instanceof String cn ? cn : String.valueOf(idx);
                 String message = "Constraint :[" + constraintName + "] violated in the Class " + typeName;
 
-                Object messageFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(c, "messageFunction");
+                Object messageFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(c, SLOT_MESSAGE_FUNCTION);
                 if (messageFn != null)
                 {
                     try
                     {
                         java.util.List<Object> msgArgs = new java.util.ArrayList<>();
                         msgArgs.add(value);
-                        Object msgParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(messageFn, "parameters");
+                        Object msgParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(messageFn, SLOT_PARAMETERS);
                         if (msgParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence msgParams && msgParams.size() > 1)
                         {
                             for (int p = 1; p < msgParams.size(); p++)
                             {
                                 Object rawParam = msgParams.getBoxed(p);
-                                Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawParam, "name");
+                                Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawParam, SLOT_NAME);
                                 if (tvNameObj instanceof String tvName)
                                 {
                                     Object tvVal = typeVarBindings.get(tvName);

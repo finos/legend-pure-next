@@ -51,13 +51,8 @@ public final class PureFbDecoder
             return accessor.readProperty(propertyName);
         }
         // Post-flip backing: raw XDef. Per-Pure-class decoder lives in
-        // PureFbDecoderRegistry, looked up by Shape's dynamic type.
-        Object dt = obj.getShape().getDynamicType();
-        if (dt instanceof String purePath)
-        {
-            return PureFbDecoderRegistry.decode(purePath, propertyName, obj.fb,
-                    (org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess) obj.resolver, obj);
-        }
-        return null;
+        // PureFbDecoderRegistry, looked up by the PDO's classInfo path.
+        return PureFbDecoderRegistry.decode(obj.classInfo.purePath, propertyName, obj.fb,
+                (org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess) obj.resolver, obj);
     }
 }

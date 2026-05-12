@@ -89,7 +89,13 @@ public final class PureTruffleRuntime
                     .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
                     .option("engine.TraceCompilation", "true")
                     .option("engine.WarnInterpreterOnly", "false")
-                    .option("engine.CompilationFailureAction", "Silent");
+                    .option("engine.CompilationFailureAction", "Silent")
+                    // Lambda-body inlining makes some parent FDs into large
+                    // compilation units; default budgets cause PermanentBailout
+                    // ("Too deep inlining") on hot paths. Bump.
+                    .option("compiler.InliningExpansionBudget", "100000")
+                    .option("compiler.InliningInliningBudget", "100000")
+                    .option("compiler.MaximumGraalGraphSize", "300000");
             // Instrument options (cpusampler.*, pureprofiler.*) and explicit
             // engine.* overrides must go on the Engine, not the Context — when
             // a Context shares an Engine, instrument-scope options can only

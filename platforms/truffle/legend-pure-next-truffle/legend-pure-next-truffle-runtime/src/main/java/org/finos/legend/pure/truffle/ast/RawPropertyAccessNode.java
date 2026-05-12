@@ -27,6 +27,15 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 @NodeInfo(shortName = "propertyAccess")
 public final class RawPropertyAccessNode extends PureNode
 {
+
+    private static final int SLOT_DEFAULT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("defaultValue");
+    private static final int SLOT_EXPRESSION_SEQUENCE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("expressionSequence");
+    private static final int SLOT_FUNC = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("func");
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("values");
     private final Object fe;
     private final boolean isQualifiedProperty;
     private final String propertyName;
@@ -53,18 +62,18 @@ public final class RawPropertyAccessNode extends PureNode
         this.argNodes = argNodes;
 
         // Pre-resolve property name and kind at construction time
-        Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
+        Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
         this.isQualifiedProperty = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(func,
                 "meta::pure::metamodel::function::property::QualifiedProperty");
         if (!isQualifiedProperty)
         {
             Object nameObj = func != null
-                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(func, "name")
+                    ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(func, SLOT_NAME)
                     : null;
             String name = nameObj instanceof String s ? s : null;
             if (name == null)
             {
-                Object fnName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName");
+                Object fnName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME);
                 if (fnName instanceof String s) name = s;
             }
             this.propertyName = name;
@@ -90,7 +99,7 @@ public final class RawPropertyAccessNode extends PureNode
 
         if (isQualifiedProperty)
         {
-            Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
+            Object func = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
             return getContext().executeFunction(func, argValues);
         }
 
@@ -147,14 +156,14 @@ public final class RawPropertyAccessNode extends PureNode
                 // constructed). The legacy `properties`-as-defaultValue path
                 // below is for newEnumeration()-built ones that don't yet
                 // populate `values`.
-                Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "values");
+                Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_VALUES);
                 if (valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence values)
                 {
                     for (int i = 0; i < values.size(); i++)
                     {
                         Object enumValue = values.getBoxed(i);
                         if (enumValue != null && propName.equals(
-                                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(enumValue, "name")))
+                                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(enumValue, SLOT_NAME)))
                         {
                             CompilerDirectives.transferToInterpreterAndInvalidate();
                             cachedEnumTarget = target;
@@ -167,19 +176,19 @@ public final class RawPropertyAccessNode extends PureNode
                 // Runtime enum (no Java class): values live on _properties()
                 // as Property instances whose default-value lambda wraps the
                 // Enum. Walk the properties looking for a matching name.
-                Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "properties");
+                Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_PROPERTIES);
                 if (propsObj instanceof org.finos.legend.pure.truffle.types.PureSequence properties)
                 {
                     for (int i = 0; i < properties.size(); i++)
                     {
                         Object prop = properties.getBoxed(i);
-                        if (prop != null && propName.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name")))
+                        if (prop != null && propName.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_NAME)))
                         {
                             // The default-value lambda's expressionSequence[0]
                             // is an AtomicValue whose _value() is the Enum.
-                            Object dv = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "defaultValue");
+                            Object dv = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_DEFAULT_VALUE);
                             if (dv == null) continue;
-                            Object dvSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(dv, "expressionSequence");
+                            Object dvSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(dv, SLOT_EXPRESSION_SEQUENCE);
                             if (!(dvSeqObj instanceof org.finos.legend.pure.truffle.types.PureSequence dvSeq) || dvSeq.isEmpty())
                             {
                                 continue;
@@ -188,7 +197,7 @@ public final class RawPropertyAccessNode extends PureNode
                             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(expr,
                                     "meta::pure::metamodel::valuespecification::AtomicValue"))
                             {
-                                return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(expr, "value");
+                                return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(expr, SLOT_VALUE);
                             }
                         }
                     }

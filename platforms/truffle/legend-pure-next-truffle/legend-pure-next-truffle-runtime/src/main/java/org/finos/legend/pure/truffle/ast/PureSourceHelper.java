@@ -23,6 +23,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class PureSourceHelper
 {
+
+    private static final int SLOT_END_COLUMN = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("endColumn");
+    private static final int SLOT_END_LINE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("endLine");
+    private static final int SLOT_SOURCE_ID = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceId");
+    private static final int SLOT_SOURCE_INFORMATION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceInformation");
+    private static final int SLOT_START_COLUMN = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startColumn");
+    private static final int SLOT_START_LINE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startLine");
     private static final ConcurrentHashMap<String, Source> SOURCE_CACHE = new ConcurrentHashMap<>();
     private static final List<Path> SOURCE_ROOTS = new CopyOnWriteArrayList<>();
 
@@ -62,18 +69,18 @@ public final class PureSourceHelper
         {
             return null;
         }
-        Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "sourceId");
-        Object startLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startLine");
+        Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_SOURCE_ID);
+        Object startLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_LINE);
         if (!(sourceIdObj instanceof String sourceId) || !(startLineObj instanceof Number startLineNum))
         {
             return null;
         }
         int startLine = startLineNum.intValue();
-        Object startColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startColumn");
+        Object startColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_COLUMN);
         int startCol = startColObj instanceof Number n ? n.intValue() : 1;
-        Object endLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "endLine");
+        Object endLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_END_LINE);
         int endLine = endLineObj instanceof Number n ? n.intValue() : startLine;
-        Object endColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "endColumn");
+        Object endColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_END_COLUMN);
         int endCol = endColObj instanceof Number n ? n.intValue() : startCol;
 
         Source source = SOURCE_CACHE.computeIfAbsent(sourceId, PureSourceHelper::buildSource);
@@ -130,7 +137,7 @@ public final class PureSourceHelper
         }
         try
         {
-            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "sourceInformation");
+            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(vs, SLOT_SOURCE_INFORMATION);
             if (si != null)
             {
                 SourceSection section = createSourceSection(si);

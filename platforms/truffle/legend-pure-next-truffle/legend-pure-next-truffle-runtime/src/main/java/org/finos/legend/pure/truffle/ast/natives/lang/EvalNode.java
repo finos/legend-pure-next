@@ -32,6 +32,8 @@ import org.finos.legend.pure.truffle.ast.RawClosure;
 @NodeInfo(shortName = "eval")
 public final class EvalNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     @Children
     private PureNode[] children;
 
@@ -117,7 +119,7 @@ public final class EvalNode extends PureNode
             if (args.length > 0)
             {
                 return propertyReader.execute(args[0],
-                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fn, "name"));
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_NAME));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         }
@@ -139,7 +141,7 @@ public final class EvalNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static Object executeNativeViaRegistry(org.finos.legend.pure.truffle.PureContext evaluator, Object nf, Object[] args)
     {
-        String signature = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(nf, "name");
+        String signature = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(nf, SLOT_NAME);
         NativeNodeRegistry registry = evaluator.astBuilder().specialized();
         NativeNodeRegistry.Factory factory = registry.lookup(signature);
         if (factory == null)

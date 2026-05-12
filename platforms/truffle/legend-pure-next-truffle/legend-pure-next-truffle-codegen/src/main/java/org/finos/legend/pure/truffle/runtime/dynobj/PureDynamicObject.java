@@ -9,35 +9,49 @@
 package org.finos.legend.pure.truffle.runtime.dynobj;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.object.DynamicObject;
-import com.oracle.truffle.api.object.DynamicObjectLibrary;
-import com.oracle.truffle.api.object.Shape;
+import com.oracle.truffle.api.interop.TruffleObject;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.types.PureSequence;
+
+import java.util.Arrays;
 
 /**
  * Single object kind for all Pure-on-Truffle metamodel instances.
  *
- * <p>Replaces the per-class XImpl + XFlatBufferWrapper bi-morphic pair with a
- * single class whose Pure type is encoded by its {@link Shape}. Properties live
- * in the Shape's slots; on first access they're materialized from {@link #fb}
- * (when present) via {@link PureFbDecoder} and stored back into the slot —
- * subsequent accesses are normal {@code DynamicObjectLibrary} hits.</p>
+ * <p>Storage is a hand-rolled {@code Object[] slots} array sized for the
+ * Pure class's property count, indexed by the {@link PureClassInfo}'s
+ * inheritance-preserved slot table. Replaces the
+ * {@code DynamicObject}/{@code Shape}/{@code TriePropertyMap} path that
+ * JFR pinned at ~35% of warm-time CPU.</p>
  *
- * <p>Implements {@link PropertyAccessor} so the default-method bodies on the
- * generated metamodel interfaces (which delegate {@code _name()} →
- * {@code readProperty("name")}) work without per-class {@code @Override}s.
- * Post-flip, every loaded element is a {@code PureDynamicObject} subclass
- * that implements all generated typed interfaces; the typed call sites keep
- * compiling and running.</p>
+ * <p>Read path under Graal PE (after AST-build slot resolution):
+ * <pre>
+ *   mov  rax, [pdo + slots_offset]   ; load slots field
+ *   mov  rax, [rax + 16 + idx*8]      ; load constant-indexed element
+ * </pre>
+ * Two loads, ~2 ns. Polymorphism-tolerant because the slot index is constant
+ * per (Pure class, property name) across every subclass — inheritance
+ * preserved by {@link PureClassInfo}.</p>
  *
- * <p>The {@link #fb} / {@link #resolver} / {@link #parent} fields are plain
- * Java finals (not Shape slots) — PE inlines them as constants. {@link #fb}
- * is null for Pure-built instances (e.g. {@code ^Class(name="Foo")}); FB-loaded
- * instances carry the FlatBuffer struct pointer.</p>
+ * <p>{@link #fb} carries an FB-backed source for lazy decode (PDB load
+ * path). On first read of a property whose slot is {@link PureFbDecoder#LAZY},
+ * the value is materialised via {@link PureFbDecoderRegistry#decode} and
+ * stored back in the slot.</p>
  */
-public class PureDynamicObject extends DynamicObject implements PropertyAccessor
+public class PureDynamicObject implements PropertyAccessor, TruffleObject
 {
+    /** Per-class slot table — inheritance-preserved (subclass shares parent's
+     *  slot indices for inherited properties). Resolved once per class at
+     *  construction via {@link PureClassRegistry}. */
+    public final PureClassInfo classInfo;
+
+    /** Per-instance property storage, indexed by {@link PureClassInfo#slotIndex}.
+     *  Sized to {@code classInfo.slotCount}. FB-backed instances start with
+     *  every slot set to {@link PureFbDecoder#LAZY} (decode-on-first-read).
+     *  Pure-built instances start with {@code null} in every slot. */
+    public final Object[] slots;
+
     /** FB-generated {@code XDef} struct (e.g. {@code PropertyDef}); null for Pure-built. */
     public final Object fb;
 
@@ -47,64 +61,133 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
     /** Parent for {@code AncestorRef} resolution; null for top-level / Pure-built. */
     public final Object parent;
 
-    public PureDynamicObject(Shape shape, Object fb, Object resolver, Object parent)
+    public PureDynamicObject(PureClassInfo classInfo, Object fb, Object resolver, Object parent)
     {
-        super(shape);
+        this.classInfo = classInfo;
+        this.slots = new Object[classInfo.slotCount()];
+        if (fb != null && this.slots.length > 0)
+        {
+            // FB-backed: every property starts LAZY so the first read
+            // triggers FB materialisation. Pure-built leaves slots null —
+            // copy() relies on null to mean "unset", distinct from a set
+            // value of {@link PureSequence#EMPTY}.
+            Arrays.fill(this.slots, PureFbDecoder.LAZY);
+        }
         this.fb = fb;
         this.resolver = resolver;
         this.parent = parent;
     }
 
-    /**
-     * Lazy DOL-backed read. Cache hit (post-warmup) is a single Shape-folded
-     * slot load. Cache miss decodes from {@link #fb} via the per-Pure-class
-     * decoder registered in {@link PureFbDecoderRegistry}, then stores the
-     * materialised value back so subsequent reads hit the slot.
-     *
-     * <p>Backwards-compatible fallback: if {@link #fb} implements {@link
-     * PropertyAccessor} (the legacy {@code XImpl} construction path), call
-     * its {@code readProperty} directly. Lets the loader flip happen
-     * incrementally — once the loader switches to constructing {@link
-     * PureDynamicObject} with raw {@code XDef} as {@link #fb}, the registry
-     * path takes over.</p>
-     */
-    @Override
-    @TruffleBoundary
-    public Object readProperty(String name)
+    /** Convenience accessor — the Pure-class path encoded in this instance. */
+    public String purePath()
     {
-        DynamicObjectLibrary dol = DynamicObjectLibrary.getUncached();
-        Object cached = dol.getOrDefault(this, name, PureFbDecoder.LAZY);
-        if (cached != PureFbDecoder.LAZY)
+        return classInfo.purePath;
+    }
+
+    /**
+     * Direct slot read by index. Called from AST nodes that have resolved
+     * the slot index at build time via {@link PureClassRegistry#globalSlot}
+     * and stored it as a {@code final} int. Under PE this folds to a single
+     * array load (plus a LAZY materialisation branch on FB-cold path).
+     *
+     * <p>Returns {@code null} when this class doesn't declare a property at
+     * {@code slotIdx} (the slot index is global but this PDO's
+     * {@code slots[]} is sized to its own properties; foreign slots are
+     * out-of-range). Callers in Pure-semantic contexts treat null as
+     * {@link PureSequence#EMPTY}.</p>
+     */
+    public Object readSlot(int slotIdx)
+    {
+        if (slotIdx >= slots.length)
         {
-            return cached;
+            // Two cases collapse here:
+            //   1. This class declares no property at slotIdx (global slot
+            //      exceeds classInfo.slotCount) — return null = "absent".
+            //   2. Bootstrap-cycle: this PDO was constructed before classInfo
+            //      grew. The slot IS in classInfo.nameBySlot but past this
+            //      PDO's slots[]. Fall back to FB decode by name if we can.
+            String[] names = classInfo.nameBySlot();
+            if (fb != null && slotIdx < names.length && names[slotIdx] != null)
+            {
+                return decodeFromFb(names[slotIdx]);
+            }
+            return null;
+        }
+        Object v = slots[slotIdx];
+        if (v == PureFbDecoder.LAZY)
+        {
+            return materialize(slotIdx);
+        }
+        return v;
+    }
+
+    /** Direct slot write by index. */
+    public void writeSlot(int slotIdx, Object value)
+    {
+        slots[slotIdx] = value;
+    }
+
+    @TruffleBoundary
+    private Object materialize(int slotIdx)
+    {
+        String[] names = classInfo.nameBySlot();
+        // Global slot may exceed classInfo.nameBySlot() length OR map to a
+        // slot this class doesn't declare (null entry). Both mean "property
+        // not on this class" — store null and return; never pass null to a
+        // typed FB Impl's readProperty(switch) which would NPE.
+        String name = slotIdx < names.length ? names[slotIdx] : null;
+        if (name == null)
+        {
+            slots[slotIdx] = null;
+            return null;
         }
         Object decoded = decodeFromFb(name);
-        dol.put(this, name, decoded);
+        if (decoded == PropertyAccessor.ABSENT) decoded = null;
+        slots[slotIdx] = decoded;
         return decoded;
+    }
+
+    @Override
+    public Object readProperty(String name)
+    {
+        int slot = classInfo.slotIndex(name);
+        if (slot >= 0 && slot < slots.length)
+        {
+            return readSlot(slot);
+        }
+        return fb != null ? decodeFromFb(name) : PropertyAccessor.ABSENT;
+    }
+
+    @Override
+    public void writeProperty(String name, Object value)
+    {
+        int slot = classInfo.slotIndex(name);
+        if (slot < 0)
+        {
+            throw new IllegalArgumentException("writeProperty: " + classInfo.purePath
+                    + " has no property '" + name + "'");
+        }
+        Class<?> paramType = classInfo.propTypes().get(name);
+        if (paramType != null)
+        {
+            value = PropertyCoercion.coerce(value, paramType);
+        }
+        slots[slot] = value;
     }
 
     private Object decodeFromFb(String name)
     {
-        if (fb == null)
-        {
-            return null;
-        }
-        // Legacy path: fb is an XImpl/XFBW that implements PropertyAccessor.
-        // PropertyAccessor.readProperty does the per-class decode switch.
+        if (fb == null) return null;
         if (fb instanceof PropertyAccessor accessor)
         {
             Object value = accessor.readProperty(name);
             return value == PropertyAccessor.ABSENT ? null : value;
         }
-        // New path: fb is a raw XDef; per-Pure-class decoder is registered in
-        // PureFbDecoderRegistry, looked up by Shape's dynamic type.
-        Object dt = getShape().getDynamicType();
-        if (dt instanceof String purePath)
-        {
-            return PureFbDecoderRegistry.decode(purePath, name, fb,
-                    (TruffleMetadataAccess) resolver, this);
-        }
-        return null;
+        // Cached on classInfo so we skip the per-call
+        // {@link PureFbDecoderRegistry} HashMap lookup (which dominated
+        // {@code StringLatin1.equals} in JFR for FB-backed reads).
+        PureFbDecoderRegistry.Decoder d = classInfo.decoder();
+        return d != null ? d.decode(name, fb, (TruffleMetadataAccess) resolver, this) : null;
     }
 
     @Override
@@ -113,20 +196,9 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
     {
         if (this == o) return true;
         if (!(o instanceof PureDynamicObject other)) return false;
-        // Same Pure type required for equality — compare Shapes directly
-        // (Shapes are per-purePath singletons so identity ≡ purePath equality
-        // for the root Shape, and Shape transitions still point at the same
-        // dynamicType so this stays correct across instance specialization).
-        Object meta = getShape().getSharedData();
-        Object oMeta = other.getShape().getSharedData();
-        if (!(meta instanceof PureShapeRegistry.ShapeMeta m) || meta != oMeta) return false;
-        String[] keys = m.equalityKeys;
-        if (keys == null || keys.length == 0)
-        {
-            // No declared equality keys → identity. Matches XImpl's
-            // hashCode behaviour (System.identityHashCode when no keys).
-            return false;
-        }
+        if (classInfo != other.classInfo) return false;
+        String[] keys = classInfo.equalityKeys();
+        if (keys == null || keys.length == 0) return false;
         for (String k : keys)
         {
             if (!java.util.Objects.equals(readProperty(k), other.readProperty(k))) return false;
@@ -138,18 +210,15 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
     @TruffleBoundary
     public int hashCode()
     {
-        Object meta = getShape().getSharedData();
-        if (!(meta instanceof PureShapeRegistry.ShapeMeta m)) return System.identityHashCode(this);
-        String[] keys = m.equalityKeys;
+        String[] keys = classInfo.equalityKeys();
         if (keys == null || keys.length == 0) return System.identityHashCode(this);
         int h = 1;
         for (String k : keys)
         {
             Object v = readProperty(k);
-            // Match XImpl's hashCode: only String/Number/Boolean contribute
-            // (XImpl filters hashProps to primitive types to avoid recursive
-            // self-references). For PDO we approximate by hashing primitive
-            // values, treating PDO-valued properties as identity-only.
+            // Only primitive-typed equality keys contribute, matching the
+            // original XImpl hashCode that filtered to String/Number/Boolean
+            // to avoid recursive self-references.
             if (v instanceof String || v instanceof Number || v instanceof Boolean)
             {
                 h = 31 * h + v.hashCode();
@@ -157,21 +226,4 @@ public class PureDynamicObject extends DynamicObject implements PropertyAccessor
         }
         return h;
     }
-
-    @Override
-    @TruffleBoundary
-    public void writeProperty(String name, Object value)
-    {
-        Object meta = getShape().getSharedData();
-        if (meta instanceof PureShapeRegistry.ShapeMeta m)
-        {
-            Class<?> paramType = m.propTypes.get(name);
-            if (paramType != null)
-            {
-                value = PropertyCoercion.coerce(value, paramType);
-            }
-        }
-        DynamicObjectLibrary.getUncached().put(this, name, value);
-    }
-
 }

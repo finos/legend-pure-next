@@ -35,6 +35,20 @@ import java.util.WeakHashMap;
  */
 public final class PureContext
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_EXPRESSION_SEQUENCE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("expressionSequence");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_OPEN_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("openVariables");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_QUALIFIED_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("qualifiedProperties");
+    private static final int SLOT_SOURCE_ID = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceId");
+    private static final int SLOT_SOURCE_INFORMATION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceInformation");
+    private static final int SLOT_START_COLUMN = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startColumn");
+    private static final int SLOT_START_LINE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startLine");
+    private static final int SLOT_TYPE_VARIABLE_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariableValues");
+    private static final int SLOT_TYPE_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeVariables");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
     private final PureLanguage language;
     private final TruffleLanguage.Env env;
 
@@ -48,31 +62,29 @@ public final class PureContext
     // Per-lambda caches
     private final WeakHashMap<Object, RootCallTarget> lambdaCache = new WeakHashMap<>();
 
+    /** Per-context CGT cache for enum-value singletons. Enum PDOs are
+     *  JVM-static (one instance shared across every PureContext / resolver),
+     *  so we cannot stamp the resolver-specific CGT onto their slot table —
+     *  a CGT built for resolver A would outlive A's PureContext and leak into
+     *  resolver B's matches as a stale wrapper. Identity-keyed; the singleton
+     *  identity is stable program-wide. */
+    private final java.util.Map<org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject, Object> enumCgtCache =
+            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
     // Construction stack for new/copy parent references (~)
     private final ArrayDeque<Object> constructionStack = new ArrayDeque<>();
 
     // Per-module state holds caches whose entries reference wrappers from a
-    // specific module. Keying by owning module means we can wipe just the
-    // affected slice on a recompile (via {@link #unregisterModule}) without
-    // touching unrelated modules' caches.
-    //
-    // Why these caches need module-scope (rather than living flat on the
-    // context):
-    //   - enumCgts: keyed by Java enum constant (a JVM singleton); the
-    //     cached CGT references a wrapper from the module that owns the
-    //     enum's path. Wipe that module → cache must drop the entry.
-    //   - typePathCgts: keyed by Pure type path; the cached CGT references
-    //     a wrapper from the module that owns the path. Same logic.
-    //
-    // Legacy resolvers (anonymous TruffleMetadataAccess) without a registry
-    // map to the {@link #DEFAULT_MODULE_KEY} bucket — same behavior as the
-    // pre-module flat cache.
+    // specific module. typePathCgts is keyed by Pure type path; the cached
+    // CGT references a wrapper from the module that owns the path. Keying
+    // by owning module means we can wipe just the affected slice on a
+    // recompile (via {@link #unregisterModule}) without touching unrelated
+    // modules' caches.
     private final java.util.HashMap<String, ModuleState> moduleStates = new java.util.HashMap<>();
     private static final String DEFAULT_MODULE_KEY = "<default>";
 
     private static final class ModuleState
     {
-        final java.util.IdentityHashMap<Object, Object> enumCgts = new java.util.IdentityHashMap<>();
         final java.util.HashMap<String, Object> typePathCgts = new java.util.HashMap<>();
     }
 
@@ -214,9 +226,9 @@ public final class PureContext
             FrameLayout prevLayout = astBuilder.pushLayout(cf.layout());
             try
             {
-                Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "expressionSequence");
+                Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_EXPRESSION_SEQUENCE);
                 PureNode[] body = astBuilder.lowerBody(exprSeqObj, cf.layout());
-                Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "openVariables");
+                Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_OPEN_VARIABLES);
                 String[] openVarNames;
                 if (!(openVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence openVars) || openVars.isEmpty())
                 {
@@ -228,7 +240,7 @@ public final class PureContext
                     for (int i = 0; i < openVars.size(); i++)
                     {
                         Object ov = openVars.getBoxed(i);
-                        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ov, "name");
+                        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ov, SLOT_NAME);
                         if (nameObj instanceof String s)
                         {
                             openVarNames[i] = s;
@@ -284,6 +296,10 @@ public final class PureContext
         {
             return null;
         }
+        // Post enum-to-PDO migration: the generated {@code XEnum} class is
+        // no longer a Java {@code enum} — it's a final class holding PDO
+        // singletons. Look up the value via the static {@code valueOf(String)}
+        // method which now returns a {@link PureDynamicObject}.
         String enumClassName = "org.finos.legend.pure.truffle.pdb." + pureFqnToJavaFqn(enumPath) + "Enum";
         Class<?> enumClass;
         try
@@ -296,21 +312,19 @@ public final class PureContext
             // back to _values() traversal.
             return null;
         }
-        if (!enumClass.isEnum())
+        try
         {
-            throw new RuntimeException(enumClassName + " exists but is not a Java enum.");
+            return enumClass.getMethod("valueOf", String.class).invoke(null, valueName);
         }
-        for (Object constant : enumClass.getEnumConstants())
+        catch (java.lang.reflect.InvocationTargetException e)
         {
-            if (constant instanceof java.lang.Enum<?> e && e.name().equals(valueName))
-            {
-                return constant;
-            }
+            if (e.getCause() instanceof IllegalArgumentException iae) throw iae;
+            throw new RuntimeException(e.getCause());
         }
-        throw new RuntimeException(
-                "Enum '" + enumPath + "' has no value named '" + valueName + "'. "
-                        + "Available values: " + java.util.Arrays.stream(enumClass.getEnumConstants())
-                        .map(c -> ((java.lang.Enum<?>) c).name()).toList());
+        catch (ReflectiveOperationException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -359,20 +373,54 @@ public final class PureContext
      */
     public Object classifierGenericType(Object value)
     {
-        if (value == null)
+        // Post enum-to-PDO migration: every Pure metamodel value (including
+        // enum singletons) is a {@link PureDynamicObject} with CGT in its
+        // slot table. Enum-value singletons can't have their CGT set at
+        // codegen class-load (no resolver yet) — fill lazily on first read
+        // gated by classInfo identity so non-enum PDOs skip the registry
+        // lookup entirely.
+        if (value instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)
         {
+            // Codegen-emitted enum-value singletons (e.g.
+            // {@code GenericTypeOperationTypeEnum.Union}) are JVM-static and
+            // shared across every PureContext — must NOT read/write SLOT_CGT
+            // on them, or resolver A's CGT leaks into resolver B's matches.
+            // {@link PureEnumRegistry#enumerationPathOf} returns non-null only
+            // for those static singletons; runtime-created enums (e.g. via
+            // {@code newEnumeration}) aren't registered there and keep their
+            // CGT in the slot table like ordinary PDOs.
+            if (pdo.classInfo == ENUM_CLASS_INFO)
+            {
+                String enumPath = org.finos.legend.pure.truffle.runtime.dynobj.PureEnumRegistry.enumerationPathOf(pdo);
+                if (enumPath != null) return resolveStaticEnumCgt(pdo, enumPath);
+            }
+            Object cgt = pdo.readSlot(SLOT_CGT);
+            if (cgt != null) return cgt;
             return null;
         }
-        // Java enum constants implementing a generated Pure-Enum interface get
-        // their CGT cached per-context (they're JVM singletons; can't stamp).
-        if (value.getClass().isEnum())
-        {
-            return enumCgt(value);
-        }
-        // Anything else — read CGT via the universal property accessor (works
-        // for both legacy XImpl and PureDynamicObject post-flip).
-        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "classifierGenericType");
+        // Primitive Pure values resolve type-cgts by Java class.
+        if (value instanceof Long || value instanceof Integer) return cgtForType("Integer");
+        if (value instanceof Double || value instanceof Float) return cgtForType("Float");
+        if (value instanceof String) return cgtForType("String");
+        if (value instanceof Boolean) return cgtForType("Boolean");
+        return null;
     }
+
+    private static final org.finos.legend.pure.truffle.runtime.dynobj.PureClassInfo ENUM_CLASS_INFO =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.enumClassInfo();
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object resolveStaticEnumCgt(org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo, String enumPath)
+    {
+        Object cached = enumCgtCache.get(pdo);
+        if (cached != null) return cached;
+        Object cgt = cgtForType(enumPath);
+        if (cgt != null) enumCgtCache.put(pdo, cgt);
+        return cgt;
+    }
+
+    private static final int SLOT_CGT =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
 
     /**
      * Build/cache a CGT for the given Pure type path against this context's
@@ -406,44 +454,6 @@ public final class PureContext
         return cgt;
     }
 
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private Object enumCgt(Object enumConstant)
-    {
-        if (resolver == null)
-        {
-            return null;
-        }
-        // Derive Pure path from the Java enum class FQN. Marker interfaces
-        // are no longer emitted, so `getInterfaces()` only yields
-        // PropertyAccessor — we can't read the Pure path from there. The
-        // generated class name pattern is `<pdb-prefix>.<dotted-path>Enum`,
-        // strip the prefix + `Enum` suffix and convert dots to `::`.
-        String javaFqn = enumConstant.getClass().getName();
-        String stripped = javaFqn.startsWith("org.finos.legend.pure.truffle.pdb.")
-                ? javaFqn.substring("org.finos.legend.pure.truffle.pdb.".length())
-                : javaFqn;
-        if (stripped.endsWith("Enum"))
-        {
-            stripped = stripped.substring(0, stripped.length() - 4);
-        }
-        String purePath = stripped.replace(".", "::");
-        String moduleKey = ownerModuleOfPath(purePath);
-        ModuleState state = moduleStateFor(moduleKey);
-        var cached = state.enumCgts.get(enumConstant);
-        if (cached != null)
-        {
-            return cached;
-        }
-        Object enumType = resolver.getElement(purePath);
-        if (enumType == null)
-        {
-            return null;
-        }
-        var cgt = org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(enumType, resolver);
-        state.enumCgts.put(enumConstant, cgt);
-        return cgt;
-    }
-
     /**
      * Find the module that owns a given path. Falls back to
      * {@link #DEFAULT_MODULE_KEY} when the registry isn't available (legacy
@@ -471,13 +481,13 @@ public final class PureContext
         if (cgt == null) return staticQp;
         Object runtimeType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         if (runtimeType == null) return staticQp;
-        String qpName = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(staticQp, "name");
+        String qpName = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(staticQp, SLOT_NAME);
         int argCount = rawArgs.length;
         java.util.List<Object> mro =
                 org.finos.legend.pure.truffle.runtime.helper._Type.linearize(runtimeType, resolver);
         for (Object type : mro)
         {
-            Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "qualifiedProperties");
+            Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_QUALIFIED_PROPERTIES);
             if (!(qpsObj instanceof org.finos.legend.pure.truffle.types.PureSequence qps))
             {
                 continue;
@@ -485,9 +495,9 @@ public final class PureContext
             for (Object candidate : qps.toBoxedArray())
             {
                 if (candidate == null) continue;
-                Object cqpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "name");
+                Object cqpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(candidate, SLOT_NAME);
                 if (!qpName.equals(cqpName)) continue;
-                Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "parameters");
+                Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(candidate, SLOT_PARAMETERS);
                 if (cqpParamsObj instanceof org.finos.legend.pure.truffle.types.PureSequence cqpParams
                         && cqpParams.size() == argCount
                         && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(candidate,
@@ -504,14 +514,14 @@ public final class PureContext
     {
         Object cgt = getClassifierGenericType(target);
         if (cgt == null) return;
-        Object tvvObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(cgt, "typeVariableValues");
+        Object tvvObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cgt, SLOT_TYPE_VARIABLE_VALUES);
         if (!(tvvObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVarVals) || typeVarVals.isEmpty())
         {
             return;
         }
         Object ownerType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
         Object typeVarsObj = ownerType != null
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ownerType, "typeVariables") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ownerType, SLOT_TYPE_VARIABLES) : null;
         if (!(typeVarsObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeVars) || typeVars.isEmpty())
         {
             return;
@@ -520,7 +530,7 @@ public final class PureContext
         for (int i = 0; i < count; i++)
         {
             Object tvObj = typeVars.getBoxed(i);
-            Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(tvObj, "name");
+            Object tvNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(tvObj, SLOT_NAME);
             String name = tvNameObj instanceof String s ? s : String.valueOf(tvObj);
             Integer slot = layout.slotFor(name);
             if (slot != null)
@@ -529,7 +539,7 @@ public final class PureContext
                 if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(tvVal,
                         "meta::pure::metamodel::valuespecification::AtomicValue"))
                 {
-                    tvVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(tvVal, "value");
+                    tvVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(tvVal, SLOT_VALUE);
                 }
                 if (tvVal != null)
                 {
@@ -547,12 +557,19 @@ public final class PureContext
         }
         // Read the property generically — works for both legacy XImpl
         // (PropertyAccessor) and the post-flip PureDynamicObject.
-        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "classifierGenericType");
+        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_CLASSIFIER_GENERIC_TYPE);
     }
 
     // ---------------------------------------------------------------
     // Compilation (private)
     // ---------------------------------------------------------------
+
+    /** Public accessor for the {@link CompiledFunction} of a lambda
+     *  (FrameLayout + body PureNodes), used by inline-fold AST building. */
+    public org.finos.legend.pure.truffle.frame.CompiledFunction compileLambdaFunction(Object lambda)
+    {
+        return compile(lambda);
+    }
 
     private CompiledFunction compile(Object fd)
     {
@@ -564,7 +581,7 @@ public final class PureContext
         functionCache.put(fd, cf);
         try
         {
-            Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "expressionSequence");
+            Object exprSeqObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_EXPRESSION_SEQUENCE);
             PureNode[] body = astBuilder.lowerBody(exprSeqObj, layout);
             cf.setBody(body);
             // LambdaFunction has its own AST-build via callTargetForLambda;
@@ -578,11 +595,11 @@ public final class PureContext
                 com.oracle.truffle.api.source.SourceSection rootSource = null;
                 try
                 {
-                    Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "sourceInformation");
+                    Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_SOURCE_INFORMATION);
                     if (si == null && exprSeqObj instanceof org.finos.legend.pure.truffle.types.PureSequence exprSeq && !exprSeq.isEmpty())
                     {
                         Object firstExpr = exprSeq.getBoxed(0);
-                        si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(firstExpr, "sourceInformation");
+                        si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(firstExpr, SLOT_SOURCE_INFORMATION);
                     }
                     rootSource = org.finos.legend.pure.truffle.ast.PureSourceHelper.createSourceSection(si);
                 }
@@ -621,15 +638,15 @@ public final class PureContext
     {
         try
         {
-            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lambda, "sourceInformation");
+            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_SOURCE_INFORMATION);
             if (si != null)
             {
-                Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "sourceId");
+                Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_SOURCE_ID);
                 if (sourceIdObj instanceof String sourceId)
                 {
                     return "lambda@" + sourceId
-                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startLine")
-                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(si, "startColumn");
+                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_LINE)
+                            + ":" + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_COLUMN);
                 }
             }
         }

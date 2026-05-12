@@ -68,6 +68,9 @@ public final class PureFbDecoderRegistry
         return d != null ? d.decode(name, fb, resolver, parent) : null;
     }
 
+    /** Package-visible wrapper for {@link PureClassInfo#decoder} cache miss. */
+    static Decoder lazyLoadPublic(String purePath) { return lazyLoad(purePath); }
+
     private static Decoder lazyLoad(String purePath)
     {
         // meta::pure::metamodel::type::Class → org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ClassImpl

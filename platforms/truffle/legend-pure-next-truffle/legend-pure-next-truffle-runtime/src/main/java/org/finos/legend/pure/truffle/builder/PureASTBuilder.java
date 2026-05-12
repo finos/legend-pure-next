@@ -37,6 +37,20 @@ import org.finos.legend.pure.truffle.frame.FrameLayout;
  */
 public final class PureASTBuilder
 {
+
+    private static final int SLOT_EXPRESSION_SEQUENCE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("expressionSequence");
+    private static final int SLOT_FUNC = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("func");
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
+    private static final int SLOT_MULTIPLICITY = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_OPEN_VARIABLES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("openVariables");
+    private static final int SLOT_OWNER = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("owner");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_PARAMETERS_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parametersValues");
+    private static final int SLOT_QUALIFIED_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("qualifiedProperties");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("values");
     private static final String LET_FUNCTION_SIGNATURE = "letFunction_String_1__T_m__T_m_";
     private static final String MULTI_IF_SIGNATURE = "if_Pair_MANY__Function_1__T_m_";
     private static final String PAIR_SIGNATURE = "pair_U_1__V_1__Pair_1_";
@@ -47,6 +61,11 @@ public final class PureASTBuilder
     // {@link #lowerBody} and consulted when lowering variable reads /
     // letFunction calls. Null means "no frame in scope".
     private FrameLayout currentLayout;
+
+    private Integer resolveSlot(String name)
+    {
+        return currentLayout == null ? null : currentLayout.slotFor(name);
+    }
 
     public PureASTBuilder(Object nativesFallback, NativeNodeRegistry specialized)
     {
@@ -162,7 +181,7 @@ public final class PureASTBuilder
 
     private PureNode lowerCollection(Object col)
     {
-        Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(col, "values");
+        Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(col, SLOT_VALUES);
         org.finos.legend.pure.truffle.types.PureSequence values = valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence vs2
                 ? vs2 : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         PureNode[] children = new PureNode[values.size()];
@@ -188,7 +207,7 @@ public final class PureASTBuilder
     private PureNode lowerPropertyAccess(Object prop, Object fe)
     {
         PureNode[] args = lowerArgs(fe);
-        Object propName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "name");
+        Object propName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_NAME);
         boolean isQp = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(prop,
                 "meta::pure::metamodel::function::property::QualifiedProperty");
         if (args.length == 1
@@ -209,7 +228,7 @@ public final class PureASTBuilder
      */
     private static boolean canTargetBeEnumeration(Object prop)
     {
-        Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(prop, "owner");
+        Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_OWNER);
         // Conservative: if owner is anything other than a non-Enumeration
         // PackageableElement Class, we don't know — fall back to the full
         // RawPropertyAccessNode path. Most properties have a non-Enumeration
@@ -221,10 +240,10 @@ public final class PureASTBuilder
 
     private PureNode lowerFunctionExpression(Object fe)
     {
-        Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "func");
+        Object funcObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNC);
         if (funcObj == null)
         {
-            Object fnNameDbg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName");
+            Object fnNameDbg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME);
             throw new RuntimeException("_func() returned null for: " + fnNameDbg + " [" + fe.getClass().getName() + "]");
         }
         Object func = funcObj;
@@ -234,9 +253,9 @@ public final class PureASTBuilder
         if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(func,
                 "meta::pure::metamodel::function::property::QualifiedProperty"))
         {
-            Object feParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
+            Object feParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
             int callArgCount = feParamsObj instanceof PureSequence feps ? feps.size() : 0;
-            Object qpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(func, "parameters");
+            Object qpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(func, SLOT_PARAMETERS);
             int qpParamCount = qpParamsObj instanceof PureSequence qpps ? qpps.size() : 0;
             if (qpParamCount != callArgCount)
             {
@@ -257,7 +276,7 @@ public final class PureASTBuilder
         // Pair allocation; non-literal patterns fall through to the
         // regular dispatch (where the native factory builds a runtime
         // {@code MultiIfNode}).
-        Object resolvedFuncName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(resolvedFunc, "name");
+        Object resolvedFuncName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(resolvedFunc, SLOT_NAME);
         if (MULTI_IF_SIGNATURE.equals(resolvedFuncName))
         {
             PureNode multiIf = tryLowerMultiIf(fe);
@@ -295,7 +314,7 @@ public final class PureASTBuilder
         }
         throw new RuntimeException(
                 "Unsupported function type: " + resolvedFunc.getClass().getName() + " for: "
-                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "functionName"));
+                        + org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_FUNCTION_NAME));
     }
 
     /**
@@ -313,7 +332,7 @@ public final class PureASTBuilder
      */
     private PureNode tryLowerMultiIf(Object fe)
     {
-        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
+        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
         if (!(paramsObj instanceof PureSequence params) || params.size() < 2)
         {
             return null;
@@ -324,7 +343,7 @@ public final class PureASTBuilder
         {
             return null;
         }
-        Object pairValuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairsArg, "values");
+        Object pairValuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pairsArg, SLOT_VALUES);
         if (!(pairValuesObj instanceof PureSequence pairValues))
         {
             return null;
@@ -340,15 +359,15 @@ public final class PureASTBuilder
             {
                 return null;
             }
-            Object pairFunc = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairFe, "func");
+            Object pairFunc = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pairFe, SLOT_FUNC);
             if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(pairFunc,
                     "meta::pure::metamodel::function::FunctionDefinition",
                     org.finos.legend.pure.truffle.PureLanguage.get(null).resolver())
-                    || !PAIR_SIGNATURE.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairFunc, "name")))
+                    || !PAIR_SIGNATURE.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pairFunc, SLOT_NAME)))
             {
                 return null;
             }
-            Object pairArgsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pairFe, "parametersValues");
+            Object pairArgsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pairFe, SLOT_PARAMETERS_VALUES);
             PureSequence pairArgs = pairArgsObj instanceof PureSequence pa ? pa : null;
             if (pairArgs == null || pairArgs.size() != 2)
             {
@@ -391,16 +410,16 @@ public final class PureASTBuilder
     {
         Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
                 "meta::pure::metamodel::valuespecification::AtomicValue")
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(vs, "value") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(vs, SLOT_VALUE) : null;
         // Widened from `instanceof LambdaFunction` so PDO lambdas
         // (post-loader-flip resolver returns) take the same fast path.
         if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(inner,
                 "meta::pure::metamodel::function::LambdaFunction"))
         {
-            Object lfParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(inner, "parameters");
+            Object lfParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(inner, SLOT_PARAMETERS);
             if (!(lfParamsObj instanceof PureSequence lfParams) || lfParams.isEmpty())
             {
-                Object bodyObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(inner, "expressionSequence");
+                Object bodyObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(inner, SLOT_EXPRESSION_SEQUENCE);
                 if (bodyObj instanceof PureSequence body && body.size() == 1)
                 {
                     return lower(body.getBoxed(0));
@@ -420,19 +439,19 @@ public final class PureASTBuilder
      */
     private Object findQpOverload(Object wrongQp, int expectedParamCount)
     {
-        Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(wrongQp, "owner");
+        Object owner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(wrongQp, SLOT_OWNER);
         if (owner == null) return null;
-        Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(owner, "qualifiedProperties");
+        Object qpsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(owner, SLOT_QUALIFIED_PROPERTIES);
         if (!(qpsObj instanceof PureSequence qps)) return null;
-        Object targetNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(wrongQp, "name");
+        Object targetNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(wrongQp, SLOT_NAME);
         if (!(targetNameObj instanceof String targetName)) return null;
         for (int i = 0; i < qps.size(); i++)
         {
             Object candidate = qps.getBoxed(i);
             if (candidate == null) continue;
-            Object cqpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "name");
+            Object cqpName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(candidate, SLOT_NAME);
             if (!targetName.equals(cqpName)) continue;
-            Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(candidate, "parameters");
+            Object cqpParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(candidate, SLOT_PARAMETERS);
             if (cqpParamsObj instanceof PureSequence cqpParams
                     && cqpParams.size() == expectedParamCount
                     && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(candidate,
@@ -446,17 +465,53 @@ public final class PureASTBuilder
 
     private PureNode lowerNativeCall(Object nf, Object fe)
     {
-        Object sigObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(nf, "name");
+        Object sigObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(nf, SLOT_NAME);
         String signature = sigObj instanceof String s ? s : null;
         if (LET_FUNCTION_SIGNATURE.equals(signature))
         {
             return lowerFrameLet(fe);
         }
+        // Inline-fold fast path — when {@link FrameDescriptorBuilder} pre-
+        // scanned this fold's closure-literal lambda and pre-allocated
+        // inline slots in the enclosing frame, re-lower the lambda body
+        // here and emit an {@code InlineFoldNode}. The lambda body becomes
+        // a @Child of the fold, so Truffle's PE compiles them as one
+        // unit — no CallTarget, no per-iteration Object[] alloc, the JIT
+        // inlines the body into the loop the way Eclipse-Collections
+        // lambdas inline in plain Java.
+        // Inline fast path for lambda-taking natives: when the lambda arg
+        // is a literal closure, compile its body once + reuse it as a
+        // @Child running in a Truffle sub-frame (escape-analyzable). No
+        // CallTarget per iteration.
+        if (currentLayout != null)
+        {
+            if ("fold_T_MANY__Function_1__V_MANY__V_MANY_".equals(signature)
+                    || "fold_T_MANY__Function_1__V_1__V_1_".equals(signature))
+            {
+                PureNode inlined = lowerInlineFold(fe);
+                if (inlined != null) return inlined;
+            }
+            // exists/forAll disabled: dispatch cost they save is similar to
+            // subframe creation cost (their lambda bodies are small and
+            // Truffle's adaptive DirectCallNode inlining already eliminates
+            // most boundary overhead). Re-enable once we have a design
+            // that benefits stateless predicates.
+            // else if ("exists_T_MANY__Function_1__Boolean_1_".equals(signature))
+            // {
+            //     PureNode inlined = lowerInlineExists(fe, false);
+            //     if (inlined != null) return inlined;
+            // }
+            // else if ("forAll_T_MANY__Function_1__Boolean_1_".equals(signature))
+            // {
+            //     PureNode inlined = lowerInlineExists(fe, true);
+            //     if (inlined != null) return inlined;
+            // }
+        }
         NativeNodeRegistry.Factory factory = specialized.lookup(signature);
         if (factory != null)
         {
-            Object gt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "genericType");
-            Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "multiplicity");
+            Object gt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_GENERIC_TYPE);
+            Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_MULTIPLICITY);
             return factory.create(lowerArgs(fe), gt, mul, fe);
         }
         // All signatures should be registered. If we reach here, it's a
@@ -464,17 +519,173 @@ public final class PureASTBuilder
         throw new RuntimeException("No specialized Truffle node for native: " + signature);
     }
 
+    /**
+     * Re-lower the lambda body of an inline-eligible fold with name
+     * overrides routing the lambda's param names to the inline slots
+     * pre-allocated by {@link org.finos.legend.pure.truffle.frame.FrameDescriptorBuilder}.
+     * Returns null if anything unexpected happens — caller falls back to
+     * the standard {@code FoldNode}.
+     */
+    /** Build the subframe meta common to all inline-lambda-native nodes:
+     *  resolves the lambda PDO, its compiled body, FrameDescriptor, and
+     *  the (caller-slot → lambda-slot) bindings for open variables. */
+    private InlineSubframeMeta buildInlineSubframeMeta(Object fe, int lambdaArgIdx)
+    {
+        Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
+        if (!(argsObj instanceof PureSequence args) || args.size() <= lambdaArgIdx) return null;
+        Object lambdaArg = args.getBoxed(lambdaArgIdx);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambdaArg,
+                "meta::pure::metamodel::valuespecification::AtomicValue")) return null;
+        Object lambda = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambdaArg, SLOT_VALUE);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambda,
+                "meta::pure::metamodel::function::LambdaFunction")) return null;
+
+        org.finos.legend.pure.truffle.frame.CompiledFunction cf =
+                org.finos.legend.pure.truffle.PureLanguage.get(null).compileLambdaFunction(lambda);
+        if (cf == null) return null;
+        PureNode[] body = cf.body();
+        if (body == null) return null;
+        org.finos.legend.pure.truffle.frame.FrameLayout lambdaLayout = cf.layout();
+
+        Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_OPEN_VARIABLES);
+        int n = (openVarsObj instanceof PureSequence ov) ? ov.size() : 0;
+        int[] callerSlots = new int[n];
+        int[] lambdaSlots = new int[n];
+        int boundCount = 0;
+        if (n > 0)
+        {
+            PureSequence ov = (PureSequence) openVarsObj;
+            for (int i = 0; i < n; i++)
+            {
+                Object o = ov.getBoxed(i);
+                Object nm = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(o, SLOT_NAME);
+                if (!(nm instanceof String name)) continue;
+                Integer cSlot = currentLayout == null ? null : currentLayout.slotFor(name);
+                Integer lSlot = lambdaLayout.slotFor(name);
+                if (cSlot == null || lSlot == null) return null;
+                callerSlots[boundCount] = cSlot;
+                lambdaSlots[boundCount] = lSlot;
+                boundCount++;
+            }
+        }
+        if (boundCount < n)
+        {
+            int[] cTrim = new int[boundCount];
+            int[] lTrim = new int[boundCount];
+            System.arraycopy(callerSlots, 0, cTrim, 0, boundCount);
+            System.arraycopy(lambdaSlots, 0, lTrim, 0, boundCount);
+            callerSlots = cTrim;
+            lambdaSlots = lTrim;
+        }
+        return new InlineSubframeMeta(args, body, lambdaLayout, callerSlots, lambdaSlots);
+    }
+
+    private record InlineSubframeMeta(PureSequence callArgs, PureNode[] body,
+            org.finos.legend.pure.truffle.frame.FrameLayout lambdaLayout,
+            int[] callerSlots, int[] lambdaSlots) {}
+
+    private PureNode lowerInlineExists(Object fe, boolean forAll)
+    {
+        InlineSubframeMeta m = buildInlineSubframeMeta(fe, 1);
+        if (m == null) return null;
+        int[] paramSlots = m.lambdaLayout.paramSlots();
+        if (paramSlots == null || paramSlots.length < 1) return null;
+        int elemSlot = paramSlots[0];
+        PureNode collectionNode = lower(m.callArgs.getBoxed(0));
+        return new org.finos.legend.pure.truffle.ast.natives.collection.InlineExistsNode(
+                collectionNode, m.body, m.lambdaLayout.descriptor(), elemSlot, forAll,
+                m.callerSlots, m.lambdaSlots);
+    }
+
+    /**
+     * Subframe-approach inline-fold. The lambda's body is compiled once
+     * (in the lambda's own FrameDescriptor) and reused as a {@code @Child}
+     * of {@code InlineFoldNode}. At runtime, {@code InlineFoldNode}
+     * creates a fresh sub-frame per call using the lambda's descriptor
+     * and runs the body in it. Truffle PE virtualizes the sub-frame
+     * (it doesn't escape), so slot writes become Java locals in the
+     * JIT'd hot loop — same machine code as Eclipse-Collections + Java
+     * lambdas after JIT.
+     */
+    private PureNode lowerInlineFold(Object fe)
+    {
+        Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
+        if (!(argsObj instanceof PureSequence args) || args.size() < 3) return null;
+
+        Object lambdaArg = args.getBoxed(1);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambdaArg,
+                "meta::pure::metamodel::valuespecification::AtomicValue")) return null;
+        Object lambda = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambdaArg, SLOT_VALUE);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambda,
+                "meta::pure::metamodel::function::LambdaFunction")) return null;
+
+        // Compile the lambda (idempotent; populates cache) and pull its
+        // body + FrameLayout. We reuse the already-lowered body PureNodes
+        // and FrameDescriptor — no re-lowering needed.
+        org.finos.legend.pure.truffle.frame.CompiledFunction cf =
+                org.finos.legend.pure.truffle.PureLanguage.get(null).compileLambdaFunction(lambda);
+        if (cf == null) return null;
+        PureNode[] body = cf.body();
+        if (body == null) return null;
+        org.finos.legend.pure.truffle.frame.FrameLayout lambdaLayout = cf.layout();
+        int[] paramSlots = lambdaLayout.paramSlots();
+        if (paramSlots == null || paramSlots.length < 2) return null;
+        int elemSlot = paramSlots[0];
+        int accSlot = paramSlots[1];
+
+        // Open-var bindings: caller-frame slot → lambda-frame slot, by name.
+        Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_OPEN_VARIABLES);
+        int n = (openVarsObj instanceof PureSequence ov) ? ov.size() : 0;
+        int[] callerSlots = new int[n];
+        int[] lambdaSlots = new int[n];
+        int boundCount = 0;
+        if (n > 0)
+        {
+            PureSequence ov = (PureSequence) openVarsObj;
+            for (int i = 0; i < n; i++)
+            {
+                Object o = ov.getBoxed(i);
+                Object nm = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(o, SLOT_NAME);
+                if (!(nm instanceof String name)) continue;
+                Integer cSlot = currentLayout == null ? null : currentLayout.slotFor(name);
+                Integer lSlot = lambdaLayout.slotFor(name);
+                if (cSlot == null || lSlot == null)
+                {
+                    // Lambda references something not visible in caller's
+                    // layout — fall back to FoldNode rather than guess.
+                    return null;
+                }
+                callerSlots[boundCount] = cSlot;
+                lambdaSlots[boundCount] = lSlot;
+                boundCount++;
+            }
+        }
+        if (boundCount < n)
+        {
+            int[] cTrim = new int[boundCount];
+            int[] lTrim = new int[boundCount];
+            System.arraycopy(callerSlots, 0, cTrim, 0, boundCount);
+            System.arraycopy(lambdaSlots, 0, lTrim, 0, boundCount);
+            callerSlots = cTrim;
+            lambdaSlots = lTrim;
+        }
+
+        PureNode collectionNode = lower(args.getBoxed(0));
+        PureNode seedNode = lower(args.getBoxed(2));
+        return new org.finos.legend.pure.truffle.ast.natives.collection.InlineFoldNode(
+                collectionNode, seedNode, body,
+                lambdaLayout.descriptor(), elemSlot, accSlot,
+                callerSlots, lambdaSlots);
+    }
+
     private PureNode lowerVariableRead(Object ve)
     {
-        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ve, "name");
+        Object nameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ve, SLOT_NAME);
         String veName = nameObj instanceof String s ? s : null;
-        if (currentLayout != null)
+        Integer slot = resolveSlot(veName);
+        if (slot != null)
         {
-            Integer slot = currentLayout.slotFor(veName);
-            if (slot != null)
-            {
-                return new FrameVariableReadNode(slot, veName);
-            }
+            return new FrameVariableReadNode(slot, veName);
         }
         return new FrameVariableReadNode(-1, veName);
     }
@@ -486,7 +697,7 @@ public final class PureASTBuilder
             throw new RuntimeException("letFunction lowered outside an enclosing function frame "
                     + "(no FrameLayout in scope) — letFunction has no meaningful semantics here");
         }
-        Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
+        Object argsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
         if (!(argsObj instanceof PureSequence args) || args.size() < 2)
         {
             throw new RuntimeException("letFunction requires at least (name, value); got "
@@ -495,13 +706,15 @@ public final class PureASTBuilder
         Object nameArg = args.getBoxed(0);
         Object nameInner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(nameArg,
                 "meta::pure::metamodel::valuespecification::AtomicValue")
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(nameArg, "value") : null;
+                ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(nameArg, SLOT_VALUE) : null;
         if (!(nameInner instanceof String name))
         {
             throw new RuntimeException("letFunction's first argument must be a literal String AtomicValue; got: "
                     + (nameArg == null ? "null" : nameArg.getClass().getName()));
         }
-        Integer slot = currentLayout.slotFor(name);
+        // resolveSlot consults name-overrides first so inlined-lambda let
+        // targets (mangled) get the right slot.
+        Integer slot = resolveSlot(name);
         if (slot == null)
         {
             throw new RuntimeException("letFunction target '" + name + "' has no pre-allocated slot in the current frame layout — "
@@ -527,13 +740,13 @@ public final class PureASTBuilder
 
     private PureNode lowerAtomicValue(Object av)
     {
-        Object value = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(av, "value");
+        Object value = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(av, SLOT_VALUE);
         // Widened from `instanceof LambdaFunction` so PDO lambdas
         // (post-loader-flip resolver returns) take the same path.
         if (value != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(value,
                 "meta::pure::metamodel::function::LambdaFunction"))
         {
-            Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(value, "openVariables");
+            Object openVarsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(value, SLOT_OPEN_VARIABLES);
             if (openVarsObj instanceof PureSequence openVars && !openVars.isEmpty())
             {
                 return new RawLambdaCaptureNode(value, openVars, currentLayout);
@@ -574,7 +787,7 @@ public final class PureASTBuilder
     {
         try
         {
-            Object gt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(av, "genericType");
+            Object gt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(av, SLOT_GENERIC_TYPE);
             if (gt == null)
             {
                 return null;
@@ -582,7 +795,7 @@ public final class PureASTBuilder
             Object type = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(gt);
             if (type != null)
             {
-                Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "name");
+                Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_NAME);
                 if (n instanceof String s) return s;
             }
         }
@@ -595,7 +808,7 @@ public final class PureASTBuilder
 
     private PureNode[] lowerArgs(Object fe)
     {
-        Object paramSpecsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fe, "parametersValues");
+        Object paramSpecsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
         org.finos.legend.pure.truffle.types.PureSequence paramSpecs = paramSpecsObj instanceof PureSequence ps
                 ? ps : org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
         PureNode[] argNodes = new PureNode[paramSpecs.size()];

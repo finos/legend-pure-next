@@ -7,6 +7,8 @@ import java.util.List;
 
 public final class _Type
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     private _Type() {}
 
     @SuppressWarnings("unchecked")
@@ -85,12 +87,15 @@ public final class _Type
     {
         if (type == null) return false;
         Object any = anyTypeRef;
-        if (any != null)
-        {
-            return type == any;
-        }
-        // First call: resolve and cache. Volatile write publishes the
-        // reference for subsequent unsynchronised reads.
+        if (any != null && type == any) return true;
+        // Either no cached Any yet, or the cached Any belongs to a different
+        // resolver (cross-resolver pollution — same JVM, multiple test classes
+        // each with their own resolver and their own Any singleton). Re-resolve
+        // through the current resolver; getElement is per-resolver cached so
+        // the lookup is a single CHM.get on the warm path. Refresh the static
+        // cache so the next call from this resolver hits the fast identity
+        // check; the cache may thrash between resolvers but the overall cost
+        // is bounded by the resolver-switch frequency, not the call frequency.
         if (resolver != null)
         {
             Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
@@ -102,26 +107,7 @@ public final class _Type
         }
         // Fallback: string compare (only hits before "Any" is in the resolver).
         // Type extends PackageableElement, so the instanceof guard is implicit.
-        return "Any".equals(PureObj.read(type, "name"));
+        return "Any".equals(PureObj.readBySlot(type, SLOT_NAME));
     }
 
-    public static String print(Object type, TruffleMetadataAccess resolver)
-    {
-        if (type == null)
-        {
-            return "null";
-        }
-        // Type extends PackageableElement; path() handles the lookup uniformly.
-        String path = _PackageableElement.path(type, resolver);
-        if (path != null && !path.isEmpty())
-        {
-            return path;
-        }
-        Object name = PureObj.read(type, "name");
-        if (name instanceof String s && !s.isEmpty())
-        {
-            return s;
-        }
-        return type.getClass().getName();
-    }
 }

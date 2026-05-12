@@ -52,6 +52,9 @@ import java.util.Set;
  */
 public final class TruffleModuleRegistry implements TruffleMetadataAccess
 {
+
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
     private final LinkedHashMap<String, TruffleModule> modules = new LinkedHashMap<>();
     private final TypeCache typeCache = new TypeCache();
     // Lazy index keyed by (function shortName, arity) → resolved
@@ -160,12 +163,12 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
                 {
                     continue;
                 }
-                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "functionName");
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_FUNCTION_NAME);
                 if (!(fnNameObj instanceof String fnName))
                 {
                     continue;
                 }
-                Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(element, "parameters");
+                Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PARAMETERS);
                 int arity = paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence ps ? ps.size() : 0;
                 idx.computeIfAbsent(fnName, k -> new HashMap<>())
                    .computeIfAbsent(arity, k -> new ArrayList<>())

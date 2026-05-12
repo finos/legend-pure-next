@@ -25,17 +25,17 @@ import org.finos.legend.pure.truffle.ast.PureNode;
 @NodeInfo(shortName = "copySimple")
 public final class CopySimpleNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_OWNER = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("owner");
+    private static final int SLOT_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type");
+    private static final int SLOT_TYPE_ARGUMENTS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeArguments");
     @Child
     private PureNode child;
 
-    private final Object genericType;
-    private final Object multiplicity;
-
-    public CopySimpleNode(PureNode child, Object genericType, Object multiplicity)
+    public CopySimpleNode(PureNode child)
     {
         this.child = child;
-        this.genericType = genericType;
-        this.multiplicity = multiplicity;
     }
 
     @Override
@@ -59,7 +59,7 @@ public final class CopySimpleNode extends PureNode
         // Fix self-referencing CGT (e.g., Class<x> where x == original) —
         // _copy() preserves the CGT reference to the source object, but
         // for self-referential cases we need to rewire it to the copy.
-        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(original, "classifierGenericType");
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(original, SLOT_CLASSIFIER_GENERIC_TYPE);
         if (cgt != null && hasSelfReference(cgt, original))
         {
             cgt = deepCopyCgt(cgt, original, copy, resolver);
@@ -70,7 +70,7 @@ public final class CopySimpleNode extends PureNode
         if (cgt != null)
         {
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType",
-                    NewWithKeysNode.preferCanonicalAnchorPublic(cgt, resolver));
+                    NewWithKeysNode.preferCanonicalAnchor(cgt, resolver));
         }
         return copy;
     }
@@ -88,75 +88,23 @@ public final class CopySimpleNode extends PureNode
     {
         org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject src =
                 (org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) original;
-        // Construct against the *root* Shape for the Pure path (per-class
-        // singleton in PureShapeRegistry) — DynamicObject's constructor
-        // refuses a Shape that's already been specialized with instance
-        // properties, which src.getShape() would be after prior `dol.put`s.
-        // Carry the FB from src so the copy can lazy-decode the same
-        // properties on demand (covers fields the source hasn't materialised
-        // yet — without this they'd come back null on the copy and break
-        // structural equality with the original).
-        Object dt = src.getShape().getDynamicType();
-        com.oracle.truffle.api.object.Shape rootShape = (dt instanceof String purePath)
-                ? org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(purePath)
-                : src.getShape();
+        // Construct a fresh copy against the same per-class PureClassInfo
+        // (slot table is shared) and copy the source's slots directly.
+        // The copy starts with whatever values the source has — including
+        // LAZY for unmaterialised slots, so the copy will decode-on-demand
+        // from src.fb the same way the source would.
         org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject copy =
                 new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
-                        rootShape, src.fb, src.resolver, src.parent);
-        com.oracle.truffle.api.object.DynamicObjectLibrary dol =
-                com.oracle.truffle.api.object.DynamicObjectLibrary.getUncached();
-        // Carry over the source's already-materialised values so subsequent
-        // reads on the copy hit the DOL fast path instead of re-decoding.
-        Object[] keys = dol.getKeyArray(src);
-        for (Object key : keys)
-        {
-            if (!(key instanceof String name)) continue;
-            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(src, name);
-            dol.put(copy, name, v);
-        }
+                        src.classInfo, src.fb, src.resolver, src.parent);
+        System.arraycopy(src.slots, 0, copy.slots, 0, src.slots.length);
         return copy;
-    }
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String printGtv(Object gtv, Object original, Object copy, int depth)
-    {
-        if (gtv == null) return "null";
-        String indent = "  ".repeat(depth);
-        StringBuilder sb = new StringBuilder();
-        Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type");
-        String typeName = type == null ? "null"
-                : type == original ? "ORIGINAL@" + System.identityHashCode(original)
-                : type == copy ? "COPY@" + System.identityHashCode(copy)
-                : type.getClass().getName() + "@" + System.identityHashCode(type);
-        sb.append("GT(type=").append(typeName);
-        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
-        if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence ta && !ta.isEmpty())
-        {
-            sb.append(", typeArgs=[");
-            for (int i = 0; i < ta.size(); i++)
-            {
-                if (i > 0) sb.append(", ");
-                Object elem = ta.getBoxed(i);
-                if (elem != null && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(elem) != null)
-                {
-                    sb.append("\n").append(indent).append("  ").append(printGtv(elem, original, copy, depth + 1));
-                }
-                else
-                {
-                    sb.append(elem != null ? elem.getClass().getName() : "null");
-                }
-            }
-            sb.append("]");
-        }
-        sb.append(")");
-        return sb.toString();
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean hasSelfReference(Object gtv, Object original)
     {
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type") == original) return true;
-        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gtv, SLOT_TYPE) == original) return true;
+        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gtv, SLOT_TYPE_ARGUMENTS);
         if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeArgs)
         {
             for (int i = 0; i < typeArgs.size(); i++)
@@ -182,14 +130,14 @@ public final class CopySimpleNode extends PureNode
         // Copy type — substitute self-references. The typed `instanceof Type`
         // guard on `copy` was assertion-only (copy == _copy() of original which
         // is a Type), so widening to non-null is safe.
-        Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "type");
+        Object type = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gtv, SLOT_TYPE);
         if (type == original && copy != null)
         {
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", copy);
         }
         else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(type,
                 "meta::pure::metamodel::type::generics::TypeParameter")
-                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(type, "owner") == original)
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_OWNER) == original)
         {
             // Copy the TypeParameter (always PDO post-flip), then override
             // owner to point at the new instance.
@@ -202,7 +150,7 @@ public final class CopySimpleNode extends PureNode
             org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(result, "type", type);
         }
         // Deep-copy typeArguments recursively
-        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(gtv, "typeArguments");
+        Object taObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gtv, SLOT_TYPE_ARGUMENTS);
         if (taObj instanceof org.finos.legend.pure.truffle.types.PureSequence typeArgs && !typeArgs.isEmpty())
         {
             Object[] copied = new Object[typeArgs.size()];

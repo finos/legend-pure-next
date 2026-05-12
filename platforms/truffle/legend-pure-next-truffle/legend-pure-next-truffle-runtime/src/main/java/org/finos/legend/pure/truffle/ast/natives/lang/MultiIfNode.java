@@ -52,6 +52,9 @@ import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 @NodeInfo(shortName = "multiIf")
 public final class MultiIfNode extends PureNode
 {
+
+    private static final int SLOT_FIRST = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("first");
+    private static final int SLOT_SECOND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("second");
     // --- Static mode fields ------------------------------------------------
 
     /** Inlined condition expressions; null in runtime mode. */
@@ -125,6 +128,17 @@ public final class MultiIfNode extends PureNode
     private Object executeRuntime(VirtualFrame frame)
     {
         Object condList = condListNode.executeGeneric(frame);
+        Object defaultFn = defaultBody.executeGeneric(frame);
+        return runtimeLoop(condList, defaultFn);
+    }
+
+    /** Frame-free dynamic-condList path. {@code @TruffleBoundary} stops
+     *  Graal PE from inlining through {@code pureTypeIs} (which can pull
+     *  the JDK Locale/ConcurrentHashMap recursive-inline chain into the
+     *  parent's compilation unit and bail). */
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private Object runtimeLoop(Object condList, Object defaultFn)
+    {
         int n = CollectionHelper.size(condList);
         for (int i = 0; i < n; i++)
         {
@@ -134,15 +148,14 @@ public final class MultiIfNode extends PureNode
             {
                 continue;
             }
-            Object condFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "first");
+            Object condFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(item, SLOT_FIRST);
             Object condResult = condCallNode.call(condFn);
             if (Boolean.TRUE.equals(condResult))
             {
-                Object bodyFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(item, "second");
+                Object bodyFn = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(item, SLOT_SECOND);
                 return bodyCallNode.call(bodyFn);
             }
         }
-        Object defaultFn = defaultBody.executeGeneric(frame);
         return bodyCallNode != null ? bodyCallNode.call(defaultFn) : defaultFn;
     }
 }

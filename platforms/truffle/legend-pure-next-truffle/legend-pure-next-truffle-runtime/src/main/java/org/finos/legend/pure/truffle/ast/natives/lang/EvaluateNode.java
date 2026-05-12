@@ -34,6 +34,8 @@ import java.util.List;
 @NodeInfo(shortName = "evaluate")
 public final class EvaluateNode extends PureNode
 {
+
+    private static final int SLOT_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("values");
     @Children
     private PureNode[] children;
 
@@ -97,7 +99,7 @@ public final class EvaluateNode extends PureNode
         if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(listObj,
                 "meta::pure::functions::collection::List"))
         {
-            Object vals = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(listObj, "values");
+            Object vals = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(listObj, SLOT_VALUES);
             int sz = org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper.size(vals);
             if (sz == 0)
             {

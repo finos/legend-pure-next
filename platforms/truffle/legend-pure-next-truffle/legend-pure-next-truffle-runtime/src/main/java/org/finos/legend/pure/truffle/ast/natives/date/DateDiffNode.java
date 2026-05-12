@@ -28,6 +28,8 @@ import java.time.temporal.ChronoUnit;
 @NodeInfo(shortName = "dateDiff")
 public final class DateDiffNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     private static final String SIG = "dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_";
 
     @Child
@@ -140,21 +142,13 @@ public final class DateDiffNode extends PureNode
         {
             return null;
         }
-        // Pure enum constants — read 'name' via the universal accessor (works
-        // for both legacy XImpl and PureDynamicObject).
+        // Post enum-to-PDO migration: every enum value is a PDO typed as
+        // {@code meta::pure::metamodel::type::Enum} with a {@code name} slot.
         if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(unit,
                 "meta::pure::metamodel::type::Enum"))
         {
-            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(unit, "name");
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(unit, SLOT_NAME);
             return name instanceof String s ? s : null;
-        }
-        // Java enum constants implementing a generated PDB enum interface
-        // (e.g. DurationUnit.YEARS) — pureTypeOf returns the enum type's
-        // path (not "...Enum"), so the leaf-class case above doesn't match.
-        // The Java enum's name() is the unit name we want.
-        if (unit.getClass().isEnum())
-        {
-            return ((Enum<?>) unit).name();
         }
         if (unit instanceof String s)
         {

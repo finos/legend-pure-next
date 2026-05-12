@@ -90,10 +90,29 @@ public final class _PackageableElement
 
     private static final String PACKAGE_PURE_PATH = "meta::pure::metamodel::Package";
 
+    private static final int SLOT_PACKAGE =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package");
+    private static final int SLOT_NAME =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+
+    private static Object readPackage(Object obj)
+    {
+        return obj instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                ? pdo.readSlot(SLOT_PACKAGE)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(obj, SLOT_PACKAGE);
+    }
+
+    private static Object readName(Object obj)
+    {
+        return obj instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                ? pdo.readSlot(SLOT_NAME)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(obj, SLOT_NAME);
+    }
+
     private static String computePath(Object pe)
     {
-        Object pkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "package");
-        String name = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pe, "name");
+        Object pkg = readPackage(pe);
+        String name = (String) readName(pe);
         if (pkg == null || name == null)
         {
             return name != null ? name : "";
@@ -115,8 +134,8 @@ public final class _PackageableElement
                 && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(current, PACKAGE_PURE_PATH)
                 && depth < 15)
         {
-            Object parent = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(current, "package");
-            String name = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(current, "name");
+            Object parent = readPackage(current);
+            String name = (String) readName(current);
             if (parent == null || name == null || name.isEmpty())
             {
                 break;

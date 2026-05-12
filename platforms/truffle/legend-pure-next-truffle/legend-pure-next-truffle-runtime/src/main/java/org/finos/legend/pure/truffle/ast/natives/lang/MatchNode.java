@@ -18,15 +18,17 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
+import org.finos.legend.pure.truffle.ast.RawClosure;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._Type;
-import org.finos.legend.pure.truffle.ast.RawClosure;
 
 /**
- * {@code match(Any[*], Function<{...}>[1..*]) : T[m]} and the two-parameter
+ * {@code match(Any[m], Function<{T[n]->P[o]}>[*]) : P[o]} — type-based
+ * function dispatch. Iterates over match functions, checking parameter types
+ * against the value's runtime type, invoking the first match. Has a 3-arg
  * variant with an extra parameter {@code P[o]}.
  *
  * <p>Evaluates all children, then performs type-based dispatch against the
@@ -99,7 +101,7 @@ public final class MatchNode extends PureNode
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(mfRaw,
                     "meta::pure::metamodel::valuespecification::AtomicValue"))
             {
-                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mfRaw, "value");
+                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mfRaw, SLOT_VALUE);
                 if (inner != null)
                 {
                     mfRaw = inner;
@@ -130,7 +132,7 @@ public final class MatchNode extends PureNode
 
             // Build args: [value, optionalExtra]
             Object[] args;
-            Object fdParams = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
+            Object fdParams = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_PARAMETERS);
             if (values.length > 2
                     && fdParams instanceof org.finos.legend.pure.truffle.types.PureSequence fdParamSeq
                     && fdParamSeq.size() >= 2)
@@ -151,8 +153,32 @@ public final class MatchNode extends PureNode
                 : "n/a";
         if (vtPath == null) vtPath = "n/a";
         Object cgt = context.classifierGenericType(value);
+        StringBuilder dbg = new StringBuilder();
+        for (int di = 0; di < fnCount; di++)
+        {
+            Object mfRawD = CollectionHelper.at(matchFns, di);
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(mfRawD,
+                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+            {
+                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mfRawD, SLOT_VALUE);
+                if (inner != null) mfRawD = inner;
+            }
+            Object fdD = mfRawD instanceof RawClosure rcD ? rcD.lambda() : mfRawD;
+            Object pParams = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fdD, SLOT_PARAMETERS);
+            dbg.append("\n  branch ").append(di).append(": params=").append(pParams);
+            if (pParams instanceof org.finos.legend.pure.truffle.types.PureSequence ps && !ps.isEmpty())
+            {
+                Object p = ps.getBoxed(0);
+                Object mul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(p, SLOT_MULTIPLICITY);
+                Object lb = mul != null ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_LOWER_BOUND) : null;
+                Object ub = mul != null ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_UPPER_BOUND) : null;
+                Object lbV = lb != null ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lb, SLOT_VALUE) : null;
+                Object ubV = ub != null ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ub, SLOT_VALUE) : null;
+                dbg.append(" mul=").append(mul).append(" lb.value=").append(lbV).append(" ub.value=").append(ubV);
+            }
+        }
         throw new RuntimeException("No match function matched the value: " + value
-                + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getName()) + ", fnCount=" + fnCount + "]");
+                + " [valueType=" + vtPath + ", cgt=" + (cgt == null ? "NULL" : cgt.getClass().getName()) + ", fnCount=" + fnCount + "]" + dbg);
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
@@ -169,98 +195,21 @@ public final class MatchNode extends PureNode
     private static Object getRawValueType(Object value,
                                           org.finos.legend.pure.truffle.PureContext context)
     {
-        TruffleMetadataAccess resolver = context.resolver();
-        if (value == null || (value instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
-        {
-            return resolver.getElement("meta::pure::metamodel::type::Nil");
-        }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureSequence seq)
-        {
-            if (seq.isEmpty())
-            {
-                return resolver.getElement("meta::pure::metamodel::type::Nil");
-            }
-            // Compute the most common type across all elements
-            java.util.List<Object> types = new java.util.ArrayList<>();
-            for (int i = 0; i < seq.size(); i++)
-            {
-                Object t = getRawValueType(seq.getBoxed(i), context);
-                if (t != null)
-                {
-                    types.add(t);
-                }
-            }
-            if (types.isEmpty())
-            {
-                return resolver.getElement("meta::pure::metamodel::type::Nil");
-            }
-            return org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
-        }
-        // Pure metamodel object (any subtype of Any) — read CGT via context
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(value) != null)
-        {
-            var cgt = context.classifierGenericType(value);
-            if (cgt == null)
-            {
-                throw new RuntimeException("No classifierGenericType on: " + value.getClass().getName()
-                        + " id=" + System.identityHashCode(value));
-            }
-            return org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
-        }
-        if (value instanceof Long)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
-        }
-        if (value instanceof Double)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Float");
-        }
-        if (value instanceof Boolean)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
-        }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureDate.StrictDate)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
-        }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureDate.DateTime)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
-        }
-        if (value instanceof org.finos.legend.pure.truffle.types.PureDate)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
-        }
-        if (value instanceof String s)
-        {
-            // Detect date strings by format (fallback for dates not yet wrapped in PureDate)
-            if (org.finos.legend.pure.truffle.ast.natives.string.ToStringNode.isDateString(s))
-            {
-                if (s.contains("T"))
-                {
-                    return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
-                }
-                return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
-            }
-            // Detect enum value strings
-            int dotIdx = s.lastIndexOf('.');
-            if (dotIdx > 0 && s.contains("::"))
-            {
-                String enumTypePath = s.substring(0, dotIdx);
-                Object enumType = resolver.getElement(enumTypePath);
-                if (enumType != null)
-                {
-                    return enumType;
-                }
-            }
-            return resolver.getElement("meta::pure::metamodel::type::primitives::String");
-        }
-        if (value instanceof java.math.BigDecimal)
-        {
-            return resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
-        }
-        return resolver.getElement("meta::pure::metamodel::type::Any");
+        return org.finos.legend.pure.truffle.ast.natives.meta.MetaHelper.getRawValueType(value, context.resolver());
     }
+
+    private static final int SLOT_PARAMETERS =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
+    private static final int SLOT_MULTIPLICITY =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicity");
+    private static final int SLOT_GENERIC_TYPE =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("genericType");
+    private static final int SLOT_LOWER_BOUND =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("lowerBound");
+    private static final int SLOT_UPPER_BOUND =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("upperBound");
+    private static final int SLOT_VALUE =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean matchesBranch(Object fd,
@@ -268,7 +217,9 @@ public final class MatchNode extends PureNode
                                          int valueCount,
                                          org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(fd, "parameters");
+        Object paramsObj = fd instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject fdPdo
+                ? fdPdo.readSlot(SLOT_PARAMETERS)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fd, SLOT_PARAMETERS);
         if (!(paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence params) || params.isEmpty())
         {
             return true;
@@ -281,7 +232,9 @@ public final class MatchNode extends PureNode
             throw new RuntimeException("Error");
         }
 
-        Object paramMul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(param, "multiplicity");
+        Object paramMul = param instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pPdo
+                ? pPdo.readSlot(SLOT_MULTIPLICITY)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, SLOT_MULTIPLICITY);
         // For null/empty values (count=0), skip type check — Nil is compatible with everything.
         // Only check multiplicity.
         if (valueCount == 0)
@@ -293,7 +246,9 @@ public final class MatchNode extends PureNode
             return true;
         }
 
-        Object paramGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(param, "genericType");
+        Object paramGT = param instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pPdo2
+                ? pPdo2.readSlot(SLOT_GENERIC_TYPE)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, SLOT_GENERIC_TYPE);
         if (paramGT != null)
         {
             Object paramType = _GenericType.type(paramGT);
@@ -326,8 +281,13 @@ public final class MatchNode extends PureNode
         // a resolver-backed isType check. Param-typed multiplicities have neither
         // lowerBound nor upperBound, so this returns true for them — matches the
         // original `!instanceof ConcreteMultiplicity → return true` shortcut.
-        Object lb = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mult, "lowerBound");
-        Object ub = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(mult, "upperBound");
+        boolean multIsPdo = mult instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
+        Object lb = multIsPdo
+                ? ((org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) mult).readSlot(SLOT_LOWER_BOUND)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mult, SLOT_LOWER_BOUND);
+        Object ub = multIsPdo
+                ? ((org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) mult).readSlot(SLOT_UPPER_BOUND)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mult, SLOT_UPPER_BOUND);
         if (lb == null && ub == null)
         {
             return true;
@@ -336,14 +296,18 @@ public final class MatchNode extends PureNode
         long lower = 0;
         if (lb != null)
         {
-            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(lb, "value");
+            Object v = lb instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject lbPdo
+                    ? lbPdo.readSlot(SLOT_VALUE)
+                    : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lb, SLOT_VALUE);
             if (v instanceof Number n) lower = n.longValue();
         }
 
         long upper = -1;
         if (ub != null)
         {
-            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ub, "value");
+            Object v = ub instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject ubPdo
+                    ? ubPdo.readSlot(SLOT_VALUE)
+                    : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ub, SLOT_VALUE);
             if (v instanceof Number n) upper = n.longValue();
         }
 

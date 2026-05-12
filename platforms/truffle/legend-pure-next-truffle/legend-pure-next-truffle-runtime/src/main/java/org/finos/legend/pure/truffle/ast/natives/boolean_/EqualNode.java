@@ -31,6 +31,10 @@ import java.util.Objects;
 @NodeInfo(shortName = "equal")
 public final class EqualNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
     @Child
     private PureNode left;
 
@@ -195,23 +199,18 @@ public final class EqualNode extends PureNode
             if (bIsEnum)
             {
                 Object eb = b;
-                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "name");
-                Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(eb, "name");
+                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ea, SLOT_NAME);
+                Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(eb, SLOT_NAME);
                 if (!Objects.equals(eaName, ebName))
                 {
                     return false;
                 }
-                // Same name — check same enum type
-                // For generated Java enums, same class = same enum type
-                // For EnumImpl (FlatBuffer-wrapped), same class doesn't mean same
-                // enum type — must check CGT path
-                if (a.getClass() == b.getClass() && a.getClass().isEnum())
-                {
-                    return true;
-                }
-                // FlatBuffer-wrapped enums: compare classifierGenericType by path
-                Object eaCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "classifierGenericType");
-                Object ebCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(eb, "classifierGenericType");
+                // Post enum-to-PDO migration: all enum values are PDO
+                // singletons sharing the {@code Enum} classInfo. Two values
+                // are the same enum type iff their {@code classifierGenericType}
+                // resolves to the same type.
+                Object eaCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ea, SLOT_CLASSIFIER_GENERIC_TYPE);
+                Object ebCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(eb, SLOT_CLASSIFIER_GENERIC_TYPE);
                 if (eaCgt != null && ebCgt != null)
                 {
                     var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(eaCgt);
@@ -235,14 +234,14 @@ public final class EqualNode extends PureNode
             }
             if (b instanceof String s)
             {
-                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(ea, "name");
+                Object eaName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ea, SLOT_NAME);
                 return Objects.equals(eaName, extractEnumValueName(s));
             }
             return false;
         }
         if (bIsEnum && a instanceof String s)
         {
-            Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(b, "name");
+            Object ebName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(b, SLOT_NAME);
             return Objects.equals(extractEnumValueName(s), ebName);
         }
         // Two enum value strings: compare by extracted value name
@@ -299,8 +298,8 @@ public final class EqualNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static boolean samePureType(Object a, Object b)
     {
-        Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(a, "classifierGenericType");
-        Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(b, "classifierGenericType");
+        Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(a, SLOT_CLASSIFIER_GENERIC_TYPE);
+        Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(b, SLOT_CLASSIFIER_GENERIC_TYPE);
         if (cgtA == null || cgtB == null)
         {
             return false;
@@ -376,7 +375,7 @@ public final class EqualNode extends PureNode
                 return new java.util.LinkedHashSet<>(java.util.Arrays.asList(keys));
             }
         }
-        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(obj, "classifierGenericType");
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(obj, SLOT_CLASSIFIER_GENERIC_TYPE);
         if (cgt == null)
         {
             return null;
@@ -413,7 +412,7 @@ public final class EqualNode extends PureNode
             if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(v,
                     "meta::pure::metamodel::valuespecification::AtomicValue"))
             {
-                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(v, "value");
+                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_VALUE);
                 if (inner != null)
                 {
                     v = inner;

@@ -135,10 +135,9 @@ public final class TrufflePdbLoader implements TruffleModule
         {
             return null;
         }
-        com.oracle.truffle.api.object.Shape shape =
-                org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(pureTypePath);
         return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
-                shape, /*fb=*/elem, /*resolver=*/this.resolver, /*parent=*/null);
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(pureTypePath, this.resolver),
+                /*fb=*/elem, /*resolver=*/this.resolver, /*parent=*/null);
     }
 
     @Override
@@ -233,7 +232,7 @@ public final class TrufflePdbLoader implements TruffleModule
             var getRootMethod = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class);
             Object def = getRootMethod.invoke(null, bb);
             return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(purePath),
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(purePath, resolver),
                     def, resolver, null);
         }
         catch (Exception e)

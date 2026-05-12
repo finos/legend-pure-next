@@ -1221,15 +1221,12 @@ public class PdbJavaGenerator
         sb.append("        return null;\n");
         sb.append("    }\n\n");
 
-        // pureTypeOf — extracts the Pure type path from a PureDynamicObject
-        // (set by the loader at Shape.dynamicType). Returns null for legacy
-        // XImpl values; callers compare against `pureTypeOf(obj) == null` to
-        // mean "not a PDO" and route to the typed instanceof chain instead.
+        // pureTypeOf — extract the Pure type path from a PureDynamicObject
+        // via its classInfo (replaces the dropped Shape.dynamicType lookup).
         sb.append("    private static String pureTypeOf(Object o)\n    {\n");
-        sb.append("        if (o instanceof PureDynamicObject pdo\n");
-        sb.append("                && pdo.getShape().getDynamicType() instanceof String s)\n");
+        sb.append("        if (o instanceof PureDynamicObject pdo)\n");
         sb.append("        {\n");
-        sb.append("            return s;\n");
+        sb.append("            return pdo.classInfo.purePath;\n");
         sb.append("        }\n");
         sb.append("        return null;\n");
         sb.append("    }\n\n");
@@ -1403,13 +1400,12 @@ public class PdbJavaGenerator
             String shortName = pr.typeName == null ? "" : (pr.typeName.contains("::") ? pr.typeName.substring(pr.typeName.lastIndexOf("::") + 2) : pr.typeName);
             if (enumFqn != null)
             {
-                // Enum value — extract its name() via PropertyAccessor.
-                // Works for both Java enums (XEnum constants implement PropertyAccessor)
-                // and PDO Enum values (have a "name" property).
+                // Post enum-to-PDO migration: every enum value is a PDO with
+                // a {@code name} property; the {@code XEnum} class still
+                // holds the PDO singletons but isn't a Java enum.
                 sb.append("        int ").append(camel).append("Off = 0;\n");
                 sb.append("        { Object _e = readProp(obj, \"").append(pr.name).append("\");\n");
-                sb.append("          if (_e instanceof ").append(enumFqn).append(" _je) { ").append(camel).append("Off = builder.createString(_je.name()); }\n");
-                sb.append("          else if (_e != null) {\n");
+                sb.append("          if (_e != null) {\n");
                 sb.append("            Object _en = readProp(_e, \"name\");\n");
                 sb.append("            if (_en instanceof String _ens) ").append(camel).append("Off = builder.createString(_ens);\n");
                 sb.append("          } }\n");
@@ -1580,9 +1576,8 @@ public class PdbJavaGenerator
         sb.append("                Object _item = _seq_").append(camel).append(".getBoxed(i);\n");
         if (enumFqn != null)
         {
-            // Java enums use .name(); PDO enum values expose "name" via readProp.
-            sb.append("                if (_item instanceof ").append(enumFqn).append(" _je) { _offs_").append(camel).append("[i] = builder.createString(_je.name()); }\n");
-            sb.append("                else { Object _en = readProp(_item, \"name\"); _offs_").append(camel).append("[i] = (_en instanceof String _ens) ? builder.createString(_ens) : 0; }\n");
+            // Post enum-to-PDO migration: enum values expose `name` via readProp.
+            sb.append("                Object _en = readProp(_item, \"name\"); _offs_").append(camel).append("[i] = (_en instanceof String _ens) ? builder.createString(_ens) : 0;\n");
         }
         else if ("String".equals(shortName))
         {
@@ -2084,7 +2079,7 @@ public class PdbJavaGenerator
                 {
                     sb.append("              if (item == null) throw new RuntimeException(\"Null element in FBS array for ").append(_wppA).append("\");\n");
                     sb.append("              arr[i] = new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(\n");
-                    sb.append("                      org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(_wppA).append("\"),\n");
+                    sb.append("                      org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(\"").append(_wppA).append("\", resolver),\n");
                     sb.append("                      item, resolver, this);\n");
                 }
                 else
@@ -2120,7 +2115,7 @@ public class PdbJavaGenerator
                     sb.append("        { var raw = fb.").append(camel).append("();\n");
                     sb.append("          __raw = raw != null\n");
                     sb.append("                  ? new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(\n");
-                    sb.append("                          org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(wrapperPurePath).append("\"),\n");
+                    sb.append("                          org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(\"").append(wrapperPurePath).append("\", resolver),\n");
                     sb.append("                          raw, resolver, this)\n");
                     sb.append("                  : null; }\n");
                 }
@@ -2215,7 +2210,7 @@ public class PdbJavaGenerator
         if (wrapperPurePath != null)
         {
             sb.append("if (d != null) ").append(target).append(" = new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(")
-                    .append("org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(\"").append(wrapperPurePath).append("\"), d, resolver, this); ");
+                    .append("org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(\"").append(wrapperPurePath).append("\", resolver), d, resolver, this); ");
         }
         else if ("IntegerValueDef".equals(defName))
         {
@@ -2310,76 +2305,60 @@ public class PdbJavaGenerator
     {
         StringBuilder sb = new StringBuilder();
         String pkg = toJavaPackage(er.packagePath);
-        String tp = TRUFFLE_PACKAGE_PREFIX;
+        String cls = er.name + "Enum";
+        String pdoFqn = "org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject";
+        String registryFqn = "org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry";
+        String enumRegFqn = "org.finos.legend.pure.truffle.runtime.dynobj.PureEnumRegistry";
+        String enumerationPath = (er.packagePath.isEmpty() ? "" : er.packagePath + "::") + er.name;
 
         sb.append("// AUTO-GENERATED from PDB - DO NOT EDIT\n");
         sb.append("package ").append(pkg).append(";\n\n");
-        sb.append("public enum ").append(er.name).append("Enum implements ")
-                .append("org.finos.legend.pure.truffle.runtime.PropertyAccessor")
-                .append("\n{\n");
 
-        for (int i = 0; i < er.values.size(); i++)
+        // The previous design used a Java {@code enum} for JVM-singleton
+        // identity. That broke the post-migration invariant that every Pure
+        // metamodel value is a {@link PureDynamicObject} (Java enums extend
+        // {@link java.lang.Enum} and can't be re-parented to PDO), forcing
+        // an {@code instanceof Enum} fallback at every property-read site.
+        // This class holds PDO singletons instead — identity-comparison via
+        // {@code ==} still works, but every value is a real PDO and the
+        // typed read paths apply uniformly. Each singleton's Pure
+        // Enumeration path is registered in {@link PureEnumRegistry} so the
+        // CGT can be resolved lazily per-context (the resolver isn't
+        // available at class-load time).
+        sb.append("public final class ").append(cls).append("\n{\n");
+        sb.append("    private ").append(cls).append("() {}\n\n");
+
+        sb.append("    public static final String ENUMERATION_PATH = \"").append(enumerationPath).append("\";\n\n");
+
+        for (String v : er.values)
         {
-            sb.append("    ").append(er.values.get(i));
-            sb.append(i < er.values.size() - 1 ? ",\n" : ";\n");
+            sb.append("    public static final ").append(pdoFqn).append(" ").append(v)
+                    .append(" = makeValue(\"").append(v).append("\");\n");
         }
-
         sb.append("\n");
 
-        // Fields widened to Object: post-PDO-flip the typed interfaces
-        // (GenericTypeValue / SourceInformation / ElementOverride) are no
-        // longer generated. Enum constants are JVM singletons so CGT etc.
-        // live per-context here (set by PureContext.enumCgt), but the
-        // storage type is just Object.
-        sb.append("    private Object classifierGenericType;\n");
-        sb.append("    private Object sourceInformation;\n");
-        sb.append("    private Object elementOverride;\n");
-        sb.append("    private org.finos.legend.pure.truffle.types.PureSequence taggedValues = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n");
-        sb.append("    private org.finos.legend.pure.truffle.types.PureSequence stereotypes = new org.finos.legend.pure.truffle.types.ObjectSequence(new Object[0]);\n\n");
+        sb.append("    private static final java.util.Map<String, ").append(pdoFqn).append("> BY_NAME = new java.util.HashMap<>();\n\n");
 
-        sb.append("    public Object _classifierGenericType() { return this.classifierGenericType; }\n");
-        sb.append("    public ").append(er.name).append("Enum _classifierGenericType(Object value) { this.classifierGenericType = value; return this; }\n\n");
+        sb.append("    static\n    {\n");
+        for (String v : er.values)
+        {
+            sb.append("        BY_NAME.put(\"").append(v).append("\", ").append(v).append(");\n");
+        }
+        sb.append("    }\n\n");
 
-        sb.append("    public Object _sourceInformation() { return this.sourceInformation; }\n");
-        sb.append("    public ").append(er.name).append("Enum _sourceInformation(Object value) { this.sourceInformation = value; return this; }\n\n");
+        sb.append("    private static ").append(pdoFqn).append(" makeValue(String name)\n    {\n");
+        sb.append("        ").append(pdoFqn).append(" pdo = new ").append(pdoFqn).append("(\n");
+        sb.append("                ").append(registryFqn).append(".enumClassInfo(), null, null, null);\n");
+        sb.append("        pdo.writeProperty(\"name\", name);\n");
+        sb.append("        ").append(enumRegFqn).append(".register(pdo, ENUMERATION_PATH);\n");
+        sb.append("        return pdo;\n");
+        sb.append("    }\n\n");
 
-        sb.append("    public Object _elementOverride() { return this.elementOverride; }\n");
-        sb.append("    public ").append(er.name).append("Enum _elementOverride(Object value) { this.elementOverride = value; return this; }\n\n");
-
-        // _name (from Enum interface)
-        sb.append("    public String _name() { return this.name(); }\n");
-        sb.append("    public ").append(er.name).append("Enum _name(String value) { return this; }\n\n");
-
-        // _taggedValues, _stereotypes
-        sb.append("    public org.finos.legend.pure.truffle.types.PureSequence _taggedValues() { return this.taggedValues; }\n");
-        sb.append("    public ").append(er.name).append("Enum _taggedValues(org.finos.legend.pure.truffle.types.PureSequence value) { this.taggedValues = value; return this; }\n\n");
-
-        sb.append("    public org.finos.legend.pure.truffle.types.PureSequence _stereotypes() { return this.stereotypes; }\n");
-        sb.append("    public ").append(er.name).append("Enum _stereotypes(org.finos.legend.pure.truffle.types.PureSequence value) { this.stereotypes = value; return this; }\n\n");
-
-        // _copy() — dropped (the typed interface no longer declares it; no
-        // remaining caller uses typed _copy on enum constants).
-
-        // PropertyAccessor — Pure-side `$enumValue.name`, `.stereotypes`, etc.
-        // dispatch through this switch instead of a reflective method handle.
-        // Java enums extend java.lang.Enum (whose generic supertype triggers
-        // the SignatureParser → Locale → ConcurrentHashMap inlining chain)
-        // so the previous fallback-to-reflection path also broke
-        // {@code TruffleTestCompilerPure.assertNoCompilationFailures} once
-        // PropertyReadNode tightened its monomorphic cache.
-        sb.append("    @Override\n");
-        sb.append("    public Object readProperty(String name)\n    {\n");
-        sb.append("        switch (name)\n        {\n");
-        sb.append("            case \"name\": return _name();\n");
-        sb.append("            case \"classifierGenericType\": return _classifierGenericType();\n");
-        sb.append("            case \"sourceInformation\": return _sourceInformation();\n");
-        sb.append("            case \"elementOverride\": return _elementOverride();\n");
-        sb.append("            case \"taggedValues\": return _taggedValues();\n");
-        sb.append("            case \"stereotypes\": return _stereotypes();\n");
-        sb.append("            default: return org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT;\n");
-        sb.append("        }\n    }\n\n");
-        sb.append("    @Override\n");
-        sb.append("    public void writeProperty(String name, Object value) {}\n\n");
+        sb.append("    public static ").append(pdoFqn).append(" valueOf(String name)\n    {\n");
+        sb.append("        ").append(pdoFqn).append(" v = BY_NAME.get(name);\n");
+        sb.append("        if (v == null) throw new IllegalArgumentException(\"No enum value '\" + name + \"' in ").append(cls).append("\");\n");
+        sb.append("        return v;\n");
+        sb.append("    }\n");
 
         sb.append("}\n");
         return sb.toString();

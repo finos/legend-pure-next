@@ -31,6 +31,8 @@ import java.util.Map;
  */
 public final class ProtocolTranslator
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
     private static final String BOOTSTRAP_PREFIX = "meta.pure.";
     private static final String TRUFFLE_PREFIX = "org.finos.legend.pure.truffle.pdb.";
     private final TruffleMetadataAccess resolver;
@@ -214,7 +216,7 @@ public final class ProtocolTranslator
             return;
         }
         // Already has CGT (e.g. copied from source) — don't overwrite
-        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, "classifierGenericType") != null)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(target, SLOT_CLASSIFIER_GENERIC_TYPE) != null)
         {
             return;
         }

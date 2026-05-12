@@ -42,15 +42,8 @@ public final class TruffleInstanceFactory
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath, TruffleMetadataAccess resolver)
     {
-        // For user-defined Pure classes there's no codegen'd XImpl static{}
-        // block to populate the metadata registry; walk the Class element's
-        // properties + stereotypes from the resolver instead. Idempotent and
-        // memoised per pure-path so this is a one-shot cost on first
-        // construction. Must run BEFORE shapeFor so the resulting Shape's
-        // sharedData snapshot picks up the entries.
-        org.finos.legend.pure.truffle.runtime.dynobj.PropertyMetadataRegistry.ensurePopulated(classPath, resolver);
         return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
-                org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(classPath),
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(classPath, resolver),
                 /*fb=*/ null,
                 resolver,
                 /*parent=*/ null);
@@ -60,7 +53,7 @@ public final class TruffleInstanceFactory
     public static Object createInstance(String classPath)
     {
         return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
-                org.finos.legend.pure.truffle.runtime.dynobj.PureShapeRegistry.shapeFor(classPath),
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(classPath, null),
                 /*fb=*/ null,
                 /*resolver=*/ null,
                 /*parent=*/ null);

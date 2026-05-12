@@ -26,6 +26,9 @@ import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 @NodeInfo(shortName = "putAll")
 public final class PutAllNode extends PureNode
 {
+
+    private static final int SLOT_FIRST = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("first");
+    private static final int SLOT_SECOND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("second");
     private final String signature;
 
     @Child
@@ -98,8 +101,8 @@ public final class PutAllNode extends PureNode
                 if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pair,
                         "meta::pure::functions::collection::Pair"))
                 {
-                    newMap.put(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "first"),
-                            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pair, "second"));
+                    newMap.put(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pair, SLOT_FIRST),
+                            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pair, SLOT_SECOND));
                 }
             }
         }

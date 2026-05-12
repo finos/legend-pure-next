@@ -29,6 +29,9 @@ import java.util.Objects;
 @NodeInfo(shortName = "is")
 public final class IsNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     @Child
     private PureNode left;
 
@@ -66,21 +69,20 @@ public final class IsNode extends PureNode
                 "meta::pure::metamodel::type::Enum");
         if (aIsEnum && bIsEnum)
         {
-            Object nameA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "name");
-            Object nameB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "name");
+            Object nameA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_NAME);
+            Object nameB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_NAME);
             if (!Objects.equals(nameA, nameB))
             {
                 return false;
             }
-            if (rawA.getClass() == rawB.getClass() && rawA.getClass().isEnum())
-            {
-                return true;
-            }
-            Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "classifierGenericType");
-            Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "classifierGenericType");
+            // Post enum-to-PDO migration: all enum values are PDO singletons
+            // sharing the {@code Enum} classInfo. Two values are the same
+            // enum type iff their CGTs resolve to the same Pure type.
+            Object cgtA = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_CLASSIFIER_GENERIC_TYPE);
+            Object cgtB = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_CLASSIFIER_GENERIC_TYPE);
             if (cgtA == null || cgtB == null)
             {
-                return rawA.getClass() == rawB.getClass();
+                return false;
             }
             var typeA = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtA);
             var typeB = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgtB);
@@ -98,13 +100,13 @@ public final class IsNode extends PureNode
         }
         if (aIsEnum && rawB instanceof String s)
         {
-            return Objects.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawA, "name"),
+            return Objects.equals(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawA, SLOT_NAME),
                     extractEnumValueName(s));
         }
         if (bIsEnum && rawA instanceof String s)
         {
             return Objects.equals(extractEnumValueName(s),
-                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(rawB, "name"));
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(rawB, SLOT_NAME));
         }
         return false;
     }

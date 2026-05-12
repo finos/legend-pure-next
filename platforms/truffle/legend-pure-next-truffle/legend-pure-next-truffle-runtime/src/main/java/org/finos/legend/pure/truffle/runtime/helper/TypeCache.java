@@ -51,6 +51,19 @@ import java.util.Set;
  */
 public final class TypeCache implements TruffleTypeCache
 {
+
+    private static final int SLOT_PROFILE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("profile");
+    private static final int SLOT_STEREOTYPES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("stereotypes");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_GENERAL =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+    private static final int SLOT_NAME =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PROPERTIES =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
+
     private static final String EQUALITY_PROFILE_PATH = "meta::pure::profiles::equality";
     private static final String EQUALITY_KEY_VALUE = "Key";
     private static final int MAX_GENERALIZATION_DEPTH = 64;
@@ -230,14 +243,14 @@ public final class TypeCache implements TruffleTypeCache
             }
         }
         out.add(type);
-        Object gens = PureObj.read(type, "generalizations");
+        Object gens = PureObj.readBySlot(type, SLOT_GENERALIZATIONS);
         if (gens instanceof PureSequence seq)
         {
             for (Object gen : seq.toBoxedArray())
             {
                 if (gen != null)
                 {
-                    Object superType = _GenericType.type(PureObj.read(gen, "general"));
+                    Object superType = _GenericType.type(PureObj.readBySlot(gen, SLOT_GENERAL));
                     linearizeInto(superType, out);
                 }
             }
@@ -256,7 +269,7 @@ public final class TypeCache implements TruffleTypeCache
         {
             return;
         }
-        Object propsObj = PureObj.read(owner, "properties");
+        Object propsObj = PureObj.readBySlot(owner, SLOT_PROPERTIES);
         if (propsObj instanceof PureSequence properties)
         {
             for (Object prop : properties.toBoxedArray())
@@ -265,7 +278,7 @@ public final class TypeCache implements TruffleTypeCache
                 {
                     continue;
                 }
-                Object nameObj = PureObj.read(prop, "name");
+                Object nameObj = PureObj.readBySlot(prop, SLOT_NAME);
                 if (!(nameObj instanceof String propName) || !seenPropNames.add(propName))
                 {
                     continue;
@@ -276,7 +289,7 @@ public final class TypeCache implements TruffleTypeCache
                 }
             }
         }
-        Object gensObj = PureObj.read(owner, "generalizations");
+        Object gensObj = PureObj.readBySlot(owner, SLOT_GENERALIZATIONS);
         if (gensObj instanceof PureSequence gens)
         {
             for (Object gen : gens.toBoxedArray())
@@ -285,7 +298,7 @@ public final class TypeCache implements TruffleTypeCache
                 {
                     continue;
                 }
-                Object general = PureObj.read(gen, "general");
+                Object general = PureObj.readBySlot(gen, SLOT_GENERAL);
                 if (general == null)
                 {
                     continue;
@@ -301,7 +314,7 @@ public final class TypeCache implements TruffleTypeCache
 
     private static boolean hasEqualityKeyStereotype(Object prop)
     {
-        Object stereotypesObj = PureObj.read(prop, "stereotypes");
+        Object stereotypesObj = PureObj.readBySlot(prop, SLOT_STEREOTYPES);
         if (!(stereotypesObj instanceof PureSequence stereotypes))
         {
             return false;
@@ -312,11 +325,11 @@ public final class TypeCache implements TruffleTypeCache
             {
                 continue;
             }
-            if (!EQUALITY_KEY_VALUE.equals(PureObj.read(ster, "value")))
+            if (!EQUALITY_KEY_VALUE.equals(PureObj.readBySlot(ster, SLOT_VALUE)))
             {
                 continue;
             }
-            Object profile = PureObj.read(ster, "profile");
+            Object profile = PureObj.readBySlot(ster, SLOT_PROFILE);
             if (profile != null && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
             {
                 return true;
