@@ -400,17 +400,30 @@ public final class CopyWithKeysNode extends PureNode
     private static void copyViaReflection(Object source, Object target)
     {
         if (!(source instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdoSrc)
-                || !(target instanceof org.finos.legend.pure.truffle.runtime.PropertyAccessor pa))
+                || !(target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdoTgt))
         {
             return;
         }
-        // Iterate every slot in the source's classInfo. Reads pull
-        // materialised values from slots (or lazy-decode if needed) so the
-        // copy ends up with the same state as the source.
-        for (String name : pdoSrc.classInfo.propertyNames())
+        // Source and target have identical classInfo (copy preserves class),
+        // so slot indices line up. Iterate the raw slots array directly to
+        // skip the per-name {@code slotByName.get} + {@code writeProperty}
+        // coercion lookup. Materialise lazy FB entries via {@code readSlot}
+        // only when we hit the LAZY sentinel; everything else is a direct
+        // array load + store. Coercion is unnecessary because the value
+        // came from a slot of the same class.
+        Object[] srcSlots = pdoSrc.slots;
+        Object[] tgtSlots = pdoTgt.slots;
+        int n = Math.min(srcSlots.length, tgtSlots.length);
+        for (int i = 0; i < n; i++)
         {
-            Object v = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(pdoSrc, name);
-            if (v != null) pa.writeProperty(name, v);
+            Object v = srcSlots[i];
+            if (v == null) continue;
+            if (v == org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder.LAZY)
+            {
+                v = pdoSrc.readSlot(i);
+                if (v == null) continue;
+            }
+            tgtSlots[i] = v;
         }
     }
 

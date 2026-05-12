@@ -87,15 +87,12 @@ public final class _Type
     {
         if (type == null) return false;
         Object any = anyTypeRef;
-        if (any != null && type == any) return true;
-        // Either no cached Any yet, or the cached Any belongs to a different
-        // resolver (cross-resolver pollution — same JVM, multiple test classes
-        // each with their own resolver and their own Any singleton). Re-resolve
-        // through the current resolver; getElement is per-resolver cached so
-        // the lookup is a single CHM.get on the warm path. Refresh the static
-        // cache so the next call from this resolver hits the fast identity
-        // check; the cache may thrash between resolvers but the overall cost
-        // is bounded by the resolver-switch frequency, not the call frequency.
+        if (any != null)
+        {
+            return type == any;
+        }
+        // First call: resolve and cache. Volatile write publishes the
+        // reference for subsequent unsynchronised reads.
         if (resolver != null)
         {
             Object resolved = resolver.getElement("meta::pure::metamodel::type::Any");
