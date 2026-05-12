@@ -25,6 +25,52 @@
             <groupId>org.finos.legend.pure</groupId>
             <artifactId>legend-pure-next-bootstrap-compiler</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                <!-- Jena (~13MB), Caffeine (~2MB), JSON-LD/Jakarta JSON,
+                     commons-compress, protobuf, thrift — all build-time-only
+                     dependencies of the bootstrap RDF→FB pipeline
+                     ({@code M3BootstrapReader}, {@code SpecificationBinaryBuilder}).
+                     The Truffle runtime only consumes pre-built PDBs via
+                     {@code PDBModule}, never the RDF-bootstrap path, so these
+                     can be stripped from the runtime classpath and the
+                     resulting native-image binary. -->
+                <exclusion>
+                    <groupId>org.apache.jena</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.ben-manes.caffeine</groupId>
+                    <artifactId>caffeine</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.apicatalog</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>jakarta.json</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.thrift</groupId>
+                    <artifactId>libthrift</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.finos.legend.pure</groupId>
@@ -207,11 +253,18 @@
                                 </filter>
                                 <!-- pure/annotations/* are emitted identically by RdfJavaGenerator
                                      in both parser and compiler. Keep the parser copy (parser is
-                                     the upstream module) and drop the compiler's duplicate. -->
+                                     the upstream module) and drop the compiler's duplicate.
+
+                                     core.pdb is also packed at JAR root by the bootstrap-compiler
+                                     module (its build-core-pdb execution writes to target/classes/).
+                                     We embed the same file under /embedded/ via the native-lib
+                                     profile's <resource> mapping; without this exclude we get
+                                     4.5MB duplicated in the image. -->
                                 <filter>
                                     <artifact>org.finos.legend.pure:legend-pure-next-bootstrap-compiler</artifact>
                                     <excludes>
                                         <exclude>pure/annotations/**</exclude>
+                                        <exclude>core.pdb</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
@@ -253,6 +306,71 @@
                                      build time so its singleton lands in the heap as a fully constructed
                                      object rather than triggering the build-time/run-time mismatch error. -->
                                 <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.profiler.PureProfilerProvider</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+            native-lib: builds a shared library libpure-truffle.dylib / .so / .dll
+            with core.pdb and compiler.pdb baked in as classpath resources. The
+            @CEntryPoint-annotated methods in {@link PureNativeLib} become C-callable
+            functions so host processes (JVM via JNI/FFM, native CLIs, Python via
+            ctypes, etc.) can embed Pure compile + execute without spawning a
+            subprocess. Activate with `mvn -Pnative-lib package -DskipTests`.
+
+            Prerequisites:
+              - shared/core.pdb and shared/compiler.pdb must exist (run
+                `just bootstrap::build` from the repo root first).
+              - GraalVM 25 with native-image on PATH.
+        -->
+        <profile>
+            <id>native-lib</id>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>${project.basedir}/src/main/resources</directory>
+                    </resource>
+                    <!-- Pull shared/core.pdb + shared/compiler.pdb into the JAR
+                         under /embedded/*.pdb so PureNativeLib.extractResource
+                         can stream them at first call. -->
+                    <resource>
+                        <directory>${project.basedir}/../../../../shared</directory>
+                        <targetPath>embedded</targetPath>
+                        <includes>
+                            <include>core.pdb</include>
+                            <include>compiler.pdb</include>
+                        </includes>
+                    </resource>
+                </resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.10.6</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native-lib</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <imageName>libpure-truffle</imageName>
+                            <buildArgs>
+                                <buildArg>--shared</buildArg>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>--features=org.finos.legend.pure.truffle.nativeimage.PureFeature</buildArg>
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.PureLanguageProvider</buildArg>
+                                <buildArg>--initialize-at-build-time=org.finos.legend.pure.truffle.profiler.PureProfilerProvider</buildArg>
+                                <!-- Include the embedded PDB resources in the image.
+                                     native-image strips unreferenced resources by default. -->
+                                <buildArg>-H:IncludeResources=embedded/.*\.pdb</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

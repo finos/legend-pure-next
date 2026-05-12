@@ -23,10 +23,7 @@ native function
     meta::pure::functions::collection::isEmpty(p:Any[*]):Boolean[1];
 
 
-function <<PCT.function>> meta::pure::functions::collection::isEmpty(p:Any[0..1]):Boolean[1]
-{
-    equal($p->size(), 0)
-}
+native function <<PCT.function>> meta::pure::functions::collection::isEmpty(p:Any[0..1]):Boolean[1];
 
 
 function <<PCT.test>> meta::pure::functions::collection::tests::isEmpty::testIsEmpty<Z|y>(f:Function<{Function<{->Z[y]}>[1]->Z[y]}>[1]):Boolean[1]
