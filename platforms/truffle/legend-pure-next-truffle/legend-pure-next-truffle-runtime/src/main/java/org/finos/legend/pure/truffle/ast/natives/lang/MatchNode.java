@@ -96,33 +96,43 @@ public final class MatchNode extends PureNode
         for (int i = 0; i < fnCount; i++)
         {
             Object mfRaw = CollectionHelper.at(matchFns, i);
-            // Unwrap AtomicValue wrapper — FlatBuffer-based collections may
-            // deliver match lambdas still wrapped in their VS envelope.
-            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(mfRaw,
-                    "meta::pure::metamodel::valuespecification::AtomicValue"))
-            {
-                Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mfRaw, SLOT_VALUE);
-                if (inner != null)
-                {
-                    mfRaw = inner;
-                }
-            }
-            // Extract the FunctionDefinition for type matching, but keep the
-            // original (possibly RawClosure) for invocation so captured open
-            // variables are preserved.
+            // RawClosure is the overwhelmingly common case — short-circuit it
+            // with a single `instanceof` before doing any pureTypeIs/pureTypeOf
+            // work. The original code did the AtomicValue {@code pureTypeIs}
+            // first on every iteration; for a RawClosure that falls through to
+            // {@code pureTypeOfNonPdo} which does a {@code ConcurrentHashMap.get}
+            // per iter (JFR: 9 leaf samples on warm wall).
             Object fd;
             if (mfRaw instanceof RawClosure rc)
             {
                 fd = rc.lambda();
             }
-            else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(mfRaw,
-                    "meta::pure::metamodel::function::FunctionDefinition", resolver))
-            {
-                fd = mfRaw;
-            }
             else
             {
-                throw new RuntimeException("Not possible");
+                // Unwrap AtomicValue wrapper — FlatBuffer-based collections may
+                // deliver match lambdas still wrapped in their VS envelope.
+                if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(mfRaw,
+                        "meta::pure::metamodel::valuespecification::AtomicValue"))
+                {
+                    Object inner = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mfRaw, SLOT_VALUE);
+                    if (inner != null)
+                    {
+                        mfRaw = inner;
+                    }
+                }
+                if (mfRaw instanceof RawClosure rc2)
+                {
+                    fd = rc2.lambda();
+                }
+                else if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(mfRaw,
+                        "meta::pure::metamodel::function::FunctionDefinition", resolver))
+                {
+                    fd = mfRaw;
+                }
+                else
+                {
+                    throw new RuntimeException("Not possible");
+                }
             }
 
             if (!matchesBranch(fd, valueType, valueCount, resolver))

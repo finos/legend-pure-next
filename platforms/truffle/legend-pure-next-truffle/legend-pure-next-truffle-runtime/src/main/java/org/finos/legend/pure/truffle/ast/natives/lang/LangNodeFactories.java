@@ -14,6 +14,7 @@
 
 package org.finos.legend.pure.truffle.ast.natives.lang;
 
+import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.builder.NativeNodeRegistry;
 
 /**
@@ -42,16 +43,24 @@ public final class LangNodeFactories
         registry.register("if_Boolean_1__Function_1__Function_1__T_m_",
                 (args, gt, mul, fe) -> new IfNode(args[0], args[1], args[2]));
 
-        // Multi-clause if — declared `native` in if.pure (was previously a
-        // Pure body using `find`). The runtime case walks a Pair[*] and
-        // calls each pair's first/second lambda — same semantics as Pure's
-        // {@code find}-based body but without the closure-dispatch on
-        // {@code find} itself. Literal pair-list patterns get a faster
-        // {@link MultiIfNode} static lowering applied earlier in
-        // {@code PureASTBuilder.lowerFunctionExpression} (no Pair
-        // allocation, no per-clause closure call).
+        // Multi-clause if — declared `native` in if.pure. Two operating modes:
+        //   - Static: the args are a literal pair-list ({@code [pair(|c1, |b1),
+        //     pair(|c2, |b2), ...]}). The AST builder's
+        //     {@link PureASTBuilder#tryLowerMultiIf} inspects the
+        //     FunctionExpression, pulls each pair's cond+body lambdas, and
+        //     emits a {@link MultiIfNode} with pre-lowered branches — no
+        //     {@code Pair} allocation, no per-clause closure call.
+        //   - Runtime: anything else (a variable, a function-built sequence
+        //     of pairs, etc.). The {@link MultiIfNode} runtime constructor
+        //     walks the {@code Pair[*]} at execution time, reading each pair's
+        //     {@code first}/{@code second} lambdas via slot.
         registry.register("if_Pair_MANY__Function_1__T_m_",
-                (args, gt, mul, fe) -> new MultiIfNode(args[0], args[1]));
+                (args, gt, mul, fe) ->
+                {
+                    PureNode staticForm = org.finos.legend.pure.truffle.PureLanguage.get(null)
+                            .astBuilder().tryLowerMultiIf(fe);
+                    return staticForm != null ? staticForm : new MultiIfNode(args[0], args[1]);
+                });
 
         // eval — all four overloads use the same variable-arity EvalNode
         registry.register("eval_Function_1__V_m_",
@@ -70,11 +79,28 @@ public final class LangNodeFactories
         registry.register("or_Boolean_1__Boolean_1__Boolean_1_",
                 (args, gt, mul, fe) -> new OrNode(args[0], args[1]));
 
-        // match — both overloads (with and without extra parameter)
+        // match — both overloads (with and without extra parameter).
+        // Specialised at AST-build when the branch list is a literal
+        // {@code Collection} of literal closure-lambdas with single
+        // {@code T[1]} params: pre-resolves branch type paths and emits a
+        // {@link SpecializedMatchNode} that PE-folds the dispatch into a
+        // constant-string-compare {@code @ExplodeLoop}. Otherwise falls
+        // back to the generic {@link MatchNode} that walks branches via
+        // the {@code @TruffleBoundary} {@code matchesBranch}.
         registry.register("match_Any_MANY__Function_$1_MANY$__T_m_",
-                (args, gt, mul, fe) -> new MatchNode(args));
+                (args, gt, mul, fe) ->
+                {
+                    PureNode spec = org.finos.legend.pure.truffle.PureLanguage.get(null)
+                            .astBuilder().tryLowerMatch(fe);
+                    return spec != null ? spec : new MatchNode(args);
+                });
         registry.register("match_Any_MANY__Function_$1_MANY$__P_o__T_m_",
-                (args, gt, mul, fe) -> new MatchNode(args));
+                (args, gt, mul, fe) ->
+                {
+                    PureNode spec = org.finos.legend.pure.truffle.PureLanguage.get(null)
+                            .astBuilder().tryLowerMatch(fe);
+                    return spec != null ? spec : new MatchNode(args);
+                });
 
         // evaluate(Function[1], List[*]) — unwraps List values before dispatch
         registry.register("evaluate_Function_1__List_MANY__Any_MANY_",

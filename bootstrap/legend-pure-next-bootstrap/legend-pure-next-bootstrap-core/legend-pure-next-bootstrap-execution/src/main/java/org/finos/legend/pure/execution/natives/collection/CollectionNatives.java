@@ -586,6 +586,24 @@ public class CollectionNatives
             return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
         });
 
+        // contains(Any[*], Any[1]) : Boolean[1] — Pure body was
+        // {@code $collection->exists(x | $value == $x)}; declared native in
+        // {@code pure/specification/functions/collection/boolean/contains.pure}
+        // to let backends skip the per-element closure dispatch.
+        natives.put("contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            Object value = _E_ValueSpecification.unwrap(args.get(1));
+            for (ValueSpecification itemVS : col._values())
+            {
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(value, _E_ValueSpecification.unwrap(itemVS), resolver))
+                {
+                    return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
+                }
+            }
+            return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
+        });
+
         // forAll(T[*], Function<{T[1]->Boolean[1]}>[1]) : Boolean[1]
         natives.put("forAll_T_MANY__Function_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
         {

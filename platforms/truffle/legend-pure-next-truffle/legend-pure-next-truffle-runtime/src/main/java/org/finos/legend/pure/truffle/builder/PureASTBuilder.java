@@ -51,8 +51,9 @@ public final class PureASTBuilder
     private static final int SLOT_QUALIFIED_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("qualifiedProperties");
     private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
     private static final int SLOT_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("values");
+    private static final int SLOT_LOWER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("lowerBound");
+    private static final int SLOT_UPPER_BOUND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("upperBound");
     private static final String LET_FUNCTION_SIGNATURE = "letFunction_String_1__T_m__T_m_";
-    private static final String MULTI_IF_SIGNATURE = "if_Pair_MANY__Function_1__T_m_";
     private static final String PAIR_SIGNATURE = "pair_U_1__V_1__Pair_1_";
 
     private final NativeNodeRegistry specialized;
@@ -268,23 +269,6 @@ public final class PureASTBuilder
             }
         }
         final Object resolvedFunc = func;
-        // Recognise the multi-clause if pattern at AST-build time and lower
-        // it to a flat conditional chain — see {@link MultiIfNode}.
-        // Static-form fast path for the multi-clause if — applies whether
-        // the function is a NativeFunction or FunctionDefinition. Literal
-        // pair-list patterns lower to a flat {@link MultiIfNode} with no
-        // Pair allocation; non-literal patterns fall through to the
-        // regular dispatch (where the native factory builds a runtime
-        // {@code MultiIfNode}).
-        Object resolvedFuncName = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(resolvedFunc, SLOT_NAME);
-        if (MULTI_IF_SIGNATURE.equals(resolvedFuncName))
-        {
-            PureNode multiIf = tryLowerMultiIf(fe);
-            if (multiIf != null)
-            {
-                return multiIf;
-            }
-        }
         // Dispatch by Pure metaclass — works for both XImpl (legacy) and
         // PureDynamicObject (post-flip). NativeFunction is a leaf concrete
         // type (no subtypes), so pureTypeIs is enough; FunctionDefinition /
@@ -330,7 +314,7 @@ public final class PureASTBuilder
      * {@link org.finos.legend.pure.truffle.ast.natives.lang.LambdaCallNoArgNode}.
      * Either way the {@code pair()} call site is bypassed entirely.</p>
      */
-    private PureNode tryLowerMultiIf(Object fe)
+    public PureNode tryLowerMultiIf(Object fe)
     {
         Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
         if (!(paramsObj instanceof PureSequence params) || params.size() < 2)
@@ -354,8 +338,15 @@ public final class PureASTBuilder
         for (int i = 0; i < n; i++)
         {
             Object pairFe = pairValues.getBoxed(i);
-            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pairFe,
-                    "meta::pure::metamodel::valuespecification::FunctionExpression"))
+            // Subtype check — pair-list elements are concretely
+            // {@code FunctionInvocation} (a subtype of {@code FunctionExpression}),
+            // not the abstract supertype itself. Using {@code pureTypeIs}'s
+            // exact-match check here silently dropped every multi-if site into
+            // the runtime mode (35/35 → pair allocs per call) for the entire
+            // pre-fix history of this code.
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(pairFe,
+                    "meta::pure::metamodel::valuespecification::FunctionExpression",
+                    org.finos.legend.pure.truffle.PureLanguage.get(null).resolver()))
             {
                 return null;
             }
@@ -388,6 +379,109 @@ public final class PureASTBuilder
             return null;
         }
         return new org.finos.legend.pure.truffle.ast.natives.lang.MultiIfNode(conds, bodies, defaultBody);
+    }
+
+    /**
+     * Try to lower a call to {@code match(value, [lambda1, lambda2, ...])}
+     * (or the 3-arg variant with an extra parameter) into a
+     * {@link org.finos.legend.pure.truffle.ast.natives.lang.SpecializedMatchNode}.
+     *
+     * <p>Triggers when the branch list is a literal {@code Collection} of
+     * literal closure-lambdas (each an {@code AtomicValue<LambdaFunction>})
+     * where every lambda has exactly one parameter typed {@code T[1]} for a
+     * concretely-resolvable Pure type. At that point each branch's accepted
+     * type is known at AST-build, so the runtime dispatch can use a
+     * constant-folded {@code @ExplodeLoop} {@code isType} chain instead of
+     * the generic {@code @TruffleBoundary matchesBranch} loop.</p>
+     *
+     * <p>Returns {@code null} when any of these conditions don't hold; the
+     * caller falls back to the generic {@code MatchNode}.</p>
+     */
+    public PureNode tryLowerMatch(Object fe)
+    {
+        Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fe, SLOT_PARAMETERS_VALUES);
+        if (!(paramsObj instanceof PureSequence params) || params.size() < 2)
+        {
+            return null;
+        }
+        Object branchListVs = params.getBoxed(1);
+        if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(branchListVs,
+                "meta::pure::metamodel::valuespecification::Collection"))
+        {
+            return null;
+        }
+        Object branchValuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(branchListVs, SLOT_VALUES);
+        if (!(branchValuesObj instanceof PureSequence branchValues) || branchValues.isEmpty())
+        {
+            return null;
+        }
+        int n = branchValues.size();
+        Object[] branchTypeElements = new Object[n];
+        for (int i = 0; i < n; i++)
+        {
+            Object branchVs = branchValues.getBoxed(i);
+            // Each branch must be an AtomicValue wrapping a LambdaFunction.
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(branchVs,
+                    "meta::pure::metamodel::valuespecification::AtomicValue"))
+            {
+                return null;
+            }
+            Object lambda = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(branchVs, SLOT_VALUE);
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(lambda,
+                    "meta::pure::metamodel::function::LambdaFunction"))
+            {
+                return null;
+            }
+            // Single parameter, multiplicity [1], known concrete type.
+            Object lambdaParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lambda, SLOT_PARAMETERS);
+            if (!(lambdaParamsObj instanceof PureSequence lambdaParams) || lambdaParams.size() != 1)
+            {
+                return null;
+            }
+            Object param = lambdaParams.getBoxed(0);
+            Object paramGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, SLOT_GENERIC_TYPE);
+            if (paramGT == null)
+            {
+                return null;
+            }
+            Object paramType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(paramGT);
+            if (paramType == null)
+            {
+                return null;
+            }
+            // Only accept [1] multiplicity for now — keeps the runtime
+            // dispatch a pure type check. Other multiplicities would need
+            // a value-count check we don't yet emit.
+            Object paramMul = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(param, SLOT_MULTIPLICITY);
+            if (!isSingleMultiplicity(paramMul))
+            {
+                return null;
+            }
+            branchTypeElements[i] = paramType;
+        }
+        // Lower the args normally — the value, the branch-list (still
+        // evaluated to produce real closures with their captured open
+        // vars), and the optional 3rd arg.
+        PureNode valueNode = lower(params.getBoxed(0));
+        PureNode matchFnsNode = lower(branchListVs);
+        PureNode extraNode = params.size() > 2 ? lower(params.getBoxed(2)) : null;
+        if (valueNode == null || matchFnsNode == null) return null;
+        return new org.finos.legend.pure.truffle.ast.natives.lang.SpecializedMatchNode(
+                valueNode, matchFnsNode, extraNode, branchTypeElements);
+    }
+
+    /** {@code true} when the multiplicity is concretely {@code [1]} —
+     *  lowerBound == upperBound == 1. */
+    private static boolean isSingleMultiplicity(Object mul)
+    {
+        if (mul == null) return false;
+        Object lb = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_LOWER_BOUND);
+        Object ub = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(mul, SLOT_UPPER_BOUND);
+        if (lb == null || ub == null) return false;
+        Object lbVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(lb, SLOT_VALUE);
+        Object ubVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(ub, SLOT_VALUE);
+        return lbVal instanceof Number ln && ubVal instanceof Number un
+                && ln.longValue() == 1 && un.longValue() == 1;
     }
 
     /**

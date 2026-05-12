@@ -62,18 +62,21 @@ public class MetamodelFactoriesWarmWallBenchTest
         coreLoader.preloadAll();
         compilerLoader.preloadAll();
 
-        runtime = PureTruffleRuntime.builder()
+        PureTruffleRuntime.Builder runtimeBuilder = PureTruffleRuntime.builder()
                 .withResolver(resolver)
                 .withParserExtensions(List.of(
                         new TruffleCompiledGraphLanguageExtension(),
                         new TruffleCompilerStatsLanguageExtension(),
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
-                // Override surefire's pure.truffle.compileImmediately=true:
-                // this bench measures warm-wall steady state, and forcing
-                // every reached CallTarget through Tier 2 on first call would
-                // inflate the measured wall by the JIT cost of cold paths.
-                .withCompileImmediately(false)
-                .build();
+                .withCompileImmediately(false);
+        if (Boolean.getBoolean("pure.bench.profiler"))
+        {
+            runtimeBuilder
+                    .withPolyglotOption("pureprofiler", "true")
+                    .withPolyglotOption("pureprofiler.OutputFile", "/tmp/pure-profiler.txt")
+                    .withPolyglotOption("pureprofiler.Top", "40");
+        }
+        runtime = runtimeBuilder.build();
 
         compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
         pureParser = PureLanguage.get(null).pureParser();

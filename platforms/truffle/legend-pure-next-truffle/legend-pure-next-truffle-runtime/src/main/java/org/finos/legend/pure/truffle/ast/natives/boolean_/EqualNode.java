@@ -100,6 +100,31 @@ public final class EqualNode extends PureNode
         return callPureEquals(rawA, rawB, getResolver());
     }
 
+    /**
+     * Resolver-passed deep equality. Same logic as {@link #executeBoolean(VirtualFrame)}
+     * but takes the operands directly — used by AST nodes that need to compare
+     * values inside an inner loop ({@link
+     * org.finos.legend.pure.truffle.ast.natives.collection.ContainsNode}) without
+     * paying for an extra {@link RawLambdaCallNode} dispatch per element.
+     */
+    public static boolean equalsStatic(Object a, Object b, TruffleMetadataAccess resolver)
+    {
+        if (a == b) return true;
+        if (a instanceof Long la && b instanceof Long lb) return la.longValue() == lb.longValue();
+        if (a instanceof Boolean ba && b instanceof Boolean bb) return ba.booleanValue() == bb.booleanValue();
+        if (a instanceof String sa && b instanceof String sb) return sa.equals(sb);
+        return slowEqualsStatic(a, b, resolver);
+    }
+
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
+    private static boolean slowEqualsStatic(Object a, Object b, TruffleMetadataAccess resolver)
+    {
+        Object rawA = normalizeForEquals(a);
+        Object rawB = normalizeForEquals(b);
+        if (rawA == rawB) return true;
+        return callPureEquals(rawA, rawB, resolver);
+    }
+
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {

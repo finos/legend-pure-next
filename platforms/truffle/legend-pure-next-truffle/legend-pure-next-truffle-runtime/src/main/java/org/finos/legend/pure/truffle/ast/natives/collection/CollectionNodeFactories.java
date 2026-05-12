@@ -96,6 +96,8 @@ public final class CollectionNodeFactories
                 (args, gt, mul, fe) -> new FoldNode(args[0], args[1], args[2]));
         registry.register("exists_T_MANY__Function_1__Boolean_1_",
                 (args, gt, mul, fe) -> new ExistsNode(args[0], args[1]));
+        registry.register("contains_Any_MANY__Any_1__Boolean_1_",
+                (args, gt, mul, fe) -> new ContainsNode(args[0], args[1]));
         registry.register("forAll_T_MANY__Function_1__Boolean_1_",
                 (args, gt, mul, fe) -> new ForAllNode(args[0], args[1]));
         registry.register("find_T_MANY__Function_1__T_$0_1$_",
