@@ -200,16 +200,7 @@ public final class PropertyMetadataRegistry
         ConcurrentHashMap<String, Class<?>> inner = META.get(purePath);
         if (inner == null)
         {
-            try
-            {
-                Class.forName(toJavaClassName(purePath));
-            }
-            catch (ClassNotFoundException ignored)
-            {
-                // Pure class with no codegen'd XImpl (e.g. a user-defined
-                // Pure class loaded purely from the PDB at runtime). Skip.
-            }
-            inner = META.get(purePath);
+            inner = tryLoadInner(purePath);
             if (inner == null) return null;
         }
         return inner.get(propName);
@@ -227,21 +218,55 @@ public final class PropertyMetadataRegistry
         ConcurrentHashMap<String, Class<?>> inner = META.get(purePath);
         if (inner == null)
         {
-            try { Class.forName(toJavaClassName(purePath)); } catch (ClassNotFoundException ignored) {}
-            inner = META.get(purePath);
+            inner = tryLoadInner(purePath);
         }
         return inner != null ? inner : java.util.Map.of();
     }
 
+    /** Pure paths that have no XImpl on the classpath. Avoids retrying
+     *  {@code Class.forName} (which itself walks the classpath) + the
+     *  regex {@code split("::")} on every miss for the same path. */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> NO_XIMPL =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Resolve the XImpl class for {@code purePath} and return the populated
+     *  inner map (or {@code null} when no XImpl exists). Memoises the
+     *  "no XImpl" verdict in {@link #NO_XIMPL} so subsequent calls for the
+     *  same path skip the {@code Class.forName} and the path-to-FQN build. */
+    private static ConcurrentHashMap<String, Class<?>> tryLoadInner(String purePath)
+    {
+        if (NO_XIMPL.containsKey(purePath)) return null;
+        try
+        {
+            Class.forName(toJavaClassName(purePath));
+        }
+        catch (ClassNotFoundException ignored)
+        {
+            NO_XIMPL.put(purePath, Boolean.TRUE);
+            return null;
+        }
+        return META.get(purePath);
+    }
+
+    /** {@code purePath.split("::")} is regex-backed (Pattern.compile per call
+     *  for 2-char delimiters); manual {@code indexOf} loop is ~10x faster on
+     *  the warm path and was 18 leaf JFR samples before this rewrite. */
     private static String toJavaClassName(String purePath)
     {
-        String[] segments = purePath.split("::");
-        StringBuilder sb = new StringBuilder("org.finos.legend.pure.truffle.pdb.");
-        for (int i = 0; i < segments.length; i++)
+        StringBuilder sb = new StringBuilder(purePath.length() + 16);
+        sb.append("org.finos.legend.pure.truffle.pdb.");
+        int start = 0;
+        boolean firstSegment = true;
+        while (true)
         {
-            if (i > 0) sb.append('.');
-            // Match TruffleInstanceFactory's keyword escaping.
-            sb.append(JAVA_KEYWORDS.contains(segments[i]) ? segments[i] + "_" : segments[i]);
+            int idx = purePath.indexOf("::", start);
+            int end = idx < 0 ? purePath.length() : idx;
+            if (!firstSegment) sb.append('.');
+            firstSegment = false;
+            String segment = purePath.substring(start, end);
+            sb.append(JAVA_KEYWORDS.contains(segment) ? segment + "_" : segment);
+            if (idx < 0) break;
+            start = idx + 2;
         }
         sb.append("Impl");
         return sb.toString();

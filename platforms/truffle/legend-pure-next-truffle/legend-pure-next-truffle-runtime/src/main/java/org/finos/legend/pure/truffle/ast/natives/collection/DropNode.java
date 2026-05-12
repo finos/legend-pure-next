@@ -48,12 +48,13 @@ public final class DropNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         long n = IntegerHelper.asLong(count.executeGeneric(frame), SIG);
-        Object[] arr = CollectionHelper.toArray(col);
-        int from = (int) Math.min(Math.max(n, 0), arr.length);
-        if (from >= arr.length)
-        {
-            return PureSequence.EMPTY;
-        }
-        return new ObjectSequence(Arrays.copyOfRange(arr, from, arr.length));
+        int sz = CollectionHelper.size(col);
+        int from = (int) Math.min(Math.max(n, 0), sz);
+        if (from >= sz) return PureSequence.EMPTY;
+        // Single allocation — skip the full-collection {@code toArray} +
+        // {@code Arrays.copyOfRange} double-copy.
+        Object[] out = new Object[sz - from];
+        for (int i = 0; i < out.length; i++) out[i] = CollectionHelper.at(col, from + i);
+        return new ObjectSequence(out);
     }
 }

@@ -48,12 +48,14 @@ public final class TakeNode extends PureNode
     {
         Object col = collection.executeGeneric(frame);
         long n = IntegerHelper.asLong(count.executeGeneric(frame), SIG);
-        Object[] arr = CollectionHelper.toArray(col);
-        int to = (int) Math.min(Math.max(n, 0), arr.length);
-        if (to == 0)
-        {
-            return PureSequence.EMPTY;
-        }
-        return new ObjectSequence(Arrays.copyOf(arr, to));
+        int sz = CollectionHelper.size(col);
+        int to = (int) Math.min(Math.max(n, 0), sz);
+        if (to == 0) return PureSequence.EMPTY;
+        // Single allocation — skip the full-collection {@code toArray} +
+        // {@code Arrays.copyOf} double-copy that JFR identified at 13 leaf
+        // samples on the warm wall.
+        Object[] out = new Object[to];
+        for (int i = 0; i < to; i++) out[i] = CollectionHelper.at(col, i);
+        return new ObjectSequence(out);
     }
 }
