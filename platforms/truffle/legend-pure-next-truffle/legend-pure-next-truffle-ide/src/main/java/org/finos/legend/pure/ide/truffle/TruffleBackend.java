@@ -372,15 +372,23 @@ public final class TruffleBackend implements PureBackend
     }
 
     /**
-     * Sample one element from the module and check if Truffle's registry can
-     * already resolve it. If yes, the module's source is redundant with a
-     * loaded PDB and we skip recompiling it.
+     * True iff the module's elements are already served by a static PDB
+     * loader (e.g. compiler-pure → compiler.pdb), in which case recompiling
+     * the source would be redundant.
+     *
+     * <p>Crucially, this must NOT return true when the elements are served
+     * by a {@link TruffleInMemoryModule} that we registered on a previous
+     * Run — those represent user-editable source and must be re-compiled
+     * so edits to welcome.pure (etc.) actually take effect. Sampling
+     * {@code registry.getElement(path)} alone can't distinguish the two;
+     * we have to look at the module type via {@code moduleOfPath}.</p>
      */
     private boolean alreadyInResolver(LocalModule module)
     {
         for (String path : module.elementPaths())
         {
-            return registry.getElement(path) != null;
+            org.finos.legend.pure.truffle.runtime.TruffleModule owner = registry.moduleOfPath(path);
+            return owner instanceof TrufflePdbLoader;
         }
         return false;
     }

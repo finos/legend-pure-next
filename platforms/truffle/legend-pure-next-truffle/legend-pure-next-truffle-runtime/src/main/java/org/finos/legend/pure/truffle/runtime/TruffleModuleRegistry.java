@@ -103,7 +103,8 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
      */
     public void unregister(String name)
     {
-        if (!modules.containsKey(name))
+        TruffleModule removed = modules.get(name);
+        if (removed == null)
         {
             return;
         }
@@ -115,6 +116,16 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             {
                 dependents.add(m.name());
             }
+        }
+        // Drop cached element lookups owned by this module — otherwise
+        // re-registering with fresh content (e.g. an IDE recompile of
+        // welcome.pure) would still serve the old objects from the cache.
+        // The cache documents itself as "stable for the registry's lifetime,"
+        // which holds for PDB modules but not for in-memory modules we
+        // unregister + re-register.
+        for (String path : removed.elementPaths())
+        {
+            elementCache.remove(path);
         }
         modules.remove(name);
         functionsByNameArity = null;
