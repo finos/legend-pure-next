@@ -76,19 +76,77 @@ public final class ValueSpecificationCompiler
         return result;
     }
 
-    private static FunctionInvocationImpl compileFunctionInvocation(
+    private static ValueSpecification compileFunctionInvocation(
             meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
             MutableList<String> imports, MetadataAccess model, CompilationContext context)
     {
+        MutableList<ValueSpecification> params = fa._parametersValues()
+                .collect(pv -> compile(pv, imports, model, context));
+
+        // Constant-fold unary minus on a numeric literal:
+        //   minus(AtomicValue(N)) → AtomicValue(-N), preserving generic type/multiplicity.
+        // Mirrors the symmetric fold in compiler-pure (compileFunctionInvocation).
+        ValueSpecification folded = tryFoldUnaryMinus(fa, params, model, context);
+        if (folded != null)
+        {
+            return folded;
+        }
+
         FunctionInvocationImpl result = new FunctionInvocationImpl(model)
                 ._functionName(fa._functionName())
-                ._parametersValues(fa._parametersValues()
-                        .collect(pv -> compile(pv, imports, model, context)));
+                ._parametersValues(params);
         if (fa._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
+    }
+
+    private static ValueSpecification tryFoldUnaryMinus(
+            meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl fa,
+            MutableList<ValueSpecification> params,
+            MetadataAccess model,
+            CompilationContext context)
+    {
+        if (!"minus".equals(fa._functionName()) || params.size() != 1)
+        {
+            return null;
+        }
+        if (!(params.get(0) instanceof AtomicValueImpl av))
+        {
+            return null;
+        }
+        Object v = av._value();
+        if (!(v instanceof Number num) || v instanceof ValueSpecification)
+        {
+            return null;
+        }
+        // Fold only Integer/Float-typed literals. Skip Decimal (BigDecimal encoding
+        // varies across compiler backends and folding it breaks PDB parity with
+        // the Truffle compiler) and any other Number subtype that doesn't come
+        // from a parser-produced literal token.
+        Object negated;
+        if (num instanceof Long l) { negated = -l; }
+        else if (num instanceof Double d) { negated = -d; }
+        else if (num instanceof Integer i) { negated = -i; }
+        else if (num instanceof Float f) { negated = -f; }
+        else { return null; }
+
+        AtomicValueImpl folded = new AtomicValueImpl(model);
+        folded._value(negated);
+        if (av._genericType() != null)
+        {
+            folded._genericType(av._genericType());
+        }
+        if (av._multiplicity() != null)
+        {
+            folded._multiplicity(av._multiplicity());
+        }
+        if (fa._p_sourceInformation() != null)
+        {
+            folded._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
+        }
+        return folded;
     }
 
     private static DotApplicationImpl compileDotApplication(

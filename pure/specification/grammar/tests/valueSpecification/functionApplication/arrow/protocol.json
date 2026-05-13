@@ -707,22 +707,33 @@
           "startLine" : 16
         },
         "parametersValues" : [ {
-          "_type" : "AtomicValue",
-          "genericType" : {
-            "_type" : "UserDefinedGenericType",
-            "type" : {
-              "_type" : "Type_Pointer",
-              "value" : "Integer"
-            }
-          },
+          "_type" : "FunctionInvocation",
+          "functionName" : "minus",
           "p_sourceInformation" : {
             "_type" : "SourceInformation",
             "endColumn" : 7,
             "endLine" : 16,
-            "startColumn" : 7,
+            "startColumn" : 6,
             "startLine" : 16
           },
-          "value" : -1
+          "parametersValues" : [ {
+            "_type" : "AtomicValue",
+            "genericType" : {
+              "_type" : "UserDefinedGenericType",
+              "type" : {
+                "_type" : "Type_Pointer",
+                "value" : "Integer"
+              }
+            },
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 7,
+              "endLine" : 16,
+              "startColumn" : 7,
+              "startLine" : 16
+            },
+            "value" : 1
+          } ]
         } ]
       }, {
         "_type" : "ArrowInvocation",
@@ -962,22 +973,33 @@
               },
               "value" : 2
             }, {
-              "_type" : "AtomicValue",
-              "genericType" : {
-                "_type" : "UserDefinedGenericType",
-                "type" : {
-                  "_type" : "Type_Pointer",
-                  "value" : "Integer"
-                }
-              },
+              "_type" : "FunctionInvocation",
+              "functionName" : "minus",
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
                 "endColumn" : 13,
                 "endLine" : 20,
-                "startColumn" : 13,
+                "startColumn" : 12,
                 "startLine" : 20
               },
-              "value" : -1
+              "parametersValues" : [ {
+                "_type" : "AtomicValue",
+                "genericType" : {
+                  "_type" : "UserDefinedGenericType",
+                  "type" : {
+                    "_type" : "Type_Pointer",
+                    "value" : "Integer"
+                  }
+                },
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 13,
+                  "endLine" : 20,
+                  "startColumn" : 13,
+                  "startLine" : 20
+                },
+                "value" : 1
+              } ]
             } ]
           } ]
         } ]

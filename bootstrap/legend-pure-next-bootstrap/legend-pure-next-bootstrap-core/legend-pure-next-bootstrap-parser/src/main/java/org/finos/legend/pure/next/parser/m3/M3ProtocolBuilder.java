@@ -903,12 +903,6 @@ public class M3ProtocolBuilder
             ValueSpecification inner = visitSimpleExpr(signCtx.simpleExpression(), typeParamNames, multParamNames);
             if (signCtx.MINUS() != null)
             {
-                // Fold negation into numeric literals: -1 -> AtomicValue(-1)
-                if (inner instanceof AtomicValueImpl av && av._value() instanceof Number num)
-                {
-                    Object negated = negateNumber(num);
-                    return av._value(negated);
-                }
                 return new FunctionInvocationImpl()
                         ._p_sourceInformation(buildSourceInfo(signCtx))
                         ._functionName("minus")
@@ -2043,26 +2037,6 @@ public class M3ProtocolBuilder
                 ._p_sourceInformation(buildSourceInfo(ctx))
                 ._value(value)
                 ._genericType(buildPrimitiveGenericType(genericTypeName));
-    }
-
-    /**
-     * Negate a numeric value, preserving its type.
-     */
-    private static Object negateNumber(final Number num)
-    {
-        if (num instanceof Long l)
-        {
-            return -l;
-        }
-        else if (num instanceof Double d)
-        {
-            return -d;
-        }
-        else if (num instanceof Integer i)
-        {
-            return -i;
-        }
-        throw new RuntimeException("Unsupported number type: " + num.getClass());
     }
 
     /**

@@ -243,21 +243,35 @@ public final class TruffleCompilerBinaryBuilder
 
     /**
      * Tripwire: every Graal compilation Truffle attempted during compilation
-     * must succeed. Throws if any {@code opt failed} events were recorded —
-     * the caller (e.g. {@code pure-truffle compile}) propagates the throw
-     * and exits non-zero. No-op under native-image AOT (no JIT events).
+     * must succeed — *except* for the HotSpot code-installation size ceiling,
+     * which no engine option can lift and which gracefully degrades the
+     * affected lambda to Tier-1. All failures are still printed for
+     * visibility, but only actionable ones cause the throw. The caller
+     * (e.g. {@code pure-truffle compile}) propagates the throw and exits
+     * non-zero. No-op under native-image AOT (no JIT events).
      */
     private static void failOnGraalCompilationFailures(PureTruffleRuntime runtime)
     {
-        java.util.List<String> failures = runtime.graalCompilationFailures();
-        if (failures.isEmpty())
+        java.util.List<String> all = runtime.graalCompilationFailures();
+        java.util.List<String> actionable = runtime.graalActionableCompilationFailures();
+        if (all.isEmpty())
+        {
+            return;
+        }
+        int tolerated = all.size() - actionable.size();
+        if (tolerated > 0)
+        {
+            System.err.println("[graal-tripwire] tolerated " + tolerated
+                    + " unavoidable code-size bailout(s); affected lambdas stay Tier-1.");
+        }
+        if (actionable.isEmpty())
         {
             return;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("Graal compilation failures: ").append(failures.size())
+        sb.append("Graal compilation failures: ").append(actionable.size())
                 .append(" of ").append(runtime.graalCompilationAttempts()).append(" attempts. Top failures:\n");
-        failures.stream().limit(10).forEach(line -> sb.append(line).append('\n'));
+        actionable.stream().limit(10).forEach(line -> sb.append(line).append('\n'));
         sb.append("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose` ")
                 .append("and inspect the produced graal_dumps/ directory.");
         throw new RuntimeException(sb.toString());

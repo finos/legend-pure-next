@@ -18,6 +18,7 @@ import meta.pure.metamodel.PackageableElement;
 import meta.pure.metamodel.extension.Stereotype;
 import meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
+import org.finos.legend.pure.execution.natives.io.IONatives;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.bootstrapModule.BootstrapModule;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
@@ -65,6 +66,8 @@ class TestPureExecution
             {
                 tests.add(DynamicTest.dynamicTest(path, () ->
                 {
+                    Boolean prevSilenced = IONatives.SILENCED.get();
+                    IONatives.SILENCED.set(Boolean.TRUE);
                     try
                     {
                         execution.execute(fd);
@@ -73,6 +76,10 @@ class TestPureExecution
                     {
                         // Pure assertion failures → JUnit failures (not errors)
                         throw new org.opentest4j.AssertionFailedError(e.getMessage(), e);
+                    }
+                    finally
+                    {
+                        IONatives.SILENCED.set(prevSilenced);
                     }
                 }));
             }

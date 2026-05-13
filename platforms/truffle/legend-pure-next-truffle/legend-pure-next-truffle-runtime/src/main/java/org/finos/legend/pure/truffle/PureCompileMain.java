@@ -352,21 +352,26 @@ public final class PureCompileMain
     {
         long attempts = runtime.graalCompilationAttempts();
         java.util.List<String> failures = runtime.graalCompilationFailures();
+        java.util.List<String> actionable = runtime.graalActionableCompilationFailures();
+        int tolerated = failures.size() - actionable.size();
         // Permanent CLI output — every run prints the Graal tripwire status
         // so users see at a glance whether Truffle's optimizing compiler
         // actually engaged. Under native-image AOT this prints "0/0" since
         // there is no JIT at runtime; on the JVM with GraalVM, expect
-        // attempts >> 0 and failures == 0.
+        // attempts >> 0 and failures == 0. `tolerated` counts HotSpot
+        // code-installation size bailouts that no engine option can lift —
+        // those lambdas stay Tier-1, which is correct (just slower).
         System.err.println("[graal-tripwire] " + attempts
-                + " compilations attempted, " + failures.size() + " failed.");
-        if (failures.isEmpty())
+                + " compilations attempted, " + failures.size() + " failed"
+                + (tolerated > 0 ? " (" + tolerated + " tolerated, " + actionable.size() + " actionable)." : "."));
+        if (actionable.isEmpty())
         {
             return;
         }
         System.err.println();
-        System.err.println("Graal compilation failures: " + failures.size()
+        System.err.println("Graal compilation failures: " + actionable.size()
                 + " of " + runtime.graalCompilationAttempts() + " attempts. Top failures:");
-        failures.stream().limit(10).forEach(System.err::println);
+        actionable.stream().limit(10).forEach(System.err::println);
         System.err.println();
         System.err.println("To diagnose, re-run with `-Dpolyglot.engine.CompilationFailureAction=Diagnose`");
         System.err.println("and inspect the produced graal_dumps/ directory.");

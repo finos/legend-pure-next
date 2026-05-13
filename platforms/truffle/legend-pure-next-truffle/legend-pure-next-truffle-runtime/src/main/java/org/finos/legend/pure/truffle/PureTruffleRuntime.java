@@ -195,6 +195,38 @@ public final class PureTruffleRuntime
     }
 
     /**
+     * Subset of {@link #graalCompilationFailures()} that excludes bailouts
+     * we cannot fix by tuning Truffle — specifically HotSpot's per-method
+     * code-installation size ceiling ("Code installation failed: code is
+     * too large"). That limit is a JVM property (max emitted machine-code
+     * bytes per installed method, dictated by branch-displacement encoding);
+     * no {@code engine.*} or {@code compiler.*} option lifts it, and the
+     * affected lambda gracefully stays Tier-1 without breaking correctness.
+     *
+     * <p>Tripwires that translate failures into process exit / test failures
+     * should call this variant; the unfiltered {@link
+     * #graalCompilationFailures()} remains for diagnostic / logging use.</p>
+     */
+    public List<String> graalActionableCompilationFailures()
+    {
+        return graalCompilationFailures().stream()
+                .filter(line -> !isUnavoidableCodeSizeBailout(line))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * True for an {@code opt failed} line whose bailout reason is the HotSpot
+     * code-installation size ceiling. See {@link
+     * #graalActionableCompilationFailures()} for why this is the one Graal
+     * bailout family that's not actionable via Truffle configuration.
+     */
+    public static boolean isUnavoidableCodeSizeBailout(String optFailedLine)
+    {
+        return optFailedLine != null
+                && optFailedLine.contains("Code installation failed: code is too large");
+    }
+
+    /**
      * Total Graal compilation events ({@code opt done} + {@code opt failed})
      * recorded during this runtime's lifetime. 0 under native-image AOT.
      */

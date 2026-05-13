@@ -295,16 +295,61 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
         | ^ValueCompileResult(values = [], openVariables = [], context = $errorContexts->at($errorContexts->size() - 1)),
         | let paramValues = $paramsCompilation.values;
           let openVars = $paramsCompilation.openVariables->removeDuplicatesBy({ov| $ov.name->toOne()});
-          ^ValueCompileResult(
-              values = [^FunctionInvocation(
-                  functionName = $fi.functionName,
-                  parametersValues = $paramValues->cast(@ValueSpecification),
-                  genericType = ^CompilerNotSetGenericType(),
-                  multiplicity = PureOne,
-                  sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
-              )],
-              openVariables = $openVars
+          // Constant-fold unary minus on a numeric literal:
+          //   minus(AtomicValue(N)) → AtomicValue(-N), preserving generic type/multiplicity.
+          // Mirrors the symmetric fold in the Java ValueSpecificationCompiler. The
+          // parser always emits FunctionInvocation("minus", [literal]) for `-1`; the
+          // compiler folds it so the compiled graph stays as a plain literal.
+          let folded = tryFoldUnaryMinus($fi, $paramValues, $vs, $ctx);
+          if($folded->isNotEmpty(),
+              | ^ValueCompileResult(
+                    values = $folded->cast(@ValueSpecification),
+                    openVariables = $openVars
+                ),
+              | ^ValueCompileResult(
+                    values = [^FunctionInvocation(
+                        functionName = $fi.functionName,
+                        parametersValues = $paramValues->cast(@ValueSpecification),
+                        genericType = ^CompilerNotSetGenericType(),
+                        multiplicity = PureOne,
+                        sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+                    )],
+                    openVariables = $openVars
+                )
           );
+    );
+}
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::tryFoldUnaryMinus(fi:meta::pure::protocol::grammar::valuespecification::FunctionInvocation[1], paramValues:ValueSpecification[*], vs:meta::pure::protocol::grammar::valuespecification::ValueSpecification[1], ctx:CompilerContext[1]):AtomicValue[0..1]
+{
+    let av = if($fi.functionName == 'minus' && $paramValues->size() == 1 && $paramValues->at(0)->instanceOf(AtomicValue),
+        | $paramValues->at(0)->cast(@AtomicValue),
+        | []
+    );
+    let foldable = $av->isNotEmpty()
+                   && $av->toOne().value->isNotEmpty()
+                   && $av->toOne().value->toOne()->instanceOf(Number);
+    if($foldable,
+        | let avOne = $av->toOne();
+          // Dispatch on the literal's runtime type so the negated value keeps
+          // the same primitive (Integer→Integer, Float→Float, Decimal→Decimal).
+          // Use unary `-x` rather than `minus(0, x)` to avoid a Number-typed
+          // literal zero on the LHS, which would coerce the result to Number
+          // and lose the original primitive type.
+          let negated = $avOne.value->toOne()->match([
+              i:Integer[1] | -$i,
+              f:Float[1]   | -$f,
+              d:Decimal[1] | -$d,
+              n:Number[1]  | -$n
+          ]);
+          let folded = ^AtomicValue(
+              value = $negated,
+              genericType = $avOne.genericType,
+              multiplicity = $avOne.multiplicity,
+              sourceInformation = compileSourceInformationWithFallback($vs.p_sourceInformation, $ctx)
+          );
+          $folded;,
+        | []
     );
 }
 

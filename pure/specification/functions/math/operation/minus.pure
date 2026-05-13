@@ -23,6 +23,8 @@ native function
     }
     meta::pure::functions::math::minus(left:Integer[1], right:Integer[1]):Integer[1];
 
+native function <<PCT.function>> meta::pure::functions::math::minus(expr:Integer[1]):Integer[1];
+
 native function <<PCT.function>> meta::pure::functions::math::minus(left:Float[1], right:Float[1]):Float[1];
 
 native function <<PCT.function>> meta::pure::functions::math::minus(expr:Float[1]):Float[1];
