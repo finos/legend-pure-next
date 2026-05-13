@@ -41,16 +41,17 @@ import java.util.concurrent.Future;
  */
 public class PureLSPWebSocketServer extends WebSocketServer
 {
-    private final PDBModule coreModule;
+    private final MutableList<PDBModule> pdbModules;
     private final MutableList<LocalModule> editableModules;
     private final PureBackend backend;
     private final Map<WebSocket, ConnectionState> connections = new ConcurrentHashMap<>();
 
-    public PureLSPWebSocketServer(int port, PDBModule coreModule, MutableList<LocalModule> editableModules,
+    public PureLSPWebSocketServer(int port, MutableList<PDBModule> pdbModules,
+                                  MutableList<LocalModule> editableModules,
                                   PureBackend backend)
     {
         super(new InetSocketAddress(port));
-        this.coreModule = coreModule;
+        this.pdbModules = pdbModules;
         this.editableModules = editableModules;
         this.backend = backend;
         setReuseAddr(true);
@@ -67,7 +68,7 @@ public class PureLSPWebSocketServer extends WebSocketServer
             PipedOutputStream clientToServer = new PipedOutputStream(serverInput);
 
             // Create the LSP server
-            PureLSPServer server = new PureLSPServer(coreModule, editableModules, backend);
+            PureLSPServer server = new PureLSPServer(pdbModules, editableModules, backend);
 
             // Output stream that writes back to the WebSocket
             OutputStream serverOutput = new WebSocketOutputStream(conn);

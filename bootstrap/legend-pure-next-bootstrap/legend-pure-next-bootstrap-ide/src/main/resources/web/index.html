@@ -1298,7 +1298,13 @@
                 const hasChildren = node.children && node.children.length > 0;
                 const iconInfo = getIcon(node.type, hasChildren);
                 const separator = treeId === 'packageTree' ? '::' : '/';
-                const currentPath = parentPath ? parentPath + separator + node.name : node.name;
+                // Module nodes in the file tree are visual grouping only —
+                // they're not part of the file's sourceId. Skip them when
+                // building currentPath so openFile receives the same
+                // sourceId the server's LocalModule.sourceFiles() exposes.
+                const currentPath = node.type === 'Module'
+                    ? parentPath
+                    : (parentPath ? parentPath + separator + node.name : node.name);
 
                 const nodeDiv = document.createElement('div');
                 nodeDiv.className = 'tree-node';
@@ -1438,7 +1444,11 @@
                     knownFiles.clear();
                     function extractPaths(nList, parent) {
                         for (const n of nList) {
-                            const current = parent ? parent + '/' + n.name : n.name;
+                            // Module nodes are visual-only — they don't
+                            // contribute to a file's sourceId.
+                            const current = n.type === 'Module'
+                                ? parent
+                                : (parent ? parent + '/' + n.name : n.name);
                             if (n.type === 'File') {
                                 knownFiles.add(current);
                             }
