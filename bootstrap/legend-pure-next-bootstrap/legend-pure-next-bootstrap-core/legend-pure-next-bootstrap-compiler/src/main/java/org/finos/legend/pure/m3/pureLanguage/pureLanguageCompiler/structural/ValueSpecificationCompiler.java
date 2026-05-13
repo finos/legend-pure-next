@@ -92,14 +92,74 @@ public final class ValueSpecificationCompiler
             return folded;
         }
 
+        // Arity-based name dispatch for column-spec builders. Parser emits the
+        // unsuffixed funcColSpec / aggColSpec / funcColSpecArray / aggColSpecArray;
+        // the compiler rewrites to the *2 variant when the lambda has 3 params
+        // (Relation, Window, U). Pure's function mangling collapses Function<{...}>
+        // argument types, so we can't merge them as overloads — name-rewrite is
+        // the path. Symmetric to compiler-pure.
+        String effectiveName = dispatchColSpecArity(fa._functionName(), params);
+
         FunctionInvocationImpl result = new FunctionInvocationImpl(model)
-                ._functionName(fa._functionName())
+                ._functionName(effectiveName)
                 ._parametersValues(params);
         if (fa._p_sourceInformation() != null)
         {
             result._sourceInformation(SourceInformationCompiler.compile(fa._p_sourceInformation(), context.getSourceId(), model));
         }
         return result;
+    }
+
+    private static String dispatchColSpecArity(String name, MutableList<ValueSpecification> params)
+    {
+        if (params.isEmpty())
+        {
+            return name;
+        }
+        if ("funcColSpec".equals(name) || "aggColSpec".equals(name))
+        {
+            return firstParamIsLambdaOfArity(params, 3) ? name + "2" : name;
+        }
+        if ("funcColSpecArray".equals(name) || "aggColSpecArray".equals(name))
+        {
+            return firstCollectionElementUsesArity2(params) ? name + "2" : name;
+        }
+        return name;
+    }
+
+    private static boolean firstParamIsLambdaOfArity(MutableList<ValueSpecification> params, int arity)
+    {
+        ValueSpecification first = params.get(0);
+        if (!(first instanceof AtomicValueImpl av))
+        {
+            return false;
+        }
+        Object inner = av._value();
+        if (!(inner instanceof meta.pure.metamodel.function.LambdaFunction lambda))
+        {
+            return false;
+        }
+        return lambda._parameters() != null && lambda._parameters().size() == arity;
+    }
+
+    private static boolean firstCollectionElementUsesArity2(MutableList<ValueSpecification> params)
+    {
+        ValueSpecification first = params.get(0);
+        if (!(first instanceof CollectionImpl coll))
+        {
+            return false;
+        }
+        if (coll._values() == null || coll._values().isEmpty())
+        {
+            return false;
+        }
+        Object firstVal = coll._values().get(0);
+        if (!(firstVal instanceof FunctionInvocationImpl inner))
+        {
+            return false;
+        }
+        String n = inner._functionName();
+        return "funcColSpec2".equals(n) || "aggColSpec2".equals(n);
     }
 
     private static ValueSpecification tryFoldUnaryMinus(

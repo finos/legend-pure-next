@@ -301,6 +301,14 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
           // parser always emits FunctionInvocation("minus", [literal]) for `-1`; the
           // compiler folds it so the compiled graph stays as a plain literal.
           let folded = tryFoldUnaryMinus($fi, $paramValues, $vs, $ctx);
+          // Arity-based name dispatch for column-spec builders: parser emits
+          // the unsuffixed funcColSpec / aggColSpec / funcColSpecArray /
+          // aggColSpecArray; the compiler rewrites to the *2 variant when the
+          // lambda has 3 parameters (Relation, Window, U). Pure's function
+          // mangling collapses Function<{...}> argument types so the two
+          // variants can't share a name as overloads — name-rewrite is the
+          // only path. Mirrors Java's ValueSpecificationCompiler.
+          let effectiveName = dispatchColSpecArity($fi.functionName->toOne(), $paramValues);
           if($folded->isNotEmpty(),
               | ^ValueCompileResult(
                     values = $folded->cast(@ValueSpecification),
@@ -308,7 +316,7 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::compileFu
                 ),
               | ^ValueCompileResult(
                     values = [^FunctionInvocation(
-                        functionName = $fi.functionName,
+                        functionName = $effectiveName,
                         parametersValues = $paramValues->cast(@ValueSpecification),
                         genericType = ^CompilerNotSetGenericType(),
                         multiplicity = PureOne,
@@ -351,6 +359,52 @@ function meta::pure::compiler::structural::valueSpecificationCompiler::tryFoldUn
           $folded;,
         | []
     );
+}
+
+// ----------------------------------------------------------------------------
+// Column-spec arity dispatch
+// ----------------------------------------------------------------------------
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::dispatchColSpecArity(name:String[1], paramValues:ValueSpecification[*]):String[1]
+{
+    if($paramValues->isEmpty(),
+        | $name,
+        | if($name == 'funcColSpec' || $name == 'aggColSpec',
+              | if(firstParamIsLambdaOfArity($paramValues, 3), | $name + '2', | $name),
+              | if($name == 'funcColSpecArray' || $name == 'aggColSpecArray',
+                    | if(firstCollectionElementUsesArity2($paramValues), | $name + '2', | $name),
+                    | $name
+                )
+          )
+    )
+}
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::firstParamIsLambdaOfArity(paramValues:ValueSpecification[*], arity:Integer[1]):Boolean[1]
+{
+    let first = $paramValues->at(0);
+    let lambdaArity = if($first->instanceOf(AtomicValue),
+        | let avVal = $first->cast(@AtomicValue).value;
+          if($avVal->isNotEmpty() && $avVal->toOne()->instanceOf(LambdaFunction),
+              | $avVal->toOne()->cast(@LambdaFunction<Any>).parameters->size(),
+              | -1
+          );,
+        | -1
+    );
+    $lambdaArity == $arity;
+}
+
+function meta::pure::compiler::structural::valueSpecificationCompiler::firstCollectionElementUsesArity2(paramValues:ValueSpecification[*]):Boolean[1]
+{
+    let first = $paramValues->at(0);
+    let innerName = if($first->instanceOf(Collection),
+        | let coll = $first->cast(@Collection);
+          if($coll.values->isNotEmpty() && $coll.values->at(0)->instanceOf(FunctionInvocation),
+              | $coll.values->at(0)->cast(@FunctionInvocation).functionName->toOne(),
+              | ''
+          );,
+        | ''
+    );
+    $innerName == 'funcColSpec2' || $innerName == 'aggColSpec2';
 }
 
 // ============================================================================

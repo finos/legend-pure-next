@@ -965,6 +965,11 @@ public class M3ProtocolBuilder
         else if (ctx.columnBuilders() != null)
         {
             // Column builders: ~colName or ~[col1, col2]
+            //
+            // Function-name dispatch is delegated to the compiler. The parser
+            // emits the unsuffixed name (funcColSpec / aggColSpec / colSpec);
+            // compile-time lookup picks the *2 overload when the lambda is a
+            // 3-arg variant (Relation, Window, U).
             M3Parser.ColumnBuildersContext cbCtx = ctx.columnBuilders();
             MutableList<M3Parser.OneColSpecContext> colSpecs = ListAdapter.adapt(cbCtx.oneColSpec());
             MutableList<ValueSpecification> builtCols = ListAdapter.adapt(colSpecs).collect(colSpec ->
@@ -974,15 +979,7 @@ public class M3ProtocolBuilder
                 String funcName;
                 if (hasLambda)
                 {
-                    int lambdaParamCount = countLambdaParams(colSpec.anyLambda());
-                    if (hasReduceLambda)
-                    {
-                        funcName = lambdaParamCount == 3 ? "aggColSpec2" : "aggColSpec";
-                    }
-                    else
-                    {
-                        funcName = lambdaParamCount == 3 ? "funcColSpec2" : "funcColSpec";
-                    }
+                    funcName = hasReduceLambda ? "aggColSpec" : "funcColSpec";
                 }
                 else
                 {
@@ -1056,21 +1053,12 @@ public class M3ProtocolBuilder
 
                 if (anyLambda)
                 {
-                    // Determine array function based on lambda param count and whether reduce lambdas are present:
-                    // With reduce lambda → aggColSpecArray / aggColSpecArray2
-                    // Without reduce lambda → funcColSpecArray / funcColSpecArray2
-                    M3Parser.OneColSpecContext firstLambdaCol = colSpecs.detect(cs -> cs.anyLambda() != null);
-                    int lambdaParamCount = countLambdaParams(firstLambdaCol.anyLambda());
+                    // Function-name dispatch (Array1 vs Array2 — single vs 3-arg lambda)
+                    // is delegated to the compiler. Parser emits the unsuffixed
+                    // funcColSpecArray / aggColSpecArray; compile-time lookup picks
+                    // the *2 overload from the inner Collection<FuncColSpec> shape.
                     boolean hasReduceLambda = colSpecs.anySatisfy(cs -> cs.extraFunction() != null);
-                    String arrayFuncName;
-                    if (hasReduceLambda)
-                    {
-                        arrayFuncName = lambdaParamCount == 3 ? "aggColSpecArray2" : "aggColSpecArray";
-                    }
-                    else
-                    {
-                        arrayFuncName = lambdaParamCount == 3 ? "funcColSpecArray2" : "funcColSpecArray";
-                    }
+                    String arrayFuncName = hasReduceLambda ? "aggColSpecArray" : "funcColSpecArray";
 
                     // Pass the already-built funcColSpec/funcColSpec2 expressions as a Collection
                     MutableList<ValueSpecification> arrayParams = Lists.mutable.empty();
@@ -1481,23 +1469,6 @@ public class M3ProtocolBuilder
                             return param;
                         }))
                 ._expressionSequence(visitCodeBlockExpressions(pipeCtx.codeBlock(), typeParamNames, multParamNames));
-    }
-
-    /**
-     * Count the number of lambda parameters from an anyLambda grammar context.
-     * Used to dispatch funcColSpec (1 param) vs funcColSpec2 (3 params).
-     */
-    private int countLambdaParams(M3Parser.AnyLambdaContext ctx)
-    {
-        if (ctx.lambdaFunction() != null)
-        {
-            return ctx.lambdaFunction().lambdaParam().size();
-        }
-        else if (ctx.lambdaParam() != null)
-        {
-            return 1;
-        }
-        return 0;
     }
 
     // ========================================================================

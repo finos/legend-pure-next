@@ -290,7 +290,7 @@
         } ]
       }, {
         "_type" : "FunctionInvocation",
-        "functionName" : "funcColSpec2",
+        "functionName" : "funcColSpec",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 21,
@@ -366,7 +366,7 @@
         } ]
       }, {
         "_type" : "FunctionInvocation",
-        "functionName" : "aggColSpec2",
+        "functionName" : "aggColSpec",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 35,
@@ -940,7 +940,7 @@
         } ]
       }, {
         "_type" : "FunctionInvocation",
-        "functionName" : "funcColSpecArray2",
+        "functionName" : "funcColSpecArray",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 46,
@@ -963,7 +963,7 @@
           },
           "values" : [ {
             "_type" : "FunctionInvocation",
-            "functionName" : "funcColSpec2",
+            "functionName" : "funcColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 22,
@@ -1039,7 +1039,7 @@
             } ]
           }, {
             "_type" : "FunctionInvocation",
-            "functionName" : "funcColSpec2",
+            "functionName" : "funcColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 45,
@@ -1119,7 +1119,7 @@
         } ]
       }, {
         "_type" : "FunctionInvocation",
-        "functionName" : "aggColSpecArray2",
+        "functionName" : "aggColSpecArray",
         "p_sourceInformation" : {
           "_type" : "SourceInformation",
           "endColumn" : 74,
@@ -1142,7 +1142,7 @@
           },
           "values" : [ {
             "_type" : "FunctionInvocation",
-            "functionName" : "aggColSpec2",
+            "functionName" : "aggColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 36,
@@ -1262,7 +1262,7 @@
             } ]
           }, {
             "_type" : "FunctionInvocation",
-            "functionName" : "aggColSpec2",
+            "functionName" : "aggColSpec",
             "p_sourceInformation" : {
               "_type" : "SourceInformation",
               "endColumn" : 73,
