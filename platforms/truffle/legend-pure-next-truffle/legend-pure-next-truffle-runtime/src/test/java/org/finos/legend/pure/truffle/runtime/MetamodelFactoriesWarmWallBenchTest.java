@@ -36,6 +36,9 @@ import java.util.List;
  * in CI would add ~30s to every test run with no asserted outcome (it just
  * prints numbers).</p>
  */
+@Disabled("Sandbox bench — depends on the untracked `pure/language/` workspace "
+        + "for `metamodel_factories.pure`, so it fails on fresh clones / CI. "
+        + "Enable locally when measuring.")
 public class MetamodelFactoriesWarmWallBenchTest
 {
     private static PureTruffleRuntime runtime;
