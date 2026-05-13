@@ -154,6 +154,17 @@ public class LocalModule implements Module
         return state != null ? state.elementPaths() : Set.of();
     }
 
+    /**
+     * Filesystem roots this module owns ({@code null} when the module was
+     * constructed from in-memory {@link PureContent}s rather than a folder).
+     * Exposed for tools that need to re-read or re-compile the module's
+     * source — e.g. an IDE backend driving a parallel compile pipeline.
+     */
+    public List<Path> sourceFolders()
+    {
+        return sourceFolders == null ? List.of() : List.copyOf(sourceFolders);
+    }
+
     @Override
     public Set<String> sourceFiles()
     {

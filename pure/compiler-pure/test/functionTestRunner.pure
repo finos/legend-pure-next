@@ -87,7 +87,12 @@ function <<test.TestDependency>> meta::pure::test::runTests(rootPackagePath:Stri
         // Each zero-arg <<test.Test>> returns Boolean[1]. An assertion failure
         // throws, unwinding the whole run — the progress display already shows
         // which test was executing.
-        $fn->evaluate([]);
+        //
+        // withSilencedPrint suppresses the stdout side effect of `print`/
+        // `println` calls inside the test body (assertions on their return
+        // values keep working). The runner's tickProgress prints stay
+        // visible because they run outside the closure.
+        withSilencedPrint(| $fn->evaluate([]));
     );
 
     let elapsedMs = currentTimeMillis() - $start;

@@ -17,6 +17,7 @@ package org.finos.legend.pure.ide;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.services.LanguageClient;
+import org.finos.legend.pure.ide.backend.PureBackend;
 import org.finos.legend.pure.m3.module.localModule.LocalModule;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -42,13 +43,16 @@ public class PureLSPWebSocketServer extends WebSocketServer
 {
     private final PDBModule coreModule;
     private final MutableList<LocalModule> editableModules;
+    private final PureBackend backend;
     private final Map<WebSocket, ConnectionState> connections = new ConcurrentHashMap<>();
 
-    public PureLSPWebSocketServer(int port, PDBModule coreModule, MutableList<LocalModule> editableModules)
+    public PureLSPWebSocketServer(int port, PDBModule coreModule, MutableList<LocalModule> editableModules,
+                                  PureBackend backend)
     {
         super(new InetSocketAddress(port));
         this.coreModule = coreModule;
         this.editableModules = editableModules;
+        this.backend = backend;
         setReuseAddr(true);
     }
 
@@ -63,7 +67,7 @@ public class PureLSPWebSocketServer extends WebSocketServer
             PipedOutputStream clientToServer = new PipedOutputStream(serverInput);
 
             // Create the LSP server
-            PureLSPServer server = new PureLSPServer(coreModule, editableModules);
+            PureLSPServer server = new PureLSPServer(coreModule, editableModules, backend);
 
             // Output stream that writes back to the WebSocket
             OutputStream serverOutput = new WebSocketOutputStream(conn);

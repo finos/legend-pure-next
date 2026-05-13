@@ -50,7 +50,12 @@ public class DynamicInstance
     public DynamicInstance(String classPath)
     {
         this.classPath = classPath;
-        this.values = new HashMap<>();
+        // LinkedHashMap preserves declaration order so printing / inspection
+        // tools (PureValuePrinter, Truffle's IDE Compile tab, etc.) see
+        // properties in the same order the class declared them. HashMap's
+        // arbitrary iteration order made the rendered output non-deterministic
+        // and divergent from Truffle's slot-indexed walk.
+        this.values = new java.util.LinkedHashMap<>();
         this.id = "Anonymous_" + ID_COUNTER.incrementAndGet();
     }
 

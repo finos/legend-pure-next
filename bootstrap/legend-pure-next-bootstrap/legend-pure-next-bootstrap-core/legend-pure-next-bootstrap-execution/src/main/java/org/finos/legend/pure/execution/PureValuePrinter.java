@@ -51,6 +51,15 @@ public class PureValuePrinter
 {
     private static final String INDENT = "  ";
 
+    /**
+     * Hard cap on object-graph recursion depth. The Pure {@code print} native
+     * has a {@code max} arg but historically it's been used inconsistently;
+     * this cap is the structural safety net. Even with cycle detection via
+     * {@code visited}, a chain of distinct objects (e.g. a deeply nested
+     * AST) can blow the stack — this bounds the worst case.
+     */
+    private static final int MAX_DEPTH = 50;
+
     private PureValuePrinter()
     {
     }
@@ -99,6 +108,14 @@ public class PureValuePrinter
 
     private static void append(Object value, StringBuilder sb, int indent, Set<Object> visited)
     {
+        if (indent > MAX_DEPTH)
+        {
+            // Defensive cap on object-graph traversal. Cycle detection handles
+            // back-edges but a chain of distinct objects (e.g. a deeply nested
+            // AST) can still bottom out the stack without it.
+            sb.append("<max-depth>");
+            return;
+        }
         if (value == null)
         {
             sb.append("null");
@@ -204,7 +221,10 @@ public class PureValuePrinter
             sb.append("<cycle: ").append(shortSegment(di.getClassPath())).append('>');
             return;
         }
-        sb.append(shortSegment(di.getClassPath())).append(' ').append(di.getId());
+        // Header is just the class's simple name — no per-instance Anonymous_NNN
+        // tag. The tag varies per process (sequential ID counter), making
+        // output non-reproducible across runs and divergent from Truffle.
+        sb.append(shortSegment(di.getClassPath()));
         di.getValues().forEach((key, val) ->
         {
             if (val == null)

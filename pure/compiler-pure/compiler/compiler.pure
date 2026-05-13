@@ -245,7 +245,13 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
         sourceFileCount = $total,
         inferenceRollbackCount = $pass3Ctx.inferenceRollbacks,
         candidateEvaluationCount = $pass3Ctx.candidateEvaluations,
-        elementStatistics = $pass3Ctx.elementStatistics,
+        // Pass 2 and pass 3 each append a per-element ElementStatistics entry
+        // (compiler.pure:505 and compiler.pure:535), so the raw list has the
+        // same elementPath twice. Aggregate per path so the final stats and
+        // every downstream consumer (CLI summary, IDE Compile tab) sees one
+        // row per element with cumulative timing — matches Java-direct's
+        // map-keyed-with-per-pass-fields shape.
+        elementStatistics = $pass3Ctx.elementStatistics->aggregateElementStatistics(),
         rollbackSites = $pass3Ctx.rollbackSites
     );
     println(printCompilationStatisticsSummary($stats));
@@ -256,6 +262,26 @@ function meta::pure::compiler::compileDir(dir:String[1], debug:Boolean[1]):Compi
         statistics = $stats,
         context  = $pass3Ctx
     );
+}
+
+// Collapse per-pass duplicates into one row per element. Pass 2 and pass 3
+// each append an ElementStatistics for the same elementPath; this rolls them
+// up: totalMillis, inferenceRollbacks, candidateEvaluations are summed,
+// elementType is taken from the first occurrence (stable across passes).
+function meta::pure::compiler::aggregateElementStatistics(stats:ElementStatistics[*]):ElementStatistics[*]
+{
+    $stats->groupBy(s | $s.elementPath)
+        ->keyValues()
+        ->map({pair |
+            let group = $pair.second.values;
+            ^ElementStatistics(
+                elementPath = $pair.first,
+                elementType = $group->at(0).elementType,
+                totalMillis = $group->fold({s, acc | $acc + $s.totalMillis}, 0),
+                inferenceRollbacks = $group->fold({s, acc | $acc + $s.inferenceRollbacks}, 0),
+                candidateEvaluations = $group->fold({s, acc | $acc + $s.candidateEvaluations}, 0)
+            );
+        });
 }
 
 // Format CompilationStatistics as a human-readable summary block — mirrors

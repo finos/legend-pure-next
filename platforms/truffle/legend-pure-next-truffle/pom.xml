@@ -21,6 +21,7 @@
     <modules>
         <module>legend-pure-next-truffle-codegen</module>
         <module>legend-pure-next-truffle-runtime</module>
+        <module>legend-pure-next-truffle-ide</module>
     </modules>
 
     <!--

@@ -22,6 +22,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
 import org.finos.legend.pure.cli.CompilerNatives;
 import org.finos.legend.pure.execution.PureExecution;
+import org.finos.legend.pure.ide.backend.PureBackend;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.CompilationError;
 import org.finos.legend.pure.m3.module.CompilationResult;
@@ -57,16 +58,19 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     private LanguageClient client;
     private final PDBModule coreModule;
     private final MutableList<LocalModule> editableModules;
+    private final PureBackend backend;
     private String currentSource = "";
     private String currentUri = "";
     private PureModel lastModel;
     private final ScheduledExecutorService debounceExecutor = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> pendingCompile;
 
-    public PureLSPServer(PDBModule coreModule, MutableList<LocalModule> editableModules)
+    public PureLSPServer(PDBModule coreModule, MutableList<LocalModule> editableModules, PureBackend backend)
     {
         this.coreModule = coreModule;
         this.editableModules = editableModules;
+        this.backend = backend;
+        System.out.println("[LSP] backend = " + backend.name());
     }
 
     public void connect(LanguageClient client)
@@ -145,7 +149,11 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
     {
         currentUri = params.getTextDocument().getUri();
         currentSource = params.getTextDocument().getText();
-        compileAndPublishDiagnostics();
+        // Do NOT trigger a compile here: compileCurrentSource() persists
+        // currentSource to welcome.pure, and on a freshly-connected client
+        // the editor is empty at this point — which would silently wipe the
+        // file on disk. The first didChange (user edit) will pick this up
+        // with real content.
     }
 
     @Override
@@ -520,29 +528,23 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
                 return;
             }
 
-            // Execute — capture System.out so Pure print()/println() output is
-            // forwarded to the terminal; the return value is discarded.
-            java.io.ByteArrayOutputStream capturedOut = new java.io.ByteArrayOutputStream();
-            java.io.PrintStream originalOut = System.out;
-            System.setOut(new java.io.PrintStream(capturedOut));
-            try
+            // Route execution through the selected backend (java-direct or
+            // truffle). The backend captures stdout so Pure print()/println()
+            // output flows back to the IDE terminal.
+            PureBackend.ExecutionResult execResult = backend.execute(editableModules, model, result, goFunc);
+            if (execResult.ok())
             {
-                PureExecution execution = PureExecution.builder()
-                        .withResolver(new org.finos.legend.pure.m3.module.ScopedMetadataAccess(welcomeMod, model))
-                        .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
-                        .build();
-                execution.execute(goFunc);
+                sendExecuteResult(execResult.capturedStdout(), false, execResult.compileStats());
             }
-            finally
+            else
             {
-                System.setOut(originalOut);
+                Throwable err = execResult.error();
+                sendExecuteResult("Execution error: " + err.getMessage(), true, execResult.compileStats());
             }
-            String printed = capturedOut.toString(java.nio.charset.StandardCharsets.UTF_8);
-            sendExecuteResult(printed, false);
         }
         catch (Exception e)
         {
-            sendExecuteResult("Execution error: " + e.getMessage(), true);
+            sendExecuteResult("Execution error: " + e.getMessage(), true, null);
         }
     }
 
@@ -633,19 +635,6 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
             }
         }
         
-        PureExecution execution;
-        try {
-            execution = PureExecution.builder()
-                    .withResolver(new org.finos.legend.pure.m3.module.ScopedMetadataAccess(lastModel.getModule("welcome") != null ? lastModel.getModule("welcome") : coreModule, lastModel))
-                    .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
-                    .build();
-        } catch (Exception e) {
-            execution = PureExecution.builder()
-                    .withResolver(coreModule)
-                    .withNativeExtensions(Lists.mutable.with(new CompilerNatives()))
-                    .build();
-        }
-
         ValueSpecification adapterArg = null;
         if ("pct".equals(mode) && adapterPath != null && !adapterPath.isEmpty())
         {
@@ -671,36 +660,26 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
             if (testElem instanceof FunctionDefinition fd)
             {
-                java.io.ByteArrayOutputStream capturedOut = new java.io.ByteArrayOutputStream();
-                java.io.PrintStream originalOut = System.out;
-                System.setOut(new java.io.PrintStream(capturedOut));
-                try
+                // Tests reuse the previously-compiled model, so no fresh
+                // CompilationResult to pass through — test output focuses on
+                // pass/fail, not compile stats.
+                PureBackend.ExecutionResult execResult = "pct".equals(mode) && adapterArg != null
+                        ? backend.execute(editableModules, lastModel, null, fd, adapterArg)
+                        : backend.execute(editableModules, lastModel, null, fd);
+                if (execResult.ok())
                 {
-                    if ("pct".equals(mode) && adapterArg != null)
-                    {
-                        execution.execute(fd, adapterArg);
-                    }
-                    else
-                    {
-                        execution.execute(fd);
-                    }
                     result.put("status", "passed");
                 }
-                catch (org.finos.legend.pure.execution.PureAssertionError e)
+                else
                 {
+                    Throwable err = execResult.error();
                     result.put("status", "failed");
-                    result.put("error", "Assertion Failed: " + e.getMessage());
+                    result.put("error",
+                            err instanceof org.finos.legend.pure.execution.PureAssertionError
+                                    ? "Assertion Failed: " + err.getMessage()
+                                    : "Error: " + err.getMessage());
                 }
-                catch (Exception e)
-                {
-                    result.put("status", "failed");
-                    result.put("error", "Error: " + e.getMessage());
-                }
-                finally
-                {
-                    System.setOut(originalOut);
-                    result.put("output", capturedOut.toString(java.nio.charset.StandardCharsets.UTF_8));
-                }
+                result.put("output", execResult.capturedStdout());
             }
             else
             {
@@ -751,9 +730,14 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
 
     private void sendExecuteResult(String result, boolean isError)
     {
+        sendExecuteResult(result, isError, null);
+    }
+
+    private void sendExecuteResult(String result, boolean isError, PureBackend.CompileStats compileStats)
+    {
         if (client instanceof PureLanguageClient pureClient)
         {
-            pureClient.executeResult(new ExecuteResultParams(result, isError));
+            pureClient.executeResult(new ExecuteResultParams(result, isError, compileStats));
         }
     }
 
@@ -1180,7 +1164,7 @@ public class PureLSPServer implements LanguageServer, TextDocumentService, Works
         void openFile(OpenFileParams params);
     }
 
-    public record ExecuteResultParams(String result, boolean error) {}
+    public record ExecuteResultParams(String result, boolean error, PureBackend.CompileStats compileStats) {}
     public record TreeDataParams(String treeId, String json) {}
 
     public record OpenFileParams(String sourceId, String content, Integer line, Integer column)

@@ -88,11 +88,22 @@ public final class CopySimpleNode extends PureNode
     {
         org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject src =
                 (org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject) original;
-        // Construct a fresh copy against the same per-class PureClassInfo
-        // (slot table is shared) and copy the source's slots directly.
-        // The copy starts with whatever values the source has — including
-        // LAZY for unmaterialised slots, so the copy will decode-on-demand
-        // from src.fb the same way the source would.
+        // Force-materialize any unread LAZY slots on the source before the
+        // arraycopy. Without this, src and the copy both keep LAZY markers
+        // pointing at the same FlatBuffer — and each subsequent read on
+        // either object triggers an independent decode that yields a fresh
+        // PDO. Reference-equality comparisons (used by Pure's `!=` for
+        // objects without identity keys) then report the copy's edges as
+        // different from the source's, even though they're structurally
+        // identical. Materialising once on the source means both src.slots
+        // and the copy's slots share the same canonical decoded refs.
+        for (int i = 0; i < src.slots.length; i++)
+        {
+            if (src.slots[i] == org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder.LAZY)
+            {
+                src.readSlot(i);
+            }
+        }
         org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject copy =
                 new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
                         src.classInfo, src.fb, src.resolver, src.parent);

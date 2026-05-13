@@ -14,13 +14,50 @@
 
 import meta::pure::test::pct::*;
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*], max:Integer[1]):Nil[0]
+// Returns the formatted string it just wrote (value + trailing newline) so
+// tests can assert on the exact rendering without intercepting stdout.
+// Implementation is two `print` calls — `print` returns the formatted
+// string, so println simply concatenates the two returns.
+function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*], max:Integer[1]):String[1]
 {
-    print($param, $max);
-    print('\n');
+    print($param, $max) + print('\n', $max);
 }
 
-function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*]):Nil[0]
+function <<PCT.function, PCT.platformOnly>> meta::pure::functions::io::println(param:Any[*]):String[1]
 {
     println($param, 1);
+}
+
+// =============================================================================
+// Tests — reuses TestPerson / TestNested classes defined in `print.pure`.
+// =============================================================================
+
+function <<test.Test>> meta::pure::functions::io::tests::testPrintlnInteger():Boolean[1]
+{
+    assertEquals('42\n', println(42));
+}
+
+function <<test.Test>> meta::pure::functions::io::tests::testPrintlnString():Boolean[1]
+{
+    assertEquals('hello\n', println('hello'));
+}
+
+function <<test.Test>> meta::pure::functions::io::tests::testPrintlnBoolean():Boolean[1]
+{
+    assertEquals('true\n', println(true));
+}
+
+function <<test.Test>> meta::pure::functions::io::tests::testPrintlnList():Boolean[1]
+{
+    assertEquals('1\n2\n3\n', println([1, 2, 3]));
+}
+
+function <<test.Test>> meta::pure::functions::io::tests::testPrintlnObject():Boolean[1]
+{
+    let p = ^meta::pure::functions::io::tests::TestPerson(name='Carol', age=40);
+    assertEquals(
+        'TestPerson\n' +
+        '  name: \'Carol\'\n' +
+        '  age: 40\n',
+        println($p));
 }

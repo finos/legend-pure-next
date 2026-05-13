@@ -263,6 +263,13 @@ class TrufflePureTestRunner
     {
         return DynamicTest.dynamicTest(path, () ->
         {
+            // Suppress the stdout side effect of `print`/`println` for the
+            // test body so individual tests don't pollute Surefire's event
+            // channel. The returned string is unaffected, so assertions
+            // still work. The flag is restored in finally to keep
+            // surrounding setup/teardown output visible.
+            Boolean prevSilenced = org.finos.legend.pure.truffle.ast.natives.io.PrintNode.SILENCED.get();
+            org.finos.legend.pure.truffle.ast.natives.io.PrintNode.SILENCED.set(Boolean.TRUE);
             try
             {
                 if (adapter != null)
@@ -295,6 +302,10 @@ class TrufflePureTestRunner
                     cause = cause.getCause();
                 }
                 throw new org.opentest4j.AssertionFailedError("[" + path + "] " + cause.getMessage() + formatPureStack(e), e);
+            }
+            finally
+            {
+                org.finos.legend.pure.truffle.ast.natives.io.PrintNode.SILENCED.set(prevSilenced);
             }
         });
     }

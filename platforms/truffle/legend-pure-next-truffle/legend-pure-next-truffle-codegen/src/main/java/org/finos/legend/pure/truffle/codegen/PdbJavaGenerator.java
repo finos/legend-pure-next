@@ -165,9 +165,14 @@ public class PdbJavaGenerator
             generateFlatBufferWriter(outputDir);
         }
 
+        // The "skipped" tally is everything outside meta::pure::metamodel::*
+        // — those classes deliberately use the PDO + PureShapeRegistry path
+        // at runtime instead of generated Impls. The previous "already on
+        // classpath" label was misleading; this is by design, not a
+        // collision.
         System.out.println("    Generated " + interfaces + " interfaces, "
                 + impls + " impls, " + enumCount + " enums ("
-                + skipped + " skipped, already on classpath)");
+                + skipped + " non-metamodel skipped — use PDO at runtime)");
     }
 
     // =========================================================================
@@ -3214,7 +3219,10 @@ public class PdbJavaGenerator
             }
             Path pdbPath = Path.of(args[i]);
             String moduleName = pdbPath.getFileName().toString().replace(".pdb", "");
-            inputPaths.add(pdbPath.toString());
+            // Canonicalize for the banner — Maven passes
+            // ${project.basedir}/../../../../shared/core.pdb which is
+            // functionally correct but unreadable in build logs.
+            inputPaths.add(pdbPath.toAbsolutePath().normalize().toString());
             MutableList<String> deps = Lists.mutable.withAll(moduleNames);
             PDBModule pdb = new PDBModule(pdbPath, PDBModule.Mode.EXECUTION,
                     moduleName, "*", deps);
@@ -3228,7 +3236,7 @@ public class PdbJavaGenerator
             if ("--fbs".equals(args[i]))
             {
                 fbsSchema = FbsSchema.parse(Path.of(args[i + 1]));
-                inputPaths.add(args[i + 1]);
+                inputPaths.add(Path.of(args[i + 1]).toAbsolutePath().normalize().toString());
                 break;
             }
         }
@@ -3236,7 +3244,7 @@ public class PdbJavaGenerator
         {
             System.out.println((i == 0 ? "  Inputs: " : "          ") + inputPaths.get(i));
         }
-        System.out.println("  Output: " + outputDir);
+        System.out.println("  Output: " + outputDir.toAbsolutePath().normalize());
 
         // Build and compile the model (required for FlatBuffer elements to resolve)
         MutableList<org.finos.legend.pure.m3.module.Module> moduleList = Lists.mutable.empty();
