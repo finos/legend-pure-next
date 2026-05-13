@@ -153,7 +153,6 @@ public class M3ProtocolBuilder
         {
             classDef._typeParameters(typeParams);
         }
-        Set<String> typeParamNames = typeParams.collect(tp -> tp._name()).toSet();
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
@@ -166,7 +165,7 @@ public class M3ProtocolBuilder
             classDef._typeVariables(
                     ListAdapter.adapt(ctx.typeVariableParameters()
                                     .functionVariableExpression())
-                            .collect(ctx2 -> buildFunctionVariableExpression(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildFunctionVariableExpression));
         }
 
         // Handle extends (generalizations)
@@ -175,7 +174,7 @@ public class M3ProtocolBuilder
             classDef._generalizations(
                     ListAdapter.adapt(ctx.type()).collect(typeCtx ->
                             new GeneralizationImpl()
-                                    ._general(buildGenericType(typeCtx, typeParamNames))
+                                    ._general(buildGenericType(typeCtx))
                                     ._p_sourceInformation(buildSourceInfo(typeCtx))));
         }
 
@@ -187,17 +186,17 @@ public class M3ProtocolBuilder
         {
             classDef._constraints(
                     ListAdapter.adapt(ctx.constraints().constraint())
-                            .collect(ctx2 -> buildConstraint(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildConstraint));
         }
 
         if (ctx.classBody() != null && ctx.classBody().properties() != null)
         {
             classDef._properties(
                     ListAdapter.adapt(ctx.classBody().properties().property())
-                            .collect(ctx2 -> buildProperty(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildProperty));
             classDef._qualifiedProperties(
                     ListAdapter.adapt(ctx.classBody().properties().qualifiedProperty())
-                            .collect(ctx2 -> buildQualifiedProperty(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildQualifiedProperty));
         }
 
         elements.add(classDef);
@@ -219,7 +218,7 @@ public class M3ProtocolBuilder
             primDef._typeVariables(
                     ListAdapter.adapt(ctx.typeVariableParameters()
                                     .functionVariableExpression())
-                            .collect(ctx2 -> buildFunctionVariableExpression(ctx2, java.util.Collections.emptySet(), java.util.Collections.emptySet())));
+                            .collect(this::buildFunctionVariableExpression));
         }
 
         // Handle extends type
@@ -227,7 +226,7 @@ public class M3ProtocolBuilder
         {
             primDef._generalizations(Lists.mutable.with(
                     new GeneralizationImpl()
-                            ._general(buildGenericType(ctx.type(), java.util.Collections.emptySet()))
+                            ._general(buildGenericType(ctx.type()))
                             ._p_sourceInformation(buildSourceInfo(ctx.type()))));
         }
 
@@ -236,7 +235,7 @@ public class M3ProtocolBuilder
         {
             primDef._constraints(
                     ListAdapter.adapt(ctx.constraints().constraint())
-                            .collect(ctx2 -> buildConstraint(ctx2, java.util.Collections.emptySet(), java.util.Collections.emptySet())));
+                            .collect(this::buildConstraint));
         }
 
         elements.add(primDef);
@@ -247,7 +246,7 @@ public class M3ProtocolBuilder
     // Constraints
     // ========================================================================
 
-    private ConstraintImpl buildConstraint(final M3Parser.ConstraintContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ConstraintImpl buildConstraint(final M3Parser.ConstraintContext ctx)
     {
         ConstraintImpl c = new ConstraintImpl()
                 ._p_sourceInformation(buildSourceInfo(ctx));
@@ -263,7 +262,7 @@ public class M3ProtocolBuilder
             // The function body is the combinedExpression
             c._functionDefinition(new LambdaFunctionImpl()
                     ._p_sourceInformation(buildSourceInfo(sc))
-                    ._expressionSequence(Lists.mutable.with(visitCombinedExpr(sc.combinedExpression(), typeParamNames, multParamNames))));
+                    ._expressionSequence(Lists.mutable.with(visitCombinedExpr(sc.combinedExpression()))));
         }
         else if (ctx.complexConstraint() != null)
         {
@@ -286,7 +285,7 @@ public class M3ProtocolBuilder
             // Function
             c._functionDefinition(new LambdaFunctionImpl()
                     ._p_sourceInformation(buildSourceInfo(cc.constraintFunction()))
-                    ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintFunction().combinedExpression(), typeParamNames, multParamNames))));
+                    ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintFunction().combinedExpression()))));
 
             // Enforcement level
             if (cc.constraintEnforcementLevel() != null)
@@ -298,20 +297,20 @@ public class M3ProtocolBuilder
             {
                 c._messageFunction(new LambdaFunctionImpl()
                         ._p_sourceInformation(buildSourceInfo(cc.constraintMessage()))
-                        ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintMessage().combinedExpression(), typeParamNames, multParamNames))));
+                        ._expressionSequence(Lists.mutable.with(visitCombinedExpr(cc.constraintMessage().combinedExpression()))));
             }
         }
 
         return c;
     }
 
-    private PropertyImpl buildProperty(final M3Parser.PropertyContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private PropertyImpl buildProperty(final M3Parser.PropertyContext ctx)
     {
         PropertyImpl prop = new PropertyImpl()
                 ._name(ctx.propertyName().getText())
                 ._p_sourceInformation(buildSourceInfo(ctx))
-                ._genericType(buildGenericType(ctx.propertyReturnType().type(), typeParamNames))
-                ._multiplicity(parseMultiplicity(ctx.propertyReturnType().multiplicity().getText(), multParamNames));
+                ._genericType(buildGenericType(ctx.propertyReturnType().type()))
+                ._multiplicity(parseMultiplicity(ctx.propertyReturnType().multiplicity().getText()));
 
         // Parse stereotypes and tagged values for property
         parseStereotypesAndTaggedValues(prop, ctx.stereotypes(), ctx.taggedValues());
@@ -331,13 +330,13 @@ public class M3ProtocolBuilder
             prop._defaultValue(new LambdaFunctionImpl()
                     ._p_sourceInformation(buildSourceInfo(ctx.defaultValue()))
                     ._expressionSequence(Lists.mutable.with(
-                            visitCombinedExpr(ctx.defaultValue().combinedExpression(), typeParamNames, multParamNames))));
+                            visitCombinedExpr(ctx.defaultValue().combinedExpression()))));
         }
 
         return prop;
     }
 
-    private QualifiedPropertyImpl buildQualifiedProperty(final M3Parser.QualifiedPropertyContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private QualifiedPropertyImpl buildQualifiedProperty(final M3Parser.QualifiedPropertyContext ctx)
     {
         QualifiedPropertyImpl qp = new QualifiedPropertyImpl()
                 ._name(ctx.identifier().getText())
@@ -350,20 +349,22 @@ public class M3ProtocolBuilder
         M3Parser.QualifiedPropertyBodyContext bodyCtx = ctx.qualifiedPropertyBody();
         qp._parameters(
                 ListAdapter.adapt(bodyCtx.functionVariableExpression())
-                        .collect(ctx2 -> buildFunctionVariableExpression(ctx2, typeParamNames, multParamNames)));
+                        .collect(this::buildFunctionVariableExpression));
 
         // Parse expression body (codeBlock)
-        qp._expressionSequence(visitCodeBlockExpressions(bodyCtx.codeBlock(), typeParamNames, multParamNames));
+        qp._expressionSequence(visitCodeBlockExpressions(bodyCtx.codeBlock()));
 
         // Parse return type (resolves type parameter refs like T)
-        qp._genericType(buildGenericType(ctx.propertyReturnType().type(), typeParamNames));
-        qp._multiplicity(parseMultiplicity(ctx.propertyReturnType().multiplicity().getText(), multParamNames));
+        qp._genericType(buildGenericType(ctx.propertyReturnType().type()));
+        qp._multiplicity(parseMultiplicity(ctx.propertyReturnType().multiplicity().getText()));
 
         return qp;
     }
 
-    private Multiplicity_Protocol parseMultiplicity(final String mult, final Set<String> multParamNames)
+    private Multiplicity_Protocol parseMultiplicity(final String mult)
     {
+        // Multiplicity parameters are resolved by the compiler against the active scope.
+        // The parser always emits the symbolic form for non-numeric inner tokens.
         // Handle malformed or null input
         if (mult == null || !mult.startsWith("[") || !mult.endsWith("]"))
         {
@@ -375,42 +376,49 @@ public class M3ProtocolBuilder
         // Format: [1], [0..1], [*], [1..*], [m] (multiplicity param)
         String inner = mult.substring(1, mult.length() - 1);
 
-        // Check if this is a multiplicity parameter reference
-        if (multParamNames.contains(inner))
+        if (inner.equals("*"))
         {
-            return new UserDefinedMultiplicityParameterImpl()._name(inner);
+            return new UserDefinedAdHocMultiplicityImpl()._lowerBound(multVal(0));
         }
-
-        UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl();
-        try
+        if (inner.contains(".."))
         {
-            if (inner.equals("*"))
+            String[] parts = inner.split("\\.\\.");
+            try
             {
-                result._lowerBound(multVal(0));
-            }
-            else if (inner.contains(".."))
-            {
-                String[] parts = inner.split("\\.\\.");
-                result._lowerBound(multVal(Integer.parseInt(parts[0])));
+                UserDefinedAdHocMultiplicityImpl result = new UserDefinedAdHocMultiplicityImpl()
+                        ._lowerBound(multVal(Integer.parseInt(parts[0])));
                 if (!parts[1].equals("*"))
                 {
                     result._upperBound(multVal(Integer.parseInt(parts[1])));
                 }
+                return result;
             }
-            else
+            catch (NumberFormatException e)
+            {
+                // Malformed numeric range — fall through to PureOne fallback below.
+            }
+        }
+        else
+        {
+            try
             {
                 int val = Integer.parseInt(inner);
-                result._lowerBound(multVal(val));
-                result._upperBound(multVal(val));
+                return new UserDefinedAdHocMultiplicityImpl()
+                        ._lowerBound(multVal(val))
+                        ._upperBound(multVal(val));
+            }
+            catch (NumberFormatException e)
+            {
+                // Non-numeric inner is a multiplicity parameter reference. Scope-aware
+                // resolution moved to the compiler — parser always emits the symbolic
+                // form here and the compiler binds the name against the active scope.
+                return new UserDefinedMultiplicityParameterImpl()._name(inner);
             }
         }
-        catch (NumberFormatException e)
-        {
-            result._lowerBound(multVal(1));
-            result._upperBound(multVal(1));
-        }
 
-        return result;
+        return new UserDefinedAdHocMultiplicityImpl()
+                ._lowerBound(multVal(1))
+                ._upperBound(multVal(1));
     }
 
     @Override
@@ -450,10 +458,10 @@ public class M3ProtocolBuilder
         {
             assoc._properties(
                     ListAdapter.adapt(ctx.associationBody().properties().property())
-                            .collect(ctx2 -> buildProperty(ctx2, java.util.Collections.emptySet(), java.util.Collections.emptySet())));
+                            .collect(this::buildProperty));
             assoc._qualifiedProperties(
                     ListAdapter.adapt(ctx.associationBody().properties().qualifiedProperty())
-                            .collect(ctx2 -> buildQualifiedProperty(ctx2, java.util.Collections.emptySet(), java.util.Collections.emptySet())));
+                            .collect(this::buildQualifiedProperty));
         }
 
         elements.add(assoc);
@@ -602,7 +610,6 @@ public class M3ProtocolBuilder
         {
             func._typeParameters(typeParams);
         }
-        Set<String> typeParamNames = typeParams.collect(tp -> tp._name()).toSet();
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
@@ -612,11 +619,11 @@ public class M3ProtocolBuilder
         M3Parser.FunctionTypeSignatureContext sigCtx = ctx.functionTypeSignature();
         func._parameters(
                 ListAdapter.adapt(sigCtx.functionVariableExpression())
-                        .collect(ctx2 -> buildFunctionVariableExpression(ctx2, typeParamNames, multParamNames)));
+                        .collect(this::buildFunctionVariableExpression));
 
         // Parse return type and multiplicity
-        func._returnGenericType(buildGenericType(sigCtx.type(), typeParamNames, multParamNames));
-        func._returnMultiplicity(parseMultiplicity(sigCtx.multiplicity().getText(), multParamNames));
+        func._returnGenericType(buildGenericType(sigCtx.type()));
+        func._returnMultiplicity(parseMultiplicity(sigCtx.multiplicity().getText()));
 
         // Build function name (ID)
         String simpleName = fullName.contains("::") ? fullName.substring(fullName.lastIndexOf("::") + 2) : fullName;
@@ -629,15 +636,15 @@ public class M3ProtocolBuilder
             func._preConstraints(
                     ListAdapter.adapt(ctx.constraints().constraint())
                             .reject(cCtx -> cCtx.getText().contains("$return"))
-                            .collect(ctx2 -> buildConstraint(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildConstraint));
             func._postConstraints(
                     ListAdapter.adapt(ctx.constraints().constraint())
                             .select(cCtx -> cCtx.getText().contains("$return"))
-                            .collect(ctx2 -> buildConstraint(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::buildConstraint));
         }
 
         // Parse body (codeBlock)
-        func._expressionSequence(visitCodeBlockExpressions(ctx.codeBlock(), typeParamNames, multParamNames));
+        func._expressionSequence(visitCodeBlockExpressions(ctx.codeBlock()));
 
         elements.add(func);
         return func;
@@ -660,7 +667,6 @@ public class M3ProtocolBuilder
         {
             func._typeParameters(typeParams);
         }
-        Set<String> typeParamNames = typeParams.collect(tp -> tp._name()).toSet();
         Set<String> multParamNames = collectMultiplicityParams(tpCtx == null ? null : tpCtx.multiplictyParameters());
         if (!multParamNames.isEmpty())
         {
@@ -670,11 +676,11 @@ public class M3ProtocolBuilder
         M3Parser.FunctionTypeSignatureContext sigCtx = ctx.functionTypeSignature();
         func._parameters(
                 ListAdapter.adapt(sigCtx.functionVariableExpression())
-                        .collect(ctx2 -> buildFunctionVariableExpression(ctx2, typeParamNames, multParamNames)));
+                        .collect(this::buildFunctionVariableExpression));
 
         // Parse return type and multiplicity
-        func._returnGenericType(buildGenericType(sigCtx.type(), typeParamNames, multParamNames));
-        func._returnMultiplicity(parseMultiplicity(sigCtx.multiplicity().getText(), multParamNames));
+        func._returnGenericType(buildGenericType(sigCtx.type()));
+        func._returnMultiplicity(parseMultiplicity(sigCtx.multiplicity().getText()));
 
         // Build function name (ID)
         String simpleName = fullName.contains("::") ? fullName.substring(fullName.lastIndexOf("::") + 2) : fullName;
@@ -690,17 +696,17 @@ public class M3ProtocolBuilder
     // Code Block and Expression Visitors
     // ========================================================================
 
-    private MutableList<ValueSpecification> visitCodeBlockExpressions(final M3Parser.CodeBlockContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private MutableList<ValueSpecification> visitCodeBlockExpressions(final M3Parser.CodeBlockContext ctx)
     {
         return ListAdapter.adapt(ctx.programLine())
                 .collectIf(
                         lineCtx -> lineCtx.combinedExpression() != null || lineCtx.letExpression() != null,
                         lineCtx -> lineCtx.combinedExpression() != null
-                                ? visitCombinedExpr(lineCtx.combinedExpression(), typeParamNames, multParamNames)
-                                : visitLetExpr(lineCtx.letExpression(), typeParamNames, multParamNames));
+                                ? visitCombinedExpr(lineCtx.combinedExpression())
+                                : visitLetExpr(lineCtx.letExpression()));
     }
 
-    private ValueSpecification visitLetExpr(final M3Parser.LetExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitLetExpr(final M3Parser.LetExpressionContext ctx)
     {
         // let x = expr  →  FunctionExpression(functionName="letFunction", params=[name, value])
         return new FunctionInvocationImpl()
@@ -711,7 +717,7 @@ public class M3ProtocolBuilder
                                 ._p_sourceInformation(buildSourceInfo(ctx.identifier()))
                                 ._genericType(buildPrimitiveGenericType("String"))
                                 ._value(ctx.identifier().getText()),
-                        visitCombinedExpr(ctx.combinedExpression(), typeParamNames, multParamNames)));
+                        visitCombinedExpr(ctx.combinedExpression())));
     }
 
     // ------------------------------------------------------------------------
@@ -721,46 +727,46 @@ public class M3ProtocolBuilder
     // binary operations into nested FunctionInvocation nodes.
     // ------------------------------------------------------------------------
 
-    private ValueSpecification visitCombinedExpr(final M3Parser.CombinedExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitCombinedExpr(final M3Parser.CombinedExpressionContext ctx)
     {
-        return visitOrExpr(ctx.orExpression(), typeParamNames, multParamNames);
+        return visitOrExpr(ctx.orExpression());
     }
 
-    private ValueSpecification visitOrExpr(final M3Parser.OrExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitOrExpr(final M3Parser.OrExpressionContext ctx)
     {
         List<M3Parser.AndExpressionContext> operands = ctx.andExpression();
-        ValueSpecification result = visitAndExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitAndExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.AndExpressionContext rhsCtx = operands.get(i);
-            result = buildBinaryCall("or", opTok, rhsCtx, result, visitAndExpr(rhsCtx, typeParamNames, multParamNames));
+            result = buildBinaryCall("or", opTok, rhsCtx, result, visitAndExpr(rhsCtx));
         }
         return result;
     }
 
-    private ValueSpecification visitAndExpr(final M3Parser.AndExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitAndExpr(final M3Parser.AndExpressionContext ctx)
     {
         List<M3Parser.EqualityExpressionContext> operands = ctx.equalityExpression();
-        ValueSpecification result = visitEqualityExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitEqualityExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.EqualityExpressionContext rhsCtx = operands.get(i);
-            result = buildBinaryCall("and", opTok, rhsCtx, result, visitEqualityExpr(rhsCtx, typeParamNames, multParamNames));
+            result = buildBinaryCall("and", opTok, rhsCtx, result, visitEqualityExpr(rhsCtx));
         }
         return result;
     }
 
-    private ValueSpecification visitEqualityExpr(final M3Parser.EqualityExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitEqualityExpr(final M3Parser.EqualityExpressionContext ctx)
     {
         List<M3Parser.RelationalExpressionContext> operands = ctx.relationalExpression();
-        ValueSpecification result = visitRelationalExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitRelationalExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.RelationalExpressionContext rhsCtx = operands.get(i);
-            ValueSpecification right = visitRelationalExpr(rhsCtx, typeParamNames, multParamNames);
+            ValueSpecification right = visitRelationalExpr(rhsCtx);
             ValueSpecification eq = buildBinaryCall("equal", opTok, rhsCtx, result, right);
             result = (opTok.getType() == M3Lexer.TEST_NOT_EQUAL)
                     ? new FunctionInvocationImpl()
@@ -772,44 +778,44 @@ public class M3ProtocolBuilder
         return result;
     }
 
-    private ValueSpecification visitRelationalExpr(final M3Parser.RelationalExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitRelationalExpr(final M3Parser.RelationalExpressionContext ctx)
     {
         List<M3Parser.AdditiveExpressionContext> operands = ctx.additiveExpression();
-        ValueSpecification result = visitAdditiveExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitAdditiveExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.AdditiveExpressionContext rhsCtx = operands.get(i);
             String funcName = relationalFuncName(opTok.getType());
-            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitAdditiveExpr(rhsCtx, typeParamNames, multParamNames));
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitAdditiveExpr(rhsCtx));
         }
         return result;
     }
 
-    private ValueSpecification visitAdditiveExpr(final M3Parser.AdditiveExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitAdditiveExpr(final M3Parser.AdditiveExpressionContext ctx)
     {
         List<M3Parser.MultiplicativeExpressionContext> operands = ctx.multiplicativeExpression();
-        ValueSpecification result = visitMultiplicativeExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitMultiplicativeExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.MultiplicativeExpressionContext rhsCtx = operands.get(i);
             String funcName = (opTok.getType() == M3Lexer.PLUS) ? "plus" : "minus";
-            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitMultiplicativeExpr(rhsCtx, typeParamNames, multParamNames));
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitMultiplicativeExpr(rhsCtx));
         }
         return result;
     }
 
-    private ValueSpecification visitMultiplicativeExpr(final M3Parser.MultiplicativeExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitMultiplicativeExpr(final M3Parser.MultiplicativeExpressionContext ctx)
     {
         List<M3Parser.ExpressionContext> operands = ctx.expression();
-        ValueSpecification result = visitExpr(operands.get(0), typeParamNames, multParamNames);
+        ValueSpecification result = visitExpr(operands.get(0));
         for (int i = 1; i < operands.size(); i++)
         {
             Token opTok = operatorTokenAt(ctx, i);
             M3Parser.ExpressionContext rhsCtx = operands.get(i);
             String funcName = (opTok.getType() == M3Lexer.STAR) ? "times" : "divide";
-            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitExpr(rhsCtx, typeParamNames, multParamNames));
+            result = buildBinaryCall(funcName, opTok, rhsCtx, result, visitExpr(rhsCtx));
         }
         return result;
     }
@@ -859,35 +865,35 @@ public class M3ProtocolBuilder
         throw new RuntimeException("Unknown relational operator token type: " + tokenType);
     }
 
-    private ValueSpecification visitExpr(final M3Parser.ExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitExpr(final M3Parser.ExpressionContext ctx)
     {
         // expression: nonArrowOrEqualExpression (propertyOrFunctionExpression)*
         return ListAdapter.adapt(
                 ctx.propertyOrFunctionExpression()).injectInto(
-                visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression(), typeParamNames, multParamNames),
+                visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression()),
                 (acc, pofCtx) ->
                 {
                     if (pofCtx.propertyExpression() != null)
                     {
-                        return visitPropertyExpr(acc, pofCtx.propertyExpression(), typeParamNames, multParamNames);
+                        return visitPropertyExpr(acc, pofCtx.propertyExpression());
                     }
                     else if (pofCtx.functionExpression() != null)
                     {
-                        return visitArrowFunctionExpr(acc, pofCtx.functionExpression(), typeParamNames, multParamNames);
+                        return visitArrowFunctionExpr(acc, pofCtx.functionExpression());
                     }
                     return acc;
                 });
     }
 
-    private ValueSpecification visitNonArrowOrEqual(final M3Parser.NonArrowOrEqualExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitNonArrowOrEqual(final M3Parser.NonArrowOrEqualExpressionContext ctx)
     {
         if (ctx.atomicExpression() != null)
         {
-            return visitAtomicExpr(ctx.atomicExpression(), typeParamNames, multParamNames);
+            return visitAtomicExpr(ctx.atomicExpression());
         }
         else if (ctx.expressionsArray() != null)
         {
-            return visitExpressionsArr(ctx.expressionsArray(), typeParamNames, multParamNames);
+            return visitExpressionsArr(ctx.expressionsArray());
         }
         else if (ctx.notExpression() != null)
         {
@@ -895,12 +901,12 @@ public class M3ProtocolBuilder
                     ._p_sourceInformation(buildSourceInfo(ctx.notExpression()))
                     ._functionName("not")
                     ._parametersValues(Lists.mutable.with(
-                            visitSimpleExpr(ctx.notExpression().simpleExpression(), typeParamNames, multParamNames)));
+                            visitSimpleExpr(ctx.notExpression().simpleExpression())));
         }
         else if (ctx.signedExpression() != null)
         {
             M3Parser.SignedExpressionContext signCtx = ctx.signedExpression();
-            ValueSpecification inner = visitSimpleExpr(signCtx.simpleExpression(), typeParamNames, multParamNames);
+            ValueSpecification inner = visitSimpleExpr(signCtx.simpleExpression());
             if (signCtx.MINUS() != null)
             {
                 return new FunctionInvocationImpl()
@@ -918,12 +924,12 @@ public class M3ProtocolBuilder
                     ._functionName("slice")
                     ._parametersValues(
                             ListAdapter.adapt(sliceCtx.expression())
-                                    .collect(e -> visitExpr(e, typeParamNames, multParamNames)));
+                                    .collect(this::visitExpr));
         }
         else if (ctx.combinedExpression() != null)
         {
             // Parenthesized: ( combinedExpression )
-            return visitCombinedExpr(ctx.combinedExpression(), typeParamNames, multParamNames);
+            return visitCombinedExpr(ctx.combinedExpression());
         }
         throw new RuntimeException("Unexpected nonArrowOrEqualExpression: " + ctx.getText());
     }
@@ -932,7 +938,7 @@ public class M3ProtocolBuilder
     // Atomic Expressions
     // ========================================================================
 
-    private ValueSpecification visitAtomicExpr(final M3Parser.AtomicExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitAtomicExpr(final M3Parser.AtomicExpressionContext ctx)
     {
         if (ctx.variable() != null)
         {
@@ -944,15 +950,15 @@ public class M3ProtocolBuilder
         }
         else if (ctx.anyLambda() != null)
         {
-            return visitAnyLambdaExpr(ctx.anyLambda(), typeParamNames, multParamNames);
+            return visitAnyLambdaExpr(ctx.anyLambda());
         }
         else if (ctx.instanceReference() != null)
         {
-            return visitInstanceRef(ctx.instanceReference(), typeParamNames, multParamNames);
+            return visitInstanceRef(ctx.instanceReference());
         }
         else if (ctx.expressionInstance() != null)
         {
-            return buildExpressionInstance(ctx.expressionInstance(), typeParamNames, multParamNames);
+            return buildExpressionInstance(ctx.expressionInstance());
         }
         else if (ctx.dsl() != null)
         {
@@ -990,13 +996,13 @@ public class M3ProtocolBuilder
                 // map lambda as first param
                 if (hasLambda)
                 {
-                    paramVals.add(visitAnyLambdaExpr(colSpec.anyLambda(), typeParamNames, multParamNames));
+                    paramVals.add(visitAnyLambdaExpr(colSpec.anyLambda()));
                 }
 
                 // reduce lambda as second param (for aggColSpec)
                 if (hasReduceLambda)
                 {
-                    paramVals.add(visitAnyLambdaExpr(colSpec.extraFunction().anyLambda(), typeParamNames, multParamNames));
+                    paramVals.add(visitAnyLambdaExpr(colSpec.extraFunction().anyLambda()));
                 }
 
                 // Column name (String)
@@ -1012,11 +1018,11 @@ public class M3ProtocolBuilder
                             ._name(colSpec.columnName().getText());
                     if (colSpec.type() != null)
                     {
-                        col._genericType(buildGenericType(colSpec.type(), typeParamNames));
+                        col._genericType(buildGenericType(colSpec.type()));
                     }
                     if (colSpec.multiplicity() != null)
                     {
-                        col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
+                        col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText()));
                     }
                     RelationTypeImpl relationType = new RelationTypeImpl()
                             ._columns(Lists.mutable.with(col));
@@ -1103,11 +1109,11 @@ public class M3ProtocolBuilder
                                     ._name(colSpec.columnName().getText());
                             if (colSpec.type() != null)
                             {
-                                col._genericType(buildGenericType(colSpec.type(), typeParamNames));
+                                col._genericType(buildGenericType(colSpec.type()));
                             }
                             if (colSpec.multiplicity() != null)
                             {
-                                col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText(), multParamNames));
+                                col._multiplicity(parseMultiplicity(colSpec.multiplicity().getText()));
                             }
                             columns.add(col);
                         }
@@ -1140,17 +1146,17 @@ public class M3ProtocolBuilder
                     ._p_sourceInformation(buildSourceInfo(ctx));
             if (ctx.type() != null)
             {
-                holder._genericType(buildGenericType(ctx.type(), typeParamNames));
+                holder._genericType(buildGenericType(ctx.type()));
             }
             if (ctx.multiplicityArgument() != null)
             {
                 // Bare multiplicity from @Type|mul or @|mul — wrap in brackets for parseMultiplicity
-                holder._multiplicity(parseMultiplicity("[" + ctx.multiplicityArgument().getText() + "]", multParamNames));
+                holder._multiplicity(parseMultiplicity("[" + ctx.multiplicityArgument().getText() + "]"));
             }
             else if (ctx.multiplicity() != null)
             {
                 // Legacy @[mul] syntax
-                holder._multiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
+                holder._multiplicity(parseMultiplicity(ctx.multiplicity().getText()));
             }
             // Fill in undefined defaults for the missing half:
             // @Type → <Type|?>, @|mul → <?|mul>
@@ -1175,7 +1181,7 @@ public class M3ProtocolBuilder
     // Expression Instance (^Type(prop=value, ...))
     // ========================================================================
 
-    private ValueSpecification buildExpressionInstance(final M3Parser.ExpressionInstanceContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification buildExpressionInstance(final M3Parser.ExpressionInstanceContext ctx)
     {
         boolean isCopy = ctx.variable() != null;
 
@@ -1205,7 +1211,7 @@ public class M3ProtocolBuilder
             {
                 genericType._typeArguments(
                         ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
-                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
+                                .collect(this::buildTypeOrUndefined));
             }
             if (ctx.multiplicityArguments() != null)
             {
@@ -1242,7 +1248,7 @@ public class M3ProtocolBuilder
                                             ListAdapter.adapt(assignCtx.propertyName())
                                                     .collect(pnCtx -> pnCtx.getText())
                                                     .makeString(".")),
-                            visitExprInstanceRightSide(assignCtx.expressionInstanceRightSide(), typeParamNames, multParamNames));
+                            visitExprInstanceRightSide(assignCtx.expressionInstanceRightSide()));
                     if (assignCtx.PLUS() != null)
                     {
                         keParams.add(new AtomicValueImpl()
@@ -1273,7 +1279,7 @@ public class M3ProtocolBuilder
      * Parse the right-hand side of an expression instance property assignment.
      * Reuses existing expression visitors for each grammar alternative.
      */
-    private ValueSpecification visitExprInstanceRightSide(final M3Parser.ExpressionInstanceRightSideContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitExprInstanceRightSide(final M3Parser.ExpressionInstanceRightSideContext ctx)
     {
         M3Parser.ExpressionInstanceAtomicRightSideContext atomic = ctx.expressionInstanceAtomicRightSide();
         if (atomic.parentReference() != null)
@@ -1305,11 +1311,11 @@ public class M3ProtocolBuilder
         }
         if (atomic.combinedExpression() != null)
         {
-            return visitCombinedExpr(atomic.combinedExpression(), typeParamNames, multParamNames);
+            return visitCombinedExpr(atomic.combinedExpression());
         }
         else if (atomic.expressionInstance() != null)
         {
-            return buildExpressionInstance(atomic.expressionInstance(), typeParamNames, multParamNames);
+            return buildExpressionInstance(atomic.expressionInstance());
         }
         else if (atomic.qualifiedName() != null)
         {
@@ -1414,25 +1420,25 @@ public class M3ProtocolBuilder
     // Lambda / anonymous function
     // ========================================================================
 
-    private ValueSpecification visitAnyLambdaExpr(final M3Parser.AnyLambdaContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitAnyLambdaExpr(final M3Parser.AnyLambdaContext ctx)
     {
         LambdaFunctionImpl lambda;
         if (ctx.lambdaFunction() != null)
         {
-            lambda = visitLambdaFunc(ctx.lambdaFunction(), typeParamNames, multParamNames);
+            lambda = visitLambdaFunc(ctx.lambdaFunction());
         }
         else if (ctx.lambdaPipe() != null && ctx.lambdaParam() != null)
         {
             // lambdaParam lambdaPipe  (inline form: x|...)
             lambda = buildLambda(
                     Lists.mutable.with(ctx.lambdaParam()),
-                    ctx.lambdaPipe(), ctx, typeParamNames, multParamNames);
+                    ctx.lambdaPipe(), ctx);
         }
         else if (ctx.lambdaPipe() != null)
         {
             // bare pipe: |...
             lambda = buildLambda(Lists.mutable.empty(),
-                    ctx.lambdaPipe(), ctx, typeParamNames, multParamNames);
+                    ctx.lambdaPipe(), ctx);
         }
         else
         {
@@ -1445,13 +1451,13 @@ public class M3ProtocolBuilder
                 ._value(lambda);
     }
 
-    private LambdaFunctionImpl visitLambdaFunc(final M3Parser.LambdaFunctionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private LambdaFunctionImpl visitLambdaFunc(final M3Parser.LambdaFunctionContext ctx)
     {
         // lambdaFunction: { (lambdaParam,...)? lambdaPipe }
-        return buildLambda(ctx.lambdaParam(), ctx.lambdaPipe(), ctx, typeParamNames, multParamNames);
+        return buildLambda(ctx.lambdaParam(), ctx.lambdaPipe(), ctx);
     }
 
-    private LambdaFunctionImpl buildLambda(final List<M3Parser.LambdaParamContext> paramCtxs, final M3Parser.LambdaPipeContext pipeCtx, final ParserRuleContext outerCtx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private LambdaFunctionImpl buildLambda(final List<M3Parser.LambdaParamContext> paramCtxs, final M3Parser.LambdaPipeContext pipeCtx, final ParserRuleContext outerCtx)
     {
         return new LambdaFunctionImpl()
                 ._p_sourceInformation(buildSourceInfo(outerCtx))
@@ -1463,19 +1469,19 @@ public class M3ProtocolBuilder
                             if (paramCtx.lambdaParamType() != null)
                             {
                                 param._p_sourceInformation(buildSourceInfo(paramCtx))
-                                        ._genericType(buildGenericType(paramCtx.lambdaParamType().type(), typeParamNames))
-                                        ._multiplicity(parseMultiplicity(paramCtx.lambdaParamType().multiplicity().getText(), multParamNames));
+                                        ._genericType(buildGenericType(paramCtx.lambdaParamType().type()))
+                                        ._multiplicity(parseMultiplicity(paramCtx.lambdaParamType().multiplicity().getText()));
                             }
                             return param;
                         }))
-                ._expressionSequence(visitCodeBlockExpressions(pipeCtx.codeBlock(), typeParamNames, multParamNames));
+                ._expressionSequence(visitCodeBlockExpressions(pipeCtx.codeBlock()));
     }
 
     // ========================================================================
     // Instance Reference (function call / variable reference)
     // ========================================================================
 
-    private ValueSpecification visitInstanceRef(final M3Parser.InstanceReferenceContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitInstanceRef(final M3Parser.InstanceReferenceContext ctx)
     {
         // instanceReference: (PATH_SEPARATOR | qualifiedName) allOrFunction?
         String name = ctx.getText();
@@ -1493,7 +1499,7 @@ public class M3ProtocolBuilder
             M3Parser.FunctionExpressionParametersContext paramsCtx = ctx.allOrFunction().functionExpressionParameters();
             sfe._parametersValues(
                     ListAdapter.adapt(paramsCtx.combinedExpression())
-                            .collect(ctx2 -> visitCombinedExpr(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::visitCombinedExpr));
             return sfe;
         }
 
@@ -1571,7 +1577,7 @@ public class M3ProtocolBuilder
     // Property & Arrow Function Expressions
     // ========================================================================
 
-    private ValueSpecification visitPropertyExpr(final ValueSpecification receiver, final M3Parser.PropertyExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitPropertyExpr(final ValueSpecification receiver, final M3Parser.PropertyExpressionContext ctx)
     {
         // property access: .propName or .propName(args)
         MutableList<ValueSpecification> params = Lists.mutable.with(receiver);
@@ -1579,7 +1585,7 @@ public class M3ProtocolBuilder
         {
             params.addAllIterable(
                     ListAdapter.adapt(ctx.functionExpressionParameters().combinedExpression())
-                            .collect(ctx2 -> visitCombinedExpr(ctx2, typeParamNames, multParamNames)));
+                            .collect(this::visitCombinedExpr));
         }
         return new DotApplicationImpl()
                 ._p_sourceInformation(buildSourceInfo(ctx))
@@ -1587,7 +1593,7 @@ public class M3ProtocolBuilder
                 ._parametersValues(params);
     }
 
-    private ValueSpecification visitArrowFunctionExpr(final ValueSpecification receiver, final M3Parser.FunctionExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitArrowFunctionExpr(final ValueSpecification receiver, final M3Parser.FunctionExpressionContext ctx)
     {
         // arrow: ->funcName(args) (->funcName(args))*
         return ListIterate.injectInto(receiver,
@@ -1602,7 +1608,7 @@ public class M3ProtocolBuilder
                     params.addAllIterable(
                             ListAdapter.adapt(ctx.functionExpressionParameters(idx)
                                             .combinedExpression())
-                                    .collect(ctx2 -> visitCombinedExpr(ctx2, typeParamNames, multParamNames)));
+                                    .collect(this::visitCombinedExpr));
                     sfe._parametersValues(params);
                     return sfe;
                 });
@@ -1612,20 +1618,20 @@ public class M3ProtocolBuilder
     // simpleExpression (used by notExpression / signedExpression)
     // ========================================================================
 
-    private ValueSpecification visitSimpleExpr(final M3Parser.SimpleExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private ValueSpecification visitSimpleExpr(final M3Parser.SimpleExpressionContext ctx)
     {
-        ValueSpecification result = visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression(), typeParamNames, multParamNames);
+        ValueSpecification result = visitNonArrowOrEqual(ctx.nonArrowOrEqualExpression());
 
         return ListAdapter.adapt(ctx.propertyOrFunctionExpression())
                 .injectInto(result, (acc, pofCtx) ->
                 {
                     if (pofCtx.propertyExpression() != null)
                     {
-                        return visitPropertyExpr(acc, pofCtx.propertyExpression(), typeParamNames, multParamNames);
+                        return visitPropertyExpr(acc, pofCtx.propertyExpression());
                     }
                     else if (pofCtx.functionExpression() != null)
                     {
-                        return visitArrowFunctionExpr(acc, pofCtx.functionExpression(), typeParamNames, multParamNames);
+                        return visitArrowFunctionExpr(acc, pofCtx.functionExpression());
                     }
                     return acc;
                 });
@@ -1635,10 +1641,10 @@ public class M3ProtocolBuilder
     // Expressions Array  (collection: [ expr, expr, ... ])
     // ========================================================================
 
-    private CollectionImpl visitExpressionsArr(final M3Parser.ExpressionsArrayContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private CollectionImpl visitExpressionsArr(final M3Parser.ExpressionsArrayContext ctx)
     {
         MutableList<ValueSpecification> vals = ListAdapter.adapt(ctx.combinedExpression())
-                .collect(exprCtx -> visitCombinedExpr(exprCtx, typeParamNames, multParamNames));
+                .collect(this::visitCombinedExpr);
 
         return new CollectionImpl()
                 ._p_sourceInformation(buildSourceInfo(ctx))
@@ -1652,14 +1658,14 @@ public class M3ProtocolBuilder
     // Function Variable Expression (parameter declaration: name : Type[mult])
     // ========================================================================
 
-    private VariableExpressionImpl buildFunctionVariableExpression(final M3Parser.FunctionVariableExpressionContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private VariableExpressionImpl buildFunctionVariableExpression(final M3Parser.FunctionVariableExpressionContext ctx)
     {
         return new VariableExpressionImpl()
                 ._name(ctx.identifier().getText())
                 ._p_sourceInformation(buildSourceInfo(ctx))
-                ._genericType(buildGenericType(ctx.type(), typeParamNames, multParamNames))
+                ._genericType(buildGenericType(ctx.type()))
                 ._multiplicity(
-                        parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
+                        parseMultiplicity(ctx.multiplicity().getText()));
     }
 
     // ========================================================================
@@ -1729,13 +1735,13 @@ public class M3ProtocolBuilder
      * Build a GenericType from a typeOrUndefined context.
      * Grammar: typeOrUndefined: (QUESTION | typeWithOperation)
      */
-    private GenericType buildTypeOrUndefined(final M3Parser.TypeOrUndefinedContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private GenericType buildTypeOrUndefined(final M3Parser.TypeOrUndefinedContext ctx)
     {
         if (ctx.QUESTION() != null)
         {
             return new UndefinedGenericTypeImpl();
         }
-        return buildTypeWithOperation(ctx.typeWithOperation(), typeParamNames, multParamNames);
+        return buildTypeWithOperation(ctx.typeWithOperation());
     }
 
     /**
@@ -1743,9 +1749,9 @@ public class M3ProtocolBuilder
      * Handles type algebra: equal (=), add (+), sub (-), subset (⊆).
      * Grammar: typeWithOperation : type equalType? (typeAddSubOperation)* subsetType?
      */
-    private GenericType buildTypeWithOperation(final M3Parser.TypeWithOperationContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private GenericType buildTypeWithOperation(final M3Parser.TypeWithOperationContext ctx)
     {
-        GenericType result = buildGenericType(ctx.type(), typeParamNames, multParamNames);
+        GenericType result = buildGenericType(ctx.type());
 
         // Handle equal: Z=(?:K)
         if (ctx.equalType() != null)
@@ -1753,7 +1759,7 @@ public class M3ProtocolBuilder
             result = new GenericTypeOperationImpl()
                     ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Equal"))
                     ._left(result)
-                    ._right(buildGenericType(ctx.equalType().type(), typeParamNames, multParamNames));
+                    ._right(buildGenericType(ctx.equalType().type()));
         }
 
         // Handle add/sub operations: T-Z+V
@@ -1764,14 +1770,14 @@ public class M3ProtocolBuilder
                 result = new GenericTypeOperationImpl()
                         ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Union"))
                         ._left(result)
-                        ._right(buildGenericType(opCtx.addType().type(), typeParamNames, multParamNames));
+                        ._right(buildGenericType(opCtx.addType().type()));
             }
             else
             {
                 result = new GenericTypeOperationImpl()
                         ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Difference"))
                         ._left(result)
-                        ._right(buildGenericType(opCtx.subType().type(), typeParamNames, multParamNames));
+                        ._right(buildGenericType(opCtx.subType().type()));
             }
         }
 
@@ -1781,19 +1787,14 @@ public class M3ProtocolBuilder
             result = new GenericTypeOperationImpl()
                     ._operationType(buildEnumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Subset"))
                     ._left(result)
-                    ._right(buildGenericType(ctx.subsetType().type(), typeParamNames, multParamNames));
+                    ._right(buildGenericType(ctx.subsetType().type()));
         }
 
         return result;
     }
 
 
-    private UserDefinedGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames)
-    {
-        return buildGenericType(ctx, typeParamNames, java.util.Collections.emptySet());
-    }
-
-    private UserDefinedGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private UserDefinedGenericTypeImpl buildGenericType(final M3Parser.TypeContext ctx)
     {
         UserDefinedGenericTypeImpl gt = new UserDefinedGenericTypeImpl();
 
@@ -1801,24 +1802,18 @@ public class M3ProtocolBuilder
         {
             String typeName = ctx.qualifiedName().getText();
 
-            // Check if this is a reference to a declared type parameter
-            if (typeParamNames.contains(typeName))
-            {
-                gt._type(new TypeParameterImpl()
-                        ._name(typeName));
-            }
-            else
-            {
-                gt._type(new Type_PointerImpl()
-                        ._value(typeName)
-                        ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName())));
-            }
+            // Scope-free emission: every qualified-name reference becomes a Type_Pointer.
+            // The compiler disambiguates against the active type-parameter scope and
+            // either promotes to TypeParameter or resolves as a concrete type.
+            gt._type(new Type_PointerImpl()
+                    ._value(typeName)
+                    ._p_sourceInformation(buildSourceInfo(ctx.qualifiedName())));
 
             if (ctx.typeArguments() != null)
             {
                 gt._typeArguments(
                         ListAdapter.adapt(ctx.typeArguments().typeOrUndefined())
-                                .collect(tou -> buildTypeOrUndefined(tou, typeParamNames, multParamNames)));
+                                .collect(this::buildTypeOrUndefined));
             }
 
             // Handle multiplicity arguments: Type<Arg|*>
@@ -1840,12 +1835,12 @@ public class M3ProtocolBuilder
         else if (ctx.CURLY_BRACKET_OPEN() != null)
         {
             // FunctionType: {ParamType1[m1], ParamType2[m2] -> ReturnType[m]}
-            gt._type(buildFunctionType(ctx, typeParamNames, multParamNames));
+            gt._type(buildFunctionType(ctx));
         }
         else if (ctx.GROUP_OPEN() != null && !ctx.columnType().isEmpty())
         {
             // RelationType: (col:String, col2:Integer)
-            gt._type(buildRelationType(ctx, typeParamNames, multParamNames));
+            gt._type(buildRelationType(ctx));
         }
 
         return gt;
@@ -1856,16 +1851,16 @@ public class M3ProtocolBuilder
      * Grammar: { functionTypePureType? (COMMA functionTypePureType)*
      * ARROW type multiplicity }
      */
-    private FunctionTypeImpl buildFunctionType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private FunctionTypeImpl buildFunctionType(final M3Parser.TypeContext ctx)
     {
         return new FunctionTypeImpl()
                 ._parameters(
                         ListAdapter.adapt(ctx.functionTypePureType())
                                 .collect(paramCtx -> new VariableExpressionImpl()
-                                        ._genericType(buildGenericType(paramCtx.type(), typeParamNames, multParamNames))
-                                        ._multiplicity(parseMultiplicity(paramCtx.multiplicity().getText(), multParamNames))))
-                ._returnType(buildGenericType(ctx.type(), typeParamNames, multParamNames))
-                ._returnMultiplicity(parseMultiplicity(ctx.multiplicity().getText(), multParamNames));
+                                        ._genericType(buildGenericType(paramCtx.type()))
+                                        ._multiplicity(parseMultiplicity(paramCtx.multiplicity().getText()))))
+                ._returnType(buildGenericType(ctx.type()))
+                ._returnMultiplicity(parseMultiplicity(ctx.multiplicity().getText()));
     }
 
     /**
@@ -1873,7 +1868,7 @@ public class M3ProtocolBuilder
      * Grammar: ( columnType (COMMA columnType)* )
      * columnType: mayColumnName COLON mayColumnType multiplicity?
      */
-    private RelationTypeImpl buildRelationType(final M3Parser.TypeContext ctx, final Set<String> typeParamNames, final Set<String> multParamNames)
+    private RelationTypeImpl buildRelationType(final M3Parser.TypeContext ctx)
     {
         return new RelationTypeImpl()
                 ._columns(ListAdapter.adapt(ctx.columnType())
@@ -1900,13 +1895,13 @@ public class M3ProtocolBuilder
                             // Column type
                             if (colCtx.mayColumnType() != null && colCtx.mayColumnType().type() != null)
                             {
-                                col._genericType(buildGenericType(colCtx.mayColumnType().type(), typeParamNames));
+                                col._genericType(buildGenericType(colCtx.mayColumnType().type()));
                             }
 
                             // Column multiplicity (optional)
                             if (colCtx.multiplicity() != null)
                             {
-                                col._multiplicity(parseMultiplicity(colCtx.multiplicity().getText(), multParamNames));
+                                col._multiplicity(parseMultiplicity(colCtx.multiplicity().getText()));
                             }
 
                             return col._p_sourceInformation(buildSourceInfo(colCtx));

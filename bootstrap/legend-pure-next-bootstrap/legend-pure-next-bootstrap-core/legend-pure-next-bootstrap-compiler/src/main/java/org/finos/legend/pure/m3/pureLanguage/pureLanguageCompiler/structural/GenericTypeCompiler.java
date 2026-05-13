@@ -86,6 +86,23 @@ public final class GenericTypeCompiler
                     yield _GenericType.buildUserDefinedGenericType(resolveOrCompileTypeParameter(grammarTP, context, model), model);
                 }
 
+                // Scope-aware Type_Pointer resolution: if the pointer's value matches
+                // a type parameter in scope, promote it to TypeParameter. This lets
+                // the parser stay scope-free — it always emits Type_Pointer and the
+                // compiler disambiguates here. Symmetric to compiler-pure.
+                if (gtv._type() instanceof Type_Pointer asPtr)
+                {
+                    PureLanguageCompilerContext plcc = context.compilerContextExtensions(PureLanguageCompilerContext.class);
+                    if (plcc != null)
+                    {
+                        TypeParameter scoped = plcc.lookupTypeParameter(asPtr._value());
+                        if (scoped != null)
+                        {
+                            yield _GenericType.buildUserDefinedGenericType(scoped, model);
+                        }
+                    }
+                }
+
                 Type rawType = resolveType(gtv._type(), imports, model, context);
                 if (rawType == null)
                 {

@@ -64,34 +64,51 @@ function meta::pure::compiler::structural::genericTypeCompiler::compileGenericTy
     let protocolType = $protocolGT.type->toOne();
     let result = $protocolType->match([
         p:meta::pure::protocol::grammar::type::Type_Pointer[1] |
-            let allMatches = $context->resolveAllElements($p.value);
-            let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
-            let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
-            let siCtx = if($p.p_sourceInformation->isNotEmpty(),
-                | formatSourceInfo($p.p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
-                | ''
+            // Scope-aware resolution: if the pointer's value matches a type
+            // parameter in scope (local or inherited from the owning class /
+            // function), promote it to a TypeParameter. This lets the parser
+            // stay scope-free — it always emits Type_Pointer and the compiler
+            // disambiguates here. Mirrors the resolution Java's GenericTypeCompiler
+            // does for the symmetric case.
+            let asTypeParam = $typeParameters->filter(tp | $tp.name == $p.value);
+            let asInheritedTypeParam = if($asTypeParam->isNotEmpty(),
+                | $asTypeParam,
+                | $context.ownerTypeParams->filter(tp | $tp.name == $p.value)
             );
-            if($allMatches->size() > 1,
-                | let errorMsg = 'The element \'' + $p.value + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
-                  ^CompilerResult<GenericType>(
-                      value = buildUserDefinedGenericType(Any),
-                      context = ^$context(errors += $errorMsg)
-                  );,
-                | let resolvedOpt = $context->resolveElement($p.value);
-                  let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
-                      | $context->resolveElement($packagePath + '::' + $p.value),
-                      | $resolvedOpt
+            if($asInheritedTypeParam->isNotEmpty(),
+                | ^CompilerResult<GenericType>(
+                      value = buildUserDefinedGenericType($asInheritedTypeParam->toOne()),
+                      context = $context
+                  ),
+                | let allMatches = $context->resolveAllElements($p.value);
+                  let elemCtx = if($elementContext->length() > 0, | ' in ' + $elementContext, | '');
+                  let ownerCtx = if($ownerContext->length() > 0, | ' in ' + $ownerContext, | '');
+                  let siCtx = if($p.p_sourceInformation->isNotEmpty(),
+                      | formatSourceInfo($p.p_sourceInformation->cast(@meta::pure::protocol::grammar::SourceInformation), $context),
+                      | ''
                   );
-                  if($resolvedOptWithPackage->isEmpty(),
-                      | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+                  if($allMatches->size() > 1,
+                      | let errorMsg = 'The element \'' + $p.value + '\' is ambiguous, found in multiple imports: ' + $allMatches->map(m | '\'' + $m + '\'')->joinStrings(', ') + $elemCtx + $ownerCtx + $siCtx;
                         ^CompilerResult<GenericType>(
                             value = buildUserDefinedGenericType(Any),
                             context = ^$context(errors += $errorMsg)
                         );,
-                      | ^CompilerResult<GenericType>(
-                            value = buildUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)),
-                            context = $context
-                        )
+                      | let resolvedOpt = $context->resolveElement($p.value);
+                        let resolvedOptWithPackage = if($resolvedOpt->isEmpty(),
+                            | $context->resolveElement($packagePath + '::' + $p.value),
+                            | $resolvedOpt
+                        );
+                        if($resolvedOptWithPackage->isEmpty(),
+                            | let errorMsg = 'The type \'' + $p.value + '\' can\'t be found' + $elemCtx + $ownerCtx + $siCtx;
+                              ^CompilerResult<GenericType>(
+                                  value = buildUserDefinedGenericType(Any),
+                                  context = ^$context(errors += $errorMsg)
+                              );,
+                            | ^CompilerResult<GenericType>(
+                                  value = buildUserDefinedGenericType($resolvedOptWithPackage->toOne()->cast(@Type)),
+                                  context = $context
+                              )
+                        );
                   );
             );,
         t:meta::pure::protocol::grammar::type::generics::TypeParameter[1] |

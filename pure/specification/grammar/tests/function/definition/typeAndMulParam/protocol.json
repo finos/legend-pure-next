@@ -46,8 +46,15 @@
             "genericType" : {
               "_type" : "UserDefinedGenericType",
               "type" : {
-                "_type" : "TypeParameter",
-                "name" : "T"
+                "_type" : "Type_Pointer",
+                "p_sourceInformation" : {
+                  "_type" : "SourceInformation",
+                  "endColumn" : 16,
+                  "endLine" : 4,
+                  "startColumn" : 16,
+                  "startLine" : 4
+                },
+                "value" : "T"
               }
             },
             "multiplicity" : {
@@ -101,8 +108,15 @@
         "genericType" : {
           "_type" : "UserDefinedGenericType",
           "type" : {
-            "_type" : "TypeParameter",
-            "name" : "T"
+            "_type" : "Type_Pointer",
+            "p_sourceInformation" : {
+              "_type" : "SourceInformation",
+              "endColumn" : 44,
+              "endLine" : 2,
+              "startColumn" : 44,
+              "startLine" : 2
+            },
+            "value" : "T"
           }
         },
         "multiplicity" : {
@@ -121,8 +135,15 @@
       "returnGenericType" : {
         "_type" : "UserDefinedGenericType",
         "type" : {
-          "_type" : "TypeParameter",
-          "name" : "T"
+          "_type" : "Type_Pointer",
+          "p_sourceInformation" : {
+            "_type" : "SourceInformation",
+            "endColumn" : 51,
+            "endLine" : 2,
+            "startColumn" : 51,
+            "startLine" : 2
+          },
+          "value" : "T"
         }
       },
       "returnMultiplicity" : {
