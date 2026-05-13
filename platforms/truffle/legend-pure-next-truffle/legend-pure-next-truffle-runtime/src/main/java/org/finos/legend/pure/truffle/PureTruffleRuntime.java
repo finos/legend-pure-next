@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle;
 
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.nodes.RootNode;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
@@ -90,7 +89,13 @@ public final class PureTruffleRuntime
                     .err(new PrintStream(graalLog, true, StandardCharsets.UTF_8))
                     .option("engine.TraceCompilation", "true")
                     .option("engine.WarnInterpreterOnly", "false")
-                    .option("engine.CompilationFailureAction", "Silent");
+                    .option("engine.CompilationFailureAction", "Silent")
+                    // Lambda-body inlining makes some parent FDs into large
+                    // compilation units; default budgets cause PermanentBailout
+                    // ("Too deep inlining") on hot paths. Bump.
+                    .option("compiler.InliningExpansionBudget", "100000")
+                    .option("compiler.InliningInliningBudget", "100000")
+                    .option("compiler.MaximumGraalGraphSize", "300000");
             // Instrument options (cpusampler.*, pureprofiler.*) and explicit
             // engine.* overrides must go on the Engine, not the Context — when
             // a Context shares an Engine, instrument-scope options can only
@@ -251,8 +256,40 @@ public final class PureTruffleRuntime
             return this;
         }
 
+        /**
+         * Force Graal to compile every reached CallTarget on first invocation
+         * (no warm-up threshold). Sets {@code engine.CompileImmediately=true}.
+         *
+         * <p>Use this in functional tests so the graalCompilationFailures
+         * tripwire sees a compilation event for every Pure function the test
+         * suite touches — without it, single-call paths stay in the interpreter
+         * and any inlining bailout in them slips by silently. Off by default
+         * in production runs (CLI compile/execute) where it would multiply
+         * startup cost.</p>
+         *
+         * <p>Explicit calls override the {@code pure.truffle.compileImmediately}
+         * system-property default. Pass {@code false} from benchmarks to keep
+         * measuring steady-state warm wall regardless of the property.</p>
+         */
+        public Builder withCompileImmediately(boolean enabled)
+        {
+            this.polyglotOptions.put("engine.CompileImmediately", String.valueOf(enabled));
+            return this;
+        }
+
         public PureTruffleRuntime build()
         {
+            // System-property default: surefire's argLine sets this so every
+            // test that drives PureTruffleRuntime gets aggressive JIT
+            // automatically. Explicit withCompileImmediately(...) calls win.
+            if (!polyglotOptions.containsKey("engine.CompileImmediately"))
+            {
+                String prop = System.getProperty("pure.truffle.compileImmediately");
+                if (prop != null)
+                {
+                    polyglotOptions.put("engine.CompileImmediately", prop);
+                }
+            }
             return new PureTruffleRuntime(resolver, parserExtensions, sourceRoots, polyglotOptions);
         }
     }
@@ -268,7 +305,7 @@ public final class PureTruffleRuntime
      * EvaluatorHolder for BridgedNativeCallNode fallback on remaining bridge
      * signatures.
      */
-    public Object execute(FunctionDefinition function, Object... args)
+    public Object execute(Object function, Object... args)
     {
         Object result = context.executeFunction(function, args);
         if (result instanceof PureSequence ps && ps.isEmpty())

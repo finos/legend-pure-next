@@ -1,86 +1,71 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+
 package org.finos.legend.pure.truffle.ast;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.nodes.Node;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder;
 
 /**
- * Pure {@code $obj.foo} property dispatch. All generated metamodel classes
- * (XImpl + XFlatBufferWrapper) implement {@link PropertyAccessor#readProperty}
- * — a single virtual call into a generated {@code switch} on the property
- * name. Replaces a previous {@link java.lang.invoke.MethodHandle}-based
- * lookup that was opaque to Graal partial evaluation and contributed to
- * "Too deep inlining" compilation failures during self-host.
+ * Helper for dynamic-name property reads ({@code execute(target, propName)} —
+ * propName from a runtime expression) and bound-name reads (literal name
+ * baked at AST-build time via {@link #PropertyReadNode(String)}).
  *
- * <p>Per-call-site monomorphic inline cache: the first execution stores the
- * receiver's exact class as {@link CompilationFinal}, so subsequent calls of
- * the same shape (the common case for {@code $obj.foo} where the static type
- * is fixed) let Graal devirtualize {@code readProperty} to the cached class's
- * implementation. With {@code propName} also constant at the AST level, the
- * generated {@code switch} inside that class collapses to a single
- * {@code _foo()} accessor call after partial evaluation.</p>
+ * <p>Post custom-storage pivot, reads go through {@link PureDynamicObject#readProperty}
+ * (slot lookup via {@code classInfo.slotIndex}) or the legacy
+ * {@link PropertyAccessor#readProperty} for non-PDO targets like
+ * {@link org.finos.legend.pure.truffle.ast.natives.collection.MapImpl}.</p>
  *
- * <p>Receivers that aren't a {@link PropertyAccessor} (e.g. {@code RawClosure}
- * wrapping a lambda) are unwrapped or fall through to {@link #ABSENT}; no
- * reflection path remains.</p>
+ * <p>{@link #ABSENT} is the sentinel returned by {@link #executeOrAbsent} for
+ * "no such property on this class" — callers that need to distinguish that
+ * from a present-but-null property use the {@code OrAbsent} variant.</p>
  */
 public final class PropertyReadNode extends Node
 {
-    /**
-     * Sentinel returned by {@link #executeOrAbsent} when the target has no
-     * such property at all (vs. has it and it's empty). Callers that need
-     * to distinguish those two cases — e.g. enumeration property access,
-     * which falls back to enum-value lookup only when the property doesn't
-     * exist — should use {@code executeOrAbsent} and check for this token.
-     */
     public static final Object ABSENT = PropertyAccessor.ABSENT;
 
-    /**
-     * Property name bound at AST-build time when the call site has a fixed
-     * name (the {@link RawPropertyAccessNode} case — every {@code $obj.foo}
-     * literal in Pure source). {@code @CompilationFinal} so PE bakes it in
-     * per-instance and the {@code readProperty(boundName)} switch in the
-     * generated {@code XImpl}/{@code XFlatBufferWrapper} folds to a direct
-     * typed accessor (e.g. {@code _foo()}). When {@code null}, the call
-     * site is dynamic (e.g. deep-path readers in {@code CopyWithKeysNode}
-     * or {@code ToStringNode} where the property is computed) and the
-     * back-compat {@code execute(target, propName)} overload uses the
-     * runtime argument.
-     */
     @CompilationFinal
     private final String boundName;
 
-    /**
-     * 2-entry inline cache. Compiler-pure property-read sites overwhelmingly
-     * see exactly two classes (the {@code XImpl} compiled in-memory and the
-     * {@code XFlatBufferWrapper} loaded from a PDB), so a single-entry cache
-     * misses ~half the time and the polymorphic fallthrough can't fold the
-     * readProperty(name) switch through interface dispatch. Two slots fit
-     * the common case exactly: at most two transferToInterpreterAndInvalidate
-     * deopts during warmup, then steady state with both classes hot.
-     *
-     * <p>An earlier 4-entry attempt regressed by ~5% — the extra deopts cost
-     * more than the higher hit rate saved. 2 is empirically the right shape
-     * for this workload's class diversity.</p>
-     */
-    @CompilationFinal
-    private Class<?> cachedClass;
-    @CompilationFinal
-    private Class<?> cachedClass2;
+    /** Slot index when {@link #boundName} is set — global, baked once and
+     *  valid for every PDO receiver. {@code -1} when not bound. */
+    private final int boundSlot;
 
     public PropertyReadNode()
     {
         this.boundName = null;
+        this.boundSlot = -1;
     }
 
     public PropertyReadNode(String propertyName)
     {
         this.boundName = propertyName;
+        this.boundSlot = PureClassRegistry.globalSlot(propertyName);
     }
 
+    /**
+     * Read returning {@link org.finos.legend.pure.truffle.types.PureSequence#EMPTY}
+     * for "not present" or "unset". Uses the blind-slot fast path: even when
+     * this receiver class doesn't declare the property, {@code slots[]} is
+     * either out-of-range (returns null → normalized to EMPTY) or holds
+     * null (unset → EMPTY) — both correct under "execute" semantics.
+     */
     public Object execute(Object target, String propName)
     {
+        if (boundName != null && target instanceof PureDynamicObject pdo)
+        {
+            Object v = pdo.readSlot(boundSlot);
+            return v == null ? org.finos.legend.pure.truffle.types.PureSequence.EMPTY : v;
+        }
         Object result = executeOrAbsent(target, propName);
         if (result == ABSENT || result == null)
         {
@@ -90,9 +75,12 @@ public final class PropertyReadNode extends Node
     }
 
     /**
-     * Like {@link #execute}, but returns {@link #ABSENT} when the target
-     * class has no getter for the property (rather than masking that as an
-     * empty sequence).
+     * Read returning {@link #ABSENT} for "property not declared by this
+     * receiver type". Callers (notably {@code RawPropertyAccessNode}'s
+     * Enumeration fallback) rely on ABSENT to distinguish "missing
+     * property" from "present but empty". A null slot is indistinguishable
+     * from a real EMPTY value here — must verify the receiver class
+     * actually declares the property via {@link PureDynamicObject#readProperty}.
      */
     public Object executeOrAbsent(Object target, String propName)
     {
@@ -103,48 +91,17 @@ public final class PropertyReadNode extends Node
         if (target instanceof RawClosure rc)
         {
             target = rc.lambda();
+            if (target == null) return ABSENT;
         }
-        // Prefer the bound name when present — guarantees PE sees a
-        // per-instance constant for the readProperty(name) switch even
-        // if the caller site doesn't propagate {@code propName} as a PE
-        // constant through the call boundary.
         String name = (boundName != null) ? boundName : propName;
-        Class<?> tc = target.getClass();
-        if (tc == cachedClass || tc == cachedClass2)
+        if (target instanceof PureDynamicObject pdo)
         {
-            // PE has both cached classes baked in via @CompilationFinal —
-            // the disjunction folds to a known-class check at each site,
-            // and the readProperty(name) switch reduces to the typed
-            // accessor for that class.
-            return ((PropertyAccessor) target).readProperty(name);
+            return pdo.readProperty(name);
         }
-        return cacheMissOrPoly(target, name);
-    }
-
-    private Object cacheMissOrPoly(Object target, String name)
-    {
-        if (cachedClass == null)
+        if (target instanceof PropertyAccessor pa)
         {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            if (target instanceof PropertyAccessor pa)
-            {
-                cachedClass = target.getClass();
-                return pa.readProperty(name);
-            }
-            return ABSENT;
+            return pa.readProperty(name);
         }
-        if (cachedClass2 == null)
-        {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            if (target instanceof PropertyAccessor pa)
-            {
-                cachedClass2 = target.getClass();
-                return pa.readProperty(name);
-            }
-            return ABSENT;
-        }
-        // Both slots filled with different classes — third+ class is fully
-        // polymorphic. PE can't fold readProperty switch here.
-        return target instanceof PropertyAccessor pa ? pa.readProperty(name) : ABSENT;
+        return ABSENT;
     }
 }

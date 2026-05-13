@@ -1,5 +1,5 @@
 ###Error
-No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/classTypeParam_E_wrongType 17:24-17:26)
+No matching function 'plus' found for argument types (String[1], Integer[1]) (at valueSpecification/functionExpression/functionApplication/generics/classTypeParam_E_wrongType 17:17-17:26)
 
 ###Pure
 Class MyClass<Z>

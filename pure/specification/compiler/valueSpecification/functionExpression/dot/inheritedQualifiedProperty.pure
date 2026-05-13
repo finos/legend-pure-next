@@ -21,7 +21,7 @@ function test::use():Any[*]
 ###CompiledGraph
 class test::SuperClass extends Any  ~Class<test::SuperClass>  @2:1-7:1
   qualifiedProperty greet(name:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @5:18-5:24
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @5:9-5:24
       AtomicValue  'Hello ' :@String@[1]  ~@AtomicValue@  @5:9-5:16
       Variable name :#String##[1]#  ~@VariableExpression@  @5:20-5:24
 

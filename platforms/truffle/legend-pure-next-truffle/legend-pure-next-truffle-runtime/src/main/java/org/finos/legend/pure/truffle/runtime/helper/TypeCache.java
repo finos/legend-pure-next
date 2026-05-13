@@ -14,13 +14,8 @@
 
 package org.finos.legend.pure.truffle.runtime.helper;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.extension.Stereotype;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleTypeCache;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.util.ArrayList;
@@ -56,6 +51,19 @@ import java.util.Set;
  */
 public final class TypeCache implements TruffleTypeCache
 {
+
+    private static final int SLOT_PROFILE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("profile");
+    private static final int SLOT_STEREOTYPES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("stereotypes");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
+    private static final int SLOT_GENERAL =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+    private static final int SLOT_NAME =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_PROPERTIES =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
+
     private static final String EQUALITY_PROFILE_PATH = "meta::pure::profiles::equality";
     private static final String EQUALITY_KEY_VALUE = "Key";
     private static final int MAX_GENERALIZATION_DEPTH = 64;
@@ -76,7 +84,7 @@ public final class TypeCache implements TruffleTypeCache
     // during warmup; under the previous synchronizedMap wrapper, every
     // read paid a monitor enter/exit (46 JFR samples = ~2.7% of warm CPU
     // on the metamodel_factories.pure self-host).
-    private volatile IdentityHashMap<Type, Entry> entries = new IdentityHashMap<>();
+    private volatile IdentityHashMap<Object, Entry> entries = new IdentityHashMap<>();
     private final Map<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     /**
      * Pre-built {@link java.util.function.Supplier} per Pure class path.
@@ -92,7 +100,7 @@ public final class TypeCache implements TruffleTypeCache
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public List<Type> linearization(Object type)
+    public List<Object> linearization(Object type)
     {
         return entryFor(type).linearization;
     }
@@ -106,7 +114,7 @@ public final class TypeCache implements TruffleTypeCache
 
     @Override
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    public Set<Type> ancestors(Object type)
+    public Set<Object> ancestors(Object type)
     {
         return entryFor(type).ancestors;
     }
@@ -165,22 +173,22 @@ public final class TypeCache implements TruffleTypeCache
 
     private Entry entryFor(Object type)
     {
-        if (!(type instanceof Type t))
+        if (type == null)
         {
             return EMPTY;
         }
         // Fast path — unsynchronized read of the volatile snapshot. Once
         // entries are populated during warmup, this is the only branch
         // hit and avoids the monitor enter/exit.
-        Entry hit = entries.get(t);
+        Entry hit = entries.get(type);
         if (hit != null)
         {
             return hit;
         }
-        return computeAndCache(t);
+        return computeAndCache(type);
     }
 
-    private synchronized Entry computeAndCache(Type t)
+    private synchronized Entry computeAndCache(Object t)
     {
         // Re-check inside the lock — another thread may have populated.
         Entry hit = entries.get(t);
@@ -189,27 +197,27 @@ public final class TypeCache implements TruffleTypeCache
             return hit;
         }
         Entry computed = compute(t);
-        IdentityHashMap<Type, Entry> next = new IdentityHashMap<>(entries);
+        IdentityHashMap<Object, Entry> next = new IdentityHashMap<>(entries);
         next.put(t, computed);
         entries = next;
         return computed;
     }
 
-    private static Entry compute(Type type)
+    private static Entry compute(Object type)
     {
-        List<Type> lin = new ArrayList<>();
+        List<Object> lin = new ArrayList<>();
         linearizeInto(type, lin);
         Set<String> keys = new LinkedHashSet<>();
-        if (type instanceof SimplePropertyOwner spo)
-        {
-            collectEqualityKeysInto(spo, keys, new LinkedHashSet<>(), 0);
-        }
+        // Type IS-A SimplePropertyOwner in Pure (Class, Association, etc.) —
+        // PureObj.read returns null for the absent slot when this isn't true,
+        // and collectEqualityKeysInto gracefully no-ops on a null _properties.
+        collectEqualityKeysInto(type, keys, new LinkedHashSet<>(), 0);
         // Identity-keyed set of ancestors for O(1) subtypeOf check. We can't
         // use HashSet (Type's structural equals/hashCode recurse through
         // generalisations and blow the stack on cyclic shapes); identity is
         // semantically correct here since top-level PDB types are singletons
         // per resolver.
-        Set<Type> ancestors = Collections.newSetFromMap(new IdentityHashMap<>(lin.size() * 2));
+        Set<Object> ancestors = Collections.newSetFromMap(new IdentityHashMap<>(lin.size() * 2));
         ancestors.addAll(lin);
         return new Entry(
                 List.copyOf(lin),
@@ -219,7 +227,7 @@ public final class TypeCache implements TruffleTypeCache
 
     // --- linearization ------------------------------------------------------
 
-    private static void linearizeInto(Type type, List<Type> out)
+    private static void linearizeInto(Object type, List<Object> out)
     {
         if (type == null)
         {
@@ -227,7 +235,7 @@ public final class TypeCache implements TruffleTypeCache
         }
         // Identity check — generated Type.equals walks the structure and
         // can recurse through cyclic generalisations (see entries field).
-        for (Type seen : out)
+        for (Object seen : out)
         {
             if (seen == type)
             {
@@ -235,14 +243,14 @@ public final class TypeCache implements TruffleTypeCache
             }
         }
         out.add(type);
-        Object gens = type._generalizations();
+        Object gens = PureObj.readBySlot(type, SLOT_GENERALIZATIONS);
         if (gens instanceof PureSequence seq)
         {
             for (Object gen : seq.toBoxedArray())
             {
-                if (gen instanceof Generalization g)
+                if (gen != null)
                 {
-                    Type superType = _GenericType.type(g._general());
+                    Object superType = _GenericType.type(PureObj.readBySlot(gen, SLOT_GENERAL));
                     linearizeInto(superType, out);
                 }
             }
@@ -251,7 +259,7 @@ public final class TypeCache implements TruffleTypeCache
 
     // --- equality keys ------------------------------------------------------
 
-    private static void collectEqualityKeysInto(SimplePropertyOwner owner, Set<String> keys,
+    private static void collectEqualityKeysInto(Object owner, Set<String> keys,
             Set<String> seenPropNames, int depth)
     {
         // Cycle/runaway guard — generalization chains are usually shallow but
@@ -261,17 +269,17 @@ public final class TypeCache implements TruffleTypeCache
         {
             return;
         }
-        PureSequence properties = owner._properties();
-        if (properties != null)
+        Object propsObj = PureObj.readBySlot(owner, SLOT_PROPERTIES);
+        if (propsObj instanceof PureSequence properties)
         {
-            for (Object p : properties.toBoxedArray())
+            for (Object prop : properties.toBoxedArray())
             {
-                if (!(p instanceof Property prop))
+                if (prop == null)
                 {
                     continue;
                 }
-                String propName = prop._name();
-                if (propName == null || !seenPropNames.add(propName))
+                Object nameObj = PureObj.readBySlot(prop, SLOT_NAME);
+                if (!(nameObj instanceof String propName) || !seenPropNames.add(propName))
                 {
                     continue;
                 }
@@ -281,35 +289,48 @@ public final class TypeCache implements TruffleTypeCache
                 }
             }
         }
-        if (owner instanceof Type type && type._generalizations() != null)
+        Object gensObj = PureObj.readBySlot(owner, SLOT_GENERALIZATIONS);
+        if (gensObj instanceof PureSequence gens)
         {
-            for (Object gen : type._generalizations().toBoxedArray())
+            for (Object gen : gens.toBoxedArray())
             {
-                if (gen instanceof Generalization g && g._general() != null)
+                if (gen == null)
                 {
-                    Type superType = _GenericType.type(g._general());
-                    if (superType instanceof SimplePropertyOwner superOwner)
-                    {
-                        collectEqualityKeysInto(superOwner, keys, seenPropNames, depth + 1);
-                    }
+                    continue;
+                }
+                Object general = PureObj.readBySlot(gen, SLOT_GENERAL);
+                if (general == null)
+                {
+                    continue;
+                }
+                Object superType = _GenericType.type(general);
+                if (superType != null)
+                {
+                    collectEqualityKeysInto(superType, keys, seenPropNames, depth + 1);
                 }
             }
         }
     }
 
-    private static boolean hasEqualityKeyStereotype(Property prop)
+    private static boolean hasEqualityKeyStereotype(Object prop)
     {
-        PureSequence stereotypes = prop._stereotypes();
-        if (stereotypes == null)
+        Object stereotypesObj = PureObj.readBySlot(prop, SLOT_STEREOTYPES);
+        if (!(stereotypesObj instanceof PureSequence stereotypes))
         {
             return false;
         }
-        for (Object st : stereotypes.toBoxedArray())
+        for (Object ster : stereotypes.toBoxedArray())
         {
-            if (st instanceof Stereotype ster
-                    && EQUALITY_KEY_VALUE.equals(ster._value())
-                    && ster._profile() instanceof PackageableElement profile
-                    && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
+            if (ster == null)
+            {
+                continue;
+            }
+            if (!EQUALITY_KEY_VALUE.equals(PureObj.readBySlot(ster, SLOT_VALUE)))
+            {
+                continue;
+            }
+            Object profile = PureObj.readBySlot(ster, SLOT_PROFILE);
+            if (profile != null && EQUALITY_PROFILE_PATH.equals(_PackageableElement.path(profile)))
             {
                 return true;
             }
@@ -317,5 +338,5 @@ public final class TypeCache implements TruffleTypeCache
         return false;
     }
 
-    private record Entry(List<Type> linearization, Set<String> equalityKeys, Set<Type> ancestors) {}
+    private record Entry(List<Object> linearization, Set<String> equalityKeys, Set<Object> ancestors) {}
 }

@@ -82,6 +82,11 @@ test: test-java stage build-compiler-pdb test-pure-compiler
 # Build with surefire-driven Java unit tests (covers Pure runTests / PCT).
 test-java: (_mvn "with-tests")
 
+# Print silencing for tests is per-test-body now: the Pure test runner wraps
+# each <<test.Test>> invocation in withSilencedPrint, which flips a
+# thread-local around the body. Runner-side prints (tickProgress, etc.)
+# remain visible.
+
 # Standalone Pure runTests over meta::pure::functions (also covered by `test-java` via TestPureExecution; assumes `just build` was run).
 test-pure-testFunctions:
     @{{banner}} '[pure→bootstrap]' 'runTests over meta::pure::functions (assumes `just build` was run)'

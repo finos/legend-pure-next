@@ -2,7 +2,6 @@ package org.finos.legend.pure.truffle.ast;
 
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +23,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class PureSourceHelper
 {
+
+    private static final int SLOT_END_COLUMN = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("endColumn");
+    private static final int SLOT_END_LINE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("endLine");
+    private static final int SLOT_SOURCE_ID = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceId");
+    private static final int SLOT_SOURCE_INFORMATION = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("sourceInformation");
+    private static final int SLOT_START_COLUMN = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startColumn");
+    private static final int SLOT_START_LINE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("startLine");
     private static final ConcurrentHashMap<String, Source> SOURCE_CACHE = new ConcurrentHashMap<>();
     private static final List<Path> SOURCE_ROOTS = new CopyOnWriteArrayList<>();
 
@@ -57,17 +63,25 @@ public final class PureSourceHelper
      * Create a SourceSection from a PDB SourceInformation.
      * Returns null if sourceInfo is null or lacks required fields.
      */
-    public static SourceSection createSourceSection(SourceInformation si)
+    public static SourceSection createSourceSection(Object si)
     {
-        if (si == null || si._sourceId() == null || si._startLine() == null)
+        if (si == null)
         {
             return null;
         }
-        String sourceId = si._sourceId();
-        int startLine = si._startLine().intValue();
-        int startCol = si._startColumn() != null ? si._startColumn().intValue() : 1;
-        int endLine = si._endLine() != null ? si._endLine().intValue() : startLine;
-        int endCol = si._endColumn() != null ? si._endColumn().intValue() : startCol;
+        Object sourceIdObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_SOURCE_ID);
+        Object startLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_LINE);
+        if (!(sourceIdObj instanceof String sourceId) || !(startLineObj instanceof Number startLineNum))
+        {
+            return null;
+        }
+        int startLine = startLineNum.intValue();
+        Object startColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_START_COLUMN);
+        int startCol = startColObj instanceof Number n ? n.intValue() : 1;
+        Object endLineObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_END_LINE);
+        int endLine = endLineObj instanceof Number n ? n.intValue() : startLine;
+        Object endColObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(si, SLOT_END_COLUMN);
+        int endCol = endColObj instanceof Number n ? n.intValue() : startCol;
 
         Source source = SOURCE_CACHE.computeIfAbsent(sourceId, PureSourceHelper::buildSource);
 
@@ -117,20 +131,25 @@ public final class PureSourceHelper
      */
     public static <T extends PureNode> T withSource(T node, Object vs)
     {
-        if (vs instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.ValueSpecification vsTyped)
+        if (vs == null)
         {
-            try
+            return node;
+        }
+        try
+        {
+            Object si = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(vs, SLOT_SOURCE_INFORMATION);
+            if (si != null)
             {
-                SourceSection section = createSourceSection(vsTyped._sourceInformation());
+                SourceSection section = createSourceSection(si);
                 if (section != null)
                 {
                     node.setPureSourceSection(section);
                 }
             }
-            catch (Exception ignored)
-            {
-                // SourceInformation may not be available on all VS types
-            }
+        }
+        catch (Exception ignored)
+        {
+            // SourceInformation may not be available on all VS types
         }
         return node;
     }

@@ -754,6 +754,7 @@
             <div class="result-panel" id="resultPanel">
                 <div class="result-tabs">
                     <button id="bottomTabOutput" class="bottom-tab active" onclick="switchBottomTab('output')"><span class="icon">◉</span> Output <span class="result-badge" id="resultBadge" style="display:none"></span></button>
+                    <button id="bottomTabCompile" class="bottom-tab" onclick="switchBottomTab('compile')"><span class="icon">⚙</span> Compile</button>
                     <button id="bottomTabTests" class="bottom-tab" onclick="switchBottomTab('tests')"><span class="icon">✔</span> Tests</button>
                     <button id="bottomTabSearch" class="bottom-tab" onclick="switchBottomTab('search')"><span class="icon">⌕</span> Search</button>
                 </div>
@@ -763,7 +764,13 @@
                         <span class="placeholder">Press F9 or click Run to compile and execute go():Any[*]</span>
                     </div>
                 </div>
-                
+
+                <div class="bottom-content-panel" id="bottomPanelCompile">
+                    <div class="result-content" id="compileContent">
+                        <span class="placeholder">Compile statistics appear here after Run.</span>
+                    </div>
+                </div>
+
                 <div class="bottom-content-panel" id="bottomPanelTests">
                     <div class="test-split-view">
                         <div class="test-tree-side">
@@ -918,6 +925,12 @@
         // Bottom Tab Switching
         // =================================================================
         function switchBottomTab(tab) {
+            // The Compile tab is a sibling of Output / Tests / Search and is
+            // populated from pure/executeResult's compileStats payload.
+            const tabBtn = document.getElementById('bottomTabCompile');
+            if (tabBtn) tabBtn.classList.toggle('active', tab === 'compile');
+            const tabPanel = document.getElementById('bottomPanelCompile');
+            if (tabPanel) tabPanel.classList.toggle('active', tab === 'compile');
             document.getElementById('bottomTabOutput').classList.toggle('active', tab === 'output');
             document.getElementById('bottomTabTests').classList.toggle('active', tab === 'tests');
             document.getElementById('bottomTabSearch').classList.toggle('active', tab === 'search');
@@ -2042,6 +2055,40 @@
 
         function handleExecuteResult(params) {
             showResult(params.result, params.isError || params.error);
+            renderCompileStats(params.compileStats);
+        }
+
+        function renderCompileStats(stats) {
+            const el = document.getElementById('compileContent');
+            if (!el) return;
+            if (!stats) {
+                el.innerHTML = '<span class="placeholder">No compile stats reported.</span>';
+                return;
+            }
+            const lines = [];
+            lines.push('  Compilation Statistics');
+            lines.push('    Total time:            ' + stats.totalMillis + ' ms');
+            lines.push('      Parsing:              ' + stats.parsingMillis + ' ms');
+            lines.push('      First pass:           ' + stats.firstPassMillis + ' ms');
+            lines.push('      Second pass:          ' + stats.secondPassMillis + ' ms');
+            lines.push('      Third pass:           ' + stats.thirdPassMillis + ' ms');
+            lines.push('    Elements:                ' + stats.elementCount);
+            lines.push('    Source files:            ' + stats.sourceFileCount);
+            lines.push('    Inference rollbacks:     ' + stats.inferenceRollbackCount);
+            lines.push('    Candidate evaluations:   ' + stats.candidateEvaluationCount);
+            const elements = (stats.elementStatistics || []).slice();
+            if (elements.length > 0) {
+                elements.sort((a, b) => b.totalMillis - a.totalMillis);
+                lines.push('    Top 10 Elements by Compilation Time');
+                elements.slice(0, 10).forEach(e => {
+                    const ms = String(e.totalMillis).padStart(7, ' ');
+                    const type = (e.elementType || '').padEnd(20, ' ');
+                    const rb = String(e.inferenceRollbacks || 0).padEnd(6, ' ');
+                    const cand = String(e.candidateEvaluations || 0).padEnd(6, ' ');
+                    lines.push(`      ${ms} ms  ${type}  rollbacks=${rb} candidates=${cand}  ${e.elementPath || ''}`);
+                });
+            }
+            el.innerHTML = '<pre style="margin:0;padding:8px 12px;font-family:monospace;font-size:12px;white-space:pre;">' + escapeHtml(lines.join('\n')) + '</pre>';
         }
 
         let pendingJumpLine = null;

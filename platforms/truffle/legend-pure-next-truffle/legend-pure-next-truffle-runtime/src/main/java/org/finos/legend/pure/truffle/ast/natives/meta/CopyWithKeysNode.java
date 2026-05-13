@@ -17,10 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
@@ -34,6 +30,21 @@ import org.finos.legend.pure.truffle.types.PureSequence;
 @NodeInfo(shortName = "copyWithKeys")
 public final class CopyWithKeysNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_DEFAULT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("defaultValue");
+    private static final int SLOT_EXPRESSION_SEQUENCE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("expressionSequence");
+    private static final int SLOT_GENERAL = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("general");
+    private static final int SLOT_GENERALIZATIONS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("generalizations");
+    private static final int SLOT_MULTIPLICITY_ARGUMENTS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicityArguments");
+    private static final int SLOT_MULTIPLICITY_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("multiplicityParameters");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_OWNER = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("owner");
+    private static final int SLOT_PROPERTIES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("properties");
+    private static final int SLOT_PROPERTIES_FROM_ASSOCIATIONS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("propertiesFromAssociations");
+    private static final int SLOT_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type");
+    private static final int SLOT_TYPE_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("typeParameters");
+    private static final int SLOT_VALUE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("value");
     @CompilationFinal
     private final String signature;
 
@@ -86,68 +97,23 @@ public final class CopyWithKeysNode extends PureNode
      * concurrent compile threads don't race on the put; the read path is
      * a plain {@code get} and dominates by orders of magnitude.
      */
-    // Volatile copy-on-write IdentityHashMap. See _PackageableElement.PATH_CACHE
-    // for the rationale: synchronizedMap.get goes through a monitor; a volatile
-    // snapshot lets reads (the hot path) skip the monitor entirely.
-    private static volatile java.util.IdentityHashMap<Class<?>, String> CLASS_PATH_CACHE =
-            new java.util.IdentityHashMap<>();
-    private static final Object CLASS_PATH_CACHE_LOCK = new Object();
-
     /**
-     * Cache of {@code classPath.replace("org::finos::legend::pure::truffle::pdb::", "")}
-     * results. Called from {@link #finalizeCopy} on every {@code ^X(...)}
-     * operation; the input is the same per receiver class so it's worth
-     * memoising. JFR identified 19 samples on this {@code String.replace}
-     * after the {@code classPathFromInstance} cache landed — same shape
-     * of fix.
+     * Resolve the Pure path of a copy source. PDOs carry it in the Shape's
+     * dynamicType; the legacy non-PDO {@link PropertyAccessor} fallback walks
+     * {@code Class.getInterfaces()[0]} (only reached for hand-written collection
+     * types like {@link org.finos.legend.pure.truffle.ast.natives.collection.MapImpl}
+     * — never for Pure metamodel instances post-PDO-migration).
      */
-    private static volatile java.util.IdentityHashMap<String, String> PURE_CLASS_PATH_CACHE =
-            new java.util.IdentityHashMap<>();
-    private static final Object PURE_CLASS_PATH_CACHE_LOCK = new Object();
-    private static final String PDB_PREFIX = "org::finos::legend::pure::truffle::pdb::";
-
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String stripPdbPrefix(String classPath)
-    {
-        // Identity-keyed cache works because classPath comes from the
-        // (interned) classPathFromInstance cache — same Class always
-        // produces the same String reference on subsequent reads.
-        String cached = PURE_CLASS_PATH_CACHE.get(classPath);
-        if (cached != null) return cached;
-        String result = classPath.startsWith(PDB_PREFIX) ? classPath.substring(PDB_PREFIX.length()) : classPath;
-        synchronized (PURE_CLASS_PATH_CACHE_LOCK)
-        {
-            if (!PURE_CLASS_PATH_CACHE.containsKey(classPath))
-            {
-                java.util.IdentityHashMap<String, String> next = new java.util.IdentityHashMap<>(PURE_CLASS_PATH_CACHE);
-                next.put(classPath, result);
-                PURE_CLASS_PATH_CACHE = next;
-            }
-        }
-        return result;
-    }
-
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String classPathFromInstance(Object instance)
     {
-        Class<?> cls = instance.getClass();
-        String cached = CLASS_PATH_CACHE.get(cls);
-        if (cached != null) return cached == ABSENT ? null : cached;
-        Class<?>[] interfaces = cls.getInterfaces();
-        String result = interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
-        synchronized (CLASS_PATH_CACHE_LOCK)
+        if (instance instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)
         {
-            if (!CLASS_PATH_CACHE.containsKey(cls))
-            {
-                java.util.IdentityHashMap<Class<?>, String> next = new java.util.IdentityHashMap<>(CLASS_PATH_CACHE);
-                next.put(cls, result == null ? ABSENT : result);
-                CLASS_PATH_CACHE = next;
-            }
+            return pdo.classInfo.purePath;
         }
-        return result;
+        Class<?>[] interfaces = instance.getClass().getInterfaces();
+        return interfaces.length > 0 ? interfaces[0].getName().replace(".", "::") : null;
     }
-
-    private static final String ABSENT = "<no-interface>";
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static String headBeforeDot(String s)
@@ -183,22 +149,22 @@ public final class CopyWithKeysNode extends PureNode
                 }
             }
         }
-        String pureClassPath = stripPdbPrefix(classPath);
         java.util.Set<String> keyPropNames = new java.util.HashSet<>();
         for (var kv : keyValues) keyPropNames.add(kv.getKey());
-        addCopiedAssociationProps(copy, pureClassPath, keyPropNames, keyValues, eval);
+        addCopiedAssociationProps(copy, classPath, keyPropNames, keyValues, eval);
 
-        NewWithKeysNode.setReverseAssociationPointers(copy, pureClassPath, keyValues, eval, appendReader, appendWriter);
+        NewWithKeysNode.setReverseAssociationPointers(copy, classPath, keyValues, eval, appendReader, appendWriter);
 
         for (String topProp : topLevelDeepProps)
         {
             Object subCopy = subCopyReader.execute(copy, topProp);
-            if (subCopy instanceof Any subAny && subAny._classifierGenericType() != null)
+            Object subCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(subCopy, SLOT_CLASSIFIER_GENERIC_TYPE);
+            if (subCgt != null)
             {
-                var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subAny._classifierGenericType());
-                if (subType instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement subPe)
+                var subType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(subCgt);
+                if (subType != null)
                 {
-                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subPe);
+                    String subPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(subType);
                     java.util.List<java.util.Map.Entry<String, Object>> subKvs = new java.util.ArrayList<>();
                     addCopiedAssociationProps(subCopy, subPath, new java.util.HashSet<>(), subKvs, eval);
                     NewWithKeysNode.setReverseAssociationPointers(subCopy, subPath, subKvs, eval, appendReader, appendWriter);
@@ -216,56 +182,33 @@ public final class CopyWithKeysNode extends PureNode
         // Step 1: Evaluate the source object (first arg) — pre-compiled as child node
         Object original = sourceNode.executeGeneric(frame);
 
-        String classPath;
-        GenericTypeValue cgt;
-        if (original instanceof PackageableElement pe)
+        if (original == null)
         {
-            cgt = pe._classifierGenericType();
-            classPath = classPathFromInstance(pe);
+            throw new RuntimeException("Cannot copy: null");
         }
-        else if (original instanceof Any any)
-        {
-            cgt = any._classifierGenericType();
-            classPath = classPathFromInstance(any);
-        }
-        else
-        {
-            throw new RuntimeException("Cannot copy: " + (original == null ? "null" : original.getClass().getName()));
-        }
-
+        // Every Pure metamodel value is an Any. Single PureObj-driven path
+        // works for both legacy XImpl and the future PureDynamicObject.
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(original, SLOT_CLASSIFIER_GENERIC_TYPE);
+        String classPath = classPathFromInstance(original);
         if ((classPath == null || classPath.isEmpty()) && cgt != null)
         {
             classPath = resolveClassPathFromCGT(cgt);
         }
 
-        // Step 2: Create the copy via the typed {@code _copy()} method that
-        // codegen emits on every metamodel impl (declared on {@link Any}).
-        // Replaces the previous {@code createInstance + reflective property
-        // copy} sequence — the JFR profile showed that reflection at ~75% of
-        // self-compile CPU because the inner {@code Class.getMethods()} walk
-        // is O(N) per copy and copies the method array defensively each time.
-        Object copy = (original instanceof Any anyOrig)
-                ? anyOrig._copy()
-                : org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
-        if (!(original instanceof Any))
-        {
-            // Legacy fallback for non-Any originals: keep the reflective
-            // path. Should be unreachable in practice — every metamodel
-            // value is Any.
-            shallowCopyProperties(original, copy, cgt);
-        }
-        GenericTypeValue copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
+        // Post-flip: original is always a PureDynamicObject. The typed
+        // `Any._copy()` fast path was a relic of the pre-flip world; no
+        // user-visible value is a typed XImpl anymore.
+        Object copy = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(classPath, getResolver());
+        shallowCopyProperties(original, copy, cgt);
+        Object copyCgt = fixSelfReferentialCGT(cgt, original, copy, eval.resolver());
         // Platform-level canonical anchor: preserve canonical GenericType_<TypeName>
         // UDPGT-PE references through copy operations. Symmetric to NewWithKeysNode's
         // preferCanonicalAnchor — without this, copies of canonical-classified
         // values can lose their canonical reference if any earlier step diverged.
         if (copyCgt != null)
         {
-            copyCgt = NewWithKeysNode.preferCanonicalAnchorPublic(copyCgt, eval.resolver());
-        }
-        if (copy instanceof Any anyC && copyCgt != null)
-        {
-            anyC._classifierGenericType(copyCgt);
+            copyCgt = NewWithKeysNode.preferCanonicalAnchor(copyCgt, eval.resolver());
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(copy, "classifierGenericType", copyCgt);
         }
         // Fix TypeParameter/MultiplicityParameter owners to point to the copy
         fixTypeParameterOwners(copy);
@@ -313,12 +256,12 @@ public final class CopyWithKeysNode extends PureNode
      * Resolve a class path from a truffle GenericTypeValue.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static String resolveClassPathFromCGT(GenericTypeValue cgt)
+    private static String resolveClassPathFromCGT(Object cgt)
     {
-        Type rawType = _GenericType.type(cgt);
-        if (rawType instanceof PackageableElement pe)
+        Object rawType = _GenericType.type(cgt);
+        if (rawType != null)
         {
-            String path = _PackageableElement.path(pe);
+            String path = _PackageableElement.path(rawType);
             if (path != null && !path.isEmpty())
             {
                 return path;
@@ -332,10 +275,10 @@ public final class CopyWithKeysNode extends PureNode
      * Copies all _xxx() getter values to the corresponding _xxx(value) setter.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void shallowCopyProperties(Object source, Object target, GenericTypeValue cgt)
+    private static void shallowCopyProperties(Object source, Object target, Object cgt)
     {
         // Use the truffle type to gather property names, then copy via reflection
-        Type sourceType = cgt != null ? _GenericType.type(cgt) : null;
+        Object sourceType = cgt != null ? _GenericType.type(cgt) : null;
         if (sourceType == null)
         {
             // Fallback: try interface methods directly
@@ -353,7 +296,7 @@ public final class CopyWithKeysNode extends PureNode
      * every copy was wasted work.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.List<String> collectAllPropertyNames(Type type)
+    private static java.util.List<String> collectAllPropertyNames(Object type)
     {
         java.util.List<String> cached = PROPERTY_NAMES_CACHE.get(type);
         if (cached != null)
@@ -369,7 +312,7 @@ public final class CopyWithKeysNode extends PureNode
         {
             if (!PROPERTY_NAMES_CACHE.containsKey(type))
             {
-                java.util.IdentityHashMap<Type, java.util.List<String>> next =
+                java.util.IdentityHashMap<Object, java.util.List<String>> next =
                         new java.util.IdentityHashMap<>(PROPERTY_NAMES_CACHE);
                 next.put(type, result);
                 PROPERTY_NAMES_CACHE = next;
@@ -385,35 +328,37 @@ public final class CopyWithKeysNode extends PureNode
      * structural equals on generated metamodel types can recurse through
      * cyclic generalisations and blow the stack.
      */
-    private static volatile java.util.IdentityHashMap<Type, java.util.List<String>> PROPERTY_NAMES_CACHE =
+    private static volatile java.util.IdentityHashMap<Object, java.util.List<String>> PROPERTY_NAMES_CACHE =
             new java.util.IdentityHashMap<>();
     private static final Object PROPERTY_NAMES_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void collectPropertyNamesRecursive(Type type, java.util.List<String> names,
+    private static void collectPropertyNamesRecursive(Object type, java.util.List<String> names,
                                                        java.util.Set<String> seen,
                                                        java.util.Set<String> visited)
     {
-        String typeId = (type instanceof PackageableElement pe)
-                ? _PackageableElement.path(pe)
-                : String.valueOf(System.identityHashCode(type));
-        if (typeId == null || !visited.add(typeId))
+        String typeId = type != null
+                ? _PackageableElement.path(type)
+                : null;
+        if (typeId == null) typeId = String.valueOf(System.identityHashCode(type));
+        if (!visited.add(typeId))
         {
             return;
         }
-        if (type instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Class cls)
-        {
-            addPropertyNamesFromSeq(cls._properties(), names, seen);
-            addPropertyNamesFromSeq(cls._propertiesFromAssociations(), names, seen);
-        }
-        Object gens = type._generalizations();
+        Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_PROPERTIES);
+        if (propsObj instanceof PureSequence ps) addPropertyNamesFromSeq(ps, names, seen);
+        Object pfaObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_PROPERTIES_FROM_ASSOCIATIONS);
+        if (pfaObj instanceof PureSequence pfa) addPropertyNamesFromSeq(pfa, names, seen);
+        Object gens = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(type, SLOT_GENERALIZATIONS);
         if (gens instanceof PureSequence seq)
         {
             for (Object gen : seq.toBoxedArray())
             {
-                if (gen instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.relationship.Generalization g)
+                Object general = gen != null
+                        ? org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(gen, SLOT_GENERAL) : null;
+                if (general != null)
                 {
-                    Type superType = _GenericType.type(g._general());
+                    Object superType = _GenericType.type(general);
                     if (superType != null)
                     {
                         collectPropertyNamesRecursive(superType, names, seen, visited);
@@ -432,97 +377,53 @@ public final class CopyWithKeysNode extends PureNode
         }
         for (Object prop : seq.toBoxedArray())
         {
-            if (prop instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property p
-                    && p._name() != null && seen.add(p._name()))
+            if (prop == null) continue;
+            Object n = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_NAME);
+            if (n instanceof String name && seen.add(name))
             {
-                names.add(p._name());
+                names.add(name);
             }
         }
     }
 
     /**
-     * Copy a single property value from source to target via reflection.
-     */
-    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void copyPropertyDirect(Object source, Object target, String propName)
-    {
-        String methodName = "_" + propName;
-        try
-        {
-            java.lang.reflect.Method getter = source.getClass().getMethod(methodName);
-            Object value = getter.invoke(source);
-            if (value == null)
-            {
-                return;
-            }
-            for (java.lang.reflect.Method setter : target.getClass().getMethods())
-            {
-                if (setter.getName().equals(methodName) && setter.getParameterCount() == 1)
-                {
-                    try
-                    {
-                        setter.invoke(target, value);
-                        break;
-                    }
-                    catch (IllegalArgumentException ignored)
-                    {
-                    }
-                }
-            }
-        }
-        catch (ReflectiveOperationException ignored)
-        {
-        }
-    }
-
-    /**
-     * Fallback: copy all _xxx() properties from source to target using interface methods.
+     * Shallow-copy all materialised properties from source to target.
+     * Post-PDO-flip the source is always a {@link
+     * org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject} and
+     * the target is a {@link
+     * org.finos.legend.pure.truffle.runtime.PropertyAccessor} (i.e. another
+     * PDO). The previous typed-reflection fallback ({@code
+     * source.getClass().getInterfaces()[0].getMethods()}) was a relic of
+     * the typed-XImpl era — no live caller produces a non-PDO source.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void copyViaReflection(Object source, Object target)
     {
-        Class<?>[] interfaces = source.getClass().getInterfaces();
-        if (interfaces.length == 0)
+        if (!(source instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdoSrc)
+                || !(target instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdoTgt))
         {
             return;
         }
-        for (java.lang.reflect.Method getter : interfaces[0].getMethods())
+        // Source and target have identical classInfo (copy preserves class),
+        // so slot indices line up. Iterate the raw slots array directly to
+        // skip the per-name {@code slotByName.get} + {@code writeProperty}
+        // coercion lookup. Materialise lazy FB entries via {@code readSlot}
+        // only when we hit the LAZY sentinel; everything else is a direct
+        // array load + store. Coercion is unnecessary because the value
+        // came from a slot of the same class.
+        Object[] srcSlots = pdoSrc.slots;
+        Object[] tgtSlots = pdoTgt.slots;
+        int n = Math.min(srcSlots.length, tgtSlots.length);
+        for (int i = 0; i < n; i++)
         {
-            String name = getter.getName();
-            if (!name.startsWith("_") || getter.getParameterCount() != 0)
+            Object v = srcSlots[i];
+            if (v == null) continue;
+            if (v == org.finos.legend.pure.truffle.runtime.dynobj.PureFbDecoder.LAZY)
             {
-                continue;
+                v = pdoSrc.readSlot(i);
+                if (v == null) continue;
             }
-            if ("_copy".equals(name) || "_class".equals(name))
-            {
-                continue;
-            }
-            try
-            {
-                Object value = getter.invoke(source);
-                if (value == null)
-                {
-                    continue;
-                }
-                for (java.lang.reflect.Method setter : target.getClass().getMethods())
-                {
-                    if (setter.getName().equals(name) && setter.getParameterCount() == 1)
-                    {
-                        try
-                        {
-                            setter.invoke(target, value);
-                            break;
-                        }
-                        catch (IllegalArgumentException ignored)
-                        {
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                throw new RuntimeException("Failed during equality key property set in copy", e);
-            }
+            tgtSlots[i] = v;
         }
     }
 
@@ -533,7 +434,7 @@ public final class CopyWithKeysNode extends PureNode
      * Returns the updated CGT, or the original if no self-reference was found.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static GenericTypeValue fixSelfReferentialCGT(GenericTypeValue cgt, Object original, Object copy,
+    private static Object fixSelfReferentialCGT(Object cgt, Object original, Object copy,
                                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         if (cgt == null)
@@ -546,9 +447,11 @@ public final class CopyWithKeysNode extends PureNode
             boolean hasSelfRef = false;
             for (Object arg : typeArgs.toBoxedArray())
             {
-                if (arg instanceof GenericTypeValue argV)
+                // _GenericType.type is Object-tolerant — handles both typed
+                // GenericTypeValue and PDO uniformly.
+                if (arg != null)
                 {
-                    Type argType = _GenericType.type(argV);
+                    Object argType = _GenericType.type(arg);
                     if (argType != null && argType == original)
                     {
                         hasSelfRef = true;
@@ -556,31 +459,34 @@ public final class CopyWithKeysNode extends PureNode
                     }
                 }
             }
-            if (hasSelfRef && copy instanceof Type copyType)
+            if (hasSelfRef)
             {
+                Object copyType = copy;
                 // Build a new CGT with updated self-references
-                var newCgt = _GenericType.buildUserDefinedGenericType(cgt._type(), resolver);
+                Object cgtType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cgt, SLOT_TYPE);
+                var newCgt = _GenericType.buildUserDefinedGenericType(cgtType, resolver);
                 org.finos.legend.pure.truffle.types.ObjectSequence newArgs =
                         new org.finos.legend.pure.truffle.types.ObjectSequence(
                                 java.util.Arrays.stream(typeArgs.toBoxedArray())
                                         .map(arg ->
                                         {
-                                            if (arg instanceof GenericTypeValue argV)
+                                            // _GenericType.type / .typeArguments work on PDO too.
+                                            if (arg != null)
                                             {
-                                                Type argType = _GenericType.type(argV);
+                                                Object argType = _GenericType.type(arg);
                                                 if (argType != null && argType == original)
                                                 {
                                                     var selfRef = _GenericType.buildUserDefinedGenericType(copyType, resolver);
                                                     // Carry over inner type arguments (e.g., TypeParameter GTs)
-                                                    PureSequence innerTA = _GenericType.typeArguments(argV);
+                                                    PureSequence innerTA = _GenericType.typeArguments(arg);
                                                     if (innerTA != null && !innerTA.isEmpty())
                                                     {
-                                                        selfRef._typeArguments(innerTA);
+                                                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(selfRef, "typeArguments", innerTA);
                                                     }
-                                                    PureSequence innerMA = argV._multiplicityArguments();
-                                                    if (innerMA != null && !innerMA.isEmpty())
+                                                    Object innerMAObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(arg, SLOT_MULTIPLICITY_ARGUMENTS);
+                                                    if (innerMAObj instanceof PureSequence innerMA && !innerMA.isEmpty())
                                                     {
-                                                        selfRef._multiplicityArguments(innerMA);
+                                                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(selfRef, "multiplicityArguments", innerMA);
                                                     }
                                                     return (Object) selfRef;
                                                 }
@@ -588,11 +494,11 @@ public final class CopyWithKeysNode extends PureNode
                                             return arg;
                                         })
                                         .toArray());
-                newCgt._typeArguments(newArgs);
-                PureSequence mulArgs = cgt._multiplicityArguments();
-                if (mulArgs != null)
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(newCgt, "typeArguments", newArgs);
+                Object mulArgsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(cgt, SLOT_MULTIPLICITY_ARGUMENTS);
+                if (mulArgsObj != null)
                 {
-                    newCgt._multiplicityArguments(mulArgs);
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(newCgt, "multiplicityArguments", mulArgsObj);
                 }
                 return newCgt;
             }
@@ -619,13 +525,17 @@ public final class CopyWithKeysNode extends PureNode
             {
                 return; // Sub-object doesn't exist — nothing to set
             }
-            // Copy the sub-object so we don't mutate the original
-            if (child instanceof Any any)
+            // Copy the sub-object so we don't mutate the original. All Pure
+            // values are PDOs post-flip; the typed Any._copy() fast path was
+            // removed when FB-decode stopped handing back typed XImpls.
+            Object childCopy = (child instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject)
+                    ? CopySimpleNode.pdoCopyPublic(child) : null;
+            if (childCopy != null)
             {
-                Object childCopy = tryCopy(any);
-                if (childCopy instanceof Any anyCopy)
+                Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(child, SLOT_CLASSIFIER_GENERIC_TYPE);
+                if (cgt != null)
                 {
-                    anyCopy._classifierGenericType(any._classifierGenericType());
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(childCopy, "classifierGenericType", cgt);
                 }
                 writer.execute(current, parts[i], childCopy);
                 current = childCopy;
@@ -637,16 +547,6 @@ public final class CopyWithKeysNode extends PureNode
         }
         // Set the leaf property
         writer.execute(current, parts[parts.length - 1], value);
-    }
-
-    /**
-     * {@code _copy()} on an Any — declared on the {@link Any} interface
-     * since codegen now generates it for every metamodel class. One virtual
-     * call, no reflection.
-     */
-    private static Object tryCopy(Any any)
-    {
-        return any._copy();
     }
 
     /**
@@ -669,11 +569,11 @@ public final class CopyWithKeysNode extends PureNode
         // we did for the property-copy hot path. Removes the last
         // {@code Class.getMethods()} call in the copy chain (~21 samples in
         // JFR after the {@code _copy} fix).
-        if (!(copy instanceof Any anyCopy) || !(copy instanceof org.finos.legend.pure.truffle.runtime.PropertyAccessor pa))
+        if (!(copy instanceof org.finos.legend.pure.truffle.runtime.PropertyAccessor pa))
         {
             return;
         }
-        var cgt = anyCopy._classifierGenericType();
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(copy, SLOT_CLASSIFIER_GENERIC_TYPE);
         if (cgt == null)
         {
             return;
@@ -717,12 +617,12 @@ public final class CopyWithKeysNode extends PureNode
      * <p>Identity-keyed on Type. Volatile copy-on-write for unsynchronized
      * reads — same pattern as the other static caches in this module.</p>
      */
-    private static volatile java.util.IdentityHashMap<Type, java.util.List<String>> ASSOC_PROPS_CACHE =
+    private static volatile java.util.IdentityHashMap<Object, java.util.List<String>> ASSOC_PROPS_CACHE =
             new java.util.IdentityHashMap<>();
     private static final Object ASSOC_PROPS_CACHE_LOCK = new Object();
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static java.util.List<String> associationPropsForType(Type type, String classPath,
+    private static java.util.List<String> associationPropsForType(Object type, String classPath,
                                                                    org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
         java.util.List<String> cached = ASSOC_PROPS_CACHE.get(type);
@@ -751,7 +651,7 @@ public final class CopyWithKeysNode extends PureNode
         {
             if (!ASSOC_PROPS_CACHE.containsKey(type))
             {
-                java.util.IdentityHashMap<Type, java.util.List<String>> next =
+                java.util.IdentityHashMap<Object, java.util.List<String>> next =
                         new java.util.IdentityHashMap<>(ASSOC_PROPS_CACHE);
                 next.put(type, immut);
                 ASSOC_PROPS_CACHE = next;
@@ -768,50 +668,49 @@ public final class CopyWithKeysNode extends PureNode
     private static void fixPropertyOwners(Object original, Object copy,
                                           org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver)
     {
-        if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SimplePropertyOwner spo))
+        Object propsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(copy, SLOT_PROPERTIES);
+        if (!(propsObj instanceof PureSequence props))
         {
             return;
         }
-        PureSequence props = spo._properties();
-        if (props == null)
-        {
-            return;
-        }
-        var copyGT = (copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type copyType)
-                ? org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(
-                        copyType, resolver)
+        // Only build a self-referencing GT for actual Types — Associations,
+        // Properties, etc. flow through this path during copy but aren't
+        // valid `_type` slot values for a GenericType. Downstream the
+        // `if (copyGT == null) continue;` guard at line 782 handles the null.
+        // Use pureTypeIs because post loader-flip Type instances may be PDOs.
+        Object copyGT = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(copy,
+                "meta::pure::metamodel::type::Type", resolver)
+                ? org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(copy, resolver)
                 : null;
 
         for (int i = 0; i < props.size(); i++)
         {
-            Object p = props.getBoxed(i);
-            if (p instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
+            Object prop = props.getBoxed(i);
+            if (prop == null) continue;
+            // Fix owner reference
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_OWNER) == original)
             {
-                // Fix owner reference
-                if (prop._owner() == original)
-                {
-                    prop._owner(spo);
-                }
-                // Fix enum value CGT inside defaultValue lambda
-                if (copyGT != null && prop._defaultValue() != null
-                        && prop._defaultValue()._expressionSequence() != null
-                        && !prop._defaultValue()._expressionSequence().isEmpty())
-                {
-                    Object vs = prop._defaultValue()._expressionSequence().getBoxed(0);
-                    if (vs instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.AtomicValue av
-                            && av._value() instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any enumVal)
-                    {
-                        var enumCgt = enumVal._classifierGenericType();
-                        if (enumCgt != null)
-                        {
-                            var enumCgtType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(enumCgt);
-                            if (enumCgtType == original)
-                            {
-                                enumVal._classifierGenericType(copyGT);
-                            }
-                        }
-                    }
-                }
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(prop, "owner", copy);
+            }
+            // Fix enum value CGT inside defaultValue lambda
+            if (copyGT == null) continue;
+            Object dv = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(prop, SLOT_DEFAULT_VALUE);
+            if (dv == null) continue;
+            Object dvExprObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(dv, SLOT_EXPRESSION_SEQUENCE);
+            if (!(dvExprObj instanceof PureSequence dvExpr) || dvExpr.isEmpty()) continue;
+            Object vs = dvExpr.getBoxed(0);
+            if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(vs,
+                    "meta::pure::metamodel::valuespecification::AtomicValue")) continue;
+            Object enumVal = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(vs, SLOT_VALUE);
+            // Only PDOs carry an instance-level CGT — primitive defaults like
+            // {@code Integer[1] = 1} have a Long value with no CGT to rewire.
+            if (!(enumVal instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject)) continue;
+            Object enumCgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(enumVal, SLOT_CLASSIFIER_GENERIC_TYPE);
+            if (enumCgt == null) continue;
+            var enumCgtType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(enumCgt);
+            if (enumCgtType == original)
+            {
+                org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(enumVal, "classifierGenericType", copyGT);
             }
         }
     }
@@ -824,31 +723,27 @@ public final class CopyWithKeysNode extends PureNode
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private static void fixTypeParameterOwners(Object copy)
     {
-        if (!(copy instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeAndMultiplicityParametersOwner owner))
-        {
-            return;
-        }
-        PureSequence typeParams = owner._typeParameters();
-        if (typeParams != null)
+        Object typeParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(copy, SLOT_TYPE_PARAMETERS);
+        if (typeParamsObj instanceof PureSequence typeParams)
         {
             for (int i = 0; i < typeParams.size(); i++)
             {
                 Object tp = typeParams.getBoxed(i);
-                if (tp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.TypeParameter tpObj)
+                if (tp != null)
                 {
-                    tpObj._owner(owner);
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(tp, "owner", copy);
                 }
             }
         }
-        PureSequence mulParams = owner._multiplicityParameters();
-        if (mulParams != null)
+        Object mulParamsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(copy, SLOT_MULTIPLICITY_PARAMETERS);
+        if (mulParamsObj instanceof PureSequence mulParams)
         {
             for (int i = 0; i < mulParams.size(); i++)
             {
                 Object mp = mulParams.getBoxed(i);
-                if (mp instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.MultiplicityParameter mpObj)
+                if (mp != null)
                 {
-                    mpObj._owner(owner);
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(mp, "owner", copy);
                 }
             }
         }

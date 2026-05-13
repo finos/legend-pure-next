@@ -57,7 +57,18 @@
                             <arguments>
                                 <argument>${project.build.directory}/generated-pdb-sources</argument>
                                 <argument>${project.basedir}/../../../../shared/core.pdb</argument>
-                                <argument>${project.basedir}/../../../../shared/compiler.pdb</argument>
+                                <!-- compiler.pdb intentionally NOT listed:
+                                     the codegen only emits Java types for
+                                     `meta::pure::metamodel::*` classes (see
+                                     PdbJavaGenerator.isMetamodelClass) and
+                                     compiler-pure types live under
+                                     `meta::pure::compiler::*` — they're
+                                     filtered out 1-for-1. Loading the file
+                                     just to filter it all out costs build
+                                     time and produces a misleading
+                                     "skipped" tally in the log. The runtime
+                                     uses PDO + PureShapeRegistry for those
+                                     classes; no generated impls needed. -->
                                 <argument>--fbs</argument>
                                 <argument>${project.basedir}/../../../../shared/specification/m3.fbs</argument>
                             </arguments>

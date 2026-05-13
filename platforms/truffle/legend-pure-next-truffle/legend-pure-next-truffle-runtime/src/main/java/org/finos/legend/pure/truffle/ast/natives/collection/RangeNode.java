@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 
@@ -43,9 +42,9 @@ public final class RangeNode extends PureNode
     private PureNode stepNode;
 
     @CompilationFinal
-    private final GenericType elementGenericType;
+    private final Object elementGenericType;
 
-    public RangeNode(PureNode startNode, PureNode stopNode, PureNode stepNode, GenericType elementGenericType)
+    public RangeNode(PureNode startNode, PureNode stopNode, PureNode stepNode, Object elementGenericType)
     {
         this.startNode = startNode;
         this.stopNode = stopNode;

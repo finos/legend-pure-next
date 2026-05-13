@@ -128,11 +128,14 @@
                                         <exclude>LICENSE-EPL-1.0.txt</exclude>
                                     </excludes>
                                 </filter>
-                                <!-- pure/annotations/* are emitted identically by RdfJavaGenerator
-                                     in both parser and compiler. Keep the parser copy (parser is
-                                     the upstream module) and drop the compiler's duplicate. -->
+                                <!-- pure/annotations/* are emitted by RdfJavaGenerator in
+                                     both parser and compiler, but the compiler's set is a
+                                     superset (includes @Excluded, @Inferred, @Pointer etc.
+                                     that PureValuePrinter walks via reflection). Drop the
+                                     parser's smaller copy so the compiler's full set wins
+                                     in the fat jar. -->
                                 <filter>
-                                    <artifact>org.finos.legend.pure:legend-pure-next-bootstrap-compiler</artifact>
+                                    <artifact>org.finos.legend.pure:legend-pure-next-bootstrap-parser</artifact>
                                     <excludes>
                                         <exclude>pure/annotations/**</exclude>
                                     </excludes>

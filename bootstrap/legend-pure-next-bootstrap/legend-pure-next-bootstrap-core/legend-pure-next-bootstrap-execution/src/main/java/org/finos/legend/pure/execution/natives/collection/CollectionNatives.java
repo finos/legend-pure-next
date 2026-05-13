@@ -48,6 +48,31 @@ public class CollectionNatives
         natives.put("isEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
              _E_ValueSpecification.wrap(_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty(), genericType, multiplicity, resolver)
         );
+        // isEmpty(Any[0..1]) — semantics identical, just a stricter param mul.
+        natives.put("isEmpty_Any_$0_1$__Boolean_1_", natives.get("isEmpty_Any_MANY__Boolean_1_"));
+
+        // isNotEmpty(Any[*]) / (Any[0..1]) : Boolean[1]
+        natives.put("isNotEmpty_Any_MANY__Boolean_1_", (args, eval, genericType, multiplicity) ->
+             _E_ValueSpecification.wrap(!_E_ValueSpecification.toCollection(args.get(0), resolver)._values().isEmpty(), genericType, multiplicity, resolver)
+        );
+        natives.put("isNotEmpty_Any_$0_1$__Boolean_1_", natives.get("isNotEmpty_Any_MANY__Boolean_1_"));
+
+        // firstNonEmpty(thunks:Function<{->T[*]}>[*]) : T[*]
+        // Walk thunks linearly, eval each, return first non-empty result;
+        // short-circuit — later thunks aren't evaluated.
+        natives.put("firstNonEmpty_Function_MANY__T_MANY_", (args, eval, genericType, multiplicity) ->
+        {
+            meta.pure.metamodel.valuespecification.Collection thunks = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            for (ValueSpecification thunk : thunks._values())
+            {
+                ValueSpecification result = eval.executeFunction(thunk, List.of());
+                if (!_E_ValueSpecification.toCollection(result, resolver)._values().isEmpty())
+                {
+                    return result;
+                }
+            }
+            return _E_ValueSpecification.wrap(null, genericType, multiplicity, resolver);
+        });
 
         // toOne(T[*]) : T[1]
         natives.put("toOne_T_MANY__T_1_", (args, eval, genericType, multiplicity) ->
@@ -579,6 +604,24 @@ public class CollectionNatives
             for (ValueSpecification itemVS : col._values())
             {
                 if (Boolean.TRUE.equals(_E_ValueSpecification.unwrap(eval.executeFunction(args.get(1), List.of(itemVS)))))
+                {
+                    return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
+                }
+            }
+            return _E_ValueSpecification.wrap(false, genericType, multiplicity, resolver);
+        });
+
+        // contains(Any[*], Any[1]) : Boolean[1] — Pure body was
+        // {@code $collection->exists(x | $value == $x)}; declared native in
+        // {@code pure/specification/functions/collection/boolean/contains.pure}
+        // to let backends skip the per-element closure dispatch.
+        natives.put("contains_Any_MANY__Any_1__Boolean_1_", (args, eval, genericType, multiplicity) ->
+        {
+            meta.pure.metamodel.valuespecification.Collection col = _E_ValueSpecification.toCollection(args.get(0), resolver);
+            Object value = _E_ValueSpecification.unwrap(args.get(1));
+            for (ValueSpecification itemVS : col._values())
+            {
+                if (org.finos.legend.pure.execution.NativeRepository.pureEquals(value, _E_ValueSpecification.unwrap(itemVS), resolver))
                 {
                     return _E_ValueSpecification.wrap(true, genericType, multiplicity, resolver);
                 }

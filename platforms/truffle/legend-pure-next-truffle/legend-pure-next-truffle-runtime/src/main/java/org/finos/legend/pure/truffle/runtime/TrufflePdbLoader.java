@@ -17,7 +17,6 @@ package org.finos.legend.pure.truffle.runtime;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
 import org.finos.legend.pure.m3.module.pdbModule.archive.CompressedArchiveReader;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -111,6 +110,36 @@ public final class TrufflePdbLoader implements TruffleModule
 
     private static final Object ABSENT = new Object(); // sentinel for negative cache
 
+    /**
+     * Stage 1 bridge for the {@link org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject}
+     * migration: returns the loaded element wrapped in a PureDynamicObject so
+     * call sites can be migrated to {@code DynamicObjectLibrary} access
+     * incrementally. Until every site is migrated and we flip the loader's
+     * default, both APIs coexist — wrapping is safe because the underlying FBW
+     * already implements {@code PropertyAccessor.readProperty}, which the
+     * dynobj layer uses as its decoder backend.
+     */
+    public org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject getElementAsDynamic(String path)
+    {
+        Object elem = getElement(path);
+        if (elem == null)
+        {
+            return null;
+        }
+        if (elem instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo)
+        {
+            return pdo;
+        }
+        String pureTypePath = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.derivePureTypePathFrom(elem);
+        if (pureTypePath == null)
+        {
+            return null;
+        }
+        return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(pureTypePath, this.resolver),
+                /*fb=*/elem, /*resolver=*/this.resolver, /*parent=*/null);
+    }
+
     @Override
     public Object getElement(String path)
     {
@@ -186,32 +215,29 @@ public final class TrufflePdbLoader implements TruffleModule
             return null;
         }
 
+        // Loader flip: construct PureDynamicObject backed by the raw FB Def.
+        // The Shape's dynamic type is the Pure-class path (derived from the
+        // wrapperClassName); per-class decoders registered by each generated
+        // XImpl's static{} block in PureFbDecoderRegistry handle property reads.
+        // Each XImpl's class is loaded lazily on first read (via Class.forName
+        // in PureFbDecoderRegistry.lazyLoad), which triggers static-init and
+        // registers the decoder.
+        String purePath = wrapperClassName
+                .replace("org.finos.legend.pure.truffle.pdb.", "")
+                .replaceFirst("Impl$", "")
+                .replace(".", "::");
         try
         {
-            // Create the FBS Def from the byte buffer
             Class<?> defClass = Class.forName(defClassName);
             var getRootMethod = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class);
             Object def = getRootMethod.invoke(null, bb);
-
-            // Create the truffle wrapper
-            Class<?> wrapperClass = Class.forName(wrapperClassName);
-            return wrapperClass.getConstructor(defClass, TruffleMetadataAccess.class).newInstance(def, resolver);
+            return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                    org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(purePath, resolver),
+                    def, resolver, null);
         }
         catch (Exception e)
         {
-            // Fallback: try without "Def" suffix in getRootAs method
-            try
-            {
-                Class<?> defClass = Class.forName(defClassName);
-                Object def = defClass.getMethod("getRootAs" + typeName + "Def", ByteBuffer.class, defClass)
-                        .invoke(null, bb, defClass.getDeclaredConstructor().newInstance());
-                Class<?> wrapperClass = Class.forName(wrapperClassName);
-                return wrapperClass.getConstructor(defClass, TruffleMetadataAccess.class).newInstance(def, resolver);
-            }
-            catch (Exception e2)
-            {
-                throw new RuntimeException("Failed to deserialize element type=" + typeName + ": " + e.getMessage() + " / " + e2.getMessage());
-            }
+            throw new RuntimeException("Failed to deserialize element type=" + typeName + ": " + e.getMessage(), e);
         }
     }
 
@@ -235,76 +261,76 @@ public final class TrufflePdbLoader implements TruffleModule
         String p = "org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.";
 
         // Functions
-        m.put("UserDefinedFunction", p + "function.UserDefinedFunctionFlatBufferWrapper");
-        m.put("NativeFunction", p + "function.NativeFunctionFlatBufferWrapper");
-        m.put("LambdaFunction", p + "function.LambdaFunctionFlatBufferWrapper");
+        m.put("UserDefinedFunction", p + "function.UserDefinedFunctionImpl");
+        m.put("NativeFunction", p + "function.NativeFunctionImpl");
+        m.put("LambdaFunction", p + "function.LambdaFunctionImpl");
 
         // Types
-        m.put("Class", p + "type.ClassFlatBufferWrapper");
-        m.put("Enumeration", p + "type.EnumerationFlatBufferWrapper");
-        m.put("PrimitiveType", p + "type.PrimitiveTypeFlatBufferWrapper");
-        m.put("FunctionType", p + "type.FunctionTypeFlatBufferWrapper");
+        m.put("Class", p + "type.ClassImpl");
+        m.put("Enumeration", p + "type.EnumerationImpl");
+        m.put("PrimitiveType", p + "type.PrimitiveTypeImpl");
+        m.put("FunctionType", p + "type.FunctionTypeImpl");
 
         // Properties
-        m.put("Property", p + "function.property.PropertyFlatBufferWrapper");
-        m.put("QualifiedProperty", p + "function.property.QualifiedPropertyFlatBufferWrapper");
+        m.put("Property", p + "function.property.PropertyImpl");
+        m.put("QualifiedProperty", p + "function.property.QualifiedPropertyImpl");
 
         // ValueSpecifications
         String vs = p + "valuespecification.";
-        m.put("ArrowInvocation", vs + "ArrowInvocationFlatBufferWrapper");
-        m.put("AtomicValue", vs + "AtomicValueFlatBufferWrapper");
-        m.put("Collection", vs + "CollectionFlatBufferWrapper");
-        m.put("DotApplication", vs + "DotApplicationFlatBufferWrapper");
-        m.put("FunctionInvocation", vs + "FunctionInvocationFlatBufferWrapper");
-        m.put("VariableExpression", vs + "VariableExpressionFlatBufferWrapper");
-        m.put("GenericTypeAndMultiplicityHolder", vs + "GenericTypeAndMultiplicityHolderFlatBufferWrapper");
-        m.put("UserDefinedGenericTypeAndMultiplicityHolder", vs + "UserDefinedGenericTypeAndMultiplicityHolderFlatBufferWrapper");
-        m.put("CompilerGenericTypeAndMultiplicityHolder", vs + "CompilerGenericTypeAndMultiplicityHolderFlatBufferWrapper");
+        m.put("ArrowInvocation", vs + "ArrowInvocationImpl");
+        m.put("AtomicValue", vs + "AtomicValueImpl");
+        m.put("Collection", vs + "CollectionImpl");
+        m.put("DotApplication", vs + "DotApplicationImpl");
+        m.put("FunctionInvocation", vs + "FunctionInvocationImpl");
+        m.put("VariableExpression", vs + "VariableExpressionImpl");
+        m.put("GenericTypeAndMultiplicityHolder", vs + "GenericTypeAndMultiplicityHolderImpl");
+        m.put("UserDefinedGenericTypeAndMultiplicityHolder", vs + "UserDefinedGenericTypeAndMultiplicityHolderImpl");
+        m.put("CompilerGenericTypeAndMultiplicityHolder", vs + "CompilerGenericTypeAndMultiplicityHolderImpl");
 
         // Generics
         String gt = p + "type.generics.";
-        m.put("UserDefinedGenericType", gt + "UserDefinedGenericTypeFlatBufferWrapper");
-        m.put("UserDefinedPackageableGenericType", gt + "UserDefinedPackageableGenericTypeFlatBufferWrapper");
-        m.put("InferredGenericType", gt + "InferredGenericTypeFlatBufferWrapper");
-        m.put("InferredPackageableGenericType", gt + "InferredPackageableGenericTypeFlatBufferWrapper");
-        m.put("UndefinedGenericType", gt + "UndefinedGenericTypeFlatBufferWrapper");
-        m.put("CompilerNotSetGenericType", gt + "CompilerNotSetGenericTypeFlatBufferWrapper");
-        m.put("TypeParameter", gt + "TypeParameterFlatBufferWrapper");
-        m.put("ResolvedTypeParameter", gt + "ResolvedTypeParameterFlatBufferWrapper");
-        m.put("ResolvedMultiplicityParameter", gt + "ResolvedMultiplicityParameterFlatBufferWrapper");
-        m.put("GenericTypeOperation", p + "relation.GenericTypeOperationFlatBufferWrapper");
+        m.put("UserDefinedGenericType", gt + "UserDefinedGenericTypeImpl");
+        m.put("UserDefinedPackageableGenericType", gt + "UserDefinedPackageableGenericTypeImpl");
+        m.put("InferredGenericType", gt + "InferredGenericTypeImpl");
+        m.put("InferredPackageableGenericType", gt + "InferredPackageableGenericTypeImpl");
+        m.put("UndefinedGenericType", gt + "UndefinedGenericTypeImpl");
+        m.put("CompilerNotSetGenericType", gt + "CompilerNotSetGenericTypeImpl");
+        m.put("TypeParameter", gt + "TypeParameterImpl");
+        m.put("ResolvedTypeParameter", gt + "ResolvedTypeParameterImpl");
+        m.put("ResolvedMultiplicityParameter", gt + "ResolvedMultiplicityParameterImpl");
+        m.put("GenericTypeOperation", p + "relation.GenericTypeOperationImpl");
 
         // Multiplicities
         String mu = p + "multiplicity.";
-        m.put("UserDefinedAdHocMultiplicity", mu + "UserDefinedAdHocMultiplicityFlatBufferWrapper");
-        m.put("UserDefinedPackageableMultiplicity", mu + "UserDefinedPackageableMultiplicityFlatBufferWrapper");
-        m.put("UserDefinedMultiplicityParameter", mu + "UserDefinedMultiplicityParameterFlatBufferWrapper");
-        m.put("InferredAdHocMultiplicity", mu + "InferredAdHocMultiplicityFlatBufferWrapper");
-        m.put("InferredPackageableMultiplicity", mu + "InferredPackageableMultiplicityFlatBufferWrapper");
-        m.put("InferredMultiplicityParameter", mu + "InferredMultiplicityParameterFlatBufferWrapper");
-        m.put("UndefinedMultiplicity", mu + "UndefinedMultiplicityFlatBufferWrapper");
-        m.put("CompilerNotSetMultiplicity", mu + "CompilerNotSetMultiplicityFlatBufferWrapper");
-        m.put("MultiplicityValue", mu + "MultiplicityValueFlatBufferWrapper");
+        m.put("UserDefinedAdHocMultiplicity", mu + "UserDefinedAdHocMultiplicityImpl");
+        m.put("UserDefinedPackageableMultiplicity", mu + "UserDefinedPackageableMultiplicityImpl");
+        m.put("UserDefinedMultiplicityParameter", mu + "UserDefinedMultiplicityParameterImpl");
+        m.put("InferredAdHocMultiplicity", mu + "InferredAdHocMultiplicityImpl");
+        m.put("InferredPackageableMultiplicity", mu + "InferredPackageableMultiplicityImpl");
+        m.put("InferredMultiplicityParameter", mu + "InferredMultiplicityParameterImpl");
+        m.put("UndefinedMultiplicity", mu + "UndefinedMultiplicityImpl");
+        m.put("CompilerNotSetMultiplicity", mu + "CompilerNotSetMultiplicityImpl");
+        m.put("MultiplicityValue", mu + "MultiplicityValueImpl");
 
         // Other
-        m.put("Package", p + "PackageFlatBufferWrapper");
-        m.put("Association", p + "relationship.AssociationFlatBufferWrapper");
-        m.put("Generalization", p + "relationship.GeneralizationFlatBufferWrapper");
-        m.put("Constraint", p + "constraint.ConstraintFlatBufferWrapper");
-        m.put("Profile", p + "extension.ProfileFlatBufferWrapper");
-        m.put("Enum", p + "type.EnumFlatBufferWrapper");
-        m.put("Stereotype", p + "extension.StereotypeFlatBufferWrapper");
-        m.put("Tag", p + "extension.TagFlatBufferWrapper");
-        m.put("TaggedValue", p + "extension.TaggedValueFlatBufferWrapper");
-        m.put("Annotation", p + "extension.AnnotationFlatBufferWrapper");
-        m.put("SourceInformation", p + "SourceInformationFlatBufferWrapper");
-        m.put("ConstraintsGetterOverride", p + "constraint.ConstraintsGetterOverrideFlatBufferWrapper");
-        m.put("Relation", p + "relation.RelationFlatBufferWrapper");
-        m.put("RelationElementAccessor", p + "relation.RelationElementAccessorFlatBufferWrapper");
-        m.put("RelationType", p + "relation.RelationTypeFlatBufferWrapper");
-        m.put("Column", p + "relation.ColumnFlatBufferWrapper");
-        m.put("Nil", p + "type.NilFlatBufferWrapper");
-        m.put("Test", p + "testable.TestFlatBufferWrapper");
+        m.put("Package", p + "PackageImpl");
+        m.put("Association", p + "relationship.AssociationImpl");
+        m.put("Generalization", p + "relationship.GeneralizationImpl");
+        m.put("Constraint", p + "constraint.ConstraintImpl");
+        m.put("Profile", p + "extension.ProfileImpl");
+        m.put("Enum", p + "type.EnumImpl");
+        m.put("Stereotype", p + "extension.StereotypeImpl");
+        m.put("Tag", p + "extension.TagImpl");
+        m.put("TaggedValue", p + "extension.TaggedValueImpl");
+        m.put("Annotation", p + "extension.AnnotationImpl");
+        m.put("SourceInformation", p + "SourceInformationImpl");
+        m.put("ConstraintsGetterOverride", p + "constraint.ConstraintsGetterOverrideImpl");
+        m.put("Relation", p + "relation.RelationImpl");
+        m.put("RelationElementAccessor", p + "relation.RelationElementAccessorImpl");
+        m.put("RelationType", p + "relation.RelationTypeImpl");
+        m.put("Column", p + "relation.ColumnImpl");
+        m.put("Nil", p + "type.NilImpl");
+        m.put("Test", p + "testable.TestImpl");
 
         return m;
     }

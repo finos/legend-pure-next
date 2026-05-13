@@ -106,8 +106,20 @@ public final class PureFeature implements Feature
         }
         try
         {
-            // Register all methods; the interpreter only calls `_<property>()` accessors
-            // but registering everything is safer and costs only build-time metadata.
+            // Register all methods. The interpreter calls a variety of
+            // reflectively-looked-up methods that aren't easily expressed as
+            // a single name filter:
+            //   - {@code _<property>()} Pure-property accessors on XImpl /
+            //     XFlatBufferWrapper classes.
+            //   - {@code getRootAsX(ByteBuffer)} FB factory methods on m3
+            //     protocol Def classes.
+            //   - {@code valueOf(String)} on generated enum classes
+            //     (PureContext.coerceToJavaEnum).
+            //   - Possibly more across the m3 protocol surface.
+            // A previous attempt narrowed this to a name-prefix filter and
+            // broke `valueOf` + other reflective lookups in subtle ways.
+            // Registering everything is safer; the bytes saved by tightening
+            // are small (~2MB) and not worth the brittleness.
             for (Method m : cls.getMethods())
             {
                 RuntimeReflection.register(m);

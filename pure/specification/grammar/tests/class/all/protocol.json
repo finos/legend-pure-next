@@ -156,7 +156,7 @@
               "_type" : "SourceInformation",
               "endColumn" : 40,
               "endLine" : 11,
-              "startColumn" : 38,
+              "startColumn" : 27,
               "startLine" : 11
             },
             "parametersValues" : [ {
@@ -227,7 +227,7 @@
               "_type" : "SourceInformation",
               "endColumn" : 41,
               "endLine" : 13,
-              "startColumn" : 27,
+              "startColumn" : 20,
               "startLine" : 13
             },
             "parametersValues" : [ {
@@ -299,7 +299,7 @@
               "_type" : "SourceInformation",
               "endColumn" : 40,
               "endLine" : 18,
-              "startColumn" : 38,
+              "startColumn" : 27,
               "startLine" : 18
             },
             "parametersValues" : [ {
@@ -1043,7 +1043,7 @@
               "_type" : "SourceInformation",
               "endColumn" : 35,
               "endLine" : 29,
-              "startColumn" : 18,
+              "startColumn" : 13,
               "startLine" : 29
             },
             "parametersValues" : [ {
@@ -1051,9 +1051,9 @@
               "functionName" : "plus",
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
-                "endColumn" : 35,
+                "endColumn" : 25,
                 "endLine" : 29,
-                "startColumn" : 18,
+                "startColumn" : 13,
                 "startLine" : 29
               },
               "parametersValues" : [ {

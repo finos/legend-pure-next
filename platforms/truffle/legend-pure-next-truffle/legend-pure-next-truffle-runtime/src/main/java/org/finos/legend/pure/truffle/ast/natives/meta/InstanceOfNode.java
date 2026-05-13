@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 
@@ -51,11 +50,7 @@ public final class InstanceOfNode extends PureNode
     {
 
         // Resolve the target type
-        Type targetType = null;
-        if (typeResult instanceof Type t)
-        {
-            targetType = t;
-        }
+        Object targetType = typeResult;
 
         if (rawVal == null || (rawVal instanceof org.finos.legend.pure.truffle.types.PureSequence ps && ps.isEmpty()))
         {
@@ -67,7 +62,7 @@ public final class InstanceOfNode extends PureNode
         }
 
         // Get the value's runtime type
-        Type valueType = MetaHelper.getRawValueType(rawVal, resolver);
+        Object valueType = MetaHelper.getRawValueType(rawVal, resolver);
         if (valueType == null)
         {
             return false;

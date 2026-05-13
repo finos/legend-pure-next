@@ -1,8 +1,8 @@
 package org.finos.legend.pure.truffle.runtime.helper;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureObj;
 
 public final class _PackageableElement
 {
@@ -15,7 +15,7 @@ public final class _PackageableElement
      * the PDB index) over walking the FlatBuffer package chain, which is
      * order-dependent and can produce inconsistent results.</p>
      */
-    public static String path(PackageableElement pe)
+    public static String path(Object pe)
     {
         return path(pe, null);
     }
@@ -35,7 +35,7 @@ public final class _PackageableElement
     // synchronizedMap wrapper showed up at ~1% of warm CPU on this site
     // alone before this change because path() is on the hot path of every
     // type/element comparison and metaprogramming operation.
-    private static volatile java.util.IdentityHashMap<PackageableElement, String> PATH_CACHE =
+    private static volatile java.util.IdentityHashMap<Object, String> PATH_CACHE =
             new java.util.IdentityHashMap<>();
     private static final Object PATH_CACHE_LOCK = new Object();
 
@@ -45,7 +45,7 @@ public final class _PackageableElement
     // Path resolution is not on the tightest inner loop and is cheap
     // past a boundary; the resolver fast-path returns immediately.
     @TruffleBoundary
-    public static String path(PackageableElement pe, TruffleMetadataAccess resolver)
+    public static String path(Object pe, TruffleMetadataAccess resolver)
     {
         if (pe == null)
         {
@@ -74,7 +74,7 @@ public final class _PackageableElement
         return result;
     }
 
-    private static void putPathCache(PackageableElement pe, String result)
+    private static void putPathCache(Object pe, String result)
     {
         synchronized (PATH_CACHE_LOCK)
         {
@@ -82,16 +82,37 @@ public final class _PackageableElement
             {
                 return;
             }
-            java.util.IdentityHashMap<PackageableElement, String> next = new java.util.IdentityHashMap<>(PATH_CACHE);
+            java.util.IdentityHashMap<Object, String> next = new java.util.IdentityHashMap<>(PATH_CACHE);
             next.put(pe, result);
             PATH_CACHE = next;
         }
     }
 
-    private static String computePath(PackageableElement pe)
+    private static final String PACKAGE_PURE_PATH = "meta::pure::metamodel::Package";
+
+    private static final int SLOT_PACKAGE =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("package");
+    private static final int SLOT_NAME =
+            org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+
+    private static Object readPackage(Object obj)
     {
-        Object pkg = pe._package();
-        String name = pe._name();
+        return obj instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                ? pdo.readSlot(SLOT_PACKAGE)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(obj, SLOT_PACKAGE);
+    }
+
+    private static Object readName(Object obj)
+    {
+        return obj instanceof org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject pdo
+                ? pdo.readSlot(SLOT_NAME)
+                : org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(obj, SLOT_NAME);
+    }
+
+    private static String computePath(Object pe)
+    {
+        Object pkg = readPackage(pe);
+        String name = (String) readName(pe);
         if (pkg == null || name == null)
         {
             return name != null ? name : "";
@@ -109,10 +130,12 @@ public final class _PackageableElement
         StringBuilder sb = new StringBuilder();
         Object current = pkg;
         int depth = 0;
-        while (current instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.Package p && depth < 15)
+        while (current != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(current, PACKAGE_PURE_PATH)
+                && depth < 15)
         {
-            Object parent = p._package();
-            String name = p._name();
+            Object parent = readPackage(current);
+            String name = (String) readName(current);
             if (parent == null || name == null || name.isEmpty())
             {
                 break;

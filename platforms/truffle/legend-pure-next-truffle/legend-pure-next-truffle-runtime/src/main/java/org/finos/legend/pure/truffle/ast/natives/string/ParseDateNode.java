@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.date.DateHelper;
 import org.finos.legend.pure.truffle.types.PureDate;
@@ -34,10 +32,10 @@ public final class ParseDateNode extends PureNode
     @Child
     private PureNode arg;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ParseDateNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
+    public ParseDateNode(PureNode arg, Object genericType, Object multiplicity)
     {
         this.arg = arg;
         this.genericType = genericType;

@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
@@ -31,10 +29,10 @@ public final class ToRepresentationNode extends PureNode
     @Child
     private PureNode arg;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ToRepresentationNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
+    public ToRepresentationNode(PureNode arg, Object genericType, Object multiplicity)
     {
         this.arg = arg;
         this.genericType = genericType;
@@ -86,6 +84,13 @@ public final class ToRepresentationNode extends PureNode
         if (v instanceof Number || v instanceof Boolean)
         {
             return ToStringNode.pureToString(v);
+        }
+        // Enum values render in qualified form ("<EnumPath>.<ValueName>")
+        // so error messages disambiguate identity.
+        String enumPath = ToStringNode.enumQualifiedPath(v);
+        if (enumPath != null)
+        {
+            return enumPath;
         }
         return String.valueOf(v);
     }

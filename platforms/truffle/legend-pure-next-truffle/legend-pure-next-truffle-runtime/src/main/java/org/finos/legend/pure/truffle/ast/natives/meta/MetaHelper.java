@@ -14,8 +14,6 @@
 
 package org.finos.legend.pure.truffle.ast.natives.meta;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Type;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.natives.collection.CollectionHelper;
 import org.finos.legend.pure.truffle.types.PureDate;
@@ -35,13 +33,13 @@ public final class MetaHelper
      * Handles raw Java values (Long, Double, etc.),
      * generated Impl classes (Any), and PureSequence.
      */
-    public static Type getRawValueType(Object value, TruffleMetadataAccess resolver)
+    public static Object getRawValueType(Object value, TruffleMetadataAccess resolver)
     {
         if (value == null || (value instanceof PureSequence ps && ps.isEmpty()))
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+            return resolver.getElement("meta::pure::metamodel::type::Nil");
         }
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(value) != null)
         {
             var cgt = org.finos.legend.pure.truffle.PureLanguage.get(null).classifierGenericType(value);
             if (cgt != null)
@@ -51,27 +49,27 @@ public final class MetaHelper
         }
         if (value instanceof Long)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::Integer");
         }
         if (value instanceof Double)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Float");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::Float");
         }
         if (value instanceof Boolean)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::Boolean");
         }
         if (value instanceof PureDate.StrictDate)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
         }
         if (value instanceof PureDate.DateTime)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
         }
         if (value instanceof PureDate)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
         }
         if (value instanceof String s)
         {
@@ -81,9 +79,9 @@ public final class MetaHelper
             {
                 String enumTypePath = s.substring(0, dotIdx);
                 Object enumType = resolver.getElement(enumTypePath);
-                if (enumType instanceof Type t)
+                if (enumType != null)
                 {
-                    return t;
+                    return enumType;
                 }
             }
             // Detect date strings by format (fallback for dates not yet wrapped in PureDate)
@@ -91,21 +89,21 @@ public final class MetaHelper
             {
                 if (s.contains("T"))
                 {
-                    return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
+                    return resolver.getElement("meta::pure::metamodel::type::primitives::DateTime");
                 }
                 // yyyy-MM-dd = StrictDate, yyyy or yyyy-MM = Date
                 long dashCount = s.chars().filter(c -> c == '-').count();
                 if (dashCount >= 2)
                 {
-                    return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
+                    return resolver.getElement("meta::pure::metamodel::type::primitives::StrictDate");
                 }
-                return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Date");
+                return resolver.getElement("meta::pure::metamodel::type::primitives::Date");
             }
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::String");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::String");
         }
         if (value instanceof java.math.BigDecimal)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
+            return resolver.getElement("meta::pure::metamodel::type::primitives::Decimal");
         }
         if (value instanceof PureSequence seq)
         {
@@ -115,7 +113,7 @@ public final class MetaHelper
         {
             return getCollectionType(ml.size(), ml::get, resolver);
         }
-        return (Type) resolver.getElement("meta::pure::metamodel::type::Any");
+        return resolver.getElement("meta::pure::metamodel::type::Any");
     }
 
     /**
@@ -123,21 +121,21 @@ public final class MetaHelper
      * in a collection. Uses {@code _Type.findCommonType} for LUB computation.
      */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Type getCollectionType(int size, java.util.function.IntFunction<Object> getter, TruffleMetadataAccess resolver)
+    private static Object getCollectionType(int size, java.util.function.IntFunction<Object> getter, TruffleMetadataAccess resolver)
     {
         if (size == 0)
         {
-            return (Type) resolver.getElement("meta::pure::metamodel::type::Nil");
+            return resolver.getElement("meta::pure::metamodel::type::Nil");
         }
         if (size == 1)
         {
             return getRawValueType(getter.apply(0), resolver);
         }
-        org.eclipse.collections.api.list.MutableList<Type> types =
+        org.eclipse.collections.api.list.MutableList<Object> types =
                 org.eclipse.collections.api.factory.Lists.mutable.ofInitialCapacity(size);
         for (int i = 0; i < size; i++)
         {
-            Type t = getRawValueType(getter.apply(i), resolver);
+            Object t = getRawValueType(getter.apply(i), resolver);
             if (t != null && !types.contains(t))
             {
                 types.add(t);
@@ -145,10 +143,10 @@ public final class MetaHelper
         }
         if (types.size() <= 1)
         {
-            return types.isEmpty() ? (Type) resolver.getElement("meta::pure::metamodel::type::Any") : types.get(0);
+            return types.isEmpty() ? resolver.getElement("meta::pure::metamodel::type::Any") : types.get(0);
         }
-        Type common = org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
-        return common != null ? common : (Type) resolver.getElement("meta::pure::metamodel::type::Any");
+        Object common = org.finos.legend.pure.truffle.runtime.helper._Type.findCommonType(types, false, resolver);
+        return common != null ? common : resolver.getElement("meta::pure::metamodel::type::Any");
     }
 
     /**
@@ -158,9 +156,16 @@ public final class MetaHelper
      * through PureContext so Java enum constants pick up their per-context
      * cached CGT instead of relying on a JVM-singleton field.
      */
-    public static GenericType getRawGenericType(Object value)
+    public static Object getRawGenericType(Object value)
     {
-        if (value instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any)
+        // Any Pure metamodel object (typed XImpl OR PureDynamicObject) carries a
+        // classifierGenericType. Detect via PureObj.pureTypeOf which works for
+        // both representations — the typed `instanceof Any` Java guard misses
+        // PureDynamicObject post-loader-flip, falling through to the
+        // primitive-type fallback in the 2-arg overload that builds a fresh
+        // UDGT with empty typeArguments (loses FB-encoded type args).
+        if (value != null
+                && org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(value) != null)
         {
             return org.finos.legend.pure.truffle.PureLanguage.get(null).classifierGenericType(value);
         }
@@ -171,15 +176,15 @@ public final class MetaHelper
      * Get the GenericType of a raw value, constructing one from the resolver
      * for primitive types that don't carry their own GenericType.
      */
-    public static GenericType getRawGenericType(Object value, TruffleMetadataAccess resolver)
+    public static Object getRawGenericType(Object value, TruffleMetadataAccess resolver)
     {
-        GenericType gt = getRawGenericType(value);
+        Object gt = getRawGenericType(value);
         if (gt != null)
         {
             return gt;
         }
         // Build a GenericType for primitive types
-        Type type = getRawValueType(value, resolver);
+        Object type = getRawValueType(value, resolver);
         if (type != null)
         {
             return org.finos.legend.pure.truffle.runtime.helper._GenericType.buildUserDefinedGenericType(type, resolver);

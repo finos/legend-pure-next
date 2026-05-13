@@ -16,8 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.math.IntegerHelper;
 
@@ -34,10 +32,10 @@ public final class ParentReferenceNode extends PureNode
     @Child
     private PureNode propNameChild;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ParentReferenceNode(PureNode depthChild, PureNode propNameChild, GenericType genericType, Multiplicity multiplicity)
+    public ParentReferenceNode(PureNode depthChild, PureNode propNameChild, Object genericType, Object multiplicity)
     {
         this.depthChild = depthChild;
         this.propNameChild = propNameChild;

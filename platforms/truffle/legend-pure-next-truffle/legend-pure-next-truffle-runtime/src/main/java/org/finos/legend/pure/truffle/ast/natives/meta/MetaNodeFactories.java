@@ -69,11 +69,11 @@ public final class MetaNodeFactories
 
         // new(GenericTypeAndMultiplicityHolder[1]) : T[1] — no key expressions
         registry.register("new_GenericTypeAndMultiplicityHolder_1__T_1_",
-                (args, gt, mul, fe) -> new NewSimpleNode(args[0], gt, mul));
+                (args, gt, mul, fe) -> new NewSimpleNode(args[0]));
 
         // new(GenericType[1]) : Any[1]
         registry.register("new_GenericType_1__Any_1_",
-                (args, gt, mul, fe) -> new NewGenericTypeNode(args[0], gt, mul));
+                (args, gt, mul, fe) -> new NewGenericTypeNode(args[0]));
 
         // keyExpression — 2-arg and 3-arg variants
         registry.register("keyExpression_String_1__Any_MANY__KeyExpression_1_",
@@ -87,7 +87,7 @@ public final class MetaNodeFactories
 
         // copy(T[1]) : T[1] — simple copy with no overrides
         registry.register("copy_T_1__T_1_",
-                (args, gt, mul, fe) -> new CopySimpleNode(args[0], gt, mul));
+                (args, gt, mul, fe) -> new CopySimpleNode(args[0]));
 
         // cast(Any[m], GenericTypeAndMultiplicityHolder[1]) : T[m]
         registry.register("cast_Any_m__GenericTypeAndMultiplicityHolder_1__T_m_",

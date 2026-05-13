@@ -52,6 +52,9 @@ import java.util.Set;
  */
 public final class TruffleModuleRegistry implements TruffleMetadataAccess
 {
+
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_PARAMETERS = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("parameters");
     private final LinkedHashMap<String, TruffleModule> modules = new LinkedHashMap<>();
     private final TypeCache typeCache = new TypeCache();
     // Lazy index keyed by (function shortName, arity) → resolved
@@ -100,7 +103,8 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
      */
     public void unregister(String name)
     {
-        if (!modules.containsKey(name))
+        TruffleModule removed = modules.get(name);
+        if (removed == null)
         {
             return;
         }
@@ -112,6 +116,16 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             {
                 dependents.add(m.name());
             }
+        }
+        // Drop cached element lookups owned by this module — otherwise
+        // re-registering with fresh content (e.g. an IDE recompile of
+        // welcome.pure) would still serve the old objects from the cache.
+        // The cache documents itself as "stable for the registry's lifetime,"
+        // which holds for PDB modules but not for in-memory modules we
+        // unregister + re-register.
+        for (String path : removed.elementPaths())
+        {
+            elementCache.remove(path);
         }
         modules.remove(name);
         functionsByNameArity = null;
@@ -155,16 +169,18 @@ public final class TruffleModuleRegistry implements TruffleMetadataAccess
             for (String path : m.elementPaths())
             {
                 Object element = getElement(path);
-                if (!(element instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction pf))
+                if (!org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(element,
+                        "meta::pure::metamodel::function::PackageableFunction", this))
                 {
                     continue;
                 }
-                String fnName = pf._functionName();
-                if (fnName == null)
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_FUNCTION_NAME);
+                if (!(fnNameObj instanceof String fnName))
                 {
                     continue;
                 }
-                int arity = pf._parameters() == null ? 0 : pf._parameters().size();
+                Object paramsObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_PARAMETERS);
+                int arity = paramsObj instanceof org.finos.legend.pure.truffle.types.PureSequence ps ? ps.size() : 0;
                 idx.computeIfAbsent(fnName, k -> new HashMap<>())
                    .computeIfAbsent(arity, k -> new ArrayList<>())
                    .add(element);

@@ -36,6 +36,16 @@ public final class CollectionNodeFactories
                 (args, gt, mul, fe) -> new SizeNode(args[0]));
         registry.register("isEmpty_Any_MANY__Boolean_1_",
                 (args, gt, mul, fe) -> new IsEmptyNode(args[0]));
+        // [0..1] overload — semantics identical (size==0), declared native to
+        // skip user-fn dispatch on the 18M+ calls per metamodel_factories compile.
+        registry.register("isEmpty_Any_$0_1$__Boolean_1_",
+                (args, gt, mul, fe) -> new IsEmptyNode(args[0]));
+        registry.register("isNotEmpty_Any_MANY__Boolean_1_",
+                (args, gt, mul, fe) -> new IsNotEmptyNode(args[0]));
+        registry.register("isNotEmpty_Any_$0_1$__Boolean_1_",
+                (args, gt, mul, fe) -> new IsNotEmptyNode(args[0]));
+        registry.register("firstNonEmpty_Function_MANY__T_MANY_",
+                (args, gt, mul, fe) -> new FirstNonEmptyNode(args[0]));
         registry.register("toOne_T_MANY__T_1_",
                 (args, gt, mul, fe) -> new ToOneNode(args[0]));
         registry.register("toOneMany_T_MANY__T_$1_MANY$_",
@@ -96,6 +106,8 @@ public final class CollectionNodeFactories
                 (args, gt, mul, fe) -> new FoldNode(args[0], args[1], args[2]));
         registry.register("exists_T_MANY__Function_1__Boolean_1_",
                 (args, gt, mul, fe) -> new ExistsNode(args[0], args[1]));
+        registry.register("contains_Any_MANY__Any_1__Boolean_1_",
+                (args, gt, mul, fe) -> new ContainsNode(args[0], args[1]));
         registry.register("forAll_T_MANY__Function_1__Boolean_1_",
                 (args, gt, mul, fe) -> new ForAllNode(args[0], args[1]));
         registry.register("find_T_MANY__Function_1__T_$0_1$_",

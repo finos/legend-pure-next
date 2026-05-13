@@ -52,7 +52,7 @@
               "_type" : "SourceInformation",
               "endColumn" : 35,
               "endLine" : 6,
-              "startColumn" : 18,
+              "startColumn" : 13,
               "startLine" : 6
             },
             "parametersValues" : [ {
@@ -60,9 +60,9 @@
               "functionName" : "plus",
               "p_sourceInformation" : {
                 "_type" : "SourceInformation",
-                "endColumn" : 35,
+                "endColumn" : 25,
                 "endLine" : 6,
-                "startColumn" : 18,
+                "startColumn" : 13,
                 "startLine" : 6
               },
               "parametersValues" : [ {

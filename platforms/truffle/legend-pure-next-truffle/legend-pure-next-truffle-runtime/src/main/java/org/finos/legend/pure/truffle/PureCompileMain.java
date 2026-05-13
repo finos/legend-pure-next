@@ -14,7 +14,6 @@
 
 package org.finos.legend.pure.truffle;
 
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.m3.PureModel;
 import org.finos.legend.pure.m3.module.pdbModule.PDBModule;
@@ -307,12 +306,12 @@ public final class PureCompileMain
 
         try
         {
-            FunctionDefinition fd = (FunctionDefinition) resolver.getElement(function);
+            Object fd = resolver.getElement(function);
             if (fd == null)
             {
                 for (PDBModule mod : modules)
                 {
-                    fd = (FunctionDefinition) mod.getElement(function);
+                    fd = mod.getElement(function);
                     if (fd != null) break;
                 }
             }

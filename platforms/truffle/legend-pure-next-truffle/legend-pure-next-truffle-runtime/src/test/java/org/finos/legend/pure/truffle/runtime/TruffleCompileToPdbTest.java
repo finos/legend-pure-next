@@ -18,8 +18,6 @@ import org.eclipse.collections.api.factory.Lists;
 import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.types.PureSequence;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,7 +49,7 @@ public class TruffleCompileToPdbTest
 {
     private static PureTruffleRuntime runtime;
     private static TruffleMetadataAccess resolver;
-    private static FunctionDefinition compileFn;
+    private static Object compileFn;
     private static org.finos.legend.pure.next.parser.PureParser pureParser;
 
     private static Path locateBuildDir()
@@ -108,13 +106,14 @@ public class TruffleCompileToPdbTest
                         new org.finos.legend.pure.m3.extensions.error.ErrorLanguageExtension()))
                 .build();
 
-        Object compileObj = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
-        if (!(compileObj instanceof FunctionDefinition))
+        compileFn = resolver.getElement("meta::pure::compiler::compile_PureFile_1__CompilationResult_1_");
+        if (compileFn == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(compileFn,
+                "meta::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("compile FunctionDefinition not resolvable: "
-                    + (compileObj == null ? "null" : compileObj.getClass().getName()));
+                    + (compileFn == null ? "null" : compileFn.getClass().getName()));
         }
-        compileFn = (FunctionDefinition) compileObj;
 
         // Reuse the runtime's configured PureParser instance — same one the
         // native `parse` uses, so this test path matches TruffleTestCompilerPure exactly.
@@ -277,11 +276,16 @@ public class TruffleCompileToPdbTest
             }
             else
             {
-                List<PackageableElement> elements = new ArrayList<>();
+                List<Object> elements = new ArrayList<>();
                 for (int i = 0; i < elementsSeq.size(); i++)
                 {
                     Object el = elementsSeq.getBoxed(i);
-                    if (el instanceof PackageableElement pe) elements.add(pe);
+                    // Accept both typed XImpl and PureDynamicObject elements.
+                    if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(el,
+                            "meta::pure::metamodel::PackageableElement", resolver))
+                    {
+                        elements.add(el);
+                    }
                 }
                 if (elements.isEmpty())
                 {
@@ -296,7 +300,7 @@ public class TruffleCompileToPdbTest
                         if (Files.size(tmpPdb) == 0) issues.add("Round-tripped PDB is empty");
                         TrufflePdbLoader rt = new TrufflePdbLoader(tmpPdb);
                         int matched = 0;
-                        for (PackageableElement original : elements)
+                        for (Object original : elements)
                         {
                             String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(original);
                             Object reloaded = rt.getElement(path);
@@ -305,8 +309,14 @@ public class TruffleCompileToPdbTest
                                 issues.add("MISSING: " + path);
                                 continue;
                             }
-                            String expectedType = baseTypeName(original.getClass().getSimpleName());
-                            String actualType = baseTypeName(reloaded.getClass().getSimpleName());
+                            // Compare Pure-level types via pureTypeOf, not Java class
+                            // names — post-loader-flip both sides are PDOs whose
+                            // Java simple name is "PureDynamicObject"; the Pure
+                            // type is what actually identifies the metamodel class.
+                            String expectedType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(original);
+                            String actualType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(reloaded);
+                            if (expectedType == null) expectedType = baseTypeName(original.getClass().getSimpleName());
+                            if (actualType == null) actualType = baseTypeName(reloaded.getClass().getSimpleName());
                             if (!expectedType.equals(actualType))
                             {
                                 issues.add("TYPE: " + path + " expected=" + expectedType + " actual=" + actualType);
@@ -331,14 +341,11 @@ public class TruffleCompileToPdbTest
 
     private static Object invokeAccessor(Object target, String accessor)
     {
-        try
-        {
-            return target.getClass().getMethod(accessor).invoke(target);
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Failed to invoke " + accessor + " on " + target.getClass().getName(), e);
-        }
+        // accessor is `_X` form; strip leading underscore for PureObj.read
+        // which expects the bare property name. Works for both typed XImpl
+        // and PureDynamicObject.
+        String propName = accessor.startsWith("_") ? accessor.substring(1) : accessor;
+        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, propName);
     }
 
     private static String baseTypeName(String simple)

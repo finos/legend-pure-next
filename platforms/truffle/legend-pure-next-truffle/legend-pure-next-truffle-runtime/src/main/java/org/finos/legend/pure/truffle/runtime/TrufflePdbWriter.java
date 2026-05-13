@@ -18,12 +18,7 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndex;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.ElementIndexEntry;
 import org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndex;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.PackageableFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.FunctionType;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue;
-import org.finos.legend.pure.truffle.runtime.codegen.GeneratedFlatBufferWriter;
+import org.finos.legend.pure.truffle.pdb.codec.GeneratedFlatBufferWriter;
 import org.finos.legend.pure.truffle.runtime.helper._GenericType;
 import org.finos.legend.pure.truffle.runtime.helper._PackageableElement;
 
@@ -52,6 +47,10 @@ import java.util.zip.ZipOutputStream;
  */
 public final class TrufflePdbWriter
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_FUNCTION_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("functionName");
+    private static final int SLOT_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("type");
     private TrufflePdbWriter()
     {
     }
@@ -61,7 +60,7 @@ public final class TrufflePdbWriter
      * Required-property validation is on by default — call the overload to
      * disable it for round-tripping content already on disk.
      */
-    public static void write(Iterable<? extends PackageableElement> elements, Path outputPath) throws IOException
+    public static void write(Iterable<?> elements, Path outputPath) throws IOException
     {
         write(elements, outputPath, true);
     }
@@ -72,7 +71,7 @@ public final class TrufflePdbWriter
      * "[1] / [1..*] property must be non-null/non-empty" checks — useful when
      * round-tripping elements loaded from a PDB whose readers may have gaps.
      */
-    public static void write(Iterable<? extends PackageableElement> elements, Path outputPath, boolean validateRequired) throws IOException
+    public static void write(Iterable<?> elements, Path outputPath, boolean validateRequired) throws IOException
     {
         if (outputPath.getParent() != null)
         {
@@ -84,8 +83,8 @@ public final class TrufflePdbWriter
             zos.setLevel(Deflater.BEST_COMPRESSION);
 
             List<String[]> indexEntries = new ArrayList<>();
-            List<PackageableFunction> functionEntries = new ArrayList<>();
-            for (PackageableElement element : elements)
+            List<Object> functionEntries = new ArrayList<>();
+            for (Object element : elements)
             {
                 String typeName = elementTypeName(element);
                 if (typeName == null)
@@ -101,9 +100,10 @@ public final class TrufflePdbWriter
                 byte[] data = builder.sizedByteArray();
 
                 indexEntries.add(new String[]{path, typeName});
-                if (element instanceof PackageableFunction pf && pf._functionName() != null && !pf._functionName().isEmpty())
+                Object fnNameObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(element, SLOT_FUNCTION_NAME);
+                if (fnNameObj instanceof String fnName && !fnName.isEmpty())
                 {
-                    functionEntries.add(pf);
+                    functionEntries.add(element);
                 }
 
                 String entryPath = "elements/" + path.replace("::", "/") + "." + typeName;
@@ -120,17 +120,19 @@ public final class TrufflePdbWriter
 
     /**
      * Derive the bootstrap-side discriminator name from a runtime class.
-     * {@code ClassImpl → "Class"}; classes whose simple name doesn't end in
-     * {@code Impl} return {@code null} (caller skips them).
+     * {@code ClassImpl → "Class"}; for {@link PureDynamicObject} we extract
+     * the simple name from the Shape's dynamic type (Pure path).
      */
-    private static String elementTypeName(PackageableElement element)
+    private static String elementTypeName(Object element)
     {
-        // {@link Class#getSimpleName()} (not {@code getName()}) — the writer's
-        // element-index needs just {@code "ClassImpl"}, not the FQN. This used
-        // to be {@code getSimpleName} until a sweep that aimed to break the
-        // SignatureParser→Locale inlining chain incorrectly rewrote it; the
-        // reflective writer is only invoked from {@code @TruffleBoundary}
-        // contexts, so the JDK chain isn't a concern here.
+        // PureDynamicObject path: Java simple name is just "PureDynamicObject"
+        // (not the Pure type), so derive from pureTypeOf() instead.
+        String pt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(element);
+        if (pt != null)
+        {
+            int idx = pt.lastIndexOf("::");
+            return idx < 0 ? pt : pt.substring(idx + 2);
+        }
         String simple = element.getClass().getSimpleName();
         if (simple.endsWith("Impl"))
         {
@@ -151,7 +153,7 @@ public final class TrufflePdbWriter
      * Truffle PDB diverges from Java direct's {@code compiler.pdb} structurally
      * (sections-only-in-A would flag one extra section in the diff).
      */
-    private static void writeFunctionIndex(ZipOutputStream zos, List<PackageableFunction> entries, boolean validateRequired) throws IOException
+    private static void writeFunctionIndex(ZipOutputStream zos, List<Object> entries, boolean validateRequired) throws IOException
     {
         if (entries.isEmpty())
         {
@@ -162,11 +164,13 @@ public final class TrufflePdbWriter
         int[] entryOffsets = new int[entries.size()];
         for (int i = 0; i < entries.size(); i++)
         {
-            PackageableFunction fn = entries.get(i);
+            Object fn = entries.get(i);
             int fullPathOffset = builder.createString(_PackageableElement.path(fn));
-            int functionNameOffset = builder.createString(fn._functionName());
+            int functionNameOffset = builder.createString(
+                    (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_FUNCTION_NAME));
             int functionTypeOffset = writeFunctionTypeOf(writer, fn);
-            boolean isNative = fn instanceof NativeFunction;
+            boolean isNative = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                    "meta::pure::metamodel::function::NativeFunction");
             entryOffsets[i] = org.finos.legend.pure.m3.module.pdbModule.fbs.FunctionIndexEntry
                     .createFunctionIndexEntry(builder, fullPathOffset, functionNameOffset, functionTypeOffset, isNative);
         }
@@ -185,15 +189,23 @@ public final class TrufflePdbWriter
      * GT) and serialize it. The FunctionType lives in slot 0 of the
      * classifier's typeArguments.
      */
-    private static int writeFunctionTypeOf(GeneratedFlatBufferWriter writer, PackageableFunction fn)
+    private static int writeFunctionTypeOf(GeneratedFlatBufferWriter writer, Object fn)
     {
-        Object cgt = fn._classifierGenericType();
-        if (cgt instanceof GenericTypeValue gtv && _GenericType.typeArguments(gtv) != null && _GenericType.typeArguments(gtv).size() > 0)
+        Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_CLASSIFIER_GENERIC_TYPE);
+        org.finos.legend.pure.truffle.types.PureSequence args = _GenericType.typeArguments(cgt);
+        if (args != null && args.size() > 0)
         {
-            Object first = _GenericType.typeArguments(gtv).getBoxed(0);
-            if (first instanceof GenericTypeValue inner && inner._type() instanceof FunctionType ft)
+            Object first = args.getBoxed(0);
+            if (first != null)
             {
-                return writer.writeFunctionType(ft);
+                Object innerType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(first, SLOT_TYPE);
+                if (innerType != null)
+                {
+                    // Method renamed to write_meta_pure_metamodel_type_FunctionType
+                    // (per-Pure-path uniqueness) so the dispatch is unambiguous
+                    // when same-simple-name classes exist across packages.
+                    return writer.write_meta_pure_metamodel_type_FunctionType(innerType);
+                }
             }
         }
         return 0;

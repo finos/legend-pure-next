@@ -40,7 +40,7 @@ function protocol::f_X_1__Any_MANY_(x:a::X[1]):@Any@[*]  ~UserDefinedFunction<{a
     AtomicValue  2 :@Integer@[1]  ~@AtomicValue@  @8:11-8:11
     AtomicValue  true :@Boolean@[1]  ~@AtomicValue@  @8:14-8:17
   Collection :#Any#[2]  ~@Collection@  @9:5-9:16
-    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @9:8-9:10
+    FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @9:6-9:10
       AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:6-9:6
       AtomicValue  1 :@Integer@[1]  ~@AtomicValue@  @9:10-9:10
     AtomicValue  'a' :@String@[1]  ~@AtomicValue@  @9:13-9:15

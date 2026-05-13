@@ -8,37 +8,34 @@
 
 package org.finos.legend.pure.truffle.ast;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.runtime.PropertyAccessor;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassInfo;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry;
+import org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
- * Direct {@code $obj.foo} property access AST node — a self-contained
- * {@link PureNode} with the receiver as a single {@code @Child} (no
- * args[] allocation per call) and the property name baked in as
- * {@code @CompilationFinal} (PE folds the {@code readProperty} switch
- * to a typed accessor at every site).
- *
- * <p>Replaces the helper pattern of {@code RawPropertyAccessNode} →
- * {@link PropertyReadNode} for the common case (non-QP, non-enum target).
- * For the cached path PE produces machine code equivalent to a direct
- * Java field load:
+ * Direct {@code $obj.foo} property access — emitted by
+ * {@code PureASTBuilder.lowerPropertyAccess} for non-QP, non-enum property
+ * reads. Folds to a constant-indexed array load under Graal PE:
  * <pre>
- *   mov rax, [target_class_pointer]   ; class word
- *   cmp rax, cached_class             ; class identity
- *   jne slow                          ; rare: fall to enum/QP/poly path
- *   mov rax, [target+offset_of_foo]   ; field load (PE-folded readProperty switch)
- *   ret
+ *   mov rax, [pdo + slots_offset]
+ *   mov rax, [rax + 16 + slotIdx*8]
  * </pre>
  *
- * <p>Enum-target / RawClosure / null-target cases fall through to
- * {@link RawPropertyAccessNode}-equivalent slow logic via
- * {@link #slowPath(Object)} — the AST builder uses this node only when
- * the static type can't be an Enumeration; for enumerations it emits
- * the full {@code RawPropertyAccessNode}.</p>
+ * <p>The slot index is baked at AST-build time via
+ * {@link PureClassRegistry#globalSlot(String)} — slot indices are <b>global</b>
+ * (every class with property "foo" stores it at the same slot N), so resolving
+ * once at AST construction yields a constant valid for every receiver subclass.
+ * That constant is stored {@code final}, which lets PE fold the array offset
+ * to a literal in the compiled method.</p>
+ *
+ * <p>{@link RawClosure} unwrap remains a runtime-representation bridge — Pure
+ * compiler types lambdas as {@code FunctionDefinition} but at runtime a
+ * captured lambda is wrapped in {@code RawClosure} which isn't itself a PDO.</p>
  */
 @NodeInfo(shortName = "directPropAccess")
 public final class DirectPropertyAccessNode extends PureNode
@@ -49,79 +46,51 @@ public final class DirectPropertyAccessNode extends PureNode
     @CompilationFinal
     private final String propertyName;
 
-    @CompilationFinal
-    private Class<?> cachedClass;
-
-    @CompilationFinal
-    private Class<?> cachedClass2;
+    /** Slot index — global, baked at AST build. {@link PureClassInfo} guarantees
+     *  inheritance-preserved indices, so this int is valid for every subclass
+     *  receiver. {@code final} so PE folds the array offset to a literal. */
+    private final int slot;
 
     public DirectPropertyAccessNode(PureNode targetNode, String propertyName)
     {
         this.targetNode = targetNode;
         this.propertyName = propertyName;
+        this.slot = PureClassRegistry.globalSlot(propertyName);
     }
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
         Object target = targetNode.executeGeneric(frame);
-        if (target == null
-                || (target instanceof PureSequence ps && ps.isEmpty()))
+        if (target instanceof PureDynamicObject pdo)
         {
-            return PureSequence.EMPTY;
-        }
-        Class<?> tc = target.getClass();
-        // Bi-morphic class cache — compiler-pure property sites typically
-        // see XImpl (built in-memory) and XFlatBufferWrapper (loaded from
-        // PDB). Both fast paths PE-fold to a direct readProperty call
-        // with the constant propertyName, which then folds to a typed
-        // accessor (e.g. _rawType()) and ultimately a single field load.
-        if (tc == cachedClass || tc == cachedClass2)
-        {
-            Object r = ((PropertyAccessor) target).readProperty(propertyName);
-            return (r == PropertyAccessor.ABSENT || r == null) ? PureSequence.EMPTY : r;
+            Object v = pdo.readSlot(slot);
+            return v == null ? PureSequence.EMPTY : v;
         }
         return slowPath(target);
     }
 
+    @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private Object slowPath(Object target)
     {
-        // RawClosure unwrap — closures over lambda functions don't implement
-        // PropertyAccessor; we delegate to the underlying lambda for property
-        // access (e.g. $closure.expressionSequence in test code).
+        if (target == null || (target instanceof PureSequence ps && ps.isEmpty()))
+        {
+            return PureSequence.EMPTY;
+        }
         if (target instanceof RawClosure rc)
         {
-            target = rc.lambda();
-            if (target == null) return PureSequence.EMPTY;
-        }
-        if (cachedClass == null)
-        {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            if (target instanceof PropertyAccessor pa)
+            Object inner = rc.lambda();
+            if (inner instanceof PureDynamicObject pdo)
             {
-                cachedClass = target.getClass();
-                Object r = pa.readProperty(propertyName);
-                return (r == PropertyAccessor.ABSENT || r == null) ? PureSequence.EMPTY : r;
+                Object v = pdo.readSlot(slot);
+                return v == null ? PureSequence.EMPTY : v;
             }
-            return PureSequence.EMPTY;
+            target = inner;
         }
-        if (cachedClass2 == null && target.getClass() != cachedClass)
-        {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            if (target instanceof PropertyAccessor pa)
-            {
-                cachedClass2 = target.getClass();
-                Object r = pa.readProperty(propertyName);
-                return (r == PropertyAccessor.ABSENT || r == null) ? PureSequence.EMPTY : r;
-            }
-            return PureSequence.EMPTY;
-        }
-        // Both slots filled with different classes — third+ class is fully
-        // polymorphic. PE can't fold readProperty switch here.
         if (target instanceof PropertyAccessor pa)
         {
-            Object r = pa.readProperty(propertyName);
-            return (r == PropertyAccessor.ABSENT || r == null) ? PureSequence.EMPTY : r;
+            Object v = pa.readProperty(propertyName);
+            return v == null || v == PropertyAccessor.ABSENT ? PureSequence.EMPTY : v;
         }
         return PureSequence.EMPTY;
     }

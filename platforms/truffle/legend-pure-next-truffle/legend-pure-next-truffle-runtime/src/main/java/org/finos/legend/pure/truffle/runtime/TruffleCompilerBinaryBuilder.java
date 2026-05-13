@@ -15,8 +15,6 @@
 package org.finos.legend.pure.truffle.runtime;
 
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition;
 import org.finos.legend.pure.truffle.types.PureSequence;
 
 import java.io.IOException;
@@ -120,11 +118,15 @@ public final class TruffleCompilerBinaryBuilder
         runtimeCustomizer.accept(runtimeBuilder);
         PureTruffleRuntime runtime = runtimeBuilder.build();
 
-        Object compileDirObj = resolver.getElement(COMPILE_DIR_FN_PATH);
-        if (!(compileDirObj instanceof FunctionDefinition compileDirFn))
+        // Post-loader-flip the resolver may return a PureDynamicObject for
+        // the compile function; runtime.execute accepts Object.
+        Object compileDirFn = resolver.getElement(COMPILE_DIR_FN_PATH);
+        if (compileDirFn == null
+                || !org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(compileDirFn,
+                        "meta::pure::metamodel::function::FunctionDefinition", resolver))
         {
             throw new RuntimeException("compileDir FunctionDefinition not resolvable: "
-                    + (compileDirObj == null ? "null" : compileDirObj.getClass().getName()));
+                    + (compileDirFn == null ? "null" : compileDirFn.getClass().getName()));
         }
 
         try
@@ -193,7 +195,10 @@ public final class TruffleCompilerBinaryBuilder
             // ancestors (`meta`, `meta::pure`, …) and core.pdb already owns
             // those, so re-emitting them would diverge from bootstrap's output.
             // Non-Package elements always pass through.
-            LinkedHashMap<String, PackageableElement> elementsByPath = new LinkedHashMap<>();
+            // Accepts both typed XImpl (instanceof PackageableElement) and
+            // PureDynamicObject (PureObj.pureTypeOf returns Pure path) since
+            // TrufflePdbWriter.write now accepts Iterable<?>.
+            LinkedHashMap<String, Object> elementsByPath = new LinkedHashMap<>();
             Object elementsObj = invokeAccessor(result, "_elements");
             if (elementsObj instanceof PureSequence elementsSeq)
             {
@@ -201,16 +206,17 @@ public final class TruffleCompilerBinaryBuilder
                 for (int i = 0; i < elementsSeq.size(); i++)
                 {
                     Object el = elementsSeq.getBoxed(i);
-                    if (el instanceof PackageableElement pe)
+                    if (el == null) continue;
+                    String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(el);
+                    if (pureType == null) continue;
+                    String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(el);
+                    boolean isPkg = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(el,
+                            "meta::pure::metamodel::Package");
+                    if (isPkg && anchor != null && anchor.hasElement(path))
                     {
-                        String path = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(pe);
-                        if (pe instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.Package
-                                && anchor != null && anchor.hasElement(path))
-                        {
-                            continue;
-                        }
-                        elementsByPath.put(path, pe);
+                        continue;
                     }
+                    elementsByPath.put(path, el);
                 }
             }
 
@@ -263,15 +269,18 @@ public final class TruffleCompilerBinaryBuilder
         return fileName.endsWith(".pdb") ? fileName.substring(0, fileName.length() - 4) : fileName;
     }
 
+    /**
+     * Read a property via {@link
+     * org.finos.legend.pure.truffle.runtime.dynobj.PureObj#read} — works for
+     * both typed XImpls and {@code PureDynamicObject}s. The previous
+     * reflection-on-`_X()` path failed on PDO targets since the typed
+     * `<X>` interface (which declared the default getter) is no longer
+     * generated and {@code PureDynamicObject} only implements
+     * {@code PropertyAccessor}.
+     */
     private static Object invokeAccessor(Object target, String accessor)
     {
-        try
-        {
-            return target.getClass().getMethod(accessor).invoke(target);
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Failed to invoke " + accessor + " on " + target.getClass().getName(), e);
-        }
+        String propName = accessor.startsWith("_") ? accessor.substring(1) : accessor;
+        return org.finos.legend.pure.truffle.runtime.dynobj.PureObj.read(target, propName);
     }
 }

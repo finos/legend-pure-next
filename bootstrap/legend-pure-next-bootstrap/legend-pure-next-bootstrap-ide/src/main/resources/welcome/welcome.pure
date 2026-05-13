@@ -1,11 +1,14 @@
-import meta::pure::compiler::*;
-
 Class A
+{
+    b() {1} : Integer[1];
+}
+
+Class B
 {
     b() {1} : Integer[1];
 }
 
 function go():Any[*]
 {
-    println(A);
+    println([1,2,3]->map(x|$x+1));
 }

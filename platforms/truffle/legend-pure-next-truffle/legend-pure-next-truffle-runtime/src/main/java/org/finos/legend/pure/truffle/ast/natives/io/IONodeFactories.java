@@ -28,11 +28,21 @@ public final class IONodeFactories
 
     public static void registerAll(NativeNodeRegistry registry)
     {
-        registry.register("print_Any_MANY__Integer_1__Nil_0_",
+        // print returns String[1] now (writes AND returns the formatted
+        // value) so println can compose without a separate formatter native.
+        registry.register("print_Any_MANY__Integer_1__String_1_",
                 (args, gt, mul, fe) -> new PrintNode(args[0], args[1]));
 
-        registry.register("println_Any_MANY__Nil_0_",
-                (args, gt, mul, fe) -> new PrintlnNode(args[0]));
+        // println is a Pure function (`print(v) + print('\n')`) — no
+        // Truffle-native override; the bytecode from the Pure body works on
+        // both backends.
+
+        // withSilencedPrint pushes a thread-local flag that suppresses
+        // print's stdout side effect for the duration of the closure.
+        // Used by test runners to silence individual test bodies while
+        // keeping the progress UI visible.
+        registry.register("withSilencedPrint_Function_1__T_m_",
+                (args, gt, mul, fe) -> new WithSilencedPrintNode(args[0]));
 
         registry.register("readFile_String_1__String_1_",
                 (args, gt, mul, fe) -> new ReadFileNode(args[0]));

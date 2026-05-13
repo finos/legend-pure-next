@@ -26,7 +26,7 @@ function test::foldMatchOpenVar__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@
         Collection :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@Collection@  @5:19-7:9
           Lambda(i:@Integer@[1]) :#LambdaFunction<#{@Integer@[1]->#Integer##[1]#}#>#[1]  ~@AtomicValue@  @6:13-6:36
             openVar acc :#Integer##[1]#
-            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:33-6:36
+            FunctionInvocation plus_Integer_1__Integer_1__Integer_1_ :#Integer##[1]#  ~@FunctionInvocation@  @6:28-6:36
               Variable acc :#Integer##[1]#  ~@VariableExpression@  @6:28-6:31
               Variable i :#Integer##[1]#  ~@VariableExpression@  @6:35-6:36
     AtomicValue  0 :@Integer@[1]  ~@AtomicValue@  @8:8-8:8

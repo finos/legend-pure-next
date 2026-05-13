@@ -120,8 +120,8 @@ class test::factory::TestClass extends Any  ~Class<test::factory::TestClass>  @4
   property annotations :test::factory::TestType[*]  ~Property<test::factory::TestClass, test::factory::TestType|*>
 
 function test::factory::qualifiedName_TestType_1__String_1_(t:test::factory::TestType[1]):@String@[1]  ~UserDefinedFunction<{test::factory::TestType[1]->@String@[1]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:12-59:27
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:12-59:27
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:7-59:27
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @59:7-59:17
       DotApplication test::factory::TestType.pkg :#String##[1]#  ~@DotApplication@  @59:7-59:10
         Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @59:5-59:6
       AtomicValue  '::' :@String@[1]  ~@AtomicValue@  @59:14-59:17
@@ -259,7 +259,7 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
       Variable allTypes :#test::factory::TestType##[*]#  ~@VariableExpression@  @87:25-87:33
       Lambda(t:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @87:43-87:62
         openVar c :#test::factory::TestClass##[1]#
-        FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @87:54-87:62
+        FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @87:49-87:62
           DotApplication test::factory::TestType.pkg :#String##[1]#  ~@DotApplication@  @87:49-87:52
             Variable t :#test::factory::TestType##[1]#  ~@VariableExpression@  @87:47-87:48
           DotApplication test::factory::TestClass.pkg :#String##[1]#  ~@DotApplication@  @87:59-87:62
@@ -279,7 +279,7 @@ function test::factory::inferImportsLike_TestClass_1__String_MANY_(c:test::facto
             Variable inSamePackage :#test::factory::TestType##[*]#  ~@VariableExpression@  @88:43-88:56
             Lambda(s:#test::factory::TestType##[1]#) :#LambdaFunction<#{#test::factory::TestType##[1]#->#Boolean##[1]#}#>#[1]  ~@AtomicValue@  @88:66-88:107
               openVar t :#test::factory::TestType##[1]#
-              FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @88:88-88:107
+              FunctionInvocation equal_Any_MANY__Any_MANY__Boolean_1_ :#Boolean##[1]#  ~@FunctionInvocation@  @88:70-88:107
                 FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @88:70-88:86
                   Variable s :#test::factory::TestType##[1]#  ~@VariableExpression@  @88:84-88:85
                 FunctionInvocation test::factory::qualifiedName_TestType_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @88:91-88:107

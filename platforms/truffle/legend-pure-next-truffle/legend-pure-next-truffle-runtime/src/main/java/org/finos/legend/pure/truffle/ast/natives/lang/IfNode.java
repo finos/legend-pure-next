@@ -22,8 +22,22 @@ import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
 /**
  * {@code if(Boolean[1], Function<{->T[m]}>[1], Function<{->T[m]}>[1]) : T[m]}.
  *
- * <p>Evaluates the condition eagerly. Invokes the selected branch
- * as a zero-arg lambda via Truffle CallTarget dispatch.</p>
+ * <p>Two operating modes, picked by the AST builder:</p>
+ *
+ * <h3>Static (inlined-bodies) mode</h3>
+ * When both the {@code then} and {@code else} arguments are literal 0-param
+ * closure-lambdas with single-expression bodies, the AST builder lowers each
+ * body directly as a {@link PureNode} child here. Runtime: evaluate the
+ * condition, execute the chosen body. No {@code RawClosure} allocation per
+ * call, no {@code RawLambdaCallNode} dispatch — the body's variable
+ * references resolve directly against the caller's frame layout via the
+ * builder's standard expression-lowering path. Same pattern as
+ * {@link MultiIfNode}'s static mode.
+ *
+ * <h3>Generic (lambda-dispatched) mode</h3>
+ * Anything else (e.g. the branch is a variable-bound lambda or a function
+ * reference). Evaluates the branch to a closure and dispatches via
+ * {@link RawLambdaCallNode}.
  */
 @NodeInfo(shortName = "if")
 public final class IfNode extends PureNode
@@ -31,20 +45,45 @@ public final class IfNode extends PureNode
     @Child
     private PureNode condition;
 
+    // --- Static mode (both inlined) ---
+
+    /** Inlined then-body; non-null in static mode, null in generic mode. */
+    @Child
+    private PureNode thenBody;
+
+    /** Inlined else-body; non-null in static mode, null in generic mode. */
+    @Child
+    private PureNode elseBody;
+
+    // --- Generic mode (lambda dispatch) ---
+
+    /** Generic then-arg producing a closure; null in static mode. */
     @Child
     private PureNode thenBranch;
 
+    /** Generic else-arg producing a closure; null in static mode. */
     @Child
     private PureNode elseBranch;
 
     @Child
-    private RawLambdaCallNode callNode = new RawLambdaCallNode();
+    private RawLambdaCallNode callNode;
 
+    /** Static-mode constructor — caller pre-lowered each branch's body. */
+    public IfNode(PureNode condition, PureNode thenBody, PureNode elseBody, boolean staticMode)
+    {
+        this.condition = condition;
+        this.thenBody = thenBody;
+        this.elseBody = elseBody;
+        // Skip {@link RawLambdaCallNode} entirely — static branches don't need it.
+    }
+
+    /** Generic-mode constructor — branches are closure-producing expressions. */
     public IfNode(PureNode condition, PureNode thenBranch, PureNode elseBranch)
     {
         this.condition = condition;
         this.thenBranch = thenBranch;
         this.elseBranch = elseBranch;
+        this.callNode = new RawLambdaCallNode();
     }
 
     @Override
@@ -54,9 +93,12 @@ public final class IfNode extends PureNode
         // child is one of the boolean producers (NotBool / And / Or / Equal /
         // comparison nodes). For producers that still return Object the base
         // PureNode.executeBoolean does the unbox.
-        Object branchFn = condition.executeBoolean(frame)
-                ? thenBranch.executeGeneric(frame)
-                : elseBranch.executeGeneric(frame);
+        boolean cond = condition.executeBoolean(frame);
+        if (thenBody != null)
+        {
+            return cond ? thenBody.executeGeneric(frame) : elseBody.executeGeneric(frame);
+        }
+        Object branchFn = cond ? thenBranch.executeGeneric(frame) : elseBranch.executeGeneric(frame);
         return callNode.call(branchFn);
     }
 }

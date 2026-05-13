@@ -17,9 +17,6 @@ package org.finos.legend.pure.truffle.ast.natives.meta;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.natives.string.StringHelper;
@@ -34,16 +31,16 @@ public final class PathToElementNode extends PureNode
     @Children
     private PureNode[] children;
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
     private final boolean lenient;
 
-    public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity)
+    public PathToElementNode(PureNode[] children, Object genericType, Object multiplicity)
     {
         this(children, genericType, multiplicity, false);
     }
 
-    public PathToElementNode(PureNode[] children, GenericType genericType, Multiplicity multiplicity, boolean lenient)
+    public PathToElementNode(PureNode[] children, Object genericType, Object multiplicity, boolean lenient)
     {
         this.children = children;
         this.genericType = genericType;

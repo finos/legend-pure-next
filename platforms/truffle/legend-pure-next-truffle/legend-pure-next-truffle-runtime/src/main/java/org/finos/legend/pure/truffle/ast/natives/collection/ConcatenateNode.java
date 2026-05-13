@@ -44,16 +44,19 @@ public final class ConcatenateNode extends PureNode
     {
         Object a = left.executeGeneric(frame);
         Object b = right.executeGeneric(frame);
-        Object[] aArr = CollectionHelper.toArray(a);
-        Object[] bArr = CollectionHelper.toArray(b);
-        int total = aArr.length + bArr.length;
+        int aSize = CollectionHelper.size(a);
+        int bSize = CollectionHelper.size(b);
+        int total = aSize + bSize;
         if (total == 0)
         {
             return PureSequence.EMPTY;
         }
+        // Direct fill into the final array — skips the per-input toArray
+        // allocation+copy. Each {@code at(v, i)} is a constant-time read
+        // for the common {@link ObjectSequence} case.
         Object[] merged = new Object[total];
-        System.arraycopy(aArr, 0, merged, 0, aArr.length);
-        System.arraycopy(bArr, 0, merged, aArr.length, bArr.length);
+        for (int i = 0; i < aSize; i++) merged[i] = CollectionHelper.at(a, i);
+        for (int i = 0; i < bSize; i++) merged[aSize + i] = CollectionHelper.at(b, i);
         return new ObjectSequence(merged);
     }
 }

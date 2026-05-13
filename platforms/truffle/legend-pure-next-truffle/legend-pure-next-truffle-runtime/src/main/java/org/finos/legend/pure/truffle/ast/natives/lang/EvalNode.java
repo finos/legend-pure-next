@@ -19,8 +19,6 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.NativeFunction;
 import org.finos.legend.pure.truffle.ast.AtomicValueNode;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.ast.RawLambdaCallNode;
@@ -34,6 +32,8 @@ import org.finos.legend.pure.truffle.ast.RawClosure;
 @NodeInfo(shortName = "eval")
 public final class EvalNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     @Children
     private PureNode[] children;
 
@@ -97,12 +97,13 @@ public final class EvalNode extends PureNode
             }
             throw new RuntimeException("Cannot compile lambda CallTarget");
         }
-        if (fn instanceof LambdaFunction lf)
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                "meta::pure::metamodel::function::LambdaFunction"))
         {
-            com.oracle.truffle.api.RootCallTarget ct = evaluator.callTargetForLambda(lf);
+            com.oracle.truffle.api.RootCallTarget ct = evaluator.callTargetForLambda(fn);
             if (ct != null)
             {
-                RawClosure closure = new RawClosure(lf, new Object[0], new String[0], ct);
+                RawClosure closure = new RawClosure(fn, new Object[0], new String[0], ct);
                 Object[] fullArgs = new Object[args.length + 1];
                 fullArgs[0] = closure;
                 System.arraycopy(args, 0, fullArgs, 1, args.length);
@@ -110,31 +111,37 @@ public final class EvalNode extends PureNode
             }
             throw new RuntimeException("Cannot compile lambda CallTarget");
         }
-        if (fn instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.FunctionDefinition fd)
+        // Property is a leaf — pureTypeIs is enough (QualifiedProperty routes
+        // to the FunctionDefinition branch below since it extends both).
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                "meta::pure::metamodel::function::property::Property"))
         {
-            return evaluator.executeFunction(fd, args);
-        }
-        if (fn instanceof NativeFunction nf)
-        {
-            return executeNativeViaRegistry(evaluator, nf, args);
-        }
-        if (fn instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.property.Property prop)
-        {
-            // Property passed as first-class function to eval: access the
-            // property on the first argument
             if (args.length > 0)
             {
-                return propertyReader.execute(args[0], prop._name());
+                return propertyReader.execute(args[0],
+                        (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(fn, SLOT_NAME));
             }
             return org.finos.legend.pure.truffle.types.PureSequence.EMPTY;
+        }
+        org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess resolver = evaluator.resolver();
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.isType(fn,
+                "meta::pure::metamodel::function::FunctionDefinition", resolver))
+        {
+            return evaluator.executeFunction(fn, args);
+        }
+        // NativeFunction (leaf concrete type) — match via Pure path.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(fn,
+                "meta::pure::metamodel::function::NativeFunction"))
+        {
+            return executeNativeViaRegistry(evaluator, fn, args);
         }
         throw new RuntimeException("eval: first argument is not a function: " + fn.getClass().getName());
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object executeNativeViaRegistry(org.finos.legend.pure.truffle.PureContext evaluator, NativeFunction nf, Object[] args)
+    private static Object executeNativeViaRegistry(org.finos.legend.pure.truffle.PureContext evaluator, Object nf, Object[] args)
     {
-        String signature = nf._name();
+        String signature = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(nf, SLOT_NAME);
         NativeNodeRegistry registry = evaluator.astBuilder().specialized();
         NativeNodeRegistry.Factory factory = registry.lookup(signature);
         if (factory == null)

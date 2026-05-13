@@ -10,11 +10,14 @@ import java.util.LinkedHashMap;
  * Runtime implementation of Pure's {@code Map<U,V>}.
  * Backed by a {@link LinkedHashMap} for O(1) lookup with insertion-order iteration.
  */
-public class MapImpl implements org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.Map
+public class MapImpl implements org.finos.legend.pure.truffle.runtime.PropertyAccessor
 {
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue classifierGenericType;
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation sourceInformation;
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ElementOverride elementOverride;
+    // Fields widened to Object — the typed metamodel interfaces are no
+    // longer generated (zero codegen for non-metamodel; metamodel emits
+    // XImpls only). All Pure values that flow into these slots are PDOs.
+    private Object classifierGenericType;
+    private Object sourceInformation;
+    private Object elementOverride;
 
     private final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
 
@@ -55,46 +58,45 @@ public class MapImpl implements org.finos.legend.pure.truffle.pdb.meta.pure.func
         return map;
     }
 
+    // _classifierGenericType / _sourceInformation / _elementOverride getters
+    // and setters now resolve via Any's default methods, which delegate to
+    // readProperty/writeProperty on this PropertyAccessor.
+
     @Override
-    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue _classifierGenericType()
+    public Object readProperty(String name)
     {
-        return this.classifierGenericType;
+        switch (name)
+        {
+            case "classifierGenericType":
+                return classifierGenericType == null ? org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT : classifierGenericType;
+            case "sourceInformation":
+                return sourceInformation == null ? org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT : sourceInformation;
+            case "elementOverride":
+                return elementOverride == null ? org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT : elementOverride;
+            default:
+                return org.finos.legend.pure.truffle.runtime.PropertyAccessor.ABSENT;
+        }
     }
 
     @Override
-    public MapImpl _classifierGenericType(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue value)
+    public void writeProperty(String name, Object value)
     {
-        this.classifierGenericType = value;
-        return this;
+        switch (name)
+        {
+            case "classifierGenericType":
+                this.classifierGenericType = value;
+                return;
+            case "sourceInformation":
+                this.sourceInformation = value;
+                return;
+            case "elementOverride":
+                this.elementOverride = value;
+                return;
+            default:
+                throw new IllegalArgumentException("MapImpl has no property named: " + name);
+        }
     }
 
-    @Override
-    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation _sourceInformation()
-    {
-        return this.sourceInformation;
-    }
-
-    @Override
-    public MapImpl _sourceInformation(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.SourceInformation value)
-    {
-        this.sourceInformation = value;
-        return this;
-    }
-
-    @Override
-    public org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ElementOverride _elementOverride()
-    {
-        return this.elementOverride;
-    }
-
-    @Override
-    public MapImpl _elementOverride(org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.ElementOverride value)
-    {
-        this.elementOverride = value;
-        return this;
-    }
-
-    @Override
     public MapImpl _copy()
     {
         MapImpl copy = new MapImpl();

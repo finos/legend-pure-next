@@ -124,7 +124,6 @@ expression:
             (
                 propertyOrFunctionExpression
             )*
-            (equalNotEqual)?
         )
 ;
 simpleExpression:
@@ -175,22 +174,32 @@ codeBlock: programLine (END_LINE (programLine END_LINE)*)?
 programLine: combinedExpression | letExpression
 ;
 
-equalNotEqual: (TEST_EQUAL | TEST_NOT_EQUAL ) combinedArithmeticOnly
-;
-
-combinedArithmeticOnly: expressionOrExpressionGroup arithmeticPart*
-;
-
-expressionPart: booleanPart | arithmeticPart
-;
-
 letExpression: LET identifier EQUAL combinedExpression
 ;
 
-combinedExpression: expressionOrExpressionGroup expressionPart*
+// Operator precedence is encoded in the grammar as a rule ladder
+// (lowest precedence at the top, highest at the bottom). Each level
+// is left-associative; the visitor walks left-to-right and folds.
+// Order: || < && < ==,!= < <,<=,>,>= < +,- < *,/ < unary/property/atomic
+combinedExpression: orExpression
 ;
 
-expressionOrExpressionGroup: expression
+orExpression: andExpression (OR andExpression)*
+;
+
+andExpression: equalityExpression (AND equalityExpression)*
+;
+
+equalityExpression: relationalExpression ((TEST_EQUAL | TEST_NOT_EQUAL) relationalExpression)*
+;
+
+relationalExpression: additiveExpression ((LESSTHAN | LESSTHANEQUAL | GREATERTHAN | GREATERTHANEQUAL) additiveExpression)*
+;
+
+additiveExpression: multiplicativeExpression ((PLUS | MINUS) multiplicativeExpression)*
+;
+
+multiplicativeExpression: expression ((STAR | DIVIDE) expression)*
 ;
 
 expressionsArray: BRACKET_OPEN ( combinedExpression (COMMA combinedExpression)* )? BRACKET_CLOSE
@@ -343,21 +352,6 @@ instanceLiteral: instanceLiteralToken | (MINUS INTEGER) | (MINUS FLOAT) | (MINUS
 ;
 
 instanceLiteralToken: STRING | INTEGER | FLOAT | DECIMAL | DATE | BOOLEAN | STRICTTIME
-;
-
-arithmeticPart:   PLUS simpleExpression (PLUS simpleExpression)*
-                | (STAR simpleExpression (STAR simpleExpression)*)
-                | (MINUS simpleExpression (MINUS simpleExpression)*)
-                | (DIVIDE simpleExpression (DIVIDE simpleExpression)*)
-                | (LESSTHAN simpleExpression)
-                | (LESSTHANEQUAL simpleExpression)
-                | (GREATERTHAN simpleExpression)
-                | (GREATERTHANEQUAL simpleExpression)
-;
-
-booleanPart:  AND combinedArithmeticOnly
-            | (OR  combinedArithmeticOnly )
-            | equalNotEqual
 ;
 
 functionVariableExpression: identifier COLON type multiplicity

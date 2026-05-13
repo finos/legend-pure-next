@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 import org.finos.legend.pure.truffle.types.ObjectSequence;
@@ -35,7 +34,7 @@ public final class ZipNode extends PureNode
     private PureNode rightArg;
 
     @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedPairCgt;
+    private Object cachedPairCgt;
 
     public ZipNode(PureNode leftArg, PureNode rightArg)
     {
@@ -59,12 +58,12 @@ public final class ZipNode extends PureNode
         {
             return PureSequence.EMPTY;
         }
-        return doZip(left, right, sz, lookupPairCgt());
+        return doZip(left, right, sz, lookupPairCgt(), getResolver());
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupPairCgt()
+    private Object lookupPairCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedPairCgt;
+        Object cgt = cachedPairCgt;
         if (cgt == null)
         {
             // First-call population — invalidate so PE re-specialises with
@@ -79,10 +78,9 @@ public final class ZipNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populatePairCgt()
+    private Object populatePairCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
-                getContext().cgtForType("meta::pure::functions::collection::Pair");
+        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Pair");
         if (cgt == null)
         {
             throw new RuntimeException("[ZipNode] Cannot resolve Pair type from PDB");
@@ -92,15 +90,16 @@ public final class ZipNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object doZip(Object left, Object right, int sz, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue pairCGT)
+    private static Object doZip(Object left, Object right, int sz, Object pairCGT, TruffleMetadataAccess resolver)
     {
         Object[] pairs = new Object[sz];
         for (int i = 0; i < sz; i++)
         {
-            PairImpl pair = new PairImpl();
-            pair._first(CollectionHelper.at(left, i));
-            pair._second(CollectionHelper.at(right, i));
-            pair._classifierGenericType(pairCGT);
+            Object pair = org.finos.legend.pure.truffle.runtime.TruffleInstanceFactory.createInstance(
+                    "meta::pure::functions::collection::Pair", resolver);
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "first", CollectionHelper.at(left, i));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "second", CollectionHelper.at(right, i));
+            org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(pair, "classifierGenericType", pairCGT);
             pairs[i] = pair;
         }
         return new ObjectSequence(pairs);

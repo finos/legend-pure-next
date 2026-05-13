@@ -19,7 +19,7 @@ class protocol::MyClass extends Any  ~Class<protocol::MyClass>  @4:1-8:1
   qualifiedProperty displayName(prefix:@String@[1]) :@String@[1]
     <<protocol::support::AProfile.flag>>
     {protocol::support::AProfile.tag1 = 'yeah'}
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:86-7:97
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @7:78-7:97
       Variable prefix :#String##[1]#  ~@VariableExpression@  @7:78-7:84
       DotApplication protocol::MyClass.name :#String##[1]#  ~@DotApplication@  @7:93-7:97
         Variable this :#protocol::MyClass##[1]#  ~@VariableExpression@  @7:88-7:92

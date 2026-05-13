@@ -158,7 +158,7 @@
             "_type" : "SourceInformation",
             "endColumn" : 10,
             "endLine" : 6,
-            "startColumn" : 8,
+            "startColumn" : 6,
             "startLine" : 6
           },
           "parametersValues" : [ {

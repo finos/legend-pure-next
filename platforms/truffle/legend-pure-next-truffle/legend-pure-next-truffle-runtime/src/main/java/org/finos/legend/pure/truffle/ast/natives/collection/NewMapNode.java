@@ -16,7 +16,6 @@ package org.finos.legend.pure.truffle.ast.natives.collection;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.PairImpl;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 
@@ -27,6 +26,9 @@ import org.finos.legend.pure.truffle.runtime.TruffleMetadataAccess;
 @NodeInfo(shortName = "newMap")
 public final class NewMapNode extends PureNode
 {
+
+    private static final int SLOT_FIRST = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("first");
+    private static final int SLOT_SECOND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("second");
     private final String signature;
 
     @Child
@@ -43,7 +45,7 @@ public final class NewMapNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.CompilationFinal
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cachedMapCgt;
+    private Object cachedMapCgt;
 
     @Override
     public Object executeGeneric(VirtualFrame frame)
@@ -56,9 +58,9 @@ public final class NewMapNode extends PureNode
         return buildMap(pairs, lookupMapCgt());
     }
 
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue lookupMapCgt()
+    private Object lookupMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt = cachedMapCgt;
+        Object cgt = cachedMapCgt;
         if (cgt == null)
         {
             com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -68,10 +70,9 @@ public final class NewMapNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue populateMapCgt()
+    private Object populateMapCgt()
     {
-        org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue cgt =
-                getContext().cgtForType("meta::pure::functions::collection::Map");
+        Object cgt = getContext().cgtForType("meta::pure::functions::collection::Map");
         if (cgt == null)
         {
             throw new RuntimeException("[NewMapNode] Cannot resolve Map type from PDB");
@@ -81,17 +82,19 @@ public final class NewMapNode extends PureNode
     }
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static Object buildMap(Object pairs, org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericTypeValue mapCGT)
+    private static Object buildMap(Object pairs, Object mapCGT)
     {
         MapImpl map = new MapImpl();
-        map._classifierGenericType(mapCGT);
+        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.write(map, "classifierGenericType", mapCGT);
         int sz = CollectionHelper.size(pairs);
         for (int i = 0; i < sz; i++)
         {
             Object pair = CollectionHelper.at(pairs, i);
-            if (pair instanceof PairImpl p)
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(pair,
+                    "meta::pure::functions::collection::Pair"))
             {
-                map.put(p._first(), p._second());
+                map.put(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pair, SLOT_FIRST),
+                        org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(pair, SLOT_SECOND));
             }
         }
         return map;

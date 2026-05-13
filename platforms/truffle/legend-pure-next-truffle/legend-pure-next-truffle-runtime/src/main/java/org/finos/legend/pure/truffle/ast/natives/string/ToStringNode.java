@@ -17,24 +17,28 @@ package org.finos.legend.pure.truffle.ast.natives.string;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.multiplicity.Multiplicity;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.generics.GenericType;
 import org.finos.legend.pure.truffle.ast.PureNode;
 import org.finos.legend.pure.truffle.types.PureDate;
 
 @NodeInfo(shortName = "toStr")
 public final class ToStringNode extends PureNode
 {
+
+    private static final int SLOT_CLASSIFIER_GENERIC_TYPE = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("classifierGenericType");
+    private static final int SLOT_FIRST = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("first");
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    private static final int SLOT_SECOND = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("second");
+    private static final int SLOT_VALUES = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("values");
     @Child
     private PureNode arg;
 
     @Child
     private org.finos.legend.pure.truffle.ast.PropertyReadNode toStringReader = new org.finos.legend.pure.truffle.ast.PropertyReadNode();
 
-    private final GenericType genericType;
-    private final Multiplicity multiplicity;
+    private final Object genericType;
+    private final Object multiplicity;
 
-    public ToStringNode(PureNode arg, GenericType genericType, Multiplicity multiplicity)
+    public ToStringNode(PureNode arg, Object genericType, Object multiplicity)
     {
         this.arg = arg;
         this.genericType = genericType;
@@ -63,6 +67,46 @@ public final class ToStringNode extends PureNode
         return pureToString(v, null);
     }
 
+    /**
+     * Pure-source representation of an enum value: "<EnumerationPath>.<ValueName>"
+     * (e.g. "meta::pure::...::LA_GeographicEntityType.CITY"). Returns null when
+     * {@code v} isn't recognisable as a Pure enum value — caller should fall
+     * back to the regular toString form. Used by {@code %r} (toRepresentation)
+     * since enum values in Pure source are always written in qualified form.
+     */
+    @TruffleBoundary
+    static String enumQualifiedPath(Object v)
+    {
+        if (v == null) return null;
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(v);
+        // Post enum-to-PDO migration: enum values are PDOs typed as
+        // {@code meta::pure::metamodel::type::Enum}. The Java-enum branch
+        // is dead.
+        if ("meta::pure::metamodel::type::Enum".equals(pureType))
+        {
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_NAME);
+            if (name instanceof String s)
+            {
+                Object cgt = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_CLASSIFIER_GENERIC_TYPE);
+                if (cgt != null)
+                {
+                    Object enumType = org.finos.legend.pure.truffle.runtime.helper._GenericType.type(cgt);
+                    if (enumType != null)
+                    {
+                        var resolver = org.finos.legend.pure.truffle.PureLanguage.get(null).resolver();
+                        String enumPath = org.finos.legend.pure.truffle.runtime.helper._PackageableElement.path(enumType, resolver);
+                        if (enumPath != null && !enumPath.isEmpty())
+                        {
+                            return enumPath + "." + s;
+                        }
+                    }
+                }
+                return s;
+            }
+        }
+        return null;
+    }
+
     // @TruffleBoundary — recursive over arbitrary structure with substring,
     // StringBuilder, and reflection (toString-QP dispatch). Same JDK
     // inlining-budget hazard as normalizeDateString. Cheap to call across
@@ -78,16 +122,27 @@ public final class ToStringNode extends PureNode
         {
             return normalizeDateString(pd.dateString());
         }
-        // Enum values — return just the enum constant name
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum enumVal && enumVal._name() != null)
+        String pureType = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeOf(v);
+        // Pure's `toString` of an enum value returns just the value name
+        // (e.g. "CITY"), matching the standard convention. Callers wanting
+        // the fully-qualified "<EnumerationPath>.<ValueName>" form (the
+        // toRepresentation/%r convention) must use enumQualifiedPath above.
+        if ("meta::pure::metamodel::type::Enum".equals(pureType))
         {
-            return enumVal._name();
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_NAME);
+            if (name instanceof String s)
+            {
+                return s;
+            }
         }
         // List — [a, b, c]
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.List list)
+        if ("meta::pure::functions::collection::List".equals(pureType))
         {
-            var values = list._values();
-            if (values == null || values.isEmpty()) return "[]";
+            Object valuesObj = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_VALUES);
+            if (!(valuesObj instanceof org.finos.legend.pure.truffle.types.PureSequence values) || values.isEmpty())
+            {
+                return "[]";
+            }
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < values.size(); i++)
             {
@@ -97,23 +152,26 @@ public final class ToStringNode extends PureNode
             return sb.append("]").toString();
         }
         // Pair — <a, b>
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.functions.collection.Pair pair)
+        if ("meta::pure::functions::collection::Pair".equals(pureType))
         {
-            return "<" + pureToString(pair._first(), reader) + ", " + pureToString(pair._second(), reader) + ">";
+            return "<" + pureToString(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_FIRST), reader)
+                    + ", " + pureToString(org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_SECOND), reader) + ">";
         }
-        // Named metamodel elements — return just the name
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.PackageableElement pe && pe._name() != null)
+        // Named metamodel elements (PE-typed) — return just the name. We've
+        // already handled Enum above, so this catches Class/Property/etc.
+        if (pureType != null)
         {
-            return pe._name();
-        }
-        // For class instances (Any), try to invoke Pure's toString() QP
-        if (v instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Any any)
-        {
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(v, SLOT_NAME);
+            if (name instanceof String s && !s.isEmpty())
+            {
+                return s;
+            }
+            // For class instances (Any), try to invoke Pure's toString() QP
             if (reader != null)
             {
                 try
                 {
-                    Object result = reader.execute(any, "toString");
+                    Object result = reader.execute(v, "toString");
                     if (result instanceof String s)
                     {
                         return s;

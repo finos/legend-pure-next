@@ -42,29 +42,21 @@ public final class TruffleInstanceFactory
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath, TruffleMetadataAccess resolver)
     {
-        // newInstance() goes through a LambdaMetafactory-built Supplier —
-        // no Constructor.newInstance / AccessibleObject.checkAccess per
-        // call. JFR profile showed those frames at ~7% of self-compile CPU
-        // before this overload existed.
-        return resolver.typeCache().newInstance(classPath);
+        return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(classPath, resolver),
+                /*fb=*/ null,
+                resolver,
+                /*parent=*/ null);
     }
 
-    /** Back-compat overload — no caching. Prefer the resolver-aware overload above. */
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     public static Object createInstance(String classPath)
     {
-        try
-        {
-            return resolveClass(classPath).getDeclaredConstructor().newInstance();
-        }
-        catch (RuntimeException re)
-        {
-            throw re;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Failed to instantiate '" + classPath + "'", e);
-        }
+        return new org.finos.legend.pure.truffle.runtime.dynobj.PureDynamicObject(
+                org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.classInfoFor(classPath, null),
+                /*fb=*/ null,
+                /*resolver=*/ null,
+                /*parent=*/ null);
     }
 
     /**

@@ -19,7 +19,6 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeInfo;
-import org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.function.LambdaFunction;
 import org.finos.legend.pure.truffle.frame.FrameLayout;
 
 /**
@@ -31,7 +30,11 @@ import org.finos.legend.pure.truffle.frame.FrameLayout;
 @NodeInfo(shortName = "lambdaCapture")
 public final class RawLambdaCaptureNode extends PureNode
 {
-    private final LambdaFunction lambda;
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
+    // Widened from typed LambdaFunction so post-loader-flip PDO lambdas
+    // flow through this node uniformly. callTargetForLambda accepts Object.
+    private final Object lambda;
 
     @CompilationFinal(dimensions = 1)
     private final String[] openVarNames;
@@ -39,7 +42,7 @@ public final class RawLambdaCaptureNode extends PureNode
     @CompilationFinal(dimensions = 1)
     private final int[] openVarSlots;
 
-    public RawLambdaCaptureNode(LambdaFunction lambda,
+    public RawLambdaCaptureNode(Object lambda,
                                 org.finos.legend.pure.truffle.types.PureSequence openVars,
                                 FrameLayout layout)
     {
@@ -49,9 +52,16 @@ public final class RawLambdaCaptureNode extends PureNode
         for (int i = 0; i < openVars.size(); i++)
         {
             Object varObj = openVars.getBoxed(i);
-            String name = (varObj instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.valuespecification.VariableExpression ve)
-                    ? ve._name()
-                    : String.valueOf(varObj);
+            String name;
+            if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(varObj,
+                    "meta::pure::metamodel::valuespecification::VariableExpression"))
+            {
+                name = (String) org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(varObj, SLOT_NAME);
+            }
+            else
+            {
+                name = String.valueOf(varObj);
+            }
             openVarNames[i] = name;
             Integer slot = layout != null ? layout.slotFor(name) : null;
             openVarSlots[i] = slot != null ? slot : -1;
@@ -61,9 +71,29 @@ public final class RawLambdaCaptureNode extends PureNode
     @Override
     public Object executeGeneric(VirtualFrame frame)
     {
-        Object[] capturedValues = capture(frame);
-        RootCallTarget ct = lookupCallTarget();
-        return new RawClosure(lambda, capturedValues, openVarNames, ct);
+        RootCallTarget ct = cachedCallTarget;
+        if (ct == null)
+        {
+            com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+            ct = lookupCallTarget();
+        }
+        // No-capture closure: invariant per call site (same lambda + same
+        // call target + no captured frame state). Cache the RawClosure
+        // once and reuse — skips the per-call Object[] + RawClosure alloc
+        // for the {@code |...} / {@code _-> expr} pattern that drops
+        // through map/filter without binding outer vars.
+        if (openVarNames.length == 0)
+        {
+            RawClosure cached = cachedNoCaptureClosure;
+            if (cached == null)
+            {
+                com.oracle.truffle.api.CompilerDirectives.transferToInterpreterAndInvalidate();
+                cached = new RawClosure(lambda, EMPTY_OBJECTS, openVarNames, ct);
+                cachedNoCaptureClosure = cached;
+            }
+            return cached;
+        }
+        return new RawClosure(lambda, capture(frame), openVarNames, ct);
     }
 
     @ExplodeLoop
@@ -80,16 +110,17 @@ public final class RawLambdaCaptureNode extends PureNode
         return capturedValues;
     }
 
+    private static final Object[] EMPTY_OBJECTS = new Object[0];
+
+    @CompilationFinal
+    private RawClosure cachedNoCaptureClosure;
+
     @CompilationFinal
     private RootCallTarget cachedCallTarget;
 
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
     private RootCallTarget lookupCallTarget()
     {
-        if (cachedCallTarget != null)
-        {
-            return cachedCallTarget;
-        }
         cachedCallTarget = getContext().callTargetForLambda(lambda);
         return cachedCallTarget;
     }

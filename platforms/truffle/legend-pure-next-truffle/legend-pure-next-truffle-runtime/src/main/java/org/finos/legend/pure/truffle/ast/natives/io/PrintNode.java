@@ -17,10 +17,12 @@ package org.finos.legend.pure.truffle.ast.natives.io;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import org.finos.legend.pure.truffle.ast.PureNode;
-import org.finos.legend.pure.truffle.types.PureSequence;
 
 /**
- * {@code print(Any[*], Integer[1]) : Nil[0]} -- prints value to stdout.
+ * {@code print(Any[*], Integer[1]) : String[1]} — writes the formatted value
+ * to stdout and returns the same string. The dual return lets the Pure-level
+ * {@code println} compose ({@code print(v) + print('\n')}) without
+ * recomputing the format, and lets tests assert on the rendering directly.
  */
 @NodeInfo(shortName = "print")
 public final class PrintNode extends PureNode
@@ -43,16 +45,30 @@ public final class PrintNode extends PureNode
         Object val = valueArg.executeGeneric(frame);
         if (depthArg != null)
         {
+            // Evaluate for side effects; depth bound is reserved.
             depthArg.executeGeneric(frame);
         }
-        doPrint(val);
-        return PureSequence.EMPTY;
+        return doPrint(val);
     }
 
+    /**
+     * Thread-local "suppress print stdout" flag. {@link WithSilencedPrintNode}
+     * flips it around test bodies so individual tests' Pure {@code print}
+     * calls don't pollute stdout while the runner's own progress prints
+     * (called outside the test body) remain visible. The Pure-level value
+     * returned by {@code print} is unaffected — assertions still work.
+     */
+    public static final ThreadLocal<Boolean> SILENCED = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
     @com.oracle.truffle.api.CompilerDirectives.TruffleBoundary
-    private static void doPrint(Object val)
+    private static String doPrint(Object val)
     {
-        System.out.print(String.valueOf(val));
-        System.out.flush();
+        String s = TruffleValuePrinter.printForOutput(val);
+        if (!SILENCED.get())
+        {
+            System.out.print(s);
+            System.out.flush();
+        }
+        return s;
     }
 }

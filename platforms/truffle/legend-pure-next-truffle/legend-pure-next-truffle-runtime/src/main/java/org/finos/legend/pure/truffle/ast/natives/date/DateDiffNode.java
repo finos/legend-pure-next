@@ -28,6 +28,8 @@ import java.time.temporal.ChronoUnit;
 @NodeInfo(shortName = "dateDiff")
 public final class DateDiffNode extends PureNode
 {
+
+    private static final int SLOT_NAME = org.finos.legend.pure.truffle.runtime.dynobj.PureClassRegistry.globalSlot("name");
     private static final String SIG = "dateDiff_Date_1__Date_1__DurationUnit_1__Integer_1_";
 
     @Child
@@ -136,9 +138,17 @@ public final class DateDiffNode extends PureNode
 
     static String resolveUnitName(Object unit)
     {
-        if (unit instanceof org.finos.legend.pure.truffle.pdb.meta.pure.metamodel.type.Enum e)
+        if (unit == null)
         {
-            return e._name();
+            return null;
+        }
+        // Post enum-to-PDO migration: every enum value is a PDO typed as
+        // {@code meta::pure::metamodel::type::Enum} with a {@code name} slot.
+        if (org.finos.legend.pure.truffle.runtime.dynobj.PureObj.pureTypeIs(unit,
+                "meta::pure::metamodel::type::Enum"))
+        {
+            Object name = org.finos.legend.pure.truffle.runtime.dynobj.PureObj.readBySlot(unit, SLOT_NAME);
+            return name instanceof String s ? s : null;
         }
         if (unit instanceof String s)
         {

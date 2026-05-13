@@ -14,8 +14,8 @@ Class test::MyClass
 
 ###CompiledGraph
 function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
-  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:30-6:68
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:30-6:68
+  FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:24-6:68
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @6:24-6:62
       DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @6:24-6:28
         FunctionInvocation new_GenericTypeAndMultiplicityHolder_1__KeyExpression_MANY__T_1_ :#test::MyClass##[1]#  ~@FunctionInvocation@  @6:5-6:23
           typeParam T -> test::MyClass
@@ -38,7 +38,7 @@ function test::tst__Any_MANY_():@Any@[*]  ~UserDefinedFunction<{->@Any@[*]}>
 class test::MyClass extends Any  ~Class<test::MyClass>  @9:1-13:1
   property name :@String@[1]  ~Property<test::MyClass, @String@|1>
   qualifiedProperty name(s:@String@[1]) :@String@[1]
-    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @12:34-12:37
+    FunctionInvocation plus_String_1__String_1__String_1_ :#String##[1]#  ~@FunctionInvocation@  @12:28-12:37
       DotApplication test::MyClass.name :#String##[1]#  ~@DotApplication@  @12:28-12:32
         Variable this :#test::MyClass##[1]#  ~@VariableExpression@  @12:23-12:27
       Variable s :#String##[1]#  ~@VariableExpression@  @12:36-12:37
