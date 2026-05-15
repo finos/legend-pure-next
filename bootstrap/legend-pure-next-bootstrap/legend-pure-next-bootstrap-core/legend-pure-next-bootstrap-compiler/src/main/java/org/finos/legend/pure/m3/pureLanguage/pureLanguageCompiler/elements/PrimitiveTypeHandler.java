@@ -2,7 +2,6 @@ package org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.elements;
 
 import meta.pure.metamodel.type.PrimitiveType;
 import meta.pure.metamodel.type.PrimitiveTypeImpl;
-import meta.pure.metamodel.type.Type;
 import meta.pure.metamodel.valuespecification.VariableExpression;
 import meta.pure.metamodel.valuespecification.VariableExpressionImpl;
 import org.eclipse.collections.api.factory.Lists;
@@ -17,7 +16,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.Con
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.GeneralizationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.VariableCompiler;
-import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._G_PackageableElement;
 
 import java.util.Objects;
 

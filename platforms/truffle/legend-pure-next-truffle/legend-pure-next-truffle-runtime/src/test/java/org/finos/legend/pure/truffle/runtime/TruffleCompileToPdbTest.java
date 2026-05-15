@@ -14,12 +14,8 @@
 
 package org.finos.legend.pure.truffle.runtime;
 
-import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
 import org.finos.legend.pure.truffle.PureTruffleRuntime;
 import org.finos.legend.pure.truffle.types.PureSequence;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;

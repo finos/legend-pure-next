@@ -22,8 +22,6 @@ import meta.pure.metamodel.type.EnumImpl;
 import meta.pure.metamodel.type.Enumeration;
 import meta.pure.metamodel.type.EnumerationImpl;
 import meta.pure.metamodel.type.Type;
-import meta.pure.metamodel.type.generics.GenericType;
-import meta.pure.metamodel.type.generics.GenericTypeValue;
 import meta.pure.metamodel.type.generics.InferredGenericTypeImpl;
 import meta.pure.metamodel.type.generics.UserDefinedGenericTypeImpl;
 import meta.pure.metamodel.valuespecification.AtomicValueImpl;
@@ -36,7 +34,7 @@ import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._Functi
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._GenericType;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.AnnotationCompiler;
 import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.structural.SourceInformationCompiler;
-import org.finos.legend.pure.next.parser.m3.helper._G_PackageableElement;
+import org.finos.legend.pure.m3.pureLanguage.pureLanguageCompiler.helper._G_PackageableElement;
 
 import java.util.Objects;
 

@@ -20,7 +20,7 @@ import meta.pure.protocol.PureFile;
 import meta.pure.protocol.Section;
 import meta.pure.protocol.grammar.PackageableElement;
 import org.eclipse.collections.api.list.MutableList;
-import org.finos.legend.pure.next.parser.m3.M3ProtocolSerializer;
+import org.finos.legend.pure.next.parser.m3.PureLanguageSerializer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -40,24 +40,24 @@ import java.util.function.Function;
  * </pre>
  * </p>
  */
-public class TopLevelProtocolSerializer
+public class TopLevelSerializer
 {
     private final Map<String, Function<MutableList<PackageableElement>, String>>
             serializers = new LinkedHashMap<>();
-    private final M3ProtocolSerializer.ParenthesisMode parenMode;
+    private final PureLanguageSerializer.ParenthesisMode parenMode;
 
     /**
      * Create a new serializer with MINIMAL parenthesization.
      */
-    public TopLevelProtocolSerializer()
+    public TopLevelSerializer()
     {
-        this(M3ProtocolSerializer.ParenthesisMode.MINIMAL);
+        this(PureLanguageSerializer.ParenthesisMode.MINIMAL);
     }
 
     /**
      * Create a new serializer with the given parenthesization mode.
      */
-    public TopLevelProtocolSerializer(final M3ProtocolSerializer.ParenthesisMode mode)
+    public TopLevelSerializer(final PureLanguageSerializer.ParenthesisMode mode)
     {
         this.parenMode = mode;
         register("Pure",
@@ -71,7 +71,7 @@ public class TopLevelProtocolSerializer
      * @param serializer  function that takes elements and returns Pure text
      * @return this serializer for chaining
      */
-    public TopLevelProtocolSerializer register(
+    public TopLevelSerializer register(
             final String sectionName,
             final Function<MutableList<PackageableElement>, String> serializer)
     {
@@ -130,9 +130,9 @@ public class TopLevelProtocolSerializer
 
     private static String serializePureElements(
             final MutableList<PackageableElement> elements,
-            final M3ProtocolSerializer.ParenthesisMode mode)
+            final PureLanguageSerializer.ParenthesisMode mode)
     {
-        M3ProtocolSerializer pureSerializer = new M3ProtocolSerializer(mode);
+        PureLanguageSerializer pureSerializer = new PureLanguageSerializer(mode);
         return pureSerializer.serializeElements(elements);
     }
 }

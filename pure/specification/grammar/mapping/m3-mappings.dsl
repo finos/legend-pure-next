@@ -154,7 +154,7 @@ rule instanceLiteralToken {
 rule orExpression {
   left_fold over $ctx.andExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                 sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                  functionName = "or",
                  parametersValues = listOf(acc, rhs))
   }
@@ -163,7 +163,7 @@ rule orExpression {
 rule andExpression {
   left_fold over $ctx.equalityExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                 sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                  functionName = "and",
                  parametersValues = listOf(acc, rhs))
   }
@@ -173,12 +173,12 @@ rule andExpression {
 rule equalityExpression {
   left_fold over $ctx.relationalExpression {
     let ValueSpecification eq = newImpl(FunctionInvocation,
-                                         sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                                         sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                                          functionName = "equal",
                                          parametersValues = listOf(acc, rhs))
     alt when $tok = TEST_NOT_EQUAL {
       step newImpl(FunctionInvocation,
-                   sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                   sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                    functionName = "not",
                    parametersValues = listOf(eq))
     }
@@ -191,7 +191,7 @@ rule equalityExpression {
 rule relationalExpression {
   left_fold over $ctx.additiveExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                 sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                  functionName = match($tok,
                                        LESSTHAN, "lessThan",
                                        LESSTHANEQUAL, "lessThanEqual",
@@ -204,7 +204,7 @@ rule relationalExpression {
 rule additiveExpression {
   left_fold over $ctx.multiplicativeExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                 sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                  functionName = match($tok, PLUS, "plus", MINUS, "minus"),
                  parametersValues = listOf(acc, rhs))
   }
@@ -213,7 +213,7 @@ rule additiveExpression {
 rule multiplicativeExpression {
   left_fold over $ctx.expression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
+                 sourceInformation = buildOpSourceInfo($tok, acc, $rhsCtx),
                  functionName = match($tok, STAR, "times", DIVIDE, "divide"),
                  parametersValues = listOf(acc, rhs))
   }
@@ -935,12 +935,13 @@ helper buildClassGeneralization(TypeContext ctx) {
 # Grammar: functionDefinition: FUNCTION stereotypes? taggedValues? qualifiedName
 #                              typeAndMultiplicityParameters? functionTypeSignature
 #                              constraints? codeBlock
-# Uses a let + mutation form because `_name` must finally be derived from the
-# fully-built function (buildId hashes the parameter/return signature) and so
-# can't be computed inline as part of the newImpl literal.
+# `_name` is the canonical Pure signature (`fnName_ParamT_Mult__…__ReturnT_Mult_`)
+# computed by the `functionId` helper below — derived from the parse-tree context,
+# so the whole rule fits in a single `newImpl` literal.
 rule functionDefinition {
-  let UserDefinedFunctionImpl __r = newImpl(UserDefinedFunction,
+  return register(newImpl(UserDefinedFunction,
     sourceInformation = buildSourceInfo($ctx),
+    name = functionId($ctx),
     package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
                         newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
     functionName = simpleNameOf($ctx.qualifiedName.text),
@@ -955,9 +956,7 @@ rule functionDefinition {
     postConstraints = ifPresent($ctx.constraints, filterMap($ctx.constraints.constraint, "$return", buildConstraint)),
     expressionSequence = buildCodeBlock($ctx.codeBlock),
     stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
-  post __r._name(_G_PackageableFunction.buildId(__r))
-  return register(__r)
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
 }
 
 # Top-level element rule: nativeFunction.
@@ -965,8 +964,9 @@ rule functionDefinition {
 #                         typeAndMultiplicityParameters? functionTypeSignature
 # Same shape as functionDefinition minus the body and constraints.
 rule nativeFunction {
-  let NativeFunctionImpl __r = newImpl(NativeFunction,
+  return register(newImpl(NativeFunction,
     sourceInformation = buildSourceInfo($ctx),
+    name = nativeFunctionId($ctx),
     package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
                         newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
     functionName = simpleNameOf($ctx.qualifiedName.text),
@@ -978,9 +978,70 @@ rule nativeFunction {
     returnGenericType = buildGenericType($ctx.functionTypeSignature.type),
     returnMultiplicity = buildMultiplicity($ctx.functionTypeSignature.multiplicity),
     stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
-  post __r._name(_G_PackageableFunction.buildId(__r))
-  return register(__r)
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
+}
+
+# === Function-ID helpers ===
+# Compute the canonical Pure signature `fnName_ParamT_Mult__…__ReturnT_Mult_` from
+# the parse-tree context. Shape:
+#     simpleName + (params? "_" + buildParamSig1 + "__" + … + "__" + buildParamSigN  : "")
+#                + "__" + returnTypeSig + "_" + returnMultSig + "_"
+
+helper functionId(FunctionDefinitionContext ctx) as String {
+  return simpleNameOf($ctx.qualifiedName.text)
+       + buildParamListSig($ctx.functionTypeSignature)
+       + "__" + buildTypeSig($ctx.functionTypeSignature.type)
+       + "_" + buildMultSig($ctx.functionTypeSignature.multiplicity) + "_"
+}
+
+helper nativeFunctionId(NativeFunctionContext ctx) as String {
+  return simpleNameOf($ctx.qualifiedName.text)
+       + buildParamListSig($ctx.functionTypeSignature)
+       + "__" + buildTypeSig($ctx.functionTypeSignature.type)
+       + "_" + buildMultSig($ctx.functionTypeSignature.multiplicity) + "_"
+}
+
+helper buildParamListSig(FunctionTypeSignatureContext ctx) as String {
+  alt when notEmpty($ctx.functionVariableExpression) {
+    return "_" + joinStringsWith(mapList($ctx.functionVariableExpression, buildParamSig), "__")
+  }
+  alt else {
+    return ""
+  }
+}
+
+helper buildParamSig(FunctionVariableExpressionContext ctx) as String {
+  return buildTypeSig($ctx.type) + "_" + buildMultSig($ctx.multiplicity)
+}
+
+helper buildTypeSig(TypeContext ctx) as String {
+  alt when $ctx.qualifiedName {
+    return simpleNameOf($ctx.qualifiedName.text)
+  }
+  alt else {
+    return "UNKNOWN"
+  }
+}
+
+helper buildMultSig(MultiplicityContext ctx) as String {
+  alt when $ctx.multiplicityArgument.QUESTION {
+    return "UNDEFINED"
+  }
+  alt when $ctx.multiplicityArgument.identifier {
+    return $ctx.multiplicityArgument.identifier.text
+  }
+  alt when $ctx.multiplicityArgument.fromMultiplicity && $ctx.multiplicityArgument.toMultiplicity.STAR {
+    return "$" + $ctx.multiplicityArgument.fromMultiplicity.text + "_MANY$"
+  }
+  alt when $ctx.multiplicityArgument.fromMultiplicity {
+    return "$" + $ctx.multiplicityArgument.fromMultiplicity.text + "_" + $ctx.multiplicityArgument.toMultiplicity.text + "$"
+  }
+  alt when $ctx.multiplicityArgument.toMultiplicity.STAR {
+    return "MANY"
+  }
+  alt else {
+    return $ctx.multiplicityArgument.toMultiplicity.text
+  }
 }
 
 # Top-level element rule: association.
@@ -1255,3 +1316,32 @@ rule instanceLiteral as AtomicValueImpl {
   else error("Unsupported literal")
 }
 
+
+
+# === Source-information helpers ===
+# `lineOffset` (the per-instance long field) is referenced as a bare identifier;
+# it resolves to the field on the generated builder class.
+
+helper buildSourceInfo(ParserRuleContext ctx) as SourceInformationImpl {
+  return newImpl(SourceInformation,
+                 startLine   = (long)($ctx.getStart().getLine()) + lineOffset,
+                 startColumn = (long)($ctx.getStart().getCharPositionInLine()) + 1,
+                 endLine     = (long)($ctx.getStop().getLine()) + lineOffset,
+                 endColumn   = (long)($ctx.getStop().getCharPositionInLine() + $ctx.getStop().getText().length()))
+}
+
+# Span of a binary-call: from LHS start to RHS end. Falls back to the operator
+# token's position when the LHS has no source info (e.g. a primitive literal
+# constructed inline without sourceInformation set).
+helper buildOpSourceInfo(Token opTok, ValueSpecification left, ParserRuleContext ctx) as SourceInformationImpl {
+  let SourceInformation leftSrc = left._p_sourceInformation()
+  return newImpl(SourceInformation,
+                 startLine   = ifPresent(nonNull(leftSrc) && nonNull(leftSrc._startLine()),
+                                         leftSrc._startLine(),
+                                         (long)(opTok.getLine()) + lineOffset),
+                 startColumn = ifPresent(nonNull(leftSrc) && nonNull(leftSrc._startColumn()),
+                                         leftSrc._startColumn(),
+                                         (long)(opTok.getCharPositionInLine()) + 1),
+                 endLine     = (long)($ctx.getStop().getLine()) + lineOffset,
+                 endColumn   = (long)($ctx.getStop().getCharPositionInLine() + $ctx.getStop().getText().length()))
+}

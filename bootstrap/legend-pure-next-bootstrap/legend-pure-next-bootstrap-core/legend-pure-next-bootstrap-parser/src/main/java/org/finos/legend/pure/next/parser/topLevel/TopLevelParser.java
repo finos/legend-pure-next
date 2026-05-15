@@ -54,11 +54,11 @@ import java.util.Map;
  * </pre>
  * </p>
  */
-public final class TopLevelProtocolBuilder
+public final class TopLevelParser
 {
     private static final String DEFAULT_SECTION_NAME = "Pure";
 
-    private TopLevelProtocolBuilder()
+    private TopLevelParser()
     {
     }
 

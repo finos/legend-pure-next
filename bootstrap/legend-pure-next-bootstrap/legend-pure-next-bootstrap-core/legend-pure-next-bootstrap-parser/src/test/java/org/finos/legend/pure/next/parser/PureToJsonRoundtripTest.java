@@ -15,11 +15,11 @@
 package org.finos.legend.pure.next.parser;
 
 import org.eclipse.collections.api.factory.Lists;
-import org.finos.legend.pure.next.parser.m3.M3ProtocolSerializer;
+import org.finos.legend.pure.next.parser.m3.PureLanguageSerializer;
 import org.finos.legend.pure.next.parser.m3.PureLanguageParser;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
+import org.finos.legend.pure.next.parser.topLevel.TopLevelParser;
 import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolJsonSerializer;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolSerializer;
+import org.finos.legend.pure.next.parser.topLevel.TopLevelSerializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -105,7 +105,7 @@ public class PureToJsonRoundtripTest {
         String expectedJson = loadResource(cl, testPath + PROTOCOL_FILE);
 
         // Parse Pure via TopLevelProtocolBuilder
-        meta.pure.protocol.PureFile pureFile = TopLevelProtocolBuilder.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
+        meta.pure.protocol.PureFile pureFile = TopLevelParser.parse(pureSource, "testFile", Lists.mutable.with(new PureLanguageParser()));
         Assertions.assertFalse(pureFile._sections().isEmpty(),
                 "Expected at least one section for " + testName);
         Assertions.assertEquals("Pure", pureFile._sections().get(0)._parserName(),
@@ -146,27 +146,27 @@ public class PureToJsonRoundtripTest {
         String minimalCompareResource = testPath + GRAMMAR_COMPARE_FILE;
 
         final String compareSource;
-        final M3ProtocolSerializer.ParenthesisMode mode;
+        final PureLanguageSerializer.ParenthesisMode mode;
 
         if (resourceExists(cl, explicitCompareResource))
         {
             compareSource = loadResource(cl, explicitCompareResource);
-            mode = M3ProtocolSerializer.ParenthesisMode.EXPLICIT;
+            mode = PureLanguageSerializer.ParenthesisMode.EXPLICIT;
         }
         else if (resourceExists(cl, minimalCompareResource))
         {
             compareSource = loadResource(cl, minimalCompareResource);
-            mode = M3ProtocolSerializer.ParenthesisMode.MINIMAL;
+            mode = PureLanguageSerializer.ParenthesisMode.MINIMAL;
         }
         else
         {
             compareSource = pureSource;
-            mode = M3ProtocolSerializer.ParenthesisMode.MINIMAL;
+            mode = PureLanguageSerializer.ParenthesisMode.MINIMAL;
         }
 
         // Pure roundtrip: serialize PureFile back to Pure
-        TopLevelProtocolSerializer pureSerializer =
-                new TopLevelProtocolSerializer(mode);
+        TopLevelSerializer pureSerializer =
+                new TopLevelSerializer(mode);
         String actualPure = pureSerializer.serialize(pureFile);
 
         // Normalize both for comparison (remove extra whitespace)

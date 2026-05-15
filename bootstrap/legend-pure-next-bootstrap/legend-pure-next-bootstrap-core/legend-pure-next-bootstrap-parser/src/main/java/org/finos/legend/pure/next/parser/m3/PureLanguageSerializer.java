@@ -64,7 +64,7 @@ import java.util.function.BiConsumer;
 /**
  * Serializes protocol model objects back to Pure code.
  */
-public class M3ProtocolSerializer
+public class PureLanguageSerializer
 {
     /**
      * Controls how parentheses are emitted around operator expressions.
@@ -89,12 +89,12 @@ public class M3ProtocolSerializer
 
     private final ParenthesisMode parenMode;
 
-    public M3ProtocolSerializer()
+    public PureLanguageSerializer()
     {
         this(ParenthesisMode.MINIMAL);
     }
 
-    public M3ProtocolSerializer(final ParenthesisMode mode)
+    public PureLanguageSerializer(final ParenthesisMode mode)
     {
         this.parenMode = mode;
     }

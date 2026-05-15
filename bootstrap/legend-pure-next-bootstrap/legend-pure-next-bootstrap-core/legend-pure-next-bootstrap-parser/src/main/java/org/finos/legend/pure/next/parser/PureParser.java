@@ -17,7 +17,7 @@
 package org.finos.legend.pure.next.parser;
 
 import meta.pure.protocol.PureFile;
-import org.finos.legend.pure.next.parser.topLevel.TopLevelProtocolBuilder;
+import org.finos.legend.pure.next.parser.topLevel.TopLevelParser;
 
 import java.util.List;
 
@@ -54,7 +54,7 @@ public final class PureParser
      */
     public PureFile parse(String sourceId, String content)
     {
-        return TopLevelProtocolBuilder.parse(content, sourceId, extensions);
+        return TopLevelParser.parse(content, sourceId, extensions);
     }
 
     /**
