@@ -651,8 +651,8 @@ public final class M3VisitorGenerator
                         // left_fold over $.X { op "name" | op_by_token TOK "name" | when_token TOK wrap_with "name" }
                         r.leftFold = new LeftFold();
                         String lfHead = body.substring("left_fold over ".length()).replace("{", "").strip();
-                        if (!lfHead.startsWith("$.")) throw new RuntimeException("left_fold operand must be $.X: " + lfHead);
-                        r.leftFold.operandRule = lfHead.substring(2);
+                        if (!lfHead.startsWith("$ctx.")) throw new RuntimeException("left_fold operand must be $ctx.X: " + lfHead);
+                        r.leftFold.operandRule = lfHead.substring("$ctx.".length());
                         depth++;
                     }
                     else if (body.startsWith("chain_fold from "))
@@ -664,8 +664,8 @@ public final class M3VisitorGenerator
                         if (overIdx < 0) throw new RuntimeException("chain_fold needs ' over $.X': " + body);
                         r.chainFold.seedExpr = cfHead.substring(0, overIdx).strip();
                         String overPart = cfHead.substring(overIdx + " over ".length()).strip();
-                        if (!overPart.startsWith("$.")) throw new RuntimeException("chain_fold list must be $.X: " + overPart);
-                        r.chainFold.overRule = overPart.substring(2);
+                        if (!overPart.startsWith("$ctx.")) throw new RuntimeException("chain_fold list must be $ctx.X: " + overPart);
+                        r.chainFold.overRule = overPart.substring("$ctx.".length());
                         depth++;
                     }
                     else if (r.chainFold != null && body.startsWith("else step "))
@@ -678,8 +678,8 @@ public final class M3VisitorGenerator
                         // grow_list over $.X { alt when $it.Y { yield EXPR } ... }
                         r.growList = new GrowList();
                         String glHead = body.substring("grow_list over ".length()).replace("{", "").strip();
-                        if (!glHead.startsWith("$.")) throw new RuntimeException("grow_list list must be $.X: " + glHead);
-                        r.growList.overRule = glHead.substring(2);
+                        if (!glHead.startsWith("$ctx.")) throw new RuntimeException("grow_list list must be $ctx.X: " + glHead);
+                        r.growList.overRule = glHead.substring("$ctx.".length());
                         depth++;
                     }
                     else if (currentAlt != null && body.startsWith("yield "))
@@ -1289,22 +1289,26 @@ public final class M3VisitorGenerator
 
     /**
      * Translate a left_fold step / let expression to Java, substituting the
-     * per-iteration bindings: `acc` → `result`, `rhs` → `rhs` (kept), `$tok` → `opTok`,
-     * and `$loc` (when it appears alone, not as `$loc($.X)`) → the operator source-info
-     * helper call. Then defer to the normal `exprToJava` for the rest.
+     * per-iteration bindings:
+     *   acc      → result    (running accumulator / LHS)
+     *   rhs      → rhs       (just-built right operand, kept verbatim)
+     *   $tok     → opTok     (operator Token)
+     *   $rhsCtx  → rhsCtx    (RHS sub-context, useful for source-info helpers)
+     *
+     * Defers to the normal `exprToJava` for everything else. There is no
+     * fold-local `$loc` magic — the DSL writes `buildOpSourceInfo($tok, $rhsCtx, acc)`
+     * explicitly for the binary-call span.
      */
     private static String foldExprToJava(String dslExpr)
     {
-        // Use unique placeholders so the normal exprToJava doesn't re-interpret these.
-        // $loc alone → operator-source-info; $loc($.X) stays for exprToJava's handler.
         String staged = dslExpr;
         staged = staged.replaceAll("\\bacc\\b", "__FOLD_ACC__");
         staged = staged.replaceAll("\\$tok\\b", "__FOLD_TOK__");
-        staged = staged.replaceAll("\\$loc(?!\\()", "__FOLD_LOC__");
+        staged = staged.replaceAll("\\$rhsCtx\\b", "__FOLD_RHSCTX__");
         String java = exprToJava(staged, null);
         java = java.replace("__FOLD_ACC__", "result");
         java = java.replace("__FOLD_TOK__", "opTok");
-        java = java.replace("__FOLD_LOC__", "buildOpSourceInfo(opTok, rhsCtx, result)");
+        java = java.replace("__FOLD_RHSCTX__", "rhsCtx");
         return java;
     }
 
@@ -1376,14 +1380,14 @@ public final class M3VisitorGenerator
         {
             String expr = f.expr;
             int idx = 0;
-            while ((idx = expr.indexOf("$.", idx)) >= 0)
+            while ((idx = expr.indexOf("$ctx.", idx)) >= 0)
             {
-                int end = idx + 2;
+                int end = idx + "$ctx.".length();
                 while (end < expr.length() && (Character.isLetterOrDigit(expr.charAt(end)) || expr.charAt(end) == '_'))
                 {
                     end++;
                 }
-                String name = expr.substring(idx + 2, end);
+                String name = expr.substring(idx + "$ctx.".length(), end);
                 if (expr.startsWith(".text", end))
                 {
                     counts.merge(name, 1, Integer::sum);
@@ -1434,12 +1438,12 @@ public final class M3VisitorGenerator
             // chain_fold iteration-variable form: ctx-of-current-item
             return "it." + pred.substring(4) + "() != null";
         }
-        if (pred.startsWith("$."))
+        if (pred.startsWith("$ctx."))
         {
             // Multi-segment paths emit a null-safe chain so the predicate is sound
             // even when intermediate getters can return null (e.g. optional sub-rules):
-            //   $.X.Y → ctx.X() != null && ctx.X().Y() != null
-            String[] segs = pred.substring(2).split("\\.");
+            //   $ctx.X.Y → ctx.X() != null && ctx.X().Y() != null
+            String[] segs = pred.substring("$ctx.".length()).split("\\.");
             StringBuilder sb = new StringBuilder();
             StringBuilder cum = new StringBuilder("ctx");
             for (int k = 0; k < segs.length; k++)
@@ -1478,16 +1482,8 @@ public final class M3VisitorGenerator
     {
         String e = dslExpr.strip();
 
-        // Specific-child source-info: $loc($.X) → buildSourceInfo(ctx.X()); supports
-        // nested paths like $loc($.X.Y) → buildSourceInfo(ctx.X().Y()).
-        if (e.startsWith("$loc($.") && e.endsWith(")"))
-        {
-            String tok = e.substring("$loc($.".length(), e.length() - 1);
-            return "buildSourceInfo(" + pathToJava(tok, false) + ")";
-        }
-
-        // ifPresent($.X, THEN, ELSE) — ctx.X() != null ? THEN : ELSE
-        // ifPresent($.X, EXPR)        — 2-arg "skip" sentinel; only legal as a top-level
+        // ifPresent($ctx.X, THEN, ELSE) — ctx.X() != null ? THEN : ELSE
+        // ifPresent($ctx.X, EXPR)        — 2-arg "skip" sentinel; only legal as a top-level
         //                               newImpl field of a rule's return or a let-binding,
         //                               where the decomposer turns it into a conditional
         //                               setter. Anywhere else it's a parse error.
@@ -1642,28 +1638,27 @@ public final class M3VisitorGenerator
             return inner + ".split(\"\\\\.\")[0]";
         }
 
-        // firstOf($.X) — first element of a list-returning sub-rule accessor.
-        if (e.startsWith("firstOf($.") && e.endsWith(")"))
+        // firstOf($ctx.X) — first element of a list-returning sub-rule accessor.
+        if (e.startsWith("firstOf($ctx.") && e.endsWith(")"))
         {
-            String tok = e.substring("firstOf($.".length(), e.length() - 1);
+            String tok = e.substring("firstOf($ctx.".length(), e.length() - 1);
             return "ctx." + tok + "().get(0)";
         }
 
-        // anyHas($.X, name) — boolean: any item in $.X has a non-null `name()` child.
-        // Used both as a predicate (alt when …) and as a value (ifPresent argument).
-        if (e.startsWith("anyHas($.") && e.endsWith(")"))
+        // anyHas($ctx.X, name) — boolean: any item in $ctx.X has a non-null `name()` child.
+        if (e.startsWith("anyHas($ctx.") && e.endsWith(")"))
         {
-            String inner = e.substring("anyHas($.".length(), e.length() - 1);
+            String inner = e.substring("anyHas($ctx.".length(), e.length() - 1);
             int comma = inner.indexOf(',');
             String tok = inner.substring(0, comma).strip();
             String name = inner.substring(comma + 1).strip();
             return "ListAdapter.adapt(ctx." + tok + "()).anySatisfy(__c -> __c." + name + "() != null)";
         }
 
-        // anyHasAny($.X, name1, name2) — boolean: any item in $.X has non-null `name1()` OR `name2()`.
-        if (e.startsWith("anyHasAny($.") && e.endsWith(")"))
+        // anyHasAny($ctx.X, name1, name2) — boolean: any item in $ctx.X has non-null `name1()` OR `name2()`.
+        if (e.startsWith("anyHasAny($ctx.") && e.endsWith(")"))
         {
-            String inner = e.substring("anyHasAny($.".length(), e.length() - 1);
+            String inner = e.substring("anyHasAny($ctx.".length(), e.length() - 1);
             List<String> parts = splitTopLevelCommas(inner);
             String tok = parts.get(0).strip();
             String name1 = parts.get(1).strip();
@@ -1671,12 +1666,11 @@ public final class M3VisitorGenerator
             return "ListAdapter.adapt(ctx." + tok + "()).anySatisfy(__c -> __c." + name1 + "() != null || __c." + name2 + "() != null)";
         }
 
-        // selectMapHasAny($.X, name1, name2, fn) — filter $.X to items where name1 OR name2 is
-        // non-null, then map each via build<fn>. Used to gather only the typed columns in a
-        // colSpecArray RelationType holder.
-        if (e.startsWith("selectMapHasAny($.") && e.endsWith(")"))
+        // selectMapHasAny($ctx.X, name1, name2, fn) — filter $ctx.X to items where name1 OR name2 is
+        // non-null, then map each via build<fn>.
+        if (e.startsWith("selectMapHasAny($ctx.") && e.endsWith(")"))
         {
-            String inner = e.substring("selectMapHasAny($.".length(), e.length() - 1);
+            String inner = e.substring("selectMapHasAny($ctx.".length(), e.length() - 1);
             List<String> parts = splitTopLevelCommas(inner);
             String tok = parts.get(0).strip();
             String name1 = parts.get(1).strip();
@@ -1686,21 +1680,20 @@ public final class M3VisitorGenerator
             return "ListAdapter.adapt(ctx." + tok + "()).select(__c -> __c." + name1 + "() != null || __c." + name2 + "() != null).collect(this::" + methodRef + ")";
         }
 
-        // hasAny($self, name1, name2) — boolean: the current context has non-null name1() OR name2().
-        // Used as a predicate or value for the per-colSpec type-holder dispatch.
-        if (e.startsWith("hasAny($self, ") && e.endsWith(")"))
+        // hasAny($ctx, name1, name2) — boolean: the current context has non-null name1() OR name2().
+        if (e.startsWith("hasAny($ctx, ") && e.endsWith(")"))
         {
-            String inner = e.substring("hasAny($self, ".length(), e.length() - 1);
+            String inner = e.substring("hasAny($ctx, ".length(), e.length() - 1);
             List<String> parts = splitTopLevelCommas(inner);
             String name1 = parts.get(0).strip();
             String name2 = parts.get(1).strip();
             return "(ctx." + name1 + "() != null || ctx." + name2 + "() != null)";
         }
 
-        // count($.X) — ctx.X().size() — element count of a list-returning child rule.
-        if (e.startsWith("count($.") && e.endsWith(")"))
+        // count($ctx.X) — ctx.X().size() — element count of a list-returning child rule.
+        if (e.startsWith("count($ctx.") && e.endsWith(")"))
         {
-            String tok = e.substring("count($.".length(), e.length() - 1);
+            String tok = e.substring("count($ctx.".length(), e.length() - 1);
             return "ctx." + tok + "().size()";
         }
 
@@ -1730,14 +1723,14 @@ public final class M3VisitorGenerator
             }
         }
 
-        // joinStripped($.X) — concatenate the quote-stripped getText() of every $.X token.
+        // joinStripped($ctx.X) — concatenate the quote-stripped getText() of every $ctx.X token.
         // Used for grammar like `STRING (PLUS STRING)*` where multiple quoted strings should
         // be folded into one logical value.
         if (e.startsWith("joinStripped(") && e.endsWith(")"))
         {
             String inner = e.substring("joinStripped(".length(), e.length() - 1).strip();
-            if (!inner.startsWith("$.")) throw new RuntimeException("joinStripped expects $.X: " + inner);
-            String tok = inner.substring(2);
+            if (!inner.startsWith("$ctx.")) throw new RuntimeException("joinStripped expects $ctx.X: " + inner);
+            String tok = inner.substring("$ctx.".length());
             return "ListAdapter.adapt(ctx." + tok + "()).collect(__n -> { String __raw = __n.getText();"
                     + " return __raw.substring(1, __raw.length() - 1); }).makeString(\"\")";
         }
@@ -1840,8 +1833,7 @@ public final class M3VisitorGenerator
             return inner + ".contains(\"T\") ? " + dateTimeType + " : " + strictDateType;
         }
 
-        if (e.equals("$loc")) return "buildSourceInfo(ctx)";
-        if (e.equals("$self")) return "ctx";
+        if (e.equals("$ctx")) return "ctx";
         if (e.equals("acc")) return "acc";
         if (e.startsWith("$it.") && isSimpleTokenRef(e))
         {
@@ -1858,21 +1850,20 @@ public final class M3VisitorGenerator
             if (isText) sb.append(".getText()");
             return sb.toString();
         }
-        if (e.startsWith("$.") && e.endsWith(".text") && isSimpleTokenRef(e))
+        if (e.startsWith("$ctx.") && e.endsWith(".text") && isSimpleTokenRef(e))
         {
-            // Cache-aware $.X.text shortcut (only for single-segment paths). Multi-segment
-            // paths like $.X.Y.text fall through to pathToJava.
-            String inner = e.substring(2, e.length() - ".text".length());
+            // Cache-aware $ctx.X.text shortcut (single-segment paths only).
+            String inner = e.substring("$ctx.".length(), e.length() - ".text".length());
             if (!inner.contains(".") && cachedTextToken != null && cachedTextToken.equals(inner))
             {
                 return "__t";
             }
             return pathToJava(inner, true);
         }
-        if (e.startsWith("$.") && isSimpleTokenRef(e)) return pathToJava(e.substring(2), false);
-        // Pass-through (e.g. a helper invocation like `buildGenericType($.type)` or
-        // `parseMultiplicity($.multiplicity.text)`). Recursively substitute embedded
-        // $.X.text and $.X references so the resulting expression is valid Java.
+        if (e.startsWith("$ctx.") && isSimpleTokenRef(e)) return pathToJava(e.substring("$ctx.".length()), false);
+        // Pass-through (e.g. a helper invocation like `buildGenericType($ctx.type)` or
+        // `parseMultiplicity($ctx.multiplicity.text)`). Recursively substitute embedded
+        // $ctx.X.text and $ctx.X references so the resulting expression is valid Java.
         return substituteContextRefs(e, cachedTextToken);
     }
 
@@ -1975,16 +1966,17 @@ public final class M3VisitorGenerator
                 i = matched;
                 continue;
             }
-            // $self → ctx — the current rule's parser context as an argument.
-            if (i + 4 < e.length() + 1 && e.regionMatches(i, "$self", 0, 5)
-                    && (i + 5 == e.length() || !Character.isLetterOrDigit(e.charAt(i + 5))))
+            // $ctx (bare) → ctx — the rule's parser context.
+            // Must check BEFORE $ctx.X path so that $ctx alone isn't consumed as a path prefix.
+            if (i + 3 < e.length() + 1 && e.regionMatches(i, "$ctx", 0, 4)
+                    && (i + 4 == e.length() || (e.charAt(i + 4) != '.' && !Character.isLetterOrDigit(e.charAt(i + 4)))))
             {
                 out.append("ctx");
-                i += 5;
+                i += 4;
                 continue;
             }
-            // $it.X[.Y[.Z]][.text] (chain_fold/grow_list iteration-variable form) — must
-            // check before $. Walks each segment; trailing `.text` becomes `.getText()`.
+            // $it.X[.Y[.Z]][.text] (chain_fold/grow_list iteration-variable form). Walks each
+            // segment; trailing `.text` becomes `.getText()`.
             if (i + 3 < e.length() && e.charAt(i) == '$' && e.charAt(i + 1) == 'i'
                     && e.charAt(i + 2) == 't' && e.charAt(i + 3) == '.')
             {
@@ -2027,12 +2019,15 @@ public final class M3VisitorGenerator
                 }
                 i = j;
             }
-            else if (i + 1 < e.length() && e.charAt(i) == '$' && e.charAt(i + 1) == '.')
+            else if (i + 4 < e.length() && e.regionMatches(i, "$ctx.", 0, 5))
             {
-                // Walk a $.X[.Y[.Z]][.text] path. Each `.X` segment becomes `.X()` in
+                // Walk a $ctx.X[.Y[.Z]][.text] path. Each `.X` segment becomes `.X()` in
                 // Java; a trailing `.text` becomes `.getText()`. Single-segment .text
                 // honors the cachedTextToken optimization.
-                int j = i + 2;
+                // If the path is followed by `(` (e.g. `$ctx.getText()`), treat it as a
+                // Java method call and leave the parens to the source — don't add `()`
+                // after the final segment.
+                int j = i + "$ctx.".length();
                 java.util.List<String> segs = new ArrayList<>();
                 while (j < e.length() && (Character.isLetter(e.charAt(j)) || e.charAt(j) == '_'))
                 {
@@ -2052,7 +2047,8 @@ public final class M3VisitorGenerator
                         break;
                     }
                 }
-                boolean endsInText = segs.size() > 1 && "text".equals(segs.get(segs.size() - 1));
+                boolean trailingCall = j < e.length() && e.charAt(j) == '(';
+                boolean endsInText = !trailingCall && segs.size() > 1 && "text".equals(segs.get(segs.size() - 1));
                 if (endsInText && segs.size() == 2 && cachedTextToken != null && cachedTextToken.equals(segs.get(0)))
                 {
                     out.append("__t");
@@ -2065,6 +2061,18 @@ public final class M3VisitorGenerator
                         out.append('.').append(segs.get(k)).append("()");
                     }
                     out.append(".getText()");
+                }
+                else if (trailingCall)
+                {
+                    // Java method-call form: emit `ctx.X().Y.method` and let the source's
+                    // `(` continue the call. All-but-last segments are path-style; the
+                    // final segment is the Java method name (no trailing `()`).
+                    out.append("ctx");
+                    for (int k = 0; k < segs.size() - 1; k++)
+                    {
+                        out.append('.').append(segs.get(k)).append("()");
+                    }
+                    out.append('.').append(segs.get(segs.size() - 1));
                 }
                 else
                 {

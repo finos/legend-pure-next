@@ -29,8 +29,8 @@
 #   }                                                           #   top-level element, return
 #
 #   rule X {                                                    # multi-alt dispatch:
-#     alt when $.A { return newImpl(T1, …) }                    #   each alt returns
-#     alt when $.B { return newImpl(T2, …) }                    #   its own value;
+#     alt when $ctx.A { return newImpl(T1, …) }                    #   each alt returns
+#     alt when $ctx.B { return newImpl(T2, …) }                    #   its own value;
 #     else error("…")                                            #   else error catches
 #   }
 #
@@ -41,11 +41,12 @@
 #   }
 #
 # === Expression sub-language ===
-#   $.<rule_or_token>             →  ctx.<rule_or_token>()
-#   $.<rule_or_token>.text        →  ctx.<rule_or_token>().getText()
-#   $self                          →  ctx
-#   $loc                           →  buildSourceInfo(ctx)
-#   $loc($.X)                      →  buildSourceInfo(ctx.X())
+#   $ctx                          →  ctx
+#   $ctx.<rule_or_token>          →  ctx.<rule_or_token>()
+#   $ctx.<rule_or_token>.<sub>    →  ctx.<rule_or_token>().<sub>()
+#   $ctx.<rule_or_token>.text     →  ctx.<rule_or_token>().getText()
+#   buildSourceInfo($ctx)         →  buildSourceInfo(ctx)            (regular method call)
+#   buildSourceInfo($ctx.X)       →  buildSourceInfo(ctx.X())        (regular method call)
 #
 # === Conditional fields ===
 # Inside `newImpl(...)`, a property whose value is `ifPresent(p, e)` (2-arg)
@@ -53,7 +54,7 @@
 # `ifPresent(p, e1, e2)` evaluates to `e1` or `e2` as usual.
 #
 # === Alts and predicates ===
-# `alt when <pred> { return … }` introduces a guarded branch. `$.X` reads
+# `alt when <pred> { return … }` introduces a guarded branch. `$ctx.X` reads
 # `ctx.X() != null`. Multiple clauses are combined with `&&`. Alternatives
 # are tested in order. `alt else { return … }` and `else error("…")` provide
 # fallbacks.
@@ -62,7 +63,7 @@
 #   newImpl(T, k=v, …)        →  new TImpl()._k(v) — value can be ifPresent(p,e) (skip)
 #   register(expr)             →  flags rule as topLevel; visit wrapper adds to `elements`
 #   listOf(a, b, …)            →  Lists.mutable.with(a, b, …)
-#   mapList($.X, fn)           →  ListAdapter.adapt(ctx.X()).collect(this::fn)
+#   mapList($ctx.X, fn)           →  ListAdapter.adapt(ctx.X()).collect(this::fn)
 #   prepended(item, list)      →  Lists.mutable.with(item).withAll(list)
 #   ifPresent(p, e1, e2)       →  ternary
 #   parseLong / parseDouble / parseBoolean
@@ -74,57 +75,57 @@
 #   enumPointer(qn, val)
 #
 # === Iteration constructs (legacy block syntax) ===
-# The expression-precedence ladder uses `left_fold over $.X { … }` for left-
+# The expression-precedence ladder uses `left_fold over $ctx.X { … }` for left-
 # associative binary operators. Chain-fold and grow-list have similar shapes.
 # These keep a small block syntax; everything else is the unified form above.
 
 rule variable {
   return newImpl(VariableExpression,
-                 name = $.identifier.text,
-                 sourceInformation = $loc)
+                 name = $ctx.identifier.text,
+                 sourceInformation = buildSourceInfo($ctx))
 }
 
 rule instanceLiteralToken {
-  alt when $.INTEGER {
+  alt when $ctx.INTEGER {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = parseLong($.INTEGER.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = parseLong($ctx.INTEGER.text),
                    genericType = primitiveType("Integer"))
   }
-  alt when $.STRING {
+  alt when $ctx.STRING {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = stripQuotes($.STRING.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = stripQuotes($ctx.STRING.text),
                    genericType = primitiveType("String"))
   }
-  alt when $.FLOAT {
+  alt when $ctx.FLOAT {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = parseDouble($.FLOAT.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = parseDouble($ctx.FLOAT.text),
                    genericType = primitiveType("Float"))
   }
-  alt when $.DECIMAL {
+  alt when $ctx.DECIMAL {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = parseDouble($.DECIMAL.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = parseDouble($ctx.DECIMAL.text),
                    genericType = primitiveType("Decimal"))
   }
-  alt when $.BOOLEAN {
+  alt when $ctx.BOOLEAN {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = parseBoolean($.BOOLEAN.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = parseBoolean($ctx.BOOLEAN.text),
                    genericType = primitiveType("Boolean"))
   }
-  alt when $.DATE {
+  alt when $ctx.DATE {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = stripPercent($.DATE.text),
-                   genericType = dateLiteralType($.DATE.text))
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = stripPercent($ctx.DATE.text),
+                   genericType = dateLiteralType($ctx.DATE.text))
   }
-  alt when $.STRICTTIME {
+  alt when $ctx.STRICTTIME {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = stripPercent($.STRICTTIME.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = stripPercent($ctx.STRICTTIME.text),
                    genericType = primitiveType("StrictTime"))
   }
   else error("Unsupported literal token")
@@ -135,7 +136,7 @@ rule instanceLiteralToken {
 # > multiplicative). Each rule left-folds over its child rule, emitting
 # binary FunctionInvocation calls per operator token between operands.
 #
-# `left_fold over $.X { ... }` generates:
+# `left_fold over $ctx.X { ... }` generates:
 #   - operands = ctx.X();
 #   - result = build_X(operands.get(0));
 #   - for i in 1..n: take the operator token at position 2*i-1, build a
@@ -151,18 +152,18 @@ rule instanceLiteralToken {
 # -----------------------------------------------------------------------
 
 rule orExpression {
-  left_fold over $.andExpression {
+  left_fold over $ctx.andExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                  functionName = "or",
                  parametersValues = listOf(acc, rhs))
   }
 }
 
 rule andExpression {
-  left_fold over $.equalityExpression {
+  left_fold over $ctx.equalityExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                  functionName = "and",
                  parametersValues = listOf(acc, rhs))
   }
@@ -170,14 +171,14 @@ rule andExpression {
 
 # `==` is `equal(lhs, rhs)`; `!=` wraps the same call in `not(...)`.
 rule equalityExpression {
-  left_fold over $.relationalExpression {
+  left_fold over $ctx.relationalExpression {
     let ValueSpecification eq = newImpl(FunctionInvocation,
-                                         sourceInformation = $loc,
+                                         sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                                          functionName = "equal",
                                          parametersValues = listOf(acc, rhs))
     alt when $tok = TEST_NOT_EQUAL {
       step newImpl(FunctionInvocation,
-                   sourceInformation = $loc,
+                   sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                    functionName = "not",
                    parametersValues = listOf(eq))
     }
@@ -188,9 +189,9 @@ rule equalityExpression {
 }
 
 rule relationalExpression {
-  left_fold over $.additiveExpression {
+  left_fold over $ctx.additiveExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                  functionName = match($tok,
                                        LESSTHAN, "lessThan",
                                        LESSTHANEQUAL, "lessThanEqual",
@@ -201,18 +202,18 @@ rule relationalExpression {
 }
 
 rule additiveExpression {
-  left_fold over $.multiplicativeExpression {
+  left_fold over $ctx.multiplicativeExpression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                  functionName = match($tok, PLUS, "plus", MINUS, "minus"),
                  parametersValues = listOf(acc, rhs))
   }
 }
 
 rule multiplicativeExpression {
-  left_fold over $.expression {
+  left_fold over $ctx.expression {
     step newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildOpSourceInfo($tok, $rhsCtx, acc),
                  functionName = match($tok, STAR, "times", DIVIDE, "divide"),
                  parametersValues = listOf(acc, rhs))
   }
@@ -220,13 +221,13 @@ rule multiplicativeExpression {
 
 # -----------------------------------------------------------------------
 # Simple sub-builders. These exercise:
-#   - sub-rule helper calls (buildGenericType($.type), parseMultiplicity(...))
+#   - sub-rule helper calls (buildGenericType($ctx.type), parseMultiplicity(...))
 #   - delegate rules (combinedExpression passes through to orExpression)
-#   - specific-child source-info ($loc($.X))
+#   - specific-child source-info (buildSourceInfo($ctx.X))
 # -----------------------------------------------------------------------
 
 rule combinedExpression as ValueSpecification {
-  return buildOrExpression($.orExpression)
+  return buildOrExpression($ctx.orExpression)
 }
 
 # Grammar: multiplicity: BRACKET_OPEN multiplicityArgument BRACKET_CLOSE
@@ -234,7 +235,7 @@ rule combinedExpression as ValueSpecification {
 # actual value (identifier, `?`, or bounds). Avoids re-parsing the bracketed
 # text representation back into a structure.
 rule multiplicity as Multiplicity_Protocol {
-  return parseMultiplicityArgument($.multiplicityArgument)
+  return parseMultiplicityArgument($ctx.multiplicityArgument)
 }
 
 # Grammar: multiplicityArgument: identifier | ((fromMultiplicity DOTDOT)? toMultiplicity)
@@ -248,37 +249,37 @@ rule multiplicity as Multiplicity_Protocol {
 #                  in which case lower=0 and upper is left unset (any count).
 rule multiplicityArgument as Multiplicity_Protocol {
   method parseMultiplicityArgument
-  alt when $.QUESTION {
+  alt when $ctx.QUESTION {
     return newImpl(UndefinedMultiplicity)
   }
-  alt when $.identifier {
-    return newImpl(UserDefinedMultiplicityParameter, name = $.identifier.text)
+  alt when $ctx.identifier {
+    return newImpl(UserDefinedMultiplicityParameter, name = $ctx.identifier.text)
   }
   alt else {
     return newImpl(UserDefinedAdHocMultiplicity,
                    lowerBound = newImpl(MultiplicityValue,
-                                        value = ifPresent($.fromMultiplicity,
-                                                          parseLong($.fromMultiplicity.text),
-                                                          ifPresent($.toMultiplicity.STAR,
+                                        value = ifPresent($ctx.fromMultiplicity,
+                                                          parseLong($ctx.fromMultiplicity.text),
+                                                          ifPresent($ctx.toMultiplicity.STAR,
                                                                     parseLong("0"),
-                                                                    parseLong($.toMultiplicity.text)))),
-                   upperBound = ifPresent($.toMultiplicity.INTEGER, newImpl(MultiplicityValue, value = parseLong($.toMultiplicity.text))))
+                                                                    parseLong($ctx.toMultiplicity.text)))),
+                   upperBound = ifPresent($ctx.toMultiplicity.INTEGER, newImpl(MultiplicityValue, value = parseLong($ctx.toMultiplicity.text))))
   }
 }
 
 rule functionVariableExpression {
   return newImpl(VariableExpression,
-                 name = $.identifier.text,
-                 sourceInformation = $loc,
-                 genericType = buildGenericType($.type),
-                 multiplicity = buildMultiplicity($.multiplicity))
+                 name = $ctx.identifier.text,
+                 sourceInformation = buildSourceInfo($ctx),
+                 genericType = buildGenericType($ctx.type),
+                 multiplicity = buildMultiplicity($ctx.multiplicity))
 }
 
 # -----------------------------------------------------------------------
 # Per-alt return/delegate forms:
 #   - `as ReturnType` on the rule declares the method's return type.
 #   - inside an alt: `return EXPR` returns the value of EXPR.
-#   - inside an alt: `delegate $.X` returns buildX(ctx.X()).
+#   - inside an alt: `delegate $ctx.X` returns buildX(ctx.X()).
 #   - inside an alt: `emit T` overrides the rule-level emit type for that alt.
 # -----------------------------------------------------------------------
 
@@ -287,32 +288,32 @@ rule functionVariableExpression {
 # A multi-way dispatcher: simple delegates for most sub-rules, an inline DSL block
 # alternative, and AT (TypeRef) and columnBuilders dispatched to their own rules.
 rule atomicExpression as ValueSpecification {
-  alt when $.variable {
-    return buildVariable($.variable)
+  alt when $ctx.variable {
+    return buildVariable($ctx.variable)
   }
-  alt when $.instanceLiteralToken {
-    return buildInstanceLiteralToken($.instanceLiteralToken)
+  alt when $ctx.instanceLiteralToken {
+    return buildInstanceLiteralToken($ctx.instanceLiteralToken)
   }
-  alt when $.anyLambda {
-    return buildAnyLambda($.anyLambda)
+  alt when $ctx.anyLambda {
+    return buildAnyLambda($ctx.anyLambda)
   }
-  alt when $.instanceReference {
-    return buildInstanceReference($.instanceReference)
+  alt when $ctx.instanceReference {
+    return buildInstanceReference($ctx.instanceReference)
   }
-  alt when $.expressionInstance {
-    return buildExpressionInstance($.expressionInstance)
+  alt when $ctx.expressionInstance {
+    return buildExpressionInstance($ctx.expressionInstance)
   }
-  alt when $.dsl {
+  alt when $ctx.dsl {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc($.dsl),
+                   sourceInformation = buildSourceInfo($ctx.dsl),
                    genericType = primitiveType("String"),
-                   value = $.dsl.DSL_TEXT.text)
+                   value = $ctx.dsl.DSL_TEXT.text)
   }
-  alt when $.columnBuilders {
-    return buildColumnBuilders($.columnBuilders)
+  alt when $ctx.columnBuilders {
+    return buildColumnBuilders($ctx.columnBuilders)
   }
-  alt when $.AT {
-    return buildAtomicTypeRef($self)
+  alt when $ctx.AT {
+    return buildAtomicTypeRef($ctx)
   }
   else error("Unsupported atomicExpression")
 }
@@ -323,12 +324,12 @@ rule atomicExpression as ValueSpecification {
 # stay declarative.
 helper buildAtomicTypeRef(AtomicExpressionContext ctx) {
   return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
-                 sourceInformation = $loc,
-                 genericType = ifPresent($.type, buildGenericType($.type), newImpl(UndefinedGenericType)),
-                 multiplicity = ifPresent($.multiplicityArgument,
-                                          parseMultiplicityArgument($.multiplicityArgument),
-                                          ifPresent($.multiplicity,
-                                                    buildMultiplicity($.multiplicity),
+                 sourceInformation = buildSourceInfo($ctx),
+                 genericType = ifPresent($ctx.type, buildGenericType($ctx.type), newImpl(UndefinedGenericType)),
+                 multiplicity = ifPresent($ctx.multiplicityArgument,
+                                          parseMultiplicityArgument($ctx.multiplicityArgument),
+                                          ifPresent($ctx.multiplicity,
+                                                    buildMultiplicity($ctx.multiplicity),
                                                     newImpl(UndefinedMultiplicity))))
 }
 
@@ -342,38 +343,38 @@ helper buildAtomicTypeRef(AtomicExpressionContext ctx) {
 # is decided here based on lambda presence; the *2 suffix dispatch is delegated to
 # the compiler.
 rule columnBuilders as ValueSpecification {
-  alt when $.BRACKET_OPEN && anyHas($.oneColSpec, extraFunction) {
+  alt when $ctx.BRACKET_OPEN && anyHas($ctx.oneColSpec, extraFunction) {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="aggColSpecArray",
                    parametersValues=listOf(
                      newImpl(Collection,
-                             values=mapList($.oneColSpec, buildOneColSpec),
-                             multiplicity=multBounds(count($.oneColSpec), count($.oneColSpec))),
+                             values=mapList($ctx.oneColSpec, buildOneColSpec),
+                             multiplicity=multBounds(count($ctx.oneColSpec), count($ctx.oneColSpec))),
                      newImpl(CompilerGenericTypeAndMultiplicityHolder)))
   }
-  alt when $.BRACKET_OPEN && anyHas($.oneColSpec, anyLambda) {
+  alt when $ctx.BRACKET_OPEN && anyHas($ctx.oneColSpec, anyLambda) {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="funcColSpecArray",
                    parametersValues=listOf(
                      newImpl(Collection,
-                             values=mapList($.oneColSpec, buildOneColSpec),
-                             multiplicity=multBounds(count($.oneColSpec), count($.oneColSpec))),
+                             values=mapList($ctx.oneColSpec, buildOneColSpec),
+                             multiplicity=multBounds(count($ctx.oneColSpec), count($ctx.oneColSpec))),
                      newImpl(CompilerGenericTypeAndMultiplicityHolder)))
   }
-  alt when $.BRACKET_OPEN {
+  alt when $ctx.BRACKET_OPEN {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="colSpecArray",
                    parametersValues=listOf(
                      newImpl(Collection,
-                             values=mapList($.oneColSpec, buildColumnNameAtomic),
-                             multiplicity=multBounds(count($.oneColSpec), count($.oneColSpec))),
-                     buildColSpecArrayHolder($self)))
+                             values=mapList($ctx.oneColSpec, buildColumnNameAtomic),
+                             multiplicity=multBounds(count($ctx.oneColSpec), count($ctx.oneColSpec))),
+                     buildColSpecArrayHolder($ctx)))
   }
   alt else {
-    return buildOneColSpec(firstOf($.oneColSpec))
+    return buildOneColSpec(firstOf($ctx.oneColSpec))
   }
 }
 
@@ -389,27 +390,27 @@ rule columnBuilders as ValueSpecification {
 #                          (placeholder for the compiler to fill in).
 rule oneColSpec as ValueSpecification {
   let ValueSpecification nameAtomic = newImpl(AtomicValue,
-                                                sourceInformation = $loc($.columnName),
+                                                sourceInformation = buildSourceInfo($ctx.columnName),
                                                 genericType = primitiveType("String"),
-                                                value = $.columnName.text)
-  let ValueSpecification typeHolder = ifPresent(hasAny($self, type, multiplicity),
+                                                value = $ctx.columnName.text)
+  let ValueSpecification typeHolder = ifPresent(hasAny($ctx, type, multiplicity),
                                                   newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
                                                           genericType = newImpl(UserDefinedGenericType,
                                                                                 type = newImpl(RelationType,
-                                                                                                columns = listOf(buildOneColSpecColumn($self))))),
+                                                                                                columns = listOf(buildOneColSpecColumn($ctx))))),
                                                   newImpl(CompilerGenericTypeAndMultiplicityHolder))
   return newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
-                 functionName = ifPresent($.anyLambda,
-                                          ifPresent($.extraFunction, "aggColSpec", "funcColSpec"),
+                 sourceInformation = buildSourceInfo($ctx),
+                 functionName = ifPresent($ctx.anyLambda,
+                                          ifPresent($ctx.extraFunction, "aggColSpec", "funcColSpec"),
                                           "colSpec"),
-                 parametersValues = ifPresent($.anyLambda,
-                                              ifPresent($.extraFunction,
-                                                        listOf(buildAnyLambda($.anyLambda),
-                                                               buildAnyLambda($.extraFunction.anyLambda),
+                 parametersValues = ifPresent($ctx.anyLambda,
+                                              ifPresent($ctx.extraFunction,
+                                                        listOf(buildAnyLambda($ctx.anyLambda),
+                                                               buildAnyLambda($ctx.extraFunction.anyLambda),
                                                                nameAtomic,
                                                                typeHolder),
-                                                        listOf(buildAnyLambda($.anyLambda),
+                                                        listOf(buildAnyLambda($ctx.anyLambda),
                                                                nameAtomic,
                                                                typeHolder)),
                                               listOf(nameAtomic, typeHolder)))
@@ -419,28 +420,28 @@ rule oneColSpec as ValueSpecification {
 # Used both for the per-column type-holder and for the combined colSpecArray holder.
 helper buildOneColSpecColumn(OneColSpecContext ctx) {
   return newImpl(Column,
-                 name = $.columnName.text,
-                 genericType = ifPresent($.type, buildGenericType($.type)),
-                 multiplicity = ifPresent($.multiplicity, buildMultiplicity($.multiplicity)))
+                 name = $ctx.columnName.text,
+                 genericType = ifPresent($ctx.type, buildGenericType($ctx.type)),
+                 multiplicity = ifPresent($ctx.multiplicity, buildMultiplicity($ctx.multiplicity)))
 }
 
 # The String AtomicValue carrying a column name, used in colSpecArray.
 helper buildColumnNameAtomic(OneColSpecContext ctx) as ValueSpecification {
   return newImpl(AtomicValue,
-                 sourceInformation = $loc($.columnName),
+                 sourceInformation = buildSourceInfo($ctx.columnName),
                  genericType = primitiveType("String"),
-                 value = $.columnName.text)
+                 value = $ctx.columnName.text)
 }
 
 # The type holder for the colSpecArray case (no lambdas anywhere). Either a
 # UserDefinedGenericTypeAndMultiplicityHolder wrapping a RelationType built from
 # all typed/multiplied colSpecs, or a CompilerHolder when none have explicit types.
 helper buildColSpecArrayHolder(ColumnBuildersContext ctx) as ValueSpecification {
-  alt when anyHasAny($.oneColSpec, type, multiplicity) {
+  alt when anyHasAny($ctx.oneColSpec, type, multiplicity) {
     return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
                    genericType = newImpl(UserDefinedGenericType,
                                          type = newImpl(RelationType,
-                                                        columns = selectMapHasAny($.oneColSpec, type, multiplicity, oneColSpecColumn))))
+                                                        columns = selectMapHasAny($ctx.oneColSpec, type, multiplicity, oneColSpecColumn))))
   }
   alt else {
     return newImpl(CompilerGenericTypeAndMultiplicityHolder)
@@ -454,19 +455,19 @@ helper buildColSpecArrayHolder(ColumnBuildersContext ctx) as ValueSpecification 
 #   - subsetType? → wrap in `Subset`
 # Uses `set` to rebind the running result across the four stages.
 rule typeWithOperation as GenericType {
-  let GenericType result = buildGenericType($.type)
-  set result = ifPresent($.equalType,
+  let GenericType result = buildGenericType($ctx.type)
+  set result = ifPresent($ctx.equalType,
                           newImpl(GenericTypeOperation,
                                   operationType=enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Equal"),
                                   left=result,
-                                  right=buildGenericType($.equalType.type)),
+                                  right=buildGenericType($ctx.equalType.type)),
                           result)
-  set result = ListAdapter.adapt($.typeAddSubOperation).injectInto(result, this::buildWrapAddSubOp)
-  set result = ifPresent($.subsetType,
+  set result = ListAdapter.adapt($ctx.typeAddSubOperation).injectInto(result, this::buildWrapAddSubOp)
+  set result = ifPresent($ctx.subsetType,
                           newImpl(GenericTypeOperation,
                                   operationType=enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Subset"),
                                   left=result,
-                                  right=buildGenericType($.subsetType.type)),
+                                  right=buildGenericType($ctx.subsetType.type)),
                           result)
   return result
 }
@@ -474,33 +475,33 @@ rule typeWithOperation as GenericType {
 # One Union/Difference wrap step for a single typeAddSubOperation context.
 # Used as the lambda body of the injectInto fold in typeWithOperation.
 helper buildWrapAddSubOp(GenericType base, TypeAddSubOperationContext ctx) as GenericType {
-  alt when $.addType {
+  alt when $ctx.addType {
     return newImpl(GenericTypeOperation,
                    operationType = enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Union"),
                    left = base,
-                   right = buildGenericType($.addType.type))
+                   right = buildGenericType($ctx.addType.type))
   }
   alt else {
     return newImpl(GenericTypeOperation,
                    operationType = enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Difference"),
                    left = base,
-                   right = buildGenericType($.subType.type))
+                   right = buildGenericType($ctx.subType.type))
   }
 }
 
 rule typeOrUndefined as GenericType {
-  alt when $.QUESTION {
+  alt when $ctx.QUESTION {
     return newImpl(UndefinedGenericType)
   }
   alt else {
-    return buildTypeWithOperation($.typeWithOperation)
+    return buildTypeWithOperation($ctx.typeWithOperation)
   }
   else error("Unexpected typeOrUndefined")
 }
 
 rule buildMilestoningVariableExpression as ValueSpecification {
-  alt when $.variable {
-    return buildVariable($.variable)
+  alt when $ctx.variable {
+    return buildVariable($ctx.variable)
   }
   else error("Milestoning date expressions not yet supported")
 }
@@ -526,64 +527,64 @@ rule buildMilestoningVariableExpression as ValueSpecification {
 # value is the qualifiedName when present, else everything before the first dot
 # in the raw text (the PATH_SEPARATOR-prefixed form).
 rule instanceReference as ValueSpecification {
-  alt when $.allOrFunction.functionExpressionParameters {
+  alt when $ctx.allOrFunction.functionExpressionParameters {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
-                   functionName=ifPresent($.qualifiedName, $.qualifiedName.text, $self.getText()),
-                   parametersValues=mapList($.allOrFunction.functionExpressionParameters.combinedExpression, buildCombinedExpression))
+                   sourceInformation=buildSourceInfo($ctx),
+                   functionName=ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, $ctx.getText()),
+                   parametersValues=mapList($ctx.allOrFunction.functionExpressionParameters.combinedExpression, buildCombinedExpression))
   }
-  alt when $.allOrFunction.allFunction {
+  alt when $ctx.allOrFunction.allFunction {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="getAll",
                    parametersValues=listOf(
                      newImpl(AtomicValue,
-                             sourceInformation=$loc,
+                             sourceInformation=buildSourceInfo($ctx),
                              value=newImpl(Package_Pointer,
-                                           value=ifPresent($.qualifiedName, $.qualifiedName.text, beforeFirstDot($self.getText()))))))
+                                           value=ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, beforeFirstDot($ctx.getText()))))))
   }
-  alt when $.allOrFunction.allVersionsFunction {
+  alt when $ctx.allOrFunction.allVersionsFunction {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="getAllVersions",
                    parametersValues=listOf(
                      newImpl(AtomicValue,
-                             sourceInformation=$loc,
+                             sourceInformation=buildSourceInfo($ctx),
                              value=newImpl(Package_Pointer,
-                                           value=ifPresent($.qualifiedName, $.qualifiedName.text, beforeFirstDot($self.getText()))))))
+                                           value=ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, beforeFirstDot($ctx.getText()))))))
   }
-  alt when $.allOrFunction.allVersionsInRangeFunction {
+  alt when $ctx.allOrFunction.allVersionsInRangeFunction {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="getAllVersionsInRange",
                    parametersValues=prepended(
                      newImpl(AtomicValue,
-                             sourceInformation=$loc,
+                             sourceInformation=buildSourceInfo($ctx),
                              value=newImpl(Package_Pointer,
-                                           value=ifPresent($.qualifiedName, $.qualifiedName.text, beforeFirstDot($self.getText())))),
-                     mapList($.allOrFunction.allVersionsInRangeFunction.buildMilestoningVariableExpression, buildMilestoningVariableExpression)))
+                                           value=ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, beforeFirstDot($ctx.getText())))),
+                     mapList($ctx.allOrFunction.allVersionsInRangeFunction.buildMilestoningVariableExpression, buildMilestoningVariableExpression)))
   }
-  alt when $.allOrFunction.allFunctionWithMilestoning {
+  alt when $ctx.allOrFunction.allFunctionWithMilestoning {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    functionName="getAll",
                    parametersValues=prepended(
                      newImpl(AtomicValue,
-                             sourceInformation=$loc,
+                             sourceInformation=buildSourceInfo($ctx),
                              value=newImpl(Package_Pointer,
-                                           value=ifPresent($.qualifiedName, $.qualifiedName.text, beforeFirstDot($self.getText())))),
-                     mapList($.allOrFunction.allFunctionWithMilestoning.buildMilestoningVariableExpression, buildMilestoningVariableExpression)))
+                                           value=ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, beforeFirstDot($ctx.getText())))),
+                     mapList($ctx.allOrFunction.allFunctionWithMilestoning.buildMilestoningVariableExpression, buildMilestoningVariableExpression)))
   }
   alt else {
     return newImpl(AtomicValue,
-                   sourceInformation=$loc,
-                   value=newImpl(Package_Pointer, value=$self.getText()))
+                   sourceInformation=buildSourceInfo($ctx),
+                   value=newImpl(Package_Pointer, value=$ctx.getText()))
   }
 }
 
 # Grammar: lambdaParam: identifier lambdaParamType?
 # A lambda parameter slot: either bare (`x`) or typed (`x:T[m]`). The three
-# optional fields share one predicate ($.lambdaParamType) — set together.
+# optional fields share one predicate ($ctx.lambdaParamType) — set together.
 # Grammar: propertyExpression: DOT propertyName functionExpressionParameters?
 # Property access on a `receiver`: `receiver.propName` or `receiver.propName(args)`.
 # Takes the receiver value-spec as an extra method parameter.
@@ -593,29 +594,29 @@ rule instanceReference as ValueSpecification {
 # Two alts: `^$var(...)` (copy) and `^Type(...)` (new). Property assignments are
 # wrapped in a single Collection appended to the params list when non-empty.
 rule expressionInstance as ValueSpecification {
-  alt when $.variable {
+  alt when $ctx.variable {
     return newImpl(FunctionInvocation,
-                   sourceInformation = $loc,
+                   sourceInformation = buildSourceInfo($ctx),
                    functionName = "copy",
-                   parametersValues = ifPresent(notEmpty($.expressionInstanceParserPropertyAssignment),
-                     listOf(newImpl(VariableExpression, name = $.variable.identifier.text, sourceInformation = $loc($.variable)),
+                   parametersValues = ifPresent(notEmpty($ctx.expressionInstanceParserPropertyAssignment),
+                     listOf(newImpl(VariableExpression, name = $ctx.variable.identifier.text, sourceInformation = buildSourceInfo($ctx.variable)),
                             newImpl(Collection,
-                                    sourceInformation = $loc,
-                                    values = mapList($.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
-                                    multiplicity = multBounds(count($.expressionInstanceParserPropertyAssignment), count($.expressionInstanceParserPropertyAssignment)))),
-                     listOf(newImpl(VariableExpression, name = $.variable.identifier.text, sourceInformation = $loc($.variable)))))
+                                    sourceInformation = buildSourceInfo($ctx),
+                                    values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
+                                    multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
+                     listOf(newImpl(VariableExpression, name = $ctx.variable.identifier.text, sourceInformation = buildSourceInfo($ctx.variable)))))
   }
   alt else {
     return newImpl(FunctionInvocation,
-                   sourceInformation = $loc,
+                   sourceInformation = buildSourceInfo($ctx),
                    functionName = "new",
-                   parametersValues = ifPresent(notEmpty($.expressionInstanceParserPropertyAssignment),
-                     listOf(buildExpressionInstanceNewHead($self),
+                   parametersValues = ifPresent(notEmpty($ctx.expressionInstanceParserPropertyAssignment),
+                     listOf(buildExpressionInstanceNewHead($ctx),
                             newImpl(Collection,
-                                    sourceInformation = $loc,
-                                    values = mapList($.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
-                                    multiplicity = multBounds(count($.expressionInstanceParserPropertyAssignment), count($.expressionInstanceParserPropertyAssignment)))),
-                     listOf(buildExpressionInstanceNewHead($self))))
+                                    sourceInformation = buildSourceInfo($ctx),
+                                    values = mapList($ctx.expressionInstanceParserPropertyAssignment, buildExpressionInstanceParserPropertyAssignment),
+                                    multiplicity = multBounds(count($ctx.expressionInstanceParserPropertyAssignment), count($ctx.expressionInstanceParserPropertyAssignment)))),
+                     listOf(buildExpressionInstanceNewHead($ctx))))
   }
 }
 
@@ -627,17 +628,17 @@ rule expressionInstance as ValueSpecification {
 # can stay declarative.
 helper buildExpressionInstanceNewHead(ExpressionInstanceContext ctx) {
   return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
-                 sourceInformation = $loc,
-                 genericType = buildExpressionInstanceGenericType($self),
+                 sourceInformation = buildSourceInfo($ctx),
+                 genericType = buildExpressionInstanceGenericType($ctx),
                  multiplicity = multBounds(1, 1))
 }
 
 helper buildExpressionInstanceGenericType(ExpressionInstanceContext ctx) {
   return newImpl(UserDefinedGenericType,
-                 type = newImpl(Type_Pointer, value = ifPresent($.qualifiedName, $.qualifiedName.text, "Unknown")),
-                 typeArguments = ifPresent($.typeArguments, mapList($.typeArguments.typeOrUndefined, buildTypeOrUndefined)),
-                 multiplicityArguments = ifPresent($.multiplicityArguments, mapList($.multiplicityArguments.multiplicityArgument, parseMultiplicityArgument)),
-                 typeVariableValues = ifPresent($.typeVariableValues, mapList($.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
+                 type = newImpl(Type_Pointer, value = ifPresent($ctx.qualifiedName, $ctx.qualifiedName.text, "Unknown")),
+                 typeArguments = ifPresent($ctx.typeArguments, mapList($ctx.typeArguments.typeOrUndefined, buildTypeOrUndefined)),
+                 multiplicityArguments = ifPresent($ctx.multiplicityArguments, mapList($ctx.multiplicityArguments.multiplicityArgument, parseMultiplicityArgument)),
+                 typeVariableValues = ifPresent($ctx.typeVariableValues, mapList($ctx.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
 }
 
 # Grammar: expressionInstanceParserPropertyAssignment: propertyName (DOT propertyName)*
@@ -645,16 +646,16 @@ helper buildExpressionInstanceGenericType(ExpressionInstanceContext ctx) {
 # Each assignment becomes a `keyExpression(nameStr, rhs[, plusFlag])` invocation.
 rule expressionInstanceParserPropertyAssignment {
   return newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildSourceInfo($ctx),
                  functionName = "keyExpression",
-                 parametersValues = ifPresent($.PLUS,
+                 parametersValues = ifPresent($ctx.PLUS,
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = $loc, genericType = primitiveType("String"), value = joinTextWith($.propertyName, ".")),
-                     buildExpressionInstanceRightSide($.expressionInstanceRightSide),
-                     newImpl(AtomicValue, sourceInformation = $loc, genericType = primitiveType("Boolean"), value = true)),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide),
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("Boolean"), value = true)),
                    listOf(
-                     newImpl(AtomicValue, sourceInformation = $loc, genericType = primitiveType("String"), value = joinTextWith($.propertyName, ".")),
-                     buildExpressionInstanceRightSide($.expressionInstanceRightSide))))
+                     newImpl(AtomicValue, sourceInformation = buildSourceInfo($ctx), genericType = primitiveType("String"), value = joinTextWith($ctx.propertyName, ".")),
+                     buildExpressionInstanceRightSide($ctx.expressionInstanceRightSide))))
 }
 
 # Grammar: expressionInstanceRightSide: expressionInstanceAtomicRightSide
@@ -663,30 +664,30 @@ rule expressionInstanceParserPropertyAssignment {
 # parentReference is `~.~.~...propertyName.propertyName`: count of TILDEs gives
 # the "depth", DOT-joined propertyNames give the "path".
 rule expressionInstanceRightSide as ValueSpecification {
-  alt when $.expressionInstanceAtomicRightSide.parentReference {
+  alt when $ctx.expressionInstanceAtomicRightSide.parentReference {
     return newImpl(FunctionInvocation,
-                   sourceInformation=$loc($.expressionInstanceAtomicRightSide.parentReference),
+                   sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
                    functionName="parentReference",
                    parametersValues=listOf(
                      newImpl(AtomicValue,
-                             sourceInformation=$loc($.expressionInstanceAtomicRightSide.parentReference),
+                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
                              genericType=primitiveType("Integer"),
-                             value=(long)($.expressionInstanceAtomicRightSide.parentReference.TILDE.size - 1)),
+                             value=(long)($ctx.expressionInstanceAtomicRightSide.parentReference.TILDE.size - 1)),
                      newImpl(AtomicValue,
-                             sourceInformation=$loc($.expressionInstanceAtomicRightSide.parentReference),
+                             sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide.parentReference),
                              genericType=primitiveType("String"),
-                             value=joinTextWith($.expressionInstanceAtomicRightSide.parentReference.propertyName, "."))))
+                             value=joinTextWith($ctx.expressionInstanceAtomicRightSide.parentReference.propertyName, "."))))
   }
-  alt when $.expressionInstanceAtomicRightSide.combinedExpression {
-    return buildCombinedExpression($.expressionInstanceAtomicRightSide.combinedExpression)
+  alt when $ctx.expressionInstanceAtomicRightSide.combinedExpression {
+    return buildCombinedExpression($ctx.expressionInstanceAtomicRightSide.combinedExpression)
   }
-  alt when $.expressionInstanceAtomicRightSide.expressionInstance {
-    return buildExpressionInstance($.expressionInstanceAtomicRightSide.expressionInstance)
+  alt when $ctx.expressionInstanceAtomicRightSide.expressionInstance {
+    return buildExpressionInstance($ctx.expressionInstanceAtomicRightSide.expressionInstance)
   }
-  alt when $.expressionInstanceAtomicRightSide.qualifiedName {
+  alt when $ctx.expressionInstanceAtomicRightSide.qualifiedName {
     return newImpl(VariableExpression,
-                   sourceInformation=$loc($.expressionInstanceAtomicRightSide),
-                   name=$.expressionInstanceAtomicRightSide.qualifiedName.text)
+                   sourceInformation=buildSourceInfo($ctx.expressionInstanceAtomicRightSide),
+                   name=$ctx.expressionInstanceAtomicRightSide.qualifiedName.text)
   }
   else error("Unsupported expressionInstanceRightSide")
 }
@@ -697,9 +698,9 @@ rule expressionInstanceRightSide as ValueSpecification {
 # the running result (acc) as its first parameter and the per-step args as the rest.
 rule functionExpression as ValueSpecification {
   param ValueSpecification receiver
-  chain_fold from receiver over $.arrowStep {
+  chain_fold from receiver over $ctx.arrowStep {
     else step newImpl(ArrowInvocation,
-                       sourceInformation=$loc,
+                       sourceInformation=buildSourceInfo($ctx),
                        functionName=$it.qualifiedName.text,
                        parametersValues=prepended(acc, mapList($it.functionExpressionParameters.combinedExpression, buildCombinedExpression)))
   }
@@ -708,19 +709,19 @@ rule functionExpression as ValueSpecification {
 rule propertyExpression as ValueSpecification {
   param ValueSpecification receiver
   return newImpl(DotApplication,
-                 sourceInformation = $loc,
-                 functionName = $.propertyName.text,
-                 parametersValues = ifPresent($.functionExpressionParameters,
-                                              prepended(receiver, mapList($.functionExpressionParameters.combinedExpression, buildCombinedExpression)),
+                 sourceInformation = buildSourceInfo($ctx),
+                 functionName = $ctx.propertyName.text,
+                 parametersValues = ifPresent($ctx.functionExpressionParameters,
+                                              prepended(receiver, mapList($ctx.functionExpressionParameters.combinedExpression, buildCombinedExpression)),
                                               listOf(receiver)))
 }
 
 rule lambdaParam {
   return newImpl(VariableExpression,
-                 name = $.identifier.text,
-                 sourceInformation = ifPresent($.lambdaParamType, $loc),
-                 genericType = ifPresent($.lambdaParamType, buildGenericType($.lambdaParamType.type)),
-                 multiplicity = ifPresent($.lambdaParamType, buildMultiplicity($.lambdaParamType.multiplicity)))
+                 name = $ctx.identifier.text,
+                 sourceInformation = ifPresent($ctx.lambdaParamType, buildSourceInfo($ctx)),
+                 genericType = ifPresent($ctx.lambdaParamType, buildGenericType($ctx.lambdaParamType.type)),
+                 multiplicity = ifPresent($ctx.lambdaParamType, buildMultiplicity($ctx.lambdaParamType.multiplicity)))
 }
 
 # Grammar: lambdaFunction: LBRACE (lambdaParam (COMMA lambdaParam)*)? lambdaPipe RBRACE
@@ -728,67 +729,67 @@ rule lambdaParam {
 # the caller in `anyLambda`).
 rule lambdaFunction {
   return newImpl(LambdaFunction,
-                 sourceInformation = $loc,
-                 parameters = mapList($.lambdaParam, buildLambdaParam),
-                 expressionSequence = buildCodeBlock($.lambdaPipe.codeBlock))
+                 sourceInformation = buildSourceInfo($ctx),
+                 parameters = mapList($ctx.lambdaParam, buildLambdaParam),
+                 expressionSequence = buildCodeBlock($ctx.lambdaPipe.codeBlock))
 }
 
 # Grammar: anyLambda: lambdaFunction | (lambdaParam? lambdaPipe)
 # Three alternatives; each wraps the resulting LambdaFunction in an AtomicValue
-# whose source info matches the lambda. Predicate `$.X && $.Y` combines.
+# whose source info matches the lambda. Predicate `$ctx.X && $ctx.Y` combines.
 rule anyLambda as ValueSpecification {
-  alt when $.lambdaFunction {
+  alt when $ctx.lambdaFunction {
     return newImpl(AtomicValue,
-                   sourceInformation=$loc($.lambdaFunction),
-                   value=buildLambdaFunction($.lambdaFunction))
+                   sourceInformation=buildSourceInfo($ctx.lambdaFunction),
+                   value=buildLambdaFunction($ctx.lambdaFunction))
   }
-  alt when $.lambdaPipe && $.lambdaParam {
+  alt when $ctx.lambdaPipe && $ctx.lambdaParam {
     return newImpl(AtomicValue,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    value=newImpl(LambdaFunction,
-                                  sourceInformation=$loc,
-                                  parameters=listOf(buildLambdaParam($.lambdaParam)),
-                                  expressionSequence=buildCodeBlock($.lambdaPipe.codeBlock)))
+                                  sourceInformation=buildSourceInfo($ctx),
+                                  parameters=listOf(buildLambdaParam($ctx.lambdaParam)),
+                                  expressionSequence=buildCodeBlock($ctx.lambdaPipe.codeBlock)))
   }
-  alt when $.lambdaPipe {
+  alt when $ctx.lambdaPipe {
     return newImpl(AtomicValue,
-                   sourceInformation=$loc,
+                   sourceInformation=buildSourceInfo($ctx),
                    value=newImpl(LambdaFunction,
-                                  sourceInformation=$loc,
+                                  sourceInformation=buildSourceInfo($ctx),
                                   parameters=listOf(),
-                                  expressionSequence=buildCodeBlock($.lambdaPipe.codeBlock)))
+                                  expressionSequence=buildCodeBlock($ctx.lambdaPipe.codeBlock)))
   }
   else error("Unsupported anyLambda")
 }
 
 rule notExpression as ValueSpecification {
   return newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildSourceInfo($ctx),
                  functionName = "not",
-                 parametersValues = listOf(buildSimpleExpression($.simpleExpression)))
+                 parametersValues = listOf(buildSimpleExpression($ctx.simpleExpression)))
 }
 
 # Grammar: nonArrowOrEqualExpression: atomicExpression | expressionsArray |
 #          notExpression | signedExpression | sliceExpression | combinedExpression
 # Each branch is a delegate to its sub-rule's build method.
 rule nonArrowOrEqualExpression as ValueSpecification {
-  alt when $.atomicExpression {
-    return buildAtomicExpression($.atomicExpression)
+  alt when $ctx.atomicExpression {
+    return buildAtomicExpression($ctx.atomicExpression)
   }
-  alt when $.expressionsArray {
-    return buildExpressionsArray($.expressionsArray)
+  alt when $ctx.expressionsArray {
+    return buildExpressionsArray($ctx.expressionsArray)
   }
-  alt when $.notExpression {
-    return buildNotExpression($.notExpression)
+  alt when $ctx.notExpression {
+    return buildNotExpression($ctx.notExpression)
   }
-  alt when $.signedExpression {
-    return buildSignedExpression($.signedExpression)
+  alt when $ctx.signedExpression {
+    return buildSignedExpression($ctx.signedExpression)
   }
-  alt when $.sliceExpression {
-    return buildSliceExpression($.sliceExpression)
+  alt when $ctx.sliceExpression {
+    return buildSliceExpression($ctx.sliceExpression)
   }
-  alt when $.combinedExpression {
-    return buildCombinedExpression($.combinedExpression)
+  alt when $ctx.combinedExpression {
+    return buildCombinedExpression($ctx.combinedExpression)
   }
   else error("Unexpected nonArrowOrEqualExpression")
 }
@@ -796,22 +797,22 @@ rule nonArrowOrEqualExpression as ValueSpecification {
 # Grammar: signedExpression: (MINUS | PLUS) simpleExpression
 # When MINUS, wrap the inner in a `minus(...)` call. When PLUS, pass-through.
 rule signedExpression as ValueSpecification {
-  alt when $.MINUS {
+  alt when $ctx.MINUS {
     return newImpl(FunctionInvocation,
-                   sourceInformation = $loc,
+                   sourceInformation = buildSourceInfo($ctx),
                    functionName = "minus",
-                   parametersValues = listOf(buildSimpleExpression($.simpleExpression)))
+                   parametersValues = listOf(buildSimpleExpression($ctx.simpleExpression)))
   }
   alt else {
-    return buildSimpleExpression($.simpleExpression)
+    return buildSimpleExpression($ctx.simpleExpression)
   }
 }
 
 rule sliceExpression as ValueSpecification {
   return newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildSourceInfo($ctx),
                  functionName = "slice",
-                 parametersValues = mapList($.expression, buildExpression))
+                 parametersValues = mapList($ctx.expression, buildExpression))
 }
 
 # -----------------------------------------------------------------------
@@ -828,14 +829,14 @@ rule sliceExpression as ValueSpecification {
 # → letFunction(StringAtomic(name), expr)
 rule letExpression as ValueSpecification {
   return newImpl(FunctionInvocation,
-                 sourceInformation = $loc,
+                 sourceInformation = buildSourceInfo($ctx),
                  functionName = "letFunction",
                  parametersValues = listOf(
                    newImpl(AtomicValue,
-                           sourceInformation = $loc($.identifier),
+                           sourceInformation = buildSourceInfo($ctx.identifier),
                            genericType = primitiveType("String"),
-                           value = $.identifier.text),
-                   buildCombinedExpression($.combinedExpression)))
+                           value = $ctx.identifier.text),
+                   buildCombinedExpression($ctx.combinedExpression)))
 }
 
 # Top-level element rule: primitiveDefinition.
@@ -844,16 +845,16 @@ rule letExpression as ValueSpecification {
 # Single extends type (wrapped in a 1-element list of generalizations).
 rule primitiveDefinition {
   return register(newImpl(PrimitiveType,
-    sourceInformation = $loc,
-    name = simpleNameOf($.qualifiedName.text),
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    typeVariables = ifPresent($.typeVariableParameters,
-                              mapList($.typeVariableParameters.functionVariableExpression, buildFunctionVariableExpression)),
-    generalizations = ifPresent($.type, listOf(buildClassGeneralization($.type))),
-    constraints = ifPresent($.constraints, mapList($.constraints.constraint, buildConstraint)),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue))))
+    sourceInformation = buildSourceInfo($ctx),
+    name = simpleNameOf($ctx.qualifiedName.text),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    typeVariables = ifPresent($ctx.typeVariableParameters,
+                              mapList($ctx.typeVariableParameters.functionVariableExpression, buildFunctionVariableExpression)),
+    generalizations = ifPresent($ctx.type, listOf(buildClassGeneralization($ctx.type))),
+    constraints = ifPresent($ctx.constraints, mapList($ctx.constraints.constraint, buildConstraint)),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
 }
 
 # Top-level element rule: enumDefinition.
@@ -862,40 +863,40 @@ rule primitiveDefinition {
 # Each enumValue maps to a Property carrying its own annotations.
 rule enumDefinition {
   return register(newImpl(Enumeration,
-    sourceInformation = $loc,
-    name = simpleNameOf($.qualifiedName.text),
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    properties = mapList($.enumValue, buildEnumValue),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue))))
+    sourceInformation = buildSourceInfo($ctx),
+    name = simpleNameOf($ctx.qualifiedName.text),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    properties = mapList($ctx.enumValue, buildEnumValue),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
 }
 
 # Grammar: enumValue: stereotypes? taggedValues? identifier
 rule enumValue {
   return newImpl(Property,
-                 name = $.identifier.text,
-                 sourceInformation = $loc,
-                 stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-                 taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue)))
+                 name = $ctx.identifier.text,
+                 sourceInformation = buildSourceInfo($ctx),
+                 stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+                 taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
 }
 
 # Grammar: typeParameter: identifier
 rule typeParameter {
-  return newImpl(TypeParameter, name = $.identifier.text)
+  return newImpl(TypeParameter, name = $ctx.identifier.text)
 }
 
 # Grammar: typeParameterWithVariance: MINUS? identifier
 rule typeParameterWithVariance {
   return newImpl(TypeParameter,
-                 name = $.identifier.text,
-                 contravariant = ifPresent($.MINUS, true))
+                 name = $ctx.identifier.text,
+                 contravariant = ifPresent($ctx.MINUS, true))
 }
 
 # A single identifier from a multiplicity-parameters list becomes a
 # UserDefinedMultiplicityParameter.
 helper buildMultParamDef(IdentifierContext ctx) {
-  return newImpl(UserDefinedMultiplicityParameter, name = $self.getText())
+  return newImpl(UserDefinedMultiplicityParameter, name = $ctx.getText())
 }
 
 # Top-level element rule: classDefinition.
@@ -905,29 +906,29 @@ helper buildMultParamDef(IdentifierContext ctx) {
 #                          constraints? classBody?
 rule classDefinition {
   return register(newImpl(Class,
-    sourceInformation = $loc,
-    name = simpleNameOf($.qualifiedName.text),
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    typeParameters = ifPresent($.typeParametersWithVarianceAndMultiplicityParameters.typeParametersWithVariance,
-                               mapList($.typeParametersWithVarianceAndMultiplicityParameters.typeParametersWithVariance.typeParameterWithVariance, buildTypeParameterWithVariance)),
-    multiplicityParameters = ifPresent($.typeParametersWithVarianceAndMultiplicityParameters.multiplictyParameters,
-                                        mapList($.typeParametersWithVarianceAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
-    typeVariables = ifPresent($.typeVariableParameters,
-                              mapList($.typeVariableParameters.functionVariableExpression, buildFunctionVariableExpression)),
-    generalizations = ifPresent(notEmpty($.type), mapList($.type, classGeneralization)),
-    constraints = ifPresent($.constraints, mapList($.constraints.constraint, buildConstraint)),
-    properties = ifPresent($.classBody.properties, mapList($.classBody.properties.property, buildProperty)),
-    qualifiedProperties = ifPresent($.classBody.properties, mapList($.classBody.properties.qualifiedProperty, buildQualifiedProperty)),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue))))
+    sourceInformation = buildSourceInfo($ctx),
+    name = simpleNameOf($ctx.qualifiedName.text),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    typeParameters = ifPresent($ctx.typeParametersWithVarianceAndMultiplicityParameters.typeParametersWithVariance,
+                               mapList($ctx.typeParametersWithVarianceAndMultiplicityParameters.typeParametersWithVariance.typeParameterWithVariance, buildTypeParameterWithVariance)),
+    multiplicityParameters = ifPresent($ctx.typeParametersWithVarianceAndMultiplicityParameters.multiplictyParameters,
+                                        mapList($ctx.typeParametersWithVarianceAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
+    typeVariables = ifPresent($ctx.typeVariableParameters,
+                              mapList($ctx.typeVariableParameters.functionVariableExpression, buildFunctionVariableExpression)),
+    generalizations = ifPresent(notEmpty($ctx.type), mapList($ctx.type, classGeneralization)),
+    constraints = ifPresent($ctx.constraints, mapList($ctx.constraints.constraint, buildConstraint)),
+    properties = ifPresent($ctx.classBody.properties, mapList($ctx.classBody.properties.property, buildProperty)),
+    qualifiedProperties = ifPresent($ctx.classBody.properties, mapList($ctx.classBody.properties.qualifiedProperty, buildQualifiedProperty)),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
 }
 
 # Wrap a TypeContext into a Generalization (general type + source info).
 helper buildClassGeneralization(TypeContext ctx) {
   return newImpl(Generalization,
-                 general = buildGenericType($self),
-                 sourceInformation = $loc)
+                 general = buildGenericType($ctx),
+                 sourceInformation = buildSourceInfo($ctx))
 }
 
 # Top-level element rule: functionDefinition.
@@ -939,22 +940,22 @@ helper buildClassGeneralization(TypeContext ctx) {
 # can't be computed inline as part of the newImpl literal.
 rule functionDefinition {
   let UserDefinedFunctionImpl __r = newImpl(UserDefinedFunction,
-    sourceInformation = $loc,
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    functionName = simpleNameOf($.qualifiedName.text),
-    typeParameters = ifPresent($.typeAndMultiplicityParameters.typeParameters,
-                               mapList($.typeAndMultiplicityParameters.typeParameters.typeParameter, buildTypeParameter)),
-    multiplicityParameters = ifPresent($.typeAndMultiplicityParameters.multiplictyParameters,
-                                        mapList($.typeAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
-    parameters = mapList($.functionTypeSignature.functionVariableExpression, buildFunctionVariableExpression),
-    returnGenericType = buildGenericType($.functionTypeSignature.type),
-    returnMultiplicity = buildMultiplicity($.functionTypeSignature.multiplicity),
-    preConstraints = ifPresent($.constraints, filterMapNot($.constraints.constraint, "$return", buildConstraint)),
-    postConstraints = ifPresent($.constraints, filterMap($.constraints.constraint, "$return", buildConstraint)),
-    expressionSequence = buildCodeBlock($.codeBlock),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue)))
+    sourceInformation = buildSourceInfo($ctx),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    functionName = simpleNameOf($ctx.qualifiedName.text),
+    typeParameters = ifPresent($ctx.typeAndMultiplicityParameters.typeParameters,
+                               mapList($ctx.typeAndMultiplicityParameters.typeParameters.typeParameter, buildTypeParameter)),
+    multiplicityParameters = ifPresent($ctx.typeAndMultiplicityParameters.multiplictyParameters,
+                                        mapList($ctx.typeAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
+    parameters = mapList($ctx.functionTypeSignature.functionVariableExpression, buildFunctionVariableExpression),
+    returnGenericType = buildGenericType($ctx.functionTypeSignature.type),
+    returnMultiplicity = buildMultiplicity($ctx.functionTypeSignature.multiplicity),
+    preConstraints = ifPresent($ctx.constraints, filterMapNot($ctx.constraints.constraint, "$return", buildConstraint)),
+    postConstraints = ifPresent($ctx.constraints, filterMap($ctx.constraints.constraint, "$return", buildConstraint)),
+    expressionSequence = buildCodeBlock($ctx.codeBlock),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
   post __r._name(_G_PackageableFunction.buildId(__r))
   return register(__r)
 }
@@ -965,19 +966,19 @@ rule functionDefinition {
 # Same shape as functionDefinition minus the body and constraints.
 rule nativeFunction {
   let NativeFunctionImpl __r = newImpl(NativeFunction,
-    sourceInformation = $loc,
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    functionName = simpleNameOf($.qualifiedName.text),
-    typeParameters = ifPresent($.typeAndMultiplicityParameters.typeParameters,
-                               mapList($.typeAndMultiplicityParameters.typeParameters.typeParameter, buildTypeParameter)),
-    multiplicityParameters = ifPresent($.typeAndMultiplicityParameters.multiplictyParameters,
-                                        mapList($.typeAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
-    parameters = mapList($.functionTypeSignature.functionVariableExpression, buildFunctionVariableExpression),
-    returnGenericType = buildGenericType($.functionTypeSignature.type),
-    returnMultiplicity = buildMultiplicity($.functionTypeSignature.multiplicity),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue)))
+    sourceInformation = buildSourceInfo($ctx),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    functionName = simpleNameOf($ctx.qualifiedName.text),
+    typeParameters = ifPresent($ctx.typeAndMultiplicityParameters.typeParameters,
+                               mapList($ctx.typeAndMultiplicityParameters.typeParameters.typeParameter, buildTypeParameter)),
+    multiplicityParameters = ifPresent($ctx.typeAndMultiplicityParameters.multiplictyParameters,
+                                        mapList($ctx.typeAndMultiplicityParameters.multiplictyParameters.identifier, buildMultParamDef)),
+    parameters = mapList($ctx.functionTypeSignature.functionVariableExpression, buildFunctionVariableExpression),
+    returnGenericType = buildGenericType($ctx.functionTypeSignature.type),
+    returnMultiplicity = buildMultiplicity($ctx.functionTypeSignature.multiplicity),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
   post __r._name(_G_PackageableFunction.buildId(__r))
   return register(__r)
 }
@@ -987,14 +988,14 @@ rule nativeFunction {
 # associationBody contains properties() with property() and qualifiedProperty() lists.
 rule association {
   return register(newImpl(Association,
-    sourceInformation = $loc,
-    name = simpleNameOf($.qualifiedName.text),
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    properties = ifPresent($.associationBody.properties, mapList($.associationBody.properties.property, buildProperty)),
-    qualifiedProperties = ifPresent($.associationBody.properties, mapList($.associationBody.properties.qualifiedProperty, buildQualifiedProperty)),
-    stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-    taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue))))
+    sourceInformation = buildSourceInfo($ctx),
+    name = simpleNameOf($ctx.qualifiedName.text),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    properties = ifPresent($ctx.associationBody.properties, mapList($ctx.associationBody.properties.property, buildProperty)),
+    qualifiedProperties = ifPresent($ctx.associationBody.properties, mapList($ctx.associationBody.properties.qualifiedProperty, buildQualifiedProperty)),
+    stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+    taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue))))
 }
 
 # Top-level element rule: profile.
@@ -1002,37 +1003,37 @@ rule association {
 #                   tagDefinitions? CURLY_BRACKET_CLOSE
 rule profile {
   return register(newImpl(Profile,
-    sourceInformation = $loc,
-    name = simpleNameOf($.qualifiedName.text),
-    package = ifPresent(hasPackagePrefix($.qualifiedName.text),
-                        newImpl(Package_Pointer, value = packagePrefix($.qualifiedName.text))),
-    p_stereotypes = ifPresent($.stereotypeDefinitions, mapList($.stereotypeDefinitions.identifier, profileStereotypeDef)),
-    p_tags = ifPresent($.tagDefinitions, mapList($.tagDefinitions.identifier, profileTagDef))))
+    sourceInformation = buildSourceInfo($ctx),
+    name = simpleNameOf($ctx.qualifiedName.text),
+    package = ifPresent(hasPackagePrefix($ctx.qualifiedName.text),
+                        newImpl(Package_Pointer, value = packagePrefix($ctx.qualifiedName.text))),
+    p_stereotypes = ifPresent($ctx.stereotypeDefinitions, mapList($ctx.stereotypeDefinitions.identifier, profileStereotypeDef)),
+    p_tags = ifPresent($ctx.tagDefinitions, mapList($ctx.tagDefinitions.identifier, profileTagDef))))
 }
 
 # Convert an identifier context to a stereotype / tag definition (name + srcInfo).
 helper buildProfileStereotypeDef(IdentifierContext ctx) {
   return newImpl(Stereotype,
-                 sourceInformation = $loc,
-                 value = $self.getText())
+                 sourceInformation = buildSourceInfo($ctx),
+                 value = $ctx.getText())
 }
 
 helper buildProfileTagDef(IdentifierContext ctx) {
   return newImpl(Tag,
-                 sourceInformation = $loc,
-                 value = $self.getText())
+                 sourceInformation = buildSourceInfo($ctx),
+                 value = $ctx.getText())
 }
 
 # Grammar: stereotype: qualifiedName DOT identifier
 # qualifiedName = profile path, identifier = stereotype name
 rule stereotype {
   return newImpl(Stereotype_Pointer,
-                 sourceInformation = $loc($.qualifiedName),
-                 value = $.qualifiedName.text,
+                 sourceInformation = buildSourceInfo($ctx.qualifiedName),
+                 value = $ctx.qualifiedName.text,
                  extraPointerValues = listOf(
                    newImpl(PointerValue,
-                           sourceInformation = $loc($.identifier),
-                           value = $.identifier.text)))
+                           sourceInformation = buildSourceInfo($ctx.identifier),
+                           value = $ctx.identifier.text)))
 }
 
 # Grammar: taggedValue: qualifiedName DOT identifier EQUAL STRING (PLUS STRING)*
@@ -1040,13 +1041,13 @@ rule stereotype {
 rule taggedValue {
   return newImpl(TaggedValue,
                  tag = newImpl(Tag_Pointer,
-                               sourceInformation = $loc($.qualifiedName),
-                               value = $.qualifiedName.text,
+                               sourceInformation = buildSourceInfo($ctx.qualifiedName),
+                               value = $ctx.qualifiedName.text,
                                extraPointerValues = listOf(
                                    newImpl(PointerValue,
-                                           sourceInformation = $loc($.identifier),
-                                           value = $.identifier.text))),
-                 value = joinStripped($.STRING))
+                                           sourceInformation = buildSourceInfo($ctx.identifier),
+                                           value = $ctx.identifier.text))),
+                 value = joinStripped($ctx.STRING))
 }
 
 # -----------------------------------------------------------------------
@@ -1061,7 +1062,7 @@ rule taggedValue {
 # -----------------------------------------------------------------------
 
 rule simpleExpression as ValueSpecification {
-  chain_fold from buildNonArrowOrEqualExpression($.nonArrowOrEqualExpression) over $.propertyOrFunctionExpression {
+  chain_fold from buildNonArrowOrEqualExpression($ctx.nonArrowOrEqualExpression) over $ctx.propertyOrFunctionExpression {
     alt when $it.propertyExpression {
       step buildPropertyExpression(acc, $it.propertyExpression)
     }
@@ -1107,107 +1108,107 @@ rule simpleExpression as ValueSpecification {
 # throughout the codebase.
 rule type {
   method buildGenericType
-  alt when $.qualifiedName {
+  alt when $ctx.qualifiedName {
     return newImpl(UserDefinedGenericType,
                    type = newImpl(Type_Pointer,
-                                  sourceInformation = $loc($.qualifiedName),
-                                  value = $.qualifiedName.text),
-                   typeArguments = ifPresent($.typeArguments, mapList($.typeArguments.typeOrUndefined, buildTypeOrUndefined)),
-                   multiplicityArguments = ifPresent($.multiplicityArguments, mapList($.multiplicityArguments.multiplicityArgument, parseMultiplicityArgument)),
-                   typeVariableValues = ifPresent($.typeVariableValues, mapList($.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
+                                  sourceInformation = buildSourceInfo($ctx.qualifiedName),
+                                  value = $ctx.qualifiedName.text),
+                   typeArguments = ifPresent($ctx.typeArguments, mapList($ctx.typeArguments.typeOrUndefined, buildTypeOrUndefined)),
+                   multiplicityArguments = ifPresent($ctx.multiplicityArguments, mapList($ctx.multiplicityArguments.multiplicityArgument, parseMultiplicityArgument)),
+                   typeVariableValues = ifPresent($ctx.typeVariableValues, mapList($ctx.typeVariableValues.instanceLiteral, buildInstanceLiteral)))
   }
-  alt when $.CURLY_BRACKET_OPEN {
+  alt when $ctx.CURLY_BRACKET_OPEN {
     return newImpl(UserDefinedGenericType,
                    type = newImpl(FunctionType,
-                                  parameters = mapList($.functionTypePureType, buildFunctionTypePureType),
-                                  returnType = buildGenericType($.type),
-                                  returnMultiplicity = buildMultiplicity($.multiplicity)))
+                                  parameters = mapList($ctx.functionTypePureType, buildFunctionTypePureType),
+                                  returnType = buildGenericType($ctx.type),
+                                  returnMultiplicity = buildMultiplicity($ctx.multiplicity)))
   }
-  alt when $.GROUP_OPEN {
+  alt when $ctx.GROUP_OPEN {
     return newImpl(UserDefinedGenericType,
                    type = newImpl(RelationType,
-                                  columns = mapList($.columnType, buildColumnType)))
+                                  columns = mapList($ctx.columnType, buildColumnType)))
   }
 }
 
 rule columnType {
   return newImpl(Column,
-                 sourceInformation = $loc,
-                 name = ifPresent($.mayColumnName.columnName, stripIfQuoted($.mayColumnName.columnName.text)),
-                 nameWildCard = ifPresent($.mayColumnName.QUESTION, true),
-                 genericType = ifPresent($.mayColumnType.type, buildGenericType($.mayColumnType.type)),
-                 multiplicity = ifPresent($.multiplicity, buildMultiplicity($.multiplicity)))
+                 sourceInformation = buildSourceInfo($ctx),
+                 name = ifPresent($ctx.mayColumnName.columnName, stripIfQuoted($ctx.mayColumnName.columnName.text)),
+                 nameWildCard = ifPresent($ctx.mayColumnName.QUESTION, true),
+                 genericType = ifPresent($ctx.mayColumnType.type, buildGenericType($ctx.mayColumnType.type)),
+                 multiplicity = ifPresent($ctx.multiplicity, buildMultiplicity($ctx.multiplicity)))
 }
 
 rule functionTypePureType {
   return newImpl(VariableExpression,
-                 genericType = buildGenericType($.type),
-                 multiplicity = buildMultiplicity($.multiplicity))
+                 genericType = buildGenericType($ctx.type),
+                 multiplicity = buildMultiplicity($ctx.multiplicity))
 }
 
 rule constraint {
-  alt when $.simpleConstraint {
+  alt when $ctx.simpleConstraint {
     return newImpl(Constraint,
-                   sourceInformation = $loc,
-                   name = ifPresent($.simpleConstraint.constraintId, $.simpleConstraint.constraintId.VALID_STRING.text),
+                   sourceInformation = buildSourceInfo($ctx),
+                   name = ifPresent($ctx.simpleConstraint.constraintId, $ctx.simpleConstraint.constraintId.VALID_STRING.text),
                    functionDefinition = newImpl(LambdaFunction,
-                                                sourceInformation = $loc($.simpleConstraint),
-                                                expressionSequence = listOf(buildCombinedExpression($.simpleConstraint.combinedExpression))))
+                                                sourceInformation = buildSourceInfo($ctx.simpleConstraint),
+                                                expressionSequence = listOf(buildCombinedExpression($ctx.simpleConstraint.combinedExpression))))
   }
-  alt when $.complexConstraint {
+  alt when $ctx.complexConstraint {
     return newImpl(Constraint,
-                   sourceInformation = $loc,
-                   name = $.complexConstraint.VALID_STRING.text,
-                   owner = ifPresent($.complexConstraint.constraintOwner, $.complexConstraint.constraintOwner.VALID_STRING.text),
-                   externalId = ifPresent($.complexConstraint.constraintExternalId, stripQuotes($.complexConstraint.constraintExternalId.STRING.text)),
+                   sourceInformation = buildSourceInfo($ctx),
+                   name = $ctx.complexConstraint.VALID_STRING.text,
+                   owner = ifPresent($ctx.complexConstraint.constraintOwner, $ctx.complexConstraint.constraintOwner.VALID_STRING.text),
+                   externalId = ifPresent($ctx.complexConstraint.constraintExternalId, stripQuotes($ctx.complexConstraint.constraintExternalId.STRING.text)),
                    functionDefinition = newImpl(LambdaFunction,
-                                                sourceInformation = $loc($.complexConstraint.constraintFunction),
-                                                expressionSequence = listOf(buildCombinedExpression($.complexConstraint.constraintFunction.combinedExpression))),
-                   enforcementLevel = ifPresent($.complexConstraint.constraintEnforcementLevel, $.complexConstraint.constraintEnforcementLevel.ENFORCEMENT_LEVEL.text),
-                   messageFunction = ifPresent($.complexConstraint.constraintMessage,
+                                                sourceInformation = buildSourceInfo($ctx.complexConstraint.constraintFunction),
+                                                expressionSequence = listOf(buildCombinedExpression($ctx.complexConstraint.constraintFunction.combinedExpression))),
+                   enforcementLevel = ifPresent($ctx.complexConstraint.constraintEnforcementLevel, $ctx.complexConstraint.constraintEnforcementLevel.ENFORCEMENT_LEVEL.text),
+                   messageFunction = ifPresent($ctx.complexConstraint.constraintMessage,
                                                 newImpl(LambdaFunction,
-                                                        sourceInformation = $loc($.complexConstraint.constraintMessage),
-                                                        expressionSequence = listOf(buildCombinedExpression($.complexConstraint.constraintMessage.combinedExpression)))))
+                                                        sourceInformation = buildSourceInfo($ctx.complexConstraint.constraintMessage),
+                                                        expressionSequence = listOf(buildCombinedExpression($ctx.complexConstraint.constraintMessage.combinedExpression)))))
   }
 }
 
 rule property {
   return newImpl(Property,
-                 name = $.propertyName.text,
-                 sourceInformation = $loc,
-                 genericType = buildGenericType($.propertyReturnType.type),
-                 multiplicity = buildMultiplicity($.propertyReturnType.multiplicity),
-                 aggregation = ifPresent($.aggregation,
-                                          enumPointer("meta::pure::metamodel::function::property::AggregationKind", capitalize(stripParens($.aggregation.text)))),
-                 defaultValue = ifPresent($.defaultValue,
+                 name = $ctx.propertyName.text,
+                 sourceInformation = buildSourceInfo($ctx),
+                 genericType = buildGenericType($ctx.propertyReturnType.type),
+                 multiplicity = buildMultiplicity($ctx.propertyReturnType.multiplicity),
+                 aggregation = ifPresent($ctx.aggregation,
+                                          enumPointer("meta::pure::metamodel::function::property::AggregationKind", capitalize(stripParens($ctx.aggregation.text)))),
+                 defaultValue = ifPresent($ctx.defaultValue,
                                            newImpl(LambdaFunction,
-                                                   sourceInformation = $loc($.defaultValue),
-                                                   expressionSequence = listOf(buildCombinedExpression($.defaultValue.combinedExpression)))),
-                 stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-                 taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue)))
+                                                   sourceInformation = buildSourceInfo($ctx.defaultValue),
+                                                   expressionSequence = listOf(buildCombinedExpression($ctx.defaultValue.combinedExpression)))),
+                 stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+                 taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
 }
 
 rule qualifiedProperty {
   return newImpl(QualifiedProperty,
-                 name = $.identifier.text,
-                 sourceInformation = $loc,
-                 parameters = mapList($.qualifiedPropertyBody.functionVariableExpression, buildFunctionVariableExpression),
-                 expressionSequence = buildCodeBlock($.qualifiedPropertyBody.codeBlock),
-                 genericType = buildGenericType($.propertyReturnType.type),
-                 multiplicity = buildMultiplicity($.propertyReturnType.multiplicity),
-                 stereotypes = ifPresent($.stereotypes, mapList($.stereotypes.stereotype, buildStereotype)),
-                 taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue)))
+                 name = $ctx.identifier.text,
+                 sourceInformation = buildSourceInfo($ctx),
+                 parameters = mapList($ctx.qualifiedPropertyBody.functionVariableExpression, buildFunctionVariableExpression),
+                 expressionSequence = buildCodeBlock($ctx.qualifiedPropertyBody.codeBlock),
+                 genericType = buildGenericType($ctx.propertyReturnType.type),
+                 multiplicity = buildMultiplicity($ctx.propertyReturnType.multiplicity),
+                 stereotypes = ifPresent($ctx.stereotypes, mapList($ctx.stereotypes.stereotype, buildStereotype)),
+                 taggedValues = ifPresent($ctx.taggedValues, mapList($ctx.taggedValues.taggedValue, buildTaggedValue)))
 }
 
 rule expressionsArray {
   return newImpl(Collection,
-                 sourceInformation = $loc,
-                 values = mapList($.combinedExpression, buildCombinedExpression),
-                 multiplicity = multBounds(count($.combinedExpression), count($.combinedExpression)))
+                 sourceInformation = buildSourceInfo($ctx),
+                 values = mapList($ctx.combinedExpression, buildCombinedExpression),
+                 multiplicity = multBounds(count($ctx.combinedExpression), count($ctx.combinedExpression)))
 }
 
 rule codeBlock as MutableList<ValueSpecification> {
-  grow_list over $.programLine {
+  grow_list over $ctx.programLine {
     alt when $it.combinedExpression {
       yield buildCombinedExpression($it.combinedExpression)
     }
@@ -1218,7 +1219,7 @@ rule codeBlock as MutableList<ValueSpecification> {
 }
 
 rule expression as ValueSpecification {
-  chain_fold from buildNonArrowOrEqualExpression($.nonArrowOrEqualExpression) over $.propertyOrFunctionExpression {
+  chain_fold from buildNonArrowOrEqualExpression($ctx.nonArrowOrEqualExpression) over $ctx.propertyOrFunctionExpression {
     alt when $it.propertyExpression {
       step buildPropertyExpression(acc, $it.propertyExpression)
     }
@@ -1230,25 +1231,25 @@ rule expression as ValueSpecification {
 }
 
 rule instanceLiteral as AtomicValueImpl {
-  alt when $.instanceLiteralToken {
-    return buildInstanceLiteralToken($.instanceLiteralToken)
+  alt when $ctx.instanceLiteralToken {
+    return buildInstanceLiteralToken($ctx.instanceLiteralToken)
   }
-  alt when $.INTEGER {
+  alt when $ctx.INTEGER {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = ifPresent($.MINUS, -parseLong($.INTEGER.text), parseLong($.INTEGER.text)),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = ifPresent($ctx.MINUS, -parseLong($ctx.INTEGER.text), parseLong($ctx.INTEGER.text)),
                    genericType = primitiveType("Integer"))
   }
-  alt when $.FLOAT {
+  alt when $ctx.FLOAT {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = ifPresent($.MINUS, -parseDouble($.FLOAT.text), parseDouble($.FLOAT.text)),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = ifPresent($ctx.MINUS, -parseDouble($ctx.FLOAT.text), parseDouble($ctx.FLOAT.text)),
                    genericType = primitiveType("Float"))
   }
-  alt when $.DECIMAL {
+  alt when $ctx.DECIMAL {
     return newImpl(AtomicValue,
-                   sourceInformation = $loc,
-                   value = ifPresent($.MINUS, -parseDouble($.DECIMAL.text), parseDouble($.DECIMAL.text)),
+                   sourceInformation = buildSourceInfo($ctx),
+                   value = ifPresent($ctx.MINUS, -parseDouble($ctx.DECIMAL.text), parseDouble($ctx.DECIMAL.text)),
                    genericType = primitiveType("Decimal"))
   }
   else error("Unsupported literal")
