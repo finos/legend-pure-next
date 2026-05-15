@@ -427,18 +427,45 @@ public final class M3VisitorGenerator
         while (i < lines.size())
         {
             String line = lines.get(i);
-            if (line.startsWith("rule "))
+            if (line.startsWith("rule ") || line.startsWith("helper "))
             {
                 Rule r = new Rule();
-                String head = line.substring("rule ".length()).replace("{", "").strip();
-                // Optional `as Type` suffix declares an explicit return type
-                // (used when alts produce different concrete types or one alt
-                // delegates).
+                boolean isHelper = line.startsWith("helper ");
+                String head = line.substring((isHelper ? "helper " : "rule ").length()).replace("{", "").strip();
+                // Optional `as Type` suffix declares an explicit return type.
                 int asIdx = head.indexOf(" as ");
                 if (asIdx >= 0)
                 {
-                    r.name = head.substring(0, asIdx).strip();
                     r.returnType = head.substring(asIdx + " as ".length()).strip();
+                    head = head.substring(0, asIdx).strip();
+                }
+                if (isHelper)
+                {
+                    // helper buildName(ExtraType1 name1, …, CtxType ctx)
+                    // The last argument is the context (name MUST be `ctx`); earlier args
+                    // become extra params before ctx in the generated method signature.
+                    int paren = head.indexOf('(');
+                    if (paren < 0 || !head.endsWith(")"))
+                    {
+                        throw new RuntimeException("helper needs `(ExtraT name, …, CtxType ctx)`: " + line);
+                    }
+                    r.name = head.substring(0, paren).strip();
+                    r.methodNameOverride = r.name;
+                    String argsStr = head.substring(paren + 1, head.length() - 1).strip();
+                    List<String> args = splitTopLevelCommas(argsStr);
+                    if (args.isEmpty()) throw new RuntimeException("helper needs at least the ctx param: " + line);
+                    String[] ctxArg = args.get(args.size() - 1).strip().split("\\s+");
+                    if (ctxArg.length != 2 || !"ctx".equals(ctxArg[1]))
+                    {
+                        throw new RuntimeException("helper's last param must be `CtxType ctx`: " + line);
+                    }
+                    r.contextTypeOverride = ctxArg[0];
+                    for (int k = 0; k < args.size() - 1; k++)
+                    {
+                        String[] p = args.get(k).strip().split("\\s+");
+                        if (p.length != 2) throw new RuntimeException("helper param must be `TYPE name`: " + args.get(k));
+                        r.extraParams.add(new String[] {p[0], p[1]});
+                    }
                 }
                 else
                 {

@@ -1,10 +1,18 @@
 # M3 Visitor Mapping DSL
 #
-# Each `rule X` corresponds to an ANTLR rule in M3Parser.g4. The generator
-# emits a `buildX(M3Parser.XContext ctx)` method that constructs the AST node
-# described here. Top-level rules (those that produce a packageable element
-# via `register(...)`) also get an `@Override visitX(...)` wrapper that adds
-# the built object to the `elements` accumulator.
+# Two top-level declaration forms:
+#
+#   rule X { … }
+#     Maps to an ANTLR grammar rule `X` in M3Parser.g4. Emits
+#     `buildX(M3Parser.XContext ctx)`. Top-level rules that produce a
+#     packageable element via `register(...)` also get an `@Override visitX(...)`
+#     wrapper that adds the built object to the `elements` accumulator.
+#
+#   helper buildName(ExtraT1 n1, …, CtxType ctx) [as ReturnType] { … }
+#     Reusable build method that is NOT a grammar-rule visitor. The first
+#     args are extra parameters (e.g. an accumulator passed from the caller);
+#     the last param MUST be `CtxType ctx` — the ANTLR context type the helper
+#     consumes. Emits the method with the exact name written.
 #
 # === Rule shape ===
 # Every rule body is a `return` expression — optionally preceded by `let`
@@ -313,9 +321,7 @@ rule atomicExpression as ValueSpecification {
 # value-spec that names a type and/or a multiplicity. Missing halves default to
 # the Undefined variants. Built as a separate rule so the conditional defaults
 # stay declarative.
-rule atomicTypeRef {
-  context AtomicExpressionContext
-  method buildAtomicTypeRef
+helper buildAtomicTypeRef(AtomicExpressionContext ctx) {
   return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
                  sourceInformation = $loc,
                  genericType = ifPresent($.type, buildGenericType($.type), newImpl(UndefinedGenericType)),
@@ -409,34 +415,27 @@ rule oneColSpec as ValueSpecification {
                                               listOf(nameAtomic, typeHolder)))
 }
 
-# Helper rule: a single Column for a RelationType, derived from a oneColSpec context.
+# A single Column for a RelationType, derived from a oneColSpec context.
 # Used both for the per-column type-holder and for the combined colSpecArray holder.
-rule oneColSpecColumn {
-  context OneColSpecContext
-  method buildOneColSpecColumn
+helper buildOneColSpecColumn(OneColSpecContext ctx) {
   return newImpl(Column,
                  name = $.columnName.text,
                  genericType = ifPresent($.type, buildGenericType($.type)),
                  multiplicity = ifPresent($.multiplicity, buildMultiplicity($.multiplicity)))
 }
 
-# Helper rule: the String AtomicValue carrying a column name, used in colSpecArray.
-rule columnNameAtomic as ValueSpecification {
-  context OneColSpecContext
-  method buildColumnNameAtomic
+# The String AtomicValue carrying a column name, used in colSpecArray.
+helper buildColumnNameAtomic(OneColSpecContext ctx) as ValueSpecification {
   return newImpl(AtomicValue,
                  sourceInformation = $loc($.columnName),
                  genericType = primitiveType("String"),
                  value = $.columnName.text)
 }
 
-# Helper rule: the type holder for the colSpecArray case (no lambdas anywhere).
-# Either a UserDefinedGenericTypeAndMultiplicityHolder wrapping a RelationType
-# built from all typed/multiplied colSpecs, or a CompilerHolder when none have
-# explicit types.
-rule colSpecArrayHolder as ValueSpecification {
-  context ColumnBuildersContext
-  method buildColSpecArrayHolder
+# The type holder for the colSpecArray case (no lambdas anywhere). Either a
+# UserDefinedGenericTypeAndMultiplicityHolder wrapping a RelationType built from
+# all typed/multiplied colSpecs, or a CompilerHolder when none have explicit types.
+helper buildColSpecArrayHolder(ColumnBuildersContext ctx) as ValueSpecification {
   alt when anyHasAny($.oneColSpec, type, multiplicity) {
     return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
                    genericType = newImpl(UserDefinedGenericType,
@@ -472,22 +471,20 @@ rule typeWithOperation as GenericType {
   return result
 }
 
-# Helper rule: one Union/Difference wrap step for a single typeAddSubOperation
-# context. Used as the lambda body of the injectInto fold in typeWithOperation.
-rule wrapAddSubOp as GenericType {
-  context TypeAddSubOperationContext
-  param GenericType base
+# One Union/Difference wrap step for a single typeAddSubOperation context.
+# Used as the lambda body of the injectInto fold in typeWithOperation.
+helper buildWrapAddSubOp(GenericType base, TypeAddSubOperationContext ctx) as GenericType {
   alt when $.addType {
     return newImpl(GenericTypeOperation,
-                   operationType=enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Union"),
-                   left=base,
-                   right=buildGenericType($.addType.type))
+                   operationType = enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Union"),
+                   left = base,
+                   right = buildGenericType($.addType.type))
   }
   alt else {
     return newImpl(GenericTypeOperation,
-                   operationType=enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Difference"),
-                   left=base,
-                   right=buildGenericType($.subType.type))
+                   operationType = enumPointer("meta::pure::metamodel::relation::GenericTypeOperationType", "Difference"),
+                   left = base,
+                   right = buildGenericType($.subType.type))
   }
 }
 
@@ -628,18 +625,14 @@ rule expressionInstance as ValueSpecification {
 # (anonymous `^(...)` form). Inner GenericType is produced by a sub-rule so
 # its optional `typeArguments` / `multiplicityArguments` / `typeVariableValues`
 # can stay declarative.
-rule expressionInstanceNewHead {
-  context ExpressionInstanceContext
-  method buildExpressionInstanceNewHead
+helper buildExpressionInstanceNewHead(ExpressionInstanceContext ctx) {
   return newImpl(UserDefinedGenericTypeAndMultiplicityHolder,
                  sourceInformation = $loc,
                  genericType = buildExpressionInstanceGenericType($self),
                  multiplicity = multBounds(1, 1))
 }
 
-rule expressionInstanceGenericType {
-  context ExpressionInstanceContext
-  method buildExpressionInstanceGenericType
+helper buildExpressionInstanceGenericType(ExpressionInstanceContext ctx) {
   return newImpl(UserDefinedGenericType,
                  type = newImpl(Type_Pointer, value = ifPresent($.qualifiedName, $.qualifiedName.text, "Unknown")),
                  typeArguments = ifPresent($.typeArguments, mapList($.typeArguments.typeOrUndefined, buildTypeOrUndefined)),
@@ -899,11 +892,9 @@ rule typeParameterWithVariance {
                  contravariant = ifPresent($.MINUS, true))
 }
 
-# Helper rule: a single identifier from a multiplicity-parameters list becomes a
-# UserDefinedMultiplicityParameter. Context type override since `multParamDef`
-# isn't a grammar rule.
-rule multParamDef {
-  context IdentifierContext
+# A single identifier from a multiplicity-parameters list becomes a
+# UserDefinedMultiplicityParameter.
+helper buildMultParamDef(IdentifierContext ctx) {
   return newImpl(UserDefinedMultiplicityParameter, name = $self.getText())
 }
 
@@ -932,9 +923,8 @@ rule classDefinition {
     taggedValues = ifPresent($.taggedValues, mapList($.taggedValues.taggedValue, buildTaggedValue))))
 }
 
-# Helper rule: wrap a TypeContext into a Generalization (general type + source info).
-rule classGeneralization {
-  context TypeContext
+# Wrap a TypeContext into a Generalization (general type + source info).
+helper buildClassGeneralization(TypeContext ctx) {
   return newImpl(Generalization,
                  general = buildGenericType($self),
                  sourceInformation = $loc)
@@ -1020,17 +1010,14 @@ rule profile {
     p_tags = ifPresent($.tagDefinitions, mapList($.tagDefinitions.identifier, profileTagDef))))
 }
 
-# Helper rule: convert an identifier context to a stereotype definition (just name+srcInfo).
-# Context type override since `profileStereotypeDef` isn't a grammar rule.
-rule profileStereotypeDef {
-  context IdentifierContext
+# Convert an identifier context to a stereotype / tag definition (name + srcInfo).
+helper buildProfileStereotypeDef(IdentifierContext ctx) {
   return newImpl(Stereotype,
                  sourceInformation = $loc,
                  value = $self.getText())
 }
 
-rule profileTagDef {
-  context IdentifierContext
+helper buildProfileTagDef(IdentifierContext ctx) {
   return newImpl(Tag,
                  sourceInformation = $loc,
                  value = $self.getText())
