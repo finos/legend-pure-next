@@ -1,0 +1,1931 @@
+// Copyright 2026 Goldman Sachs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package org.finos.legend.pure.generators;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Generator: ANTLR-visitor methods from the m3-visitor DSL.
+ *
+ * Prototype: covers two rules (variable, instanceLiteralToken).
+ *
+ * DSL syntax — see m3-mappings.dsl for the full set:
+ *   rule X { ... }                       — declares a visitor for ANTLR rule X
+ *   emit T                               — what AST node type to construct
+ *   field name = expr                    — field assignment
+ *   shared field name = expr             — applies across all alternatives
+ *   alt when $.X { ... }                 — branch when ctx.X() != null
+ *   else error("msg")                    — fallback (emits throw)
+ *
+ * Expression sub-grammar:
+ *   $.X            → ctx.X()
+ *   $.X.text       → ctx.X().getText()
+ *   $loc           → buildSourceInfo(ctx)
+ *   parseLong(e)   → Long.parseLong(e)
+ *   parseDouble(e) → Double.parseDouble(e)
+ *   parseBoolean(e)→ Boolean.parseBoolean(e)
+ *   stripQuotes(e) → e.substring(1, e.length() - 1)            (with caching)
+ *   stripPercent(e)→ e.startsWith("%") ? e.substring(1) : e    (with caching)
+ *   primitiveType(name)        → buildPrimitiveGenericType(name)
+ *   dateLiteralType(textExpr)  → textExpr.contains("T") ? buildPrimitiveGenericType("DateTime")
+ *                                                       : buildPrimitiveGenericType("StrictDate")
+ *
+ * Outputs a single Java source file containing the generated methods. The
+ * methods are intended to be folded into M3ProtocolBuilder (or a sibling
+ * partial class) by hand or by post-processing.
+ */
+public final class M3VisitorGenerator
+{
+    public static void main(String[] args) throws IOException
+    {
+        if (args.length < 2)
+        {
+            System.err.println("Usage: M3VisitorGenerator <dsl-file> <output-java-file>");
+            System.exit(1);
+        }
+        Path dslPath = Path.of(args[0]);
+        Path outPath = Path.of(args[1]);
+
+        String source = Files.readString(dslPath, StandardCharsets.UTF_8);
+        List<Rule> rules = parse(source);
+
+        StringBuilder sb = new StringBuilder();
+        emitFullClassHeader(sb, dslPath.getFileName().toString());
+        emitParserScaffolding(sb);
+        for (Rule r : rules)
+        {
+            emit(sb, r);
+            if (r.topLevel)
+            {
+                emitTopLevelVisitWrapper(sb, r);
+            }
+            sb.append('\n');
+        }
+        sb.append("}\n");
+
+        Files.createDirectories(outPath.getParent());
+        Files.writeString(outPath, sb.toString(), StandardCharsets.UTF_8);
+        System.out.println("  Wrote " + outPath + " (" + rules.size() + " rule(s))");
+    }
+
+    private static void emitFullClassHeader(StringBuilder sb, String dslFileName)
+    {
+        sb.append("// AUTO-GENERATED from ").append(dslFileName).append(" by M3VisitorGenerator — DO NOT EDIT\n");
+        sb.append("// Concrete parser: extends M3ParserBaseVisitor directly. Contains the elements\n");
+        sb.append("// accumulator, parser entry points, build<RuleName> methods, and @Override\n");
+        sb.append("// visit wrappers for topLevel rules. Fully self-contained — no hand-written\n");
+        sb.append("// parent class. To port to another language, port this generator + the DSL.\n");
+        sb.append("package org.finos.legend.pure.next.parser.m3;\n\n");
+        sb.append("import meta.pure.protocol.grammar.Enum_PointerImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.Package_PointerImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.PackageableElement;\n");
+        sb.append("import meta.pure.protocol.grammar.SourceInformationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.constraint.Constraint;\n");
+        sb.append("import meta.pure.protocol.grammar.constraint.ConstraintImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.AnnotatedElement;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.ProfileImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.StereotypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.Stereotype_PointerImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.TagImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.Tag_PointerImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.extension.TaggedValueImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.function.LambdaFunctionImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.function.NativeFunctionImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.function.UserDefinedFunctionImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.function.property.PropertyImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.function.property.QualifiedPropertyImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.MultiplicityParameter;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.MultiplicityValueImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.Multiplicity_Protocol;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.UndefinedMultiplicityImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.UserDefinedAdHocMultiplicityImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.multiplicity.UserDefinedMultiplicityParameterImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.generics.TypeParameterImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.PointerValueImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.relation.ColumnImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.relation.GenericTypeOperationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.relation.RelationTypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.relationship.AssociationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.relationship.GeneralizationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.ClassImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.EnumerationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.FunctionTypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.PrimitiveTypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.Type_PointerImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.generics.GenericType;\n");
+        sb.append("import meta.pure.protocol.grammar.type.generics.TypeParameter;\n");
+        sb.append("import meta.pure.protocol.grammar.type.generics.UndefinedGenericTypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.type.generics.UserDefinedGenericTypeImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.ArrowInvocationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.AtomicValueImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.CollectionImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.CompilerGenericTypeAndMultiplicityHolderImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.DotApplicationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.FunctionInvocationImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.UserDefinedGenericTypeAndMultiplicityHolderImpl;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.ValueSpecification;\n");
+        sb.append("import meta.pure.protocol.grammar.valuespecification.VariableExpressionImpl;\n");
+        sb.append("import org.antlr.v4.runtime.ParserRuleContext;\n");
+        sb.append("import org.antlr.v4.runtime.Token;\n");
+        sb.append("import org.eclipse.collections.api.list.MutableList;\n");
+        sb.append("import org.eclipse.collections.impl.factory.Lists;\n");
+        sb.append("import org.eclipse.collections.impl.list.mutable.ListAdapter;\n");
+        sb.append("import org.finos.legend.pure.next.parser.m3.helper._G_PackageableFunction;\n\n");
+        sb.append("public class M3ProtocolBuilder extends M3ParserBaseVisitor<Object>\n");
+        sb.append("{\n");
+        sb.append("    protected final MutableList<PackageableElement> elements = Lists.mutable.empty();\n\n");
+    }
+
+    /**
+     * Emit the boilerplate scaffolding every generated parser class needs:
+     * the lineOffset field, the source-information helpers, the precedence-ladder
+     * sub-helpers, and the public parseElements entry points. None of these vary
+     * with the DSL, so they live in the generator as fixed templates.
+     */
+    private static void emitParserScaffolding(StringBuilder sb)
+    {
+        sb.append("    protected int lineOffset = 0;\n\n");
+        sb.append("    /** Parse Pure source and return the list of top-level packageable elements. */\n");
+        sb.append("    public java.util.List<PackageableElement> parseElements(final String source, final int lineOffsetIn)\n");
+        sb.append("    {\n");
+        sb.append("        this.lineOffset = lineOffsetIn;\n");
+        sb.append("        M3Lexer lexer = new M3Lexer(org.antlr.v4.runtime.CharStreams.fromString(source));\n");
+        sb.append("        org.antlr.v4.runtime.CommonTokenStream tokens = new org.antlr.v4.runtime.CommonTokenStream(lexer);\n");
+        sb.append("        M3Parser parser = new M3Parser(tokens);\n");
+        sb.append("        parser.removeErrorListeners();\n");
+        sb.append("        parser.addErrorListener(new org.antlr.v4.runtime.BaseErrorListener()\n");
+        sb.append("        {\n");
+        sb.append("            @Override\n");
+        sb.append("            public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer, Object offendingSymbol,\n");
+        sb.append("                                    int line, int charPositionInLine, String msg, org.antlr.v4.runtime.RecognitionException e)\n");
+        sb.append("            {\n");
+        sb.append("                throw new RuntimeException(\"Parse error in file \" + source + \" at line \" + (line + lineOffsetIn) + \":\" + charPositionInLine + \" - \" + msg);\n");
+        sb.append("            }\n");
+        sb.append("        });\n");
+        sb.append("        visit(parser.definition());\n");
+        sb.append("        return elements;\n");
+        sb.append("    }\n\n");
+        sb.append("    /** parseElements with no line offset (lineOffset = 0). */\n");
+        sb.append("    public java.util.List<PackageableElement> parseElements(final String source)\n");
+        sb.append("    {\n");
+        sb.append("        return parseElements(source, 0);\n");
+        sb.append("    }\n\n");
+        sb.append("    protected SourceInformationImpl buildSourceInfo(final ParserRuleContext ctx)\n");
+        sb.append("    {\n");
+        sb.append("        return new SourceInformationImpl()\n");
+        sb.append("                ._startLine((long) ctx.getStart().getLine() + lineOffset)\n");
+        sb.append("                ._startColumn((long) ctx.getStart().getCharPositionInLine() + 1)\n");
+        sb.append("                ._endLine((long) ctx.getStop().getLine() + lineOffset)\n");
+        sb.append("                ._endColumn((long) (ctx.getStop().getCharPositionInLine() + ctx.getStop().getText().length()));\n");
+        sb.append("    }\n\n");
+        sb.append("    /** Operator token between the i-th and (i-1)-th operand in a left-fold context. */\n");
+        sb.append("    protected Token operatorTokenAt(final ParserRuleContext ctx, final int operandIndex)\n");
+        sb.append("    {\n");
+        sb.append("        return ((org.antlr.v4.runtime.tree.TerminalNode) ctx.getChild(2 * operandIndex - 1)).getSymbol();\n");
+        sb.append("    }\n\n");
+        sb.append("    protected FunctionInvocationImpl buildBinaryCall(final String funcName, final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left, final ValueSpecification right)\n");
+        sb.append("    {\n");
+        sb.append("        return new FunctionInvocationImpl()\n");
+        sb.append("                ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, left))\n");
+        sb.append("                ._functionName(funcName)\n");
+        sb.append("                ._parametersValues(Lists.mutable.with(left, right));\n");
+        sb.append("    }\n\n");
+        sb.append("    /** Modern full-expression span: from LHS start to RHS end; falls back to op token. */\n");
+        sb.append("    protected SourceInformationImpl buildOpSourceInfo(final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left)\n");
+        sb.append("    {\n");
+        sb.append("        meta.pure.protocol.grammar.SourceInformation leftSrc = left._p_sourceInformation();\n");
+        sb.append("        long startLine = leftSrc != null && leftSrc._startLine() != null ? leftSrc._startLine() : (long) opTok.getLine() + lineOffset;\n");
+        sb.append("        long startCol = leftSrc != null && leftSrc._startColumn() != null ? leftSrc._startColumn() : (long) opTok.getCharPositionInLine() + 1;\n");
+        sb.append("        return new SourceInformationImpl()\n");
+        sb.append("                ._startLine(startLine)\n");
+        sb.append("                ._startColumn(startCol)\n");
+        sb.append("                ._endLine((long) rhsCtx.getStop().getLine() + lineOffset)\n");
+        sb.append("                ._endColumn((long) (rhsCtx.getStop().getCharPositionInLine() + rhsCtx.getStop().getText().length()));\n");
+        sb.append("    }\n\n");
+    }
+
+    /**
+     * Emit an @Override `visit<RuleName>` wrapper that calls the rule's build method,
+     * appends to `elements`, and returns the built value as Object (ANTLR convention).
+     */
+    private static void emitTopLevelVisitWrapper(StringBuilder sb, Rule r)
+    {
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        String visitName = "visit" + capitalize(r.name);
+        String buildName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        String implType = r.emitType + "Impl";
+        sb.append("\n    @Override\n");
+        sb.append("    public Object ").append(visitName).append("(final ").append(ctxType).append(" ctx)\n    {\n");
+        sb.append("        ").append(implType).append(" __built = ").append(buildName).append("(ctx);\n");
+        sb.append("        elements.add(__built);\n");
+        sb.append("        return __built;\n    }\n");
+    }
+
+    // ------------------------------------------------------------------ model
+
+    private static final class Rule
+    {
+        String name;
+        // Emit-rule fields
+        String emitType;
+        List<Field> sharedFields = new ArrayList<>();
+        List<Alt> alts = new ArrayList<>();
+        String elseError;      // null if no `else error(...)` line
+        // Left-fold-rule fields (mutually exclusive with the emit-rule fields)
+        LeftFold leftFold;     // null for emit-rules
+        // Chain-fold-rule fields (mutually exclusive with emit / left_fold / delegate).
+        // A chain_fold rule maps grammar of the shape `seed (chained-element)*` to
+        // `injectInto(seed, (acc, it) -> dispatch(it))`. Each `alt` describes one
+        // chain element; the `step EXPR` body computes the next accumulator value.
+        ChainFold chainFold;   // null for non chain-fold rules
+        // Grow-list-rule fields: dispatch-and-collect over a list of contexts.
+        // Generates `collectIf(any-alt-matches, dispatch-to-matching-alt)`. Used for
+        // grammar like `codeBlock: programLine ...` where each programLine is mapped
+        // to a value depending on its sub-context (combinedExpression vs letExpression).
+        GrowList growList;     // null for non grow-list rules
+        // Delegate rules forward straight to another build method.
+        String delegateTarget; // e.g. "orExpression"; null when not a delegate
+        String delegateReturn; // return type for the generated method
+        // Post-build statements run after the emit chain, before the final `return`.
+        // Each entry is a raw DSL expression; substituted and emitted as a Java statement.
+        // When `when` is non-null, the emitted statement is wrapped in `if (when) ...`.
+        List<PostAction> postActions = new ArrayList<>();
+        // Extra method parameters (besides the always-present `ctx`). Declared via
+        // `param TYPE name` in the rule body; emitted as `final TYPE name, ` ahead of
+        // ctx in the generated method signature. Each entry is `[type, name]`.
+        // Used for visitor methods that receive a "current value" alongside the ctx
+        // (e.g. propertyExpression takes a receiver ValueSpecification).
+        List<String[]> extraParams = new ArrayList<>();
+        // Optional method-name override. When non-null, the generated method is named
+        // exactly this value, ignoring `methodNameFor(name)`. Declared via
+        // `method NAME` in the rule body. Used when the canonical Java method name
+        // diverges from the `build<RuleName>` convention (e.g. `buildGenericType` for
+        // the `type` grammar rule).
+        String methodNameOverride;
+        // Optional context-type override. When non-null, the generated method's ctx
+        // parameter uses this type (e.g. `IdentifierContext`) instead of the type
+        // derived from the rule name. Declared via `context CtxType`. Used for
+        // helper rules that target a generic grammar rule like `identifier`.
+        String contextTypeOverride;
+        // Let-bindings declared at the rule body level. Each entry is
+        // `[type, name, exprDsl]`. Emitted as `TYPE NAME = <java>;` at the
+        // start of the method body. Used for values that need to be referenced
+        // multiple times (predicate + field) or sequentially mutated via `set`.
+        // Non-final so `set NAME = EXPR` can rebind.
+        List<String[]> lets = new ArrayList<>();
+        // Sequential rebinds declared after lets. Each entry is `[name, exprDsl]`.
+        // Emitted as `NAME = <java>;` in declared order, between lets and the alt
+        // construction. Used for staged transforms (e.g. type-algebra wrappings).
+        List<String[]> sets = new ArrayList<>();
+        // Top-level marker: when true the generator emits an extra `@Override public
+        // Object visit<RuleName>(ctx)` wrapper that calls buildX, registers it in the
+        // `elements` list, and returns it. Used for grammar rules that correspond to
+        // file-level packageable elements (class, function, profile, etc.).
+        boolean topLevel;
+        // Explicit return type for multi-alt rules whose alts produce different
+        // concrete types (or where one alt delegates / returns an expression).
+        String returnType;     // e.g. "ValueSpecification"; null = inferred
+    }
+
+    private static final class Alt
+    {
+        String predicate;      // e.g. "$.INTEGER" or null for "always" (single-branch rule)
+        List<Field> fields = new ArrayList<>();
+        // Per-alt overrides (mutually exclusive). When set, the alt's body is one
+        // of: emit a fresh T (default — uses rule.emitType), `return EXPR`, or
+        // `delegate $.X` (calls buildX(ctx.X())).
+        String altEmitType;    // override rule.emitType for this branch only
+        String returnExpr;     // raw DSL expression; alt body is `return <expr>`
+        String delegateRule;   // child rule name; alt body is `return build<X>(ctx.X())`
+    }
+
+    private static final class Field
+    {
+        String name;
+        String expr;           // raw DSL expression text
+        String predicate;      // non-null = conditional (`optional field X when $.Y = EXPR`)
+    }
+
+    private static final class PostAction
+    {
+        String predicate;      // non-null = `post when EXPR STMT` (wrap STMT in `if (EXPR) ...`)
+        String stmt;           // raw DSL statement
+    }
+
+    private static final class LeftFold
+    {
+        String operandRule;                          // e.g. "andExpression"
+        String fixedOp;                              // non-null if `op "..."` was set
+        LinkedHashMap<String, String> opByToken = new LinkedHashMap<>();
+        // Wrap mappings: tokenName → wrap-function-name (e.g. TEST_NOT_EQUAL → "not")
+        LinkedHashMap<String, String> wrapWhenToken = new LinkedHashMap<>();
+    }
+
+    /**
+     * chain_fold from SEED over $.X { alt when $it.Y { step EXPR } ... [else step EXPR] }
+     *
+     * Generates: ListAdapter.adapt(ctx.X()).injectInto(SEED, (acc, it) -> {
+     *     if (it.Y() != null) return EXPR;
+     *     ...
+     *     return ELSE_EXPR;  // or `acc` by default
+     * });
+     *
+     * Used for grammar rules of the shape `seed (chained-element)*` where each
+     * chained-element dispatches on which sub-context is present. The alt
+     * step-exprs may reference {@code acc} (the running accumulator) and
+     * {@code $it.X} (current iteration's sub-context — translated to
+     * {@code it.X()}).
+     */
+    private static final class ChainFold
+    {
+        String seedExpr;       // DSL expression for the initial accumulator
+        String overRule;       // e.g. "propertyOrFunctionExpression" — list to fold over
+        List<Alt> alts = new ArrayList<>();
+        String elseStep;       // raw DSL expression for the trailing `else step EXPR`; null = `acc`
+    }
+
+    /**
+     * grow_list over $.X { alt when $it.Y { yield EXPR } ... }
+     *
+     * Generates `ListAdapter.adapt(ctx.X()).collectIf(P, F)` where:
+     *   P = any-alt-matches predicate (or of all alt conditions)
+     *   F = dispatch lambda: if (it.Y() != null) return EXPR; ...
+     *
+     * Each alt's element type (`yield EXPR`) is stored in {@link Alt#returnExpr},
+     * re-using the per-branch value field. Items that don't match any alt are
+     * filtered out (the collectIf predicate excludes them).
+     */
+    private static final class GrowList
+    {
+        String overRule;       // e.g. "programLine"
+        List<Alt> alts = new ArrayList<>();
+    }
+
+    // ------------------------------------------------------------------ parser
+
+    private static List<Rule> parse(String source)
+    {
+        List<String> lines = new ArrayList<>();
+        // Continuation join: a line whose paren count is positive joins forward until
+        // balanced. Lets long field expressions (e.g. nested `newImpl(...)`) be split
+        // across lines for readability.
+        StringBuilder pending = null;
+        int pendingDepth = 0;
+        for (String l : source.split("\n"))
+        {
+            String trimmed = stripComment(l).strip();
+            if (trimmed.isEmpty())
+            {
+                continue;
+            }
+            if (pending != null)
+            {
+                pending.append(' ').append(trimmed);
+                pendingDepth += parenDelta(trimmed);
+                if (pendingDepth == 0)
+                {
+                    lines.add(pending.toString());
+                    pending = null;
+                }
+                continue;
+            }
+            int delta = parenDelta(trimmed);
+            if (delta > 0)
+            {
+                pending = new StringBuilder(trimmed);
+                pendingDepth = delta;
+            }
+            else
+            {
+                lines.add(trimmed);
+            }
+        }
+        if (pending != null)
+        {
+            // Tolerant: emit what we have, the body parser will complain if invalid.
+            lines.add(pending.toString());
+        }
+
+        List<Rule> rules = new ArrayList<>();
+        int i = 0;
+        while (i < lines.size())
+        {
+            String line = lines.get(i);
+            if (line.startsWith("rule "))
+            {
+                Rule r = new Rule();
+                String head = line.substring("rule ".length()).replace("{", "").strip();
+                // Optional `as Type` suffix declares an explicit return type
+                // (used when alts produce different concrete types or one alt
+                // delegates).
+                int asIdx = head.indexOf(" as ");
+                if (asIdx >= 0)
+                {
+                    r.name = head.substring(0, asIdx).strip();
+                    r.returnType = head.substring(asIdx + " as ".length()).strip();
+                }
+                else
+                {
+                    r.name = head;
+                }
+                i++;
+                // Inside rule block — `depth` 1 = inside rule, 2 = inside an alt or left_fold block.
+                int depth = 1;
+                Alt currentAlt = null;
+                while (i < lines.size() && depth > 0)
+                {
+                    String body = lines.get(i);
+                    if (body.equals("}"))
+                    {
+                        // Closing brace: alt / left_fold / chain_fold / grow_list / nested alt / rule.
+                        if (currentAlt != null)
+                        {
+                            // Belongs to whichever container is currently open. grow_list and
+                            // chain_fold both carry their own alt list; only one is non-null per rule.
+                            if (r.chainFold != null)
+                            {
+                                r.chainFold.alts.add(currentAlt);
+                            }
+                            else if (r.growList != null)
+                            {
+                                r.growList.alts.add(currentAlt);
+                            }
+                            else
+                            {
+                                r.alts.add(currentAlt);
+                            }
+                            currentAlt = null;
+                        }
+                        depth--;
+                        i++;
+                        continue;
+                    }
+                    if (currentAlt == null && body.startsWith("emit "))
+                    {
+                        r.emitType = body.substring("emit ".length()).strip();
+                    }
+                    else if (body.startsWith("shared field "))
+                    {
+                        r.sharedFields.add(parseField(body.substring("shared field ".length())));
+                    }
+                    else if (body.startsWith("alt when "))
+                    {
+                        currentAlt = new Alt();
+                        currentAlt.predicate = body.substring("alt when ".length()).replace("{", "").strip();
+                        depth++;
+                    }
+                    else if (body.startsWith("alt else"))
+                    {
+                        // `alt else { ... }` — default branch (predicate-less alt).
+                        currentAlt = new Alt();
+                        currentAlt.predicate = null;
+                        depth++;
+                    }
+                    else if (currentAlt != null && body.startsWith("emit "))
+                    {
+                        // Per-alt emit type override (rule.emitType still applies as
+                        // default if not overridden).
+                        currentAlt.altEmitType = body.substring("emit ".length()).strip();
+                    }
+                    else if (currentAlt != null && body.startsWith("return "))
+                    {
+                        currentAlt.returnExpr = body.substring("return ".length()).strip();
+                    }
+                    else if (currentAlt == null && body.startsWith("return "))
+                    {
+                        // Rule-level `return EXPR` — synthesize a single unconditional alt.
+                        // Lets a one-line rule emit a delegated call (e.g. `return helper($.X, $self)`).
+                        Alt synth = new Alt();
+                        synth.predicate = null;
+                        synth.returnExpr = body.substring("return ".length()).strip();
+                        r.alts.add(synth);
+                    }
+                    else if (currentAlt != null && body.startsWith("step "))
+                    {
+                        // chain_fold alt body: `step EXPR` — the value of the next acc.
+                        // Stored in returnExpr (re-used as the dispatch-branch value).
+                        currentAlt.returnExpr = body.substring("step ".length()).strip();
+                    }
+                    else if (currentAlt != null && body.startsWith("delegate $."))
+                    {
+                        currentAlt.delegateRule = body.substring("delegate $.".length()).strip();
+                    }
+                    else if (body.startsWith("field "))
+                    {
+                        Field f = parseField(body.substring("field ".length()));
+                        if (currentAlt != null) currentAlt.fields.add(f);
+                        else
+                        {
+                            // un-bracketed rule body — treat as single implicit alt
+                            if (r.alts.isEmpty()) r.alts.add(new Alt());
+                            r.alts.get(0).fields.add(f);
+                        }
+                    }
+                    else if (body.startsWith("optional field "))
+                    {
+                        // optional field NAME when $.X = EXPR — sets field only when predicate matches.
+                        // Implies __result-local form (emitter uses `if (P) __result._N(EXPR);`).
+                        String tail = body.substring("optional field ".length());
+                        int whenIdx = tail.indexOf(" when ");
+                        if (whenIdx < 0) throw new RuntimeException("optional field needs ' when ' clause: " + body);
+                        String name = tail.substring(0, whenIdx).strip();
+                        String rest = tail.substring(whenIdx + " when ".length());
+                        int eqIdx = rest.indexOf('=');
+                        if (eqIdx < 0) throw new RuntimeException("optional field needs '=' after when: " + body);
+                        Field f = new Field();
+                        f.name = name;
+                        f.predicate = rest.substring(0, eqIdx).strip();
+                        f.expr = rest.substring(eqIdx + 1).strip();
+                        if (currentAlt != null) currentAlt.fields.add(f);
+                        else
+                        {
+                            if (r.alts.isEmpty()) r.alts.add(new Alt());
+                            r.alts.get(0).fields.add(f);
+                        }
+                    }
+                    else if (body.startsWith("else error("))
+                    {
+                        String inner = body.substring("else error(".length());
+                        inner = inner.substring(0, inner.lastIndexOf(')'));
+                        r.elseError = inner.strip();
+                    }
+                    else if (body.startsWith("post "))
+                    {
+                        // Post-build action: side-effect statement run after the emit chain.
+                        // Two forms:
+                        //   post STMT                       (unconditional)
+                        //   post when PRED => STMT          (wrap STMT in `if (PRED) ...`)
+                        String tail = body.substring("post ".length()).strip();
+                        PostAction pa = new PostAction();
+                        if (tail.startsWith("when "))
+                        {
+                            String rest = tail.substring("when ".length()).strip();
+                            int arrow = rest.indexOf("=>");
+                            if (arrow < 0)
+                            {
+                                throw new RuntimeException("`post when` needs `=> STMT` after the predicate: " + body);
+                            }
+                            pa.predicate = rest.substring(0, arrow).strip();
+                            pa.stmt = rest.substring(arrow + 2).strip();
+                        }
+                        else
+                        {
+                            pa.stmt = tail;
+                        }
+                        r.postActions.add(pa);
+                    }
+                    else if (body.startsWith("param "))
+                    {
+                        // `param TYPE name` declares an extra method parameter before ctx.
+                        String tail = body.substring("param ".length()).strip();
+                        int sp = tail.lastIndexOf(' ');
+                        if (sp < 0) throw new RuntimeException("param needs 'TYPE name': " + body);
+                        r.extraParams.add(new String[] {tail.substring(0, sp).strip(), tail.substring(sp + 1).strip()});
+                    }
+                    else if (body.startsWith("method "))
+                    {
+                        // `method NAME` overrides the default `build<RuleName>` method name.
+                        r.methodNameOverride = body.substring("method ".length()).strip();
+                    }
+                    else if (body.startsWith("context "))
+                    {
+                        // `context CtxType` overrides the auto-derived ctx parameter type.
+                        // Used for helper rules whose name isn't a real grammar rule.
+                        r.contextTypeOverride = body.substring("context ".length()).strip();
+                    }
+                    else if (body.startsWith("let "))
+                    {
+                        // `let TYPE NAME = EXPR` declares a method-scope local.
+                        String tail = body.substring("let ".length()).strip();
+                        int eqIdx = tail.indexOf('=');
+                        if (eqIdx < 0) throw new RuntimeException("let needs '=': " + body);
+                        String lhs = tail.substring(0, eqIdx).strip();
+                        String expr = tail.substring(eqIdx + 1).strip();
+                        int sp = lhs.lastIndexOf(' ');
+                        if (sp < 0) throw new RuntimeException("let LHS needs 'TYPE NAME': " + body);
+                        r.lets.add(new String[] {lhs.substring(0, sp).strip(), lhs.substring(sp + 1).strip(), expr});
+                    }
+                    else if (body.startsWith("set "))
+                    {
+                        // `set NAME = EXPR` rebinds a previously declared let-binding.
+                        String tail = body.substring("set ".length()).strip();
+                        int eqIdx = tail.indexOf('=');
+                        if (eqIdx < 0) throw new RuntimeException("set needs '=': " + body);
+                        r.sets.add(new String[] {tail.substring(0, eqIdx).strip(), tail.substring(eqIdx + 1).strip()});
+                    }
+                    else if (body.equals("topLevel"))
+                    {
+                        // Marks this rule as a top-level element: emits an @Override
+                        // visit<X> wrapper that registers the built object in `elements`.
+                        r.topLevel = true;
+                    }
+                    else if (body.startsWith("left_fold over "))
+                    {
+                        // left_fold over $.X { op "name" | op_by_token TOK "name" | when_token TOK wrap_with "name" }
+                        r.leftFold = new LeftFold();
+                        String lfHead = body.substring("left_fold over ".length()).replace("{", "").strip();
+                        if (!lfHead.startsWith("$.")) throw new RuntimeException("left_fold operand must be $.X: " + lfHead);
+                        r.leftFold.operandRule = lfHead.substring(2);
+                        depth++;
+                    }
+                    else if (body.startsWith("chain_fold from "))
+                    {
+                        // chain_fold from SEED over $.X { alt ... [else step EXPR] }
+                        r.chainFold = new ChainFold();
+                        String cfHead = body.substring("chain_fold from ".length()).replace("{", "").strip();
+                        int overIdx = cfHead.indexOf(" over ");
+                        if (overIdx < 0) throw new RuntimeException("chain_fold needs ' over $.X': " + body);
+                        r.chainFold.seedExpr = cfHead.substring(0, overIdx).strip();
+                        String overPart = cfHead.substring(overIdx + " over ".length()).strip();
+                        if (!overPart.startsWith("$.")) throw new RuntimeException("chain_fold list must be $.X: " + overPart);
+                        r.chainFold.overRule = overPart.substring(2);
+                        depth++;
+                    }
+                    else if (r.chainFold != null && body.startsWith("else step "))
+                    {
+                        // chain_fold fallback: `else step EXPR` — value when no alt matches.
+                        r.chainFold.elseStep = body.substring("else step ".length()).strip();
+                    }
+                    else if (body.startsWith("grow_list over "))
+                    {
+                        // grow_list over $.X { alt when $it.Y { yield EXPR } ... }
+                        r.growList = new GrowList();
+                        String glHead = body.substring("grow_list over ".length()).replace("{", "").strip();
+                        if (!glHead.startsWith("$.")) throw new RuntimeException("grow_list list must be $.X: " + glHead);
+                        r.growList.overRule = glHead.substring(2);
+                        depth++;
+                    }
+                    else if (currentAlt != null && body.startsWith("yield "))
+                    {
+                        // grow_list alt body: `yield EXPR` — the value to push into the result list.
+                        currentAlt.returnExpr = body.substring("yield ".length()).strip();
+                    }
+                    else if (body.startsWith("op_by_token "))
+                    {
+                        // op_by_token TOK "name"
+                        String[] parts = body.substring("op_by_token ".length()).strip().split("\\s+", 2);
+                        String tok = parts[0];
+                        String name = unquote(parts[1]);
+                        r.leftFold.opByToken.put(tok, name);
+                    }
+                    else if (body.startsWith("op "))
+                    {
+                        r.leftFold.fixedOp = unquote(body.substring("op ".length()).strip());
+                    }
+                    else if (body.startsWith("when_token "))
+                    {
+                        // when_token TOK wrap_with "name"
+                        String tail = body.substring("when_token ".length()).strip();
+                        int wrapIdx = tail.indexOf("wrap_with");
+                        String tok = tail.substring(0, wrapIdx).strip();
+                        String name = unquote(tail.substring(wrapIdx + "wrap_with".length()).strip());
+                        r.leftFold.wrapWhenToken.put(tok, name);
+                    }
+                    else if (body.startsWith("delegate $."))
+                    {
+                        // delegate $.X [as ReturnType]
+                        String tail = body.substring("delegate $.".length()).strip();
+                        int delAsIdx = tail.indexOf(" as ");
+                        if (delAsIdx >= 0)
+                        {
+                            r.delegateTarget = tail.substring(0, delAsIdx).strip();
+                            r.delegateReturn = tail.substring(delAsIdx + " as ".length()).strip();
+                        }
+                        else
+                        {
+                            r.delegateTarget = tail;
+                            r.delegateReturn = "ValueSpecification";
+                        }
+                    }
+                    i++;
+                }
+                rules.add(r);
+            }
+            else
+            {
+                i++;
+            }
+        }
+        return rules;
+    }
+
+    /**
+     * Net paren count for a line: each `(` outside string literals contributes +1, each
+     * `)` contributes -1. Drives the continuation-join logic so a single field expression
+     * may span multiple physical lines (the body parser still sees one logical line).
+     */
+    private static int parenDelta(String line)
+    {
+        int depth = 0;
+        boolean inStr = false;
+        for (int k = 0; k < line.length(); k++)
+        {
+            char c = line.charAt(k);
+            if (c == '"')
+            {
+                inStr = !inStr;
+                continue;
+            }
+            if (inStr) continue;
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+        }
+        return depth;
+    }
+
+    private static Field parseField(String body)
+    {
+        int eq = body.indexOf('=');
+        if (eq < 0) throw new RuntimeException("malformed field (no '='): " + body);
+        Field f = new Field();
+        f.name = body.substring(0, eq).strip();
+        f.expr = body.substring(eq + 1).strip();
+        return f;
+    }
+
+    private static String stripComment(String line)
+    {
+        int hash = line.indexOf('#');
+        return hash >= 0 ? line.substring(0, hash) : line;
+    }
+
+    // ------------------------------------------------------------------ emitter
+
+    private static void emit(StringBuilder sb, Rule r)
+    {
+        if (r.delegateTarget != null)
+        {
+            emitDelegate(sb, r);
+            return;
+        }
+        if (r.leftFold != null)
+        {
+            emitLeftFold(sb, r);
+            return;
+        }
+        if (r.chainFold != null)
+        {
+            emitChainFold(sb, r);
+            return;
+        }
+        if (r.growList != null)
+        {
+            emitGrowList(sb, r);
+            return;
+        }
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        // `build` prefix avoids name collision with ANTLR's M3ParserVisitor
+        // interface methods (visit<RuleName>) whose return type is fixed to Object.
+        String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        boolean hasAltOverrides = r.alts.stream().anyMatch(a -> a.altEmitType != null || a.returnExpr != null || a.delegateRule != null);
+        String returnType = r.returnType != null ? r.returnType
+                : (hasAltOverrides ? "ValueSpecification" : r.emitType + "Impl");
+
+        sb.append("    protected ").append(returnType).append(' ').append(methodName)
+                .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
+        emitLetBindings(sb, r);
+
+        if (r.alts.size() == 1 && r.alts.get(0).predicate == null
+                && r.alts.get(0).returnExpr == null && r.alts.get(0).delegateRule == null)
+        {
+            // Single-branch rule (no `alt when`). Build a single fluent chain.
+            String implType = (r.alts.get(0).altEmitType != null ? r.alts.get(0).altEmitType : r.emitType) + "Impl";
+            List<Field> all = new ArrayList<>();
+            all.addAll(r.alts.get(0).fields);
+            all.addAll(r.sharedFields);
+            // Split into unconditional vs optional fields. Unconditional fields go in the
+            // initial fluent chain; optional fields become `if (predicate) __result._X(EXPR);`.
+            List<Field> unconditional = new ArrayList<>();
+            List<Field> optional = new ArrayList<>();
+            for (Field f : all)
+            {
+                if (f.predicate != null) optional.add(f);
+                else unconditional.add(f);
+            }
+            boolean needsResultLocal = !r.postActions.isEmpty() || !optional.isEmpty();
+            if (!needsResultLocal)
+            {
+                sb.append("        return new ").append(implType).append("()\n");
+                emitFluentChain(sb, unconditional, "                ");
+                sb.append(";\n    }\n");
+            }
+            else
+            {
+                // Capture in local so post-build actions and optional-field assignments can run.
+                sb.append("        ").append(implType).append(" __result = new ").append(implType).append("()\n");
+                emitFluentChain(sb, unconditional, "                ");
+                sb.append(";\n");
+                for (Field f : optional)
+                {
+                    String cond = predicateAsJava(f.predicate);
+                    sb.append("        if (").append(cond).append(") __result.")
+                            .append(setter(f.name)).append('(').append(exprToJava(f.expr, null)).append(");\n");
+                }
+                for (PostAction post : r.postActions)
+                {
+                    String stmtJava = substituteContextRefs(post.stmt, null).replace("$$result", "__result");
+                    if (post.predicate != null)
+                    {
+                        sb.append("        if (").append(predicateAsJava(post.predicate))
+                                .append(") ").append(stmtJava).append(";\n");
+                    }
+                    else
+                    {
+                        sb.append("        ").append(stmtJava).append(";\n");
+                    }
+                }
+                sb.append("        return __result;\n    }\n");
+            }
+            return;
+        }
+
+        // Multi-alternative rule. If any alt overrides the emit type or uses
+        // return/delegate, we emit per-branch construction with no shared
+        // __result variable. Otherwise we set up a shared __result with
+        // shared fields and each branch layers on its own fields.
+        String defaultImplType = r.emitType != null ? r.emitType + "Impl" : null;
+        boolean useSharedResult = !hasAltOverrides && r.alts.stream().allMatch(a -> a.altEmitType == null);
+        if (useSharedResult && defaultImplType != null)
+        {
+            sb.append("        ").append(defaultImplType).append(" __result = new ").append(defaultImplType).append("()");
+            if (!r.sharedFields.isEmpty())
+            {
+                sb.append('\n');
+                emitFluentChain(sb, r.sharedFields, "                ");
+            }
+            sb.append(";\n\n");
+        }
+
+        boolean sawAltElse = false;
+        for (Alt a : r.alts)
+        {
+            boolean isElse = a.predicate == null;
+            if (isElse)
+            {
+                // `alt else { ... }` — emit unconditionally (skips the `if` wrapper)
+                // and mark that we should not fall through to elseError.
+                sawAltElse = true;
+            }
+            else
+            {
+                String cond = predicateAsJava(a.predicate);
+                sb.append("        if (").append(cond).append(")\n        {\n");
+            }
+            String indent = isElse ? "        " : "            ";
+            // Per-alt action: return, delegate, or emit/build.
+            if (a.returnExpr != null)
+            {
+                sb.append(indent).append("return ").append(exprToJava(a.returnExpr, null)).append(";\n");
+                if (!isElse) sb.append("        }\n");
+                continue;
+            }
+            if (a.delegateRule != null)
+            {
+                String tgt = methodNameFor(a.delegateRule);
+                sb.append(indent).append("return ").append(tgt).append("(ctx.").append(a.delegateRule).append("());\n");
+                if (!isElse) sb.append("        }\n");
+                continue;
+            }
+            // Emit case (default — uses rule.emitType, or per-alt override).
+            String altImpl = (a.altEmitType != null ? a.altEmitType : r.emitType) + "Impl";
+            String cachedTextToken = detectRepeatedText(a);
+            if (cachedTextToken != null)
+            {
+                sb.append("            String __t = ctx.").append(cachedTextToken).append("().getText();\n");
+            }
+            boolean altHasOptional = a.fields.stream().anyMatch(f -> f.predicate != null);
+            // `alt else` doesn't emit an `if (cond) {` wrapper, so it must not emit a `}` either.
+            String closeBrace = isElse ? "" : "        }\n";
+            if (useSharedResult)
+            {
+                if (!altHasOptional)
+                {
+                    // Fluent return form preserves the existing layout for alts
+                    // with only unconditional fields.
+                    sb.append("            return __result");
+                    for (Field f : a.fields)
+                    {
+                        String javaExpr = exprToJava(f.expr, cachedTextToken);
+                        sb.append("\n                    .").append(setter(f.name))
+                                .append('(').append(javaExpr).append(')');
+                    }
+                    sb.append(";\n").append(closeBrace);
+                }
+                else
+                {
+                    // Statement form: each unconditional field becomes `__result._X(EXPR);`
+                    // and each optional field becomes `if (P) __result._X(EXPR);`.
+                    for (Field f : a.fields)
+                    {
+                        String javaExpr = exprToJava(f.expr, cachedTextToken);
+                        if (f.predicate != null)
+                        {
+                            sb.append("            if (").append(predicateAsJava(f.predicate))
+                                    .append(") __result.").append(setter(f.name))
+                                    .append('(').append(javaExpr).append(");\n");
+                        }
+                        else
+                        {
+                            sb.append("            __result.").append(setter(f.name))
+                                    .append('(').append(javaExpr).append(");\n");
+                        }
+                    }
+                    sb.append("            return __result;\n").append(closeBrace);
+                }
+            }
+            else
+            {
+                // Build fresh node — combine shared + alt fields.
+                List<Field> all = new ArrayList<>();
+                all.addAll(r.sharedFields);
+                all.addAll(a.fields);
+                boolean anyOptional = all.stream().anyMatch(f -> f.predicate != null);
+                if (!anyOptional)
+                {
+                    sb.append("            return new ").append(altImpl).append("()");
+                    if (!all.isEmpty()) sb.append('\n');
+                    for (int j = 0; j < all.size(); j++)
+                    {
+                        Field f = all.get(j);
+                        String javaExpr = exprToJava(f.expr, cachedTextToken);
+                        sb.append("                    .").append(setter(f.name))
+                                .append('(').append(javaExpr).append(')');
+                        if (j < all.size() - 1) sb.append('\n');
+                    }
+                    sb.append(";\n").append(closeBrace);
+                }
+                else
+                {
+                    // Use __result local so optional fields can apply.
+                    sb.append("            ").append(altImpl).append(" __result = new ").append(altImpl).append("()");
+                    List<Field> uncondAll = new ArrayList<>();
+                    List<Field> optAll = new ArrayList<>();
+                    for (Field f : all)
+                    {
+                        if (f.predicate != null) optAll.add(f); else uncondAll.add(f);
+                    }
+                    if (!uncondAll.isEmpty()) sb.append('\n');
+                    for (int j = 0; j < uncondAll.size(); j++)
+                    {
+                        Field f = uncondAll.get(j);
+                        String javaExpr = exprToJava(f.expr, cachedTextToken);
+                        sb.append("                    .").append(setter(f.name))
+                                .append('(').append(javaExpr).append(')');
+                        if (j < uncondAll.size() - 1) sb.append('\n');
+                    }
+                    sb.append(";\n");
+                    for (Field f : optAll)
+                    {
+                        String javaExpr = exprToJava(f.expr, cachedTextToken);
+                        sb.append("            if (").append(predicateAsJava(f.predicate))
+                                .append(") __result.").append(setter(f.name))
+                                .append('(').append(javaExpr).append(");\n");
+                    }
+                    sb.append("            return __result;\n").append(closeBrace);
+                }
+            }
+        }
+
+        if (!sawAltElse)
+        {
+            if (r.elseError != null)
+            {
+                sb.append("        throw new RuntimeException(").append(r.elseError)
+                        .append(" + \": \" + ctx.getText());\n");
+            }
+            else
+            {
+                sb.append("        throw new RuntimeException(\"No matching alternative for ")
+                        .append(r.name).append(": \" + ctx.getText());\n");
+            }
+        }
+        sb.append("    }\n");
+    }
+
+    private static void emitDelegate(StringBuilder sb, Rule r)
+    {
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        String tgtMethod = methodNameFor(r.delegateTarget);
+        sb.append("    protected ").append(r.delegateReturn).append(' ').append(methodName)
+                .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
+        sb.append("        return ").append(tgtMethod).append("(ctx.").append(r.delegateTarget).append("());\n");
+        sb.append("    }\n");
+    }
+
+    private static void emitLeftFold(StringBuilder sb, Rule r)
+    {
+        LeftFold lf = r.leftFold;
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        String rhsCtxType = "M3Parser." + capitalize(lf.operandRule) + "Context";
+        String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        String operandMethod = methodNameFor(lf.operandRule);
+
+        sb.append("    protected ValueSpecification ").append(methodName)
+                .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
+        sb.append("        java.util.List<").append(rhsCtxType).append("> operands = ctx.")
+                .append(lf.operandRule).append("();\n");
+        sb.append("        ValueSpecification result = ").append(operandMethod)
+                .append("(operands.get(0));\n");
+        sb.append("        for (int i = 1; i < operands.size(); i++)\n        {\n");
+        sb.append("            Token opTok = operatorTokenAt(ctx, i);\n");
+        sb.append("            ").append(rhsCtxType).append(" rhsCtx = operands.get(i);\n");
+        sb.append("            ValueSpecification right = ").append(operandMethod).append("(rhsCtx);\n");
+
+        // Resolve operator name.
+        if (lf.fixedOp != null)
+        {
+            sb.append("            String funcName = \"").append(lf.fixedOp).append("\";\n");
+        }
+        else if (!lf.opByToken.isEmpty())
+        {
+            // Cascade of ternaries: opTok.getType() == M3Lexer.PLUS ? "plus" : ...
+            sb.append("            String funcName = ");
+            int n = lf.opByToken.size();
+            int idx = 0;
+            String lastName = null;
+            for (Map.Entry<String, String> e : lf.opByToken.entrySet())
+            {
+                lastName = e.getValue();
+                if (idx < n - 1)
+                {
+                    sb.append("opTok.getType() == M3Lexer.").append(e.getKey())
+                            .append(" ? \"").append(e.getValue()).append("\" : ");
+                }
+                idx++;
+            }
+            // Last entry is the fallback in the ternary chain.
+            sb.append('"').append(lastName).append("\";\n");
+        }
+
+        sb.append("            ValueSpecification call = buildBinaryCall(funcName, opTok, rhsCtx, result, right);\n");
+
+        // Optional wrap (e.g. != → not(equal(...)))
+        if (!lf.wrapWhenToken.isEmpty())
+        {
+            for (Map.Entry<String, String> w : lf.wrapWhenToken.entrySet())
+            {
+                sb.append("            if (opTok.getType() == M3Lexer.").append(w.getKey()).append(")\n            {\n");
+                sb.append("                call = new FunctionInvocationImpl()\n");
+                sb.append("                        ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, result))\n");
+                sb.append("                        ._functionName(\"").append(w.getValue()).append("\")\n");
+                sb.append("                        ._parametersValues(Lists.mutable.with(call));\n");
+                sb.append("            }\n");
+            }
+        }
+        sb.append("            result = call;\n");
+        sb.append("        }\n");
+        sb.append("        return result;\n    }\n");
+    }
+
+    private static void emitChainFold(StringBuilder sb, Rule r)
+    {
+        ChainFold cf = r.chainFold;
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        String itemCtxType = "M3Parser." + capitalize(cf.overRule) + "Context";
+        String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        String returnType = r.returnType != null ? r.returnType : "ValueSpecification";
+
+        sb.append("    protected ").append(returnType).append(' ').append(methodName)
+                .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
+        sb.append("        return ListAdapter.adapt(ctx.").append(cf.overRule).append("())\n");
+        sb.append("                .injectInto(").append(exprToJava(cf.seedExpr, null))
+                .append(", (").append(returnType).append(" acc, ").append(itemCtxType).append(" it) ->\n                {\n");
+        for (Alt a : cf.alts)
+        {
+            String cond = predicateAsJava(a.predicate);
+            sb.append("                    if (").append(cond).append(")\n                    {\n");
+            sb.append("                        return ").append(exprToJava(a.returnExpr, null)).append(";\n");
+            sb.append("                    }\n");
+        }
+        String elseExpr = cf.elseStep != null ? exprToJava(cf.elseStep, null) : "acc";
+        sb.append("                    return ").append(elseExpr).append(";\n");
+        sb.append("                });\n    }\n");
+    }
+
+    private static void emitGrowList(StringBuilder sb, Rule r)
+    {
+        GrowList gl = r.growList;
+        String ctxType = "M3Parser." + (r.contextTypeOverride != null ? r.contextTypeOverride : capitalize(r.name) + "Context");
+        String itemCtxType = "M3Parser." + capitalize(gl.overRule) + "Context";
+        String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
+        String returnType = r.returnType != null ? r.returnType : "MutableList<ValueSpecification>";
+        // Element type for the lambda return — for now, hardcode ValueSpecification.
+        // (Could be plumbed via the rule's `as` clause if other element types appear.)
+        String elemType = "ValueSpecification";
+
+        StringBuilder pred = new StringBuilder();
+        for (int j = 0; j < gl.alts.size(); j++)
+        {
+            if (j > 0) pred.append(" || ");
+            pred.append(predicateAsJava(gl.alts.get(j).predicate));
+        }
+
+        sb.append("    protected ").append(returnType).append(' ').append(methodName)
+                .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
+        sb.append("        return ListAdapter.adapt(ctx.").append(gl.overRule).append("())\n");
+        sb.append("                .collectIf(\n");
+        sb.append("                        (").append(itemCtxType).append(" it) -> ").append(pred).append(",\n");
+        sb.append("                        (").append(itemCtxType).append(" it) ->\n                        {\n");
+        for (Alt a : gl.alts)
+        {
+            String cond = predicateAsJava(a.predicate);
+            sb.append("                            if (").append(cond).append(")\n                            {\n");
+            sb.append("                                return (").append(elemType).append(") ").append(exprToJava(a.returnExpr, null)).append(";\n");
+            sb.append("                            }\n");
+        }
+        sb.append("                            throw new RuntimeException(\"unreachable: predicate guarantees an alt matches\");\n");
+        sb.append("                        });\n    }\n");
+    }
+
+    /** Detects a token whose `.text` is referenced more than once in the alt, so we cache it. */
+    private static String detectRepeatedText(Alt a)
+    {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Field f : a.fields)
+        {
+            String expr = f.expr;
+            int idx = 0;
+            while ((idx = expr.indexOf("$.", idx)) >= 0)
+            {
+                int end = idx + 2;
+                while (end < expr.length() && (Character.isLetterOrDigit(expr.charAt(end)) || expr.charAt(end) == '_'))
+                {
+                    end++;
+                }
+                String name = expr.substring(idx + 2, end);
+                if (expr.startsWith(".text", end))
+                {
+                    counts.merge(name, 1, Integer::sum);
+                }
+                idx = end;
+            }
+        }
+        return counts.entrySet().stream()
+                .filter(e -> e.getValue() > 1)
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static void emitFluentChain(StringBuilder sb, List<Field> fields, String indent)
+    {
+        for (int i = 0; i < fields.size(); i++)
+        {
+            Field f = fields.get(i);
+            sb.append(indent).append('.').append(setter(f.name))
+                    .append('(').append(exprToJava(f.expr, null)).append(')');
+            if (i < fields.size() - 1) sb.append('\n');
+        }
+    }
+
+    private static String setter(String fieldName)
+    {
+        return ("sourceInformation".equals(fieldName) ? "_p_sourceInformation" : "_" + fieldName);
+    }
+
+    private static String predicateAsJava(String pred)
+    {
+        if (pred == null) return "true";
+        // Multi-clause: `$.X && $.Y` (each clause independently translated and ANDed).
+        if (pred.contains(" && "))
+        {
+            String[] parts = pred.split(" && ");
+            StringBuilder sb = new StringBuilder();
+            for (int k = 0; k < parts.length; k++)
+            {
+                if (k > 0) sb.append(" && ");
+                sb.append(predicateAsJava(parts[k].strip()));
+            }
+            return sb.toString();
+        }
+        if (pred.startsWith("$it."))
+        {
+            // chain_fold iteration-variable form: ctx-of-current-item
+            return "it." + pred.substring(4) + "() != null";
+        }
+        if (pred.startsWith("$."))
+        {
+            // Multi-segment paths emit a null-safe chain so the predicate is sound
+            // even when intermediate getters can return null (e.g. optional sub-rules):
+            //   $.X.Y → ctx.X() != null && ctx.X().Y() != null
+            String[] segs = pred.substring(2).split("\\.");
+            StringBuilder sb = new StringBuilder();
+            StringBuilder cum = new StringBuilder("ctx");
+            for (int k = 0; k < segs.length; k++)
+            {
+                if (k > 0) sb.append(" && ");
+                cum.append('.').append(segs[k]).append("()");
+                sb.append(cum).append(" != null");
+            }
+            return sb.toString();
+        }
+        // Primitive call predicate (e.g. `notEmpty(typeParams)`). Match against a
+        // known primitive at position 0 and require it to span the whole string.
+        int end = tryMatchPrimitiveCall(pred, 0);
+        if (end == pred.length())
+        {
+            return exprToJava(pred, null);
+        }
+        throw new RuntimeException("unsupported predicate: " + pred);
+    }
+
+    /**
+     * Translate a DSL expression to Java. The translation is purely textual:
+     *
+     *   $loc                       → buildSourceInfo(ctx)
+     *   $.X.text                   → ctx.X().getText()  (or __t if cached)
+     *   $.X                        → ctx.X()
+     *   primitiveType("X")         → buildPrimitiveGenericType("X")
+     *   dateLiteralType(arg)       → arg.contains("T") ? buildPrimitiveGenericType("DateTime") : buildPrimitiveGenericType("StrictDate")
+     *   stripQuotes(arg)           → arg.substring(1, arg.length() - 1)
+     *   stripPercent(arg)          → arg.startsWith("%") ? arg.substring(1) : arg
+     *   parseLong(arg)             → Long.parseLong(arg)
+     *   parseDouble(arg)           → Double.parseDouble(arg)
+     *   parseBoolean(arg)          → Boolean.parseBoolean(arg)
+     */
+    private static String exprToJava(String dslExpr, String cachedTextToken)
+    {
+        String e = dslExpr.strip();
+
+        // Specific-child source-info: $loc($.X) → buildSourceInfo(ctx.X()); supports
+        // nested paths like $loc($.X.Y) → buildSourceInfo(ctx.X().Y()).
+        if (e.startsWith("$loc($.") && e.endsWith(")"))
+        {
+            String tok = e.substring("$loc($.".length(), e.length() - 1);
+            return "buildSourceInfo(" + pathToJava(tok, false) + ")";
+        }
+
+        // ifPresent($.X, THEN, ELSE) — ctx.X() != null ? THEN : ELSE
+        if (e.startsWith("ifPresent(") && e.endsWith(")"))
+        {
+            String inner = e.substring("ifPresent(".length(), e.length() - 1);
+            // Top-level comma split into 3 parts.
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 3)
+            {
+                String pred = predicateAsJava(parts.get(0).strip());
+                String thenE = exprToJava(parts.get(1), cachedTextToken);
+                String elseE = exprToJava(parts.get(2), cachedTextToken);
+                return "(" + pred + " ? " + thenE + " : " + elseE + ")";
+            }
+        }
+
+        // listOf(a, b, c) — Lists.mutable.with(a, b, c); empty form → Lists.mutable.empty()
+        if (e.startsWith("listOf(") && e.endsWith(")"))
+        {
+            String inner = e.substring("listOf(".length(), e.length() - 1);
+            if (inner.strip().isEmpty()) return "Lists.mutable.empty()";
+            List<String> parts = splitTopLevelCommas(inner);
+            StringBuilder out = new StringBuilder("Lists.mutable.with(");
+            for (int i = 0; i < parts.size(); i++)
+            {
+                if (i > 0) out.append(", ");
+                out.append(exprToJava(parts.get(i), cachedTextToken));
+            }
+            out.append(')');
+            return out.toString();
+        }
+
+        // prepended(item, list) — Lists.mutable.with(item).withAll(list); used for
+        // receiver-prepended parameter lists (e.g. visitor methods that take a
+        // receiver and a list of other args).
+        if (e.startsWith("prepended(") && e.endsWith(")"))
+        {
+            String inner = e.substring("prepended(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 2)
+            {
+                String item = exprToJava(parts.get(0), cachedTextToken);
+                String list = exprToJava(parts.get(1), cachedTextToken);
+                return "Lists.mutable.<ValueSpecification>with(" + item + ").withAll(" + list + ")";
+            }
+        }
+
+        // filterMap($.X, "needle", fn) — adapt+select(contains)+collect.
+        // filterMapNot($.X, "needle", fn) — same but reject(contains).
+        if ((e.startsWith("filterMap(") || e.startsWith("filterMapNot(")) && e.endsWith(")"))
+        {
+            boolean negate = e.startsWith("filterMapNot(");
+            String prefix = negate ? "filterMapNot(" : "filterMap(";
+            String inner = e.substring(prefix.length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 3)
+            {
+                String listJava = exprToJava(parts.get(0), cachedTextToken);
+                String needle = parts.get(1).strip();
+                String fn = parts.get(2).strip();
+                String methodRef = fn.startsWith("build") || fn.startsWith("visit") || fn.startsWith("parse") ? fn : methodNameFor(fn);
+                String op = negate ? "reject" : "select";
+                return "ListAdapter.adapt(" + listJava + ")." + op + "(__c -> __c.getText().contains(" + needle + ")).collect(this::" + methodRef + ")";
+            }
+        }
+
+        // mapList($.X, fn) — ListAdapter.adapt(ctx.X()).collect(this::fn)
+        if (e.startsWith("mapList(") && e.endsWith(")"))
+        {
+            String inner = e.substring("mapList(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 2)
+            {
+                String listJava = exprToJava(parts.get(0), cachedTextToken);
+                String fn = parts.get(1).strip();
+                // Allow either a bare method name (mapped via methodNameFor) or
+                // a qualified-name like buildX which we leave verbatim.
+                // Verbatim if the name looks like a Java helper method (build*/visit*/parse*);
+                // otherwise treat as a bare grammar rule name and prefix with `build`.
+                String methodRef = fn.startsWith("build") || fn.startsWith("visit") || fn.startsWith("parse") ? fn : methodNameFor(fn);
+                return "ListAdapter.adapt(" + listJava + ").collect(this::" + methodRef + ")";
+            }
+        }
+
+        // notEmpty(X) — !X.isEmpty() — emit-side check for a non-empty collection.
+        if (e.startsWith("notEmpty(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("notEmpty(".length(), e.length() - 1), cachedTextToken);
+            return "!" + inner + ".isEmpty()";
+        }
+
+        // simpleNameOf(s) — last `::`-suffix of a path, or the whole string if unqualified.
+        if (e.startsWith("simpleNameOf(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("simpleNameOf(".length(), e.length() - 1), cachedTextToken);
+            return "(" + inner + ".contains(\"::\") ? " + inner + ".substring(" + inner + ".lastIndexOf(\"::\") + 2) : " + inner + ")";
+        }
+
+        // packagePrefix(s) — substring of `s` before the last `::` (undefined if no `::` present;
+        // pair with hasPackagePrefix(s) as the guard).
+        if (e.startsWith("packagePrefix(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("packagePrefix(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".substring(0, " + inner + ".lastIndexOf(\"::\"))";
+        }
+
+        // hasPackagePrefix(s) — boolean: true iff `s` contains "::". Used as a predicate.
+        if (e.startsWith("hasPackagePrefix(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("hasPackagePrefix(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".contains(\"::\")";
+        }
+
+        // beforeFirstDot(s) — substring of `s` before the first ".", or `s` itself when no dot.
+        // Used to recover the type name from a path-separator-prefixed reference like `Type.all()`.
+        if (e.startsWith("beforeFirstDot(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("beforeFirstDot(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".split(\"\\\\.\")[0]";
+        }
+
+        // firstOf($.X) — first element of a list-returning sub-rule accessor.
+        if (e.startsWith("firstOf($.") && e.endsWith(")"))
+        {
+            String tok = e.substring("firstOf($.".length(), e.length() - 1);
+            return "ctx." + tok + "().get(0)";
+        }
+
+        // anyHas($.X, name) — boolean: any item in $.X has a non-null `name()` child.
+        // Used both as a predicate (alt when …) and as a value (ifPresent argument).
+        if (e.startsWith("anyHas($.") && e.endsWith(")"))
+        {
+            String inner = e.substring("anyHas($.".length(), e.length() - 1);
+            int comma = inner.indexOf(',');
+            String tok = inner.substring(0, comma).strip();
+            String name = inner.substring(comma + 1).strip();
+            return "ListAdapter.adapt(ctx." + tok + "()).anySatisfy(__c -> __c." + name + "() != null)";
+        }
+
+        // anyHasAny($.X, name1, name2) — boolean: any item in $.X has non-null `name1()` OR `name2()`.
+        if (e.startsWith("anyHasAny($.") && e.endsWith(")"))
+        {
+            String inner = e.substring("anyHasAny($.".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            String tok = parts.get(0).strip();
+            String name1 = parts.get(1).strip();
+            String name2 = parts.get(2).strip();
+            return "ListAdapter.adapt(ctx." + tok + "()).anySatisfy(__c -> __c." + name1 + "() != null || __c." + name2 + "() != null)";
+        }
+
+        // selectMapHasAny($.X, name1, name2, fn) — filter $.X to items where name1 OR name2 is
+        // non-null, then map each via build<fn>. Used to gather only the typed columns in a
+        // colSpecArray RelationType holder.
+        if (e.startsWith("selectMapHasAny($.") && e.endsWith(")"))
+        {
+            String inner = e.substring("selectMapHasAny($.".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            String tok = parts.get(0).strip();
+            String name1 = parts.get(1).strip();
+            String name2 = parts.get(2).strip();
+            String fn = parts.get(3).strip();
+            String methodRef = fn.startsWith("build") ? fn : ("build" + capitalize(fn));
+            return "ListAdapter.adapt(ctx." + tok + "()).select(__c -> __c." + name1 + "() != null || __c." + name2 + "() != null).collect(this::" + methodRef + ")";
+        }
+
+        // hasAny($self, name1, name2) — boolean: the current context has non-null name1() OR name2().
+        // Used as a predicate or value for the per-colSpec type-holder dispatch.
+        if (e.startsWith("hasAny($self, ") && e.endsWith(")"))
+        {
+            String inner = e.substring("hasAny($self, ".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            String name1 = parts.get(0).strip();
+            String name2 = parts.get(1).strip();
+            return "(ctx." + name1 + "() != null || ctx." + name2 + "() != null)";
+        }
+
+        // count($.X) — ctx.X().size() — element count of a list-returning child rule.
+        if (e.startsWith("count($.") && e.endsWith(")"))
+        {
+            String tok = e.substring("count($.".length(), e.length() - 1);
+            return "ctx." + tok + "().size()";
+        }
+
+        // multBounds(lo, hi) — UserDefinedAdHocMultiplicity with the given numeric bounds (inline).
+        if (e.startsWith("multBounds(") && e.endsWith(")"))
+        {
+            String inner = e.substring("multBounds(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 2)
+            {
+                String lo = exprToJava(parts.get(0), cachedTextToken);
+                String hi = exprToJava(parts.get(1), cachedTextToken);
+                return "new UserDefinedAdHocMultiplicityImpl()._lowerBound(new MultiplicityValueImpl()._value((long) (" + lo + ")))._upperBound(new MultiplicityValueImpl()._value((long) (" + hi + ")))";
+            }
+        }
+
+        // joinTextWith($.X, "sep") — concatenate getText() of every $.X item with separator.
+        if (e.startsWith("joinTextWith(") && e.endsWith(")"))
+        {
+            String inner = e.substring("joinTextWith(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 2)
+            {
+                String listJava = exprToJava(parts.get(0), cachedTextToken);
+                String sep = parts.get(1).strip();
+                return "ListAdapter.adapt(" + listJava + ").collect(__n -> __n.getText()).makeString(" + sep + ")";
+            }
+        }
+
+        // joinStripped($.X) — concatenate the quote-stripped getText() of every $.X token.
+        // Used for grammar like `STRING (PLUS STRING)*` where multiple quoted strings should
+        // be folded into one logical value.
+        if (e.startsWith("joinStripped(") && e.endsWith(")"))
+        {
+            String inner = e.substring("joinStripped(".length(), e.length() - 1).strip();
+            if (!inner.startsWith("$.")) throw new RuntimeException("joinStripped expects $.X: " + inner);
+            String tok = inner.substring(2);
+            return "ListAdapter.adapt(ctx." + tok + "()).collect(__n -> { String __raw = __n.getText();"
+                    + " return __raw.substring(1, __raw.length() - 1); }).makeString(\"\")";
+        }
+
+        // newImpl(TypeName, fieldA=expr, fieldB=expr, ...) — nested object construction.
+        // Generates: new TypeNameImpl()._fieldA(expr)._fieldB(expr)... (using `setter()` for
+        // the sourceInformation→_p_sourceInformation special case).
+        if (e.startsWith("newImpl(") && e.endsWith(")"))
+        {
+            String inner = e.substring("newImpl(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (!parts.isEmpty())
+            {
+                String typeName = parts.get(0).strip();
+                StringBuilder out = new StringBuilder("new ").append(typeName).append("Impl()");
+                for (int j = 1; j < parts.size(); j++)
+                {
+                    String kv = parts.get(j);
+                    int eqIdx = kv.indexOf('=');
+                    if (eqIdx < 0) throw new RuntimeException("newImpl arg lacks '=': " + kv);
+                    String key = kv.substring(0, eqIdx).strip();
+                    String valExpr = kv.substring(eqIdx + 1).strip();
+                    out.append('.').append(setter(key)).append('(')
+                            .append(exprToJava(valExpr, cachedTextToken)).append(')');
+                }
+                return out.toString();
+            }
+        }
+
+        // Recognized intrinsics (one-arg shape).
+        String[][] simpleCalls = {
+                {"parseLong(", "Long.parseLong("},
+                {"parseDouble(", "Double.parseDouble("},
+                {"parseBoolean(", "Boolean.parseBoolean("},
+        };
+        for (String[] m : simpleCalls)
+        {
+            if (e.startsWith(m[0]) && e.endsWith(")"))
+            {
+                String inner = e.substring(m[0].length(), e.length() - 1);
+                return m[1] + exprToJava(inner, cachedTextToken) + ")";
+            }
+        }
+        // primitiveType("X") — wrap a Type_Pointer in a UserDefinedGenericType inline.
+        if (e.startsWith("primitiveType(") && e.endsWith(")"))
+        {
+            String inner = e.substring("primitiveType(".length(), e.length() - 1);
+            String arg = exprToJava(inner, cachedTextToken);
+            return "new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(" + arg + "))";
+        }
+
+        if (e.startsWith("stripQuotes(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("stripQuotes(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".substring(1, " + inner + ".length() - 1)";
+        }
+        if (e.startsWith("stripPercent(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("stripPercent(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".startsWith(\"%\") ? " + inner + ".substring(1) : " + inner;
+        }
+        // stripIfQuoted(s) — strip single-quotes only if the string is wrapped in them.
+        // Used for column names which may be either bare identifiers or quoted strings.
+        if (e.startsWith("stripIfQuoted(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("stripIfQuoted(".length(), e.length() - 1), cachedTextToken);
+            return "(" + inner + ".startsWith(\"'\") && " + inner + ".endsWith(\"'\") ? "
+                    + inner + ".substring(1, " + inner + ".length() - 1) : " + inner + ")";
+        }
+
+        // stripParens(s) — drop leading and trailing single char: "(none)" → "none".
+        if (e.startsWith("stripParens(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("stripParens(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".substring(1, " + inner + ".length() - 1)";
+        }
+        // capitalize(s) — uppercase the first char: "none" → "None".
+        if (e.startsWith("capitalize(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("capitalize(".length(), e.length() - 1), cachedTextToken);
+            return inner + ".substring(0, 1).toUpperCase() + " + inner + ".substring(1)";
+        }
+        // enumPointer("a::b::Enum", expr) — inline Enum_PointerImpl construction.
+        if (e.startsWith("enumPointer(") && e.endsWith(")"))
+        {
+            String inner = e.substring("enumPointer(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() == 2)
+            {
+                String qn = parts.get(0).strip();
+                String val = exprToJava(parts.get(1), cachedTextToken);
+                return "new Enum_PointerImpl()._value(" + qn + ")._extraPointerValues(Lists.mutable.with(new PointerValueImpl()._value(" + val + ")))";
+            }
+        }
+        if (e.startsWith("dateLiteralType(") && e.endsWith(")"))
+        {
+            String inner = exprToJava(e.substring("dateLiteralType(".length(), e.length() - 1), cachedTextToken);
+            String dateTimeType = "new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(\"DateTime\"))";
+            String strictDateType = "new UserDefinedGenericTypeImpl()._type(new Type_PointerImpl()._value(\"StrictDate\"))";
+            return inner + ".contains(\"T\") ? " + dateTimeType + " : " + strictDateType;
+        }
+
+        if (e.equals("$loc")) return "buildSourceInfo(ctx)";
+        if (e.equals("$self")) return "ctx";
+        if (e.equals("acc")) return "acc";
+        if (e.startsWith("$it.") && isSimpleTokenRef(e))
+        {
+            // Multi-segment $it path support: $it.X.Y.text → it.X().Y().getText()
+            String inner = e.substring(4);
+            boolean isText = inner.endsWith(".text") && inner.length() > ".text".length();
+            String toWalk = isText ? inner.substring(0, inner.length() - ".text".length()) : inner;
+            String[] segs = toWalk.split("\\.");
+            StringBuilder sb = new StringBuilder("it");
+            for (String seg : segs)
+            {
+                sb.append('.').append(seg).append("()");
+            }
+            if (isText) sb.append(".getText()");
+            return sb.toString();
+        }
+        if (e.startsWith("$.") && e.endsWith(".text") && isSimpleTokenRef(e))
+        {
+            // Cache-aware $.X.text shortcut (only for single-segment paths). Multi-segment
+            // paths like $.X.Y.text fall through to pathToJava.
+            String inner = e.substring(2, e.length() - ".text".length());
+            if (!inner.contains(".") && cachedTextToken != null && cachedTextToken.equals(inner))
+            {
+                return "__t";
+            }
+            return pathToJava(inner, true);
+        }
+        if (e.startsWith("$.") && isSimpleTokenRef(e)) return pathToJava(e.substring(2), false);
+        // Pass-through (e.g. a helper invocation like `buildGenericType($.type)` or
+        // `parseMultiplicity($.multiplicity.text)`). Recursively substitute embedded
+        // $.X.text and $.X references so the resulting expression is valid Java.
+        return substituteContextRefs(e, cachedTextToken);
+    }
+
+    /** True if the expression is a single $.X[.Y[.Z]][.text] reference (no parens, no extra tokens). */
+    private static boolean isSimpleTokenRef(String e)
+    {
+        for (int i = 0; i < e.length(); i++)
+        {
+            char c = e.charAt(i);
+            if (c == '(' || c == ' ') return false;
+        }
+        return true;
+    }
+
+    /**
+     * Translate a dotted path (e.g. {@code X.Y.Z}) to a Java method chain
+     * {@code ctx.X().Y().Z()}. When {@code lastIsText} is true, the final
+     * segment is rendered as {@code .getText()} instead of {@code .text()}.
+     * Used for both bare path refs ({@code $.X.Y}) and source-info refs
+     * ({@code $loc($.X.Y)}).
+     */
+    private static String pathToJava(String dottedPath, boolean lastIsText)
+    {
+        String[] segs = dottedPath.split("\\.");
+        StringBuilder sb = new StringBuilder("ctx");
+        for (int k = 0; k < segs.length; k++)
+        {
+            sb.append('.').append(segs[k]).append("()");
+        }
+        if (lastIsText) sb.append(".getText()");
+        return sb.toString();
+    }
+
+    /**
+     * Replace every {@code $.X.text} with {@code ctx.X().getText()} (or {@code __t}
+     * if cached), every remaining {@code $.X} with {@code ctx.X()}, and substitute
+     * known DSL-primitive names with their Java equivalents (so e.g. a nested
+     * {@code -parseLong(...)} produces {@code -Long.parseLong(...)}). Used for
+     * pass-through expressions where the primitive call isn't at the top.
+     */
+    /** DSL primitive names that take parenthesized args; used to detect nested calls
+     * inside otherwise-pass-through expressions (e.g. `buildAllFunction(..., mapList(...))`). */
+    private static final String[] PRIMITIVE_NAMES = {
+            "mapList", "listOf", "ifPresent", "newImpl", "prepended",
+            "joinTextWith", "joinStripped", "parseLong", "parseDouble", "parseBoolean",
+            "primitiveType", "stripQuotes", "stripPercent", "stripParens", "capitalize",
+            "enumPointer", "count", "multBounds", "dateLiteralType", "stripIfQuoted",
+            "notEmpty", "simpleNameOf", "filterMap", "filterMapNot",
+            "packagePrefix", "hasPackagePrefix", "beforeFirstDot",
+            "firstOf", "anyHas", "anyHasAny", "selectMapHasAny", "hasAny"
+    };
+
+    /**
+     * If position {@code start} in {@code e} begins a known primitive call (e.g.
+     * `mapList(...)`), return the index just past its closing `)`; otherwise return
+     * {@code start} unchanged. The caller can then slice {@code e[start..matched]}
+     * and recurse with {@link #exprToJava} to expand the primitive.
+     */
+    private static int tryMatchPrimitiveCall(String e, int start)
+    {
+        for (String p : PRIMITIVE_NAMES)
+        {
+            if (e.regionMatches(start, p, 0, p.length())
+                    && start + p.length() < e.length()
+                    && e.charAt(start + p.length()) == '(')
+            {
+                // Ensure the char before `start` is not part of a longer identifier
+                // (so we don't match `buildMapList(` as `mapList(`).
+                if (start > 0 && (Character.isLetterOrDigit(e.charAt(start - 1)) || e.charAt(start - 1) == '_'))
+                {
+                    continue;
+                }
+                int j = start + p.length() + 1;  // past `(`
+                int depth = 1;
+                while (j < e.length() && depth > 0)
+                {
+                    char c = e.charAt(j);
+                    if (c == '(') depth++;
+                    else if (c == ')') depth--;
+                    j++;
+                }
+                if (depth == 0) return j;
+            }
+        }
+        return start;
+    }
+
+    private static String substituteContextRefs(String e, String cachedTextToken)
+    {
+        StringBuilder out = new StringBuilder(e.length());
+        int i = 0;
+        while (i < e.length())
+        {
+            // Nested primitive call: expand via exprToJava and skip past it.
+            int matched = tryMatchPrimitiveCall(e, i);
+            if (matched > i)
+            {
+                out.append(exprToJava(e.substring(i, matched), cachedTextToken));
+                i = matched;
+                continue;
+            }
+            // $self → ctx — the current rule's parser context as an argument.
+            if (i + 4 < e.length() + 1 && e.regionMatches(i, "$self", 0, 5)
+                    && (i + 5 == e.length() || !Character.isLetterOrDigit(e.charAt(i + 5))))
+            {
+                out.append("ctx");
+                i += 5;
+                continue;
+            }
+            // $it.X[.Y[.Z]][.text] (chain_fold/grow_list iteration-variable form) — must
+            // check before $. Walks each segment; trailing `.text` becomes `.getText()`.
+            if (i + 3 < e.length() && e.charAt(i) == '$' && e.charAt(i + 1) == 'i'
+                    && e.charAt(i + 2) == 't' && e.charAt(i + 3) == '.')
+            {
+                int j = i + 4;
+                java.util.List<String> segs = new ArrayList<>();
+                while (j < e.length() && (Character.isLetter(e.charAt(j)) || e.charAt(j) == '_'))
+                {
+                    int segStart = j;
+                    while (j < e.length() && (Character.isLetterOrDigit(e.charAt(j)) || e.charAt(j) == '_'))
+                    {
+                        j++;
+                    }
+                    segs.add(e.substring(segStart, j));
+                    if (j < e.length() && e.charAt(j) == '.'
+                            && j + 1 < e.length() && (Character.isLetter(e.charAt(j + 1)) || e.charAt(j + 1) == '_'))
+                    {
+                        j++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                boolean endsInText = segs.size() > 1 && "text".equals(segs.get(segs.size() - 1));
+                out.append("it");
+                if (endsInText)
+                {
+                    for (int k = 0; k < segs.size() - 1; k++)
+                    {
+                        out.append('.').append(segs.get(k)).append("()");
+                    }
+                    out.append(".getText()");
+                }
+                else
+                {
+                    for (String seg : segs)
+                    {
+                        out.append('.').append(seg).append("()");
+                    }
+                }
+                i = j;
+            }
+            else if (i + 1 < e.length() && e.charAt(i) == '$' && e.charAt(i + 1) == '.')
+            {
+                // Walk a $.X[.Y[.Z]][.text] path. Each `.X` segment becomes `.X()` in
+                // Java; a trailing `.text` becomes `.getText()`. Single-segment .text
+                // honors the cachedTextToken optimization.
+                int j = i + 2;
+                java.util.List<String> segs = new ArrayList<>();
+                while (j < e.length() && (Character.isLetter(e.charAt(j)) || e.charAt(j) == '_'))
+                {
+                    int segStart = j;
+                    while (j < e.length() && (Character.isLetterOrDigit(e.charAt(j)) || e.charAt(j) == '_'))
+                    {
+                        j++;
+                    }
+                    segs.add(e.substring(segStart, j));
+                    if (j < e.length() && e.charAt(j) == '.'
+                            && j + 1 < e.length() && (Character.isLetter(e.charAt(j + 1)) || e.charAt(j + 1) == '_'))
+                    {
+                        j++;  // consume `.`, loop for next segment
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                boolean endsInText = segs.size() > 1 && "text".equals(segs.get(segs.size() - 1));
+                if (endsInText && segs.size() == 2 && cachedTextToken != null && cachedTextToken.equals(segs.get(0)))
+                {
+                    out.append("__t");
+                }
+                else if (endsInText)
+                {
+                    out.append("ctx");
+                    for (int k = 0; k < segs.size() - 1; k++)
+                    {
+                        out.append('.').append(segs.get(k)).append("()");
+                    }
+                    out.append(".getText()");
+                }
+                else
+                {
+                    out.append("ctx");
+                    for (String seg : segs)
+                    {
+                        out.append('.').append(seg).append("()");
+                    }
+                }
+                i = j;
+            }
+            else
+            {
+                out.append(e.charAt(i++));
+            }
+        }
+        // Primitive calls are now expanded recursively via tryMatchPrimitiveCall +
+        // exprToJava within the walker above, so no text-level fallback substitution
+        // is needed (and would double-rewrite e.g. `Long.Long.parseLong(...)`).
+        return out.toString();
+    }
+
+    private static String capitalize(String s)
+    {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /**
+     * Emit the rule's `let`-bindings (TYPE NAME = EXPR) followed by `set` rebinds
+     * (NAME = EXPR) as Java locals at the top of the method body. Both are emitted
+     * in declared order. Non-final so `set` can rebind safely.
+     */
+    private static void emitLetBindings(StringBuilder sb, Rule r)
+    {
+        for (String[] l : r.lets)
+        {
+            sb.append("        ").append(l[0]).append(' ').append(l[1])
+                    .append(" = ").append(exprToJava(l[2], null)).append(";\n");
+        }
+        for (String[] s : r.sets)
+        {
+            sb.append("        ").append(s[0]).append(" = ")
+                    .append(exprToJava(s[1], null)).append(";\n");
+        }
+    }
+
+    /**
+     * Format the extra-parameter prefix for a rule's generated method signature.
+     * Each `param TYPE name` directive becomes `final TYPE name, ` prepended to
+     * the `final CtxType ctx` parameter. Returns "" when no extras are declared.
+     */
+    private static String extraParamsPrefix(Rule r)
+    {
+        if (r.extraParams.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String[] p : r.extraParams)
+        {
+            sb.append("final ").append(p[0]).append(' ').append(p[1]).append(", ");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Generated method name from a grammar rule name. Most rules get a `build`
+     * prefix (so that they don't collide with ANTLR's M3ParserVisitor.visit*
+     * methods whose return type is fixed to Object). Rules whose name already
+     * begins with `build` are emitted verbatim (e.g. {@code buildMilestoningVariableExpression}).
+     */
+    private static String methodNameFor(String ruleName)
+    {
+        if (ruleName.startsWith("build"))
+        {
+            return ruleName;
+        }
+        return "build" + capitalize(ruleName);
+    }
+
+    /**
+     * Split a comma-separated expression list into its top-level parts, ignoring
+     * commas nested inside parentheses. Used for parsing multi-arg DSL primitives
+     * like {@code ifPresent($.X, THEN, ELSE)}.
+     */
+    private static List<String> splitTopLevelCommas(String s)
+    {
+        List<String> out = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == ',' && depth == 0)
+            {
+                out.add(s.substring(start, i));
+                start = i + 1;
+            }
+        }
+        out.add(s.substring(start));
+        return out;
+    }
+
+    private static String unquote(String s)
+    {
+        s = s.strip();
+        if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\""))
+        {
+            return s.substring(1, s.length() - 1);
+        }
+        return s;
+    }
+}
