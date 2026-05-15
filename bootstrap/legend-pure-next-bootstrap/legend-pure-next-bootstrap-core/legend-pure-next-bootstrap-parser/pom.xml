@@ -177,12 +177,13 @@
                             </arguments>
                         </configuration>
                     </execution>
-                    <!-- M3 visitor base class: emit M3ProtocolBuilderBase.java from the
-                         m3-mappings.dsl in the generators module. The concrete
-                         M3ProtocolBuilder (src/main/java) extends this base class and
-                         provides the abstract helpers. -->
+                    <!-- M3 visitor: emit the full M3ProtocolBuilder.java from the
+                         declarative DSL at src/main/resources/m3-visitor/m3-mappings.dsl.
+                         The generated class extends M3ParserBaseVisitor directly; there
+                         is no hand-written parent. To port the parser to another target
+                         language, port the DSL + M3VisitorGenerator. -->
                     <execution>
-                        <id>generate-m3-visitor-base</id>
+                        <id>generate-m3-visitor</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>java</goal>
@@ -190,7 +191,7 @@
                         <configuration>
                             <mainClass>org.finos.legend.pure.generators.M3VisitorGenerator</mainClass>
                             <arguments>
-                                <argument>${project.basedir}/../legend-pure-next-bootstrap-generators/src/main/resources/m3-visitor/m3-mappings.dsl</argument>
+                                <argument>${project.basedir}/src/main/resources/m3-visitor/m3-mappings.dsl</argument>
                                 <argument>${project.build.directory}/generated-sources/org/finos/legend/pure/next/parser/m3/M3ProtocolBuilder.java</argument>
                             </arguments>
                         </configuration>

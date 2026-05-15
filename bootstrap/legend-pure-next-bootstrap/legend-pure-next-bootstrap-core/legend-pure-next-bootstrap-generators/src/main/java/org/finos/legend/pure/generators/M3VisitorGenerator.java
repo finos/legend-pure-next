@@ -202,14 +202,7 @@ public final class M3VisitorGenerator
         sb.append("    {\n");
         sb.append("        return ((org.antlr.v4.runtime.tree.TerminalNode) ctx.getChild(2 * operandIndex - 1)).getSymbol();\n");
         sb.append("    }\n\n");
-        sb.append("    protected FunctionInvocationImpl buildBinaryCall(final String funcName, final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left, final ValueSpecification right)\n");
-        sb.append("    {\n");
-        sb.append("        return new FunctionInvocationImpl()\n");
-        sb.append("                ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, left))\n");
-        sb.append("                ._functionName(funcName)\n");
-        sb.append("                ._parametersValues(Lists.mutable.with(left, right));\n");
-        sb.append("    }\n\n");
-        sb.append("    /** Modern full-expression span: from LHS start to RHS end; falls back to op token. */\n");
+        sb.append("    /** Span from LHS start to RHS end (falls back to operator token when LHS has no source info). */\n");
         sb.append("    protected SourceInformationImpl buildOpSourceInfo(final Token opTok, final ParserRuleContext rhsCtx, final ValueSpecification left)\n");
         sb.append("    {\n");
         sb.append("        meta.pure.protocol.grammar.SourceInformation leftSrc = left._p_sourceInformation();\n");
@@ -334,10 +327,14 @@ public final class M3VisitorGenerator
     private static final class LeftFold
     {
         String operandRule;                          // e.g. "andExpression"
-        String fixedOp;                              // non-null if `op "..."` was set
-        LinkedHashMap<String, String> opByToken = new LinkedHashMap<>();
-        // Wrap mappings: tokenName → wrap-function-name (e.g. TEST_NOT_EQUAL → "not")
-        LinkedHashMap<String, String> wrapWhenToken = new LinkedHashMap<>();
+        // Per-iteration step body. Inside the step expression(s) the bindings
+        // `acc` (current accumulator), `rhs` (just-built right operand),
+        // `$tok` (operator token), and `$loc` (operator source-info) resolve
+        // to the corresponding Java locals in the emitted loop.
+        List<String[]> lets = new ArrayList<>();     // [type, name, exprDsl]
+        String stepExpr;                              // single unconditional step
+        List<Alt> alts = new ArrayList<>();           // token-dispatch (alt when $tok = TOK { step EXPR })
+        String elseStep;                              // raw DSL for `alt else { step EXPR }`
     }
 
     /**
@@ -459,8 +456,7 @@ public final class M3VisitorGenerator
                         // Closing brace: alt / left_fold / chain_fold / grow_list / nested alt / rule.
                         if (currentAlt != null)
                         {
-                            // Belongs to whichever container is currently open. grow_list and
-                            // chain_fold both carry their own alt list; only one is non-null per rule.
+                            // Belongs to whichever container is currently open.
                             if (r.chainFold != null)
                             {
                                 r.chainFold.alts.add(currentAlt);
@@ -468,6 +464,10 @@ public final class M3VisitorGenerator
                             else if (r.growList != null)
                             {
                                 r.growList.alts.add(currentAlt);
+                            }
+                            else if (r.leftFold != null)
+                            {
+                                r.leftFold.alts.add(currentAlt);
                             }
                             else
                             {
@@ -479,15 +479,7 @@ public final class M3VisitorGenerator
                         i++;
                         continue;
                     }
-                    if (currentAlt == null && body.startsWith("emit "))
-                    {
-                        r.emitType = body.substring("emit ".length()).strip();
-                    }
-                    else if (body.startsWith("shared field "))
-                    {
-                        r.sharedFields.add(parseField(body.substring("shared field ".length())));
-                    }
-                    else if (body.startsWith("alt when "))
+                    if (body.startsWith("alt when "))
                     {
                         currentAlt = new Alt();
                         currentAlt.predicate = body.substring("alt when ".length()).replace("{", "").strip();
@@ -500,67 +492,52 @@ public final class M3VisitorGenerator
                         currentAlt.predicate = null;
                         depth++;
                     }
-                    else if (currentAlt != null && body.startsWith("emit "))
-                    {
-                        // Per-alt emit type override (rule.emitType still applies as
-                        // default if not overridden).
-                        currentAlt.altEmitType = body.substring("emit ".length()).strip();
-                    }
                     else if (currentAlt != null && body.startsWith("return "))
                     {
-                        currentAlt.returnExpr = body.substring("return ".length()).strip();
+                        // Per-alt `return EXPR`. If EXPR is `newImpl(T, …)` with at least
+                        // one 2-arg ifPresent (conditional) field, decompose into alt fields
+                        // so each conditional becomes `if (P) __r._k(e);`. Otherwise leave
+                        // as a raw returnExpr (fluent chain emitted via exprToJava).
+                        String returnExpr = body.substring("return ".length()).strip();
+                        if (!tryDecomposeUnifiedAltReturn(currentAlt, returnExpr))
+                        {
+                            currentAlt.returnExpr = returnExpr;
+                        }
                     }
                     else if (currentAlt == null && body.startsWith("return "))
                     {
-                        // Rule-level `return EXPR` — synthesize a single unconditional alt.
-                        // Lets a one-line rule emit a delegated call (e.g. `return helper($.X, $self)`).
-                        Alt synth = new Alt();
-                        synth.predicate = null;
-                        synth.returnExpr = body.substring("return ".length()).strip();
-                        r.alts.add(synth);
+                        // Rule-level `return EXPR`. Two shapes are accepted:
+                        //   1. Unified: `return newImpl(T, k=v, k=ifPresent(p, e), ...)` or
+                        //      `return register(newImpl(T, ...))` — decomposed into emit
+                        //      + fields, so the existing fluent-chain / __result emitter
+                        //      can do the rest. 2-arg `ifPresent(p, e)` becomes an
+                        //      optional field; `register(…)` flags the rule as topLevel.
+                        //   2. Anything else — synthesize a single unconditional alt
+                        //      (delegated call, sub-rule call, etc.).
+                        String returnExpr = body.substring("return ".length()).strip();
+                        if (!tryDecomposeUnifiedReturn(r, returnExpr))
+                        {
+                            // `register(X)` outside a decomposable newImpl — peel the wrapper
+                            // and flag the rule as topLevel; the synth-alt then returns the
+                            // inner expression, and the topLevel visit wrapper does the
+                            // `elements.add(...)` at emission time.
+                            if (returnExpr.startsWith("register(") && returnExpr.endsWith(")")
+                                    && parenBalanced(returnExpr, "register(".length(), returnExpr.length() - 1))
+                            {
+                                r.topLevel = true;
+                                returnExpr = returnExpr.substring("register(".length(), returnExpr.length() - 1).strip();
+                            }
+                            Alt synth = new Alt();
+                            synth.predicate = null;
+                            synth.returnExpr = returnExpr;
+                            r.alts.add(synth);
+                        }
                     }
                     else if (currentAlt != null && body.startsWith("step "))
                     {
                         // chain_fold alt body: `step EXPR` — the value of the next acc.
                         // Stored in returnExpr (re-used as the dispatch-branch value).
                         currentAlt.returnExpr = body.substring("step ".length()).strip();
-                    }
-                    else if (currentAlt != null && body.startsWith("delegate $."))
-                    {
-                        currentAlt.delegateRule = body.substring("delegate $.".length()).strip();
-                    }
-                    else if (body.startsWith("field "))
-                    {
-                        Field f = parseField(body.substring("field ".length()));
-                        if (currentAlt != null) currentAlt.fields.add(f);
-                        else
-                        {
-                            // un-bracketed rule body — treat as single implicit alt
-                            if (r.alts.isEmpty()) r.alts.add(new Alt());
-                            r.alts.get(0).fields.add(f);
-                        }
-                    }
-                    else if (body.startsWith("optional field "))
-                    {
-                        // optional field NAME when $.X = EXPR — sets field only when predicate matches.
-                        // Implies __result-local form (emitter uses `if (P) __result._N(EXPR);`).
-                        String tail = body.substring("optional field ".length());
-                        int whenIdx = tail.indexOf(" when ");
-                        if (whenIdx < 0) throw new RuntimeException("optional field needs ' when ' clause: " + body);
-                        String name = tail.substring(0, whenIdx).strip();
-                        String rest = tail.substring(whenIdx + " when ".length());
-                        int eqIdx = rest.indexOf('=');
-                        if (eqIdx < 0) throw new RuntimeException("optional field needs '=' after when: " + body);
-                        Field f = new Field();
-                        f.name = name;
-                        f.predicate = rest.substring(0, eqIdx).strip();
-                        f.expr = rest.substring(eqIdx + 1).strip();
-                        if (currentAlt != null) currentAlt.fields.add(f);
-                        else
-                        {
-                            if (r.alts.isEmpty()) r.alts.add(new Alt());
-                            r.alts.get(0).fields.add(f);
-                        }
                     }
                     else if (body.startsWith("else error("))
                     {
@@ -614,7 +591,9 @@ public final class M3VisitorGenerator
                     }
                     else if (body.startsWith("let "))
                     {
-                        // `let TYPE NAME = EXPR` declares a method-scope local.
+                        // `let TYPE NAME = EXPR` declares a local. Routes to the enclosing
+                        // container: a left_fold body's `let` is per-iteration and re-evaluated
+                        // each loop, while a rule-level `let` is a method-scope binding.
                         String tail = body.substring("let ".length()).strip();
                         int eqIdx = tail.indexOf('=');
                         if (eqIdx < 0) throw new RuntimeException("let needs '=': " + body);
@@ -622,7 +601,15 @@ public final class M3VisitorGenerator
                         String expr = tail.substring(eqIdx + 1).strip();
                         int sp = lhs.lastIndexOf(' ');
                         if (sp < 0) throw new RuntimeException("let LHS needs 'TYPE NAME': " + body);
-                        r.lets.add(new String[] {lhs.substring(0, sp).strip(), lhs.substring(sp + 1).strip(), expr});
+                        String[] entry = new String[] {lhs.substring(0, sp).strip(), lhs.substring(sp + 1).strip(), expr};
+                        if (r.leftFold != null && currentAlt == null)
+                        {
+                            r.leftFold.lets.add(entry);
+                        }
+                        else
+                        {
+                            r.lets.add(entry);
+                        }
                     }
                     else if (body.startsWith("set "))
                     {
@@ -631,12 +618,6 @@ public final class M3VisitorGenerator
                         int eqIdx = tail.indexOf('=');
                         if (eqIdx < 0) throw new RuntimeException("set needs '=': " + body);
                         r.sets.add(new String[] {tail.substring(0, eqIdx).strip(), tail.substring(eqIdx + 1).strip()});
-                    }
-                    else if (body.equals("topLevel"))
-                    {
-                        // Marks this rule as a top-level element: emits an @Override
-                        // visit<X> wrapper that registers the built object in `elements`.
-                        r.topLevel = true;
                     }
                     else if (body.startsWith("left_fold over "))
                     {
@@ -679,45 +660,19 @@ public final class M3VisitorGenerator
                         // grow_list alt body: `yield EXPR` — the value to push into the result list.
                         currentAlt.returnExpr = body.substring("yield ".length()).strip();
                     }
-                    else if (body.startsWith("op_by_token "))
+                    else if (r.leftFold != null && currentAlt == null && body.startsWith("step "))
                     {
-                        // op_by_token TOK "name"
-                        String[] parts = body.substring("op_by_token ".length()).strip().split("\\s+", 2);
-                        String tok = parts[0];
-                        String name = unquote(parts[1]);
-                        r.leftFold.opByToken.put(tok, name);
+                        // left_fold body: unconditional `step EXPR` — assigned to result each iteration.
+                        r.leftFold.stepExpr = body.substring("step ".length()).strip();
                     }
-                    else if (body.startsWith("op "))
+                    else if (r.leftFold != null && body.startsWith("else step "))
                     {
-                        r.leftFold.fixedOp = unquote(body.substring("op ".length()).strip());
-                    }
-                    else if (body.startsWith("when_token "))
-                    {
-                        // when_token TOK wrap_with "name"
-                        String tail = body.substring("when_token ".length()).strip();
-                        int wrapIdx = tail.indexOf("wrap_with");
-                        String tok = tail.substring(0, wrapIdx).strip();
-                        String name = unquote(tail.substring(wrapIdx + "wrap_with".length()).strip());
-                        r.leftFold.wrapWhenToken.put(tok, name);
-                    }
-                    else if (body.startsWith("delegate $."))
-                    {
-                        // delegate $.X [as ReturnType]
-                        String tail = body.substring("delegate $.".length()).strip();
-                        int delAsIdx = tail.indexOf(" as ");
-                        if (delAsIdx >= 0)
-                        {
-                            r.delegateTarget = tail.substring(0, delAsIdx).strip();
-                            r.delegateReturn = tail.substring(delAsIdx + " as ".length()).strip();
-                        }
-                        else
-                        {
-                            r.delegateTarget = tail;
-                            r.delegateReturn = "ValueSpecification";
-                        }
+                        // left_fold body: `else step EXPR` — fallback value when no alt matches.
+                        r.leftFold.elseStep = body.substring("else step ".length()).strip();
                     }
                     i++;
                 }
+                inferUnifiedReturnType(r);
                 rules.add(r);
             }
             else
@@ -752,13 +707,196 @@ public final class M3VisitorGenerator
         return depth;
     }
 
-    private static Field parseField(String body)
+    /**
+     * Check that the parens at positions [openIdx-1, closeIdx] form a balanced unit —
+     * i.e. the closing paren at closeIdx matches the opening paren at openIdx-1, with
+     * no premature close in between. Used to verify a `register(...)` wrap is a single
+     * top-level call, not e.g. `register(x) + foo`.
+     */
+    private static boolean parenBalanced(String s, int openIdx, int closeIdx)
     {
-        int eq = body.indexOf('=');
-        if (eq < 0) throw new RuntimeException("malformed field (no '='): " + body);
+        int depth = 1;
+        for (int k = openIdx; k < closeIdx; k++)
+        {
+            char c = s.charAt(k);
+            if (c == '(') depth++;
+            else if (c == ')')
+            {
+                if (--depth == 0) return false;
+            }
+        }
+        return depth == 1;
+    }
+
+    /**
+     * For multi-alt unified rules (each alt has `return newImpl(T, …)`) where the
+     * rule has no explicit `as TypeName` and no `emit T`, infer the rule's method
+     * return type by inspecting each alt's `returnExpr`. If every alt returns the
+     * same `newImpl(T, …)` shape, set returnType = `TImpl`. Otherwise leave it
+     * null so the default `ValueSpecification` kicks in.
+     */
+    private static void inferUnifiedReturnType(Rule r)
+    {
+        if (r.returnType != null || r.emitType != null) return;
+        if (r.alts.isEmpty()) return;
+        // Pattern 1: single alt whose return is a bare identifier matching a let — infer
+        // the emit type from the matching let's `newImpl(T, …)` value (the let-and-mutate
+        // pattern: `let TImpl __r = newImpl(T, …); __r._foo(…); return register(__r)`).
+        if (r.alts.size() == 1)
+        {
+            String e = r.alts.get(0).returnExpr;
+            if (e != null)
+            {
+                String trimmed = e.strip();
+                for (String[] l : r.lets)
+                {
+                    if (l[1].equals(trimmed))
+                    {
+                        String letExpr = l[2].strip();
+                        if (letExpr.startsWith("newImpl(") && letExpr.endsWith(")")
+                                && tryMatchPrimitiveCall(letExpr, 0) == letExpr.length())
+                        {
+                            String args = letExpr.substring("newImpl(".length(), letExpr.length() - 1);
+                            List<String> parts = splitTopLevelCommas(args);
+                            if (!parts.isEmpty())
+                            {
+                                r.emitType = parts.get(0).strip();
+                                r.returnType = r.emitType + "Impl";
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Pattern 2: every alt either has a decomposed altEmitType (per-alt fields, after
+        // the unified-alt decomposer ran) or a `newImpl(SameT, …)` returnExpr.
+        // Either way, all alts must agree on a single emit type.
+        String commonType = null;
+        for (Alt a : r.alts)
+        {
+            String t;
+            if (a.altEmitType != null)
+            {
+                t = a.altEmitType;
+            }
+            else if (a.returnExpr != null)
+            {
+                String e = a.returnExpr.strip();
+                if (!e.startsWith("newImpl(") || !e.endsWith(")")) return;
+                if (tryMatchPrimitiveCall(e, 0) != e.length()) return;
+                String args = e.substring("newImpl(".length(), e.length() - 1);
+                List<String> parts = splitTopLevelCommas(args);
+                if (parts.isEmpty()) return;
+                t = parts.get(0).strip();
+            }
+            else
+            {
+                return;
+            }
+            if (commonType == null) commonType = t;
+            else if (!commonType.equals(t)) return;
+        }
+        if (commonType != null) r.returnType = commonType + "Impl";
+    }
+
+    /**
+     * Decompose a unified-form `return EXPR` into the existing emit + fields IR.
+     *   `return newImpl(T, k1=v1, k2=v2, ...)`
+     *   `return register(newImpl(T, ...))`             — flags rule as topLevel
+     * Each k=v becomes a field; `k = ifPresent(p, e)` 2-arg becomes an optional field.
+     * Returns false (no decomposition) for anything else — the caller falls back to a
+     * synth-alt with the raw expression.
+     */
+    private static boolean tryDecomposeUnifiedReturn(Rule r, String expr)
+    {
+        String inner = expr.strip();
+        boolean wrappedInRegister = false;
+        if (inner.startsWith("register(") && inner.endsWith(")")
+                && parenBalanced(inner, "register(".length(), inner.length() - 1))
+        {
+            wrappedInRegister = true;
+            inner = inner.substring("register(".length(), inner.length() - 1).strip();
+        }
+        if (!inner.startsWith("newImpl(") || !inner.endsWith(")"))
+        {
+            return false;
+        }
+        if (tryMatchPrimitiveCall(inner, 0) != inner.length())
+        {
+            return false;
+        }
+        String args = inner.substring("newImpl(".length(), inner.length() - 1);
+        List<String> parts = splitTopLevelCommas(args);
+        if (parts.isEmpty()) return false;
+        String emitType = parts.get(0).strip();
+        Alt defaultAlt = new Alt();
+        for (int j = 1; j < parts.size(); j++)
+        {
+            Field f = parseUnifiedField(parts.get(j).strip());
+            if (f == null) return false;
+            defaultAlt.fields.add(f);
+        }
+        // Commit only after full success — no partial side effects on the Rule
+        r.emitType = emitType;
+        r.alts.add(defaultAlt);
+        if (wrappedInRegister) r.topLevel = true;
+        return true;
+    }
+
+    /**
+     * Per-alt decomposer: if the alt's return is `newImpl(T, k=v, k=ifPresent(p, e), …)`
+     * with at least one 2-arg ifPresent, set alt.altEmitType=T and alt.fields from the
+     * args. Otherwise return false so the caller stores returnExpr unchanged (the
+     * existing fluent-chain emitter handles unconditional newImpl returns just fine).
+     */
+    private static boolean tryDecomposeUnifiedAltReturn(Alt a, String expr)
+    {
+        String inner = expr.strip();
+        if (!inner.startsWith("newImpl(") || !inner.endsWith(")")) return false;
+        if (tryMatchPrimitiveCall(inner, 0) != inner.length()) return false;
+        String args = inner.substring("newImpl(".length(), inner.length() - 1);
+        List<String> parts = splitTopLevelCommas(args);
+        if (parts.isEmpty()) return false;
+        List<Field> fields = new ArrayList<>();
+        boolean anyConditional = false;
+        for (int j = 1; j < parts.size(); j++)
+        {
+            Field f = parseUnifiedField(parts.get(j).strip());
+            if (f == null) return false;
+            if (f.predicate != null) anyConditional = true;
+            fields.add(f);
+        }
+        if (!anyConditional) return false;
+        a.altEmitType = parts.get(0).strip();
+        a.fields.addAll(fields);
+        return true;
+    }
+
+    /**
+     * Parse one `k = v` field of a unified `newImpl(...)` call. If `v` is a 2-arg
+     * `ifPresent(pred, expr)`, the field is optional (predicate=pred, expr=expr).
+     * Otherwise it's an unconditional field.
+     */
+    private static Field parseUnifiedField(String kv)
+    {
+        int eq = kv.indexOf('=');
+        if (eq < 0) return null;
         Field f = new Field();
-        f.name = body.substring(0, eq).strip();
-        f.expr = body.substring(eq + 1).strip();
+        f.name = kv.substring(0, eq).strip();
+        String value = kv.substring(eq + 1).strip();
+        if (value.startsWith("ifPresent(") && tryMatchPrimitiveCall(value, 0) == value.length())
+        {
+            String inner = value.substring("ifPresent(".length(), value.length() - 1);
+            List<String> argParts = splitTopLevelCommas(inner);
+            if (argParts.size() == 2)
+            {
+                f.predicate = argParts.get(0).strip();
+                f.expr = argParts.get(1).strip();
+                return f;
+            }
+        }
+        f.expr = value;
         return f;
     }
 
@@ -803,6 +941,28 @@ public final class M3VisitorGenerator
         sb.append("    protected ").append(returnType).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
         emitLetBindings(sb, r);
+        // Post-actions are emitted here when the rule reaches the multi-alt /
+        // single-return path (i.e. the let-and-mutate unified pattern):
+        // post-actions mutate a let-bound `__r` and the synth alt then `return __r`.
+        // The single-alt-no-return path below has its own (legacy) postActions
+        // emission tied to `__result`.
+        boolean emitPostsHere = r.alts.size() == 1 && r.alts.get(0).returnExpr != null && !r.postActions.isEmpty();
+        if (emitPostsHere)
+        {
+            for (PostAction post : r.postActions)
+            {
+                String stmtJava = substituteContextRefs(post.stmt, null);
+                if (post.predicate != null)
+                {
+                    sb.append("        if (").append(predicateAsJava(post.predicate))
+                            .append(") ").append(stmtJava).append(";\n");
+                }
+                else
+                {
+                    sb.append("        ").append(stmtJava).append(";\n");
+                }
+            }
+        }
 
         if (r.alts.size() == 1 && r.alts.get(0).predicate == null
                 && r.alts.get(0).returnExpr == null && r.alts.get(0).delegateRule == null)
@@ -1039,62 +1199,86 @@ public final class M3VisitorGenerator
         String rhsCtxType = "M3Parser." + capitalize(lf.operandRule) + "Context";
         String methodName = r.methodNameOverride != null ? r.methodNameOverride : methodNameFor(r.name);
         String operandMethod = methodNameFor(lf.operandRule);
+        String returnType = r.returnType != null ? r.returnType : "ValueSpecification";
 
-        sb.append("    protected ValueSpecification ").append(methodName)
+        sb.append("    protected ").append(returnType).append(' ').append(methodName)
                 .append("(").append(extraParamsPrefix(r)).append("final ").append(ctxType).append(" ctx)\n    {\n");
         sb.append("        java.util.List<").append(rhsCtxType).append("> operands = ctx.")
                 .append(lf.operandRule).append("();\n");
-        sb.append("        ValueSpecification result = ").append(operandMethod)
+        sb.append("        ").append(returnType).append(" result = ").append(operandMethod)
                 .append("(operands.get(0));\n");
         sb.append("        for (int i = 1; i < operands.size(); i++)\n        {\n");
         sb.append("            Token opTok = operatorTokenAt(ctx, i);\n");
         sb.append("            ").append(rhsCtxType).append(" rhsCtx = operands.get(i);\n");
-        sb.append("            ValueSpecification right = ").append(operandMethod).append("(rhsCtx);\n");
+        sb.append("            ").append(returnType).append(" rhs = ").append(operandMethod).append("(rhsCtx);\n");
 
-        // Resolve operator name.
-        if (lf.fixedOp != null)
+        // Per-iteration `let` bindings — the binding expressions can reference acc/rhs/$tok/$loc.
+        for (String[] l : lf.lets)
         {
-            sb.append("            String funcName = \"").append(lf.fixedOp).append("\";\n");
+            sb.append("            ").append(l[0]).append(' ').append(l[1])
+                    .append(" = ").append(foldExprToJava(l[2])).append(";\n");
         }
-        else if (!lf.opByToken.isEmpty())
+
+        if (lf.stepExpr != null)
         {
-            // Cascade of ternaries: opTok.getType() == M3Lexer.PLUS ? "plus" : ...
-            sb.append("            String funcName = ");
-            int n = lf.opByToken.size();
-            int idx = 0;
-            String lastName = null;
-            for (Map.Entry<String, String> e : lf.opByToken.entrySet())
+            // Single unconditional step.
+            sb.append("            result = ").append(foldExprToJava(lf.stepExpr)).append(";\n");
+        }
+        else if (!lf.alts.isEmpty())
+        {
+            // Token-dispatch: emit if/else chain. Each alt's predicate is the bare token
+            // name (parsed from `$tok = TOK_NAME`); the alt body's `step EXPR` is the value.
+            for (int j = 0; j < lf.alts.size(); j++)
             {
-                lastName = e.getValue();
-                if (idx < n - 1)
+                Alt a = lf.alts.get(j);
+                if (a.predicate != null)
                 {
-                    sb.append("opTok.getType() == M3Lexer.").append(e.getKey())
-                            .append(" ? \"").append(e.getValue()).append("\" : ");
+                    String tokName = a.predicate;
+                    // Predicate may have been parsed as `$tok = TOK_NAME`; strip the prefix if present.
+                    int eq = tokName.indexOf('=');
+                    if (eq >= 0) tokName = tokName.substring(eq + 1).strip();
+                    sb.append("            ").append(j == 0 ? "if" : "else if")
+                            .append(" (opTok.getType() == M3Lexer.").append(tokName).append(")\n");
                 }
-                idx++;
+                else
+                {
+                    sb.append("            else\n");
+                }
+                sb.append("            {\n");
+                sb.append("                result = ").append(foldExprToJava(a.returnExpr)).append(";\n");
+                sb.append("            }\n");
             }
-            // Last entry is the fallback in the ternary chain.
-            sb.append('"').append(lastName).append("\";\n");
-        }
-
-        sb.append("            ValueSpecification call = buildBinaryCall(funcName, opTok, rhsCtx, result, right);\n");
-
-        // Optional wrap (e.g. != → not(equal(...)))
-        if (!lf.wrapWhenToken.isEmpty())
-        {
-            for (Map.Entry<String, String> w : lf.wrapWhenToken.entrySet())
+            if (lf.elseStep != null)
             {
-                sb.append("            if (opTok.getType() == M3Lexer.").append(w.getKey()).append(")\n            {\n");
-                sb.append("                call = new FunctionInvocationImpl()\n");
-                sb.append("                        ._p_sourceInformation(buildOpSourceInfo(opTok, rhsCtx, result))\n");
-                sb.append("                        ._functionName(\"").append(w.getValue()).append("\")\n");
-                sb.append("                        ._parametersValues(Lists.mutable.with(call));\n");
+                sb.append("            else\n            {\n");
+                sb.append("                result = ").append(foldExprToJava(lf.elseStep)).append(";\n");
                 sb.append("            }\n");
             }
         }
-        sb.append("            result = call;\n");
+
         sb.append("        }\n");
         sb.append("        return result;\n    }\n");
+    }
+
+    /**
+     * Translate a left_fold step / let expression to Java, substituting the
+     * per-iteration bindings: `acc` → `result`, `rhs` → `rhs` (kept), `$tok` → `opTok`,
+     * and `$loc` (when it appears alone, not as `$loc($.X)`) → the operator source-info
+     * helper call. Then defer to the normal `exprToJava` for the rest.
+     */
+    private static String foldExprToJava(String dslExpr)
+    {
+        // Use unique placeholders so the normal exprToJava doesn't re-interpret these.
+        // $loc alone → operator-source-info; $loc($.X) stays for exprToJava's handler.
+        String staged = dslExpr;
+        staged = staged.replaceAll("\\bacc\\b", "__FOLD_ACC__");
+        staged = staged.replaceAll("\\$tok\\b", "__FOLD_TOK__");
+        staged = staged.replaceAll("\\$loc(?!\\()", "__FOLD_LOC__");
+        String java = exprToJava(staged, null);
+        java = java.replace("__FOLD_ACC__", "result");
+        java = java.replace("__FOLD_TOK__", "opTok");
+        java = java.replace("__FOLD_LOC__", "buildOpSourceInfo(opTok, rhsCtx, result)");
+        return java;
     }
 
     private static void emitChainFold(StringBuilder sb, Rule r)
@@ -1276,10 +1460,13 @@ public final class M3VisitorGenerator
         }
 
         // ifPresent($.X, THEN, ELSE) — ctx.X() != null ? THEN : ELSE
+        // ifPresent($.X, EXPR)        — 2-arg "skip" sentinel; only legal as a top-level
+        //                               newImpl field of a rule's return or a let-binding,
+        //                               where the decomposer turns it into a conditional
+        //                               setter. Anywhere else it's a parse error.
         if (e.startsWith("ifPresent(") && e.endsWith(")"))
         {
             String inner = e.substring("ifPresent(".length(), e.length() - 1);
-            // Top-level comma split into 3 parts.
             List<String> parts = splitTopLevelCommas(inner);
             if (parts.size() == 3)
             {
@@ -1287,6 +1474,11 @@ public final class M3VisitorGenerator
                 String thenE = exprToJava(parts.get(1), cachedTextToken);
                 String elseE = exprToJava(parts.get(2), cachedTextToken);
                 return "(" + pred + " ? " + thenE + " : " + elseE + ")";
+            }
+            if (parts.size() == 2)
+            {
+                throw new RuntimeException("2-arg ifPresent is only valid as a top-level newImpl field "
+                        + "(rule-level `return` or `let`); found in expression position: " + e);
             }
         }
 
@@ -1385,6 +1577,34 @@ public final class M3VisitorGenerator
         {
             String inner = exprToJava(e.substring("hasPackagePrefix(".length(), e.length() - 1), cachedTextToken);
             return inner + ".contains(\"::\")";
+        }
+
+        // match(discToken, TOK1, v1, TOK2, v2, …) — pattern-match on a Token's type.
+        // Emits a ternary chain comparing `disc.getType()` against each `M3Lexer.TOKi`.
+        // The LAST value is the fallback (no comparison emitted), matching the previous
+        // op_by_token semantics — the listed token names exhaustively cover the grammar's
+        // operator positions, and the final entry's name is documentation-only.
+        if (e.startsWith("match(") && e.endsWith(")"))
+        {
+            String inner = e.substring("match(".length(), e.length() - 1);
+            List<String> parts = splitTopLevelCommas(inner);
+            if (parts.size() >= 3 && (parts.size() - 1) % 2 == 0)
+            {
+                String disc = exprToJava(parts.get(0).strip(), cachedTextToken);
+                StringBuilder out = new StringBuilder("(");
+                int nPairs = (parts.size() - 1) / 2;
+                for (int j = 0; j < nPairs - 1; j++)
+                {
+                    String tok = parts.get(1 + 2 * j).strip();
+                    String val = exprToJava(parts.get(2 + 2 * j).strip(), cachedTextToken);
+                    out.append(disc).append(".getType() == M3Lexer.").append(tok)
+                            .append(" ? ").append(val).append(" : ");
+                }
+                String lastVal = exprToJava(parts.get(parts.size() - 1).strip(), cachedTextToken);
+                out.append(lastVal).append(")");
+                return out.toString();
+            }
+            throw new RuntimeException("match needs discriminator + N (token, value) pairs: " + e);
         }
 
         // beforeFirstDot(s) — substring of `s` before the first ".", or `s` itself when no dot.
@@ -1675,7 +1895,8 @@ public final class M3VisitorGenerator
             "enumPointer", "count", "multBounds", "dateLiteralType", "stripIfQuoted",
             "notEmpty", "simpleNameOf", "filterMap", "filterMapNot",
             "packagePrefix", "hasPackagePrefix", "beforeFirstDot",
-            "firstOf", "anyHas", "anyHasAny", "selectMapHasAny", "hasAny"
+            "firstOf", "anyHas", "anyHasAny", "selectMapHasAny", "hasAny",
+            "match"
     };
 
     /**
@@ -1853,14 +2074,70 @@ public final class M3VisitorGenerator
     {
         for (String[] l : r.lets)
         {
-            sb.append("        ").append(l[0]).append(' ').append(l[1])
-                    .append(" = ").append(exprToJava(l[2], null)).append(";\n");
+            String type = l[0];
+            String name = l[1];
+            String expr = l[2];
+            if (!emitConditionalNewImplLet(sb, type, name, expr))
+            {
+                sb.append("        ").append(type).append(' ').append(name)
+                        .append(" = ").append(exprToJava(expr, null)).append(";\n");
+            }
         }
         for (String[] s : r.sets)
         {
             sb.append("        ").append(s[0]).append(" = ")
                     .append(exprToJava(s[1], null)).append(";\n");
         }
+    }
+
+    /**
+     * If the let value is `newImpl(T, k=v, k=ifPresent(p, e), ...)` and has at least one
+     * 2-arg `ifPresent` field, emit it as a local-var multi-statement block:
+     *   T NAME = new TImpl()._k1(v1)._k2(v2);
+     *   if (p) NAME._kCond(e);
+     * Returns true if emitted, false to let the caller fall back to the default
+     * single-expression form. Mirrors the rule-level decompose-newImpl path.
+     */
+    private static boolean emitConditionalNewImplLet(StringBuilder sb, String type, String name, String expr)
+    {
+        String inner = expr.strip();
+        if (!inner.startsWith("newImpl(") || !inner.endsWith(")")) return false;
+        if (tryMatchPrimitiveCall(inner, 0) != inner.length()) return false;
+        String args = inner.substring("newImpl(".length(), inner.length() - 1);
+        List<String> parts = splitTopLevelCommas(args);
+        if (parts.size() < 2) return false;
+        List<Field> fields = new ArrayList<>();
+        boolean anyConditional = false;
+        for (int j = 1; j < parts.size(); j++)
+        {
+            Field f = parseUnifiedField(parts.get(j).strip());
+            if (f == null) return false;
+            if (f.predicate != null) anyConditional = true;
+            fields.add(f);
+        }
+        if (!anyConditional) return false;
+        String implType = parts.get(0).strip() + "Impl";
+        sb.append("        ").append(type).append(' ').append(name)
+                .append(" = new ").append(implType).append("()");
+        for (Field f : fields)
+        {
+            if (f.predicate == null)
+            {
+                sb.append("\n                .").append(setter(f.name))
+                        .append('(').append(exprToJava(f.expr, null)).append(')');
+            }
+        }
+        sb.append(";\n");
+        for (Field f : fields)
+        {
+            if (f.predicate != null)
+            {
+                sb.append("        if (").append(predicateAsJava(f.predicate))
+                        .append(") ").append(name).append('.').append(setter(f.name))
+                        .append('(').append(exprToJava(f.expr, null)).append(");\n");
+            }
+        }
+        return true;
     }
 
     /**
